@@ -1,16 +1,3 @@
-
-import React, { useState } from 'react';
-import { Department } from '../types';
-import { X, Plus, Trash2, GripVertical } from 'lucide-react';
-import { db } from '../firebaseConfig';
-import { setDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
-
-interface SettingsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  departments: Department[];
-}
-
 import React, { useState } from 'react';
 import { Department } from '../types';
 import { X, Plus, Trash2, GripVertical, Check, FolderKanban } from 'lucide-react';
@@ -239,7 +226,5 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     </div>
   );
 };
-
-export default SettingsModal;
 
 export default SettingsModal;
