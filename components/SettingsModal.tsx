@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Department } from '../types';
 import { X, Plus, Trash2, GripVertical, Check, FolderKanban } from 'lucide-react';
 import { db } from '../firebaseConfig';
-import { setDoc, doc, deleteDoc } from 'firebase/firestore';
+import { setDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -80,11 +80,40 @@ const handleUpdate = async (id: string, field: keyof Department, value: string) 
   } catch (e) { console.error(e); }
 };
 
-// Simplified DnD for now (no reorder persistence in this snippet request, keeping it visual mostly)
+// Drag and Drop Logic
 const onDragStart = (e: React.DragEvent, index: number) => {
   setDraggedIndex(index);
+  // Required for Firefox
+  e.dataTransfer.effectAllowed = 'move';
 };
-const onDragEnd = () => {
+
+const onDragOver = (e: React.DragEvent, index: number) => {
+  e.preventDefault(); // Necessary to allow dropping
+  if (draggedIndex === null || draggedIndex === index) return;
+  // Optional: Visual feedback could go here (reordering local state while dragging)
+};
+
+const onDrop = async (e: React.DragEvent, targetIndex: number) => {
+  e.preventDefault();
+  if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+  // Create a new array with the reordered items
+  const reordered = [...departments];
+  const [movedItem] = reordered.splice(draggedIndex, 1);
+  reordered.splice(targetIndex, 0, movedItem);
+
+  // Optimistic / Batch Update
+  const batch = writeBatch(db);
+  reordered.forEach((dept, idx) => {
+    const ref = doc(db, "부서목록", dept.id);
+    batch.update(ref, { 순서: idx + 1 });
+  });
+
+  try {
+    await batch.commit();
+  } catch (error) {
+    console.error("Error reordering departments:", error);
+  }
   setDraggedIndex(null);
 };
 
@@ -137,11 +166,14 @@ return (
                 key={dept.id}
                 draggable
                 onDragStart={(e) => onDragStart(e, index)}
-                onDragEnd={onDragEnd}
+                onDragOver={(e) => onDragOver(e, index)}
+                onDrop={(e) => onDrop(e, index)}
+                onDragEnd={() => setDraggedIndex(null)}
                 className={`
-                     relative group p-3 bg-white border border-gray-200 rounded-xl shadow-sm transition-all hover:shadow-md
-                     ${draggedIndex === index ? 'opacity-40 border-dashed border-[#fdb813]' : 'hover:border-[#fdb813]/30'}
-                   `}
+                       relative group p-3 bg-white border border-gray-200 rounded-xl shadow-sm transition-all hover:shadow-md
+                       ${draggedIndex === index ? 'opacity-40 border-dashed border-[#fdb813]' : 'hover:border-[#fdb813]/30'}
+                       cursor-move
+                     `}
               >
                 <div className="flex items-start gap-3">
                   {/* Drag Handle */}
