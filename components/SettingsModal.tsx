@@ -40,12 +40,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // New Department Logic
   const handleAdd = async () => {
     if (!newDeptName.trim()) return;
-    const newDeptCode = crypto.randomUUID();
     const newDept: Department = {
-      id: newDeptCode,
-      name: newDeptName,
+      id: newDeptName.trim(), // Use name as ID
+      name: newDeptName.trim(),
       order: departments.length + 1,
-      color: 'bg-white', // Default
+      color: '#ffffff', // Default to Hex
     };
     try {
       await setDoc(doc(db, "부서목록", newDept.id), {
