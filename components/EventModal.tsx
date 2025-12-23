@@ -12,7 +12,10 @@ interface EventModalProps {
   onSave: (event: CalendarEvent) => void;
   onDelete: (id: string) => void;
   initialDate?: string;
+  initialEndDate?: string;
   initialDepartmentId?: string;
+  initialStartTime?: string;
+  initialEndTime?: string;
   existingEvent?: CalendarEvent | null;
   departments: Department[];
 }
@@ -23,7 +26,10 @@ const EventModal: React.FC<EventModalProps> = ({
   onSave,
   onDelete,
   initialDate,
+  initialEndDate,
   initialDepartmentId,
+  initialStartTime,
+  initialEndTime,
   existingEvent,
   departments,
 }) => {
@@ -36,7 +42,7 @@ const EventModal: React.FC<EventModalProps> = ({
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
-  const [colorIndex, setColorIndex] = useState(0);
+  const [selectedColor, setSelectedColor] = useState('#fee2e2');
 
   useEffect(() => {
     if (isOpen) {
@@ -52,28 +58,31 @@ const EventModal: React.FC<EventModalProps> = ({
         // Legacy support/Robustness: If time is missing, it must be All Day
         const isTimeEmpty = !existingEvent.startTime && !existingEvent.endTime;
         setIsAllDay(existingEvent.isAllDay || isTimeEmpty);
-        const cIndex = EVENT_COLORS.findIndex(c => c.value === existingEvent.color);
-        setColorIndex(cIndex !== -1 ? cIndex : 0);
+
+        // Handle Color
+        const colorVal = existingEvent.color;
+        // If it's a class (e.g., bg-red-100), try to map it? 
+        // Or just default to one if we can't parse.
+        // Actually, if we are transitioning, we can just set it. 
+        // If it's a tailwind class, the input color might show black/white default, 
+        // but user can pick a new one. 
+        // Better: Try to find hex from EVENT_COLORS if it matches a class, else use it as hex (if valid) or default.
+        const knownColor = EVENT_COLORS.find(c => c.value === colorVal);
+        setSelectedColor(knownColor ? knownColor.value : (colorVal.startsWith('#') ? colorVal : '#fee2e2'));
       } else {
         setTitle('');
         setDescription('');
         setParticipants('');
         setDepartmentId(initialDepartmentId || departments[0]?.id || '');
-
-        const todayStr = initialDate || format(new Date(), 'yyyy-MM-dd');
-        setStartDate(todayStr);
-        setEndDate(todayStr);
-
-        const now = new Date();
-        const timeStr = format(now, 'HH:mm');
-        setStartTime(timeStr);
-        setEndTime(timeStr);
+        setStartDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
+        setEndDate(initialEndDate || initialDate || format(new Date(), 'yyyy-MM-dd'));
+        setStartTime(initialStartTime || '');
+        setEndTime(initialEndTime || '');
         setIsAllDay(false);
-
-        setColorIndex(0);
+        setSelectedColor('#fee2e2');
       }
     }
-  }, [isOpen, existingEvent, initialDate, initialDepartmentId, departments]);
+  }, [isOpen, existingEvent, initialDate, initialEndDate, initialDepartmentId, initialStartTime, initialEndTime, departments]);
 
   if (!isOpen) return null;
 
@@ -105,7 +114,7 @@ const EventModal: React.FC<EventModalProps> = ({
       startTime: isAllDay ? '' : startTime,
       endTime: isAllDay ? '' : endTime,
       isAllDay,
-      color: EVENT_COLORS[colorIndex].value,
+      color: selectedColor,
     });
     onClose();
   };
@@ -255,18 +264,18 @@ const EventModal: React.FC<EventModalProps> = ({
             <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2">
               색상 라벨
             </label>
-            <div className="flex gap-3 flex-wrap">
-              {EVENT_COLORS.map((c, idx) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() => setColorIndex(idx)}
-                  className={`w-10 h-10 rounded-full border-4 transition-all ${colorIndex === idx ? 'border-[#081429] scale-110 shadow-lg' : 'border-white shadow hover:scale-105'
-                    }`}
-                  style={{ backgroundColor: c.value }}
-                  title={c.label}
+            <div className="flex gap-4 items-center">
+              <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm transition-transform hover:scale-105 active:scale-95">
+                <input
+                  type="color"
+                  value={selectedColor}
+                  onChange={(e) => setSelectedColor(e.target.value)}
+                  className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
                 />
-              ))}
+              </div>
+              <span className="text-sm font-bold text-gray-500">
+                색상을 선택하세요
+              </span>
             </div>
           </div>
 

@@ -156,33 +156,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="flex-1 space-y-2">
                       {/* Row 1: Name and Color */}
                       <div className="flex items-center gap-2">
-                        {/* Color Picker Trigger */}
-                        <div className="relative">
-                          <button
-                            onClick={() => setActiveColorPickerId(activeColorPickerId === dept.id ? null : dept.id)}
-                            className={`w-8 h-8 rounded-full border shadow-sm flex items-center justify-center transition-transform hover:scale-105 ${dept.color.replace('bg-', 'bg-') || 'bg-white'}`}
-                            title="색상 변경"
-                            style={{ borderWidth: '2px' }}
+                        {/* Color Picker Input */}
+                        <div className="relative flex items-center justify-center">
+                          <div
+                            className={`
+                                ${!dept.color.startsWith('#') ? dept.color : 'bg-white'} 
+                                w-8 h-8 rounded-full border shadow-sm overflow-hidden flex items-center justify-center transition-transform hover:scale-105
+                                border-2 border-gray-100
+                              `}
+                            style={{
+                              backgroundColor: dept.color.startsWith('#') ? dept.color : undefined
+                            }}
                           >
-                            <div className="w-2 h-2 rounded-full bg-black/10" />
-                          </button>
-
-                          {/* Color Picker Popover */}
-                          {activeColorPickerId === dept.id && (
-                            <div className="absolute top-10 left-0 bg-white p-3 rounded-xl shadow-xl border border-gray-100 z-20 grid grid-cols-4 gap-2 w-[180px] animate-in slide-in-from-top-2 fade-in duration-200">
-                              {DEPT_COLOR_OPTIONS.map((option) => (
-                                <button
-                                  key={option.class}
-                                  onClick={() => {
-                                    handleUpdate(dept.id, 'color', option.class);
-                                    setActiveColorPickerId(null);
-                                  }}
-                                  className={`w-8 h-8 rounded-full ${option.class} border-2 ${dept.color === option.class ? 'border-black' : 'border-transparent hover:border-gray-300'} shadow-sm transition-all`}
-                                  title={option.label}
-                                />
-                              ))}
-                            </div>
-                          )}
+                            <input
+                              type="color"
+                              value={dept.color.startsWith('#') ? dept.color : '#ffffff'}
+                              onChange={(e) => handleUpdate(dept.id, 'color', e.target.value)}
+                              className="opacity-0 w-[200%] h-[200%] cursor-pointer absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                              title="색상 변경"
+                            />
+                          </div>
                         </div>
 
                         {/* Name Input */}

@@ -93,6 +93,27 @@ const App: React.FC = () => {
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
+  // New State for Time Slot Click
+  const [initialStartTime, setInitialStartTime] = useState('');
+  const [initialEndTime, setInitialEndTime] = useState('');
+
+  // Handle time slot click from Daily View
+  const handleTimeSlotClick = (date: string, time: string) => {
+    setSelectedDate(date);
+    setSelectedEndDate(date);
+    setEditingEvent(null);
+
+    setInitialStartTime(time);
+
+    // Calculate End Time (1 hour later)
+    const [h, m] = time.split(':').map(Number);
+    const endH = h + 1;
+    const endTimeStr = `${String(endH > 23 ? 23 : endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    setInitialEndTime(endTimeStr);
+
+    setIsEventModalOpen(true);
+  };
+
   // Subscribe to Departments (부서목록)
   useEffect(() => {
     const q = query(collection(db, "부서목록").withConverter(departmentConverter), orderBy("순서"));
@@ -218,6 +239,8 @@ const App: React.FC = () => {
                 setSelectedEndDate(format(new Date(), 'yyyy-MM-dd'));
                 setSelectedDeptId(visibleDepartments[0]?.id || departments[0]?.id);
                 setEditingEvent(null);
+                setInitialStartTime(''); // Reset
+                setInitialEndTime('');   // Reset
                 setIsEventModalOpen(true);
               }}
               className="flex items-center gap-2 px-5 py-2 bg-[#fdb813] text-[#081429] rounded-xl hover:brightness-110 transition-all shadow-lg text-sm font-black border border-[#fdb813] active:scale-95"
@@ -283,35 +306,37 @@ const App: React.FC = () => {
               </button>
             </div>
 
-            {/* Department Tags (Right aligned flow) */}
-            <div className="flex items-center gap-2 pr-4 overflow-visible">
-              {departments.map(dept => {
-                const isHidden = hiddenDeptIds.includes(dept.id);
-                return (
-                  <button
-                    key={dept.id}
-                    onClick={() => toggleDeptVisibility(dept.id)}
-                    className={`
-whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[11px] font-black transition-all duration-300 border flex items-center gap-2 select-none
-                                  ${isHidden
-                        ? 'bg-white/5 text-gray-500 border-white/5 opacity-40 hover:opacity-100'
-                        : `border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.1)] hover:brightness-110 text-[#081429] ${dept.color} ring-1 ring-white/10 transform hover:-translate-y-0.5`
-                      }
-`}
-                  >
-                    {dept.name}
-                    {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
-                  </button>
-                )
-              })}
-            </div>
+            {departments.map(dept => {
+              const isHidden = hiddenDeptIds.includes(dept.id);
+              return (
+                <button
+                  key={dept.id}
+                  onClick={() => toggleDeptVisibility(dept.id)}
+                  className={`
+                      whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[11px] font-black transition-all duration-300 border flex items-center gap-2 select-none
+                      ${isHidden
+                      ? 'bg-white/5 text-gray-500 border-white/5 opacity-40 hover:opacity-100'
+                      : `border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.1)] hover:brightness-110 text-[#081429] ring-1 ring-white/10 transform hover:-translate-y-0.5`
+                    }
+                      ${!isHidden && !dept.color.startsWith('#') ? dept.color : ''}
+                    `}
+                  style={{
+                    backgroundColor: !isHidden && dept.color.startsWith('#') ? dept.color : undefined
+                  }}
+                >
+                  {dept.name}
+                  {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                </button>
+              )
+            })}
           </div>
         </div>
-      </header>
+    </div>
+      </header >
 
-      <main className="flex-1 overflow-auto p-4 md:p-8 print:p-0">
-        <div className="max-w-[1920px] mx-auto min-h-screen print:p-0">
-          <div className="flex flex-col xl:flex-row gap-8 print:flex-row print:gap-4">
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className="w-full flex-1 max-w-[1920px] mx-auto min-h-screen print:p-0 flex flex-col xl:flex-row gap-8 print:flex-row print:gap-4">
+          <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0">
             <CalendarBoard
               currentDate={baseDate}
               onDateChange={setBaseDate}
@@ -319,10 +344,13 @@ whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[11px] font-black transition-all
               events={events}
               onCellClick={handleCellClick}
               onRangeSelect={handleRangeSelect}
+              onTimeSlotClick={handleTimeSlotClick} // Pass handler
               onEventClick={handleEventClick}
               viewMode={viewMode}
             />
+          </div>
 
+          <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0">
             <CalendarBoard
               currentDate={rightDate}
               onDateChange={(date) => setBaseDate(addYears(date, 1))}
@@ -330,6 +358,7 @@ whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[11px] font-black transition-all
               events={events}
               onCellClick={handleCellClick}
               onRangeSelect={handleRangeSelect}
+              onTimeSlotClick={handleTimeSlotClick} // Pass handler
               onEventClick={handleEventClick}
               viewMode={viewMode}
             />
@@ -343,8 +372,11 @@ whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[11px] font-black transition-all
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
         initialDate={selectedDate}
-        existingEvent={editingEvent}
+        initialEndDate={selectedEndDate}
         initialDepartmentId={selectedDeptId}
+        initialStartTime={initialStartTime} // Pass time
+        initialEndTime={initialEndTime}     // Pass time
+        existingEvent={editingEvent}
         departments={departments}
       />
 
@@ -353,7 +385,7 @@ whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[11px] font-black transition-all
         onClose={() => setIsSettingsOpen(false)}
         departments={departments}
       />
-    </div>
+    </div >
   );
 };
 
