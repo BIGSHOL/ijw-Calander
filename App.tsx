@@ -440,6 +440,7 @@ const App: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         departments={departments}
+        currentUserProfile={userProfile}
       />
 
       {/* Access Denied / Pending Approval Overlay */}
