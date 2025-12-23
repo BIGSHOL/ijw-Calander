@@ -11,6 +11,32 @@ interface SettingsModalProps {
   departments: Department[];
 }
 
+import React, { useState } from 'react';
+import { Department } from '../types';
+import { X, Plus, Trash2, GripVertical, Check, FolderKanban } from 'lucide-react';
+import { db } from '../firebaseConfig';
+import { setDoc, doc, deleteDoc } from 'firebase/firestore';
+
+interface SettingsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  departments: Department[];
+  onAddDepartment: (name: string) => Promise<void>;
+  onDeleteDepartment: (id: string) => Promise<void>;
+  onUpdateDepartments: (departments: Department[]) => Promise<void>;
+}
+
+const DEPT_COLOR_OPTIONS = [
+  { label: '빨강', class: 'bg-red-50', hex: '#fef2f2', border: 'border-red-200', text: 'text-red-800' },
+  { label: '주황', class: 'bg-orange-50', hex: '#fff7ed', border: 'border-orange-200', text: 'text-orange-800' },
+  { label: '노랑', class: 'bg-yellow-50', hex: '#fefce8', border: 'border-yellow-200', text: 'text-yellow-800' },
+  { label: '초록', class: 'bg-green-50', hex: '#f0fdf4', border: 'border-green-200', text: 'text-green-800' },
+  { label: '파랑', class: 'bg-blue-50', hex: '#eff6ff', border: 'border-blue-200', text: 'text-blue-800' },
+  { label: '보라', class: 'bg-purple-50', hex: '#faf5ff', border: 'border-purple-200', text: 'text-purple-800' },
+  { label: '분홍', class: 'bg-pink-50', hex: '#fdf2f8', border: 'border-pink-200', text: 'text-pink-800' },
+  { label: '회색', class: 'bg-gray-50', hex: '#f9fafb', border: 'border-gray-200', text: 'text-gray-800' },
+];
+
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
@@ -19,28 +45,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newDeptName, setNewDeptName] = useState('');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
+  // State for popover active department id to show color picker
+  const [activeColorPickerId, setActiveColorPickerId] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
+  // New Department Logic
   const handleAdd = async () => {
     if (!newDeptName.trim()) return;
+    const newDeptCode = crypto.randomUUID();
     const newDept: Department = {
-      id: crypto.randomUUID(),
+      id: newDeptCode,
       name: newDeptName,
       order: departments.length + 1,
-      color: 'bg-white',
+      color: 'bg-white', // Default
     };
     try {
       await setDoc(doc(db, "부서목록", newDept.id), {
         부서명: newDept.name,
         순서: newDept.order,
-        색상: newDept.color
+        색상: newDept.color,
+        설명: ''
       });
       setNewDeptName('');
     } catch (e) { console.error(e); }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('이 부서와 관련된 일정이 표시되지 않을 수 있습니다. 삭제하시겠습니까?')) {
+    if (confirm('이 부서와 관련된 일정이 표시되지 않을 수 있습니다. 정말 삭제하시겠습니까?')) {
       try {
         await deleteDoc(doc(db, "부서목록", id));
       } catch (e) { console.error(e); }
@@ -48,15 +80,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleUpdate = async (id: string, field: keyof Department, value: string) => {
-    const dept = departments.find(d => d.id === id);
-    if (!dept) return;
-
-    // Map internal key to Korean field name
     const fieldMap: Record<string, string> = {
       name: '부서명',
       order: '순서',
       color: '색상',
-      description: '설명' // Added description mapping
+      description: '설명'
     };
     const dbField = fieldMap[field];
     if (!dbField) return;
@@ -68,81 +96,55 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     } catch (e) { console.error(e); }
   };
 
-  // Drag and Drop Logic
+  // Simplified DnD for now (no reorder persistence in this snippet request, keeping it visual mostly)
   const onDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
-    e.dataTransfer.effectAllowed = "move";
-    // Required for Firefox
-    e.dataTransfer.setData("text/plain", index.toString());
   };
-
-  const onDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
-    // Visual reordering only (not persisting locally until drop/end)
-    const newDepts = [...departments];
-    const item = newDepts.splice(draggedIndex, 1)[0];
-    newDepts.splice(index, 0, item);
-    // Note: We can't easily animate Firestore updates via drag-over without local state override.
-    // For this simple implementation, we might skip the live preview, or complexify.
-    // Let's just allow drag, but only commit on DragEnd or Drop.
-    // Actually, to show the preview we need local state.
-    // But since `departments` is props from Firestore, we can't `setDepartments`.
-    // Skipping live preview reorder for now to avoid complexity, or just commit on drop?
-    // Committing on drag-over is too many writes.
-    // Better: Don't implement DnD reorder for now, or use a local copy.
-    // Let's rely on standard DnD but only write on Drop?
-    // User expects DnD. I will simple remove the `setDepartments` call in dragOver and just update `draggedIndex`.
-    // Wait, the original code used `setDepartments(newDepts)` to show the swap. 
-    // To support this with Firestore, we need a local state copy `localDepartments`.
-  };
-
-  const onDragEnd = async () => {
-    // Re-implementing DnD with local state is better, but given constraints:
-    // Let's alert that reordering is disabled for now or fix it.
-    // Fix:
-    // Since I can't easily do it without local state, and the user didn't explicitly ask for DnD to be preserved perfectly:
-    // I will remove the drag handlers to prevent errors for now, or just leave it non-functional but error-free.
+  const onDragEnd = () => {
     setDraggedIndex(null);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden relative border border-gray-200 animate-in fade-in slide-in-from-bottom-8 duration-300">
-        {/* Modal Header */}
-        <div className="bg-[#081429] p-6 flex justify-between items-center text-white">
-          <div>
-            <h2 className="text-xl font-black">부서 및 라인 관리</h2>
-            <p className="text-gray-400 text-xs mt-1 font-medium">부서를 드래그하여 순서를 변경할 수 있습니다.</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-300 hover:text-white">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-0 relative max-h-[90vh] overflow-hidden border border-gray-200">
+
+        {/* Header - Matching EventModal */}
+        <div className="bg-[#081429] p-4 flex justify-between items-center text-white">
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <FolderKanban size={20} className="text-[#fdb813]" />
+            부서 및 라인 관리
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <X size={24} />
           </button>
         </div>
 
-        <div className="p-8 space-y-6 max-h-[75vh] overflow-y-auto">
+        <div className="p-4 space-y-4 overflow-y-auto max-h-[calc(90vh-64px)]">
           {/* Add Section */}
-          <div className="flex gap-3 bg-[#f8fafc] p-4 rounded-2xl border border-gray-200">
+          <div className="flex gap-2">
             <input
               type="text"
               value={newDeptName}
               onChange={(e) => setNewDeptName(e.target.value)}
-              placeholder="새 부서 이름을 입력하세요"
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent transition-all font-bold"
+              placeholder="새 부서 이름"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-[#fdb813]/50 focus:border-[#fdb813] transition-all font-bold text-sm"
               onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
             />
             <button
               onClick={handleAdd}
-              className="px-6 py-3 bg-[#081429] text-[#fdb813] rounded-xl hover:bg-[#0a1a33] flex items-center gap-2 font-black shadow-md transition-all active:scale-95"
+              disabled={!newDeptName.trim()}
+              className="px-4 py-2 bg-[#081429] text-[#fdb813] rounded-lg hover:brightness-110 flex items-center gap-1 font-bold shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
-              <Plus size={20} /> 추가
+              <Plus size={16} /> 추가
             </button>
           </div>
 
-          {/* List Section */}
-          <div className="space-y-3">
+          <div className="h-px bg-gray-100 my-2" />
+
+          {/* Department List */}
+          <div className="space-y-3 pb-20"> {/* Padding for color picker popover space */}
             {departments.length === 0 ? (
-              <div className="text-center py-12 text-gray-400 font-medium bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+              <div className="text-center py-8 text-gray-400 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200">
                 등록된 부서가 없습니다.
               </div>
             ) : (
@@ -151,59 +153,93 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   key={dept.id}
                   draggable
                   onDragStart={(e) => onDragStart(e, index)}
-                  onDragOver={(e) => onDragOver(e, index)}
                   onDragEnd={onDragEnd}
                   className={`
-                    group p-4 flex items-start gap-4 bg-white border border-gray-200 rounded-2xl shadow-sm transition-all
-                    ${draggedIndex === index ? 'opacity-40 scale-95 border-dashed border-[#fdb813]' : 'hover:border-[#fdb813] hover:shadow-md'}
-                  `}
+                     relative group p-3 bg-white border border-gray-200 rounded-xl shadow-sm transition-all hover:shadow-md
+                     ${draggedIndex === index ? 'opacity-40 border-dashed border-[#fdb813]' : 'hover:border-[#fdb813]/30'}
+                   `}
                 >
-                  <div className="flex flex-col gap-1 pt-3 text-gray-400 cursor-grab active:cursor-grabbing hover:text-[#081429] transition-colors">
-                    <GripVertical size={24} />
-                  </div>
+                  <div className="flex items-start gap-3">
+                    {/* Drag Handle */}
+                    <div className="mt-2 text-gray-300 cursor-grab hover:text-gray-500">
+                      <GripVertical size={16} />
+                    </div>
 
-                  <div className="flex-1 space-y-3">
-                    <div className="flex gap-3">
+                    {/* Content */}
+                    <div className="flex-1 space-y-2">
+                      {/* Row 1: Name and Color */}
+                      <div className="flex items-center gap-2">
+                        {/* Color Picker Trigger */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setActiveColorPickerId(activeColorPickerId === dept.id ? null : dept.id)}
+                            className={`w-8 h-8 rounded-full border shadow-sm flex items-center justify-center transition-transform hover:scale-105 ${dept.color.replace('bg-', 'bg-') || 'bg-white'}`}
+                            title="색상 변경"
+                            style={{ borderWidth: '2px' }}
+                          >
+                            <div className="w-2 h-2 rounded-full bg-black/10" />
+                          </button>
+
+                          {/* Color Picker Popover */}
+                          {activeColorPickerId === dept.id && (
+                            <div className="absolute top-10 left-0 bg-white p-3 rounded-xl shadow-xl border border-gray-100 z-20 grid grid-cols-4 gap-2 w-[180px] animate-in slide-in-from-top-2 fade-in duration-200">
+                              {DEPT_COLOR_OPTIONS.map((option) => (
+                                <button
+                                  key={option.class}
+                                  onClick={() => {
+                                    handleUpdate(dept.id, 'color', option.class);
+                                    setActiveColorPickerId(null);
+                                  }}
+                                  className={`w-8 h-8 rounded-full ${option.class} border-2 ${dept.color === option.class ? 'border-black' : 'border-transparent hover:border-gray-300'} shadow-sm transition-all`}
+                                  title={option.label}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Name Input */}
+                        <input
+                          type="text"
+                          value={dept.name}
+                          onChange={(e) => handleUpdate(dept.id, 'name', e.target.value)}
+                          className="flex-1 px-2 py-1.5 font-bold text-[#081429] border-b border-transparent hover:border-gray-200 focus:border-[#fdb813] outline-none transition-colors bg-transparent"
+                        />
+
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => handleDelete(dept.id)}
+                          className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      {/* Row 2: Description */}
                       <input
                         type="text"
-                        value={dept.name}
-                        onChange={(e) => handleUpdate(dept.id, 'name', e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-100 rounded-lg font-black text-[#081429] bg-gray-50/50 focus:bg-white focus:ring-1 focus:ring-[#fdb813] outline-none transition-all"
-                        placeholder="부서명"
+                        value={dept.description || ''}
+                        onChange={(e) => handleUpdate(dept.id, 'description', e.target.value)}
+                        className="w-full px-2 py-1 text-xs text-gray-500 bg-gray-50 rounded border border-transparent focus:bg-white focus:border-[#fdb813] outline-none transition-all placeholder:text-gray-300"
+                        placeholder="부서 설명"
                       />
-                      <button
-                        onClick={() => handleDelete(dept.id)}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                      >
-                        <Trash2 size={20} />
-                      </button>
                     </div>
-                    <textarea
-                      value={dept.description || ''}
-                      onChange={(e) => handleUpdate(dept.id, 'description', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-100 rounded-lg text-sm text-[#373d41] bg-gray-50/50 focus:bg-white focus:ring-1 focus:ring-[#fdb813] outline-none resize-none transition-all"
-                      placeholder="부서 설명 (예: Vision: 글로벌 인재 육성...)"
-                      rows={2}
-                    />
                   </div>
                 </div>
               ))
             )}
           </div>
         </div>
-
-        {/* Modal Footer */}
-        <div className="bg-gray-50 p-6 border-t border-gray-200 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-8 py-3 bg-[#081429] text-white rounded-xl font-bold hover:brightness-110 shadow-lg active:scale-95 transition-all"
-          >
-            닫기
-          </button>
-        </div>
       </div>
+
+      {/* Backdrop click to close color picker */}
+      {activeColorPickerId && (
+        <div className="fixed inset-0 z-10" onClick={() => setActiveColorPickerId(null)} />
+      )}
     </div>
   );
 };
+
+export default SettingsModal;
 
 export default SettingsModal;
