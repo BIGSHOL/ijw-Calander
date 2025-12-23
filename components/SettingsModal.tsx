@@ -32,16 +32,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // System Config State
   const [lookbackYears, setLookbackYears] = useState<number>(2);
 
-  // Fetch Users if Tab is 'users' and User is Master
+  // --- Creation State (Added at top level) ---
+  const [isCreating, setIsCreating] = useState(false);
+  const [createOption, setCreateOption] = useState<'me' | 'all' | 'specific'>('me');
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+
+  const toggleUserSelection = (uid: string) => {
+    setSelectedUserIds(prev =>
+      prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid]
+    );
+  };
+
+  // Fetch Users if needed (Master OR Menu Manager)
   useEffect(() => {
-    if (activeTab === 'users' && isMaster) {
+    // We need users list if (Tab is 'users' and Master) OR (we're creating a department and need to select users)
+    if (isMaster || canManageMenus) {
       const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
         const loadUsers = snapshot.docs.map(doc => doc.data() as UserProfile);
         setUsers(loadUsers);
       });
       return () => unsubscribe();
     }
-  }, [activeTab, isMaster]);
+  }, [isMaster, canManageMenus, activeTab]); // Added activeTab to dep array just in case, but rationale suggests simplified logic is better. Let's keep it robust.
 
   // Fetch System Config if Tab is 'system' and User is Master
   useEffect(() => {
@@ -67,14 +79,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null;
 
   // --- Department Logic ---
+  // --- Department Logic ---
   const handleAdd = async () => {
     if (!newDeptName.trim()) return;
     const newDept: Department = {
-      id: newDeptName.trim().replace(/\//g, '_'), // Sanitize ID
+      id: newDeptName.trim().replace(/\//g, '_'),
       name: newDeptName.trim(),
       order: departments.length + 1,
-      color: '#ffffff', // Default to Hex
+      color: '#ffffff',
     };
+
     try {
       await setDoc(doc(db, "부서목록", newDept.id), {
         부서명: newDept.name,
@@ -82,8 +96,50 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         색상: newDept.color,
         설명: ''
       });
+
+      // Permission Grant Logic
+      const batch = writeBatch(db);
+
+      // 1. Grant to Creator (if not Master)
+      if (!isMaster && currentUserProfile) {
+        const userRef = doc(db, 'users', currentUserProfile.uid);
+        const currentAllowed = currentUserProfile.allowedDepartments || [];
+        batch.update(userRef, { allowedDepartments: [...currentAllowed, newDept.id] });
+      }
+
+      // 2. Handle Options
+      if (createOption === 'all') {
+        users.forEach(user => {
+          if (user.uid === currentUserProfile?.uid) return; // Already handled
+          const currentAllowed = user.allowedDepartments || [];
+          if (!currentAllowed.includes(newDept.id)) {
+            batch.update(doc(db, 'users', user.uid), {
+              allowedDepartments: [...currentAllowed, newDept.id]
+            });
+          }
+        });
+      } else if (createOption === 'specific') {
+        selectedUserIds.forEach(uid => {
+          if (uid === currentUserProfile?.uid) return;
+          const targetUser = users.find(u => u.uid === uid);
+          if (targetUser) {
+            const currentAllowed = targetUser.allowedDepartments || [];
+            if (!currentAllowed.includes(newDept.id)) {
+              batch.update(doc(db, 'users', uid), {
+                allowedDepartments: [...currentAllowed, newDept.id]
+              });
+            }
+          }
+        });
+      }
+
+      await batch.commit();
+
       setNewDeptName('');
-    } catch (e) { console.error(e); }
+      setIsCreating(false);
+      setCreateOption('me');
+      setSelectedUserIds([]);
+    } catch (e) { console.error(e); alert("부서 생성 실패"); }
   };
 
   const handleDelete = async (id: string) => {
@@ -236,23 +292,93 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           {activeTab === 'departments' && canManageMenus && (
             <div className="space-y-4 max-w-lg mx-auto">
               {/* Add Section */}
-              <div className="flex gap-2 bg-white p-3 rounded-xl shadow-sm border border-gray-200">
-                <input
-                  type="text"
-                  value={newDeptName}
-                  onChange={(e) => setNewDeptName(e.target.value)}
-                  placeholder="새 부서 이름"
-                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#fdb813]/50 focus:border-[#fdb813] transition-all font-bold text-sm"
-                  onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                />
+              {!isCreating ? (
                 <button
-                  onClick={handleAdd}
-                  disabled={!newDeptName.trim()}
-                  className="px-4 py-2 bg-[#081429] text-[#fdb813] rounded-lg hover:brightness-110 flex items-center gap-1 font-bold shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  onClick={() => setIsCreating(true)}
+                  className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 font-bold hover:border-[#fdb813] hover:text-[#fdb813] transition-all flex items-center justify-center gap-2"
                 >
-                  <Plus size={16} /> 추가
+                  <Plus size={20} /> 새 부서 만들기
                 </button>
-              </div>
+              ) : (
+                <div className="bg-white p-4 rounded-xl shadow-lg border border-[#fdb813] space-y-4">
+                  <h4 className="font-bold text-[#081429] flex items-center gap-2 text-sm">
+                    <FolderKanban size={16} /> 새 부서 생성
+                  </h4>
+
+                  <input
+                    type="text"
+                    value={newDeptName}
+                    onChange={(e) => setNewDeptName(e.target.value)}
+                    placeholder="부서 이름 입력"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#fdb813]/50 font-bold text-sm"
+                    autoFocus
+                  />
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">접근 권한 설정</p>
+
+                    {/* Option: Only Me */}
+                    <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-100">
+                      <input type="radio" name="createOption" checked={createOption === 'me'} onChange={() => setCreateOption('me')} className="accent-[#fdb813]" />
+                      <div className="text-sm">
+                        <span className="font-bold text-[#081429]">나만 보기</span>
+                        <p className="text-xs text-gray-400">본인에게만 권한이 자동 부여됩니다.</p>
+                      </div>
+                    </label>
+
+                    {/* Option: Everyone */}
+                    <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-100">
+                      <input type="radio" name="createOption" checked={createOption === 'all'} onChange={() => setCreateOption('all')} className="accent-[#fdb813]" />
+                      <div className="text-sm">
+                        <span className="font-bold text-[#081429]">모든 사용자에게 허용</span>
+                        <p className="text-xs text-gray-400">현재 등록된 모든 회원에게 권한을 부여합니다.</p>
+                      </div>
+                    </label>
+
+                    {/* Option: Specific */}
+                    <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-100">
+                      <input type="radio" name="createOption" checked={createOption === 'specific'} onChange={() => setCreateOption('specific')} className="accent-[#fdb813]" />
+                      <div className="text-sm">
+                        <span className="font-bold text-[#081429]">특정 사용자 선택</span>
+                        <p className="text-xs text-gray-400">선택한 사용자들에게만 권한을 부여합니다.</p>
+                      </div>
+                    </label>
+
+                    {/* Specific User Selector */}
+                    {createOption === 'specific' && (
+                      <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1 bg-gray-50">
+                        {users.filter(u => u.uid !== currentUserProfile?.uid).map(u => (
+                          <label key={u.uid} className="flex items-center gap-2 p-1.5 hover:bg-white rounded cursor-pointer transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={selectedUserIds.includes(u.uid)}
+                              onChange={() => toggleUserSelection(u.uid)}
+                              className="rounded border-gray-300 accent-[#081429]"
+                            />
+                            <span className="text-xs font-medium text-gray-700">{u.email} ({u.jobTitle || '직급없음'})</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={handleAdd}
+                      disabled={!newDeptName.trim()}
+                      className="flex-1 bg-[#081429] text-white py-2 rounded-lg font-bold text-sm hover:brightness-110 disabled:opacity-50"
+                    >
+                      생성하기
+                    </button>
+                    <button
+                      onClick={() => setIsCreating(false)}
+                      className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg font-bold text-sm hover:bg-gray-200"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Department List */}
               <div className="space-y-3 pb-20">
