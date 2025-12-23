@@ -13,6 +13,7 @@ interface CalendarBoardProps {
   events: CalendarEvent[];
   onCellClick: (date: string, deptId: string) => void;
   onRangeSelect: (startDate: string, endDate: string, deptId: string) => void;
+  onTimeSlotClick: (date: string, time: string) => void; // New Prop
   onEventClick: (event: CalendarEvent) => void;
   isPrintMode?: boolean;
   viewMode: 'daily' | 'weekly' | 'monthly';
@@ -22,8 +23,9 @@ const DailyView: React.FC<{
   date: Date,
   events: CalendarEvent[],
   departments: Department[],
-  onEventClick: (event: CalendarEvent) => void
-}> = ({ date, events, departments, onEventClick }) => {
+  onEventClick: (event: CalendarEvent) => void,
+  onTimeSlotClick: (date: string, time: string) => void // New Prop
+}> = ({ date, events, departments, onEventClick, onTimeSlotClick }) => {
   // Filter events for this day
   const todaysEvents = events.filter(e => {
     const start = parseISO(e.startDate);
@@ -33,8 +35,9 @@ const DailyView: React.FC<{
   });
 
   // Separate All-Day vs Time-Based
-  const allDayEvents = todaysEvents.filter(e => e.isAllDay);
-  const timeEvents = todaysEvents.filter(e => !e.isAllDay);
+  // Robustness: Treat valid AllDay flag OR empty times as All Day
+  const allDayEvents = todaysEvents.filter(e => e.isAllDay || (!e.startTime && !e.endTime));
+  const timeEvents = todaysEvents.filter(e => !allDayEvents.includes(e));
 
   // Time Grid settings
   const HOUR_HEIGHT = 80;
@@ -57,7 +60,13 @@ const DailyView: React.FC<{
                 <div
                   key={event.id}
                   onClick={() => onEventClick(event)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border-l-4 shadow-sm cursor-pointer hover:brightness-95 flex items-center gap-2 ${dept?.color || 'bg-gray-100 border-gray-300'}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border-l-4 shadow-sm cursor-pointer hover:brightness-95 flex items-center gap-2 
+                    ${dept?.color && !dept.color.startsWith('#') ? dept.color : 'bg-gray-100 border-gray-300'}
+                  `}
+                  style={{
+                    backgroundColor: dept?.color?.startsWith('#') ? dept.color : undefined,
+                    borderLeftColor: dept?.color?.startsWith('#') ? dept.color : undefined // Or darker? simple is fine
+                  }}
                 >
                   <span className="bg-white/50 px-1.5 rounded text-[10px] uppercase tracking-wider text-gray-700">All Day</span>
                   <span className="truncate">{event.title}</span>
@@ -76,10 +85,15 @@ const DailyView: React.FC<{
           {Array.from({ length: 24 }).map((_, hour) => (
             <div
               key={hour}
-              className="absolute w-full border-t border-gray-100 flex"
+              className="absolute w-full border-t border-gray-100 flex hover:bg-gray-50 cursor-pointer" // Add hover and pointer
               style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+              onClick={() => {
+                // Click to create event at this hour
+                const timeStr = `${String(hour).padStart(2, '0')}:00`;
+                onTimeSlotClick(format(date, 'yyyy-MM-dd'), timeStr);
+              }}
             >
-              <div className="w-16 shrink-0 text-xs font-bold text-gray-400 text-center -mt-2.5 bg-white pr-2">
+              <div className="w-16 shrink-0 text-xs font-bold text-gray-400 text-center -mt-2.5 bg-white pr-2 pointer-events-none">
                 {String(hour).padStart(2, '0')}:00
               </div>
               <div className="flex-1" />
@@ -109,8 +123,15 @@ const DailyView: React.FC<{
                 <div
                   key={event.id}
                   onClick={() => onEventClick(event)}
-                  className={`absolute left-2 right-2 rounded-lg border-l-4 p-2 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden group z-10 ${dept?.color || 'bg-white border-gray-200'}`}
-                  style={{ top: `${top}px`, height: `${Math.max(height, 30)}px` }} // Min height 30px for visibility
+                  className={`absolute left-2 right-2 rounded-lg border-l-4 p-2 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden group z-10 
+                    ${dept?.color && !dept.color.startsWith('#') ? dept.color : 'bg-white border-gray-200'}
+                  `}
+                  style={{
+                    top: `${top}px`,
+                    height: `${Math.max(height, 30)}px`,
+                    backgroundColor: dept?.color?.startsWith('#') ? dept.color : undefined,
+                    borderLeftColor: dept?.color?.startsWith('#') ? dept.color : undefined
+                  }}
                 >
                   <div className="flex flex-col h-full">
                     <div className="flex items-center justify-between">
@@ -155,6 +176,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   events,
   onCellClick,
   onRangeSelect,
+  onTimeSlotClick, // Destructure this
   onEventClick,
   isPrintMode = false,
   viewMode
@@ -215,6 +237,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           events={events}
           departments={departments}
           onEventClick={onEventClick}
+          onTimeSlotClick={onTimeSlotClick}
         />
       ) : (
         <div className="space-y-4">
