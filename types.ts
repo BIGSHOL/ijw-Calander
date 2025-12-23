@@ -16,6 +16,7 @@ export interface CalendarEvent {
   endDate: string;   // ISO Date YYYY-MM-DD
   startTime?: string; // HH:mm
   endTime?: string;   // HH:mm
+  isAllDay?: boolean;
   color: string;     // Hex or Tailwind class
 }
 

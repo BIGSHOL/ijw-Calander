@@ -42,6 +42,7 @@ const eventConverter = {
       종료일: event.endDate,
       시작시간: event.startTime || '',
       종료시간: event.endTime || '',
+      하루종일: event.isAllDay || false,
       색상: event.color
     };
   },
@@ -57,6 +58,7 @@ const eventConverter = {
       endDate: data.종료일,
       startTime: data.시작시간,
       endTime: data.종료시간,
+      isAllDay: data.하루종일,
       color: data.색상,
     } as CalendarEvent;
   }

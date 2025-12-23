@@ -35,6 +35,7 @@ const EventModal: React.FC<EventModalProps> = ({
   const [endDate, setEndDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [isAllDay, setIsAllDay] = useState(false);
   const [colorIndex, setColorIndex] = useState(0);
 
   useEffect(() => {
@@ -48,6 +49,7 @@ const EventModal: React.FC<EventModalProps> = ({
         setEndDate(existingEvent.endDate);
         setStartTime(existingEvent.startTime || '');
         setEndTime(existingEvent.endTime || '');
+        setIsAllDay(existingEvent.isAllDay || false);
         const cIndex = EVENT_COLORS.findIndex(c => c.value === existingEvent.color);
         setColorIndex(cIndex !== -1 ? cIndex : 0);
       } else {
@@ -64,6 +66,7 @@ const EventModal: React.FC<EventModalProps> = ({
         const timeStr = format(now, 'HH:mm');
         setStartTime(timeStr);
         setEndTime(timeStr);
+        setIsAllDay(false);
 
         setColorIndex(0);
       }
@@ -97,8 +100,9 @@ const EventModal: React.FC<EventModalProps> = ({
       departmentId,
       startDate,
       endDate,
-      startTime,
-      endTime,
+      startTime: isAllDay ? '' : startTime,
+      endTime: isAllDay ? '' : endTime,
+      isAllDay,
       color: EVENT_COLORS[colorIndex].value,
     });
     onClose();
@@ -160,6 +164,18 @@ const EventModal: React.FC<EventModalProps> = ({
             <div className="space-y-1.5">
               <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider flex items-center gap-1">
                 <Clock size={14} className="text-[#fdb813]" /> 시작
+                <div className="ml-auto flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    id="allDay"
+                    checked={isAllDay}
+                    onChange={(e) => setIsAllDay(e.target.checked)}
+                    className="w-4 h-4 rounded text-[#fdb813] focus:ring-[#fdb813] border-gray-300"
+                  />
+                  <label htmlFor="allDay" className="text-xs font-bold text-gray-500 cursor-pointer select-none">
+                    하루종일
+                  </label>
+                </div>
               </label>
               <div className="flex gap-2">
                 <input
@@ -169,12 +185,14 @@ const EventModal: React.FC<EventModalProps> = ({
                   onChange={(e) => setStartDate(e.target.value)}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
                 />
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-36 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
-                />
+                {!isAllDay && (
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-36 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
+                  />
+                )}
               </div>
             </div>
 
@@ -191,12 +209,14 @@ const EventModal: React.FC<EventModalProps> = ({
                   onChange={(e) => setEndDate(e.target.value)}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
                 />
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-36 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
-                />
+                {!isAllDay && (
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-36 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
+                  />
+                )}
               </div>
             </div>
           </div>
