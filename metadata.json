@@ -1,0 +1,5 @@
+{
+  "name": "DeptAnnualCalendar",
+  "description": "A departmental annual schedule planner featuring a vertical weekly matrix layout similar to Excel planners.",
+  "requestFramePermissions": []
+}
