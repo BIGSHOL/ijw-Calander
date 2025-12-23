@@ -101,7 +101,7 @@ const DailyView: React.FC<{
           ))}
 
           {/* Time Events */}
-          <div className="absolute top-0 left-16 right-0 bottom-0">
+          <div className="absolute top-0 left-16 right-0 bottom-0 pointer-events-none">
             {timeEvents.map(event => {
               if (!event.startTime || !event.endTime) return null;
 
@@ -123,7 +123,7 @@ const DailyView: React.FC<{
                 <div
                   key={event.id}
                   onClick={() => onEventClick(event)}
-                  className={`absolute left-2 right-2 rounded-lg border-l-4 p-2 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden group z-10 
+                  className={`absolute left-2 right-2 rounded-lg border-l-4 p-2 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden group z-10 pointer-events-auto
                     ${dept?.color && !dept.color.startsWith('#') ? dept.color : 'bg-white border-gray-200'}
                   `}
                   style={{
