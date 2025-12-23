@@ -50,7 +50,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
     if (dragStart && dragEnd) {
       const start = dragStart.date < dragEnd ? dragStart.date : dragEnd;
       const end = dragStart.date < dragEnd ? dragEnd : dragStart.date;
-      
+
       if (isSameDay(start, end)) {
         onCellClick(format(start, 'yyyy-MM-dd'), dragStart.deptId);
       } else {
@@ -80,7 +80,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
   };
 
   return (
-    <div 
+    <div
       className="mb-4 border-b border-gray-200 last:border-b-0 break-inside-avoid select-none relative"
       onMouseLeave={() => { setDragStart(null); setDragEnd(null); }}
       onMouseUp={handleMouseUp}
@@ -94,10 +94,10 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
           const dayName = DAYS_OF_WEEK[idx];
           const isSun = idx === 0;
           const isSat = idx === 6;
-          
+
           return (
-            <div 
-              key={date.toISOString()} 
+            <div
+              key={date.toISOString()}
               className={`border-r border-gray-300 last:border-r-0 p-1 text-center h-10 flex flex-col items-center justify-center
                 ${isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-[#373d41]'}
                 ${isToday(date) ? 'bg-[#fdb813]/20 font-bold' : ''}
@@ -113,15 +113,16 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
       {/* Department Rows */}
       {departments.map((dept) => {
         const weekEvents = events.filter(e => {
-          if (e.departmentId !== dept.id) return false;
+          // Compatibility: Match by ID or Name (for cases where old IDs like 'school' exist but new events use '학교일정')
+          if (e.departmentId !== dept.id && e.departmentId !== dept.name) return false;
           const start = parseISO(e.startDate);
           const end = parseISO(e.endDate);
           return (start <= weekEnd && end >= weekStart);
         });
 
         return (
-          <div 
-            key={dept.id} 
+          <div
+            key={dept.id}
             className={`${gridClass} border-t border-l border-r border-gray-200 bg-white min-h-[60px] relative group`}
           >
             {/* Sidebar Cell */}
@@ -150,9 +151,9 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
               {weekEvents.map(event => {
                 const pos = getEventPositionInWeek(event, weekStart, weekEnd);
                 const colorDef = EVENT_COLORS.find(c => c.value === event.color) || EVENT_COLORS[0];
-                
+
                 const style = {
-                  gridColumnStart: pos.colStart - 1, 
+                  gridColumnStart: pos.colStart - 1,
                   gridColumnEnd: `span ${pos.colSpan}`,
                 };
 
@@ -177,13 +178,13 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                     `}
                     title=""
                   >
-                    <div 
-                      className="absolute inset-0" 
-                      style={{ backgroundColor: colorDef.value }} 
+                    <div
+                      className="absolute inset-0"
+                      style={{ backgroundColor: colorDef.value }}
                     />
-                     <div 
-                      className="absolute inset-0 border" 
-                      style={{ borderColor: colorDef.border }} 
+                    <div
+                      className="absolute inset-0 border"
+                      style={{ borderColor: colorDef.border }}
                     />
                     <span className="relative z-10 truncate" style={{ color: colorDef.text }}>
                       {event.title}
@@ -198,50 +199,50 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
 
       {/* Custom Tooltip Portal/Overlay - Header color #081429 */}
       {hoveredEvent && tooltipPos && (
-        <div 
+        <div
           className="fixed z-[9999] w-72 bg-white rounded-lg shadow-2xl border border-gray-200 pointer-events-none text-left animate-in fade-in zoom-in-95 duration-100"
-          style={{ 
+          style={{
             left: `${Math.min(tooltipPos.x - 144, window.innerWidth - 300)}px`,
             top: `${Math.min(tooltipPos.y, window.innerHeight - 200)}px`
           }}
         >
-          <div 
-             className="h-2 rounded-t-lg w-full bg-[#081429]"
+          <div
+            className="h-2 rounded-t-lg w-full bg-[#081429]"
           />
           <div className="p-4 space-y-3">
-             <h3 className="text-lg font-bold text-[#081429] leading-tight">
-               {hoveredEvent.title}
-             </h3>
+            <h3 className="text-lg font-bold text-[#081429] leading-tight">
+              {hoveredEvent.title}
+            </h3>
 
-             <div className="flex items-start gap-2 text-sm text-gray-600">
-               <Clock size={16} className="mt-0.5 shrink-0 text-[#fdb813]" />
-               <div className="flex flex-col">
-                  <span className="font-bold text-[#373d41]">
-                    {hoveredEvent.startDate} {hoveredEvent.startTime ? hoveredEvent.startTime : ''}
+            <div className="flex items-start gap-2 text-sm text-gray-600">
+              <Clock size={16} className="mt-0.5 shrink-0 text-[#fdb813]" />
+              <div className="flex flex-col">
+                <span className="font-bold text-[#373d41]">
+                  {hoveredEvent.startDate} {hoveredEvent.startTime ? hoveredEvent.startTime : ''}
+                </span>
+                {(hoveredEvent.startDate !== hoveredEvent.endDate || hoveredEvent.startTime !== hoveredEvent.endTime) && (
+                  <span className="text-gray-400 text-xs font-medium">
+                    ~ {hoveredEvent.endDate} {hoveredEvent.endTime ? hoveredEvent.endTime : ''}
                   </span>
-                  { (hoveredEvent.startDate !== hoveredEvent.endDate || hoveredEvent.startTime !== hoveredEvent.endTime) && (
-                     <span className="text-gray-400 text-xs font-medium">
-                       ~ {hoveredEvent.endDate} {hoveredEvent.endTime ? hoveredEvent.endTime : ''}
-                     </span>
-                  )}
-               </div>
-             </div>
-             
-             {hoveredEvent.participants && (
-               <div className="flex items-start gap-2 text-sm text-gray-600">
-                  <Users size={16} className="mt-0.5 shrink-0 text-gray-400" />
-                  <span className="font-medium">{hoveredEvent.participants}</span>
-               </div>
-             )}
+                )}
+              </div>
+            </div>
 
-             {hoveredEvent.description && (
-               <div className="flex items-start gap-2 text-sm text-gray-600 pt-2 border-t border-gray-100 mt-2">
-                 <AlignLeft size={16} className="mt-0.5 shrink-0 text-gray-400" />
-                 <p className="whitespace-pre-wrap leading-relaxed max-h-40 overflow-hidden line-clamp-6 text-xs italic">
-                    {hoveredEvent.description}
-                 </p>
-               </div>
-             )}
+            {hoveredEvent.participants && (
+              <div className="flex items-start gap-2 text-sm text-gray-600">
+                <Users size={16} className="mt-0.5 shrink-0 text-gray-400" />
+                <span className="font-medium">{hoveredEvent.participants}</span>
+              </div>
+            )}
+
+            {hoveredEvent.description && (
+              <div className="flex items-start gap-2 text-sm text-gray-600 pt-2 border-t border-gray-100 mt-2">
+                <AlignLeft size={16} className="mt-0.5 shrink-0 text-gray-400" />
+                <p className="whitespace-pre-wrap leading-relaxed max-h-40 overflow-hidden line-clamp-6 text-xs italic">
+                  {hoveredEvent.description}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
