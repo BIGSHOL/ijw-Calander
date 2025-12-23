@@ -110,13 +110,42 @@ const App: React.FC = () => {
       setCurrentUser(user);
       if (user) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+
           if (userDoc.exists()) {
-            setUserProfile(userDoc.data() as UserProfile);
+            const userData = userDoc.data() as UserProfile;
+
+            // Critical Fix: Force Master Role for specific email if not set
+            if (user.email === 'st2000423@gmail.com' && userData.role !== 'master') {
+              console.log("Auto-promoting master account...");
+              const updatedProfile: UserProfile = {
+                ...userData,
+                role: 'master',
+                status: 'approved',
+                canEdit: true
+              };
+              await setDoc(userDocRef, updatedProfile);
+              setUserProfile(updatedProfile);
+            } else {
+              setUserProfile(userData);
+            }
           } else {
-            // Fallback for users without profile (e.g. initial master setup manually?)
-            // For now, treat as Guest with no permissions or minimal?
-            setUserProfile(null);
+            // ... existing fallback ...
+            if (user.email === 'st2000423@gmail.com') {
+              const newMasterProfile: UserProfile = {
+                uid: user.uid,
+                email: user.email!,
+                role: 'master',
+                status: 'approved',
+                allowedDepartments: [],
+                canEdit: true
+              };
+              await setDoc(userDocRef, newMasterProfile);
+              setUserProfile(newMasterProfile);
+            } else {
+              setUserProfile(null);
+            }
           }
         } catch (error) {
           console.error("Error fetching user profile:", error);
