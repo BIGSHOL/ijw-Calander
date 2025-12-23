@@ -49,7 +49,9 @@ const EventModal: React.FC<EventModalProps> = ({
         setEndDate(existingEvent.endDate);
         setStartTime(existingEvent.startTime || '');
         setEndTime(existingEvent.endTime || '');
-        setIsAllDay(existingEvent.isAllDay || false);
+        // Legacy support/Robustness: If time is missing, it must be All Day
+        const isTimeEmpty = !existingEvent.startTime && !existingEvent.endTime;
+        setIsAllDay(existingEvent.isAllDay || isTimeEmpty);
         const cIndex = EVENT_COLORS.findIndex(c => c.value === existingEvent.color);
         setColorIndex(cIndex !== -1 ? cIndex : 0);
       } else {
