@@ -140,14 +140,19 @@ const App: React.FC = () => {
   const canEdit = isMaster || userProfile?.canEdit === true;
 
   // Filter Departments based on RBAC
+  // Filter Departments based on RBAC AND Local Toggles
   const visibleDepartments = departments.filter(d => {
-    // If Master, see all (unless hidden locally)
-    if (isMaster) return true;
-    // If User, see only allowed
-    if (userProfile?.allowedDepartments?.includes(d.id)) return true;
-    // If not logged in or no permissions, show nothing (or public?)
-    // Decision: Guests see NOTHING for security
-    return false;
+    // 1. RBAC Check
+    let allowed = false;
+    if (isMaster) allowed = true;
+    else if (userProfile?.allowedDepartments?.includes(d.id)) allowed = true;
+
+    if (!allowed) return false;
+
+    // 2. Local Toggle Check
+    if (hiddenDeptIds.includes(d.id)) return false;
+
+    return true;
   });
 
   // Handle time slot click from Daily View
@@ -253,7 +258,7 @@ const App: React.FC = () => {
     }
   };
 
-  const visibleDepartments = departments.filter(d => !hiddenDeptIds.includes(d.id));
+
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f4f8]">
@@ -436,6 +441,27 @@ const App: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)}
         departments={departments}
       />
+
+      {/* Access Denied / Pending Approval Overlay */}
+      {currentUser && userProfile?.status === 'pending' && (
+        <div className="fixed inset-0 bg-[#081429] z-50 flex flex-col items-center justify-center text-white p-8 text-center animate-in fade-in duration-300">
+          <div className="bg-white/10 p-6 rounded-full mb-6">
+            <Lock size={48} className="text-[#fdb813]" />
+          </div>
+          <h2 className="text-3xl font-black mb-4">관리자 승인 대기중</h2>
+          <p className="text-gray-300 max-w-md mb-8 leading-relaxed">
+            계정 생성이 완료되었으나, 관리자의 승인이 필요합니다.<br />
+            승인이 완료되면 이메일로 알림이 발송되지 않으니,<br />
+            잠시 후 다시 로그인해 확인해주세요.
+          </p>
+          <button
+            onClick={handleLogout}
+            className="px-6 py-3 bg-white text-[#081429] font-bold rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-2"
+          >
+            <LogOut size={20} /> 로그아웃
+          </button>
+        </div>
+      )}
     </div >
   );
 };
