@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay } from 'date-fns';
 import { CalendarEvent, Department } from './types';
@@ -7,8 +6,61 @@ import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
 import CalendarBoard from './components/CalendarBoard';
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle } from 'lucide-react';
+import { db } from './firebaseConfig';
+import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy } from 'firebase/firestore';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
+
+// Firestore Converters for Korean Localization
+const departmentConverter = {
+  toFirestore: (dept: Department) => {
+    return {
+      부서명: dept.name,
+      순서: dept.order,
+      색상: dept.color
+    };
+  },
+  fromFirestore: (snapshot: any, options: any) => {
+    const data = snapshot.data(options);
+    return {
+      id: snapshot.id,
+      name: data.부서명,
+      order: data.순서,
+      color: data.색상
+    } as Department;
+  }
+};
+
+const eventConverter = {
+  toFirestore: (event: CalendarEvent) => {
+    return {
+      제목: event.title,
+      상세내용: event.description || '',
+      참가자: event.participants || '',
+      부서ID: event.departmentId,
+      시작일: event.startDate,
+      종료일: event.endDate,
+      시작시간: event.startTime || '',
+      종료시간: event.endTime || '',
+      색상: event.color
+    };
+  },
+  fromFirestore: (snapshot: any, options: any) => {
+    const data = snapshot.data(options);
+    return {
+      id: snapshot.id,
+      title: data.제목,
+      description: data.상세내용,
+      participants: data.참가자,
+      departmentId: data.부서ID,
+      startDate: data.시작일,
+      endDate: data.종료일,
+      startTime: data.시작시간,
+      endTime: data.종료시간,
+      color: data.색상,
+    } as CalendarEvent;
+  }
+};
 
 // Embedded Injaewon Logo
 const INJAEWON_LOGO = "/logo.png";
@@ -18,14 +70,11 @@ const App: React.FC = () => {
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);
 
-  const [departments, setDepartments] = useState<Department[]>(() => {
-    const saved = localStorage.getItem('dept_departments');
-    return saved ? JSON.parse(saved) : INITIAL_DEPARTMENTS;
-  });
-  const [events, setEvents] = useState<CalendarEvent[]>(() => {
-    const saved = localStorage.getItem('dept_events');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Firestore Data State
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+
+  // Local Settings
   const [hiddenDeptIds, setHiddenDeptIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('dept_hidden_ids');
     return saved ? JSON.parse(saved) : [];
@@ -39,13 +88,34 @@ const App: React.FC = () => {
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
+  // Subscribe to Departments (부서목록)
   useEffect(() => {
-    localStorage.setItem('dept_departments', JSON.stringify(departments));
-  }, [departments]);
+    const q = query(collection(db, "부서목록").withConverter(departmentConverter), orderBy("순서"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadDepts = snapshot.docs.map(doc => doc.data());
+      if (loadDepts.length === 0) {
+        // Initialize if empty
+        const batch = writeBatch(db);
+        INITIAL_DEPARTMENTS.forEach(d => {
+          const ref = doc(db, "부서목록", d.id).withConverter(departmentConverter);
+          batch.set(ref, d);
+        });
+        batch.commit();
+      } else {
+        setDepartments(loadDepts);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
+  // Subscribe to Events (일정)
   useEffect(() => {
-    localStorage.setItem('dept_events', JSON.stringify(events));
-  }, [events]);
+    const unsubscribe = onSnapshot(collection(db, "일정").withConverter(eventConverter), (snapshot) => {
+      const loadEvents = snapshot.docs.map(doc => doc.data());
+      setEvents(loadEvents);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('dept_hidden_ids', JSON.stringify(hiddenDeptIds));
@@ -74,16 +144,23 @@ const App: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
-  const handleSaveEvent = (event: CalendarEvent) => {
-    if (editingEvent) {
-      setEvents(events.map(e => e.id === event.id ? event : e));
-    } else {
-      setEvents([...events, event]);
+  const handleSaveEvent = async (event: CalendarEvent) => {
+    try {
+      const ref = doc(db, "일정", event.id).withConverter(eventConverter);
+      await setDoc(ref, event);
+    } catch (e) {
+      console.error("Error saving event: ", e);
+      alert("일정 저장 실패");
     }
   };
 
-  const handleDeleteEvent = (id: string) => {
-    setEvents(events.filter(e => e.id !== id));
+  const handleDeleteEvent = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "일정", id));
+    } catch (e) {
+      console.error("Error deleting event: ", e);
+      alert("일정 삭제 실패");
+    }
   };
 
   const toggleDeptVisibility = (id: string) => {
@@ -158,19 +235,19 @@ const App: React.FC = () => {
             <div className="flex bg-[#373d41]/80 p-1 rounded-xl border border-white/5 shrink-0">
               <button
                 onClick={() => setViewMode('daily')}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${viewMode === 'daily' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'}`}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${viewMode === 'daily' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'} `}
               >
                 <List size={14} /> 일간
               </button>
               <button
                 onClick={() => setViewMode('weekly')}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${viewMode === 'weekly' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'}`}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${viewMode === 'weekly' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'} `}
               >
                 <CalendarIcon size={14} /> 주간
               </button>
               <button
                 onClick={() => setViewMode('monthly')}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${viewMode === 'monthly' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'}`}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${viewMode === 'monthly' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'} `}
               >
                 <LayoutGrid size={14} /> 월간
               </button>
@@ -203,12 +280,12 @@ const App: React.FC = () => {
                     key={dept.id}
                     onClick={() => toggleDeptVisibility(dept.id)}
                     className={`
-                                  whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[11px] font-black transition-all duration-300 border flex items-center gap-2 select-none
+whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[11px] font-black transition-all duration-300 border flex items-center gap-2 select-none
                                   ${isHidden
                         ? 'bg-white/5 text-gray-500 border-white/5 opacity-40 hover:opacity-100'
                         : `border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.1)] hover:brightness-110 text-[#081429] ${dept.color} ring-1 ring-white/10 transform hover:-translate-y-0.5`
                       }
-                                `}
+`}
                   >
                     {dept.name}
                     {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
@@ -263,7 +340,6 @@ const App: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         departments={departments}
-        setDepartments={setDepartments}
       />
     </div>
   );

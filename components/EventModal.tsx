@@ -74,8 +74,23 @@ const EventModal: React.FC<EventModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Generate ID for new events
+    let newId = existingEvent?.id;
+    if (!newId) {
+      // 1. Sanitize Title (remove special chars, limit length)
+      const safeTitle = title.trim().replace(/[^a-zA-Z0-9가-힣]/g, '').substring(0, 10);
+      // 2. Random suffix (4 chars)
+      const randomSuffix = Math.random().toString(36).substring(2, 6);
+      // 3. Department Name (Korean) - Fallback to ID if not found
+      const deptObj = departments.find(d => d.id === departmentId);
+      const safeDeptName = deptObj ? deptObj.name : (departmentId || 'no_dept');
+
+      // Format: YYYY-MM-DD_DeptName_Title_Random
+      newId = `${startDate}_${safeDeptName}_${safeTitle}_${randomSuffix}`;
+    }
+
     onSave({
-      id: existingEvent?.id || crypto.randomUUID(),
+      id: newId,
       title,
       description,
       participants,
@@ -158,7 +173,7 @@ const EventModal: React.FC<EventModalProps> = ({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-28 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
+                  className="w-36 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
                 />
               </div>
             </div>
@@ -180,7 +195,7 @@ const EventModal: React.FC<EventModalProps> = ({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-28 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
+                  className="w-36 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
                 />
               </div>
             </div>
