@@ -34,4 +34,6 @@ export interface UserProfile {
   status: 'approved' | 'pending' | 'rejected'; // Access Control Status
   allowedDepartments: string[]; // List of department IDs
   canEdit?: boolean;
+  canManageMenus?: boolean; // New permission for menu management
+  jobTitle?: string;
 }

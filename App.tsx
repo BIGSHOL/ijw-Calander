@@ -6,7 +6,7 @@ import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
 import CalendarBoard from './components/CalendarBoard';
-import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle } from 'lucide-react';
+import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
@@ -220,13 +220,29 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+
+  // Fetch System Configuration (Lookback Period)
+  const [lookbackYears, setLookbackYears] = useState<number>(2);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'system', 'config'), (doc) => {
+      if (doc.exists()) {
+        const years = doc.data().eventLookbackYears || 2;
+        setLookbackYears(years);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Subscribe to Events (일정)
   useEffect(() => {
-    // Optimization: Fetch events from 10 years ago to ensure all history is visible
-    const oneYearAgo = format(subYears(new Date(), 10), 'yyyy-MM-dd');
+    // Optimization: Fetch events from configured lookback years (default 2)
+    const queryStartDate = format(subYears(new Date(), lookbackYears), 'yyyy-MM-dd');
+    console.log(`Fetching events from ${queryStartDate} (Lookback: ${lookbackYears} years)`);
+
     const q = query(
       collection(db, "일정").withConverter(eventConverter),
-      where("시작일", ">=", oneYearAgo)
+      where("시작일", ">=", queryStartDate)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -304,31 +320,39 @@ const App: React.FC = () => {
         <div className="flex-none px-6 py-3 md:px-10 md:py-0 flex flex-col justify-center items-center border-b md:border-b-0 md:border-r border-white/10 bg-[#081429] relative z-30 w-full md:w-auto md:min-w-[320px]">
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1 border-2 border-[#fdb813] shadow-[0_0_15px_rgba(253,184,19,0.3)] overflow-hidden">
-                {/* Fallback to text if image fails, or use icon */}
+              <div className="w-16 h-16 flex items-center justify-center overflow-hidden transition-transform hover:scale-105">
                 <img
                   src={INJAEWON_LOGO}
                   alt="Logo"
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain filter drop-shadow-md"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement?.classList.add('bg-[#fdb813]');
+                    e.currentTarget.parentElement?.classList.add('bg-[#fdb813]', 'rounded-full');
                   }}
                 />
-                {/* Fallback Icon (hidden by default, shown via CSS if img fails could be complex, but let's just assume img works or we see blank) */}
               </div>
-              <div>
+              <div className="flex flex-col">
                 <h1 className="text-2xl font-black text-white tracking-tighter flex items-center gap-2">
                   인재원 <span className="text-[#fdb813]">학원</span>
                 </h1>
                 {/* User Info Here */}
                 {currentUser && (
-                  <div className="text-[11px] text-white/60 font-medium flex items-center gap-1.5 mt-0.5">
-                    <UserCircle size={12} />
-                    <span>{userProfile?.email || currentUser.email}</span>
-                    <span className="text-[#fdb813]">
-                      ({isMaster ? '최고관리자' : '직원'})
-                    </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <div className="text-[11px] text-white/60 font-medium flex items-center gap-1.5">
+                      <UserCircle size={12} />
+                      <span>{userProfile?.email || currentUser.email}</span>
+                      <span className="text-[#fdb813]">
+                        {userProfile?.jobTitle && <span className="mr-1">[{userProfile.jobTitle}]</span>}
+                        ({isMaster ? '최고관리자' : '직원'})
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="text-gray-400 hover:text-white hover:bg-white/10 p-1 rounded transition-all"
+                      title="로그아웃"
+                    >
+                      <LogOut size={12} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -417,7 +441,7 @@ const App: React.FC = () => {
 
             {/* Department Tags (Right aligned flow) */}
             <div className="flex items-center gap-2 pr-4 overflow-visible">
-              {departments.map(dept => {
+              {visibleDepartments.map(dept => {
                 const isHidden = hiddenDeptIds.includes(dept.id);
                 return (
                   <button
@@ -508,8 +532,8 @@ const App: React.FC = () => {
       {/* Access Denied / Pending Approval Overlay */}
       {currentUser && userProfile?.status === 'pending' && (
         <div className="fixed inset-0 bg-[#081429] z-50 flex flex-col items-center justify-center text-white p-8 text-center animate-in fade-in duration-300">
-          <div className="bg-white/10 p-6 rounded-full mb-6">
-            <Lock size={48} className="text-[#fdb813]" />
+          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-2 mb-6 shadow-lg shadow-[#fdb813]/20">
+            <img src={INJAEWON_LOGO} alt="Logo" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-3xl font-black mb-4">관리자 승인 대기중</h2>
           <p className="text-gray-300 max-w-md mb-8 leading-relaxed">

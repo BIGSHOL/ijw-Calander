@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, LogIn, UserPlus } from 'lucide-react';
+import { X, Lock as LockIcon, LogIn, UserPlus } from 'lucide-react';
 import { auth, db } from '../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -97,7 +97,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                 {/* Header */}
                 <div className="bg-[#081429] p-6 text-center">
                     <div className="bg-white/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-                        {isSignUp ? <UserPlus size={32} className="text-[#fdb813]" /> : <Lock size={32} className="text-[#fdb813]" />}
+                        {isSignUp ? <UserPlus size={32} className="text-[#fdb813]" /> : <LockIcon size={32} className="text-[#fdb813]" />}
                     </div>
                     <h2 className="text-xl font-bold text-white">{isSignUp ? '관리자/직원 가입' : '로그인'}</h2>
                     <p className="text-blue-200 text-sm mt-1">
