@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay } from 'date-fns';
-import { CalendarEvent, Department } from './types';
+import { CalendarEvent, Department, UserProfile } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
+import LoginModal from './components/LoginModal';
 import CalendarBoard from './components/CalendarBoard';
-import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle } from 'lucide-react';
-import { db } from './firebaseConfig';
-import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where } from 'firebase/firestore';
+import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle } from 'lucide-react';
+import { db, auth } from './firebaseConfig';
+import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
@@ -93,9 +95,60 @@ const App: React.FC = () => {
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
-  // New State for Time Slot Click
   const [initialStartTime, setInitialStartTime] = useState('');
   const [initialEndTime, setInitialEndTime] = useState('');
+
+  // Auth State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            setUserProfile(userDoc.data() as UserProfile);
+          } else {
+            // Fallback for users without profile (e.g. initial master setup manually?)
+            // For now, treat as Guest with no permissions or minimal?
+            setUserProfile(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+        }
+      } else {
+        setUserProfile(null);
+      }
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    setUserProfile(null);
+    window.location.reload(); // Clean state reset
+  };
+
+  // Derive Permissions
+  const isMaster = userProfile?.role === 'master';
+  const canEdit = isMaster || userProfile?.canEdit === true;
+
+  // Filter Departments based on RBAC
+  const visibleDepartments = departments.filter(d => {
+    // If Master, see all (unless hidden locally)
+    if (isMaster) return true;
+    // If User, see only allowed
+    if (userProfile?.allowedDepartments?.includes(d.id)) return true;
+    // If not logged in or no permissions, show nothing (or public?)
+    // Decision: Guests see NOTHING for security
+    return false;
+  });
 
   // Handle time slot click from Daily View
   const handleTimeSlotClick = (date: string, time: string) => {
@@ -366,10 +419,16 @@ const App: React.FC = () => {
         initialDate={selectedDate}
         initialEndDate={selectedEndDate}
         initialDepartmentId={selectedDeptId}
-        initialStartTime={initialStartTime} // Pass time
-        initialEndTime={initialEndTime}     // Pass time
+        initialStartTime={initialStartTime}
+        initialEndTime={initialEndTime}
         existingEvent={editingEvent}
-        departments={departments}
+        departments={visibleDepartments} // ONLY Pass visible
+        readOnly={!canEdit} // Pass readOnly prop
+      />
+
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
       />
 
       <SettingsModal
