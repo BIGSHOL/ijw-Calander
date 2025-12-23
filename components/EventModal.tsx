@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { CalendarEvent, Department } from '../types';
+import { CalendarEvent, Department, UserProfile } from '../types';
 import { EVENT_COLORS } from '../constants';
 // Added Edit3 and Plus to the imports to fix "Cannot find name" errors on line 95
 import { X, Trash2, Clock, Users, AlignLeft, Type, Edit3, Plus } from 'lucide-react';
@@ -18,6 +18,9 @@ interface EventModalProps {
   initialEndTime?: string;
   existingEvent?: CalendarEvent | null;
   departments: Department[];
+  users: UserProfile[];
+  currentUser: UserProfile | null;
+  readOnly?: boolean;
 }
 
 const EventModal: React.FC<EventModalProps> = ({
@@ -32,10 +35,13 @@ const EventModal: React.FC<EventModalProps> = ({
   initialEndTime,
   existingEvent,
   departments,
+  users,
+  currentUser,
+  readOnly
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [participants, setParticipants] = useState('');
+  const [participants, setParticipants] = useState<string[]>([]);
   const [departmentId, setDepartmentId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -43,14 +49,18 @@ const EventModal: React.FC<EventModalProps> = ({
   const [endTime, setEndTime] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#fee2e2');
+  const [authorId, setAuthorId] = useState('');
+  const [authorName, setAuthorName] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       if (existingEvent) {
         setTitle(existingEvent.title);
         setDescription(existingEvent.description || '');
-        setParticipants(existingEvent.participants || '');
+        setParticipants(existingEvent.participants ? existingEvent.participants.split(', ') : []);
         setDepartmentId(existingEvent.departmentId);
+        setAuthorId(existingEvent.authorId || '');
+        setAuthorName(existingEvent.authorName || '');
         setStartDate(existingEvent.startDate);
         setEndDate(existingEvent.endDate);
         setStartTime(existingEvent.startTime || '');
@@ -72,7 +82,17 @@ const EventModal: React.FC<EventModalProps> = ({
       } else {
         setTitle('');
         setDescription('');
-        setParticipants('');
+        // Default Logic: Auto-select Current User
+        if (currentUser) {
+          const myName = `${currentUser.email.split('@')[0]} ${currentUser.jobTitle ? `(${currentUser.jobTitle})` : ''}`;
+          setParticipants([myName]);
+          setAuthorId(currentUser.uid);
+          setAuthorName(myName);
+        } else {
+          setParticipants([]);
+          setAuthorId('');
+          setAuthorName('');
+        }
         setDepartmentId(initialDepartmentId || departments[0]?.id || '');
         setStartDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
         setEndDate(initialEndDate || initialDate || format(new Date(), 'yyyy-MM-dd'));
@@ -107,7 +127,7 @@ const EventModal: React.FC<EventModalProps> = ({
       id: newId,
       title,
       description,
-      participants,
+      participants: participants.join(', '),
       departmentId,
       startDate,
       endDate,
@@ -115,6 +135,8 @@ const EventModal: React.FC<EventModalProps> = ({
       endTime: isAllDay ? '' : endTime,
       isAllDay,
       color: selectedColor,
+      authorId,
+      authorName
     });
     onClose();
   };
@@ -232,18 +254,35 @@ const EventModal: React.FC<EventModalProps> = ({
             </div>
           </div>
 
-          {/* Participants */}
+          {/* Participants - Multi Select Checkbox List */}
           <div>
-            <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2 flex items-center gap-1">
               <Users size={14} className="text-[#fdb813]" /> 참가자
             </label>
-            <input
-              type="text"
-              value={participants}
-              onChange={(e) => setParticipants(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none font-medium"
-              placeholder="참가자를 입력하세요 (선택)"
-            />
+            <div className="border border-gray-300 rounded-xl p-3 max-h-40 overflow-y-auto bg-gray-50/50">
+              {/* Current User (Always first) */}
+              {users.filter(u => u.status === 'approved').map(u => {
+                const displayName = `${u.email.split('@')[0]} ${u.jobTitle ? `(${u.jobTitle})` : ''}`;
+                const isSelected = participants.includes(displayName);
+                return (
+                  <label key={u.uid} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setParticipants([...participants, displayName]);
+                        } else {
+                          setParticipants(participants.filter(p => p !== displayName));
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
+                    />
+                    <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-600'}`}>{displayName}</span>
+                  </label>
+                )
+              })}
+            </div>
           </div>
 
           {/* Description */}
@@ -279,6 +318,42 @@ const EventModal: React.FC<EventModalProps> = ({
             </div>
           </div>
 
+          {/* Divider */}
+          {/* <div className="border-t border-gray-100 my-2"></div> */}
+
+          {/* Edit Mode: Author Display logic needs to be here too if existing event */}
+          {existingEvent && (
+            <div>
+              <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2">
+                작성자 정보
+              </label>
+              {currentUser?.canManageEventAuthors ? (
+                <div className="relative">
+                  <select
+                    value={authorId}
+                    onChange={(e) => {
+                      const selectedUser = users.find(u => u.uid === e.target.value);
+                      if (selectedUser) {
+                        setAuthorId(selectedUser.uid);
+                        setAuthorName(`${selectedUser.email.split('@')[0]} ${selectedUser.jobTitle ? `(${selectedUser.jobTitle})` : ''}`);
+                      }
+                    }}
+                    className="w-full appearance-none bg-white border border-gray-300 text-gray-700 text-sm font-bold py-2.5 px-4 rounded-xl outline-none focus:border-[#fdb813] cursor-pointer focus:ring-2 focus:ring-[#fdb813]"
+                  >
+                    {users.filter(u => u.status === 'approved').map(u => (
+                      <option key={u.uid} value={u.uid}>{u.email.split('@')[0]} {u.jobTitle ? `(${u.jobTitle})` : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="bg-gray-50 border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl font-bold text-sm">
+                  {authorName || '작성자 정보 없음'}
+                </div>
+              )}
+            </div>
+          )
+          }
+
           {/* Footer Actions */}
           <div className="flex justify-between items-center pt-6 border-t border-gray-100">
             {existingEvent ? (
@@ -295,7 +370,34 @@ const EventModal: React.FC<EventModalProps> = ({
                 <Trash2 size={18} /> 삭제
               </button>
             ) : (
-              <div />
+              // Author Display (Bottom Left)
+              <div className="flex flex-col justify-center px-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">작성자</span>
+                {(currentUser?.canManageEventAuthors || currentUser?.role === 'master') ? (
+                  <div className="relative">
+                    <select
+                      value={authorId}
+                      onChange={(e) => {
+                        const selectedUser = users.find(u => u.uid === e.target.value);
+                        if (selectedUser) {
+                          setAuthorId(selectedUser.uid);
+                          setAuthorName(`${selectedUser.email.split('@')[0]} ${selectedUser.jobTitle ? `(${selectedUser.jobTitle})` : ''}`);
+                        }
+                      }}
+                      className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 text-xs font-bold py-1.5 pl-3 pr-8 rounded-lg outline-none focus:border-[#fdb813] cursor-pointer"
+                    >
+                      {users.filter(u => u.status === 'approved').map(u => (
+                        <option key={u.uid} value={u.uid}>{u.email.split('@')[0]} {u.jobTitle ? `(${u.jobTitle})` : ''}</option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                      <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-xs font-bold text-gray-600">{authorName || 'Unknown'}</span>
+                )}
+              </div>
             )}
             <div className="flex gap-3">
               <button

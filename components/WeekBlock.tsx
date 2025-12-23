@@ -126,8 +126,17 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
             className={`${gridClass} border-t border-l border-r border-gray-200 bg-white min-h-[60px] relative group`}
           >
             {/* Sidebar Cell */}
-            <div className={`border-r border-gray-300 p-2 flex flex-col justify-center text-sm ${dept.color}`}>
-              <div className="font-bold text-[#081429] text-center text-[11px] break-keep leading-tight">{dept.name}</div>
+            <div
+              className="border-r border-gray-300 p-2 flex flex-col justify-center text-sm relative overflow-hidden"
+              style={{
+                borderLeft: dept.color.startsWith('#') ? `6px solid ${dept.color}` : 'none'
+              }}
+            >
+              {/* Fallback for legacy tailwind class colors */}
+              {!dept.color.startsWith('#') && (
+                <div className={`absolute left-0 top-0 bottom-0 w-[6px] ${dept.color}`} />
+              )}
+              <div className="font-bold text-[#081429] text-center text-[11px] break-keep leading-tight pl-1">{dept.name}</div>
             </div>
 
             {/* Grid Cells */}

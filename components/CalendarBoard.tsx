@@ -139,7 +139,7 @@ const DailyView: React.FC<{
                         <Clock size={10} /> {event.startTime} - {event.endTime}
                       </span>
                       {dept && (
-                        <span className="text-[10px] font-extrabold uppercase bg-white/40 px-1.5 rounded text-black/60 shadow-sm border border-black/5">
+                        <span className="text-xs font-extrabold uppercase bg-white/40 px-1.5 rounded text-black/60 shadow-sm border border-black/5">
                           {dept.name}
                         </span>
                       )}

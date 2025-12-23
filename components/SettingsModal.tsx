@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Department, UserProfile } from '../types';
-import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2 } from 'lucide-react';
+import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search } from 'lucide-react';
 import { db, auth } from '../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc } from 'firebase/firestore';
 
@@ -9,6 +9,7 @@ interface SettingsModalProps {
   onClose: () => void;
   departments: Department[];
   currentUserProfile?: UserProfile | null; // Pass current user profile
+  users: UserProfile[]; // Accept users prop
 }
 
 type TabMode = 'departments' | 'users' | 'system';
@@ -18,6 +19,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   departments,
   currentUserProfile,
+  users,
 }) => {
   const isMaster = currentUserProfile?.role === 'master';
   const canManageMenus = isMaster || currentUserProfile?.canManageMenus === true; // Derive permission
@@ -25,9 +27,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState<TabMode>('departments');
   const [newDeptName, setNewDeptName] = useState('');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [deptSearchTerm, setDeptSearchTerm] = useState('');
 
   // User Management State
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  // const [users, setUsers] = useState<UserProfile[]>([]); // Lifted to App.tsx
 
   // System Config State
   const [lookbackYears, setLookbackYears] = useState<number>(2);
@@ -43,17 +46,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     );
   };
 
-  // Fetch Users if needed (Master OR Menu Manager)
-  useEffect(() => {
-    // We need users list if (Tab is 'users' and Master) OR (we're creating a department and need to select users)
-    if (isMaster || canManageMenus) {
-      const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-        const loadUsers = snapshot.docs.map(doc => doc.data() as UserProfile);
-        setUsers(loadUsers);
-      });
-      return () => unsubscribe();
-    }
-  }, [isMaster, canManageMenus, activeTab]); // Added activeTab to dep array just in case, but rationale suggests simplified logic is better. Let's keep it robust.
+  // Fetch Users if needed (Master OR Menu Manager) - Lifted to App.tsx
+  // useEffect(() => {
+  //   // We need users list if (Tab is 'users' and Master) OR (we're creating a department and need to select users)
+  //   if (isMaster || canManageMenus) {
+  //     const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+  //       const loadUsers = snapshot.docs.map(doc => doc.data() as UserProfile);
+  //       setUsers(loadUsers);
+  //     });
+  //     return () => unsubscribe();
+  //   }
+  // }, [isMaster, canManageMenus, activeTab]); // Added activeTab to dep array just in case, but rationale suggests simplified logic is better. Let's keep it robust.
 
   // Fetch System Config if Tab is 'system' and User is Master
   useEffect(() => {
@@ -190,6 +193,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
+  const handleToggleAuthorPermission = async (user: UserProfile) => {
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { canManageEventAuthors: !user.canManageEventAuthors });
+    } catch (e) {
+      console.error(e);
+      alert("권한 수정 실패");
+    }
+  };
+
   const handleToggleUserDept = async (user: UserProfile, deptId: string) => {
     const currentDepts = user.allowedDepartments || [];
     const newDepts = currentDepts.includes(deptId)
@@ -290,171 +302,204 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* DEPARTMENT TAB - Guarded by canManageMenus */}
           {activeTab === 'departments' && canManageMenus && (
-            <div className="space-y-4 max-w-lg mx-auto">
-              {/* Add Section */}
-              {!isCreating ? (
-                <button
-                  onClick={() => setIsCreating(true)}
-                  className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 font-bold hover:border-[#fdb813] hover:text-[#fdb813] transition-all flex items-center justify-center gap-2"
-                >
-                  <Plus size={20} /> 새 부서 만들기
-                </button>
-              ) : (
-                <div className="bg-white p-4 rounded-xl shadow-lg border border-[#fdb813] space-y-4">
-                  <h4 className="font-bold text-[#081429] flex items-center gap-2 text-sm">
-                    <FolderKanban size={16} /> 새 부서 생성
-                  </h4>
-
+            <div className="space-y-6 max-w-4xl mx-auto">
+              {/* Header Actions: Create & Search */}
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Search Bar */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
                     type="text"
-                    value={newDeptName}
-                    onChange={(e) => setNewDeptName(e.target.value)}
-                    placeholder="부서 이름 입력"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-[#fdb813]/50 font-bold text-sm"
-                    autoFocus
+                    placeholder="부서 검색..."
+                    value={deptSearchTerm}
+                    onChange={(e) => setDeptSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#fdb813]/50 focus:border-[#fdb813] outline-none transition-all text-sm font-bold"
                   />
-
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">접근 권한 설정</p>
-
-                    {/* Option: Only Me */}
-                    <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-100">
-                      <input type="radio" name="createOption" checked={createOption === 'me'} onChange={() => setCreateOption('me')} className="accent-[#fdb813]" />
-                      <div className="text-sm">
-                        <span className="font-bold text-[#081429]">나만 보기</span>
-                        <p className="text-xs text-gray-400">본인에게만 권한이 자동 부여됩니다.</p>
-                      </div>
-                    </label>
-
-                    {/* Option: Everyone */}
-                    <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-100">
-                      <input type="radio" name="createOption" checked={createOption === 'all'} onChange={() => setCreateOption('all')} className="accent-[#fdb813]" />
-                      <div className="text-sm">
-                        <span className="font-bold text-[#081429]">모든 사용자에게 허용</span>
-                        <p className="text-xs text-gray-400">현재 등록된 모든 회원에게 권한을 부여합니다.</p>
-                      </div>
-                    </label>
-
-                    {/* Option: Specific */}
-                    <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer border border-transparent hover:border-gray-100">
-                      <input type="radio" name="createOption" checked={createOption === 'specific'} onChange={() => setCreateOption('specific')} className="accent-[#fdb813]" />
-                      <div className="text-sm">
-                        <span className="font-bold text-[#081429]">특정 사용자 선택</span>
-                        <p className="text-xs text-gray-400">선택한 사용자들에게만 권한을 부여합니다.</p>
-                      </div>
-                    </label>
-
-                    {/* Specific User Selector */}
-                    {createOption === 'specific' && (
-                      <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1 bg-gray-50">
-                        {users.filter(u => u.uid !== currentUserProfile?.uid).map(u => (
-                          <label key={u.uid} className="flex items-center gap-2 p-1.5 hover:bg-white rounded cursor-pointer transition-colors">
-                            <input
-                              type="checkbox"
-                              checked={selectedUserIds.includes(u.uid)}
-                              onChange={() => toggleUserSelection(u.uid)}
-                              className="rounded border-gray-300 accent-[#081429]"
-                            />
-                            <span className="text-xs font-medium text-gray-700">{u.email} ({u.jobTitle || '직급없음'})</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={handleAdd}
-                      disabled={!newDeptName.trim()}
-                      className="flex-1 bg-[#081429] text-white py-2 rounded-lg font-bold text-sm hover:brightness-110 disabled:opacity-50"
-                    >
-                      생성하기
-                    </button>
-                    <button
-                      onClick={() => setIsCreating(false)}
-                      className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg font-bold text-sm hover:bg-gray-200"
-                    >
-                      취소
-                    </button>
-                  </div>
                 </div>
-              )}
 
-              {/* Department List */}
-              <div className="space-y-3 pb-20">
+                {/* Add Section */}
+                {!isCreating ? (
+                  <button
+                    onClick={() => setIsCreating(true)}
+                    className="px-6 py-3 bg-[#081429] text-white rounded-xl font-bold hover:brightness-110 flex items-center gap-2 shadow-lg active:scale-95 transition-all text-sm whitespace-nowrap"
+                  >
+                    <Plus size={18} /> 새 부서 만들기
+                  </button>
+                ) : (
+                  <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-md animate-in fade-in zoom-in duration-200">
+                    <div className="bg-white p-5 rounded-2xl shadow-2xl border border-[#fdb813] space-y-4">
+                      <h4 className="font-bold text-[#081429] flex items-center gap-2 text-xl">
+                        <FolderKanban size={20} className="text-[#fdb813]" /> 새 부서 생성
+                      </h4>
+
+                      <input
+                        type="text"
+                        value={newDeptName}
+                        onChange={(e) => setNewDeptName(e.target.value)}
+                        placeholder="부서 이름 입력"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#fdb813]/50 font-bold text-sm"
+                        autoFocus
+                      />
+
+                      <div className="space-y-3 bg-gray-50 p-4 rounded-xl">
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">접근 권한 설정</p>
+
+                        {/* Option: Only Me */}
+                        <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-white cursor-pointer transition-colors">
+                          <input type="radio" name="createOption" checked={createOption === 'me'} onChange={() => setCreateOption('me')} className="mt-1 accent-[#fdb813] w-4 h-4" />
+                          <div>
+                            <span className="block font-bold text-[#081429] text-sm">나만 보기</span>
+                            <p className="text-xs text-gray-500 mt-0.5">본인에게만 권한이 자동 부여됩니다.</p>
+                          </div>
+                        </label>
+
+                        {/* Option: Everyone */}
+                        <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-white cursor-pointer transition-colors">
+                          <input type="radio" name="createOption" checked={createOption === 'all'} onChange={() => setCreateOption('all')} className="mt-1 accent-[#fdb813] w-4 h-4" />
+                          <div>
+                            <span className="block font-bold text-[#081429] text-sm">모든 사용자에게 허용</span>
+                            <p className="text-xs text-gray-500 mt-0.5">모든 회원에게 권한을 부여합니다.</p>
+                          </div>
+                        </label>
+
+                        {/* Option: Specific */}
+                        <label className="flex items-start gap-3 p-2 rounded-lg hover:bg-white cursor-pointer transition-colors">
+                          <input type="radio" name="createOption" checked={createOption === 'specific'} onChange={() => setCreateOption('specific')} className="mt-1 accent-[#fdb813] w-4 h-4" />
+                          <div>
+                            <span className="block font-bold text-[#081429] text-sm">특정 사용자 선택</span>
+                            <p className="text-xs text-gray-500 mt-0.5">선택한 사용자만 접근 가능합니다.</p>
+                          </div>
+                        </label>
+
+                        {createOption === 'specific' && (
+                          <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+                            {users.filter(u => u.uid !== currentUserProfile?.uid).map(u => (
+                              <label key={u.uid} className="flex items-center gap-3 p-2 hover:bg-gray-50 cursor-pointer border-b last:border-0 border-gray-100">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedUserIds.includes(u.uid)}
+                                  onChange={() => toggleUserSelection(u.uid)}
+                                  className="rounded border-gray-300 accent-[#081429] w-4 h-4"
+                                />
+                                <span className="text-sm font-medium text-gray-700">{u.email} <span className="text-gray-400 text-xs">({u.jobTitle || '직급없음'})</span></span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          onClick={() => setIsCreating(false)}
+                          className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200"
+                        >
+                          취소
+                        </button>
+                        <button
+                          onClick={handleAdd}
+                          disabled={!newDeptName.trim()}
+                          className="flex-[2] bg-[#081429] text-white py-3 rounded-xl font-bold hover:brightness-110 disabled:opacity-50 shadow-lg"
+                        >
+                          생성하기
+                        </button>
+                      </div>
+                    </div>
+                    {/* Backdrop for modal behavior */}
+                    <div className="fixed inset-0 bg-black/20 -z-10" onClick={() => setIsCreating(false)} />
+                  </div>
+                )}
+              </div>
+
+              {/* Department Grid List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
                 {departments.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400 text-sm bg-white rounded-xl border border-dashed border-gray-200">
+                  <div className="col-span-full text-center py-12 text-gray-400 text-sm bg-white rounded-2xl border-2 border-dashed border-gray-200">
                     등록된 부서가 없습니다.
                   </div>
                 ) : (
-                  departments.map((dept, index) => (
-                    <div
-                      key={dept.id}
-                      draggable
-                      onDragStart={(e) => onDragStart(e, index)}
-                      onDragOver={(e) => onDragOver(e, index)}
-                      onDrop={(e) => onDrop(e, index)}
-                      onDragEnd={() => setDraggedIndex(null)}
-                      className={`
-                                relative group p-3 bg-white border border-gray-200 rounded-xl shadow-sm transition-all hover:shadow-md
-                                ${draggedIndex === index ? 'opacity-40 border-dashed border-[#fdb813]' : 'hover:border-[#fdb813]/30'}
-                                cursor-move
-                                `}
-                    >
-                      <div className="flex items-start gap-3">
-                        {/* Drag Handle */}
-                        <div className="mt-2 text-gray-300 cursor-grab hover:text-gray-500">
-                          <GripVertical size={16} />
-                        </div>
+                  departments
+                    .filter(dept => dept.name.toLowerCase().includes(deptSearchTerm.toLowerCase()))
+                    .map((dept, index) => {
+                      // Find actual index in original list for drag
+                      const originalIndex = departments.findIndex(d => d.id === dept.id);
+                      const isSearching = deptSearchTerm.length > 0;
 
-                        {/* Content */}
-                        <div className="flex-1 space-y-2">
-                          {/* Row 1: Name and Color */}
-                          <div className="flex items-center gap-2">
-                            <div className="relative flex items-center justify-center">
-                              <div
-                                className={`
-                                            ${!dept.color.startsWith('#') ? dept.color : 'bg-white'} 
-                                            w-8 h-8 rounded-full border shadow-sm overflow-hidden flex items-center justify-center transition-transform hover:scale-105
-                                            border-2 border-gray-100
-                                        `}
-                                style={{ backgroundColor: dept.color.startsWith('#') ? dept.color : undefined }}
-                              >
+                      return (
+                        <div
+                          key={dept.id}
+                          draggable={!isSearching}
+                          onDragStart={(e) => !isSearching && onDragStart(e, originalIndex)}
+                          onDragOver={(e) => !isSearching && onDragOver(e, originalIndex)}
+                          onDrop={(e) => !isSearching && onDrop(e, originalIndex)}
+                          onDragEnd={() => setDraggedIndex(null)}
+                          className={`
+                                relative group overflow-hidden bg-white border border-gray-200 rounded-xl shadow-sm transition-all hover:shadow-lg hover:-translate-y-1
+                                ${draggedIndex === originalIndex ? 'opacity-40 border-dashed border-[#fdb813]' : 'hover:border-[#fdb813]/30'}
+                                ${!isSearching ? 'cursor-move' : ''}
+                                `}
+                        >
+                          {/* Colored Stripe */}
+                          <div
+                            className="absolute left-0 top-0 bottom-0 w-1.5 transition-colors"
+                            style={{ backgroundColor: dept.color.startsWith('#') ? dept.color : '#e5e7eb' }}
+                          />
+
+                          <div className="p-4 pl-6 flex items-start gap-3">
+                            {/* Drag Handle (Visible only on hover & no search) */}
+                            {!isSearching && (
+                              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 opacity-0 group-hover:opacity-100 cursor-grab">
+                                <GripVertical size={14} />
+                              </div>
+                            )}
+
+                            <div className="flex-1 space-y-3">
+                              {/* Header: Name & Delete */}
+                              <div className="flex items-center justify-between">
                                 <input
-                                  type="color"
-                                  value={dept.color.startsWith('#') ? dept.color : '#ffffff'}
-                                  onChange={(e) => handleUpdate(dept.id, 'color', e.target.value)}
-                                  className="opacity-0 w-[200%] h-[200%] cursor-pointer absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                                  title="색상 변경"
+                                  type="text"
+                                  value={dept.name}
+                                  onChange={(e) => handleUpdate(dept.id, 'name', e.target.value)}
+                                  className="font-bold text-[#081429] text-sm border-b border-transparent hover:border-gray-200 focus:border-[#fdb813] outline-none transition-colors bg-transparent w-full mr-2"
                                 />
+                                <button
+                                  onClick={() => handleDelete(dept.id)}
+                                  className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                  title="삭제"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+
+                              {/* Description */}
+                              <input
+                                type="text"
+                                value={dept.description || ''}
+                                onChange={(e) => handleUpdate(dept.id, 'description', e.target.value)}
+                                className="w-full text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 focus:bg-white rounded px-2 py-1.5 border border-transparent focus:border-[#fdb813] outline-none transition-all placeholder:text-gray-300"
+                                placeholder="부서 설명 입력..."
+                              />
+
+                              {/* Color Picker (Bottom Right) */}
+                              <div className="flex justify-end pt-1">
+                                <div className="relative group/color">
+                                  <div
+                                    className="w-6 h-6 rounded-full border border-gray-200 shadow-sm cursor-pointer overflow-hidden ring-2 ring-transparent group-hover/color:ring-[#fdb813]/30 transition-all"
+                                    style={{ backgroundColor: dept.color.startsWith('#') ? dept.color : '#ffffff' }}
+                                  >
+                                    <input
+                                      type="color"
+                                      value={dept.color.startsWith('#') ? dept.color : '#ffffff'}
+                                      onChange={(e) => handleUpdate(dept.id, 'color', e.target.value)}
+                                      className="opacity-0 w-[200%] h-[200%] cursor-pointer absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                                    />
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            <input
-                              type="text"
-                              value={dept.name}
-                              onChange={(e) => handleUpdate(dept.id, 'name', e.target.value)}
-                              className="flex-1 px-2 py-1.5 font-bold text-[#081429] border-b border-transparent hover:border-gray-200 focus:border-[#fdb813] outline-none transition-colors bg-transparent"
-                            />
-                            <button
-                              onClick={() => handleDelete(dept.id)}
-                              className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
                           </div>
-
-                          {/* Row 2: Description */}
-                          <input
-                            type="text"
-                            value={dept.description || ''}
-                            onChange={(e) => handleUpdate(dept.id, 'description', e.target.value)}
-                            className="w-full px-2 py-1 text-xs text-gray-500 bg-gray-50 rounded border border-transparent focus:bg-white focus:border-[#fdb813] outline-none transition-all placeholder:text-gray-300"
-                            placeholder="부서 설명"
-                          />
                         </div>
-                      </div>
-                    </div>
-                  ))
+                      )
+                    })
                 )}
               </div>
             </div>
@@ -555,6 +600,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             </div>
                             <input type="checkbox" checked={!!user.canManageMenus} onChange={() => handleToggleMenuPermission(user)} className="hidden" />
                             <span className="text-xs font-bold text-[#081429]">메뉴 관리 권한 (부서 추가/수정/삭제)</span>
+                          </label>
+
+                          {/* Author Management Permission */}
+                          <label className="flex items-center gap-2 cursor-pointer select-none mt-2">
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${user.canManageEventAuthors ? 'bg-purple-500 border-purple-500' : 'bg-white border-gray-300'}`}>
+                              {user.canManageEventAuthors && <Check size={12} className="text-white" />}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={!!user.canManageEventAuthors}
+                              onChange={() => handleToggleAuthorPermission(user)}
+                              className="hidden"
+                            />
+                            <span className="text-xs font-bold text-[#081429]">작성자 수정 권한 (다른 사람 명의로 작성)</span>
                           </label>
                         </div>
                       )}

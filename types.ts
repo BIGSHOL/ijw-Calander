@@ -18,6 +18,8 @@ export interface CalendarEvent {
   endTime?: string;   // HH:mm
   isAllDay?: boolean;
   color: string;     // Hex or Tailwind class
+  authorId?: string; // UID of the creator
+  authorName?: string; // Display name of the creator (snapshot)
 }
 
 export interface DragSelection {
@@ -35,5 +37,6 @@ export interface UserProfile {
   allowedDepartments: string[]; // List of department IDs
   canEdit?: boolean;
   canManageMenus?: boolean; // New permission for menu management
+  canManageEventAuthors?: boolean; // New permission to change event author
   jobTitle?: string;
 }
