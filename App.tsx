@@ -126,8 +126,8 @@ const App: React.FC = () => {
 
   // Subscribe to Events (일정)
   useEffect(() => {
-    // Optimization: Only fetch events from 1 year ago onwards
-    const oneYearAgo = format(subYears(new Date(), 1), 'yyyy-MM-dd');
+    // Optimization: Only fetch events from 3 years ago onwards
+    const oneYearAgo = format(subYears(new Date(), 3), 'yyyy-MM-dd');
     const q = query(
       collection(db, "일정").withConverter(eventConverter),
       where("시작일", ">=", oneYearAgo)
