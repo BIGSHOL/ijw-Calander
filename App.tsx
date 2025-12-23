@@ -48,6 +48,9 @@ const eventConverter = {
   },
   fromFirestore: (snapshot: any, options: any) => {
     const data = snapshot.data(options);
+    // Robustness: If time is empty, treat as All Day (even if field is missing)
+    const inferredAllDay = data.하루종일 || (data.시작시간 === '' && data.종료시간 === '');
+
     return {
       id: snapshot.id,
       title: data.제목,
@@ -58,7 +61,7 @@ const eventConverter = {
       endDate: data.종료일,
       startTime: data.시작시간,
       endTime: data.종료시간,
-      isAllDay: data.하루종일,
+      isAllDay: inferredAllDay,
       color: data.색상,
     } as CalendarEvent;
   }
