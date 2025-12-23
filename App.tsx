@@ -7,7 +7,7 @@ import SettingsModal from './components/SettingsModal';
 import CalendarBoard from './components/CalendarBoard';
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle } from 'lucide-react';
 import { db } from './firebaseConfig';
-import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where } from 'firebase/firestore';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
@@ -112,7 +112,14 @@ const App: React.FC = () => {
 
   // Subscribe to Events (일정)
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "일정").withConverter(eventConverter), (snapshot) => {
+    // Optimization: Only fetch events from 1 year ago onwards
+    const oneYearAgo = format(subYears(new Date(), 1), 'yyyy-MM-dd');
+    const q = query(
+      collection(db, "일정").withConverter(eventConverter),
+      where("시작일", ">=", oneYearAgo)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const loadEvents = snapshot.docs.map(doc => doc.data());
       setEvents(loadEvents);
     });
