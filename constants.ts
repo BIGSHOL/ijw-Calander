@@ -6,7 +6,7 @@ export const INITIAL_DEPARTMENTS: Department[] = [
   { id: '인재원영어', name: '인재원영어', order: 3, color: 'bg-yellow-50' },
   { id: '인재원수학', name: '인재원수학', order: 4, color: 'bg-green-50' },
   { id: '수학교재', name: '수학교재', order: 5, color: 'bg-emerald-50' },
-  { id: '인재원과학/국어', name: '인재원과학/국어', order: 6, color: 'bg-cyan-50' },
+  { id: '인재원과학_국어', name: '인재원과학/국어', order: 6, color: 'bg-cyan-50' },
   { id: '고등수학관', name: '고등수학관', order: 7, color: 'bg-sky-50' },
   { id: '행사일정', name: '행사일정', order: 8, color: 'bg-violet-50' },
   { id: '마케팅일정', name: '마케팅일정', order: 9, color: 'bg-fuchsia-50' },
