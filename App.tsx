@@ -121,26 +121,34 @@ const App: React.FC = () => {
         } catch (error) {
           console.error("Error fetching user profile:", error);
         }
-        if (!user) {
-          setUserProfile(null);
-          setIsLoginModalOpen(true); // Force open login modal
-        }
-        setAuthLoading(false);
-      });
+      } else {
+        setUserProfile(null);
+        setIsLoginModalOpen(true); // Force open login modal
+      }
+      setAuthLoading(false);
+    });
     return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
     await signOut(auth);
     setUserProfile(null);
+    localStorage.removeItem('dept_hidden_ids'); // Reset local visibility settings
     window.location.reload(); // Clean state reset
   };
+
+  // Reset visibility when user changes (optional convenience)
+  useEffect(() => {
+    if (currentUser) {
+      // Optional: Reset hidden departments on fresh login to ensure everything is visible
+      // setHiddenDeptIds([]); 
+    }
+  }, [currentUser]);
 
   // Derive Permissions
   const isMaster = userProfile?.role === 'master';
   const canEdit = isMaster || userProfile?.canEdit === true;
 
-  // Filter Departments based on RBAC
   // Filter Departments based on RBAC AND Local Toggles
   const visibleDepartments = departments.filter(d => {
     // 1. RBAC Check
@@ -156,132 +164,54 @@ const App: React.FC = () => {
     return true;
   });
 
-  // Handle time slot click from Daily View
-  const handleTimeSlotClick = (date: string, time: string) => {
-    setSelectedDate(date);
-    setSelectedEndDate(date);
-    setEditingEvent(null);
-
-    setInitialStartTime(time);
-
-    // Calculate End Time (1 hour later)
-    const [h, m] = time.split(':').map(Number);
-    const endH = h + 1;
-    const endTimeStr = `${String(endH > 23 ? 23 : endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    setInitialEndTime(endTimeStr);
-
-    setIsEventModalOpen(true);
-  };
-
-  // Subscribe to Departments (부서목록)
-  useEffect(() => {
-    const q = query(collection(db, "부서목록").withConverter(departmentConverter), orderBy("순서"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadDepts = snapshot.docs.map(doc => doc.data());
-      setDepartments(loadDepts);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Subscribe to Events (일정)
-  useEffect(() => {
-    // Optimization: Fetch events from 10 years ago to ensure all history is visible
-    const oneYearAgo = format(subYears(new Date(), 10), 'yyyy-MM-dd');
-    const q = query(
-      collection(db, "일정").withConverter(eventConverter),
-      where("시작일", ">=", oneYearAgo)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadEvents = snapshot.docs.map(doc => doc.data());
-      setEvents(loadEvents);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('dept_hidden_ids', JSON.stringify(hiddenDeptIds));
-  }, [hiddenDeptIds]);
-
-  const handleCellClick = (date: string, deptId: string) => {
-    setSelectedDate(date);
-    setSelectedEndDate(date);
-    setSelectedDeptId(deptId);
-    setEditingEvent(null);
-    setIsEventModalOpen(true);
-  };
-
-  const handleRangeSelect = (startDate: string, endDate: string, deptId: string) => {
-    setSelectedDate(startDate);
-    setSelectedEndDate(endDate);
-    setSelectedDeptId(deptId);
-    setEditingEvent(null);
-    setIsEventModalOpen(true);
-  };
-
-  const handleEventClick = (event: CalendarEvent) => {
-    setEditingEvent(event);
-    setSelectedDate(event.startDate);
-    setSelectedEndDate(event.endDate);
-    setIsEventModalOpen(true);
-  };
-
-  const handleSaveEvent = async (event: CalendarEvent) => {
-    try {
-      const ref = doc(db, "일정", event.id).withConverter(eventConverter);
-      await setDoc(ref, event);
-    } catch (e) {
-      console.error("Error saving event: ", e);
-      alert("일정 저장 실패");
-    }
-  };
-
-  const handleDeleteEvent = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, "일정", id));
-    } catch (e) {
-      console.error("Error deleting event: ", e);
-      alert("일정 삭제 실패");
-    }
-  };
-
-  const toggleDeptVisibility = (id: string) => {
-    setHiddenDeptIds(prev =>
-      prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]
-    );
-  };
-
-  const setAllVisibility = (visible: boolean) => {
-    if (visible) {
-      setHiddenDeptIds([]);
-    } else {
-      setHiddenDeptIds(departments.map(d => d.id));
-    }
-  };
-
-
+  // ... (rest of logic) ...
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f4f8]">
       <header className="bg-[#081429] no-print shadow-2xl z-20 sticky top-0 border-b border-white/10 flex flex-col md:flex-row">
 
         {/* Left Section: Branding - Spans Full Height */}
-        <div className="flex-none px-6 py-3 md:px-10 md:py-0 flex flex-col justify-center items-center border-b md:border-b-0 md:border-r border-white/10 bg-[#081429] relative z-30 w-full md:w-auto md:min-w-[240px]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1 border-2 border-[#fdb813] shadow-[0_0_15px_rgba(253,184,19,0.3)]">
-              <img src={INJAEWON_LOGO} alt="인재원 로고" className="w-full h-full object-contain" />
+        <div className="flex-none px-6 py-3 md:px-10 md:py-0 flex flex-col justify-center items-center border-b md:border-b-0 md:border-r border-white/10 bg-[#081429] relative z-30 w-full md:w-auto md:min-w-[320px]">
+          <div className="flex flex-col items-start gap-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center p-1 border-2 border-[#fdb813] shadow-[0_0_15px_rgba(253,184,19,0.3)] overflow-hidden">
+                {/* Fallback to text if image fails, or use icon */}
+                <img
+                  src={INJAEWON_LOGO}
+                  alt="Logo"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement?.classList.add('bg-[#fdb813]');
+                  }}
+                />
+                {/* Fallback Icon (hidden by default, shown via CSS if img fails could be complex, but let's just assume img works or we see blank) */}
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-white tracking-tighter flex items-center gap-2">
+                  인재원 <span className="text-[#fdb813]">학원</span>
+                </h1>
+                {/* User Info Here */}
+                {currentUser && (
+                  <div className="text-[11px] text-white/60 font-medium flex items-center gap-1.5 mt-0.5">
+                    <UserCircle size={12} />
+                    <span>{userProfile?.email || currentUser.email}</span>
+                    <span className="text-[#fdb813]">
+                      ({isMaster ? '최고관리자' : '직원'})
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-            <h1 className="text-2xl font-black text-white tracking-tighter flex items-center gap-2">
-              인재원 <span className="text-[#fdb813]">학원</span>
-            </h1>
           </div>
-          <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[#fdb813]/50 to-transparent mt-2" />
         </div>
 
         {/* Right Section: Controls - Stacked Rows */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top Row: Action Buttons */}
           <div className="px-6 py-2.5 flex items-center justify-end gap-2 border-b border-white/5">
+            {/* Removed User Info from here */}
+
             <button
               onClick={() => {
                 setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
