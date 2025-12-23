@@ -121,11 +121,12 @@ const App: React.FC = () => {
         } catch (error) {
           console.error("Error fetching user profile:", error);
         }
-      } else {
-        setUserProfile(null);
-      }
-      setAuthLoading(false);
-    });
+        if (!user) {
+          setUserProfile(null);
+          setIsLoginModalOpen(true); // Force open login modal
+        }
+        setAuthLoading(false);
+      });
     return () => unsubscribe();
   }, []);
 
@@ -434,6 +435,7 @@ const App: React.FC = () => {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
+        canClose={!!currentUser} // Only allow close if logged in
       />
 
       <SettingsModal
