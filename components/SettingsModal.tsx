@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Department, UserProfile } from '../types';
-import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2 } from 'lucide-react';
 import { db, auth } from '../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc } from 'firebase/firestore';
 
@@ -11,7 +11,7 @@ interface SettingsModalProps {
   currentUserProfile?: UserProfile | null; // Pass current user profile
 }
 
-type TabMode = 'departments' | 'users';
+type TabMode = 'departments' | 'users' | 'system';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -19,6 +19,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   departments,
   currentUserProfile,
 }) => {
+  const isMaster = currentUserProfile?.role === 'master';
+  const canManageMenus = isMaster || currentUserProfile?.canManageMenus === true; // Derive permission
+
   const [activeTab, setActiveTab] = useState<TabMode>('departments');
   const [newDeptName, setNewDeptName] = useState('');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -26,16 +29,40 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // User Management State
   const [users, setUsers] = useState<UserProfile[]>([]);
 
+  // System Config State
+  const [lookbackYears, setLookbackYears] = useState<number>(2);
+
   // Fetch Users if Tab is 'users' and User is Master
   useEffect(() => {
-    if (activeTab === 'users' && currentUserProfile?.role === 'master') {
+    if (activeTab === 'users' && isMaster) {
       const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
         const loadUsers = snapshot.docs.map(doc => doc.data() as UserProfile);
         setUsers(loadUsers);
       });
       return () => unsubscribe();
     }
-  }, [activeTab, currentUserProfile]);
+  }, [activeTab, isMaster]);
+
+  // Fetch System Config if Tab is 'system' and User is Master
+  useEffect(() => {
+    if (activeTab === 'system' && isMaster) {
+      const unsubscribe = onSnapshot(doc(db, 'system', 'config'), (doc) => {
+        if (doc.exists()) {
+          setLookbackYears(doc.data().eventLookbackYears || 2);
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [activeTab, isMaster]);
+
+  const handleUpdateLookback = async (years: number) => {
+    try {
+      await setDoc(doc(db, 'system', 'config'), { eventLookbackYears: years }, { merge: true });
+    } catch (e) {
+      console.error(e);
+      alert("설정 저장 실패");
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -89,6 +116,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     } catch (e) { console.error(e); }
   };
 
+  const handleUpdateJobTitle = async (uid: string, newTitle: string) => {
+    try {
+      await updateDoc(doc(db, 'users', uid), { jobTitle: newTitle });
+    } catch (e) {
+      console.error(e);
+      alert("직급 수정 실패");
+    }
+  };
+
+  const handleToggleMenuPermission = async (user: UserProfile) => {
+    try {
+      await updateDoc(doc(db, 'users', user.uid), { canManageMenus: !user.canManageMenus });
+    } catch (e) {
+      console.error(e);
+      alert("권한 수정 실패");
+    }
+  };
+
   const handleToggleUserDept = async (user: UserProfile, deptId: string) => {
     const currentDepts = user.allowedDepartments || [];
     const newDepts = currentDepts.includes(deptId)
@@ -101,6 +146,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleDeleteUser = async (uid: string) => {
+    console.log("deleting user", uid);
     if (confirm('사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
       try {
         await deleteDoc(doc(db, 'users', uid));
@@ -128,14 +174,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     const batch = writeBatch(db);
     reordered.forEach((dept, idx) => {
-      const ref = doc(db, "부서목록", dept.id);
-      batch.update(ref, { 순서: idx + 1 });
+      if (dept.order !== idx + 1) { // Optimization: Only write if order changed
+        const ref = doc(db, "부서목록", dept.id);
+        batch.update(ref, { 순서: idx + 1 });
+      }
     });
     try { await batch.commit(); } catch (error) { console.error(error); }
     setDraggedIndex(null);
   };
-
-  const isMaster = currentUserProfile?.role === 'master';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
@@ -150,7 +196,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </h2>
 
             {/* Tabs */}
-            {isMaster && (
+            {/* Tabs */}
+            {(isMaster || canManageMenus) && (
               <div className="flex bg-white/10 rounded-lg p-1 gap-1">
                 <button
                   onClick={() => setActiveTab('departments')}
@@ -158,12 +205,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 >
                   부서 관리
                 </button>
-                <button
-                  onClick={() => setActiveTab('users')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'users' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
-                >
-                  사용자 관리
-                </button>
+                {isMaster && (
+                  <>
+                    <button
+                      onClick={() => setActiveTab('users')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'users' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
+                    >
+                      사용자 관리
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('system')}
+                      className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'system' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
+                    >
+                      시스템 설정
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -175,8 +232,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Content Area */}
         <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
 
-          {/* DEPARTMENT TAB */}
-          {activeTab === 'departments' && (
+          {/* DEPARTMENT TAB - Guarded by canManageMenus */}
+          {activeTab === 'departments' && canManageMenus && (
             <div className="space-y-4 max-w-lg mx-auto">
               {/* Add Section */}
               <div className="flex gap-2 bg-white p-3 rounded-xl shadow-sm border border-gray-200">
@@ -303,12 +360,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           <div className="font-bold text-[#081429] flex items-center gap-2">
                             {user.email}
                             <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black tracking-wider ${user.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                user.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                              user.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
                               }`}>
                               {user.status}
                             </span>
                           </div>
                           <div className="text-xs text-gray-400 font-mono mt-0.5">UID: {user.uid.slice(0, 8)}...</div>
+                          <div className="mt-1">
+                            <input
+                              type="text"
+                              placeholder="직급 입력 (예: 대리)"
+                              defaultValue={user.jobTitle || ''}
+                              onBlur={(e) => {
+                                if (e.target.value !== user.jobTitle) {
+                                  handleUpdateJobTitle(user.uid, e.target.value);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              className="text-xs border-b border-gray-200 focus:border-[#fdb813] outline-none bg-transparent placeholder:text-gray-300 w-32 py-0.5 transition-colors"
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -345,6 +420,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
                     {/* Permission Checkboxes */}
                     <div>
+                      {/* NEW: Menu Management Permission (Master Only) */}
+                      {isMaster && user.role !== 'master' && (
+                        <div className="mb-3 pb-3 border-b border-gray-100">
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${user.canManageMenus ? 'bg-[#fdb813] border-[#fdb813]' : 'bg-white border-gray-300'}`}>
+                              {user.canManageMenus && <Check size={12} className="text-[#081429]" />}
+                            </div>
+                            <input type="checkbox" checked={!!user.canManageMenus} onChange={() => handleToggleMenuPermission(user)} className="hidden" />
+                            <span className="text-xs font-bold text-[#081429]">메뉴 관리 권한 (부서 추가/수정/삭제)</span>
+                          </label>
+                        </div>
+                      )}
+
                       <h4 className="text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">접근 허용 부서</h4>
                       <div className="flex flex-wrap gap-2">
                         {departments.map(dept => {
@@ -378,14 +466,51 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
           )}
+
+          {/* SYSTEM TAB */}
+          {activeTab === 'system' && isMaster && (
+            <div className="max-w-lg mx-auto space-y-6">
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-[#081429] mb-4 flex items-center gap-2">
+                  <Database size={18} /> 데이터 관리
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">
+                      이벤트 조회 기간 (년)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={lookbackYears}
+                        onChange={(e) => setLookbackYears(Number(e.target.value))}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none font-medium"
+                      />
+                      <button
+                        onClick={() => handleUpdateLookback(lookbackYears)}
+                        className="px-4 py-2 bg-[#081429] text-white rounded-lg font-bold hover:bg-[#1a2942] transition-colors"
+                      >
+                        저장
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      * 현재 시점으로부터 과거 N년 동안의 일정 데이터만 불러옵니다. <br />
+                      * 기간을 줄이면 앱 로딩 속도가 빨라지고 데이터 비용이 절감됩니다. <br />
+                      * 기본값: 2년
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-// Start Icon fix
-// CheckCircle2 is not imported in original snippet but used here
-import { CheckCircle2 } from 'lucide-react';
+
 
 export default SettingsModal;
