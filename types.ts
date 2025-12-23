@@ -26,3 +26,12 @@ export interface DragSelection {
 }
 
 export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  role: 'master' | 'user';
+  status: 'approved' | 'pending' | 'rejected'; // Access Control Status
+  allowedDepartments: string[]; // List of department IDs
+  canEdit?: boolean;
+}
