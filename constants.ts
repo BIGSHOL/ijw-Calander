@@ -1,16 +1,16 @@
 import { Department } from './types';
 
 export const INITIAL_DEPARTMENTS: Department[] = [
-  { id: 'school', name: '학교일정', order: 1, color: 'bg-red-50' },
-  { id: 'eie', name: 'EiE', order: 2, color: 'bg-orange-50' },
-  { id: 'talent_eng', name: '인재원영어', order: 3, color: 'bg-yellow-50' },
-  { id: 'talent_math', name: '인재원수학', order: 4, color: 'bg-green-50' },
-  { id: 'materials', name: '수학교재', order: 5, color: 'bg-emerald-50' },
-  { id: 'science_kor', name: '인재원과학/국어', order: 6, color: 'bg-cyan-50' },
-  { id: 'high_math', name: '고등수학관', order: 7, color: 'bg-sky-50' },
-  { id: 'events', name: '행사일정', order: 8, color: 'bg-violet-50' },
-  { id: 'marketing', name: '마케팅일정', order: 9, color: 'bg-fuchsia-50' },
-  { id: 'other', name: '기타일정', order: 10, color: 'bg-gray-50' },
+  { id: '학교일정', name: '학교일정', order: 1, color: 'bg-red-50' },
+  { id: 'EiE', name: 'EiE', order: 2, color: 'bg-orange-50' },
+  { id: '인재원영어', name: '인재원영어', order: 3, color: 'bg-yellow-50' },
+  { id: '인재원수학', name: '인재원수학', order: 4, color: 'bg-green-50' },
+  { id: '수학교재', name: '수학교재', order: 5, color: 'bg-emerald-50' },
+  { id: '인재원과학/국어', name: '인재원과학/국어', order: 6, color: 'bg-cyan-50' },
+  { id: '고등수학관', name: '고등수학관', order: 7, color: 'bg-sky-50' },
+  { id: '행사일정', name: '행사일정', order: 8, color: 'bg-violet-50' },
+  { id: '마케팅일정', name: '마케팅일정', order: 9, color: 'bg-fuchsia-50' },
+  { id: '기타일정', name: '기타일정', order: 10, color: 'bg-gray-50' },
 ];
 
 export const EVENT_COLORS = [
