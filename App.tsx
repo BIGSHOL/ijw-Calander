@@ -6,7 +6,7 @@ import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
 import CalendarBoard from './components/CalendarBoard';
-import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon } from 'lucide-react';
+import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
@@ -72,6 +72,16 @@ const eventConverter = {
 // Embedded Injaewon Logo
 const INJAEWON_LOGO = "/logo.png";
 
+const getJobTitleStyle = (title: string = '') => {
+  if (title.includes('원장') || title.includes('대표')) return 'bg-amber-100 text-amber-700 border border-amber-200';
+  if (title.includes('이사')) return 'bg-purple-100 text-purple-700 border border-purple-200';
+  if (title.includes('부장')) return 'bg-indigo-100 text-indigo-700 border border-indigo-200'; // Added Boojang
+  if (title.includes('실장') || title.includes('팀장')) return 'bg-blue-100 text-blue-700 border border-blue-200';
+  if (title.includes('대리')) return 'bg-green-100 text-green-700 border border-green-200';
+  if (title.includes('강사')) return 'bg-pink-100 text-pink-700 border border-pink-200';
+  return 'bg-gray-100 text-gray-600 border border-gray-200';
+};
+
 const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
   const [baseDate, setBaseDate] = useState(new Date());
@@ -80,6 +90,7 @@ const App: React.FC = () => {
   // Firestore Data State
   const [departments, setDepartments] = useState<Department[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
 
   // Local Settings
   const [hiddenDeptIds, setHiddenDeptIds] = useState<string[]>(() => {
@@ -97,6 +108,9 @@ const App: React.FC = () => {
 
   const [initialStartTime, setInitialStartTime] = useState('');
   const [initialEndTime, setInitialEndTime] = useState('');
+
+  // UI State for New Header
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -155,6 +169,18 @@ const App: React.FC = () => {
         setIsLoginModalOpen(true); // Force open login modal
       }
       setAuthLoading(false);
+    });
+    return () => unsubscribe();
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch Users (for Participants & Admin)
+  useEffect(() => {
+    // Optimization: In a real app, might want to restrict this or use cloud functions
+    // For now, we fetch all users to support the Participant Selector
+    const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const loadUsers = snapshot.docs.map(doc => doc.data() as UserProfile);
+      setUsers(loadUsers);
     });
     return () => unsubscribe();
   }, []);
@@ -314,57 +340,71 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f4f8]">
-      <header className="bg-[#081429] no-print shadow-2xl z-20 sticky top-0 border-b border-white/10 flex flex-col md:flex-row">
+      <header className="no-print z-20 sticky top-0 flex flex-col shadow-2xl relative">
+        {/* Row 1: Primary Header (Navy) */}
+        <div className="bg-[#081429] h-16 flex items-center justify-between px-4 md:px-6 border-b border-white/10 z-30 relative">
 
-        {/* Left Section: Branding - Spans Full Height */}
-        <div className="flex-none px-6 py-3 md:px-10 md:py-0 flex flex-col justify-center items-center border-b md:border-b-0 md:border-r border-white/10 bg-[#081429] relative z-30 w-full md:w-auto md:min-w-[320px]">
-          <div className="flex flex-col items-start gap-1">
-            <div className="flex items-center gap-3">
-              <div className="w-16 h-16 flex items-center justify-center overflow-hidden transition-transform hover:scale-105">
-                <img
-                  src={INJAEWON_LOGO}
-                  alt="Logo"
-                  className="w-full h-full object-contain filter drop-shadow-md"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement?.classList.add('bg-[#fdb813]', 'rounded-full');
-                  }}
-                />
-              </div>
-              <div className="flex flex-col">
-                <h1 className="text-2xl font-black text-white tracking-tighter flex items-center gap-2">
-                  인재원 <span className="text-[#fdb813]">학원</span>
-                </h1>
-                {/* User Info Here */}
-                {currentUser && (
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <div className="text-[11px] text-white/60 font-medium flex items-center gap-1.5">
-                      <UserCircle size={12} />
-                      <span>{userProfile?.email || currentUser.email}</span>
-                      <span className="text-[#fdb813]">
-                        {userProfile?.jobTitle && <span className="mr-1">[{userProfile.jobTitle}]</span>}
-                        ({isMaster ? '최고관리자' : '직원'})
-                      </span>
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className="text-gray-400 hover:text-white hover:bg-white/10 p-1 rounded transition-all"
-                      title="로그아웃"
-                    >
-                      <LogOut size={12} />
-                    </button>
-                  </div>
+          {/* Left: Branding */}
+          <div className="flex items-center gap-3 min-w-[250px]">
+            <div className="w-10 h-10 flex items-center justify-center overflow-hidden flex-shrink-0">
+              <img
+                src={INJAEWON_LOGO}
+                alt="Logo"
+                className="w-full h-full object-contain filter drop-shadow-md"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </div>
+            <h1 className="text-xl font-black text-white tracking-tighter hidden md:flex items-center gap-1 flex-shrink-0">
+              인재원 <span className="text-[#fdb813]">학원</span>
+            </h1>
+
+            {/* User Info Display (Moved to Left) */}
+            {currentUser && (
+              <div className="hidden md:flex flex-row items-center gap-1.5 ml-4 pl-4 border-l border-white/10 overflow-hidden">
+                {/* Master Badge */}
+                {userProfile?.role === 'master' && (
+                  <span className="bg-red-600 text-white text-[9px] px-1 py-0.5 rounded font-black tracking-tighter shadow-sm">MASTER</span>
                 )}
+                {/* Name */}
+                <span className="text-xs font-bold text-white whitespace-nowrap">
+                  {(userProfile?.email || currentUser?.email)?.split('@')[0]}
+                </span>
+                {/* Job Title Badge */}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded flex items-center justify-center font-bold tracking-tight whitespace-nowrap ${getJobTitleStyle(userProfile?.jobTitle)}`}>
+                  {userProfile?.jobTitle || '직급 미설정'}
+                </span>
               </div>
+            )}
+          </div>
+
+          {/* Center: View Mode Switcher */}
+          <div className="flex-1 flex justify-center">
+            <div className="flex bg-[#373d41]/50 p-1 rounded-full border border-white/10 backdrop-blur-sm">
+              <button
+                onClick={() => setViewMode('daily')}
+                className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${viewMode === 'daily' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'}`}
+              >
+                일간
+              </button>
+              <button
+                onClick={() => setViewMode('weekly')}
+                className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${viewMode === 'weekly' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'}`}
+              >
+                주간
+              </button>
+              <button
+                onClick={() => setViewMode('monthly')}
+                className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${viewMode === 'monthly' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'}`}
+              >
+                월간
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Right Section: Controls - Stacked Rows */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Top Row: Action Buttons */}
-          <div className="px-6 py-2.5 flex items-center justify-end gap-2 border-b border-white/5">
-            {/* Removed User Info from here */}
+          {/* Right: Actions */}
+          <div className="flex items-center justify-end gap-3 w-[250px]">
 
             <button
               onClick={() => {
@@ -372,102 +412,123 @@ const App: React.FC = () => {
                 setSelectedEndDate(format(new Date(), 'yyyy-MM-dd'));
                 setSelectedDeptId(visibleDepartments[0]?.id || departments[0]?.id);
                 setEditingEvent(null);
-                setInitialStartTime(''); // Reset
-                setInitialEndTime('');   // Reset
+                setInitialStartTime('');
+                setInitialEndTime('');
                 setIsEventModalOpen(true);
               }}
-              className="flex items-center gap-2 px-5 py-2 bg-[#fdb813] text-[#081429] rounded-xl hover:brightness-110 transition-all shadow-lg text-sm font-black border border-[#fdb813] active:scale-95"
+              className="h-7 px-2 bg-[#fdb813] text-[#081429] rounded hover:brightness-110 flex-shrink-0 flex items-center justify-center gap-1 font-bold shadow-sm transition-all active:scale-95 text-[11px] whitespace-nowrap"
             >
-              <Plus size={18} /> <span>일정 추가</span>
+              <Plus size={14} /> <span className="hidden lg:inline">일정 추가</span>
             </button>
-            <div className="h-8 w-px bg-white/10 mx-2" />
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="p-2.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all border border-white/5"
-              title="설정"
-            >
+
+            <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
               <Settings size={20} />
             </button>
-            <button
-              onClick={() => window.print()}
-              className="p-2.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all border border-white/5"
-              title="인쇄"
-            >
+            <button onClick={() => window.print()} className="text-gray-400 hover:text-white transition-colors">
               <Printer size={20} />
             </button>
-          </div>
-
-          {/* Bottom Row: Filters & Navigation */}
-          <div className="px-4 md:px-6 py-2 flex items-center justify-start md:justify-end gap-4 md:gap-6 bg-black/20 overflow-x-auto no-scrollbar w-full">
-            {/* View Mode Switcher */}
-            <div className="flex bg-[#373d41]/80 p-1 rounded-xl border border-white/5 shrink-0">
-              <button
-                onClick={() => setViewMode('daily')}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${viewMode === 'daily' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'} `}
-              >
-                <List size={14} /> 일간
-              </button>
-              <button
-                onClick={() => setViewMode('weekly')}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${viewMode === 'weekly' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'} `}
-              >
-                <CalendarIcon size={14} /> 주간
-              </button>
-              <button
-                onClick={() => setViewMode('monthly')}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${viewMode === 'monthly' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'} `}
-              >
-                <LayoutGrid size={14} /> 월간
-              </button>
-            </div>
-
-            <div className="h-6 w-px bg-white/10 shrink-0" />
-
-            {/* Global Visibility Toggle */}
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setAllVisibility(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 hover:bg-green-500/20 text-green-400 text-[11px] font-black rounded-lg border border-green-500/20 transition-all uppercase tracking-tighter"
-              >
-                <CheckCircle2 size={13} /> 켜기
-              </button>
-              <button
-                onClick={() => setAllVisibility(false)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[11px] font-black rounded-lg border border-red-500/20 transition-all uppercase tracking-tighter"
-              >
-                <XCircle size={13} /> 끄기
-              </button>
-            </div>
-
-            {/* Department Tags (Right aligned flow) */}
-            <div className="flex items-center gap-2 pr-4 overflow-visible">
-              {visibleDepartments.map(dept => {
-                const isHidden = hiddenDeptIds.includes(dept.id);
-                return (
-                  <button
-                    key={dept.id}
-                    onClick={() => toggleDeptVisibility(dept.id)}
-                    className={`
-                      whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[11px] font-black transition-all duration-300 border flex items-center gap-2 select-none
-                      ${isHidden
-                        ? 'bg-white/5 text-gray-500 border-white/5 opacity-40 hover:opacity-100'
-                        : `border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.1)] hover:brightness-110 text-[#081429] ring-1 ring-white/10 transform hover:-translate-y-0.5`
-                      }
-                      ${!isHidden && !dept.color.startsWith('#') ? dept.color : ''}
-                    `}
-                    style={{
-                      backgroundColor: !isHidden && dept.color.startsWith('#') ? dept.color : undefined
-                    }}
-                  >
-                    {dept.name}
-                    {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
-                  </button>
-                )
-              })}
-            </div>
+            {currentUser && (
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white border border-white/10 ml-2">
+                <UserCircle size={20} />
+              </div>
+            )}
           </div>
         </div>
-      </header >
+
+        {/* Row 2: Filter Bar (Slate) */}
+        <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-20 text-xs">
+
+          {/* Main Filter Toggle */}
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={`
+              flex items-center gap-2 px-3 h-full border-r border-gray-700 hover:bg-white/5 transition-colors
+              ${isFilterOpen ? 'text-[#fdb813] font-bold bg-white/5' : 'text-gray-300'}
+            `}
+          >
+            <Filter size={14} />
+            <span>부서 필터</span>
+            {isFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+
+          {/* Active Filters Summary */}
+          <div className="flex items-center gap-2 px-4 overflow-hidden mask-linear-fade flex-1">
+            {hiddenDeptIds.length === 0 ? (
+              <span className="text-gray-400 flex items-center gap-1.5">
+                <CheckCircle2 size={12} className="text-green-500" /> 모든 부서 표시중
+              </span>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">표시됨:</span>
+                {visibleDepartments.slice(0, 5).map(d => (
+                  <span key={d.id} className="px-1.5 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300">
+                    {d.name}
+                  </span>
+                ))}
+                {visibleDepartments.length > 5 && (
+                  <span className="text-gray-500">+{visibleDepartments.length - 5} 더보기</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Filter Popover Panel */}
+        {isFilterOpen && (
+          <div className="absolute top-[104px] left-0 w-full bg-[#1e293b]/95 backdrop-blur-xl border-b border-gray-700 shadow-2xl p-6 z-10 animate-in slide-in-from-top-2 duration-200">
+            <div className="max-w-[1920px] mx-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-white font-bold flex items-center gap-2">
+                  <Filter size={16} className="text-[#fdb813]" /> 부서 선택
+                </h3>
+                <div className="flex gap-2">
+                  <button onClick={() => setAllVisibility(true)} className="px-3 py-1.5 rounded bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20 hover:bg-green-500/20">
+                    모두 켜기
+                  </button>
+                  <button onClick={() => setAllVisibility(false)} className="px-3 py-1.5 rounded bg-red-500/10 text-red-500 text-xs font-bold border border-red-500/20 hover:bg-red-500/20">
+                    모두 끄기
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+                {departments.map(dept => {
+                  const isHidden = hiddenDeptIds.includes(dept.id);
+                  const isAllowed = userProfile?.allowedDepartments?.includes(dept.id) || isMaster;
+
+                  if (!isAllowed) return null;
+
+                  return (
+                    <button
+                      key={dept.id}
+                      onClick={() => toggleDeptVisibility(dept.id)}
+                      className={`
+                         flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-bold transition-all text-left
+                         ${isHidden
+                          ? 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500'
+                          : 'bg-[#081429] border-[#fdb813]/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
+                        }
+                       `}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color.startsWith('#') ? dept.color : 'white') : undefined }} />
+                      <span className="truncate flex-1">{dept.name}</span>
+                      {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Close Handle */}
+            <div
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full bg-[#1e293b] px-6 py-0.5 rounded-b-xl border-b border-x border-gray-700 cursor-pointer hover:bg-[#081429] transition-colors"
+              onClick={() => setIsFilterOpen(false)}
+            >
+              <ChevronUp size={16} className="text-gray-400" />
+            </div>
+          </div>
+        )}
+      </header>
 
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
         <div className="w-full flex-1 max-w-[1920px] mx-auto min-h-screen print:p-0 flex flex-col xl:flex-row gap-8 print:flex-row print:gap-4">
@@ -514,6 +575,8 @@ const App: React.FC = () => {
         existingEvent={editingEvent}
         departments={visibleDepartments} // ONLY Pass visible
         readOnly={!canEdit} // Pass readOnly prop
+        users={users}
+        currentUser={userProfile}
       />
 
       <LoginModal
@@ -527,6 +590,7 @@ const App: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)}
         departments={departments}
         currentUserProfile={userProfile}
+        users={users} // Pass users
       />
 
       {/* Access Denied / Pending Approval Overlay */}
