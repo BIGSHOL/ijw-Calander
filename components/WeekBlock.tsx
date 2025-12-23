@@ -159,11 +159,15 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
             <div className="absolute inset-y-0 left-[120px] right-0 grid grid-cols-7 pointer-events-none p-1 gap-y-1 z-10">
               {weekEvents.map(event => {
                 const pos = getEventPositionInWeek(event, weekStart, weekEnd);
-                const colorDef = EVENT_COLORS.find(c => c.value === event.color) || EVENT_COLORS[0];
+                // Direct use of custom colors
+                const bgColor = event.color;
+                const borderColor = event.borderColor || event.color;
+                const textColor = event.textColor || '#ffffff';
 
                 const style = {
                   gridColumnStart: pos.colStart - 1,
                   gridColumnEnd: `span ${pos.colSpan}`,
+                  borderColor: borderColor, // Apply border color to container
                 };
 
                 return (
@@ -189,13 +193,10 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                   >
                     <div
                       className="absolute inset-0"
-                      style={{ backgroundColor: colorDef.value }}
+                      style={{ backgroundColor: bgColor }}
                     />
-                    <div
-                      className="absolute inset-0 border"
-                      style={{ borderColor: colorDef.border }}
-                    />
-                    <span className="relative z-10 truncate" style={{ color: colorDef.text }}>
+                    {/* Inner border div removed, applied to container instead */}
+                    <span className="relative z-10 truncate" style={{ color: textColor }}>
                       {event.title}
                     </span>
                   </div>

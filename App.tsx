@@ -6,7 +6,7 @@ import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
 import CalendarBoard from './components/CalendarBoard';
-import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, User as UserIcon } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
@@ -35,7 +35,7 @@ const departmentConverter = {
 
 const eventConverter = {
   toFirestore: (event: CalendarEvent) => {
-    return {
+    const data = {
       제목: event.title,
       상세내용: event.description || '',
       참가자: event.participants || '',
@@ -45,8 +45,12 @@ const eventConverter = {
       시작시간: event.startTime || '',
       종료시간: event.endTime || '',
       하루종일: event.isAllDay || false,
-      색상: event.color
+      색상: event.color,
+      글자색: event.textColor,
+      테두리색: event.borderColor
     };
+    console.log('toFirestore called with:', event);
+    return data;
   },
   fromFirestore: (snapshot: any, options: any) => {
     const data = snapshot.data(options);
@@ -65,6 +69,8 @@ const eventConverter = {
       endTime: data.종료시간,
       isAllDay: inferredAllDay,
       color: data.색상,
+      textColor: data.글자색 || '#ffffff', // Default to white for existing events
+      borderColor: data.테두리색 || data.색상 || 'transparent', // Default to bg color if missing
     } as CalendarEvent;
   }
 };
@@ -90,7 +96,9 @@ const App: React.FC = () => {
   // Firestore Data State
   const [departments, setDepartments] = useState<Department[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); // New State
 
   // Local Settings
   const [hiddenDeptIds, setHiddenDeptIds] = useState<string[]>(() => {
@@ -427,9 +435,39 @@ const App: React.FC = () => {
             <button onClick={() => window.print()} className="text-gray-400 hover:text-white transition-colors">
               <Printer size={20} />
             </button>
+            {/* Profile Dropdown */}
             {currentUser && (
-              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white border border-white/10 ml-2">
-                <UserCircle size={20} />
+              <div className="relative">
+                <button
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className={`transition-colors mt-[5px] ${isProfileMenuOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <UserIcon size={20} />
+                </button>
+
+                {isProfileMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 overflow-hidden text-sm">
+                      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                        <p className="font-bold text-gray-800">{userProfile?.email?.split('@')[0]}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{userProfile?.jobTitle || '직급 미설정'}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setIsProfileMenuOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium transition-colors"
+                      >
+                        <LogOut size={16} /> 로그아웃
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

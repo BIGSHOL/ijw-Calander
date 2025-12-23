@@ -64,11 +64,12 @@ const DailyView: React.FC<{
                     ${dept?.color && !dept.color.startsWith('#') ? dept.color : 'bg-gray-100 border-gray-300'}
                   `}
                   style={{
-                    backgroundColor: dept?.color?.startsWith('#') ? dept.color : undefined,
-                    borderLeftColor: dept?.color?.startsWith('#') ? dept.color : undefined // Or darker? simple is fine
+                    backgroundColor: event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined),
+                    borderLeftColor: event.borderColor?.startsWith('#') ? event.borderColor : (event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined)),
+                    color: event.textColor || '#ffffff'
                   }}
                 >
-                  <span className="bg-white/50 px-1.5 rounded text-[10px] uppercase tracking-wider text-gray-700">All Day</span>
+                  <span className="bg-white/50 px-1.5 rounded text-[10px] uppercase tracking-wider text-inherit mix-blend-multiply opacity-80">All Day</span>
                   <span className="truncate">{event.title}</span>
                 </div>
               );
@@ -129,22 +130,23 @@ const DailyView: React.FC<{
                   style={{
                     top: `${top}px`,
                     height: `${Math.max(height, 30)}px`,
-                    backgroundColor: dept?.color?.startsWith('#') ? dept.color : undefined,
-                    borderLeftColor: dept?.color?.startsWith('#') ? dept.color : undefined
+                    backgroundColor: event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined),
+                    borderLeftColor: event.borderColor?.startsWith('#') ? event.borderColor : (event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined)),
+                    color: event.textColor || '#ffffff'
                   }}
                 >
                   <div className="flex flex-col h-full">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-black/70 flex items-center gap-1">
+                      <span className="text-xs font-bold text-inherit opacity-90 flex items-center gap-1">
                         <Clock size={10} /> {event.startTime} - {event.endTime}
                       </span>
                       {dept && (
-                        <span className="text-xs font-extrabold uppercase bg-white/40 px-1.5 rounded text-black/60 shadow-sm border border-black/5">
+                        <span className="text-xs font-extrabold uppercase bg-white/40 px-1.5 rounded text-inherit mix-blend-multiply shadow-sm border border-black/5">
                           {dept.name}
                         </span>
                       )}
                     </div>
-                    <div className="font-bold text-sm text-[#081429] truncate mt-0.5">{event.title}</div>
+                    <div className="font-bold text-sm text-inherit truncate mt-0.5">{event.title}</div>
                     <div className="text-xs text-gray-600 truncate mt-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                       <Users size={10} /> {event.participants || '참석자 없음'}
                     </div>

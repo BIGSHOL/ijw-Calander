@@ -18,6 +18,8 @@ export interface CalendarEvent {
   endTime?: string;   // HH:mm
   isAllDay?: boolean;
   color: string;     // Hex or Tailwind class
+  textColor?: string;
+  borderColor?: string;
   authorId?: string; // UID of the creator
   authorName?: string; // Display name of the creator (snapshot)
 }

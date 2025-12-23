@@ -49,59 +49,85 @@ const EventModal: React.FC<EventModalProps> = ({
   const [endTime, setEndTime] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#fee2e2');
+  const [selectedTextColor, setSelectedTextColor] = useState('#ffffff');
+  const [selectedBorderColor, setSelectedBorderColor] = useState('#fee2e2');
   const [authorId, setAuthorId] = useState('');
   const [authorName, setAuthorName] = useState('');
 
+  // Track which event ID we last loaded to prevent unnecessary resets
+  const [loadedEventId, setLoadedEventId] = useState<string | null>(null);
+
   useEffect(() => {
     if (isOpen) {
-      if (existingEvent) {
-        setTitle(existingEvent.title);
-        setDescription(existingEvent.description || '');
-        setParticipants(existingEvent.participants ? existingEvent.participants.split(', ') : []);
-        setDepartmentId(existingEvent.departmentId);
-        setAuthorId(existingEvent.authorId || '');
-        setAuthorName(existingEvent.authorName || '');
-        setStartDate(existingEvent.startDate);
-        setEndDate(existingEvent.endDate);
-        setStartTime(existingEvent.startTime || '');
-        setEndTime(existingEvent.endTime || '');
-        // Legacy support/Robustness: If time is missing, it must be All Day
-        const isTimeEmpty = !existingEvent.startTime && !existingEvent.endTime;
-        setIsAllDay(existingEvent.isAllDay || isTimeEmpty);
+      // Determine current target ID (existing ID or 'new')
+      const currentTargetId = existingEvent ? existingEvent.id : 'new';
 
-        // Handle Color
-        const colorVal = existingEvent.color;
-        // If it's a class (e.g., bg-red-100), try to map it? 
-        // Or just default to one if we can't parse.
-        // Actually, if we are transitioning, we can just set it. 
-        // If it's a tailwind class, the input color might show black/white default, 
-        // but user can pick a new one. 
-        // Better: Try to find hex from EVENT_COLORS if it matches a class, else use it as hex (if valid) or default.
-        const knownColor = EVENT_COLORS.find(c => c.value === colorVal);
-        setSelectedColor(knownColor ? knownColor.value : (colorVal.startsWith('#') ? colorVal : '#fee2e2'));
-      } else {
-        setTitle('');
-        setDescription('');
-        // Default Logic: Auto-select Current User
-        if (currentUser) {
-          const myName = `${currentUser.email.split('@')[0]} ${currentUser.jobTitle ? `(${currentUser.jobTitle})` : ''}`;
-          setParticipants([myName]);
-          setAuthorId(currentUser.uid);
-          setAuthorName(myName);
+      // Only reset form if we are opening a different event or freshly opening 'new'
+      if (loadedEventId !== currentTargetId) {
+        setLoadedEventId(currentTargetId);
+
+        if (existingEvent) {
+          setTitle(existingEvent.title);
+          setDescription(existingEvent.description || '');
+          // Robustness: Handle if participants is string (expected) or array (legacy/error)
+          const rawParticipants = existingEvent.participants;
+          if (typeof rawParticipants === 'string') {
+            setParticipants(rawParticipants.split(', '));
+          } else if (Array.isArray(rawParticipants)) {
+            setParticipants(rawParticipants);
+          } else {
+            setParticipants([]);
+          }
+          setDepartmentId(existingEvent.departmentId);
+          setAuthorId(existingEvent.authorId || '');
+          setAuthorName(existingEvent.authorName || '');
+          setStartDate(existingEvent.startDate);
+          setEndDate(existingEvent.endDate);
+          setStartTime(existingEvent.startTime || '');
+          setEndTime(existingEvent.endTime || '');
+          // Legacy support/Robustness: If time is missing, it must be All Day
+          const isTimeEmpty = !existingEvent.startTime && !existingEvent.endTime;
+          setIsAllDay(existingEvent.isAllDay || isTimeEmpty);
+
+          // Handle Color
+          const colorVal = existingEvent.color;
+          const knownColor = EVENT_COLORS.find(c => c.value === colorVal);
+          const initialBgColor = knownColor ? knownColor.value : (colorVal.startsWith('#') ? colorVal : '#fee2e2');
+          setSelectedColor(initialBgColor);
+
+          // Handle Text & Border Colors
+          setSelectedTextColor(existingEvent.textColor || '#ffffff');
+          setSelectedBorderColor(existingEvent.borderColor || initialBgColor);
         } else {
-          setParticipants([]);
-          setAuthorId('');
-          setAuthorName('');
+          setTitle('');
+          setDescription('');
+          // Default Logic: Auto-select Current User
+          if (currentUser) {
+            const myName = `${currentUser.email.split('@')[0]} ${currentUser.jobTitle ? `(${currentUser.jobTitle})` : ''}`;
+            setParticipants([myName]);
+            setAuthorId(currentUser.uid);
+            setAuthorName(myName);
+          } else {
+            setParticipants([]);
+            setAuthorId('');
+            setAuthorName('');
+          }
+          setDepartmentId(initialDepartmentId || departments[0]?.id || '');
+          setStartDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
+          setEndDate(initialEndDate || initialDate || format(new Date(), 'yyyy-MM-dd'));
+          setStartTime(initialStartTime || '');
+          setEndTime(initialEndTime || '');
+          setIsAllDay(false);
+          setSelectedColor('#fee2e2');
+          setSelectedTextColor('#ffffff');
+          setSelectedBorderColor('#fee2e2');
         }
-        setDepartmentId(initialDepartmentId || departments[0]?.id || '');
-        setStartDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
-        setEndDate(initialEndDate || initialDate || format(new Date(), 'yyyy-MM-dd'));
-        setStartTime(initialStartTime || '');
-        setEndTime(initialEndTime || '');
-        setIsAllDay(false);
-        setSelectedColor('#fee2e2');
       }
+    } else {
+      // When closed, reset loaded ID so it re-initializes next time
+      setLoadedEventId(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, existingEvent, initialDate, initialEndDate, initialDepartmentId, initialStartTime, initialEndTime, departments]);
 
   if (!isOpen) return null;
@@ -123,7 +149,7 @@ const EventModal: React.FC<EventModalProps> = ({
       newId = `${startDate}_${safeDeptName}_${safeTitle}_${randomSuffix}`;
     }
 
-    onSave({
+    const payload = {
       id: newId,
       title,
       description,
@@ -135,9 +161,16 @@ const EventModal: React.FC<EventModalProps> = ({
       endTime: isAllDay ? '' : endTime,
       isAllDay,
       color: selectedColor,
+      textColor: selectedTextColor,
+      borderColor: selectedBorderColor,
       authorId,
       authorName
-    });
+    };
+    console.log('DEBUG: selectedColor', selectedColor);
+    console.log('DEBUG: selectedTextColor', selectedTextColor);
+    console.log('DEBUG: selectedBorderColor', selectedBorderColor);
+    console.log('EventModal handleSubmit payload:', payload);
+    onSave(payload);
     onClose();
   };
 
@@ -298,23 +331,50 @@ const EventModal: React.FC<EventModalProps> = ({
             />
           </div>
 
-          {/* Color Picker */}
+          {/* Color Pickers */}
           <div>
             <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2">
-              색상 라벨
+              색상 스타일
             </label>
-            <div className="flex gap-4 items-center">
-              <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm transition-transform hover:scale-105 active:scale-95">
-                <input
-                  type="color"
-                  value={selectedColor}
-                  onChange={(e) => setSelectedColor(e.target.value)}
-                  className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
-                />
+            <div className="flex gap-6 items-center">
+              {/* Background Color */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm transition-transform hover:scale-105 active:scale-95">
+                  <input
+                    type="color"
+                    value={selectedColor}
+                    onChange={(e) => setSelectedColor(e.target.value)}
+                    className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
+                  />
+                </div>
+                <span className="text-[10px] font-bold text-gray-500">배경색</span>
               </div>
-              <span className="text-sm font-bold text-gray-500">
-                색상을 선택하세요
-              </span>
+
+              {/* Text Color */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm transition-transform hover:scale-105 active:scale-95">
+                  <input
+                    type="color"
+                    value={selectedTextColor}
+                    onChange={(e) => setSelectedTextColor(e.target.value)}
+                    className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
+                  />
+                </div>
+                <span className="text-[10px] font-bold text-gray-500">글자색</span>
+              </div>
+
+              {/* Border Color */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm transition-transform hover:scale-105 active:scale-95">
+                  <input
+                    type="color"
+                    value={selectedBorderColor}
+                    onChange={(e) => setSelectedBorderColor(e.target.value)}
+                    className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
+                  />
+                </div>
+                <span className="text-[10px] font-bold text-gray-500">테두리색</span>
+              </div>
             </div>
           </div>
 
