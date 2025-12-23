@@ -164,7 +164,108 @@ const App: React.FC = () => {
     return true;
   });
 
-  // ... (rest of logic) ...
+  // Handle time slot click from Daily View
+  const handleTimeSlotClick = (date: string, time: string) => {
+    setSelectedDate(date);
+    setSelectedEndDate(date);
+    setEditingEvent(null);
+
+    setInitialStartTime(time);
+
+    // Calculate End Time (1 hour later)
+    const [h, m] = time.split(':').map(Number);
+    const endH = h + 1;
+    const endTimeStr = `${String(endH > 23 ? 23 : endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    setInitialEndTime(endTimeStr);
+
+    setIsEventModalOpen(true);
+  };
+
+  // Subscribe to Departments (부서목록)
+  useEffect(() => {
+    const q = query(collection(db, "부서목록").withConverter(departmentConverter), orderBy("순서"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadDepts = snapshot.docs.map(doc => doc.data());
+      setDepartments(loadDepts);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Subscribe to Events (일정)
+  useEffect(() => {
+    // Optimization: Fetch events from 10 years ago to ensure all history is visible
+    const oneYearAgo = format(subYears(new Date(), 10), 'yyyy-MM-dd');
+    const q = query(
+      collection(db, "일정").withConverter(eventConverter),
+      where("시작일", ">=", oneYearAgo)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadEvents = snapshot.docs.map(doc => doc.data());
+      setEvents(loadEvents);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('dept_hidden_ids', JSON.stringify(hiddenDeptIds));
+  }, [hiddenDeptIds]);
+
+  const handleCellClick = (date: string, deptId: string) => {
+    setSelectedDate(date);
+    setSelectedEndDate(date);
+    setSelectedDeptId(deptId);
+    setEditingEvent(null);
+    setIsEventModalOpen(true);
+  };
+
+  const handleRangeSelect = (startDate: string, endDate: string, deptId: string) => {
+    setSelectedDate(startDate);
+    setSelectedEndDate(endDate);
+    setSelectedDeptId(deptId);
+    setEditingEvent(null);
+    setIsEventModalOpen(true);
+  };
+
+  const handleEventClick = (event: CalendarEvent) => {
+    setEditingEvent(event);
+    setSelectedDate(event.startDate);
+    setSelectedEndDate(event.endDate);
+    setIsEventModalOpen(true);
+  };
+
+  const handleSaveEvent = async (event: CalendarEvent) => {
+    try {
+      const ref = doc(db, "일정", event.id).withConverter(eventConverter);
+      await setDoc(ref, event);
+    } catch (e) {
+      console.error("Error saving event: ", e);
+      alert("일정 저장 실패");
+    }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "일정", id));
+    } catch (e) {
+      console.error("Error deleting event: ", e);
+      alert("일정 삭제 실패");
+    }
+  };
+
+  const toggleDeptVisibility = (id: string) => {
+    setHiddenDeptIds(prev =>
+      prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]
+    );
+  };
+
+  const setAllVisibility = (visible: boolean) => {
+    if (visible) {
+      setHiddenDeptIds([]);
+    } else {
+      setHiddenDeptIds(departments.map(d => d.id));
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f4f8]">
