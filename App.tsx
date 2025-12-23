@@ -119,17 +119,7 @@ const App: React.FC = () => {
     const q = query(collection(db, "부서목록").withConverter(departmentConverter), orderBy("순서"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const loadDepts = snapshot.docs.map(doc => doc.data());
-      if (loadDepts.length === 0) {
-        // Initialize if empty
-        const batch = writeBatch(db);
-        INITIAL_DEPARTMENTS.forEach(d => {
-          const ref = doc(db, "부서목록", d.id).withConverter(departmentConverter);
-          batch.set(ref, d);
-        });
-        batch.commit();
-      } else {
-        setDepartments(loadDepts);
-      }
+      setDepartments(loadDepts);
     });
     return () => unsubscribe();
   }, []);
@@ -306,32 +296,34 @@ const App: React.FC = () => {
               </button>
             </div>
 
-            {departments.map(dept => {
-              const isHidden = hiddenDeptIds.includes(dept.id);
-              return (
-                <button
-                  key={dept.id}
-                  onClick={() => toggleDeptVisibility(dept.id)}
-                  className={`
+            {/* Department Tags (Right aligned flow) */}
+            <div className="flex items-center gap-2 pr-4 overflow-visible">
+              {departments.map(dept => {
+                const isHidden = hiddenDeptIds.includes(dept.id);
+                return (
+                  <button
+                    key={dept.id}
+                    onClick={() => toggleDeptVisibility(dept.id)}
+                    className={`
                       whitespace-nowrap px-3.5 py-1.5 rounded-lg text-[11px] font-black transition-all duration-300 border flex items-center gap-2 select-none
                       ${isHidden
-                      ? 'bg-white/5 text-gray-500 border-white/5 opacity-40 hover:opacity-100'
-                      : `border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.1)] hover:brightness-110 text-[#081429] ring-1 ring-white/10 transform hover:-translate-y-0.5`
-                    }
+                        ? 'bg-white/5 text-gray-500 border-white/5 opacity-40 hover:opacity-100'
+                        : `border-transparent shadow-[0_2px_10px_rgba(0,0,0,0.1)] hover:brightness-110 text-[#081429] ring-1 ring-white/10 transform hover:-translate-y-0.5`
+                      }
                       ${!isHidden && !dept.color.startsWith('#') ? dept.color : ''}
                     `}
-                  style={{
-                    backgroundColor: !isHidden && dept.color.startsWith('#') ? dept.color : undefined
-                  }}
-                >
-                  {dept.name}
-                  {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
-                </button>
-              )
-            })}
+                    style={{
+                      backgroundColor: !isHidden && dept.color.startsWith('#') ? dept.color : undefined
+                    }}
+                  >
+                    {dept.name}
+                    {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
-    </div>
       </header >
 
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
