@@ -23,7 +23,8 @@ const departmentConverter = {
       색상: dept.color,
       기본색상: dept.defaultColor || '#fee2e2',
       기본글자색: dept.defaultTextColor || '#000000',
-      기본테두리색: dept.defaultBorderColor || '#fee2e2'
+      기본테두리색: dept.defaultBorderColor || '#fee2e2',
+      카테고리: dept.category || '' // Add Category
     };
   },
   fromFirestore: (snapshot: any, options: any) => {
@@ -35,7 +36,8 @@ const departmentConverter = {
       color: data.색상,
       defaultColor: data.기본색상 || '#fee2e2',
       defaultTextColor: data.기본글자색 || '#000000',
-      defaultBorderColor: data.기본테두리색 || '#fee2e2'
+      defaultBorderColor: data.기본테두리색 || '#fee2e2',
+      category: data.카테고리 || undefined // Load Category
     } as Department;
   }
 };
@@ -146,8 +148,12 @@ const App: React.FC = () => {
   const [isCompareMode, setIsCompareMode] = useState<boolean>(true);
 
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // New Category Filter State
 
   const [initialStartTime, setInitialStartTime] = useState('');
+
+  // Derive unique categories from available departments
+  const uniqueCategories = Array.from(new Set(departments.map(d => d.category).filter(Boolean))) as string[];
   const [initialEndTime, setInitialEndTime] = useState('');
 
   // UI State for New Header
@@ -342,7 +348,9 @@ const App: React.FC = () => {
 
 
   // Fetch System Configuration (Lookback Period)
+  // Fetch System Configuration (Lookback Period & Categories)
   const [lookbackYears, setLookbackYears] = useState<number>(2);
+  const [sysCategories, setSysCategories] = useState<string[]>([]);
 
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   useEffect(() => {
@@ -358,7 +366,9 @@ const App: React.FC = () => {
     const unsubscribe = onSnapshot(doc(db, 'system', 'config'), (doc) => {
       if (doc.exists()) {
         const years = doc.data().eventLookbackYears || 2;
+        const categories = doc.data().categories || [];
         setLookbackYears(years);
+        setSysCategories(categories);
       }
     });
     return () => unsubscribe();
@@ -823,9 +833,39 @@ const App: React.FC = () => {
           <div className="absolute top-[104px] left-0 w-full bg-[#1e293b]/95 backdrop-blur-xl border-b border-gray-700 shadow-2xl p-6 z-10 animate-in slide-in-from-top-2 duration-200">
             <div className="w-full h-full">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white font-bold flex items-center gap-2">
-                  <Filter size={16} className="text-[#fdb813]" /> 부서 선택
-                </h3>
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-white font-bold flex items-center gap-2">
+                    <Filter size={16} className="text-[#fdb813]" /> 부서 선택
+                  </h3>
+
+                  {/* Category Filter Chips */}
+                  {uniqueCategories.length > 0 && (
+                    <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
+                      <button
+                        onClick={() => setSelectedCategory(null)}
+                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === null
+                          ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                          : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
+                          }`}
+                      >
+                        전체
+                      </button>
+                      {uniqueCategories.map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedCategory(prev => prev === cat ? null : cat)}
+                          className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat
+                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
+                            }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex gap-2">
                   <button onClick={() => setAllVisibility(true)} className="px-3 py-1.5 rounded bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20 hover:bg-green-500/20">
                     모두 켜기
@@ -837,30 +877,32 @@ const App: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-                {departments.map(dept => {
-                  const isHidden = hiddenDeptIds.includes(dept.id);
-                  const isAllowed = userProfile?.allowedDepartments?.includes(dept.id) || isMaster;
+                {departments
+                  .filter(d => !selectedCategory || d.category === selectedCategory) // Apply Category Filter
+                  .map(dept => {
+                    const isHidden = hiddenDeptIds.includes(dept.id);
+                    const isAllowed = userProfile?.allowedDepartments?.includes(dept.id) || isMaster;
 
-                  if (!isAllowed) return null;
+                    if (!isAllowed) return null;
 
-                  return (
-                    <button
-                      key={dept.id}
-                      onClick={() => toggleDeptVisibility(dept.id)}
-                      className={`
+                    return (
+                      <button
+                        key={dept.id}
+                        onClick={() => toggleDeptVisibility(dept.id)}
+                        className={`
                          flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-bold transition-all text-left
                          ${isHidden
-                          ? 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500'
-                          : 'bg-[#081429] border-[#fdb813]/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
-                        }
+                            ? 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500'
+                            : 'bg-[#081429] border-[#fdb813]/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
+                          }
                        `}
-                    >
-                      <span className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color.startsWith('#') ? dept.color : 'white') : undefined }} />
-                      <span className="truncate flex-1">{dept.name}</span>
-                      {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
-                    </button>
-                  )
-                })}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color.startsWith('#') ? dept.color : 'white') : undefined }} />
+                        <span className="truncate flex-1">{dept.name}</span>
+                        {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
+                      </button>
+                    )
+                  })}
               </div>
             </div>
 
@@ -971,6 +1013,7 @@ const App: React.FC = () => {
         users={users} // Pass users
         holidays={holidays}
         events={events}
+        sysCategories={sysCategories}
       />
 
       {/* Access Denied / Pending Approval Overlay */}
