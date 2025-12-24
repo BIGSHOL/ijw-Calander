@@ -9,6 +9,8 @@ interface MyEventsModalProps {
     events: CalendarEvent[];
     currentUser: UserProfile | null;
     onEventClick: (event: CalendarEvent) => void;
+    readOnly?: boolean;
+    customTitle?: string;
 }
 
 const MyEventsModal: React.FC<MyEventsModalProps> = ({
@@ -17,6 +19,8 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
     events,
     currentUser,
     onEventClick,
+    readOnly = false,
+    customTitle,
 }) => {
     if (!isOpen || !currentUser) return null;
 
@@ -57,9 +61,9 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
 
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-[#f8fafc]">
-                    <h2 className="text-xl font-extrabold text-[#081429] flex items-center gap-2">
+                    <h2 className="text-lg font-extrabold text-[#081429] flex items-center gap-2">
                         <Calendar className="text-[#fdb813]" size={24} />
-                        내 일정 모아보기
+                        {customTitle || '내 일정 모아보기'}
                     </h2>
                     <button
                         onClick={onClose}

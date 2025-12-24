@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Department, UserProfile } from '../types';
-import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock } from 'lucide-react';
+import { Department, UserProfile, CalendarEvent } from '../types';
+import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar } from 'lucide-react';
 import { STANDARD_HOLIDAYS } from '../constants_holidays';
 import { db, auth } from '../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc } from 'firebase/firestore';
 
 import { Holiday } from '../types';
+import MyEventsModal from './MyEventsModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -14,9 +15,10 @@ interface SettingsModalProps {
   currentUserProfile?: UserProfile | null;
   users: UserProfile[];
   holidays: Holiday[];
+  events: CalendarEvent[];
 }
 
-type TabMode = 'departments' | 'users' | 'system';
+type TabMode = 'departments' | 'users' | 'system' | 'calendar_manage';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -25,6 +27,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   currentUserProfile,
   users,
   holidays,
+  events,
 }) => {
   const isMaster = currentUserProfile?.role === 'master';
   const isAdmin = currentUserProfile?.role === 'admin';
@@ -51,6 +54,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // --- User Detail Modal State ---
   const [selectedUserForEdit, setSelectedUserForEdit] = useState<string | null>(null); // UID
+  const [targetUserForEvents, setTargetUserForEvents] = useState<UserProfile | null>(null); // Admin Event View
   const [initialPermissions, setInitialPermissions] = useState<Record<string, 'view' | 'edit'> | null>(null);
 
   // Sync Props to Local State (Smart Merge)
@@ -93,22 +97,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         departmentPermissions: u.departmentPermissions ||
           (u.allowedDepartments ? Object.fromEntries(u.allowedDepartments.map(id => [id, 'view'])) : {})
       })));
-      setHasChanges(false);
-      setSelectedUserForEdit(null);
-    }
-    if (isOpen) {
-      setLocalDepartments(departments);
-      // Initialize with basic migration for display
-      setLocalUsers(users.map(u => ({
-        ...u,
-        departmentPermissions: u.departmentPermissions ||
-          (u.allowedDepartments ? Object.fromEntries(u.allowedDepartments.map(id => [id, 'view'])) : {})
-      })));
       setLocalHolidays(holidays); // Sync holidays
       setHasChanges(false);
       setSelectedUserForEdit(null);
     }
-  }, [isOpen, holidays]);
+  }, [isOpen, holidays, departments, users]); // Added dependencies for completeness
 
   const [lookbackYears, setLookbackYears] = useState<number>(2);
 
@@ -512,6 +505,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 {canManageUsers && (
                   <button onClick={() => setActiveTab('users')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'users' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>사용자 관리</button>
                 )}
+                {/* Calendar Management Tab */}
+                {(isMaster || isAdmin) && ( // Assuming only Master/Admin can manage other users' calendars
+                  <button onClick={() => setActiveTab('calendar_manage')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'calendar_manage' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>일정 관리</button>
+                )}
                 {/* System Tab Master OR Admin */}
                 {(isMaster || isAdmin) && (
                   <button onClick={() => setActiveTab('system')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'system' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>시스템 설정</button>
@@ -749,6 +746,65 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
+            {/* CALENDAR MANAGEMENT TAB */}
+            {activeTab === 'calendar_manage' && (isMaster || isAdmin) && (
+              <div className="max-w-5xl mx-auto h-full flex flex-col">
+                <h3 className="text-lg font-bold text-[#081429] mb-4">사용자 일정 관리</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  아래 목록에서 사용자를 선택하여 해당 사용자의 일정을 조회하거나 관리할 수 있습니다.
+                </p>
+
+                <div className="relative w-full mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="일정을 조회할 사용자 검색 (이름/이메일)..."
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
+                  />
+                </div>
+
+                <div className="bg-white border text-sm flex-1 overflow-y-auto rounded-xl shadow-sm">
+                  {localUsers
+                    .filter(u => u.email.includes(userSearchTerm) || u.jobTitle?.includes(userSearchTerm))
+                    .sort((a, b) => (a.role === 'master' ? -1 : 1))
+                    .map(user => (
+                      <button
+                        key={user.uid}
+                        onClick={() => setTargetUserForEvents(user)}
+                        className="w-full text-left grid grid-cols-12 gap-4 p-3 border-b border-gray-100 last:border-0 hover:bg-yellow-50/30 items-center transition-colors"
+                      >
+                        {/* User Info */}
+                        <div className="col-span-5 flex items-center gap-3 pl-2">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${user.role === 'master' ? 'bg-[#fdb813] text-[#081429]' : user.role === 'admin' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'} `}>
+                            {user.role === 'master' ? <ShieldCheck size={14} /> : user.role === 'admin' ? <Shield size={14} /> : <Users size={14} />}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-[#081429] truncate">{user.email}</div>
+                            <div className="text-[10px] text-gray-400 font-mono truncate">{user.jobTitle || '-'}</div>
+                          </div>
+                        </div>
+
+                        {/* Role */}
+                        <div className="col-span-3 text-center">
+                          {user.role === 'master' && <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-black">MASTER</span>}
+                          {user.role === 'admin' && <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-black">ADMIN</span>}
+                          {user.role === 'user' && <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px] font-medium">USER</span>}
+                        </div>
+
+                        {/* Action */}
+                        <div className="col-span-4 flex justify-end pr-4">
+                          <span className="p-2 text-gray-400 hover:text-[#081429] hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold">
+                            <Calendar size={16} /> <span className="hidden xl:inline">일정 보기</span>
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
             {/* SYSTEM TAB */}
             {activeTab === 'system' && (isMaster || isAdmin) && (
               <div className="max-w-2xl mx-auto space-y-8 pb-20">
@@ -980,9 +1036,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Render Nested User Detail Modal */}
         {renderUserDetail()}
 
+        {/* Render MyEventsModal for selected user */}
+        <MyEventsModal
+          isOpen={!!targetUserForEvents}
+          onClose={() => setTargetUserForEvents(null)}
+          events={events}
+          currentUser={targetUserForEvents} // Pass selected user as 'current' context
+          onEventClick={() => { }} // Read-only view mainly, or let them click? Maybe just close modal?
+          // Actually, if we want them to edit, we need to handle onEventClick properly.
+          // But for now, let's keep it simple. If they click, it does nothing or closes.
+          // User asked for "View", so maybe just viewing the list is enough.
+          // Let's allow closing only for now unless we want to trigger the main EventModal which is outside SettingsModal.
+          // Stacked modals? Yes.
+          // But let's pass an empty function for now to prevent errors, effectively making it "List View Only".
+          // Or better, let's allow it to be truly read-only list.
+          readOnly={true}
+          customTitle={`${targetUserForEvents?.email.split('@')[0]}님의 일정`}
+        />
       </div>
     </>
   );
 };
 
 export default SettingsModal;
+
