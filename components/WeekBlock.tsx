@@ -169,7 +169,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
             </div>
 
             {/* Grid Cells */}
-            {weekDays.map((date) => {
+            {weekDays.map((date, idx) => {
               const isDrag = isDraggingCell(date, dept.id);
               return (
                 <div
@@ -181,7 +181,10 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                     ${!isDrag && isWeekend(date) && isDateVisible(date) ? 'bg-gray-[0.01]' : ''}
                     ${!isDateVisible(date) ? 'bg-gray-50 cursor-default' : ''}
                   `}
-                  style={{ gridRow: 1 }} // Ensure all backgrounds share the same row
+                  style={{
+                    gridRow: 1,
+                    gridColumn: idx + 2 // Explicitly place in columns 2 through 8
+                  }}
                 />
               );
             })}
