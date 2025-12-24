@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Department, UserProfile, CalendarEvent, UserRole, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS } from '../types';
+import { usePermissions, canAssignRole, getAssignableRoles } from '../hooks/usePermissions';
 import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar, Lock } from 'lucide-react';
 import { STANDARD_HOLIDAYS } from '../constants_holidays';
 import { db, auth } from '../firebaseConfig';
@@ -29,10 +30,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   holidays,
   events,
 }) => {
+  const { hasPermission } = usePermissions(currentUserProfile || null);
+
+  const canViewDepartments = hasPermission('departments.view_all');
+  const canViewUsers = hasPermission('users.view');
+
+  const canCreateDept = hasPermission('departments.create');
+  const canEditDept = hasPermission('departments.edit');
+  const canDeleteDept = hasPermission('departments.delete');
+
+  const canApproveUser = hasPermission('users.approve');
+  const canChangeRole = hasPermission('users.change_role');
+  const canChangePermissions = hasPermission('users.change_permissions');
+
   const isMaster = currentUserProfile?.role === 'master';
   const isAdmin = currentUserProfile?.role === 'admin';
-  const canManageMenus = isMaster || isAdmin || currentUserProfile?.canManageMenus === true;
-  const canManageUsers = isMaster || isAdmin; // Only Master and Admin can manage users
+  // Legacy helpers mapped to permissions
+  const canManageMenus = canViewDepartments;
+  const canManageUsers = canViewUsers;
 
   const [activeTab, setActiveTab] = useState<TabMode>('departments');
   const [newDeptName, setNewDeptName] = useState('');
@@ -369,22 +384,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       className="bg-white border border-gray-200 rounded px-2 py-1 text-sm font-medium w-32 focus:border-[#fdb813] outline-none"
                     />
                     {/* Role Dropdown - 7-tier */}
-                    {isMaster && user.role !== 'master' && (
+                    {canChangeRole && canAssignRole(currentUserProfile?.role as UserRole, user.role) && (
                       <select
                         value={user.role}
                         onChange={(e) => handleUserUpdate(user.uid, { role: e.target.value as UserRole })}
                         className="px-2 py-1 rounded text-xs font-bold border outline-none bg-white cursor-pointer"
                       >
-                        {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
+                        {getAssignableRoles(currentUserProfile?.role as UserRole).map(role => (
                           <option key={role} value={role}>{ROLE_LABELS[role]}</option>
                         ))}
                       </select>
                     )}
                     <select
                       value={user.status}
-                      disabled={user.role === 'master' || (user.role === 'admin' && !isMaster)} // Prevent editing Master or other Admins unless Master
+                      disabled={!canApproveUser || !canAssignRole(currentUserProfile?.role as UserRole, user.role)}
                       onChange={(e) => handleUserUpdate(user.uid, { status: e.target.value as any })}
-                      className={`text - xs font - bold px - 2 py - 1 rounded border outline - none ${user.status === 'approved' ? 'text-green-600 bg-green-50 border-green-200' : user.status === 'pending' ? 'text-yellow-600 bg-yellow-50 border-yellow-200' : 'text-red-600 bg-red-50 border-red-200'} ${(user.role === 'master' || (user.role === 'admin' && !isMaster)) ? 'opacity-50 cursor-not-allowed' : ''} `}
+                      className={`text - xs font - bold px - 2 py - 1 rounded border outline - none ${user.status === 'approved' ? 'text-green-600 bg-green-50 border-green-200' : user.status === 'pending' ? 'text-yellow-600 bg-yellow-50 border-yellow-200' : 'text-red-600 bg-red-50 border-red-200'} ${(!canApproveUser || !canAssignRole(currentUserProfile?.role as UserRole, user.role)) ? 'opacity-50 cursor-not-allowed' : ''} `}
                     >
                       <option value="approved">승인됨</option>
                       <option value="pending">대기중</option>
@@ -397,7 +412,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             {/* Global Permissions Checkboxes */}
-            {(isMaster || isAdmin) && user.role !== 'master' && (
+            {canChangePermissions && canAssignRole(currentUserProfile?.role as UserRole, user.role) && (
               <div className="flex gap-4 mt-2">
                 <label className="flex items-center gap-2 cursor-pointer select-none px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-gray-300">
                   <input type="checkbox" checked={!!user.canManageMenus} onChange={() => handleUserUpdate(user.uid, { canManageMenus: !user.canManageMenus })} className="accent-[#081429]" />
@@ -415,26 +430,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex-1 overflow-y-auto p-6 bg-white">
             <h4 className="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider flex items-center justify-between">
               부서별 접근 권한
-              <div className="flex gap-2 text-[10px]">
-                <button onClick={() => {
-                  const newPerms: any = {};
-                  localDepartments.forEach(d => newPerms[d.id] = 'view');
-                  handleUserUpdate(user.uid, { departmentPermissions: newPerms });
-                }} className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-blue-600 font-bold">전체 조회</button>
-                <button onClick={() => {
-                  const newPerms: any = {};
-                  localDepartments.forEach(d => newPerms[d.id] = 'edit');
-                  handleUserUpdate(user.uid, { departmentPermissions: newPerms });
-                }} className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-green-600 font-bold">전체 수정</button>
-                <button onClick={() => {
-                  handleUserUpdate(user.uid, { departmentPermissions: {} });
-                }} className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-500 font-bold">전체 차단</button>
-                <button onClick={() => {
-                  if (initialPermissions) {
-                    handleUserUpdate(user.uid, { departmentPermissions: initialPermissions });
-                  }
-                }} className="px-2 py-1 bg-red-50 hover:bg-red-100 rounded text-red-500 font-bold">초기화</button>
-              </div>
+              {canChangePermissions && canAssignRole(currentUserProfile?.role as UserRole, user.role) && (
+                <div className="flex gap-2 text-[10px]">
+                  <button onClick={() => {
+                    const newPerms: any = {};
+                    localDepartments.forEach(d => newPerms[d.id] = 'view');
+                    handleUserUpdate(user.uid, { departmentPermissions: newPerms });
+                  }} className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-blue-600 font-bold">전체 조회</button>
+                  <button onClick={() => {
+                    const newPerms: any = {};
+                    localDepartments.forEach(d => newPerms[d.id] = 'edit');
+                    handleUserUpdate(user.uid, { departmentPermissions: newPerms });
+                  }} className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-green-600 font-bold">전체 수정</button>
+                  <button onClick={() => {
+                    handleUserUpdate(user.uid, { departmentPermissions: {} });
+                  }} className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-500 font-bold">전체 차단</button>
+                  <button onClick={() => {
+                    if (initialPermissions) {
+                      handleUserUpdate(user.uid, { departmentPermissions: initialPermissions });
+                    }
+                  }} className="px-2 py-1 bg-red-50 hover:bg-red-100 rounded text-red-500 font-bold">초기화</button>
+                </div>
+              )}
             </h4>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -570,7 +587,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input type="text" placeholder="부서 검색" value={deptSearchTerm} onChange={(e) => setDeptSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl outline-none" />
                 </div>
-                {!isCreating && <button onClick={() => setIsCreating(true)} className="px-6 py-3 bg-[#081429] text-white rounded-xl font-bold w-full md:w-auto">새 부서 만들기</button>}
+                {!isCreating && canCreateDept && <button onClick={() => setIsCreating(true)} className="px-6 py-3 bg-[#081429] text-white rounded-xl font-bold w-full md:w-auto">새 부서 만들기</button>}
                 {isCreating && (
                   <div className="bg-white p-4 rounded-xl border border-[#fdb813] space-y-3">
                     <input type="text" value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="부서명" className="w-full border p-2 rounded" />
@@ -600,20 +617,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {localDepartments
                     .filter(d => d.name.includes(deptSearchTerm))
-                    .filter(d => (isMaster || isAdmin) || currentUserProfile?.departmentPermissions?.[d.id]) // Filter: Master/Admin sees all, others by permission
+                    .filter(d => canViewDepartments || currentUserProfile?.departmentPermissions?.[d.id]) // Filter: Permission-based or allowed departments
                     .map((dept, index) => ( // Need index for Drag & Drop
                       <div
                         key={dept.id}
-                        draggable={(isMaster || isAdmin)} // Allow Drag for Admin too
-                        onDragStart={() => (isMaster || isAdmin) && setDraggedIndex(index)}
+                        draggable={canEditDept} // Allow Drag if can edit
+                        onDragStart={() => canEditDept && setDraggedIndex(index)}
                         onDragOver={(e) => {
                           e.preventDefault();
-                          if ((isMaster || isAdmin) && draggedIndex !== null && draggedIndex !== index) {
+                          if (canEditDept && draggedIndex !== null && draggedIndex !== index) {
                             // Optional: Visual feedback like border
                           }
                         }}
                         onDrop={() => {
-                          if ((isMaster || isAdmin) && draggedIndex !== null && draggedIndex !== index) {
+                          if (canEditDept && draggedIndex !== null && draggedIndex !== index) {
                             const newDepts = [...localDepartments];
                             const [removed] = newDepts.splice(draggedIndex, 1);
                             newDepts.splice(index, 0, removed);
@@ -629,8 +646,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div className="w-1.5 rounded-full" style={{ backgroundColor: dept.color }} />
                         <div className="flex-1">
                           <div className="flex justify-between">
-                            <input value={dept.name} onChange={(e) => handleLocalDeptUpdate(dept.id, 'name', e.target.value)} className="font-bold border-none outline-none w-full" />
-                            <button onClick={() => handleDelete(dept.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={16} /></button>
+                            <input value={dept.name} readOnly={!canEditDept} onChange={(e) => handleLocalDeptUpdate(dept.id, 'name', e.target.value)} className={`font-bold border-none outline-none w-full ${!canEditDept ? 'bg-transparent text-gray-800' : ''}`} />
+                            {canDeleteDept && <button onClick={() => handleDelete(dept.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={16} /></button>}
                           </div>
                           <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-gray-100">
                             <label className="flex flex-col gap-1 text-[10px] font-bold text-gray-400">

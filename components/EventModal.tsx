@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CalendarEvent, Department, UserProfile } from '../types';
+import { usePermissions } from '../hooks/usePermissions';
 import { EVENT_COLORS } from '../constants';
 // Added Edit3 and Plus to the imports to fix "Cannot find name" errors on line 95
 import { X, Trash2, Clock, Users, AlignLeft, Type, Edit3, Plus } from 'lucide-react';
@@ -67,9 +68,21 @@ const EventModal: React.FC<EventModalProps> = ({
 
 
   // Permission Logic
+  const { hasPermission } = usePermissions(currentUser || null);
+  const canCreate = hasPermission('events.create');
+  // Authorship check for granular permissions
+  const isAuthor = existingEvent?.authorId === currentUser?.uid;
+  const canEdit = hasPermission(isAuthor ? 'events.edit_own' : 'events.edit_others');
+  const canDelete = hasPermission(isAuthor ? 'events.delete_own' : 'events.delete_others');
+
   const isMaster = currentUser?.role === 'master';
   const isAdmin = currentUser?.role === 'admin';
-  const canEditCurrent = isMaster || isAdmin || (departmentId && currentUser?.departmentPermissions?.[departmentId] === 'edit');
+  const hasDeptAccess = isMaster || isAdmin || (departmentId && currentUser?.departmentPermissions?.[departmentId] === 'edit');
+
+  const canSaveEvent = hasDeptAccess && (!existingEvent ? canCreate : canEdit);
+  const canDeleteEvent = existingEvent && hasDeptAccess && canDelete;
+
+  const canEditCurrent = canSaveEvent; // Alias for existing JSX compatibility
 
   // Track which event ID we last loaded to prevent unnecessary resets
   const [loadedEventId, setLoadedEventId] = useState<string | null>(null);
@@ -627,7 +640,7 @@ const EventModal: React.FC<EventModalProps> = ({
 
           {/* Footer Actions */}
           <div className="flex justify-between items-center pt-6 border-t border-gray-100">
-            {existingEvent && canEditCurrent ? (
+            {canDeleteEvent ? (
               <button
                 type="button"
                 onClick={() => {
