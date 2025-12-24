@@ -375,6 +375,10 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                     {isPending && (
                       <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-white z-20" />
                     )}
+                    {/* Recurrence indicator */}
+                    {event.recurrenceGroupId && pos.isStart && (
+                      <span className="relative z-10 mr-0.5 text-[10px]" style={{ color: textColor }}>🔄</span>
+                    )}
                     {/* Inner border div removed, applied to container instead */}
                     <span className="relative z-10 truncate" style={{ color: textColor }}>
                       {event.title}

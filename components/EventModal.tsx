@@ -129,8 +129,14 @@ const EventModal: React.FC<EventModalProps> = ({
           setDepartmentId(targetDeptId);
           setStartDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
           setEndDate(initialEndDate || initialDate || format(new Date(), 'yyyy-MM-dd'));
-          setStartTime(initialStartTime || '');
-          setEndTime(initialEndTime || '');
+
+          // Auto-fill current time for new events
+          const now = new Date();
+          const currentHour = now.getHours().toString().padStart(2, '0');
+          const currentMin = now.getMinutes().toString().padStart(2, '0');
+          const nextHour = ((now.getHours() + 1) % 24).toString().padStart(2, '0');
+          setStartTime(initialStartTime || `${currentHour}:${currentMin}`);
+          setEndTime(initialEndTime || `${nextHour}:${currentMin}`);
           setIsAllDay(false);
 
           // Reset recurrence settings for new events
@@ -275,6 +281,23 @@ const EventModal: React.FC<EventModalProps> = ({
           {!canEditCurrent && (
             <div className="bg-red-50 text-red-600 text-xs font-bold p-3 rounded-xl border border-red-100 mb-2 flex items-center gap-2">
               <span className="text-lg">⚠️</span> 이 부서의 일정은 조회만 가능합니다.
+            </div>
+          )}
+
+          {/* Recurrence Info for Existing Events */}
+          {existingEvent?.recurrenceGroupId && existingEvent?.recurrenceIndex && (
+            <div className="bg-blue-50 text-blue-700 text-xs font-bold p-3 rounded-xl border border-blue-200 flex items-center gap-2">
+              <span className="text-lg">🔄</span>
+              <span>
+                반복 일정 ({
+                  existingEvent.recurrenceType === 'daily' ? '매일' :
+                    existingEvent.recurrenceType === 'weekdays' ? '평일' :
+                      existingEvent.recurrenceType === 'weekends' ? '주말' :
+                        existingEvent.recurrenceType === 'weekly' ? '매주' :
+                          existingEvent.recurrenceType === 'monthly' ? '매월' :
+                            existingEvent.recurrenceType === 'yearly' ? '매년' : '알수없음'
+                }) - {existingEvent.recurrenceIndex}번째
+              </span>
             </div>
           )}
 
