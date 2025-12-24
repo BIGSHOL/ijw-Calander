@@ -1,6 +1,7 @@
 export interface Department {
   id: string;
   name: string;
+  category?: string; // New: Grouping category (e.g., "Math", "Language")
   description?: string; // For the subtitle like "Vision: ..."
   color?: string;
   order: number;
@@ -63,7 +64,7 @@ export type PermissionId =
   | 'events.attendance'
   | 'departments.view_all' | 'departments.create' | 'departments.edit' | 'departments.delete'
   | 'users.view' | 'users.approve' | 'users.change_role' | 'users.change_permissions'
-  | 'settings.access' | 'settings.holidays' | 'settings.role_permissions';
+  | 'settings.access' | 'settings.holidays' | 'settings.role_permissions' | 'settings.manage_categories';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -78,7 +79,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'events.attendance': true,
     'departments.view_all': true, 'departments.create': true, 'departments.edit': true, 'departments.delete': false,
     'users.view': true, 'users.approve': true, 'users.change_role': false, 'users.change_permissions': true,
-    'settings.access': true, 'settings.holidays': true, 'settings.role_permissions': false,
+    'settings.access': true, 'settings.holidays': true, 'settings.role_permissions': false, 'settings.manage_categories': true,
   },
   manager: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': true,
