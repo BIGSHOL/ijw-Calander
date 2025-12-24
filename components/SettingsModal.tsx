@@ -131,9 +131,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [activeTab, isMaster]);
 
-  // Role Permissions loading (MASTER only)
+  // Role Permissions loading (MASTER, ADMIN, MANAGER can view)
+  const canViewRolePermissions = isMaster || isAdmin || currentUserProfile?.role === 'manager';
   useEffect(() => {
-    if (activeTab === 'role_permissions' && isMaster) {
+    if (activeTab === 'role_permissions' && canViewRolePermissions) {
       const unsubscribe = onSnapshot(doc(db, 'settings', 'rolePermissions'), (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data() as RolePermissions;
@@ -544,8 +545,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 {(isMaster || isAdmin) && (
                   <button onClick={() => setActiveTab('system')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'system' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>시스템 설정</button>
                 )}
-                {/* Role Permissions Tab - MASTER ONLY */}
-                {isMaster && (
+                {/* Role Permissions Tab - Visible to MASTER, ADMIN, MANAGER (Read-only for non-MASTER) */}
+                {(isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
                   <button onClick={() => setActiveTab('role_permissions')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${activeTab === 'role_permissions' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>
                     <Lock size={12} /> 역할 권한
                   </button>
@@ -1054,15 +1055,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {/* ROLE PERMISSIONS TAB - MASTER ONLY */}
-            {activeTab === 'role_permissions' && isMaster && (
+            {/* ROLE PERMISSIONS TAB - Viewable by MASTER, ADMIN, MANAGER */}
+            {activeTab === 'role_permissions' && canViewRolePermissions && (
               <div className="max-w-6xl mx-auto">
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                   <div className="bg-gradient-to-r from-[#081429] to-[#1e3a5f] p-6 text-white">
                     <h3 className="text-lg font-bold flex items-center gap-2">
                       <Lock size={20} /> 역할별 권한 설정
+                      {!isMaster && <span className="text-xs bg-yellow-500 text-[#081429] px-2 py-0.5 rounded font-bold ml-2">읽기 전용</span>}
                     </h3>
-                    <p className="text-sm text-gray-300 mt-1">각 역할이 수행할 수 있는 기능을 세부적으로 설정합니다. MASTER는 항상 모든 권한을 가집니다.</p>
+                    <p className="text-sm text-gray-300 mt-1">
+                      {isMaster
+                        ? '각 역할이 수행할 수 있는 기능을 세부적으로 설정합니다. MASTER는 항상 모든 권한을 가집니다.'
+                        : '현재 설정된 역할별 권한을 확인할 수 있습니다. 수정은 MASTER만 가능합니다.'}
+                    </p>
                   </div>
 
                   {!rolePermissionsLoaded ? (
@@ -1109,7 +1115,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   <input
                                     type="checkbox"
                                     checked={rolePermissions[role as keyof RolePermissions]?.[perm.id] ?? false}
+                                    disabled={!isMaster}
                                     onChange={(e) => {
+                                      if (!isMaster) return;
                                       setRolePermissions(prev => ({
                                         ...prev,
                                         [role]: {
@@ -1118,7 +1126,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         }
                                       }));
                                     }}
-                                    className="w-4 h-4 accent-[#081429] cursor-pointer"
+                                    className={`w-4 h-4 accent-[#081429] ${!isMaster ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                                   />
                                 </td>
                               ))}
@@ -1210,9 +1218,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   <input
                                     type="checkbox"
                                     checked={perm.disabled ? false : (rolePermissions[role as keyof RolePermissions]?.[perm.id] ?? false)}
-                                    disabled={perm.disabled}
+                                    disabled={!isMaster || perm.disabled}
                                     onChange={(e) => {
-                                      if (!perm.disabled) {
+                                      if (isMaster && !perm.disabled) {
                                         setRolePermissions(prev => ({
                                           ...prev,
                                           [role]: {
@@ -1222,7 +1230,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         }));
                                       }
                                     }}
-                                    className={`w-4 h-4 accent-[#081429] ${perm.disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                                    className={`w-4 h-4 accent-[#081429] ${(!isMaster || perm.disabled) ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
                                   />
                                 </td>
                               ))}
@@ -1234,32 +1242,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
 
                   {/* Actions */}
-                  <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-                    <button
-                      onClick={() => {
-                        if (confirm('모든 권한을 기본값으로 초기화하시겠습니까?')) {
-                          setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
-                        }
-                      }}
-                      className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 flex items-center gap-2"
-                    >
-                      <RotateCcw size={14} /> 기본값으로 초기화
-                    </button>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await setDoc(doc(db, 'settings', 'rolePermissions'), rolePermissions);
-                          alert('역할별 권한이 저장되었습니다.');
-                        } catch (e) {
-                          console.error(e);
-                          alert('저장 중 오류가 발생했습니다.');
-                        }
-                      }}
-                      className="px-6 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:bg-[#0a1a35] flex items-center gap-2"
-                    >
-                      <Save size={14} /> 저장
-                    </button>
-                  </div>
+                  {/* Actions (MASTER only) */}
+                  {isMaster && (
+                    <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                      <button
+                        onClick={() => {
+                          if (confirm('모든 권한을 기본값으로 초기화하시겠습니까?')) {
+                            setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+                          }
+                        }}
+                        className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 flex items-center gap-2"
+                      >
+                        <RotateCcw size={14} /> 기본값으로 초기화
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await setDoc(doc(db, 'settings', 'rolePermissions'), rolePermissions);
+                            alert('역할별 권한이 저장되었습니다.');
+                          } catch (e) {
+                            console.error(e);
+                            alert('저장 중 오류가 발생했습니다.');
+                          }
+                        }}
+                        className="px-6 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:bg-[#0a1a35] flex items-center gap-2"
+                      >
+                        <Save size={14} /> 저장
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
