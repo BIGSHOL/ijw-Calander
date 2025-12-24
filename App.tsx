@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay } from 'date-fns';
+import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, differenceInDays } from 'date-fns';
 import { CalendarEvent, Department, UserProfile, Holiday } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import EventModal from './components/EventModal';
@@ -58,7 +58,11 @@ const eventConverter = {
       작성자명: event.authorName || '',
       생성일시: event.createdAt || new Date().toISOString(),
       수정일시: new Date().toISOString(),
-      참가현황: event.attendance || {}
+      참가현황: event.attendance || {},
+      // Recurrence fields
+      반복그룹ID: event.recurrenceGroupId || '',
+      반복순서: event.recurrenceIndex || 0,
+      반복유형: event.recurrenceType || ''
     };
     // Filter out any remaining undefined values
     Object.keys(data).forEach(key => {
@@ -66,7 +70,6 @@ const eventConverter = {
         delete data[key];
       }
     });
-    console.log('toFirestore called with:', event);
     return data;
   },
   fromFirestore: (snapshot: any, options: any) => {
@@ -92,7 +95,11 @@ const eventConverter = {
       authorName: data.작성자명,
       createdAt: data.생성일시,
       updatedAt: data.수정일시,
-      attendance: data.참가현황
+      attendance: data.참가현황,
+      // Recurrence fields
+      recurrenceGroupId: data.반복그룹ID || undefined,
+      recurrenceIndex: data.반복순서 || undefined,
+      recurrenceType: data.반복유형 || undefined
     } as CalendarEvent;
   }
 };
@@ -397,17 +404,117 @@ const App: React.FC = () => {
 
   const handleSaveEvent = async (event: CalendarEvent) => {
     try {
-      const ref = doc(db, "일정", event.id).withConverter(eventConverter);
-      await setDoc(ref, event);
+      // Check for recurrence
+      const recurrenceCount = (event as any)._recurrenceCount;
+      delete (event as any)._recurrenceCount; // Clean up temp property
+
+      if (recurrenceCount && recurrenceCount > 1 && event.recurrenceType) {
+        // Batch create recurring events
+        const batch = writeBatch(db);
+        const baseStart = parseISO(event.startDate);
+        const baseEnd = parseISO(event.endDate);
+        const duration = differenceInDays(baseEnd, baseStart);
+        const groupId = event.id; // Use first event ID as group ID
+
+        let createdCount = 0;
+        let currentDate = baseStart;
+
+        for (let i = 0; i < recurrenceCount; i++) {
+          // Calculate next date based on recurrence type
+          if (i > 0) {
+            switch (event.recurrenceType) {
+              case 'daily':
+                currentDate = addDays(baseStart, i);
+                break;
+              case 'weekdays':
+                // Skip to next weekday
+                currentDate = addDays(currentDate, 1);
+                while (getDay(currentDate) === 0 || getDay(currentDate) === 6) {
+                  currentDate = addDays(currentDate, 1);
+                }
+                break;
+              case 'weekends':
+                // Skip to next weekend day
+                currentDate = addDays(currentDate, 1);
+                while (getDay(currentDate) !== 0 && getDay(currentDate) !== 6) {
+                  currentDate = addDays(currentDate, 1);
+                }
+                break;
+              case 'weekly':
+                currentDate = addWeeks(baseStart, i);
+                break;
+              case 'monthly':
+                currentDate = addMonths(baseStart, i);
+                break;
+              case 'yearly':
+                currentDate = addYears(baseStart, i);
+                break;
+            }
+          }
+
+          const eventId = i === 0 ? event.id : `${event.id}_r${i + 1}`;
+          const newStartDate = format(currentDate, 'yyyy-MM-dd');
+          const newEndDate = format(addDays(currentDate, duration), 'yyyy-MM-dd');
+
+          const recurringEvent: CalendarEvent = {
+            ...event,
+            id: eventId,
+            startDate: newStartDate,
+            endDate: newEndDate,
+            recurrenceGroupId: groupId,
+            recurrenceIndex: i + 1,
+          };
+
+          const ref = doc(db, "일정", eventId).withConverter(eventConverter);
+          batch.set(ref, recurringEvent);
+          createdCount++;
+        }
+
+        await batch.commit();
+        alert(`${createdCount}개의 반복 일정이 생성되었습니다.`);
+      } else {
+        // Single event save
+        const ref = doc(db, "일정", event.id).withConverter(eventConverter);
+        await setDoc(ref, event);
+      }
     } catch (e) {
       console.error("Error saving event: ", e);
       alert("일정 저장 실패");
     }
   };
 
-  const handleDeleteEvent = async (id: string) => {
+  const handleDeleteEvent = async (id: string, event?: CalendarEvent) => {
     try {
-      await deleteDoc(doc(db, "일정", id));
+      // Check if this is a recurring event
+      if (event?.recurrenceGroupId && event.recurrenceIndex) {
+        const deleteAll = window.confirm(
+          `이 일정은 반복 일정입니다.\n\n"확인": 이후 모든 반복 일정 삭제\n"취소": 이 일정만 삭제`
+        );
+
+        if (deleteAll) {
+          // Delete all future events in the recurrence group
+          const groupId = event.recurrenceGroupId;
+          const currentIndex = event.recurrenceIndex;
+
+          // Find all events in this group with index >= current
+          const toDelete = events.filter(
+            e => e.recurrenceGroupId === groupId && (e.recurrenceIndex || 0) >= currentIndex
+          );
+
+          const batch = writeBatch(db);
+          toDelete.forEach(e => {
+            batch.delete(doc(db, "일정", e.id));
+          });
+          await batch.commit();
+          alert(`${toDelete.length}개의 반복 일정이 삭제되었습니다.`);
+        } else {
+          // Delete only this event
+          await deleteDoc(doc(db, "일정", id));
+        }
+      } else {
+        // Regular single event delete
+        await deleteDoc(doc(db, "일정", id));
+      }
     } catch (e) {
       console.error("Error deleting event: ", e);
       alert("일정 삭제 실패");

@@ -28,6 +28,10 @@ export interface CalendarEvent {
   createdAt?: string; // ISO Date string
   updatedAt?: string; // ISO Date string
   attendance?: Record<string, 'pending' | 'joined' | 'declined'>; // Key: UID, Value: Status
+  // Recurrence fields
+  recurrenceGroupId?: string;  // ID of the first event in recurrence group
+  recurrenceIndex?: number;    // 1-based index in the recurrence group
+  recurrenceType?: 'daily' | 'weekdays' | 'weekends' | 'weekly' | 'monthly' | 'yearly';
 }
 
 export interface DragSelection {
