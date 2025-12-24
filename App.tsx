@@ -188,7 +188,6 @@ const App: React.FC = () => {
 
             // Critical Fix: Force Master Role for specific email if not set
             if (user.email === 'st2000423@gmail.com' && userData.role !== 'master') {
-              console.log("Auto-promoting master account...");
               const updatedProfile: UserProfile = {
                 ...userData,
                 role: 'master',
@@ -369,7 +368,6 @@ const App: React.FC = () => {
   useEffect(() => {
     // Optimization: Fetch events from configured lookback years (default 2)
     const queryStartDate = format(subYears(new Date(), lookbackYears), 'yyyy-MM-dd');
-    console.log(`Fetching events from ${queryStartDate} (Lookback: ${lookbackYears} years)`);
 
     const q = query(
       collection(db, "일정").withConverter(eventConverter),
@@ -381,7 +379,7 @@ const App: React.FC = () => {
       setEvents(loadEvents);
     });
     return () => unsubscribe();
-  }, []);
+  }, [lookbackYears]);
 
   useEffect(() => {
     localStorage.setItem('dept_hidden_ids', JSON.stringify(hiddenDeptIds));
@@ -569,6 +567,7 @@ const App: React.FC = () => {
   };
 
   // --- Event Drag and Drop ---
+  // --- Event Drag and Drop ---
   const handleEventMove = (original: CalendarEvent, updated: CalendarEvent) => {
     // Permission Check
     const isAuthor = original.authorId === userProfile?.uid;
@@ -581,11 +580,6 @@ const App: React.FC = () => {
       return;
     }
 
-    console.log('[handleEventMove] called');
-    console.log('  Original:', original.id, original.startDate, '->', original.endDate);
-    console.log('  Updated:', updated.id, updated.startDate, '->', updated.endDate);
-
-    // Add to pending moves (replace if same event was already pending)
     setPendingEventMoves(prev => {
       const filtered = prev.filter(m => m.original.id !== original.id);
       return [...filtered, { original, updated }];
