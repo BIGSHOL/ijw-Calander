@@ -209,19 +209,24 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
           return (
             <div
               key={date.toISOString()}
-              className={`border-r border-gray-300 last:border-r-0 p-1 text-center h-10 flex flex-col items-center justify-center
-                ${isHoliday ? 'text-red-600 bg-red-50/50' : isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-[#373d41]'}
+              className={`border-r border-gray-300 last:border-r-0 p-1 text-center flex flex-col items-center justify-center
+                ${isHoliday ? 'text-red-600 bg-gradient-to-b from-red-50 to-red-100/50' : isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-[#373d41]'}
                 ${isToday(date) ? 'bg-[#fdb813]/20 font-bold' : ''}
                 ${!isDateVisible(date) ? 'opacity-25 bg-gray-50' : ''} 
+                ${isHoliday ? 'min-h-[52px]' : 'min-h-[40px]'}
               `}
             >
               {isDateVisible(date) && (
                 <>
                   <div className="flex items-center gap-1 leading-none">
                     <span className="text-[10px] font-bold uppercase opacity-60 tracking-wider">{dayName}</span>
-                    {isHoliday && <span className="text-[9px] text-red-500 font-bold whitespace-nowrap">{holiday.name}</span>}
                   </div>
-                  <span className="text-sm font-extrabold leading-none mt-0.5">{dayNum}</span>
+                  <span className={`font-extrabold leading-none mt-0.5 ${isHoliday ? 'text-base' : 'text-sm'}`}>{dayNum}</span>
+                  {isHoliday && (
+                    <span className="text-[8px] text-red-600 font-bold bg-red-100 px-1.5 py-0.5 rounded-full mt-0.5 whitespace-nowrap border border-red-200">
+                      {holiday.name}
+                    </span>
+                  )}
                 </>
               )}
             </div>
