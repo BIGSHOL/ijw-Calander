@@ -127,13 +127,16 @@ export interface UserProfile {
   email: string;
   role: UserRole;
   status: 'approved' | 'pending' | 'rejected';
-  // allowedDepartments is DEPRECATED but kept for migration:
+  /** @deprecated Use granular permissions instead (kept for migration) */
   allowedDepartments?: string[];
   // Granular permissions per department (maintained)
   departmentPermissions?: Record<string, 'view' | 'edit'>;
 
-  canEdit?: boolean; // Global edit flag (legacy)
+  /** @deprecated Use role-based permissions (isMaster/isAdmin) */
+  canEdit?: boolean;
+  /** @deprecated Use 'settings.access' or 'departments.view_all' permission */
   canManageMenus?: boolean;
+  /** @deprecated Use 'events.edit_others' permission */
   canManageEventAuthors?: boolean;
   jobTitle?: string;
 }
