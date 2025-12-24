@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, differenceInDays } from 'date-fns';
 import { CalendarEvent, Department, UserProfile, Holiday } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
+import { usePermissions } from './hooks/usePermissions';
 import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
@@ -161,6 +162,9 @@ const App: React.FC = () => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Permission Hook
+  const { hasPermission } = usePermissions(userProfile || null);
+
   // Auth Listener
   // Auth Listener with Real-time Profile Sync
   useEffect(() => {
@@ -308,6 +312,10 @@ const App: React.FC = () => {
 
   // Handle time slot click from Daily View
   const handleTimeSlotClick = (date: string, time: string) => {
+    if (!hasPermission('events.create')) {
+      alert("일정 생성 권한이 없습니다.");
+      return;
+    }
     setSelectedDate(date);
     setSelectedEndDate(date);
     setEditingEvent(null);
@@ -380,6 +388,10 @@ const App: React.FC = () => {
   }, [hiddenDeptIds]);
 
   const handleCellClick = (date: string, deptId: string) => {
+    if (!hasPermission('events.create')) {
+      // Silent return or alert
+      return;
+    }
     setSelectedDate(date);
     setSelectedEndDate(date);
     setSelectedDeptId(deptId);
@@ -388,6 +400,7 @@ const App: React.FC = () => {
   };
 
   const handleRangeSelect = (startDate: string, endDate: string, deptId: string) => {
+    if (!hasPermission('events.create')) return;
     setSelectedDate(startDate);
     setSelectedEndDate(endDate);
     setSelectedDeptId(deptId);
@@ -557,6 +570,17 @@ const App: React.FC = () => {
 
   // --- Event Drag and Drop ---
   const handleEventMove = (original: CalendarEvent, updated: CalendarEvent) => {
+    // Permission Check
+    const isAuthor = original.authorId === userProfile?.uid;
+    const canDrag = hasPermission('events.drag_move');
+    const canEdit = hasPermission(isAuthor ? 'events.edit_own' : 'events.edit_others');
+    const hasDeptAccess = canEditDepartment(original.departmentId);
+
+    if (!canDrag || !canEdit || !hasDeptAccess) {
+      alert('일정을 이동할 권한이 없습니다.');
+      return;
+    }
+
     console.log('[handleEventMove] called');
     console.log('  Original:', original.id, original.startDate, '->', original.endDate);
     console.log('  Updated:', updated.id, updated.startDate, '->', updated.endDate);
