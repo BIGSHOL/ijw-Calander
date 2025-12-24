@@ -53,7 +53,12 @@ const eventConverter = {
       하루종일: event.isAllDay || false,
       색상: event.color,
       글자색: event.textColor,
-      테두리색: event.borderColor
+      테두리색: event.borderColor,
+      작성자ID: event.authorId,
+      작성자명: event.authorName,
+      생성일시: event.createdAt,
+      수정일시: event.updatedAt,
+      참가현황: event.attendance
     };
     console.log('toFirestore called with:', event);
     return data;
@@ -77,6 +82,11 @@ const eventConverter = {
       color: data.색상,
       textColor: data.글자색 || '#ffffff', // Default to white for existing events
       borderColor: data.테두리색 || data.색상 || 'transparent', // Default to bg color if missing
+      authorId: data.작성자ID,
+      authorName: data.작성자명,
+      createdAt: data.생성일시,
+      updatedAt: data.수정일시,
+      attendance: data.참가현황
     } as CalendarEvent;
   }
 };
@@ -679,6 +689,7 @@ const App: React.FC = () => {
               onEventClick={handleEventClick}
               holidays={holidays}
               viewMode={viewMode}
+              currentUser={userProfile}
             />
           </div>
 
