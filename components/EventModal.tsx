@@ -133,6 +133,10 @@ const EventModal: React.FC<EventModalProps> = ({
           setEndTime(initialEndTime || '');
           setIsAllDay(false);
 
+          // Reset recurrence settings for new events
+          setRecurrenceType('none');
+          setRecurrenceCount(1);
+
           // Apply Department Defaults
           const targetDept = departments.find(d => d.id === targetDeptId);
           setSelectedColor(targetDept?.defaultColor || '#fee2e2');

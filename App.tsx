@@ -485,8 +485,8 @@ const App: React.FC = () => {
 
   const handleDeleteEvent = async (id: string, event?: CalendarEvent) => {
     try {
-      // Check if this is a recurring event
-      if (event?.recurrenceGroupId && event.recurrenceIndex) {
+      // Check if this is a recurring event (index starts at 1, so > 0 is valid)
+      if (event?.recurrenceGroupId && event.recurrenceIndex && event.recurrenceIndex > 0) {
         const deleteAll = window.confirm(
           `이 일정은 반복 일정입니다.\n\n"확인": 이후 모든 반복 일정 삭제\n"취소": 이 일정만 삭제`
         );
