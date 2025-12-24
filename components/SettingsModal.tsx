@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Department, UserProfile, CalendarEvent } from '../types';
-import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar } from 'lucide-react';
+import { Department, UserProfile, CalendarEvent, UserRole, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS } from '../types';
+import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar, Lock } from 'lucide-react';
 import { STANDARD_HOLIDAYS } from '../constants_holidays';
 import { db, auth } from '../firebaseConfig';
-import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc } from 'firebase/firestore';
+import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
 
 import { Holiday } from '../types';
 import MyEventsModal from './MyEventsModal';
@@ -18,7 +18,7 @@ interface SettingsModalProps {
   events: CalendarEvent[];
 }
 
-type TabMode = 'departments' | 'users' | 'system' | 'calendar_manage';
+type TabMode = 'departments' | 'users' | 'system' | 'calendar_manage' | 'role_permissions';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -115,6 +115,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // --- Creation State ---
   const [isCreating, setIsCreating] = useState(false);
 
+  // --- Role Permissions State (MASTER only) ---
+  const [rolePermissions, setRolePermissions] = useState<RolePermissions>(DEFAULT_ROLE_PERMISSIONS);
+  const [rolePermissionsLoaded, setRolePermissionsLoaded] = useState(false);
+
   // System Config logic...
   useEffect(() => {
     if (activeTab === 'system' && isMaster) {
@@ -122,6 +126,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         if (doc.exists()) {
           setLookbackYears(doc.data().eventLookbackYears || 2);
         }
+      });
+      return () => unsubscribe();
+    }
+  }, [activeTab, isMaster]);
+
+  // Role Permissions loading (MASTER only)
+  useEffect(() => {
+    if (activeTab === 'role_permissions' && isMaster) {
+      const unsubscribe = onSnapshot(doc(db, 'settings', 'rolePermissions'), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data() as RolePermissions;
+          // Merge with defaults
+          const merged: RolePermissions = {};
+          for (const role of ROLE_HIERARCHY.filter(r => r !== 'master') as (keyof RolePermissions)[]) {
+            merged[role] = {
+              ...DEFAULT_ROLE_PERMISSIONS[role],
+              ...(data[role] || {})
+            };
+          }
+          setRolePermissions(merged);
+        } else {
+          setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+        }
+        setRolePermissionsLoaded(true);
       });
       return () => unsubscribe();
     }
@@ -169,7 +197,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     // The User Detail Modal should update `localUsers`.
     const originalUserMap = new Map(users.map(u => [u.uid, u]));
     localUsers.forEach(user => {
-      const original = originalUserMap.get(user.uid);
+      const original = originalUserMap.get(user.uid) as UserProfile | undefined;
       // We need to compare carefully including the new permission object
       // For simplicity, strict JSON stringify might be okay if order doesn't matter much or we normalize.
       // Better: check specific fields.
@@ -339,14 +367,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       placeholder="직급 입력"
                       className="bg-white border border-gray-200 rounded px-2 py-1 text-sm font-medium w-32 focus:border-[#fdb813] outline-none"
                     />
-                    {/* Role Badge / Toggle */}
+                    {/* Role Dropdown - 7-tier */}
                     {isMaster && user.role !== 'master' && (
-                      <button
-                        onClick={() => handleUserUpdate(user.uid, { role: user.role === 'admin' ? 'user' : 'admin' })}
-                        className={`px - 2 py - 1 rounded text - xs font - bold border transition - colors ${user.role === 'admin' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'} `}
+                      <select
+                        value={user.role}
+                        onChange={(e) => handleUserUpdate(user.uid, { role: e.target.value as UserRole })}
+                        className="px-2 py-1 rounded text-xs font-bold border outline-none bg-white cursor-pointer"
                       >
-                        {user.role === 'admin' ? '관리자(Admin)' : '일반 사용자'}
-                      </button>
+                        {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
+                          <option key={role} value={role}>{ROLE_LABELS[role]}</option>
+                        ))}
+                      </select>
                     )}
                     <select
                       value={user.status}
@@ -512,6 +543,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 {/* System Tab Master OR Admin */}
                 {(isMaster || isAdmin) && (
                   <button onClick={() => setActiveTab('system')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'system' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>시스템 설정</button>
+                )}
+                {/* Role Permissions Tab - MASTER ONLY */}
+                {isMaster && (
+                  <button onClick={() => setActiveTab('role_permissions')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${activeTab === 'role_permissions' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>
+                    <Lock size={12} /> 역할 권한
+                  </button>
                 )}
               </div>
             </div>
@@ -705,9 +742,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
                         {/* Role */}
                         <div className="col-span-2 text-center">
-                          {user.role === 'master' && <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-black">MASTER</span>}
-                          {user.role === 'admin' && <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-black">ADMIN</span>}
-                          {user.role === 'user' && <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px] font-medium">USER</span>}
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black ${user.role === 'master' ? 'bg-red-100 text-red-700' :
+                            user.role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
+                              user.role === 'manager' ? 'bg-purple-100 text-purple-700' :
+                                user.role === 'editor' ? 'bg-blue-100 text-blue-700' :
+                                  user.role === 'user' ? 'bg-gray-100 text-gray-600' :
+                                    user.role === 'viewer' ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-gray-50 text-gray-400'
+                            }`}>
+                            {ROLE_LABELS[user.role] || user.role.toUpperCase()}
+                          </span>
                         </div>
 
                         {/* Status */}
@@ -1007,6 +1051,216 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ROLE PERMISSIONS TAB - MASTER ONLY */}
+            {activeTab === 'role_permissions' && isMaster && (
+              <div className="max-w-6xl mx-auto">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-[#081429] to-[#1e3a5f] p-6 text-white">
+                    <h3 className="text-lg font-bold flex items-center gap-2">
+                      <Lock size={20} /> 역할별 권한 설정
+                    </h3>
+                    <p className="text-sm text-gray-300 mt-1">각 역할이 수행할 수 있는 기능을 세부적으로 설정합니다. MASTER는 항상 모든 권한을 가집니다.</p>
+                  </div>
+
+                  {!rolePermissionsLoaded ? (
+                    <div className="p-8 text-center text-gray-500">권한 정보를 불러오는 중...</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="text-left px-4 py-3 font-bold text-gray-700 sticky left-0 bg-gray-50 min-w-[200px]">권한</th>
+                            {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
+                              <th key={role} className="text-center px-3 py-3 font-bold text-gray-700 min-w-[80px]">
+                                <span className={`px-2 py-1 rounded text-[10px] font-black ${role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
+                                  role === 'manager' ? 'bg-purple-100 text-purple-700' :
+                                    role === 'editor' ? 'bg-blue-100 text-blue-700' :
+                                      role === 'user' ? 'bg-gray-100 text-gray-600' :
+                                        role === 'viewer' ? 'bg-yellow-100 text-yellow-700' :
+                                          'bg-gray-100 text-gray-400'
+                                  }`}>
+                                  {ROLE_LABELS[role]}
+                                </span>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {/* 일정 관리 섹션 */}
+                          <tr className="bg-blue-50/50">
+                            <td colSpan={7} className="px-4 py-2 font-bold text-blue-700 text-xs uppercase tracking-wider">📅 일정 관리</td>
+                          </tr>
+                          {[
+                            { id: 'events.create' as PermissionId, label: '일정 생성' },
+                            { id: 'events.edit_own' as PermissionId, label: '본인 일정 수정' },
+                            { id: 'events.edit_others' as PermissionId, label: '타인 일정 수정' },
+                            { id: 'events.delete_own' as PermissionId, label: '본인 일정 삭제' },
+                            { id: 'events.delete_others' as PermissionId, label: '타인 일정 삭제' },
+                            { id: 'events.drag_move' as PermissionId, label: '일정 드래그 이동' },
+                            { id: 'events.attendance' as PermissionId, label: '참가 현황 변경' },
+                          ].map(perm => (
+                            <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                              <td className="px-4 py-2.5 text-gray-700 sticky left-0 bg-white">{perm.label}</td>
+                              {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
+                                <td key={role} className="text-center px-3 py-2.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={rolePermissions[role as keyof RolePermissions]?.[perm.id] ?? false}
+                                    onChange={(e) => {
+                                      setRolePermissions(prev => ({
+                                        ...prev,
+                                        [role]: {
+                                          ...prev[role as keyof RolePermissions],
+                                          [perm.id]: e.target.checked
+                                        }
+                                      }));
+                                    }}
+                                    className="w-4 h-4 accent-[#081429] cursor-pointer"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+
+                          {/* 부서 관리 섹션 */}
+                          <tr className="bg-green-50/50">
+                            <td colSpan={7} className="px-4 py-2 font-bold text-green-700 text-xs uppercase tracking-wider">🏢 부서 관리</td>
+                          </tr>
+                          {[
+                            { id: 'departments.view_all' as PermissionId, label: '모든 부서 조회' },
+                            { id: 'departments.create' as PermissionId, label: '부서 생성' },
+                            { id: 'departments.edit' as PermissionId, label: '부서 편집' },
+                            { id: 'departments.delete' as PermissionId, label: '부서 삭제' },
+                          ].map(perm => (
+                            <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                              <td className="px-4 py-2.5 text-gray-700 sticky left-0 bg-white">{perm.label}</td>
+                              {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
+                                <td key={role} className="text-center px-3 py-2.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={rolePermissions[role as keyof RolePermissions]?.[perm.id] ?? false}
+                                    onChange={(e) => {
+                                      setRolePermissions(prev => ({
+                                        ...prev,
+                                        [role]: {
+                                          ...prev[role as keyof RolePermissions],
+                                          [perm.id]: e.target.checked
+                                        }
+                                      }));
+                                    }}
+                                    className="w-4 h-4 accent-[#081429] cursor-pointer"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+
+                          {/* 사용자 관리 섹션 */}
+                          <tr className="bg-purple-50/50">
+                            <td colSpan={7} className="px-4 py-2 font-bold text-purple-700 text-xs uppercase tracking-wider">👥 사용자 관리</td>
+                          </tr>
+                          {[
+                            { id: 'users.view' as PermissionId, label: '사용자 목록 조회' },
+                            { id: 'users.approve' as PermissionId, label: '가입 승인/거부' },
+                            { id: 'users.change_role' as PermissionId, label: '역할 변경' },
+                            { id: 'users.change_permissions' as PermissionId, label: '개별 권한 변경' },
+                          ].map(perm => (
+                            <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                              <td className="px-4 py-2.5 text-gray-700 sticky left-0 bg-white">{perm.label}</td>
+                              {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
+                                <td key={role} className="text-center px-3 py-2.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={rolePermissions[role as keyof RolePermissions]?.[perm.id] ?? false}
+                                    onChange={(e) => {
+                                      setRolePermissions(prev => ({
+                                        ...prev,
+                                        [role]: {
+                                          ...prev[role as keyof RolePermissions],
+                                          [perm.id]: e.target.checked
+                                        }
+                                      }));
+                                    }}
+                                    className="w-4 h-4 accent-[#081429] cursor-pointer"
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+
+                          {/* 시스템 설정 섹션 */}
+                          <tr className="bg-orange-50/50">
+                            <td colSpan={7} className="px-4 py-2 font-bold text-orange-700 text-xs uppercase tracking-wider">⚙️ 시스템 설정</td>
+                          </tr>
+                          {[
+                            { id: 'settings.access' as PermissionId, label: '설정 메뉴 접근' },
+                            { id: 'settings.holidays' as PermissionId, label: '공휴일 관리' },
+                            { id: 'settings.role_permissions' as PermissionId, label: '역할별 권한 설정', disabled: true },
+                          ].map(perm => (
+                            <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                              <td className="px-4 py-2.5 text-gray-700 sticky left-0 bg-white">
+                                {perm.label}
+                                {perm.disabled && <span className="text-[10px] text-gray-400 ml-2">(MASTER 전용)</span>}
+                              </td>
+                              {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
+                                <td key={role} className="text-center px-3 py-2.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={perm.disabled ? false : (rolePermissions[role as keyof RolePermissions]?.[perm.id] ?? false)}
+                                    disabled={perm.disabled}
+                                    onChange={(e) => {
+                                      if (!perm.disabled) {
+                                        setRolePermissions(prev => ({
+                                          ...prev,
+                                          [role]: {
+                                            ...prev[role as keyof RolePermissions],
+                                            [perm.id]: e.target.checked
+                                          }
+                                        }));
+                                      }
+                                    }}
+                                    className={`w-4 h-4 accent-[#081429] ${perm.disabled ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                    <button
+                      onClick={() => {
+                        if (confirm('모든 권한을 기본값으로 초기화하시겠습니까?')) {
+                          setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+                        }
+                      }}
+                      className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 flex items-center gap-2"
+                    >
+                      <RotateCcw size={14} /> 기본값으로 초기화
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await setDoc(doc(db, 'settings', 'rolePermissions'), rolePermissions);
+                          alert('역할별 권한이 저장되었습니다.');
+                        } catch (e) {
+                          console.error(e);
+                          alert('저장 중 오류가 발생했습니다.');
+                        }
+                      }}
+                      className="px-6 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:bg-[#0a1a35] flex items-center gap-2"
+                    >
+                      <Save size={14} /> 저장
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
