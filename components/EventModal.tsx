@@ -21,6 +21,8 @@ interface EventModalProps {
   users: UserProfile[];
   currentUser: UserProfile | null;
   readOnly?: boolean;
+  allEvents?: CalendarEvent[]; // For counting recurring events
+  onBatchUpdateAttendance?: (groupId: string, uid: string, status: 'pending' | 'joined' | 'declined') => void;
 }
 
 const EventModal: React.FC<EventModalProps> = ({
@@ -37,7 +39,9 @@ const EventModal: React.FC<EventModalProps> = ({
   departments,
   users,
   currentUser,
-  readOnly
+  readOnly,
+  allEvents = [],
+  onBatchUpdateAttendance
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -285,21 +289,36 @@ const EventModal: React.FC<EventModalProps> = ({
           )}
 
           {/* Recurrence Info for Existing Events */}
-          {existingEvent?.recurrenceGroupId && existingEvent?.recurrenceIndex && (
-            <div className="bg-blue-50 text-blue-700 text-xs font-bold p-3 rounded-xl border border-blue-200 flex items-center gap-2">
-              <span className="text-lg">🔄</span>
-              <span>
-                반복 일정 ({
-                  existingEvent.recurrenceType === 'daily' ? '매일' :
-                    existingEvent.recurrenceType === 'weekdays' ? '평일' :
-                      existingEvent.recurrenceType === 'weekends' ? '주말' :
-                        existingEvent.recurrenceType === 'weekly' ? '매주' :
-                          existingEvent.recurrenceType === 'monthly' ? '매월' :
-                            existingEvent.recurrenceType === 'yearly' ? '매년' : '알수없음'
-                }) - {existingEvent.recurrenceIndex}번째
-              </span>
-            </div>
-          )}
+          {existingEvent?.recurrenceGroupId && existingEvent?.recurrenceIndex && (() => {
+            const totalInGroup = allEvents.filter(e => e.recurrenceGroupId === existingEvent.recurrenceGroupId).length;
+            const lastEvent = allEvents
+              .filter(e => e.recurrenceGroupId === existingEvent.recurrenceGroupId)
+              .sort((a, b) => (b.recurrenceIndex || 0) - (a.recurrenceIndex || 0))[0];
+            const lastDate = lastEvent?.startDate || '';
+
+            return (
+              <div className="bg-blue-50 text-blue-700 text-xs font-bold p-3 rounded-xl border border-blue-200 flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🔄</span>
+                  <span>
+                    반복 일정 ({
+                      existingEvent.recurrenceType === 'daily' ? '매일' :
+                        existingEvent.recurrenceType === 'weekdays' ? '평일' :
+                          existingEvent.recurrenceType === 'weekends' ? '주말' :
+                            existingEvent.recurrenceType === 'weekly' ? '매주' :
+                              existingEvent.recurrenceType === 'monthly' ? '매월' :
+                                existingEvent.recurrenceType === 'yearly' ? '매년' : '알수없음'
+                    }) - {existingEvent.recurrenceIndex}/{totalInGroup}번째
+                  </span>
+                </div>
+                {lastDate && (
+                  <span className="text-[10px] text-blue-500 ml-7">
+                    마지막 반복: {lastDate}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Date & Time Range */}
           <div className="grid grid-cols-1 gap-4">
@@ -428,9 +447,23 @@ const EventModal: React.FC<EventModalProps> = ({
                     'joined': 'declined',
                     'declined': 'pending'
                   };
+                  const newStatus = next[currentStatus];
+
+                  // Check if this is a recurring event and offer batch update
+                  if (existingEvent?.recurrenceGroupId && onBatchUpdateAttendance) {
+                    const applyToAll = window.confirm(
+                      `참가 상태를 "${newStatus === 'joined' ? '참석' : newStatus === 'declined' ? '불참' : '미정'}"(으)로 변경합니다.\n\n모든 반복 일정에도 적용하시겠습니까?`
+                    );
+
+                    if (applyToAll) {
+                      onBatchUpdateAttendance(existingEvent.recurrenceGroupId, u.uid, newStatus);
+                    }
+                  }
+
+                  // Always update current event's local state
                   setAttendance(prev => ({
                     ...prev,
-                    [u.uid]: next[currentStatus]
+                    [u.uid]: newStatus
                   }));
                 };
 

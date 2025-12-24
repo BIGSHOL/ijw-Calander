@@ -535,6 +535,26 @@ const App: React.FC = () => {
     }
   };
 
+  // --- Batch Update Attendance for Recurring Events ---
+  const handleBatchUpdateAttendance = async (groupId: string, uid: string, status: 'pending' | 'joined' | 'declined') => {
+    try {
+      const groupEvents = events.filter(e => e.recurrenceGroupId === groupId);
+      const batch = writeBatch(db);
+
+      groupEvents.forEach(event => {
+        const ref = doc(db, "일정", event.id);
+        const updatedAttendance = { ...(event.attendance || {}), [uid]: status };
+        batch.update(ref, { 참가현황: updatedAttendance });
+      });
+
+      await batch.commit();
+      alert(`${groupEvents.length}개의 반복 일정에 참가 상태가 적용되었습니다.`);
+    } catch (e) {
+      console.error("Error batch updating attendance: ", e);
+      alert("참가 상태 일괄 변경 실패");
+    }
+  };
+
   // --- Event Drag and Drop ---
   const handleEventMove = (original: CalendarEvent, updated: CalendarEvent) => {
     console.log('[handleEventMove] called');
@@ -915,6 +935,8 @@ const App: React.FC = () => {
         readOnly={false}
         users={users}
         currentUser={userProfile}
+        allEvents={events}
+        onBatchUpdateAttendance={handleBatchUpdateAttendance}
       />
 
       <LoginModal
