@@ -603,9 +603,9 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f4f8]">
-      <header className="no-print z-20 sticky top-0 flex flex-col shadow-2xl relative">
+      <header className="no-print z-40 sticky top-0 flex flex-col shadow-2xl relative">
         {/* Row 1: Primary Header (Navy) */}
-        <div className="bg-[#081429] h-16 flex items-center justify-between px-4 md:px-6 border-b border-white/10 z-30 relative">
+        <div className="bg-[#081429] h-16 flex items-center justify-between px-4 md:px-6 border-b border-white/10 z-50 relative">
 
           {/* Left: Branding */}
           <div className="flex items-center gap-3 min-w-[250px]">
@@ -710,7 +710,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Row 2: Filter Bar (Slate) */}
-        <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-20 text-xs">
+        <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
 
           {/* Main Filter Toggle */}
           <button
