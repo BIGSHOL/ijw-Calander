@@ -26,11 +26,10 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
 }) => {
     const [filterStatus, setFilterStatus] = useState<StatusFilter>('all');
 
-    if (!isOpen || !currentUser) return null;
-
     // Compute filtered events based on current user and selected status
+    // NOTE: Hooks must be called before any conditional return
     const filteredEvents = useMemo(() => {
-        if (!currentUser) return [];
+        if (!currentUser || !isOpen) return [];
 
         // First, filter by participation
         const participated = events.filter(event => {
@@ -55,11 +54,11 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
         const past = statusFiltered.filter(e => isBefore(parseISO(e.endDate), now)).sort((a, b) => b.startDate.localeCompare(a.startDate));
 
         return [...upcoming, ...past];
-    }, [events, currentUser, filterStatus]);
+    }, [events, currentUser, filterStatus, isOpen]);
 
     // Count by status for badge display
     const statusCounts = useMemo(() => {
-        if (!currentUser) return { all: 0, pending: 0, joined: 0, declined: 0 };
+        if (!currentUser || !isOpen) return { all: 0, pending: 0, joined: 0, declined: 0 };
 
         const participated = events.filter(event => {
             if (event.attendance && event.attendance[currentUser.uid]) return true;
@@ -73,7 +72,10 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
             joined: participated.filter(e => e.attendance?.[currentUser.uid] === 'joined').length,
             declined: participated.filter(e => e.attendance?.[currentUser.uid] === 'declined').length,
         };
-    }, [events, currentUser]);
+    }, [events, currentUser, isOpen]);
+
+    // Conditional render AFTER all hooks
+    if (!isOpen || !currentUser) return null;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
