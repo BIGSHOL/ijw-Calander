@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Department, CalendarEvent, DAYS_OF_WEEK, Holiday } from '../types';
-import { format, isSameDay, parseISO, isToday, isWeekend, isWithinInterval, startOfDay } from 'date-fns';
+import { format, isSameDay, parseISO, isToday, isWeekend, isWithinInterval, startOfDay, differenceInDays, addDays } from 'date-fns';
 import { getEventPositionInWeek } from '../utils/dateUtils';
 import { EVENT_COLORS } from '../constants';
 import { Clock, AlignLeft, Users } from 'lucide-react';
@@ -11,12 +11,15 @@ interface WeekBlockProps {
   events: CalendarEvent[];
   onCellClick: (date: string, deptId: string) => void;
   onRangeSelect: (startDate: string, endDate: string, deptId: string) => void;
-
   onEventClick: (event: CalendarEvent) => void;
   // New Props
   currentMonthDate?: Date;
   limitToCurrentMonth?: boolean;
   holidays?: Holiday[];
+  // Event Drag Props
+  onEventMove?: (original: CalendarEvent, updated: CalendarEvent) => void;
+  canEditDepartment?: (deptId: string) => boolean;
+  pendingEventIds?: string[];
 }
 
 const WeekBlock: React.FC<WeekBlockProps> = ({
@@ -29,6 +32,9 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
   currentMonthDate,
   limitToCurrentMonth = false,
   holidays = [],
+  onEventMove,
+  canEditDepartment,
+  pendingEventIds = [],
 }) => {
   const weekStart = weekDays[0];
   const weekEnd = weekDays[6];
@@ -39,9 +45,15 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
     return date.getMonth() === currentMonthDate.getMonth();
   };
 
-  // Drag State
+  // Drag State (Cell Selection)
   const [dragStart, setDragStart] = useState<{ date: Date, deptId: string } | null>(null);
   const [dragEnd, setDragEnd] = useState<Date | null>(null);
+
+  // Event Drag State
+  const [draggingEvent, setDraggingEvent] = useState<CalendarEvent | null>(null);
+  const [dropTargetDate, setDropTargetDate] = useState<Date | null>(null);
+  const [dropTargetDeptId, setDropTargetDeptId] = useState<string | null>(null);
+  const hasDraggedRef = useRef(false);
 
   // Tooltip State
   const [hoveredEvent, setHoveredEvent] = useState<CalendarEvent | null>(null);
@@ -93,11 +105,91 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
     return isWithinInterval(date, { start: startOfDay(start), end: startOfDay(end) });
   };
 
+  // --- Event Drag Handlers ---
+  const handleEventDragStart = (e: React.MouseEvent, event: CalendarEvent) => {
+    // Check if user can edit the source department
+    if (canEditDepartment && !canEditDepartment(event.departmentId)) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setDraggingEvent(event);
+    setHoveredEvent(null); // Hide tooltip during drag
+    setTooltipPos(null);
+  };
+
+  const handleCellMouseEnterForEventDrag = (date: Date, deptId: string) => {
+    if (draggingEvent) {
+      setDropTargetDate(date);
+      setDropTargetDeptId(deptId);
+      // Check if actually moved from original position
+      const originalStart = parseISO(draggingEvent.startDate);
+      if (!isSameDay(date, originalStart) || deptId !== draggingEvent.departmentId) {
+        hasDraggedRef.current = true;
+      }
+    }
+  };
+
+  const handleEventDrop = () => {
+    if (draggingEvent && dropTargetDate && dropTargetDeptId && onEventMove) {
+      // Check if user can edit the target department
+      if (canEditDepartment && !canEditDepartment(dropTargetDeptId)) {
+        // Cannot drop here
+        setDraggingEvent(null);
+        setDropTargetDate(null);
+        setDropTargetDeptId(null);
+        return;
+      }
+
+      // Calculate duration
+      const originalStart = parseISO(draggingEvent.startDate);
+      const originalEnd = parseISO(draggingEvent.endDate);
+      const duration = differenceInDays(originalEnd, originalStart);
+
+      // Calculate new dates
+      const newStartDate = format(dropTargetDate, 'yyyy-MM-dd');
+      const newEndDate = format(addDays(dropTargetDate, duration), 'yyyy-MM-dd');
+
+      const updatedEvent: CalendarEvent = {
+        ...draggingEvent,
+        startDate: newStartDate,
+        endDate: newEndDate,
+        departmentId: dropTargetDeptId,
+      };
+
+      onEventMove(draggingEvent, updatedEvent);
+    }
+
+    setDraggingEvent(null);
+    setDropTargetDate(null);
+    setDropTargetDeptId(null);
+    // Reset after event loop so onClick can still check it
+    setTimeout(() => { hasDraggedRef.current = false; }, 0);
+  };
+
+  const canDropOnDept = (deptId: string) => {
+    if (!canEditDepartment) return true;
+    return canEditDepartment(deptId);
+  };
+
   return (
     <div
       className="mb-4 border-b border-gray-200 break-inside-avoid select-none relative"
-      onMouseLeave={() => { setDragStart(null); setDragEnd(null); }}
-      onMouseUp={handleMouseUp}
+      onMouseLeave={() => {
+        setDragStart(null);
+        setDragEnd(null);
+        if (draggingEvent) {
+          setDraggingEvent(null);
+          setDropTargetDate(null);
+          setDropTargetDeptId(null);
+          setTimeout(() => { hasDraggedRef.current = false; }, 0);
+        }
+      }}
+      onMouseUp={() => {
+        if (draggingEvent) {
+          handleEventDrop();
+        } else {
+          handleMouseUp();
+        }
+      }}
     >
       {/* Date Header Row - Using #373d41 */}
       <div className={`${gridClass} border-t border-l border-r border-[#373d41] bg-[#f8fafc]`}>
@@ -171,15 +263,26 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
             {/* Grid Cells */}
             {weekDays.map((date, idx) => {
               const isDrag = isDraggingCell(date, dept.id);
+              const isDropTarget = draggingEvent && dropTargetDate && dropTargetDeptId === dept.id && isSameDay(date, dropTargetDate);
+              const canDrop = draggingEvent ? canDropOnDept(dept.id) : true;
+
               return (
                 <div
                   key={date.toISOString()}
-                  onMouseDown={() => isDateVisible(date) && handleMouseDown(date, dept.id)}
-                  onMouseEnter={() => isDateVisible(date) && handleMouseEnter(date, dept.id)}
+                  onMouseDown={() => !draggingEvent && isDateVisible(date) && handleMouseDown(date, dept.id)}
+                  onMouseEnter={() => {
+                    if (isDateVisible(date)) {
+                      handleMouseEnter(date, dept.id);
+                      handleCellMouseEnterForEventDrag(date, dept.id);
+                    }
+                  }}
                   className={`border-r border-gray-300 last:border-r-0 cursor-pointer relative transition-colors
                     ${isDrag ? 'bg-[#fdb813]/30' : (isDateVisible(date) ? 'hover:bg-gray-50' : '')}
                     ${!isDrag && isWeekend(date) && isDateVisible(date) ? 'bg-gray-[0.01]' : ''}
                     ${!isDateVisible(date) ? 'bg-gray-50 cursor-default' : ''}
+                    ${isDropTarget && canDrop ? 'bg-[#fdb813]/40 ring-2 ring-[#fdb813] ring-inset' : ''}
+                    ${isDropTarget && !canDrop ? 'bg-red-100 cursor-not-allowed' : ''}
+                    ${draggingEvent && !isDropTarget && canDrop ? 'hover:bg-[#fdb813]/20' : ''}
                   `}
                   style={{
                     gridRow: 1,
@@ -233,31 +336,45 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                   borderColor: borderColor, // Apply border color to container
                 };
 
+                const isDragging = draggingEvent?.id === event.id;
+                const isPending = pendingEventIds.includes(event.id);
+                const canDrag = !canEditDepartment || canEditDepartment(event.departmentId);
+
                 return (
                   <div
                     key={event.id}
                     style={style}
+                    onMouseDown={(e) => canDrag && handleEventDragStart(e, event)}
                     onClick={(e) => {
-                      e.stopPropagation();
-                      onEventClick(event);
+                      if (!hasDraggedRef.current) {
+                        e.stopPropagation();
+                        onEventClick(event);
+                      }
                     }}
-                    onMouseEnter={(e) => handleEventMouseEnter(e, event)}
+                    onMouseEnter={(e) => !draggingEvent && handleEventMouseEnter(e, event)}
                     onMouseLeave={handleEventMouseLeave}
                     className={`
                       pointer-events-auto
                       rounded px-2 py-1 text-xs font-bold border shadow-sm
                       overflow-hidden whitespace-nowrap text-ellipsis
-                      hover:brightness-95 cursor-pointer flex items-center
+                      flex items-center
                       h-6 relative
                       ${!pos.isStart ? 'rounded-l-none border-l-0 opacity-90' : ''}
                       ${!pos.isEnd ? 'rounded-r-none border-r-0' : ''}
+                      ${canDrag ? 'cursor-grab hover:brightness-95' : 'cursor-pointer hover:brightness-95'}
+                      ${isDragging ? 'opacity-50 ring-2 ring-[#fdb813] cursor-grabbing scale-105 z-50' : ''}
+                      ${isPending ? 'ring-2 ring-dashed ring-orange-400' : ''}
                     `}
-                    title=""
+                    title={canDrag ? "드래그하여 이동" : ""}
                   >
                     <div
                       className="absolute inset-0"
                       style={{ backgroundColor: bgColor }}
                     />
+                    {/* Pending indicator */}
+                    {isPending && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-white z-20" />
+                    )}
                     {/* Inner border div removed, applied to container instead */}
                     <span className="relative z-10 truncate" style={{ color: textColor }}>
                       {event.title}
