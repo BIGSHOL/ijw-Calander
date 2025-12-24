@@ -743,6 +743,7 @@ const App: React.FC = () => {
         currentUserProfile={userProfile}
         users={users} // Pass users
         holidays={holidays}
+        events={events}
       />
 
       {/* Access Denied / Pending Approval Overlay */}
