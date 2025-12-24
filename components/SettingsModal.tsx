@@ -308,6 +308,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     markChanged();
   };
 
+  const handleDeleteUser = async (targetUid: string) => {
+    if (!confirm("정말로 이 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+    try {
+      await deleteDoc(doc(db, "users", targetUid));
+      setSelectedUserForEdit(null); // Close modal
+      alert("사용자가 삭제되었습니다.");
+      // Local state will update via onSnapshot in App.tsx -> props update -> useEffect
+    } catch (e) {
+      console.error("Failed to delete user:", e);
+      alert("사용자 삭제 중 오류가 발생했습니다.");
+    }
+  };
+
   // Render User Detail Modal (Nested or Overlay)
   const renderUserDetail = () => {
     if (!selectedUserForEdit) return null;
@@ -321,7 +334,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="bg-[#f8f9fa] border-b border-gray-200 p-6 pb-4">
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-4">
-                <div className={`w - 14 h - 14 rounded - full flex items - center justify - center text - xl font - bold ${user.role === 'master' ? 'bg-[#fdb813] text-[#081429]' : user.role === 'admin' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'} `}>
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold border-4 border-white shadow-lg ${user.role === 'master' ? 'bg-[#fdb813] text-[#081429]' : user.role === 'admin' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-500'} `}>
                   {user.role === 'master' ? <ShieldCheck /> : user.role === 'admin' ? <Shield /> : <Users />}
                 </div>
                 <div>
@@ -399,31 +412,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </h4>
 
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {localDepartments.map(dept => {
                 const current = user.departmentPermissions?.[dept.id]; // undefined, 'view', 'edit'
                 return (
-                  <div key={dept.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 hover:border-gray-300 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept.color }} />
-                      <span className="font-bold text-gray-700 text-sm">{dept.name}</span>
+                  <div key={dept.id} className="flex items-center justify-between p-2.5 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors bg-gray-50/50">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: dept.color }} />
+                      <span className="font-bold text-gray-700 text-xs truncate" title={dept.name}>{dept.name}</span>
                     </div>
-                    <div className="flex bg-gray-100 rounded-lg p-1">
+                    {/* Permission Toggle - Segmented Control */}
+                    <div className="flex bg-white rounded-lg p-0.5 border border-gray-200 shrink-0">
                       <button
                         onClick={() => handleDeptPermissionChange(user.uid, dept.id, 'none')}
-                        className={`px - 3 py - 1 text - xs font - bold rounded - md transition - all ${!current ? 'bg-white shadow-sm text-gray-400' : 'text-gray-400 hover:text-gray-600'} `}
+                        className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${!current ? 'bg-gray-100 text-gray-400 shadow-inner' : 'text-gray-300 hover:text-gray-500 hover:bg-gray-50'}`}
                       >
                         차단
                       </button>
+                      <div className="w-px bg-gray-100 my-1" />
                       <button
                         onClick={() => handleDeptPermissionChange(user.uid, dept.id, 'view')}
-                        className={`px - 3 py - 1 text - xs font - bold rounded - md transition - all ${current === 'view' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'} `}
+                        className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${current === 'view' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                       >
                         조회
                       </button>
+                      <div className="w-px bg-gray-100 my-1" />
                       <button
                         onClick={() => handleDeptPermissionChange(user.uid, dept.id, 'edit')}
-                        className={`px - 3 py - 1 text - xs font - bold rounded - md transition - all ${current === 'edit' ? 'bg-white shadow-sm text-green-600' : 'text-gray-400 hover:text-gray-600'} `}
+                        className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${current === 'edit' ? 'bg-green-50 text-green-600 shadow-sm' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                       >
                         수정
                       </button>
@@ -434,7 +450,39 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+          <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+            {/* Delete Button - Visibility Logic */}
+            <div>
+              {(() => {
+                const isTargetMaster = user.role === 'master';
+                const isTargetAdmin = user.role === 'admin';
+
+                // Self check
+                if (currentUserProfile?.uid === user.uid) return null;
+
+                // Permission Logic
+                let canDelete = false;
+                if (isMaster) {
+                  // Master can delete Admin and User (Not other Masters)
+                  if (!isTargetMaster) canDelete = true;
+                } else if (isAdmin) {
+                  // Admin can delete User only
+                  if (!isTargetMaster && !isTargetAdmin) canDelete = true;
+                }
+
+                if (!canDelete) return null;
+
+                return (
+                  <button
+                    onClick={() => handleDeleteUser(user.uid)}
+                    className="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors"
+                  >
+                    <Trash2 size={16} /> 사용자 삭제
+                  </button>
+                );
+              })()}
+            </div>
+
             <button onClick={() => setSelectedUserForEdit(null)} className="px-6 py-2 bg-[#081429] text-white rounded-lg font-bold">확인</button>
           </div>
         </div>
@@ -446,7 +494,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-0 relative max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-0 relative h-[85vh] overflow-hidden border border-gray-200 flex flex-col">
 
           {/* Header */}
           <div className="bg-[#081429] p-4 flex justify-between items-center text-white shrink-0">
@@ -488,36 +536,61 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <input type="text" placeholder="부서 검색" value={deptSearchTerm} onChange={(e) => setDeptSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl outline-none" />
                 </div>
                 {!isCreating && <button onClick={() => setIsCreating(true)} className="px-6 py-3 bg-[#081429] text-white rounded-xl font-bold w-full md:w-auto">새 부서 만들기</button>}
-                <div className="bg-white p-4 rounded-xl border border-[#fdb813] space-y-3">
-                  <input type="text" value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="부서명" className="w-full border p-2 rounded" />
+                {isCreating && (
+                  <div className="bg-white p-4 rounded-xl border border-[#fdb813] space-y-3">
+                    <input type="text" value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="부서명" className="w-full border p-2 rounded" />
 
-                  {/* Default Colors for New Dept */}
-                  <div className="flex gap-4 text-xs font-bold text-gray-500">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <span>기본 배경</span>
-                      <input type="color" value={newDeptDefaultColor} onChange={(e) => setNewDeptDefaultColor(e.target.value)} className="w-6 h-6 rounded overflow-hidden" />
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <span>기본 글자</span>
-                      <input type="color" value={newDeptDefaultTextColor} onChange={(e) => setNewDeptDefaultTextColor(e.target.value)} className="w-6 h-6 rounded overflow-hidden" />
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <span>기본 테두리</span>
-                      <input type="color" value={newDeptDefaultBorderColor} onChange={(e) => setNewDeptDefaultBorderColor(e.target.value)} className="w-6 h-6 rounded overflow-hidden" />
-                    </label>
-                  </div>
+                    {/* Default Colors for New Dept */}
+                    <div className="flex gap-4 text-xs font-bold text-gray-500">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <span>기본 배경</span>
+                        <input type="color" value={newDeptDefaultColor} onChange={(e) => setNewDeptDefaultColor(e.target.value)} className="w-6 h-6 rounded overflow-hidden" />
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <span>기본 글자</span>
+                        <input type="color" value={newDeptDefaultTextColor} onChange={(e) => setNewDeptDefaultTextColor(e.target.value)} className="w-6 h-6 rounded overflow-hidden" />
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <span>기본 테두리</span>
+                        <input type="color" value={newDeptDefaultBorderColor} onChange={(e) => setNewDeptDefaultBorderColor(e.target.value)} className="w-6 h-6 rounded overflow-hidden" />
+                      </label>
+                    </div>
 
-                  <div className="flex gap-2">
-                    <button onClick={() => setIsCreating(false)} className="flex-1 bg-gray-100 py-2 rounded">취소</button>
-                    <button onClick={handleAdd} className="flex-1 bg-[#081429] text-white py-2 rounded">생성</button>
+                    <div className="flex gap-2">
+                      <button onClick={() => setIsCreating(false)} className="flex-1 bg-gray-100 py-2 rounded">취소</button>
+                      <button onClick={handleAdd} className="flex-1 bg-[#081429] text-white py-2 rounded">생성</button>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {localDepartments
                     .filter(d => d.name.includes(deptSearchTerm))
-                    .filter(d => isMaster || currentUserProfile?.departmentPermissions?.[d.id]) // Filter by permission if not Master
-                    .map(dept => (
-                      <div key={dept.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex gap-3">
+                    .filter(d => (isMaster || isAdmin) || currentUserProfile?.departmentPermissions?.[d.id]) // Filter: Master/Admin sees all, others by permission
+                    .map((dept, index) => ( // Need index for Drag & Drop
+                      <div
+                        key={dept.id}
+                        draggable={(isMaster || isAdmin)} // Allow Drag for Admin too
+                        onDragStart={() => (isMaster || isAdmin) && setDraggedIndex(index)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if ((isMaster || isAdmin) && draggedIndex !== null && draggedIndex !== index) {
+                            // Optional: Visual feedback like border
+                          }
+                        }}
+                        onDrop={() => {
+                          if ((isMaster || isAdmin) && draggedIndex !== null && draggedIndex !== index) {
+                            const newDepts = [...localDepartments];
+                            const [removed] = newDepts.splice(draggedIndex, 1);
+                            newDepts.splice(index, 0, removed);
+                            // Re-assign order based on new index
+                            const reordered = newDepts.map((d, i) => ({ ...d, order: i + 1 }));
+                            setLocalDepartments(reordered);
+                            markChanged();
+                            setDraggedIndex(null);
+                          }
+                        }}
+                        className={`bg-white p-4 rounded-xl border shadow-sm flex gap-3 transition-transform ${draggedIndex === index ? 'opacity-50' : ''} border-gray-200`}
+                      >
                         <div className="w-1.5 rounded-full" style={{ backgroundColor: dept.color }} />
                         <div className="flex-1">
                           <div className="flex justify-between">
