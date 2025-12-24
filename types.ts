@@ -4,6 +4,9 @@ export interface Department {
   description?: string; // For the subtitle like "Vision: ..."
   color?: string;
   order: number;
+  defaultColor?: string;
+  defaultTextColor?: string;
+  defaultBorderColor?: string;
 }
 
 export interface CalendarEvent {
@@ -45,4 +48,11 @@ export interface UserProfile {
   canManageMenus?: boolean;
   canManageEventAuthors?: boolean;
   jobTitle?: string;
+}
+
+export interface Holiday {
+  id: string;      // Usually 'YYYY-MM-DD'
+  date: string;    // 'YYYY-MM-DD'
+  name: string;
+  type: 'public' | 'custom';
 }
