@@ -17,6 +17,7 @@ interface CalendarBoardProps {
   onEventClick: (event: CalendarEvent) => void;
   isPrintMode?: boolean;
   viewMode: 'daily' | 'weekly' | 'monthly';
+  holidays?: any[]; // TODO: Import Holiday type properly or use any for now to avoid circular deps if types.ts is tricky
 }
 
 const DailyView: React.FC<{
@@ -181,7 +182,8 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   onTimeSlotClick, // Destructure this
   onEventClick,
   isPrintMode = false,
-  viewMode
+  viewMode,
+  holidays = []
 }) => {
   const weeks = getMonthWeeks(currentDate);
   const currentYear = currentDate.getFullYear();
@@ -252,6 +254,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                 onCellClick={onCellClick}
                 onRangeSelect={onRangeSelect}
                 onEventClick={onEventClick}
+                holidays={holidays}
               />
             </div>
           ) : (
@@ -265,6 +268,10 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                   onCellClick={onCellClick}
                   onRangeSelect={onRangeSelect}
                   onEventClick={onEventClick}
+                  // New Props for Monthly View Cleanup
+                  currentMonthDate={currentDate}
+                  limitToCurrentMonth={true}
+                  holidays={holidays}
                 />
               ))}
             </div>

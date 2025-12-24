@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Department, CalendarEvent, DAYS_OF_WEEK } from '../types';
+import { Department, CalendarEvent, DAYS_OF_WEEK, Holiday } from '../types';
 import { format, isSameDay, parseISO, isToday, isWeekend, isWithinInterval, startOfDay } from 'date-fns';
 import { getEventPositionInWeek } from '../utils/dateUtils';
 import { EVENT_COLORS } from '../constants';
@@ -11,7 +11,12 @@ interface WeekBlockProps {
   events: CalendarEvent[];
   onCellClick: (date: string, deptId: string) => void;
   onRangeSelect: (startDate: string, endDate: string, deptId: string) => void;
+
   onEventClick: (event: CalendarEvent) => void;
+  // New Props
+  currentMonthDate?: Date;
+  limitToCurrentMonth?: boolean;
+  holidays?: Holiday[];
 }
 
 const WeekBlock: React.FC<WeekBlockProps> = ({
@@ -21,9 +26,18 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
   onCellClick,
   onRangeSelect,
   onEventClick,
+  currentMonthDate,
+  limitToCurrentMonth = false,
+  holidays = [],
 }) => {
   const weekStart = weekDays[0];
   const weekEnd = weekDays[6];
+
+  // Helper to check visibility
+  const isDateVisible = (date: Date) => {
+    if (!limitToCurrentMonth || !currentMonthDate) return true;
+    return date.getMonth() === currentMonthDate.getMonth();
+  };
 
   // Drag State
   const [dragStart, setDragStart] = useState<{ date: Date, deptId: string } | null>(null);
@@ -81,7 +95,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
 
   return (
     <div
-      className="mb-4 border-b border-gray-200 last:border-b-0 break-inside-avoid select-none relative"
+      className="mb-4 border-b border-gray-200 break-inside-avoid select-none relative"
       onMouseLeave={() => { setDragStart(null); setDragEnd(null); }}
       onMouseUp={handleMouseUp}
     >
@@ -95,16 +109,29 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
           const isSun = idx === 0;
           const isSat = idx === 6;
 
+          // Check Holiday
+          const dateStr = format(date, 'yyyy-MM-dd');
+          const holiday = holidays.find(h => h.date === dateStr);
+          const isHoliday = !!holiday;
+
           return (
             <div
               key={date.toISOString()}
               className={`border-r border-gray-300 last:border-r-0 p-1 text-center h-10 flex flex-col items-center justify-center
-                ${isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-[#373d41]'}
+                ${isHoliday ? 'text-red-600 bg-red-50/50' : isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-[#373d41]'}
                 ${isToday(date) ? 'bg-[#fdb813]/20 font-bold' : ''}
+                ${!isDateVisible(date) ? 'opacity-25 bg-gray-50' : ''} 
               `}
             >
-              <span className="text-[10px] font-bold uppercase opacity-60 tracking-wider">{dayName}</span>
-              <span className="text-sm font-extrabold leading-none">{dayNum}</span>
+              {isDateVisible(date) && (
+                <>
+                  <div className="flex items-center gap-1 leading-none">
+                    <span className="text-[10px] font-bold uppercase opacity-60 tracking-wider">{dayName}</span>
+                    {isHoliday && <span className="text-[9px] text-red-500 font-bold whitespace-nowrap">{holiday.name}</span>}
+                  </div>
+                  <span className="text-sm font-extrabold leading-none mt-0.5">{dayNum}</span>
+                </>
+              )}
             </div>
           );
         })}
@@ -145,11 +172,12 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
               return (
                 <div
                   key={date.toISOString()}
-                  onMouseDown={() => handleMouseDown(date, dept.id)}
-                  onMouseEnter={() => handleMouseEnter(date, dept.id)}
+                  onMouseDown={() => isDateVisible(date) && handleMouseDown(date, dept.id)}
+                  onMouseEnter={() => isDateVisible(date) && handleMouseEnter(date, dept.id)}
                   className={`border-r border-gray-300 last:border-r-0 cursor-pointer relative transition-colors
-                    ${isDrag ? 'bg-[#fdb813]/30' : 'hover:bg-gray-50'}
-                    ${!isDrag && isWeekend(date) ? 'bg-gray-[0.01]' : ''}
+                    ${isDrag ? 'bg-[#fdb813]/30' : (isDateVisible(date) ? 'hover:bg-gray-50' : '')}
+                    ${!isDrag && isWeekend(date) && isDateVisible(date) ? 'bg-gray-[0.01]' : ''}
+                    ${!isDateVisible(date) ? 'bg-gray-50 cursor-default' : ''}
                   `}
                 />
               );
@@ -158,7 +186,32 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
             {/* Events Layer */}
             <div className="absolute inset-y-0 left-[120px] right-0 grid grid-cols-7 pointer-events-none p-1 gap-y-1 z-10">
               {weekEvents.map(event => {
-                const pos = getEventPositionInWeek(event, weekStart, weekEnd);
+                // Determine effective range for display
+                let effectiveStart = parseISO(event.startDate);
+                let effectiveEnd = parseISO(event.endDate);
+
+                // Assuming range select behavior or single day
+                // Clamp to Current Month logic:
+                if (limitToCurrentMonth && currentMonthDate) {
+                  const monthStart = startOfDay(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1));
+                  const monthEnd = startOfDay(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0));
+
+                  if (startOfDay(effectiveStart) < monthStart) effectiveStart = monthStart;
+                  if (startOfDay(effectiveEnd) > monthEnd) effectiveEnd = monthEnd;
+
+                  // If invalid (starts after end), skip
+                  if (startOfDay(effectiveStart) > startOfDay(effectiveEnd)) return null;
+                }
+
+                // Pass the CLAMPED event to position calculator
+                // We create a temporary event object just for positioning
+                const displayEvent = { ...event, startDate: format(effectiveStart, 'yyyy-MM-dd'), endDate: format(effectiveEnd, 'yyyy-MM-dd') };
+
+                const pos = getEventPositionInWeek(displayEvent, weekStart, weekEnd);
+
+                // If position is invalid (0 span), skip
+                if (pos.colSpan <= 0) return null;
+
                 // Direct use of custom colors
                 const bgColor = event.color;
                 const borderColor = event.borderColor || event.color;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay } from 'date-fns';
-import { CalendarEvent, Department, UserProfile } from './types';
+import { CalendarEvent, Department, UserProfile, Holiday } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
@@ -89,7 +89,7 @@ const getJobTitleStyle = (title: string = '') => {
 };
 
 const App: React.FC = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>('monthly');
+
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);
 
@@ -111,7 +111,10 @@ const App: React.FC = () => {
 
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedEndDate, setSelectedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedDeptId, setSelectedDeptId] = useState<string>('');
+  const [selectedDeptId, setSelectedDeptId] = useState<string>(''); // For creating new events
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [isCompareMode, setIsCompareMode] = useState<boolean>(true);
+
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
   const [initialStartTime, setInitialStartTime] = useState('');
@@ -127,16 +130,25 @@ const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(true);
 
   // Auth Listener
+  // Auth Listener with Real-time Profile Sync
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
+    let profileUnsubscribe: (() => void) | null = null;
 
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as UserProfile;
+    const authUnsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+
+      if (profileUnsubscribe) {
+        profileUnsubscribe();
+        profileUnsubscribe = null;
+      }
+
+      if (user) {
+        // Real-time listener for User Profile
+        const userDocRef = doc(db, 'users', user.uid);
+
+        profileUnsubscribe = onSnapshot(userDocRef, async (docSnapshot) => {
+          if (docSnapshot.exists()) {
+            const userData = docSnapshot.data() as UserProfile;
 
             // Critical Fix: Force Master Role for specific email if not set
             if (user.email === 'st2000423@gmail.com' && userData.role !== 'master') {
@@ -148,12 +160,14 @@ const App: React.FC = () => {
                 canEdit: true
               };
               await setDoc(userDocRef, updatedProfile);
+              // The snapshot will fire again, so we don't need to set state here necessarily, 
+              // but for immediate feedback:
               setUserProfile(updatedProfile);
             } else {
               setUserProfile(userData);
             }
           } else {
-            // ... existing fallback ...
+            // Document doesn't exist - Create it
             if (user.email === 'st2000423@gmail.com') {
               const newMasterProfile: UserProfile = {
                 uid: user.uid,
@@ -166,20 +180,36 @@ const App: React.FC = () => {
               await setDoc(userDocRef, newMasterProfile);
               setUserProfile(newMasterProfile);
             } else {
-              setUserProfile(null);
+              // Initial user creation handled here
+              const newUserProfile: UserProfile = {
+                uid: user.uid,
+                email: user.email!,
+                role: 'user',
+                status: 'pending', // Default to pending
+                allowedDepartments: [],
+                departmentPermissions: {}
+              };
+              await setDoc(userDocRef, newUserProfile);
+              setUserProfile(newUserProfile);
             }
           }
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-        }
+          setAuthLoading(false);
+        }, (error) => {
+          console.error("Error listening to user profile:", error);
+          setAuthLoading(false);
+        });
+
       } else {
         setUserProfile(null);
-        setIsLoginModalOpen(true); // Force open login modal
+        setIsLoginModalOpen(true);
+        setAuthLoading(false);
       }
-      setAuthLoading(false);
     });
-    return () => unsubscribe();
-    return () => unsubscribe();
+
+    return () => {
+      authUnsubscribe();
+      if (profileUnsubscribe) profileUnsubscribe();
+    };
   }, []);
 
   // Fetch Users (for Participants & Admin)
@@ -222,8 +252,8 @@ const App: React.FC = () => {
     // 1. Access Control Check
     let hasAccess = false;
 
-    // Master/Admin has access to everything
-    if (isMaster || isAdmin) {
+    // Master/Admin has access to everything -> NO, only Master. Admin follows permissions.
+    if (isMaster) {
       hasAccess = true;
     }
     // Check Granular Permissions
@@ -274,6 +304,16 @@ const App: React.FC = () => {
 
   // Fetch System Configuration (Lookback Period)
   const [lookbackYears, setLookbackYears] = useState<number>(2);
+
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  useEffect(() => {
+    const q = collection(db, 'holidays');
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadHolidays = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Holiday));
+      setHolidays(loadHolidays);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'system', 'config'), (doc) => {
@@ -392,6 +432,10 @@ const App: React.FC = () => {
                 {userProfile?.role === 'master' && (
                   <span className="bg-red-600 text-white text-[9px] px-1 py-0.5 rounded font-black tracking-tighter shadow-sm">MASTER</span>
                 )}
+                {/* Admin Badge */}
+                {userProfile?.role === 'admin' && (
+                  <span className="bg-indigo-600 text-white text-[9px] px-1 py-0.5 rounded font-black tracking-tighter shadow-sm">ADMIN</span>
+                )}
                 {/* Name */}
                 <span className="text-xs font-bold text-white whitespace-nowrap">
                   {(userProfile?.email || currentUser?.email)?.split('@')[0]}
@@ -404,29 +448,6 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {/* Center: View Mode Switcher */}
-          <div className="flex-1 flex justify-center">
-            <div className="flex bg-[#373d41]/50 p-1 rounded-full border border-white/10 backdrop-blur-sm">
-              <button
-                onClick={() => setViewMode('daily')}
-                className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${viewMode === 'daily' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'}`}
-              >
-                일간
-              </button>
-              <button
-                onClick={() => setViewMode('weekly')}
-                className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${viewMode === 'weekly' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'}`}
-              >
-                주간
-              </button>
-              <button
-                onClick={() => setViewMode('monthly')}
-                className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${viewMode === 'monthly' ? 'bg-[#fdb813] text-[#081429] shadow-md' : 'text-gray-400 hover:text-white'}`}
-              >
-                월간
-              </button>
-            </div>
-          </div>
 
           {/* Right: Actions */}
           <div className="flex items-center justify-end gap-3 w-[250px]">
@@ -520,11 +541,64 @@ const App: React.FC = () => {
                     {d.name}
                   </span>
                 ))}
+
                 {visibleDepartments.length > 5 && (
                   <span className="text-gray-500">+{visibleDepartments.length - 5} 더보기</span>
                 )}
               </div>
             )}
+          </div>
+
+          {/* View Toggles - Moved from Top Header */}
+          <div className="flex items-center gap-2 ml-auto pl-4 border-l border-gray-700 h-[24px] my-auto">
+            {/* Daily/Weekly/Monthly */}
+            <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+              {(['daily', 'weekly', 'monthly'] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setViewMode(m)}
+                  className={`
+                    px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
+                    ${viewMode === m
+                      ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }
+                  `}
+                >
+                  {m === 'daily' && '일간'}
+                  {m === 'weekly' && '주간'}
+                  {m === 'monthly' && '월간'}
+                </button>
+              ))}
+            </div>
+
+            {/* Comparison Mode Toggle (Always visible) */}
+            <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+              <button
+                onClick={() => setIsCompareMode(false)}
+                className={`
+                     px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
+                     ${!isCompareMode
+                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }
+                   `}
+              >
+                기본
+              </button>
+              <button
+                onClick={() => setIsCompareMode(true)}
+                className={`
+                     px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
+                     ${isCompareMode
+                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }
+                   `}
+              >
+                비교
+              </button>
+            </div>
           </div>
         </div>
 
@@ -586,7 +660,7 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <div className="w-full flex-1 max-w-[1920px] mx-auto min-h-screen print:p-0 flex flex-col xl:flex-row gap-8 print:flex-row print:gap-4">
+        <div className="w-full flex-1 max-w-full mx-auto min-h-screen print:p-0 flex flex-col xl:flex-row gap-8 print:flex-row print:gap-4">
           <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0">
             <CalendarBoard
               currentDate={baseDate}
@@ -597,11 +671,12 @@ const App: React.FC = () => {
               onRangeSelect={handleRangeSelect}
               onTimeSlotClick={handleTimeSlotClick} // Pass handler
               onEventClick={handleEventClick}
+              holidays={holidays}
               viewMode={viewMode}
             />
           </div>
 
-          <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0">
+          <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${isCompareMode ? '' : 'hidden'}`}>
             <CalendarBoard
               currentDate={rightDate}
               onDateChange={(date) => setBaseDate(addYears(date, 1))}
@@ -611,6 +686,7 @@ const App: React.FC = () => {
               onRangeSelect={handleRangeSelect}
               onTimeSlotClick={handleTimeSlotClick} // Pass handler
               onEventClick={handleEventClick}
+              holidays={holidays}
               viewMode={viewMode}
             />
           </div>
@@ -629,7 +705,10 @@ const App: React.FC = () => {
         initialEndTime={initialEndTime}
         existingEvent={editingEvent}
         departments={visibleDepartments} // ONLY Pass visible
-        readOnly={!canGlobalEdit} // Pass readOnly prop (Note: EventModal needs updates for granular check, using Global for now)
+        // Granular Permission Update: 
+        // We do NOT forcefully set readOnly based on global edit anymore.
+        // EventModal will check `userProfile.departmentPermissions` vs `selectedDeptId`.
+        readOnly={false}
         users={users}
         currentUser={userProfile}
       />
@@ -646,6 +725,7 @@ const App: React.FC = () => {
         departments={departments}
         currentUserProfile={userProfile}
         users={users} // Pass users
+        holidays={holidays}
       />
 
       {/* Access Denied / Pending Approval Overlay */}

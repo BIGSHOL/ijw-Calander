@@ -54,6 +54,12 @@ const EventModal: React.FC<EventModalProps> = ({
   const [authorId, setAuthorId] = useState('');
   const [authorName, setAuthorName] = useState('');
 
+
+  // Permission Logic
+  const isMaster = currentUser?.role === 'master';
+  const isAdmin = currentUser?.role === 'admin';
+  const canEditCurrent = isMaster || isAdmin || (departmentId && currentUser?.departmentPermissions?.[departmentId] === 'edit');
+
   // Track which event ID we last loaded to prevent unnecessary resets
   const [loadedEventId, setLoadedEventId] = useState<string | null>(null);
 
@@ -112,15 +118,19 @@ const EventModal: React.FC<EventModalProps> = ({
             setAuthorId('');
             setAuthorName('');
           }
-          setDepartmentId(initialDepartmentId || departments[0]?.id || '');
+          const targetDeptId = initialDepartmentId || departments[0]?.id || '';
+          setDepartmentId(targetDeptId);
           setStartDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
           setEndDate(initialEndDate || initialDate || format(new Date(), 'yyyy-MM-dd'));
           setStartTime(initialStartTime || '');
           setEndTime(initialEndTime || '');
           setIsAllDay(false);
-          setSelectedColor('#fee2e2');
-          setSelectedTextColor('#ffffff');
-          setSelectedBorderColor('#fee2e2');
+
+          // Apply Department Defaults
+          const targetDept = departments.find(d => d.id === targetDeptId);
+          setSelectedColor(targetDept?.defaultColor || '#fee2e2');
+          setSelectedTextColor(targetDept?.defaultTextColor || '#ffffff');
+          setSelectedBorderColor(targetDept?.defaultBorderColor || targetDept?.defaultColor || '#fee2e2');
         }
       }
     } else {
@@ -200,8 +210,9 @@ const EventModal: React.FC<EventModalProps> = ({
               type="text"
               required
               value={title}
+              disabled={!canEditCurrent}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none transition-all font-medium"
+              className={`w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none transition-all font-medium ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               placeholder="일정 제목을 입력하세요"
             />
           </div>
@@ -213,16 +224,36 @@ const EventModal: React.FC<EventModalProps> = ({
             </label>
             <select
               value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
+              onChange={(e) => {
+                const newId = e.target.value;
+                setDepartmentId(newId);
+                // Auto-apply defaults on manual change
+                const dept = departments.find(d => d.id === newId);
+                if (dept) {
+                  setSelectedColor(dept.defaultColor || '#fee2e2');
+                  setSelectedTextColor(dept.defaultTextColor || '#ffffff');
+                  setSelectedBorderColor(dept.defaultBorderColor || dept.defaultColor || '#fee2e2');
+                }
+              }}
+              // Department selection is always enabled so users can switch to a valid dept, 
+              // BUT if we want to restrict them to only Create in Editable depts, we might want to filter options?
+              // For now, let them switch, and the form disables/enables dynamically.
               className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none bg-white font-medium cursor-pointer"
             >
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.name}
+                  {d.name} {currentUser?.departmentPermissions?.[d.id] === 'view' && !isMaster && !isAdmin ? '(조회전용)' : ''}
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Read Only Notice */}
+          {!canEditCurrent && (
+            <div className="bg-red-50 text-red-600 text-xs font-bold p-3 rounded-xl border border-red-100 mb-2 flex items-center gap-2">
+              <span className="text-lg">⚠️</span> 이 부서의 일정은 조회만 가능합니다.
+            </div>
+          )}
 
           {/* Date & Time Range */}
           <div className="grid grid-cols-1 gap-4">
@@ -325,8 +356,9 @@ const EventModal: React.FC<EventModalProps> = ({
             </label>
             <textarea
               value={description}
+              disabled={!canEditCurrent}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none min-h-[100px] resize-y font-medium text-sm"
+              className={`w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none min-h-[100px] resize-y font-medium text-sm ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               placeholder="일정의 자세한 내용을 입력하세요"
             />
           </div>
@@ -382,41 +414,42 @@ const EventModal: React.FC<EventModalProps> = ({
           {/* <div className="border-t border-gray-100 my-2"></div> */}
 
           {/* Edit Mode: Author Display logic needs to be here too if existing event */}
-          {existingEvent && (
-            <div>
-              <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2">
-                작성자 정보
-              </label>
-              {currentUser?.canManageEventAuthors ? (
-                <div className="relative">
-                  <select
-                    value={authorId}
-                    onChange={(e) => {
-                      const selectedUser = users.find(u => u.uid === e.target.value);
-                      if (selectedUser) {
-                        setAuthorId(selectedUser.uid);
-                        setAuthorName(`${selectedUser.email.split('@')[0]} ${selectedUser.jobTitle ? `(${selectedUser.jobTitle})` : ''}`);
-                      }
-                    }}
-                    className="w-full appearance-none bg-white border border-gray-300 text-gray-700 text-sm font-bold py-2.5 px-4 rounded-xl outline-none focus:border-[#fdb813] cursor-pointer focus:ring-2 focus:ring-[#fdb813]"
-                  >
-                    {users.filter(u => u.status === 'approved').map(u => (
-                      <option key={u.uid} value={u.uid}>{u.email.split('@')[0]} {u.jobTitle ? `(${u.jobTitle})` : ''}</option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="bg-gray-50 border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl font-bold text-sm">
-                  {authorName || '작성자 정보 없음'}
-                </div>
-              )}
-            </div>
-          )
+          {
+            existingEvent && (
+              <div>
+                <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2">
+                  작성자 정보
+                </label>
+                {currentUser?.canManageEventAuthors ? (
+                  <div className="relative">
+                    <select
+                      value={authorId}
+                      onChange={(e) => {
+                        const selectedUser = users.find(u => u.uid === e.target.value);
+                        if (selectedUser) {
+                          setAuthorId(selectedUser.uid);
+                          setAuthorName(`${selectedUser.email.split('@')[0]} ${selectedUser.jobTitle ? `(${selectedUser.jobTitle})` : ''}`);
+                        }
+                      }}
+                      className="w-full appearance-none bg-white border border-gray-300 text-gray-700 text-sm font-bold py-2.5 px-4 rounded-xl outline-none focus:border-[#fdb813] cursor-pointer focus:ring-2 focus:ring-[#fdb813]"
+                    >
+                      {users.filter(u => u.status === 'approved').map(u => (
+                        <option key={u.uid} value={u.uid}>{u.email.split('@')[0]} {u.jobTitle ? `(${u.jobTitle})` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl font-bold text-sm">
+                    {authorName || '작성자 정보 없음'}
+                  </div>
+                )}
+              </div>
+            )
           }
 
           {/* Footer Actions */}
           <div className="flex justify-between items-center pt-6 border-t border-gray-100">
-            {existingEvent ? (
+            {existingEvent && canEditCurrent ? (
               <button
                 type="button"
                 onClick={() => {
@@ -429,6 +462,9 @@ const EventModal: React.FC<EventModalProps> = ({
               >
                 <Trash2 size={18} /> 삭제
               </button>
+            ) : canEditCurrent && existingEvent ? (
+              // Should not happen as handled below, but strictly logic wise
+              <div />
             ) : (
               // Author Display (Bottom Left)
               <div className="flex flex-col justify-center px-1">
@@ -465,19 +501,21 @@ const EventModal: React.FC<EventModalProps> = ({
                 onClick={onClose}
                 className="px-6 py-2.5 text-[#373d41] hover:bg-gray-100 rounded-xl text-sm font-bold transition-all"
               >
-                취소
+                {canEditCurrent ? '취소' : '닫기'}
               </button>
-              <button
-                type="submit"
-                className="px-8 py-2.5 bg-[#fdb813] text-[#081429] rounded-xl hover:brightness-110 text-sm font-extrabold shadow-lg transition-all"
-              >
-                저장
-              </button>
+              {canEditCurrent && (
+                <button
+                  type="submit"
+                  className="px-8 py-2.5 bg-[#fdb813] text-[#081429] rounded-xl hover:brightness-110 text-sm font-extrabold shadow-lg transition-all"
+                >
+                  저장
+                </button>
+              )}
             </div>
           </div>
-        </form>
-      </div>
-    </div>
+        </form >
+      </div >
+    </div >
   );
 };
 
