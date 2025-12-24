@@ -41,7 +41,7 @@ const departmentConverter = {
 
 const eventConverter = {
   toFirestore: (event: CalendarEvent) => {
-    const data = {
+    const data: Record<string, any> = {
       제목: event.title,
       상세내용: event.description || '',
       참가자: event.participants || '',
@@ -54,12 +54,18 @@ const eventConverter = {
       색상: event.color,
       글자색: event.textColor,
       테두리색: event.borderColor,
-      작성자ID: event.authorId,
-      작성자명: event.authorName,
-      생성일시: event.createdAt,
-      수정일시: event.updatedAt,
-      참가현황: event.attendance
+      작성자ID: event.authorId || '',
+      작성자명: event.authorName || '',
+      생성일시: event.createdAt || new Date().toISOString(),
+      수정일시: new Date().toISOString(),
+      참가현황: event.attendance || {}
     };
+    // Filter out any remaining undefined values
+    Object.keys(data).forEach(key => {
+      if (data[key] === undefined) {
+        delete data[key];
+      }
+    });
     console.log('toFirestore called with:', event);
     return data;
   },
@@ -424,6 +430,10 @@ const App: React.FC = () => {
 
   // --- Event Drag and Drop ---
   const handleEventMove = (original: CalendarEvent, updated: CalendarEvent) => {
+    console.log('[handleEventMove] called');
+    console.log('  Original:', original.id, original.startDate, '->', original.endDate);
+    console.log('  Updated:', updated.id, updated.startDate, '->', updated.endDate);
+
     // Add to pending moves (replace if same event was already pending)
     setPendingEventMoves(prev => {
       const filtered = prev.filter(m => m.original.id !== original.id);

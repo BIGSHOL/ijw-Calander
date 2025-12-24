@@ -292,8 +292,8 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
               );
             })}
 
-            {/* Events Layer - RELATIVE layout to drive height */}
-            <div className="col-start-2 col-span-7 row-start-1 grid grid-cols-7 pointer-events-none p-1 gap-y-1 z-10 self-start">
+            {/* Events Layer - z-20 ensures it's above cell containers for drag */}
+            <div className="col-start-2 col-span-7 row-start-1 grid grid-cols-7 pointer-events-none p-1 gap-y-1 z-20 self-start">
               {weekEvents.map(event => {
                 // Determine effective range for display
                 let effectiveStart = parseISO(event.startDate);
