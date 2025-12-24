@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CalendarEvent, UserProfile } from '../types';
 import { format, parseISO, isAfter, isBefore } from 'date-fns';
 import { X, Calendar, Clock, MapPin } from 'lucide-react';
+
+type StatusFilter = 'all' | 'pending' | 'joined' | 'declined';
 
 interface MyEventsModalProps {
     isOpen: boolean;
@@ -22,38 +24,56 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
     readOnly = false,
     customTitle,
 }) => {
+    const [filterStatus, setFilterStatus] = useState<StatusFilter>('all');
+
     if (!isOpen || !currentUser) return null;
 
-    const [myEvents, setMyEvents] = useState<CalendarEvent[]>([]);
+    // Compute filtered events based on current user and selected status
+    const filteredEvents = useMemo(() => {
+        if (!currentUser) return [];
 
-    useEffect(() => {
-        if (isOpen && currentUser) {
-            // Filter events where the user is a participant
-            // Logic: Check if 'participants' string contains part of email or name (Legacy) 
-            // OR if 'attendance' record contains the UID (New Schema)
+        // First, filter by participation
+        const participated = events.filter(event => {
+            if (event.attendance && event.attendance[currentUser.uid]) {
+                return true;
+            }
+            const userName = currentUser.email.split('@')[0];
+            return event.participants?.includes(userName) || false;
+        });
 
-            const filtered = events.filter(event => {
-                // 1. Check Attendance Map (Reliable)
-                if (event.attendance && event.attendance[currentUser.uid]) {
-                    return true;
-                }
-
-                // 2. Check Participants String (Legacy/Fallback)
-                // Need a somewhat loose match because participants is just a free-form string
-                const userName = currentUser.email.split('@')[0];
-                const userNameInParticipants = event.participants?.includes(userName) || false;
-
-                return userNameInParticipants;
+        // Then, filter by status
+        const statusFiltered = filterStatus === 'all'
+            ? participated
+            : participated.filter(event => {
+                const myStatus = event.attendance?.[currentUser.uid] || 'pending';
+                return myStatus === filterStatus;
             });
 
-            // Sort by date: Upcoming first, then past
-            const now = new Date();
-            const upcoming = filtered.filter(e => isAfter(parseISO(e.endDate), now)).sort((a, b) => a.startDate.localeCompare(b.startDate));
-            const past = filtered.filter(e => isBefore(parseISO(e.endDate), now)).sort((a, b) => b.startDate.localeCompare(a.startDate)); // Descending for past
+        // Sort: upcoming first, then past
+        const now = new Date();
+        const upcoming = statusFiltered.filter(e => isAfter(parseISO(e.endDate), now)).sort((a, b) => a.startDate.localeCompare(b.startDate));
+        const past = statusFiltered.filter(e => isBefore(parseISO(e.endDate), now)).sort((a, b) => b.startDate.localeCompare(a.startDate));
 
-            setMyEvents([...upcoming, ...past]);
-        }
-    }, [isOpen, events, currentUser]);
+        return [...upcoming, ...past];
+    }, [events, currentUser, filterStatus]);
+
+    // Count by status for badge display
+    const statusCounts = useMemo(() => {
+        if (!currentUser) return { all: 0, pending: 0, joined: 0, declined: 0 };
+
+        const participated = events.filter(event => {
+            if (event.attendance && event.attendance[currentUser.uid]) return true;
+            const userName = currentUser.email.split('@')[0];
+            return event.participants?.includes(userName) || false;
+        });
+
+        return {
+            all: participated.length,
+            pending: participated.filter(e => (e.attendance?.[currentUser.uid] || 'pending') === 'pending').length,
+            joined: participated.filter(e => e.attendance?.[currentUser.uid] === 'joined').length,
+            declined: participated.filter(e => e.attendance?.[currentUser.uid] === 'declined').length,
+        };
+    }, [events, currentUser]);
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -73,15 +93,44 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
                     </button>
                 </div>
 
+                {/* Filter Tabs */}
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex gap-2">
+                    {(['all', 'pending', 'joined', 'declined'] as StatusFilter[]).map(status => (
+                        <button
+                            key={status}
+                            onClick={() => setFilterStatus(status)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5
+                                ${filterStatus === status
+                                    ? status === 'all' ? 'bg-[#081429] text-white'
+                                        : status === 'pending' ? 'bg-[#fdb813] text-[#081429]'
+                                            : status === 'joined' ? 'bg-[#081429] text-white'
+                                                : 'bg-gray-400 text-white'
+                                    : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-300'
+                                }
+                            `}
+                        >
+                            {status === 'all' && '전체'}
+                            {status === 'pending' && '미정'}
+                            {status === 'joined' && '참석'}
+                            {status === 'declined' && '불참'}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${filterStatus === status ? 'bg-white/20' : 'bg-gray-100'}`}>
+                                {statusCounts[status]}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+
                 {/* List */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-                    {myEvents.length === 0 ? (
+                    {filteredEvents.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-40 text-gray-400">
                             <Calendar size={48} className="mb-2 opacity-20" />
-                            <p className="font-bold text-sm">참여 중인 일정이 없습니다.</p>
+                            <p className="font-bold text-sm">
+                                {filterStatus === 'all' ? '참여 중인 일정이 없습니다.' : `해당 상태의 일정이 없습니다.`}
+                            </p>
                         </div>
                     ) : (
-                        myEvents.map(event => {
+                        filteredEvents.map(event => {
                             const isPast = isBefore(parseISO(event.endDate), new Date());
                             const myStatus = event.attendance?.[currentUser.uid] || 'pending';
 
