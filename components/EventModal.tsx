@@ -128,6 +128,10 @@ const EventModal: React.FC<EventModalProps> = ({
           // Handle Text & Border Colors
           setSelectedTextColor(existingEvent.textColor || '#ffffff');
           setSelectedBorderColor(existingEvent.borderColor || initialBgColor);
+
+          // Fix: Reset recurrence state for existing events to prevent state pollution
+          setRecurrenceType(existingEvent.recurrenceType || 'none');
+          setRecurrenceCount(1); // Default count for edit mode (usually not used unless new recurrence started)
         } else {
           setTitle('');
           setDescription('');
