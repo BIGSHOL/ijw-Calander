@@ -210,18 +210,35 @@ const App: React.FC = () => {
 
   // Derive Permissions
   const isMaster = userProfile?.role === 'master';
-  const canEdit = isMaster || userProfile?.canEdit === true;
+  const isAdmin = userProfile?.role === 'admin';
+  // canEdit is now derived/overridden by departmental permissions, but global override remains for Master
+  const canGlobalEdit = isMaster || isAdmin; // Admin generally has high privileges, but let's stick to granular? 
+  // User asked for "Admin" who can "give permissions". This implies Admin manages Users.
+  // Docs say: "2. 마스터계정과 같이 '권한'들을 내려줄 수 있는 '어드민' 계정 지정"
 
   // Filter Departments based on RBAC AND Local Toggles
+  // Filter Departments based on RBAC AND Local Toggles
   const visibleDepartments = departments.filter(d => {
-    // 1. RBAC Check
-    let allowed = false;
-    if (isMaster) allowed = true;
-    else if (userProfile?.allowedDepartments?.includes(d.id)) allowed = true;
+    // 1. Access Control Check
+    let hasAccess = false;
 
-    if (!allowed) return false;
+    // Master/Admin has access to everything
+    if (isMaster || isAdmin) {
+      hasAccess = true;
+    }
+    // Check Granular Permissions
+    else if (userProfile?.departmentPermissions?.[d.id]) {
+      hasAccess = true;
+    }
+    // Legacy Fallback
+    else if (userProfile?.allowedDepartments?.includes(d.id)) {
+      hasAccess = true;
+    }
 
-    // 2. Local Toggle Check
+    if (!hasAccess) return false;
+
+    // 2. Local Visibility Toggle Check
+    // (Users can hide departments locally even if they have access)
     if (hiddenDeptIds.includes(d.id)) return false;
 
     return true;
@@ -612,7 +629,7 @@ const App: React.FC = () => {
         initialEndTime={initialEndTime}
         existingEvent={editingEvent}
         departments={visibleDepartments} // ONLY Pass visible
-        readOnly={!canEdit} // Pass readOnly prop
+        readOnly={!canGlobalEdit} // Pass readOnly prop (Note: EventModal needs updates for granular check, using Global for now)
         users={users}
         currentUser={userProfile}
       />

@@ -34,11 +34,15 @@ export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 export interface UserProfile {
   uid: string;
   email: string;
-  role: 'master' | 'user';
-  status: 'approved' | 'pending' | 'rejected'; // Access Control Status
-  allowedDepartments: string[]; // List of department IDs
-  canEdit?: boolean;
-  canManageMenus?: boolean; // New permission for menu management
-  canManageEventAuthors?: boolean; // New permission to change event author
+  role: 'master' | 'admin' | 'user'; // Added 'admin'
+  status: 'approved' | 'pending' | 'rejected';
+  // allowedDepartments is DEPRECATED but kept for migration:
+  allowedDepartments?: string[];
+  // NEW: Granular permissions per department
+  departmentPermissions?: Record<string, 'view' | 'edit'>;
+
+  canEdit?: boolean; // Global edit flag (Deprecate or use as 'super edit'?)
+  canManageMenus?: boolean;
+  canManageEventAuthors?: boolean;
   jobTitle?: string;
 }
