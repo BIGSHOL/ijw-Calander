@@ -19,7 +19,10 @@ const departmentConverter = {
     return {
       부서명: dept.name,
       순서: dept.order,
-      색상: dept.color
+      색상: dept.color,
+      기본색상: dept.defaultColor || '#fee2e2',
+      기본글자색: dept.defaultTextColor || '#000000',
+      기본테두리색: dept.defaultBorderColor || '#fee2e2'
     };
   },
   fromFirestore: (snapshot: any, options: any) => {
@@ -28,7 +31,10 @@ const departmentConverter = {
       id: snapshot.id,
       name: data.부서명,
       order: data.순서,
-      color: data.색상
+      color: data.색상,
+      defaultColor: data.기본색상 || '#fee2e2',
+      defaultTextColor: data.기본글자색 || '#000000',
+      defaultBorderColor: data.기본테두리색 || '#fee2e2'
     } as Department;
   }
 };
@@ -605,7 +611,7 @@ const App: React.FC = () => {
         {/* Filter Popover Panel */}
         {isFilterOpen && (
           <div className="absolute top-[104px] left-0 w-full bg-[#1e293b]/95 backdrop-blur-xl border-b border-gray-700 shadow-2xl p-6 z-10 animate-in slide-in-from-top-2 duration-200">
-            <div className="max-w-[1920px] mx-auto">
+            <div className="w-full h-full">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-white font-bold flex items-center gap-2">
                   <Filter size={16} className="text-[#fdb813]" /> 부서 선택
