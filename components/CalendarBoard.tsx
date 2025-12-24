@@ -21,7 +21,11 @@ interface CalendarBoardProps {
   isPrintMode?: boolean;
   viewMode: 'daily' | 'weekly' | 'monthly';
   holidays?: any[];
-  currentUser: UserProfile | null; // Added prop
+  currentUser: UserProfile | null;
+  // Event Drag Props
+  onEventMove?: (original: CalendarEvent, updated: CalendarEvent) => void;
+  canEditDepartment?: (deptId: string) => boolean;
+  pendingEventIds?: string[];
 }
 
 
@@ -185,12 +189,15 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   events,
   onCellClick,
   onRangeSelect,
-  onTimeSlotClick, // Destructure this
+  onTimeSlotClick,
   onEventClick,
   isPrintMode = false,
   viewMode,
   holidays = [],
-  currentUser
+  currentUser,
+  onEventMove,
+  canEditDepartment,
+  pendingEventIds = [],
 }) => {
   const [isMyEventsOpen, setIsMyEventsOpen] = React.useState(false);
   const weeks = getMonthWeeks(currentDate); // Restore weeks definition
@@ -375,6 +382,9 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                 onRangeSelect={onRangeSelect}
                 onEventClick={onEventClick}
                 holidays={holidays}
+                onEventMove={onEventMove}
+                canEditDepartment={canEditDepartment}
+                pendingEventIds={pendingEventIds}
               />
             </div>
           ) : (
@@ -388,10 +398,12 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                   onCellClick={onCellClick}
                   onRangeSelect={onRangeSelect}
                   onEventClick={onEventClick}
-                  // New Props for Monthly View Cleanup
                   currentMonthDate={currentDate}
                   limitToCurrentMonth={true}
                   holidays={holidays}
+                  onEventMove={onEventMove}
+                  canEditDepartment={canEditDepartment}
+                  pendingEventIds={pendingEventIds}
                 />
               ))}
             </div>

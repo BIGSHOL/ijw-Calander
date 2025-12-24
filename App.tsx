@@ -139,6 +139,9 @@ const App: React.FC = () => {
   // UI State for New Header
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+  // Pending Event Moves State (for drag-and-drop)
+  const [pendingEventMoves, setPendingEventMoves] = useState<{ original: CalendarEvent, updated: CalendarEvent }[]>([]);
+
   // Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -419,6 +422,48 @@ const App: React.FC = () => {
     }
   };
 
+  // --- Event Drag and Drop ---
+  const handleEventMove = (original: CalendarEvent, updated: CalendarEvent) => {
+    // Add to pending moves (replace if same event was already pending)
+    setPendingEventMoves(prev => {
+      const filtered = prev.filter(m => m.original.id !== original.id);
+      return [...filtered, { original, updated }];
+    });
+  };
+
+  const handleSavePendingMoves = async () => {
+    if (pendingEventMoves.length === 0) return;
+    try {
+      for (const move of pendingEventMoves) {
+        await handleSaveEvent(move.updated);
+      }
+      setPendingEventMoves([]);
+      alert(`${pendingEventMoves.length}개의 일정이 이동되었습니다.`);
+    } catch (e) {
+      console.error(e);
+      alert('일정 이동 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleCancelPendingMoves = () => {
+    setPendingEventMoves([]);
+  };
+
+  const canEditDepartment = (deptId: string): boolean => {
+    if (!userProfile) return false;
+    if (userProfile.role === 'master') return true;
+    const permission = userProfile.departmentPermissions?.[deptId];
+    return permission === 'edit';
+  };
+
+  // Compute display events (apply pending moves for preview)
+  const displayEvents = events.map(event => {
+    const pendingMove = pendingEventMoves.find(m => m.original.id === event.id);
+    return pendingMove ? pendingMove.updated : event;
+  });
+
+  const pendingEventIds = pendingEventMoves.map(m => m.original.id);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f4f8]">
       <header className="no-print z-20 sticky top-0 flex flex-col shadow-2xl relative">
@@ -682,14 +727,17 @@ const App: React.FC = () => {
               currentDate={baseDate}
               onDateChange={setBaseDate}
               departments={visibleDepartments}
-              events={events}
+              events={displayEvents}
               onCellClick={handleCellClick}
               onRangeSelect={handleRangeSelect}
-              onTimeSlotClick={handleTimeSlotClick} // Pass handler
+              onTimeSlotClick={handleTimeSlotClick}
               onEventClick={handleEventClick}
               holidays={holidays}
               viewMode={viewMode}
               currentUser={userProfile}
+              onEventMove={handleEventMove}
+              canEditDepartment={canEditDepartment}
+              pendingEventIds={pendingEventIds}
             />
           </div>
 
@@ -698,16 +746,38 @@ const App: React.FC = () => {
               currentDate={rightDate}
               onDateChange={(date) => setBaseDate(addYears(date, 1))}
               departments={visibleDepartments}
-              events={events}
+              events={displayEvents}
               onCellClick={handleCellClick}
               onRangeSelect={handleRangeSelect}
-              onTimeSlotClick={handleTimeSlotClick} // Pass handler
+              onTimeSlotClick={handleTimeSlotClick}
               onEventClick={handleEventClick}
               holidays={holidays}
               viewMode={viewMode}
+              onEventMove={handleEventMove}
+              canEditDepartment={canEditDepartment}
+              pendingEventIds={pendingEventIds}
             />
           </div>
         </div>
+
+        {/* Floating Save Button for Pending Moves */}
+        {pendingEventMoves.length > 0 && (
+          <div className="fixed bottom-6 right-6 z-50 flex gap-3 animate-in slide-in-from-bottom-4 duration-300">
+            <button
+              onClick={handleCancelPendingMoves}
+              className="px-4 py-3 bg-white text-gray-700 rounded-xl font-bold shadow-lg border border-gray-200 hover:bg-gray-50 transition-all flex items-center gap-2"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleSavePendingMoves}
+              className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-xl font-bold shadow-lg hover:brightness-110 transition-all flex items-center gap-2"
+            >
+              <span className="bg-[#081429] text-white px-2 py-0.5 rounded-full text-xs font-black">{pendingEventMoves.length}</span>
+              변경사항 저장
+            </button>
+          </div>
+        )}
       </main>
 
       <EventModal
