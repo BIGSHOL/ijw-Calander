@@ -1167,7 +1167,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   <input
                                     type="checkbox"
                                     checked={rolePermissions[role as keyof RolePermissions]?.[perm.id] ?? false}
+                                    disabled={!isMaster}
                                     onChange={(e) => {
+                                      if (!isMaster) return;
                                       setRolePermissions(prev => ({
                                         ...prev,
                                         [role]: {
@@ -1176,7 +1178,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         }
                                       }));
                                     }}
-                                    className="w-4 h-4 accent-[#081429] cursor-pointer"
+                                    className={`w-4 h-4 accent-[#081429] ${!isMaster ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                                   />
                                 </td>
                               ))}
@@ -1200,7 +1202,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   <input
                                     type="checkbox"
                                     checked={rolePermissions[role as keyof RolePermissions]?.[perm.id] ?? false}
+                                    disabled={!isMaster}
                                     onChange={(e) => {
+                                      if (!isMaster) return;
                                       setRolePermissions(prev => ({
                                         ...prev,
                                         [role]: {
@@ -1209,7 +1213,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                         }
                                       }));
                                     }}
-                                    className="w-4 h-4 accent-[#081429] cursor-pointer"
+                                    className={`w-4 h-4 accent-[#081429] ${!isMaster ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                                   />
                                 </td>
                               ))}
