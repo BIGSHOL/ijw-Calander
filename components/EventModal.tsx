@@ -54,6 +54,9 @@ const EventModal: React.FC<EventModalProps> = ({
   const [authorId, setAuthorId] = useState('');
   const [authorName, setAuthorName] = useState('');
 
+  // New State for Attendance
+  const [attendance, setAttendance] = useState<Record<string, 'pending' | 'joined' | 'declined'>>({});
+
 
   // Permission Logic
   const isMaster = currentUser?.role === 'master';
@@ -159,7 +162,8 @@ const EventModal: React.FC<EventModalProps> = ({
       newId = `${startDate}_${safeDeptName}_${safeTitle}_${randomSuffix}`;
     }
 
-    const payload = {
+    const now = new Date().toISOString();
+    const payload: CalendarEvent = {
       id: newId,
       title,
       description,
@@ -174,8 +178,12 @@ const EventModal: React.FC<EventModalProps> = ({
       textColor: selectedTextColor,
       borderColor: selectedBorderColor,
       authorId,
-      authorName
+      authorName,
+      createdAt: existingEvent?.createdAt || now,
+      updatedAt: now,
+      attendance: attendance // Use current state w/ updates
     };
+
     console.log('DEBUG: selectedColor', selectedColor);
     console.log('DEBUG: selectedTextColor', selectedTextColor);
     console.log('DEBUG: selectedBorderColor', selectedBorderColor);
@@ -328,23 +336,69 @@ const EventModal: React.FC<EventModalProps> = ({
               {users.filter(u => u.status === 'approved').map(u => {
                 const displayName = `${u.email.split('@')[0]} ${u.jobTitle ? `(${u.jobTitle})` : ''}`;
                 const isSelected = participants.includes(displayName);
+                const currentStatus = attendance[u.uid] || 'pending';
+
+                // Permission Check
+                const canEditStatus = currentUser?.uid === u.uid || isMaster || isAdmin;
+
+                const cycleStatus = () => {
+                  const next: Record<string, 'pending' | 'joined' | 'declined'> = {
+                    'pending': 'joined',
+                    'joined': 'declined',
+                    'declined': 'pending'
+                  };
+                  setAttendance(prev => ({
+                    ...prev,
+                    [u.uid]: next[currentStatus]
+                  }));
+                };
+
                 return (
-                  <label key={u.uid} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setParticipants([...participants, displayName]);
-                        } else {
-                          setParticipants(participants.filter(p => p !== displayName));
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
-                    />
-                    <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-600'}`}>{displayName}</span>
-                  </label>
-                )
+                  <div key={u.uid} className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors group">
+                    <label className="flex items-center gap-3 cursor-pointer flex-1">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setParticipants([...participants, displayName]);
+                            setAttendance(prev => ({ ...prev, [u.uid]: 'pending' })); // Default to pending
+                          } else {
+                            setParticipants(participants.filter(p => p !== displayName));
+                            const newAtt = { ...attendance };
+                            delete newAtt[u.uid];
+                            setAttendance(newAtt);
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
+                      />
+                      <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-600'}`}>{displayName}</span>
+                    </label>
+
+                    {/* Attendance Status Toggle */}
+                    {isSelected && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (canEditStatus) cycleStatus();
+                        }}
+                        disabled={!canEditStatus}
+                        className={`
+                                text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1 transition-all
+                                ${currentStatus === 'joined' ? 'bg-green-100 text-green-700 border-green-200' : ''}
+                                ${currentStatus === 'declined' ? 'bg-red-100 text-red-700 border-red-200' : ''}
+                                ${currentStatus === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : ''}
+                                ${canEditStatus ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-80'}
+                            `}
+                      >
+                        {currentStatus === 'joined' && '참석'}
+                        {currentStatus === 'declined' && '불참'}
+                        {currentStatus === 'pending' && '미정'}
+                      </button>
+                    )}
+                  </div>
+                );
               })}
             </div>
           </div>
@@ -443,6 +497,16 @@ const EventModal: React.FC<EventModalProps> = ({
                     {authorName || '작성자 정보 없음'}
                   </div>
                 )}
+
+                {/* Timestamps Display */}
+                <div className="mt-2 flex flex-col gap-0.5 text-[10px] text-gray-400 font-medium px-1">
+                  {existingEvent.createdAt && (
+                    <span>생성: {format(new Date(existingEvent.createdAt), 'yyyy-MM-dd HH:mm')}</span>
+                  )}
+                  {existingEvent.updatedAt && (
+                    <span>수정: {format(new Date(existingEvent.updatedAt), 'yyyy-MM-dd HH:mm')}</span>
+                  )}
+                </div>
               </div>
             )
           }

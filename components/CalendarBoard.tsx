@@ -1,9 +1,12 @@
-import React from 'react';
-import { format, setMonth, setYear, isToday, isPast, isFuture, parseISO, startOfDay, isSameDay, addDays, subDays, differenceInMinutes, setHours, setMinutes, getHours, getMinutes } from 'date-fns';
-import { Department, CalendarEvent } from '../types';
+
+import React, { useMemo } from 'react';
+import { format, setMonth, setYear, isToday, isPast, isFuture, parseISO, startOfDay, isSameDay, addDays, subDays, differenceInMinutes, setHours, setMinutes, getHours, getMinutes, getDaysInMonth, getDate, setDate } from 'date-fns';
+import { Department, CalendarEvent, UserProfile } from '../types';
 import { getMonthWeeks } from '../utils/dateUtils';
 import WeekBlock from './WeekBlock';
-import { Clock, Users, Edit3, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import MyEventsModal from './MyEventsModal'; // Import
+import CustomSelect from './CustomSelect'; // Import CustomSelect
+import { Clock, Users, Edit3, ChevronLeft, ChevronRight, Calendar as CalendarIcon, List } from 'lucide-react';
 import { EVENT_COLORS } from '../constants';
 
 interface CalendarBoardProps {
@@ -13,12 +16,15 @@ interface CalendarBoardProps {
   events: CalendarEvent[];
   onCellClick: (date: string, deptId: string) => void;
   onRangeSelect: (startDate: string, endDate: string, deptId: string) => void;
-  onTimeSlotClick: (date: string, time: string) => void; // New Prop
+  onTimeSlotClick: (date: string, time: string) => void;
   onEventClick: (event: CalendarEvent) => void;
   isPrintMode?: boolean;
   viewMode: 'daily' | 'weekly' | 'monthly';
-  holidays?: any[]; // TODO: Import Holiday type properly or use any for now to avoid circular deps if types.ts is tricky
+  holidays?: any[];
+  currentUser: UserProfile | null; // Added prop
 }
+
+
 
 const DailyView: React.FC<{
   date: Date,
@@ -61,9 +67,9 @@ const DailyView: React.FC<{
                 <div
                   key={event.id}
                   onClick={() => onEventClick(event)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border-l-4 shadow-sm cursor-pointer hover:brightness-95 flex items-center gap-2 
+                  className={`px - 3 py - 1.5 rounded - lg text - sm font - bold border - l - 4 shadow - sm cursor - pointer hover: brightness - 95 flex items - center gap - 2 
                     ${dept?.color && !dept.color.startsWith('#') ? dept.color : 'bg-gray-100 border-gray-300'}
-                  `}
+`}
                   style={{
                     backgroundColor: event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined),
                     borderLeftColor: event.borderColor?.startsWith('#') ? event.borderColor : (event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined)),
@@ -125,12 +131,12 @@ const DailyView: React.FC<{
                 <div
                   key={event.id}
                   onClick={() => onEventClick(event)}
-                  className={`absolute left-2 right-2 rounded-lg border-l-4 p-2 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden group z-10 pointer-events-auto
+                  className={`absolute left - 2 right - 2 rounded - lg border - l - 4 p - 2 shadow - sm cursor - pointer hover: shadow - md transition - all overflow - hidden group z - 10 pointer - events - auto
                     ${dept?.color && !dept.color.startsWith('#') ? dept.color : 'bg-white border-gray-200'}
-                  `}
+`}
                   style={{
-                    top: `${top}px`,
-                    height: `${Math.max(height, 30)}px`,
+                    top: `${top} px`,
+                    height: `${Math.max(height, 30)} px`,
                     backgroundColor: event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined),
                     borderLeftColor: event.borderColor?.startsWith('#') ? event.borderColor : (event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined)),
                     color: event.textColor || '#ffffff'
@@ -183,56 +189,170 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   onEventClick,
   isPrintMode = false,
   viewMode,
-  holidays = []
+  holidays = [],
+  currentUser
 }) => {
-  const weeks = getMonthWeeks(currentDate);
+  const [isMyEventsOpen, setIsMyEventsOpen] = React.useState(false);
+  const weeks = getMonthWeeks(currentDate); // Restore weeks definition
+
+  // Header Logic
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
 
-  const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
-  const months = Array.from({ length: 12 }, (_, i) => i);
+  const yearOptions = useMemo(() => Array.from({ length: 11 }, (_, i) => ({
+    label: `${currentYear - 5 + i} 년`,
+    value: currentYear - 5 + i
+  })), [currentYear]);
+
+  const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
+    label: `${i + 1} 월`,
+    value: i
+  })), []);
+
+  const weekOptions = useMemo(() => {
+    const weeks = getMonthWeeks(currentDate);
+    return weeks.map((_, idx) => ({
+      label: `${idx + 1} 주차`,
+      value: idx
+    }));
+  }, [currentDate]);
+
+  const dayOptions = useMemo(() => {
+    const daysInMonth = getDaysInMonth(currentDate);
+    return Array.from({ length: daysInMonth }, (_, i) => ({
+      label: `${i + 1} 일`,
+      value: i + 1
+    }));
+  }, [currentDate]);
+
+
+  const handlePrev = () => {
+    if (viewMode === 'daily') onDateChange(subDays(currentDate, 1));
+    else if (viewMode === 'weekly') onDateChange(subDays(currentDate, 7));
+    else onDateChange(setMonth(currentDate, currentMonth - 1));
+  };
+
+  const handleNext = () => {
+    if (viewMode === 'daily') onDateChange(addDays(currentDate, 1));
+    else if (viewMode === 'weekly') onDateChange(addDays(currentDate, 7));
+    else onDateChange(setMonth(currentDate, currentMonth + 1));
+  };
+
 
   return (
     <div className="flex-1 bg-white shadow-xl print:shadow-none p-4 md:p-8 print:p-0 rounded-2xl border border-gray-200 print:border-none min-w-[350px]">
-      {/* Header Selector */}
-      <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-        {viewMode === 'daily' ? (
-          <div className="flex items-center gap-4 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
-            <button onClick={() => onDateChange(subDays(currentDate, 1))} className="p-1 hover:bg-gray-200 rounded-full transition-colors">
-              <ChevronLeft size={20} className="text-[#081429]" />
-            </button>
-            <div className="flex flex-col items-center">
-              <span className="text-lg font-black text-[#081429] tracking-tight">{format(currentDate, 'yyyy. MM. dd.')}</span>
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{format(currentDate, 'EEEE')}</span>
-            </div>
-            <button onClick={() => onDateChange(addDays(currentDate, 1))} className="p-1 hover:bg-gray-200 rounded-full transition-colors">
-              <ChevronRight size={20} className="text-[#081429]" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 bg-[#f8fafc] px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
-            <select
-              value={currentYear}
-              onChange={(e) => onDateChange(setYear(currentDate, parseInt(e.target.value)))}
-              className="text-lg font-bold text-[#081429] bg-transparent border-none outline-none cursor-pointer"
-            >
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-            <span className="text-gray-300 font-light">/</span>
-            <select
-              value={currentMonth}
-              onChange={(e) => onDateChange(setMonth(currentDate, parseInt(e.target.value)))}
-              className="text-lg font-bold text-[#081429] bg-transparent border-none outline-none cursor-pointer"
-            >
-              {months.map(m => <option key={m} value={m}>{m + 1}월</option>)}
-            </select>
-          </div>
-        )}
 
-        <div className="text-sm font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/20 px-4 py-1.5 rounded-full border border-[#fdb813]/30">
-          {format(currentDate, 'yyyy년 M월')}
+      {/* Unified Header */}
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+
+        {/* Navigation Group */}
+        <div className="flex items-center gap-1 w-full md:w-auto p-1.5 bg-[#f8fafc] rounded-2xl border border-gray-200 shadow-sm">
+          <button
+            onClick={handlePrev}
+            className="p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-xl transition-all text-gray-400 hover:text-[#081429]"
+          >
+            <ChevronLeft size={20} strokeWidth={3} />
+          </button>
+
+          <div className="flex items-center justify-center px-1">
+
+            {/* Year Selector */}
+            <CustomSelect
+              value={currentYear}
+              options={yearOptions}
+              onChange={(y) => onDateChange(setYear(currentDate, y))}
+            />
+
+            {/* Month Selector */}
+            <CustomSelect
+              value={currentMonth}
+              options={monthOptions}
+              onChange={(m) => onDateChange(setMonth(currentDate, m))}
+            />
+
+            {/* Weekly Selector */}
+            {viewMode === 'weekly' && (
+              <CustomSelect
+                value={getMonthWeeks(currentDate).findIndex(w => w.some(d => isSameDay(d, currentDate)))}
+                options={weekOptions}
+                onChange={(weekIdx) => {
+                  const weeks = getMonthWeeks(currentDate);
+                  // Set to first day of selected week
+                  if (weeks[weekIdx] && weeks[weekIdx][0]) {
+                    onDateChange(weeks[weekIdx][0]);
+                  }
+                }}
+              />
+            )}
+
+            {/* Daily Selector */}
+            {viewMode === 'daily' && (
+              <CustomSelect
+                value={getDate(currentDate)}
+                options={dayOptions}
+                onChange={(d) => onDateChange(setDate(currentDate, d))}
+              />
+            )}
+
+          </div>
+
+          <button
+            onClick={handleNext}
+            className="p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-xl transition-all text-gray-400 hover:text-[#081429]"
+          >
+            <ChevronRight size={20} strokeWidth={3} />
+          </button>
         </div>
+
+        {/* Right Action Group */}
+        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+          <div className="hidden md:flex text-sm font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/10 px-4 py-2 rounded-xl border border-[#fdb813]/20">
+            {format(currentDate, 'yyyy. MM')}
+          </div>
+          <div className="relative">
+            <button
+              onClick={() => setIsMyEventsOpen(true)}
+              className="flex items-center gap-2 bg-[#081429] hover:bg-[#081429]/90 text-white px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg font-bold text-sm transform hover:-translate-y-0.5"
+            >
+              <List size={16} className="text-[#fdb813]" />
+              내 일정
+            </button>
+            {/* Notification Badge */}
+            {(() => {
+              if (!currentUser) return null;
+              const pendingCount = events.filter(e => {
+                // Check if user is relevant to this event (participant)
+                const isRelevant = (e.attendance && e.attendance[currentUser.uid]) ||
+                  (e.participants && e.participants.includes(currentUser.email.split('@')[0]));
+
+                if (!isRelevant) return false;
+
+                // Check status
+                const status = e.attendance ? e.attendance[currentUser.uid] : 'pending';
+                return status === 'pending' || !status;
+              }).length;
+
+              if (pendingCount === 0) return null;
+
+              return (
+                <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-extrabold px-1.5 h-4 min-w-[16px] flex items-center justify-center rounded-full shadow-sm ring-2 ring-white animate-pulse">
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+
       </div>
+
+      {/* My Events Modal */}
+      <MyEventsModal
+        isOpen={isMyEventsOpen}
+        onClose={() => setIsMyEventsOpen(false)}
+        events={events}
+        currentUser={currentUser}
+        onEventClick={onEventClick}
+      />
 
       {/* Conditional Rendering based on viewMode */}
       {viewMode === 'daily' ? (
@@ -261,7 +381,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
             <div className="border-t-2 border-[#081429] pt-4">
               {weeks.map((week, idx) => (
                 <WeekBlock
-                  key={`${format(currentDate, 'yyyy-MM')}-${idx}`}
+                  key={`${format(currentDate, 'yyyy-MM')} -${idx} `}
                   weekDays={week}
                   departments={departments}
                   events={events}

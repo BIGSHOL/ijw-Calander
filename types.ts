@@ -25,6 +25,9 @@ export interface CalendarEvent {
   borderColor?: string;
   authorId?: string; // UID of the creator
   authorName?: string; // Display name of the creator (snapshot)
+  createdAt?: string; // ISO Date string
+  updatedAt?: string; // ISO Date string
+  attendance?: Record<string, 'pending' | 'joined' | 'declined'>; // Key: UID, Value: Status
 }
 
 export interface DragSelection {
