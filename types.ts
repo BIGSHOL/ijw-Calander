@@ -41,17 +41,98 @@ export interface DragSelection {
 
 export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
+// 7-tier role system (ordered from highest to lowest)
+export type UserRole = 'master' | 'admin' | 'manager' | 'editor' | 'user' | 'viewer' | 'guest';
+
+export const ROLE_HIERARCHY: UserRole[] = ['master', 'admin', 'manager', 'editor', 'user', 'viewer', 'guest'];
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  master: 'MASTER',
+  admin: 'ADMIN',
+  manager: 'MANAGER',
+  editor: 'EDITOR',
+  user: 'USER',
+  viewer: 'VIEWER',
+  guest: 'GUEST'
+};
+
+// Permission IDs for granular control
+export type PermissionId =
+  | 'events.create' | 'events.edit_own' | 'events.edit_others'
+  | 'events.delete_own' | 'events.delete_others' | 'events.drag_move'
+  | 'events.attendance'
+  | 'departments.view_all' | 'departments.create' | 'departments.edit' | 'departments.delete'
+  | 'users.view' | 'users.approve' | 'users.change_role' | 'users.change_permissions'
+  | 'settings.access' | 'settings.holidays' | 'settings.role_permissions';
+
+// Role-based permission configuration (stored in Firestore)
+export type RolePermissions = {
+  [role in Exclude<UserRole, 'master'>]?: Partial<Record<PermissionId, boolean>>;
+};
+
+// Default permissions for each role (MASTER has all, these are for others)
+export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
+  admin: {
+    'events.create': true, 'events.edit_own': true, 'events.edit_others': true,
+    'events.delete_own': true, 'events.delete_others': true, 'events.drag_move': true,
+    'events.attendance': true,
+    'departments.view_all': true, 'departments.create': true, 'departments.edit': true, 'departments.delete': false,
+    'users.view': true, 'users.approve': true, 'users.change_role': false, 'users.change_permissions': true,
+    'settings.access': true, 'settings.holidays': true, 'settings.role_permissions': false,
+  },
+  manager: {
+    'events.create': true, 'events.edit_own': true, 'events.edit_others': true,
+    'events.delete_own': true, 'events.delete_others': true, 'events.drag_move': true,
+    'events.attendance': true,
+    'departments.view_all': true, 'departments.create': false, 'departments.edit': true, 'departments.delete': false,
+    'users.view': true, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+  },
+  editor: {
+    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
+    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
+    'events.attendance': true,
+    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+  },
+  user: {
+    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
+    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
+    'events.attendance': true,
+    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+  },
+  viewer: {
+    'events.create': false, 'events.edit_own': false, 'events.edit_others': false,
+    'events.delete_own': false, 'events.delete_others': false, 'events.drag_move': false,
+    'events.attendance': false,
+    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+  },
+  guest: {
+    'events.create': false, 'events.edit_own': false, 'events.edit_others': false,
+    'events.delete_own': false, 'events.delete_others': false, 'events.drag_move': false,
+    'events.attendance': false,
+    'departments.view_all': false, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+  },
+};
+
 export interface UserProfile {
   uid: string;
   email: string;
-  role: 'master' | 'admin' | 'user'; // Added 'admin'
+  role: UserRole;
   status: 'approved' | 'pending' | 'rejected';
   // allowedDepartments is DEPRECATED but kept for migration:
   allowedDepartments?: string[];
-  // NEW: Granular permissions per department
+  // Granular permissions per department (maintained)
   departmentPermissions?: Record<string, 'view' | 'edit'>;
 
-  canEdit?: boolean; // Global edit flag (Deprecate or use as 'super edit'?)
+  canEdit?: boolean; // Global edit flag (legacy)
   canManageMenus?: boolean;
   canManageEventAuthors?: boolean;
   jobTitle?: string;
