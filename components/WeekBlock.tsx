@@ -215,19 +215,17 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                 ${!isDateVisible(date) ? 'opacity-25 bg-gray-50' : ''} 
               `}
             >
-              {isDateVisible(date) && (
-                <>
-                  <div className="flex items-center gap-1 leading-none">
-                    <span className="text-[10px] font-bold uppercase opacity-60 tracking-wider">{dayName}</span>
-                  </div>
-                  <span className={`font-extrabold leading-none mt-0.5 ${isHoliday ? 'text-base' : 'text-sm'}`}>{dayNum}</span>
-                  {isHoliday && (
-                    <span className="text-[8px] text-red-600 font-bold bg-red-100 px-1.5 py-0.5 rounded-full mt-0.5 whitespace-nowrap border border-red-200">
-                      {holiday.name}
-                    </span>
-                  )}
-                </>
-              )}
+              <>
+                <div className="flex items-center gap-1 leading-none">
+                  <span className="text-[10px] font-bold uppercase opacity-60 tracking-wider">{dayName}</span>
+                </div>
+                <span className={`font-extrabold leading-none mt-0.5 ${isHoliday ? 'text-base' : 'text-sm'}`}>{dayNum}</span>
+                {isHoliday && (
+                  <span className="text-[8px] text-red-600 font-bold bg-red-100 px-1.5 py-0.5 rounded-full mt-0.5 whitespace-nowrap border border-red-200">
+                    {holiday.name}
+                  </span>
+                )}
+              </>
             </div>
           );
         })}
