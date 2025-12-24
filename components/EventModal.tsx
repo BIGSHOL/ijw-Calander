@@ -10,7 +10,7 @@ interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (event: CalendarEvent) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string, event?: CalendarEvent) => void;
   initialDate?: string;
   initialEndDate?: string;
   initialDepartmentId?: string;
@@ -56,6 +56,10 @@ const EventModal: React.FC<EventModalProps> = ({
 
   // New State for Attendance
   const [attendance, setAttendance] = useState<Record<string, 'pending' | 'joined' | 'declined'>>({});
+
+  // Recurrence State (only for new events)
+  const [recurrenceType, setRecurrenceType] = useState<'none' | 'daily' | 'weekdays' | 'weekends' | 'weekly' | 'monthly' | 'yearly'>('none');
+  const [recurrenceCount, setRecurrenceCount] = useState(1);
 
 
   // Permission Logic
@@ -181,13 +185,20 @@ const EventModal: React.FC<EventModalProps> = ({
       authorName,
       createdAt: existingEvent?.createdAt || now,
       updatedAt: now,
-      attendance: attendance // Use current state w/ updates
+      attendance: attendance,
+      // Include recurrence info for new events
+      recurrenceType: recurrenceType !== 'none' ? recurrenceType : undefined,
     };
 
     console.log('DEBUG: selectedColor', selectedColor);
     console.log('DEBUG: selectedTextColor', selectedTextColor);
     console.log('DEBUG: selectedBorderColor', selectedBorderColor);
     console.log('EventModal handleSubmit payload:', payload);
+    console.log('Recurrence:', recurrenceType, 'Count:', recurrenceCount);
+
+    // Pass recurrence count via a custom property for App.tsx to handle
+    (payload as any)._recurrenceCount = recurrenceType !== 'none' ? recurrenceCount : undefined;
+
     onSave(payload);
     onClose();
   };
@@ -325,6 +336,49 @@ const EventModal: React.FC<EventModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Recurrence Options (New Events Only) */}
+          {!existingEvent && (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+              <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2 flex items-center gap-1">
+                🔄 반복 설정
+              </label>
+              <div className="flex gap-3 flex-wrap">
+                <select
+                  value={recurrenceType}
+                  onChange={(e) => setRecurrenceType(e.target.value as any)}
+                  className="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold bg-white"
+                >
+                  <option value="none">반복 없음</option>
+                  <option value="daily">매일</option>
+                  <option value="weekdays">평일 (월-금)</option>
+                  <option value="weekends">주말 (토-일)</option>
+                  <option value="weekly">매주</option>
+                  <option value="monthly">매월</option>
+                  <option value="yearly">매년</option>
+                </select>
+                {recurrenceType !== 'none' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-500">반복 횟수:</span>
+                    <select
+                      value={recurrenceCount}
+                      onChange={(e) => setRecurrenceCount(Number(e.target.value))}
+                      className="w-20 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold bg-white"
+                    >
+                      {Array.from({ length: 30 }, (_, i) => i + 1).map(n => (
+                        <option key={n} value={n}>{n}회</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+              {recurrenceType !== 'none' && (
+                <p className="text-xs text-gray-500 mt-2">
+                  총 {recurrenceCount}개의 일정이 생성됩니다.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Participants - Multi Select Checkbox List */}
           <div>
@@ -518,7 +572,7 @@ const EventModal: React.FC<EventModalProps> = ({
                 type="button"
                 onClick={() => {
                   if (confirm('정말 삭제하시겠습니까?')) {
-                    onDelete(existingEvent.id);
+                    onDelete(existingEvent.id, existingEvent);
                     onClose();
                   }
                 }}
