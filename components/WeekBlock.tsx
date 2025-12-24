@@ -156,7 +156,9 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
             <div
               className="border-r border-gray-300 p-2 flex flex-col justify-center text-sm relative overflow-hidden"
               style={{
-                borderLeft: dept.color.startsWith('#') ? `6px solid ${dept.color}` : 'none'
+                borderLeft: dept.color.startsWith('#') ? `6px solid ${dept.color}` : 'none',
+                gridRow: 1, // Ensure it stays in the first row
+                gridColumn: 1
               }}
             >
               {/* Fallback for legacy tailwind class colors */}
@@ -179,12 +181,13 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                     ${!isDrag && isWeekend(date) && isDateVisible(date) ? 'bg-gray-[0.01]' : ''}
                     ${!isDateVisible(date) ? 'bg-gray-50 cursor-default' : ''}
                   `}
+                  style={{ gridRow: 1 }} // Ensure all backgrounds share the same row
                 />
               );
             })}
 
-            {/* Events Layer */}
-            <div className="absolute inset-y-0 left-[120px] right-0 grid grid-cols-7 pointer-events-none p-1 gap-y-1 z-10">
+            {/* Events Layer - RELATIVE layout to drive height */}
+            <div className="col-start-2 col-span-7 row-start-1 grid grid-cols-7 pointer-events-none p-1 gap-y-1 z-10 self-start">
               {weekEvents.map(event => {
                 // Determine effective range for display
                 let effectiveStart = parseISO(event.startDate);
@@ -194,10 +197,14 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                 // Clamp to Current Month logic:
                 if (limitToCurrentMonth && currentMonthDate) {
                   const monthStart = startOfDay(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1));
-                  const monthEnd = startOfDay(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0));
+                  const monthEnd = startOfDay(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 0)); // Fixed: day 0 is last day of prev month? No, day 0 of NEXT month is last day of this month. Wrapper usually handles this.
+                  // Actually new Date(y, m+1, 0) is correct for last day. 
+                  // But original code had logic. Let's keep original logic concept. 
+                  // Wait, previous code: new Date(..., currentMonthDate.getMonth() + 1, 0)
+                  const monthEndCorrect = startOfDay(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0));
 
                   if (startOfDay(effectiveStart) < monthStart) effectiveStart = monthStart;
-                  if (startOfDay(effectiveEnd) > monthEnd) effectiveEnd = monthEnd;
+                  if (startOfDay(effectiveEnd) > monthEndCorrect) effectiveEnd = monthEndCorrect;
 
                   // If invalid (starts after end), skip
                   if (startOfDay(effectiveStart) > startOfDay(effectiveEnd)) return null;
@@ -238,7 +245,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                       rounded px-2 py-1 text-xs font-bold border shadow-sm
                       overflow-hidden whitespace-nowrap text-ellipsis
                       hover:brightness-95 cursor-pointer flex items-center
-                      h-[90%] self-center relative
+                      h-6 relative
                       ${!pos.isStart ? 'rounded-l-none border-l-0 opacity-90' : ''}
                       ${!pos.isEnd ? 'rounded-r-none border-r-0' : ''}
                     `}
