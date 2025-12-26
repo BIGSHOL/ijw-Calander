@@ -1104,6 +1104,7 @@ const App: React.FC = () => {
                 onEventMove={handleEventMove}
                 canEditDepartment={canEditDepartment}
                 pendingEventIds={pendingEventIds}
+                isPrimaryView={false} // Hide My Events
               />
             </div>
 
@@ -1123,6 +1124,7 @@ const App: React.FC = () => {
                 onEventMove={handleEventMove}
                 canEditDepartment={canEditDepartment}
                 pendingEventIds={pendingEventIds}
+                isPrimaryView={false} // Hide My Events
               />
             </div>
           </div>

@@ -474,88 +474,99 @@ const EventModal: React.FC<EventModalProps> = ({
               <Users size={14} className="text-[#fdb813]" /> 참가자
             </label>
             <div className="border border-gray-300 rounded-xl p-3 max-h-40 overflow-y-auto bg-gray-50/50">
-              {/* Current User (Always first) */}
-              {users.filter(u => u.status === 'approved').map(u => {
-                const displayName = `${u.email.split('@')[0]} ${u.jobTitle ? `(${u.jobTitle})` : ''}`;
-                const isSelected = participants.includes(displayName);
-                const currentStatus = attendance[u.uid] || 'pending';
+              {/* Current User (Always first) and Alphabetical Order */}
+              {users
+                .filter(u => u.status === 'approved')
+                .sort((a, b) => {
+                  // 1. Current User comes first
+                  if (currentUser && a.uid === currentUser.uid) return -1;
+                  if (currentUser && b.uid === currentUser.uid) return 1;
+                  // 2. Alphabetical Order (Name/Email)
+                  const nameA = `${a.email.split('@')[0]} ${a.jobTitle || ''}`;
+                  const nameB = `${b.email.split('@')[0]} ${b.jobTitle || ''}`;
+                  return nameA.localeCompare(nameB);
+                })
+                .map(u => {
+                  const displayName = `${u.email.split('@')[0]} ${u.jobTitle ? `(${u.jobTitle})` : ''}`;
+                  const isSelected = participants.includes(displayName);
+                  const currentStatus = attendance[u.uid] || 'pending';
 
-                // Permission Check
-                const canEditStatus = currentUser?.uid === u.uid || isMaster || isAdmin;
+                  // Permission Check
+                  const canEditStatus = currentUser?.uid === u.uid || isMaster || isAdmin;
 
-                const cycleStatus = () => {
-                  const next: Record<string, 'pending' | 'joined' | 'declined'> = {
-                    'pending': 'joined',
-                    'joined': 'declined',
-                    'declined': 'pending'
-                  };
-                  const newStatus = next[currentStatus];
+                  const cycleStatus = () => {
+                    const next: Record<string, 'pending' | 'joined' | 'declined'> = {
+                      'pending': 'joined',
+                      'joined': 'declined',
+                      'declined': 'pending'
+                    };
+                    const newStatus = next[currentStatus];
 
-                  // Check if this is a recurring event and offer batch update
-                  if (existingEvent?.recurrenceGroupId && onBatchUpdateAttendance) {
-                    const applyToAll = window.confirm(
-                      `참가 상태를 "${newStatus === 'joined' ? '참석' : newStatus === 'declined' ? '불참' : '미정'}"(으)로 변경합니다.\n\n모든 반복 일정에도 적용하시겠습니까?`
-                    );
+                    // Check if this is a recurring event and offer batch update
+                    if (existingEvent?.recurrenceGroupId && onBatchUpdateAttendance) {
+                      const applyToAll = window.confirm(
+                        `참가 상태를 "${newStatus === 'joined' ? '참석' : newStatus === 'declined' ? '불참' : '미정'}"(으)로 변경합니다.\n\n모든 반복 일정에도 적용하시겠습니까?`
+                      );
 
-                    if (applyToAll) {
-                      onBatchUpdateAttendance(existingEvent.recurrenceGroupId, u.uid, newStatus);
+                      if (applyToAll) {
+                        onBatchUpdateAttendance(existingEvent.recurrenceGroupId, u.uid, newStatus);
+                      }
                     }
-                  }
 
-                  // Always update current event's local state
-                  setAttendance(prev => ({
-                    ...prev,
-                    [u.uid]: newStatus
-                  }));
-                };
+                    // Always update current event's local state
+                    setAttendance(prev => ({
+                      ...prev,
+                      [u.uid]: newStatus
+                    }));
+                  };
 
-                return (
-                  <div key={u.uid} className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors group">
-                    <label className="flex items-center gap-3 cursor-pointer flex-1">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setParticipants([...participants, displayName]);
-                            setAttendance(prev => ({ ...prev, [u.uid]: 'pending' })); // Default to pending
-                          } else {
-                            setParticipants(participants.filter(p => p !== displayName));
-                            const newAtt = { ...attendance };
-                            delete newAtt[u.uid];
-                            setAttendance(newAtt);
-                          }
-                        }}
-                        className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
-                      />
-                      <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-600'}`}>{displayName}</span>
-                    </label>
+                  return (
+                    <div key={u.uid} className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors group">
+                      <label className="flex items-center gap-3 cursor-pointer flex-1">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setParticipants([...participants, displayName]);
+                              setAttendance(prev => ({ ...prev, [u.uid]: 'pending' })); // Default to pending
+                            } else {
+                              setParticipants(participants.filter(p => p !== displayName));
+                              const newAtt = { ...attendance };
+                              delete newAtt[u.uid];
+                              setAttendance(newAtt);
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
+                        />
+                        <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-600'}`}>{displayName}</span>
+                      </label>
 
-                    {/* Attendance Status Toggle */}
-                    {isSelected && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (canEditStatus) cycleStatus();
-                        }}
-                        disabled={!canEditStatus}
-                        className={`
+                      {/* Attendance Status Toggle */}
+                      {isSelected && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (canEditStatus) cycleStatus();
+                          }}
+                          disabled={!canEditStatus}
+                          className={`
                                 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1 transition-all
                                 ${currentStatus === 'joined' ? 'bg-green-100 text-green-700 border-green-200' : ''}
                                 ${currentStatus === 'declined' ? 'bg-red-100 text-red-700 border-red-200' : ''}
                                 ${currentStatus === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : ''}
                                 ${canEditStatus ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-80'}
                             `}
-                      >
-                        {currentStatus === 'joined' && '참석'}
-                        {currentStatus === 'declined' && '불참'}
-                        {currentStatus === 'pending' && '미정'}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+                        >
+                          {currentStatus === 'joined' && '참석'}
+                          {currentStatus === 'declined' && '불참'}
+                          {currentStatus === 'pending' && '미정'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           </div>
 

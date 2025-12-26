@@ -26,6 +26,7 @@ interface CalendarBoardProps {
   onEventMove?: (original: CalendarEvent, updated: CalendarEvent) => void;
   canEditDepartment?: (deptId: string) => boolean;
   pendingEventIds?: string[];
+  isPrimaryView?: boolean; // Only show "My Events" button on primary view
 }
 
 
@@ -198,6 +199,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   onEventMove,
   canEditDepartment,
   pendingEventIds = [],
+  isPrimaryView = true, // Default to true for backwards compatibility
 }) => {
   const [isMyEventsOpen, setIsMyEventsOpen] = React.useState(false);
   const weeks = getMonthWeeks(currentDate); // Restore weeks definition
@@ -311,44 +313,46 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           </button>
         </div>
 
-        {/* Right Action Group */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-          <div className="hidden md:flex text-sm font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/10 px-4 py-2 rounded-xl border border-[#fdb813]/20">
-            {format(currentDate, 'yyyy. MM')}
+        {/* Right Action Group - Only show My Events on Primary View */}
+        {isPrimaryView && (
+          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            <div className="hidden md:flex text-sm font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/10 px-4 py-2 rounded-xl border border-[#fdb813]/20">
+              {format(currentDate, 'yyyy. MM')}
+            </div>
+            <div className="relative">
+              <button
+                onClick={() => setIsMyEventsOpen(true)}
+                className="flex items-center gap-2 bg-[#081429] hover:bg-[#081429]/90 text-white px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg font-bold text-sm transform hover:-translate-y-0.5"
+              >
+                <List size={16} className="text-[#fdb813]" />
+                내 일정
+              </button>
+              {/* Notification Badge */}
+              {(() => {
+                if (!currentUser) return null;
+                const pendingCount = events.filter(e => {
+                  // Check if user is relevant to this event (participant)
+                  const isRelevant = (e.attendance && e.attendance[currentUser.uid]) ||
+                    (e.participants && e.participants.includes(currentUser.email.split('@')[0]));
+
+                  if (!isRelevant) return false;
+
+                  // Check status
+                  const status = e.attendance ? e.attendance[currentUser.uid] : 'pending';
+                  return status === 'pending' || !status;
+                }).length;
+
+                if (pendingCount === 0) return null;
+
+                return (
+                  <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-extrabold px-1.5 h-4 min-w-[16px] flex items-center justify-center rounded-full shadow-sm ring-2 ring-white animate-pulse">
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
-          <div className="relative">
-            <button
-              onClick={() => setIsMyEventsOpen(true)}
-              className="flex items-center gap-2 bg-[#081429] hover:bg-[#081429]/90 text-white px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg font-bold text-sm transform hover:-translate-y-0.5"
-            >
-              <List size={16} className="text-[#fdb813]" />
-              내 일정
-            </button>
-            {/* Notification Badge */}
-            {(() => {
-              if (!currentUser) return null;
-              const pendingCount = events.filter(e => {
-                // Check if user is relevant to this event (participant)
-                const isRelevant = (e.attendance && e.attendance[currentUser.uid]) ||
-                  (e.participants && e.participants.includes(currentUser.email.split('@')[0]));
-
-                if (!isRelevant) return false;
-
-                // Check status
-                const status = e.attendance ? e.attendance[currentUser.uid] : 'pending';
-                return status === 'pending' || !status;
-              }).length;
-
-              if (pendingCount === 0) return null;
-
-              return (
-                <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-extrabold px-1.5 h-4 min-w-[16px] flex items-center justify-center rounded-full shadow-sm ring-2 ring-white animate-pulse">
-                  {pendingCount > 99 ? '99+' : pendingCount}
-                </div>
-              );
-            })()}
-          </div>
-        </div>
+        )}
 
       </div>
 
