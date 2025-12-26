@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfYear } from 'date-fns';
+import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfYear, setYear, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { CalendarEvent } from '../types';
-import { ChevronRight, Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
 
 interface YearlyViewProps {
     currentDate: Date;
@@ -102,11 +102,45 @@ const YearlyView: React.FC<YearlyViewProps> = ({
         return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
     };
 
-    const selectedEventGroups = groupEventsByDate(selectedMonthEvents);
+    // Calculate department event counts for selected month
+    const departmentCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        selectedMonthEvents.forEach(e => {
+            const deptId = e.departmentId;
+            if (deptId) counts[deptId] = (counts[deptId] || 0) + 1;
+        });
+        return counts;
+    }, [selectedMonthEvents]);
+
+    const currentYear = currentDate.getFullYear();
 
     return (
-        <div className="flex flex-col lg:flex-row h-full gap-6 overflow-hidden">
-            {/* Left Pane: 12 Month Grid */}
+        <div className="flex flex-col h-full overflow-hidden">
+            {/* Year Navigation Header */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 flex-shrink-0">
+                <div className="flex items-center gap-1 p-1 bg-[#f8fafc] rounded-xl border border-gray-200 shadow-sm">
+                    <button
+                        onClick={() => onDateChange(subYears(currentDate, 1))}
+                        className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
+                    >
+                        <ChevronLeft size={16} strokeWidth={3} />
+                    </button>
+                    <span className="px-3 py-1 text-sm font-bold text-[#081429]">
+                        {currentYear}년
+                    </span>
+                    <button
+                        onClick={() => onDateChange(addYears(currentDate, 1))}
+                        className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
+                    >
+                        <ChevronRight size={16} strokeWidth={3} />
+                    </button>
+                </div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    연간 일정
+                </div>
+            </div>
+
+            {/* 12 Month Grid */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
                 <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-1 sm:gap-1.5 lg:gap-2">
                     {months.map(month => {
@@ -167,73 +201,93 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                 </div>
             </div>
 
-            {/* Right Pane: Selected Month List (PC Only) */}
+            {/* Bottom Pane: Hybrid (Option C) - Department Chips + Event Cards */}
             {showSidePanel && (
-                <div className="hidden xl:flex w-52 2xl:w-60 flex-col bg-white border-l border-gray-200 flex-shrink-0">
-                    <div className="p-5 border-b border-gray-100 bg-gray-50/50">
-                        <h2 className="text-lg font-black text-[#081429] flex items-center gap-2">
-                            <CalendarIcon size={18} className="text-[#fdb813]" />
-                            {format(selectedMonth, 'yyyy년 M월')}
-                        </h2>
-                        <p className="text-xs text-gray-500 mt-1">
-                            총 {selectedMonthEvents.length}개의 일정이 있습니다.
-                        </p>
+                <div className="flex-shrink-0 bg-white border-t border-gray-200">
+                    {/* Header with Department Summary Chips */}
+                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50/80 border-b border-gray-100">
+                        <div className="flex items-center gap-2">
+                            <CalendarIcon size={14} className="text-[#fdb813]" />
+                            <span className="text-sm font-bold text-[#081429]">
+                                {format(selectedMonth, 'M월')}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                                {selectedMonthEvents.length}개
+                            </span>
+                        </div>
+                        {/* Department Chips */}
+                        <div className="flex items-center gap-1 flex-wrap justify-end">
+                            {departments.filter(d => departmentCounts[d.id] > 0).map(dept => (
+                                <div
+                                    key={dept.id}
+                                    className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                                    style={{
+                                        backgroundColor: dept.color + '15',
+                                        borderColor: dept.color + '40',
+                                        color: dept.color
+                                    }}
+                                >
+                                    {dept.name}
+                                    <span
+                                        className="text-[9px] bg-current/20 px-1 rounded-full"
+                                        style={{ backgroundColor: dept.color, color: '#fff' }}
+                                    >
+                                        {departmentCounts[dept.id]}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-                        {selectedEventGroups.length > 0 ? (
-                            selectedEventGroups.map(([dateKey, groupEvents]) => (
-                                <div key={dateKey} className="flex gap-3">
-                                    <div className="flex-shrink-0 w-12 pt-1 text-center">
-                                        <div className="text-lg font-bold text-gray-800 leading-none">
-                                            {format(new Date(dateKey), 'd')}
-                                        </div>
-                                        <div className="text-[10px] text-gray-400 font-medium uppercase mt-0.5">
-                                            {format(new Date(dateKey), 'E', { locale: ko })}
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 space-y-2">
-                                        {groupEvents.map(evt => {
-                                            const dept = departments.find(d => d.id === evt.departmentId);
-                                            return (
-                                                <div
-                                                    key={evt.id}
-                                                    className="bg-gray-50 rounded-lg p-2.5 border border-gray-100 hover:bg-white hover:shadow-md transition-all group"
-                                                >
-                                                    <div className="flex items-start justify-between gap-2 mb-1">
-                                                        <span className="text-xs font-bold text-gray-800 line-clamp-1 group-hover:text-[#081429]">
-                                                            {evt.title}
+                    {/* Compact Event Cards - Horizontal Scroll */}
+                    <div className="overflow-x-auto custom-scrollbar">
+                        <div className="flex gap-2 p-2 min-w-max">
+                            {selectedMonthEvents.length > 0 ? (
+                                selectedMonthEvents.map(evt => {
+                                    const dept = departments.find(d => d.id === evt.departmentId);
+                                    return (
+                                        <div
+                                            key={evt.id}
+                                            className="flex-shrink-0 w-36 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-all cursor-pointer overflow-hidden"
+                                        >
+                                            {/* Color Bar Top */}
+                                            <div
+                                                className="h-1"
+                                                style={{ backgroundColor: dept?.color || '#6b7280' }}
+                                            />
+                                            <div className="p-2">
+                                                {/* Date + Dept */}
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="text-[10px] font-bold text-gray-500">
+                                                        {format(new Date(evt.startDate), 'M/d')}
+                                                    </span>
+                                                    {dept && (
+                                                        <span
+                                                            className="text-[8px] px-1 py-0.5 rounded font-bold"
+                                                            style={{
+                                                                backgroundColor: dept.color + '20',
+                                                                color: dept.color
+                                                            }}
+                                                        >
+                                                            {dept.name}
                                                         </span>
-                                                        {dept && (
-                                                            <span
-                                                                className="text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap"
-                                                                style={{
-                                                                    backgroundColor: dept.color + '20',
-                                                                    color: dept.color
-                                                                }}
-                                                            >
-                                                                {dept.name}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                                                        <div className="flex items-center gap-0.5">
-                                                            <Clock size={10} />
-                                                            {evt.isAllDay ? '종일' : format(new Date(evt.startDate), 'a h:mm')}
-                                                        </div>
-                                                    </div>
+                                                    )}
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+                                                {/* Title */}
+                                                <div className="text-xs font-medium text-gray-800 line-clamp-2 leading-tight">
+                                                    {evt.title}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="flex items-center justify-center w-full py-3 text-gray-300 text-xs">
+                                    <CalendarIcon size={14} className="mr-2 opacity-30" />
+                                    이 달에는 일정이 없습니다.
                                 </div>
-                            ))
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-300 pb-20">
-                                <CalendarIcon size={48} className="mb-4 opacity-20" />
-                                <p className="text-xs">이 달에는 일정이 없습니다.</p>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
