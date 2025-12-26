@@ -12,7 +12,8 @@ export interface Department {
 
 export interface CalendarEvent {
   id: string;
-  departmentId: string;
+  departmentId: string; // Primary department (for backward compatibility)
+  departmentIds?: string[]; // Multiple departments (new feature)
   title: string;
   description?: string;
   participants?: string;
