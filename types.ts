@@ -184,4 +184,14 @@ export interface Teacher {
   bgColor?: string;     // 퍼스널 배경색
   textColor?: string;   // 퍼스널 글자색
   order?: number;
+  defaultRoom?: string; // 기본 강의실 (자동 입력용)
+}
+
+// 수업 키워드 색상 설정
+export interface ClassKeywordColor {
+  id: string;
+  keyword: string;      // 키워드 (예: 'Phonics', 'Grammar')
+  bgColor: string;      // 배경색
+  textColor: string;    // 글자색
+  order?: number;
 }

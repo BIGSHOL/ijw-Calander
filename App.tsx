@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, differenceInDays } from 'date-fns';
-import { CalendarEvent, Department, UserProfile, Holiday } from './types';
+import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
 import EventModal from './components/EventModal';
@@ -33,6 +33,7 @@ const App: React.FC = () => {
   // Firestore Data State
   const [departments, setDepartments] = useState<Department[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); // New State
@@ -43,13 +44,32 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Dark Mode Setting
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('dark_mode');
+    return saved === 'true';
+  });
+
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('dark_mode', String(isDarkMode));
+  }, [isDarkMode]);
+
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedEndDate, setSelectedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedDeptId, setSelectedDeptId] = useState<string>(''); // For creating new events
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>(() => {
+    const saved = localStorage.getItem('default_view_mode');
+    return (saved as 'daily' | 'weekly' | 'monthly' | 'yearly') || 'monthly';
+  });
   const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(2); // 1단, 2단, 3단
 
   // Force viewColumns to 2 if currently 3 when switching to yearly view
@@ -315,6 +335,18 @@ const App: React.FC = () => {
     });
     return () => unsubscribe();
   }, [lookbackYears]);
+
+  // Subscribe to Teachers (강사목록) - CENTRALIZED to reduce Firestore reads
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, '강사목록'), (snapshot) => {
+      const teacherList = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      } as Teacher)).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+      setTeachers(teacherList);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('dept_hidden_ids', JSON.stringify(hiddenDeptIds));
@@ -823,13 +855,17 @@ const App: React.FC = () => {
             {/* User Info Display (Moved to Left) */}
             {currentUser && (
               <div className="hidden md:flex flex-row items-center gap-1.5 ml-4 pl-4 border-l border-white/10 overflow-hidden">
-                {/* Master Badge */}
-                {userProfile?.role === 'master' && (
-                  <span className="bg-red-600 text-white text-[9px] px-1 py-0.5 rounded font-black tracking-tighter shadow-sm">MASTER</span>
-                )}
-                {/* Admin Badge */}
-                {userProfile?.role === 'admin' && (
-                  <span className="bg-indigo-600 text-white text-[9px] px-1 py-0.5 rounded font-black tracking-tighter shadow-sm">ADMIN</span>
+                {/* Role Badge */}
+                {userProfile?.role && userProfile.role !== 'guest' && (
+                  <span className={`text-white text-[9px] px-1 py-0.5 rounded font-black tracking-tighter shadow-sm ${userProfile.role === 'master' ? 'bg-red-600' :
+                    userProfile.role === 'admin' ? 'bg-indigo-600' :
+                      userProfile.role === 'manager' ? 'bg-purple-600' :
+                        userProfile.role === 'editor' ? 'bg-blue-600' :
+                          userProfile.role === 'user' ? 'bg-gray-500' :
+                            userProfile.role === 'viewer' ? 'bg-yellow-600' : 'bg-gray-400'
+                    }`}>
+                    {ROLE_LABELS[userProfile.role] || userProfile.role.toUpperCase()}
+                  </span>
                 )}
                 {/* Name */}
                 <span className="text-xs font-bold text-white whitespace-nowrap">
@@ -1372,6 +1408,7 @@ const App: React.FC = () => {
               onShowStudentsChange={setTimetableShowStudents}
               selectedDays={timetableSelectedDays}
               onSelectedDaysChange={setTimetableSelectedDays}
+              teachers={teachers}
             />
           </div>
         )}
@@ -1434,6 +1471,7 @@ const App: React.FC = () => {
         holidays={holidays}
         events={events}
         sysCategories={sysCategories}
+        teachers={teachers}
       />
 
       {/* Access Denied / Pending Approval Overlay */}
