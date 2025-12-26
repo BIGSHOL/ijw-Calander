@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Department, UserProfile, CalendarEvent, UserRole, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS } from '../types';
+import { Department, UserProfile, CalendarEvent, UserRole, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS, Teacher } from '../types';
 import { usePermissions, canAssignRole, getAssignableRoles } from '../hooks/usePermissions';
-import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar, Lock, List, LayoutGrid } from 'lucide-react';
+import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar, Lock, List, LayoutGrid, Eye, EyeOff } from 'lucide-react';
 import { STANDARD_HOLIDAYS } from '../constants_holidays';
 import { db, auth } from '../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
@@ -20,7 +20,7 @@ interface SettingsModalProps {
   sysCategories: string[];
 }
 
-type TabMode = 'departments' | 'users' | 'system' | 'calendar_manage' | 'role_permissions';
+type TabMode = 'departments' | 'users' | 'teachers' | 'system' | 'calendar_manage' | 'role_permissions';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -131,6 +131,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null);
   const [editHolidayName, setEditHolidayName] = useState('');
 
+  // --- Teacher Management State ---
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [newTeacherName, setNewTeacherName] = useState('');
+  const [newTeacherSubjects, setNewTeacherSubjects] = useState<string[]>(['math', 'english']);
+  const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
+  const [editTeacherName, setEditTeacherName] = useState('');
+  const [editTeacherSubjects, setEditTeacherSubjects] = useState<string[]>([]);
+  const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
+
   // --- Category Management State ---
   const [newCategoryName, setNewCategoryName] = useState('');
 
@@ -157,6 +166,52 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     } catch (e) {
       console.error(e);
       alert('카테고리 삭제 실패');
+    }
+  };
+  // --- Category Management State ---
+  // ... (Category handlers remain here if any, but adding Teacher handlers below)
+
+  // --- Teacher Management Handlers ---
+  const handleAddTeacher = async () => {
+    if (!newTeacherName.trim()) return alert("강사 이름을 입력해주세요.");
+    try {
+      const newRef = doc(collection(db, '강사목록'));
+      await setDoc(newRef, { name: newTeacherName.trim(), subjects: newTeacherSubjects });
+      setNewTeacherName('');
+      setNewTeacherSubjects(['math', 'english']); // Reset to default
+    } catch (e) {
+      console.error(e);
+      alert("강사 추가 실패");
+    }
+  };
+
+  const handleUpdateTeacher = async (id: string) => {
+    if (!editTeacherName.trim()) return;
+    try {
+      await updateDoc(doc(db, '강사목록', id), { name: editTeacherName.trim(), subjects: editTeacherSubjects });
+      setEditingTeacherId(null);
+    } catch (e) {
+      console.error(e);
+      alert("강사 수정 실패");
+    }
+  };
+
+  const handleToggleVisibility = async (id: string, currentHidden: boolean) => {
+    try {
+      await updateDoc(doc(db, '강사목록', id), { isHidden: !currentHidden });
+    } catch (e) {
+      console.error(e);
+      alert("상태 변경 실패");
+    }
+  };
+
+  const handleDeleteTeacher = async (id: string, name: string) => {
+    if (!confirm(`'${name}' 강사를 삭제하시겠습니까?`)) return;
+    try {
+      await deleteDoc(doc(db, '강사목록', id));
+    } catch (e) {
+      console.error(e);
+      alert("강사 삭제 실패");
     }
   };
 
@@ -199,6 +254,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
         }
         setRolePermissionsLoaded(true);
+      });
+      return () => unsubscribe();
+    }
+  }, [activeTab, isMaster]);
+
+  // --- Teacher List Subscription ---
+  useEffect(() => {
+    if (activeTab === 'teachers' && isMaster) {
+      const unsubscribe = onSnapshot(collection(db, '강사목록'), (snapshot) => {
+        const teacherList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Teacher)).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+        setTeachers(teacherList);
       });
       return () => unsubscribe();
     }
@@ -592,6 +661,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <button onClick={() => setActiveTab('users')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'users' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>사용자 관리</button>
                 )}
 
+                {/* Teachers Tab - MASTER only */}
+                {isMaster && (
+                  <button onClick={() => setActiveTab('teachers')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'teachers' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>강사 관리</button>
+                )}
                 {/* System Tab Master OR Admin */}
                 {(isMaster || isAdmin) && (
                   <button onClick={() => setActiveTab('system')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'system' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>시스템 설정</button>
@@ -945,6 +1018,161 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
 
 
+
+            {/* TEACHERS TAB */}
+            {activeTab === 'teachers' && isMaster && (
+              <div className="max-w-3xl mx-auto h-full flex flex-col pb-20">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="relative w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                      type="text"
+                      placeholder="강사 검색..."
+                      value={teacherSearchTerm}
+                      onChange={(e) => setTeacherSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2 items-end">
+                    <div className="flex items-center gap-3 bg-gray-50 px-3 py-1 rounded-md border border-gray-200">
+                      <span className="text-xs font-bold text-gray-500">표시할 시간표:</span>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newTeacherSubjects.includes('math')}
+                          onChange={(e) => {
+                            if (e.target.checked) setNewTeacherSubjects([...newTeacherSubjects, 'math']);
+                            else setNewTeacherSubjects(newTeacherSubjects.filter(s => s !== 'math'));
+                          }}
+                          className="w-3.5 h-3.5 accent-[#081429]"
+                        />
+                        <span className="text-xs text-gray-700">수학</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newTeacherSubjects.includes('english')}
+                          onChange={(e) => {
+                            if (e.target.checked) setNewTeacherSubjects([...newTeacherSubjects, 'english']);
+                            else setNewTeacherSubjects(newTeacherSubjects.filter(s => s !== 'english'));
+                          }}
+                          className="w-3.5 h-3.5 accent-[#081429]"
+                        />
+                        <span className="text-xs text-gray-700">영어</span>
+                      </label>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        value={newTeacherName}
+                        onChange={(e) => setNewTeacherName(e.target.value)}
+                        placeholder="새 강사 이름"
+                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none w-48"
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddTeacher()}
+                      />
+                      <button
+                        onClick={handleAddTeacher}
+                        className="bg-[#081429] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#1e293b] flex items-center gap-1"
+                      >
+                        <Plus size={16} /> 추가
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 overflow-y-auto">
+                  <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {teachers
+                      .filter(t => t.name.toLowerCase().includes(teacherSearchTerm.toLowerCase()))
+                      .map(teacher => (
+                        <div key={teacher.id} className="p-3 border border-gray-100 rounded-lg flex justify-between items-start hover:bg-gray-50 group transition-all">
+                          {editingTeacherId === teacher.id ? (
+                            <div className="flex flex-col gap-2 w-full">
+                              <div className="flex items-center gap-2 w-full">
+                                <input
+                                  value={editTeacherName}
+                                  onChange={(e) => setEditTeacherName(e.target.value)}
+                                  className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:border-[#fdb813] outline-none"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleUpdateTeacher(teacher.id);
+                                    if (e.key === 'Escape') setEditingTeacherId(null);
+                                  }}
+                                />
+                                <button onClick={() => handleUpdateTeacher(teacher.id)} className="text-green-600 p-1.5 hover:bg-green-50 rounded bg-white border border-gray-200"><Check size={14} /></button>
+                                <button onClick={() => setEditingTeacherId(null)} className="text-red-500 p-1.5 hover:bg-red-50 rounded bg-white border border-gray-200"><X size={14} /></button>
+                              </div>
+                              <div className="flex items-center gap-3 px-1">
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={editTeacherSubjects.includes('math')}
+                                    onChange={(e) => {
+                                      if (e.target.checked) setEditTeacherSubjects([...editTeacherSubjects, 'math']);
+                                      else setEditTeacherSubjects(editTeacherSubjects.filter(s => s !== 'math'));
+                                    }}
+                                    className="w-3 h-3 accent-[#081429]"
+                                  />
+                                  <span className="text-[10px] text-gray-600">수학</span>
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={editTeacherSubjects.includes('english')}
+                                    onChange={(e) => {
+                                      if (e.target.checked) setEditTeacherSubjects([...editTeacherSubjects, 'english']);
+                                      else setEditTeacherSubjects(editTeacherSubjects.filter(s => s !== 'english'));
+                                    }}
+                                    className="w-3 h-3 accent-[#081429]"
+                                  />
+                                  <span className="text-[10px] text-gray-600">영어</span>
+                                </label>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex flex-col gap-1">
+                                <span className="font-bold text-gray-700">{teacher.name}</span>
+                                <div className="flex gap-1">
+                                  {(!teacher.subjects || teacher.subjects.includes('math')) && <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-medium">수학</span>}
+                                  {(!teacher.subjects || teacher.subjects.includes('english')) && <span className="text-[10px] bg-[#fff8e1] text-[#b45309] px-1.5 py-0.5 rounded border border-[#fef3c7] font-medium">영어</span>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleToggleVisibility(teacher.id, !!teacher.isHidden)}
+                                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                  title={teacher.isHidden ? "시간표에 표시하기" : "시간표에서 숨기기"}
+                                >
+                                  {teacher.isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingTeacherId(teacher.id);
+                                    setEditTeacherName(teacher.name);
+                                    setEditTeacherSubjects(teacher.subjects || ['math', 'english']);
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTeacher(teacher.id, teacher.name)}
+                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    {teachers.length === 0 && (
+                      <div className="col-span-full py-10 text-center text-gray-400 text-sm">등록된 강사가 없습니다.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* SYSTEM TAB */}
             {activeTab === 'system' && (isMaster || isAdmin) && (

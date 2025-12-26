@@ -132,6 +132,8 @@ export interface UserProfile {
   allowedDepartments?: string[];
   // Granular permissions per department (maintained)
   departmentPermissions?: Record<string, 'view' | 'edit'>;
+  // Favorite departments (user-specific bookmarks)
+  favoriteDepartments?: string[];
 
   /** @deprecated Use role-based permissions (isMaster/isAdmin) */
   canEdit?: boolean;
@@ -147,4 +149,35 @@ export interface Holiday {
   date: string;    // 'YYYY-MM-DD'
   name: string;
   type: 'public' | 'custom';
+}
+
+// ============ TIMETABLE TYPES ============
+
+export interface TimetableStudent {
+  id: string;
+  name: string;
+  grade?: string;       // 학년
+  school?: string;      // 학교
+  personalSchedule?: { day: string; period: string }[];
+}
+
+export interface TimetableClass {
+  id: string;
+  className: string;    // 수업명
+  teacher: string;      // 담당 강사
+  room?: string;        // 교실
+  subject: string;      // 과목 (수학/영어/기타)
+  schedule: string[];   // ["월 1교시", "수 3교시"]
+  studentList: TimetableStudent[];
+  color?: string;
+  order?: number;
+}
+
+export interface Teacher {
+  id: string;
+  name: string;
+  subjects?: string[];  // 담당 과목
+  isHidden?: boolean;   // 시간표 표시 여부
+  color?: string;
+  order?: number;
 }

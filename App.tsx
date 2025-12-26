@@ -7,9 +7,10 @@ import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
 import CalendarBoard from './components/CalendarBoard';
-import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, User as UserIcon } from 'lucide-react';
+import TimetableManager from './components/Timetable/TimetableManager';
+import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, User as UserIcon, Star } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
-import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
@@ -122,6 +123,9 @@ const getJobTitleStyle = (title: string = '') => {
 
 const App: React.FC = () => {
 
+  // App Mode (Top-level navigation)
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable'>('calendar');
+
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);
 
@@ -158,6 +162,7 @@ const App: React.FC = () => {
 
   // UI State for New Header
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Pending Event Moves State (for drag-and-drop)
   const [pendingEventMoves, setPendingEventMoves] = useState<{ original: CalendarEvent, updated: CalendarEvent }[]>([]);
@@ -308,7 +313,12 @@ const App: React.FC = () => {
 
     if (!hasAccess) return false;
 
-    // 2. Local Visibility Toggle Check
+    // 2. Favorites Filter
+    if (showFavoritesOnly && userProfile?.favoriteDepartments) {
+      if (!userProfile.favoriteDepartments.includes(d.id)) return false;
+    }
+
+    // 3. Local Visibility Toggle Check
     // (Users can hide departments locally even if they have access)
     if (hiddenDeptIds.includes(d.id)) return false;
 
@@ -556,6 +566,23 @@ const App: React.FC = () => {
     }
   };
 
+  // Toggle Favorite Department
+  const toggleFavorite = async (deptId: string) => {
+    if (!userProfile) return;
+    const current = userProfile.favoriteDepartments || [];
+    const updated = current.includes(deptId)
+      ? current.filter(id => id !== deptId)
+      : [...current, deptId];
+
+    try {
+      await updateDoc(doc(db, 'users', userProfile.uid), {
+        favoriteDepartments: updated
+      });
+    } catch (e) {
+      console.error('Error updating favorites:', e);
+    }
+  };
+
   // --- Batch Update Attendance for Recurring Events ---
   const handleBatchUpdateAttendance = async (groupId: string, uid: string, status: 'pending' | 'joined' | 'declined') => {
     try {
@@ -650,6 +677,31 @@ const App: React.FC = () => {
             <h1 className="text-xl font-black text-white tracking-tighter hidden md:flex items-center gap-1 flex-shrink-0">
               인재원 <span className="text-[#fdb813]">학원</span>
             </h1>
+
+            {/* Top-level App Mode Tabs */}
+            <div className="hidden md:flex bg-white/10 rounded-lg p-0.5 ml-4">
+              <button
+                onClick={() => setAppMode('calendar')}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'calendar'
+                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                  : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+              >
+                📅 연간 일정
+              </button>
+              {/* Timetable - MASTER only */}
+              {userProfile?.role === 'master' && (
+                <button
+                  onClick={() => setAppMode('timetable')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'timetable'
+                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  📋 시간표
+                </button>
+              )}
+            </div>
 
             {/* User Info Display (Moved to Left) */}
             {currentUser && (
@@ -866,7 +918,18 @@ const App: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  {/* Favorites Only Toggle */}
+                  <button
+                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                    className={`px-3 py-1.5 rounded flex items-center gap-1.5 text-xs font-bold border transition-all ${showFavoritesOnly
+                      ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                      : 'bg-transparent text-gray-400 border-gray-700 hover:border-[#fdb813]/50'
+                      }`}
+                  >
+                    <Star size={12} className={showFavoritesOnly ? 'fill-current' : ''} />
+                    즐겨찾기만
+                  </button>
                   <button onClick={() => setAllVisibility(true)} className="px-3 py-1.5 rounded bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20 hover:bg-green-500/20">
                     모두 켜기
                   </button>
@@ -878,29 +941,49 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
                 {departments
-                  .filter(d => !selectedCategory || d.category === selectedCategory) // Apply Category Filter
+                  .filter(d => !selectedCategory || d.category === selectedCategory)
                   .map(dept => {
                     const isHidden = hiddenDeptIds.includes(dept.id);
-                    const isAllowed = userProfile?.allowedDepartments?.includes(dept.id) || isMaster;
+                    const isAllowed = userProfile?.departmentPermissions?.[dept.id] || userProfile?.allowedDepartments?.includes(dept.id) || isMaster;
+                    const isFavorite = userProfile?.favoriteDepartments?.includes(dept.id);
 
                     if (!isAllowed) return null;
 
                     return (
-                      <button
+                      <div
                         key={dept.id}
-                        onClick={() => toggleDeptVisibility(dept.id)}
                         className={`
-                         flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-bold transition-all text-left
+                         flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-bold transition-all
                          ${isHidden
-                            ? 'bg-transparent border-gray-700 text-gray-500 hover:border-gray-500'
+                            ? 'bg-transparent border-gray-700 text-gray-500'
                             : 'bg-[#081429] border-[#fdb813]/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
                           }
                        `}
                       >
-                        <span className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color.startsWith('#') ? dept.color : 'white') : undefined }} />
-                        <span className="truncate flex-1">{dept.name}</span>
-                        {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
-                      </button>
+                        {/* Favorite Star */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(dept.id);
+                          }}
+                          className="hover:scale-110 transition-transform"
+                        >
+                          <Star
+                            size={14}
+                            className={isFavorite ? 'text-[#fdb813] fill-[#fdb813]' : 'text-gray-600 hover:text-[#fdb813]'}
+                          />
+                        </button>
+
+                        {/* Toggle Visibility */}
+                        <button
+                          onClick={() => toggleDeptVisibility(dept.id)}
+                          className="flex items-center gap-2 flex-1 text-left"
+                        >
+                          <span className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color?.startsWith('#') ? dept.color : 'white') : undefined }} />
+                          <span className="truncate flex-1">{dept.name}</span>
+                          {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
+                        </button>
+                      </div>
                     )
                   })}
               </div>
@@ -918,44 +1001,52 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <div className="w-full flex-1 max-w-full mx-auto min-h-screen print:p-0 flex flex-col xl:flex-row gap-8 print:flex-row print:gap-4">
-          <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0">
-            <CalendarBoard
-              currentDate={baseDate}
-              onDateChange={setBaseDate}
-              departments={visibleDepartments}
-              events={displayEvents}
-              onCellClick={handleCellClick}
-              onRangeSelect={handleRangeSelect}
-              onTimeSlotClick={handleTimeSlotClick}
-              onEventClick={handleEventClick}
-              holidays={holidays}
-              viewMode={viewMode}
-              currentUser={userProfile}
-              onEventMove={handleEventMove}
-              canEditDepartment={canEditDepartment}
-              pendingEventIds={pendingEventIds}
-            />
-          </div>
+        {appMode === 'calendar' ? (
+          /* Calendar View */
+          <div className="w-full flex-1 max-w-full mx-auto min-h-screen print:p-0 flex flex-col xl:flex-row gap-8 print:flex-row print:gap-4">
+            <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0">
+              <CalendarBoard
+                currentDate={baseDate}
+                onDateChange={setBaseDate}
+                departments={visibleDepartments}
+                events={displayEvents}
+                onCellClick={handleCellClick}
+                onRangeSelect={handleRangeSelect}
+                onTimeSlotClick={handleTimeSlotClick}
+                onEventClick={handleEventClick}
+                holidays={holidays}
+                viewMode={viewMode}
+                currentUser={userProfile}
+                onEventMove={handleEventMove}
+                canEditDepartment={canEditDepartment}
+                pendingEventIds={pendingEventIds}
+              />
+            </div>
 
-          <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${isCompareMode ? '' : 'hidden'}`}>
-            <CalendarBoard
-              currentDate={rightDate}
-              onDateChange={(date) => setBaseDate(addYears(date, 1))}
-              departments={visibleDepartments}
-              events={displayEvents}
-              onCellClick={handleCellClick}
-              onRangeSelect={handleRangeSelect}
-              onTimeSlotClick={handleTimeSlotClick}
-              onEventClick={handleEventClick}
-              holidays={holidays}
-              viewMode={viewMode}
-              onEventMove={handleEventMove}
-              canEditDepartment={canEditDepartment}
-              pendingEventIds={pendingEventIds}
-            />
+            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${isCompareMode ? '' : 'hidden'}`}>
+              <CalendarBoard
+                currentDate={rightDate}
+                onDateChange={(date) => setBaseDate(addYears(date, 1))}
+                departments={visibleDepartments}
+                events={displayEvents}
+                onCellClick={handleCellClick}
+                onRangeSelect={handleRangeSelect}
+                onTimeSlotClick={handleTimeSlotClick}
+                onEventClick={handleEventClick}
+                holidays={holidays}
+                viewMode={viewMode}
+                onEventMove={handleEventMove}
+                canEditDepartment={canEditDepartment}
+                pendingEventIds={pendingEventIds}
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Timetable View */
+          <div className="w-full flex-1 p-4 md:p-6">
+            <TimetableManager />
+          </div>
+        )}
 
         {/* Floating Save Button for Pending Moves */}
         {pendingEventMoves.length > 0 && (
@@ -1017,25 +1108,27 @@ const App: React.FC = () => {
       />
 
       {/* Access Denied / Pending Approval Overlay */}
-      {currentUser && userProfile?.status === 'pending' && (
-        <div className="fixed inset-0 bg-[#081429] z-50 flex flex-col items-center justify-center text-white p-8 text-center animate-in fade-in duration-300">
-          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-2 mb-6 shadow-lg shadow-[#fdb813]/20">
-            <img src={INJAEWON_LOGO} alt="Logo" className="w-full h-full object-contain" />
+      {
+        currentUser && userProfile?.status === 'pending' && (
+          <div className="fixed inset-0 bg-[#081429] z-50 flex flex-col items-center justify-center text-white p-8 text-center animate-in fade-in duration-300">
+            <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-2 mb-6 shadow-lg shadow-[#fdb813]/20">
+              <img src={INJAEWON_LOGO} alt="Logo" className="w-full h-full object-contain" />
+            </div>
+            <h2 className="text-3xl font-black mb-4">관리자 승인 대기중</h2>
+            <p className="text-gray-300 max-w-md mb-8 leading-relaxed">
+              계정 생성이 완료되었으나, 관리자의 승인이 필요합니다.<br />
+              승인이 완료되면 이메일로 알림이 발송되지 않으니,<br />
+              잠시 후 다시 로그인해 확인해주세요.
+            </p>
+            <button
+              onClick={handleLogout}
+              className="px-6 py-3 bg-white text-[#081429] font-bold rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-2"
+            >
+              <LogOut size={20} /> 로그아웃
+            </button>
           </div>
-          <h2 className="text-3xl font-black mb-4">관리자 승인 대기중</h2>
-          <p className="text-gray-300 max-w-md mb-8 leading-relaxed">
-            계정 생성이 완료되었으나, 관리자의 승인이 필요합니다.<br />
-            승인이 완료되면 이메일로 알림이 발송되지 않으니,<br />
-            잠시 후 다시 로그인해 확인해주세요.
-          </p>
-          <button
-            onClick={handleLogout}
-            className="px-6 py-3 bg-white text-[#081429] font-bold rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-2"
-          >
-            <LogOut size={20} /> 로그아웃
-          </button>
-        </div>
-      )}
+        )
+      }
     </div >
   );
 };
