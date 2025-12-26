@@ -47,7 +47,7 @@ const EventModal: React.FC<EventModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [participants, setParticipants] = useState<string[]>([]);
-  const [departmentId, setDepartmentId] = useState('');
+  const [departmentIds, setDepartmentIds] = useState<string[]>([]); // Changed to array for multi-select
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -77,7 +77,7 @@ const EventModal: React.FC<EventModalProps> = ({
 
   const isMaster = currentUser?.role === 'master';
   const isAdmin = currentUser?.role === 'admin';
-  const hasDeptAccess = isMaster || isAdmin || (departmentId && currentUser?.departmentPermissions?.[departmentId] === 'edit');
+  const hasDeptAccess = isMaster || isAdmin || departmentIds.some(dId => currentUser?.departmentPermissions?.[dId] === 'edit');
 
   const canSaveEvent = hasDeptAccess && (!existingEvent ? canCreate : canEdit);
   const canDeleteEvent = existingEvent && hasDeptAccess && canDelete;
@@ -108,7 +108,7 @@ const EventModal: React.FC<EventModalProps> = ({
           } else {
             setParticipants([]);
           }
-          setDepartmentId(existingEvent.departmentId);
+          setDepartmentIds(existingEvent.departmentIds || [existingEvent.departmentId]);
           setAuthorId(existingEvent.authorId || '');
           setAuthorName(existingEvent.authorName || '');
           setStartDate(existingEvent.startDate);
@@ -147,7 +147,7 @@ const EventModal: React.FC<EventModalProps> = ({
             setAuthorName('');
           }
           const targetDeptId = initialDepartmentId || departments[0]?.id || '';
-          setDepartmentId(targetDeptId);
+          setDepartmentIds(targetDeptId ? [targetDeptId] : []);
           setStartDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
           setEndDate(initialEndDate || initialDate || format(new Date(), 'yyyy-MM-dd'));
 
@@ -190,20 +190,23 @@ const EventModal: React.FC<EventModalProps> = ({
       // 2. Random suffix (4 chars)
       const randomSuffix = Math.random().toString(36).substring(2, 6);
       // 3. Department Name (Korean) - Fallback to ID if not found
-      const deptObj = departments.find(d => d.id === departmentId);
-      const safeDeptName = deptObj ? deptObj.name : (departmentId || 'no_dept');
+      const primaryDeptId = departmentIds[0] || '';
+      const deptObj = departments.find(d => d.id === primaryDeptId);
+      const safeDeptName = deptObj ? deptObj.name : (primaryDeptId || 'no_dept');
 
       // Format: YYYY-MM-DD_DeptName_Title_Random
       newId = `${startDate}_${safeDeptName}_${safeTitle}_${randomSuffix}`;
     }
 
     const now = new Date().toISOString();
+    const primaryDeptId = departmentIds[0] || '';
     const payload: CalendarEvent = {
       id: newId,
       title,
       description,
       participants: participants.join(', '),
-      departmentId,
+      departmentId: primaryDeptId, // Primary department for backward compatibility
+      departmentIds: departmentIds, // All selected departments
       startDate,
       endDate,
       startTime: isAllDay ? '' : startTime,
@@ -267,35 +270,57 @@ const EventModal: React.FC<EventModalProps> = ({
             />
           </div>
 
-          {/* Department */}
+          {/* Department (Multi-Select) */}
           <div>
             <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-1.5">
-              부서
+              부서 (다중 선택 가능)
             </label>
-            <select
-              value={departmentId}
-              onChange={(e) => {
-                const newId = e.target.value;
-                setDepartmentId(newId);
-                // Auto-apply defaults on manual change
-                const dept = departments.find(d => d.id === newId);
-                if (dept) {
-                  setSelectedColor(dept.defaultColor || '#fee2e2');
-                  setSelectedTextColor(dept.defaultTextColor || '#ffffff');
-                  setSelectedBorderColor(dept.defaultBorderColor || dept.defaultColor || '#fee2e2');
-                }
-              }}
-              // Department selection is always enabled so users can switch to a valid dept, 
-              // BUT if we want to restrict them to only Create in Editable depts, we might want to filter options?
-              // For now, let them switch, and the form disables/enables dynamically.
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none bg-white font-medium cursor-pointer"
-            >
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} {currentUser?.departmentPermissions?.[d.id] === 'view' && !isMaster && !isAdmin ? '(조회전용)' : ''}
-                </option>
-              ))}
-            </select>
+            <div className="border border-gray-300 rounded-xl p-3 max-h-40 overflow-y-auto bg-gray-50/50">
+              {departments.map((dept) => {
+                const isSelected = departmentIds.includes(dept.id);
+                const hasEditAccess = isMaster || isAdmin || currentUser?.departmentPermissions?.[dept.id] === 'edit';
+                const hasViewAccess = currentUser?.departmentPermissions?.[dept.id] === 'view';
+
+                return (
+                  <label
+                    key={dept.id}
+                    className={`flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer ${isSelected ? 'bg-white' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const newIds = [...departmentIds, dept.id];
+                          setDepartmentIds(newIds);
+                          // Apply first selected department's default colors
+                          if (newIds.length === 1) {
+                            setSelectedColor(dept.defaultColor || '#fee2e2');
+                            setSelectedTextColor(dept.defaultTextColor || '#ffffff');
+                            setSelectedBorderColor(dept.defaultBorderColor || dept.defaultColor || '#fee2e2');
+                          }
+                        } else {
+                          setDepartmentIds(departmentIds.filter(id => id !== dept.id));
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
+                    />
+                    <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-600'}`}>
+                      {dept.name}
+                    </span>
+                    {!hasEditAccess && hasViewAccess && (
+                      <span className="text-[10px] text-gray-400 ml-auto">(조회전용)</span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+            {departmentIds.length === 0 && (
+              <p className="text-xs text-red-500 mt-1">최소 한 개의 부서를 선택해주세요.</p>
+            )}
+            {departmentIds.length > 1 && (
+              <p className="text-xs text-blue-500 mt-1">선택된 부서: {departmentIds.length}개</p>
+            )}
           </div>
 
           {/* Read Only Notice */}

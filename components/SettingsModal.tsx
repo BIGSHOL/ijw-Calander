@@ -59,6 +59,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newDeptDefaultColor, setNewDeptDefaultColor] = useState('#ffffff');
   const [newDeptDefaultTextColor, setNewDeptDefaultTextColor] = useState('#000000');
   const [newDeptDefaultBorderColor, setNewDeptDefaultBorderColor] = useState('#fee2e2');
+  const [newDeptDefaultPermission, setNewDeptDefaultPermission] = useState<'view' | 'block' | 'edit'>('view'); // Default permission for all users
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [deptSearchTerm, setDeptSearchTerm] = useState('');
@@ -466,24 +467,44 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         카테고리: newDept.category || '',
         설명: ''
       });
-      // Grant to creator...
+
+      // Apply default permission to all users
       const batch = writeBatch(db);
-      if (!isMaster && currentUserProfile) {
-        const userRef = doc(db, 'users', currentUserProfile.uid);
-        // Update both legacy and new
-        const currentAllowed = currentUserProfile.allowedDepartments || [];
-        const currentPerms = currentUserProfile.departmentPermissions || {};
-        batch.update(userRef, {
-          allowedDepartments: [...currentAllowed, newDept.id],
-          departmentPermissions: { ...currentPerms, [newDept.id]: 'edit' } // Creator gets edit?
-        });
+
+      // Get all users and apply default permission
+      for (const user of users) {
+        const userRef = doc(db, 'users', user.uid);
+        const currentPerms = user.departmentPermissions || {};
+        const currentAllowed = user.allowedDepartments || [];
+
+        // Master always gets edit permission
+        const permissionToApply = user.role === 'master' ? 'edit' : newDeptDefaultPermission;
+
+        // Skip block permission (don't add to departmentPermissions, and don't add to allowedDepartments)
+        if (permissionToApply === 'block') {
+          // Block: remove from allowedDepartments if exists, don't add to permissions
+          batch.update(userRef, {
+            allowedDepartments: currentAllowed.filter((id: string) => id !== newDept.id),
+            departmentPermissions: { ...currentPerms } // No change for block (or explicitly no access)
+          });
+        } else {
+          // View or Edit: add to permissions
+          batch.update(userRef, {
+            allowedDepartments: currentAllowed.includes(newDept.id) ? currentAllowed : [...currentAllowed, newDept.id],
+            departmentPermissions: { ...currentPerms, [newDept.id]: permissionToApply }
+          });
+        }
       }
-      await batch.commit();      // Reset
+
+      await batch.commit();
+
+      // Reset form
       setNewDeptName('');
       setNewDeptCategory('');
       setNewDeptDefaultColor('#ffffff');
       setNewDeptDefaultTextColor('#000000');
       setNewDeptDefaultBorderColor('#fee2e2');
+      setNewDeptDefaultPermission('view');
       setIsCreating(false);
     } catch (e) { console.error(e); alert("부서 생성 실패"); }
   };
@@ -835,6 +856,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       <label className="flex items-center gap-2 cursor-pointer">
                         <span>기본 테두리</span>
                         <input type="color" value={newDeptDefaultBorderColor} onChange={(e) => setNewDeptDefaultBorderColor(e.target.value)} className="w-6 h-6 rounded overflow-hidden" />
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer ml-4">
+                        <span>기본 권한</span>
+                        <select
+                          value={newDeptDefaultPermission}
+                          onChange={(e) => setNewDeptDefaultPermission(e.target.value as 'view' | 'block' | 'edit')}
+                          className="border rounded px-2 py-1 text-xs font-bold"
+                        >
+                          <option value="view">👁️ 조회</option>
+                          <option value="block">🚫 차단</option>
+                          <option value="edit">✏️ 수정</option>
+                        </select>
                       </label>
                     </div>
 
