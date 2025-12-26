@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { TimetableClass, Teacher, TimetableStudent } from '../../types';
-import { Plus, Trash2, Users, Clock, BookOpen, X, UserPlus, GripVertical, ChevronLeft, ChevronRight, Eye, EyeOff, Search, Save, RotateCcw, Settings } from 'lucide-react';
+import { Plus, Trash2, Users, Clock, BookOpen, X, UserPlus, GripVertical, ChevronLeft, ChevronRight, Search, Settings } from 'lucide-react';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, getWeek, getMonth, getYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import EnglishTimetable from './English/EnglishTimetable';
@@ -28,9 +28,32 @@ const getSubjectTheme = (subject: string) => {
     }
 };
 
-const TimetableManager: React.FC = () => {
-    // Subject Tab
-    const [subjectTab, setSubjectTab] = useState<'math' | 'english'>('math');
+// Props interface for external filter control
+interface TimetableManagerProps {
+    subjectTab?: 'math' | 'english';
+    onSubjectChange?: (subject: 'math' | 'english') => void;
+    viewType?: 'teacher' | 'room';
+    onViewTypeChange?: (viewType: 'teacher' | 'room') => void;
+    showStudents?: boolean;
+    onShowStudentsChange?: (show: boolean) => void;
+    selectedDays?: string[];
+    onSelectedDaysChange?: (days: string[]) => void;
+}
+
+const TimetableManager: React.FC<TimetableManagerProps> = ({
+    subjectTab: externalSubjectTab,
+    onSubjectChange,
+    viewType: externalViewType,
+    onViewTypeChange,
+    showStudents: externalShowStudents,
+    onShowStudentsChange,
+    selectedDays: externalSelectedDays,
+    onSelectedDaysChange,
+}) => {
+    // Subject Tab (use external if provided)
+    const [internalSubjectTab, setInternalSubjectTab] = useState<'math' | 'english'>('math');
+    const subjectTab = externalSubjectTab ?? internalSubjectTab;
+    const setSubjectTab = onSubjectChange ?? setInternalSubjectTab;
 
     // Data State
     const [classes, setClasses] = useState<TimetableClass[]>([]);
@@ -43,12 +66,21 @@ const TimetableManager: React.FC = () => {
         return startOfWeek(today, { weekStartsOn: 1 }); // Monday as start
     });
 
-    // View State
-    const [selectedDays, setSelectedDays] = useState<string[]>(['월', '화', '수', '목', '금']);
-    const [viewType, setViewType] = useState<'teacher' | 'room'>('teacher');
+    // View State (use external if provided)
+    const [internalSelectedDays, setInternalSelectedDays] = useState<string[]>(['월', '화', '수', '목', '금']);
+    const selectedDays = externalSelectedDays ?? internalSelectedDays;
+    const setSelectedDays = onSelectedDaysChange ?? setInternalSelectedDays;
+
+    const [internalViewType, setInternalViewType] = useState<'teacher' | 'room'>('teacher');
+    const viewType = externalViewType ?? internalViewType;
+    const setViewType = onViewTypeChange ?? setInternalViewType;
+
     const [isAddClassOpen, setIsAddClassOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<TimetableClass | null>(null);
-    const [showStudents, setShowStudents] = useState(true); // Student list toggle
+
+    const [internalShowStudents, setInternalShowStudents] = useState(true);
+    const showStudents = externalShowStudents ?? internalShowStudents;
+    const setShowStudents = onShowStudentsChange ?? setInternalShowStudents;
 
     // New Class Form
     const [newClassName, setNewClassName] = useState('');
@@ -372,57 +404,35 @@ const TimetableManager: React.FC = () => {
 
     return (
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
-            {/* Main Header Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200 flex-shrink-0">
-                {/* Left Section */}
+            {/* Simple Toolbar - Search and Actions only */}
+            <div className="bg-gray-50 h-10 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs">
+                {/* Left: Week Info */}
                 <div className="flex items-center gap-3">
-                    {/* Title */}
-                    <div className="flex items-center gap-2">
-                        <Clock size={18} className="text-[#fdb813]" />
-                        <span className="font-bold text-[#081429] text-sm">시간표</span>
-                    </div>
-
-                    {/* Subject Tabs */}
-                    <div className="flex rounded overflow-hidden border border-gray-300">
+                    <span className="text-gray-600 font-medium">{weekLabel}</span>
+                    <div className="flex items-center gap-1">
                         <button
-                            onClick={() => setSubjectTab('math')}
-                            className={`px-3 py-1.5 text-xs font-bold transition-all ${subjectTab === 'math'
-                                ? 'bg-[#fdb813] text-[#081429]'
-                                : 'bg-white text-[#373d41] hover:bg-gray-100'}`}
+                            onClick={goToPrevWeek}
+                            className="p-1 border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
                         >
-                            📐 수학
+                            <ChevronLeft size={14} />
                         </button>
                         <button
-                            onClick={() => setSubjectTab('english')}
-                            className={`px-3 py-1.5 text-xs font-bold transition-all border-l border-gray-300 ${subjectTab === 'english'
-                                ? 'bg-[#fdb813] text-[#081429]'
-                                : 'bg-white text-[#373d41] hover:bg-gray-100'}`}
+                            onClick={goToThisWeek}
+                            className="px-2 py-0.5 text-[10px] font-bold border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
                         >
-                            📕 영어
+                            이번주
+                        </button>
+                        <button
+                            onClick={goToNextWeek}
+                            className="p-1 border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                            <ChevronRight size={14} />
                         </button>
                     </div>
+                </div>
 
-                    {/* View Type */}
-                    <select
-                        value={viewType}
-                        onChange={(e) => setViewType(e.target.value as 'teacher' | 'room')}
-                        className="px-2 py-1.5 text-xs font-bold border border-gray-300 rounded bg-white text-[#373d41] cursor-pointer outline-none"
-                    >
-                        <option value="teacher">👨‍🏫 강사별</option>
-                        <option value="room">🏫 교실별</option>
-                    </select>
-
-                    {/* Student Toggle */}
-                    <button
-                        onClick={() => setShowStudents(!showStudents)}
-                        className={`px-2 py-1.5 text-xs font-bold border rounded flex items-center gap-1 transition-all ${showStudents
-                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                            : 'bg-white text-[#373d41] border-gray-300 hover:bg-gray-100'}`}
-                    >
-                        {showStudents ? <Eye size={12} /> : <EyeOff size={12} />}
-                        학생목록
-                    </button>
-
+                {/* Right: Search and Actions */}
+                <div className="flex items-center gap-2">
                     {/* Search */}
                     <div className="relative">
                         <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -431,7 +441,7 @@ const TimetableManager: React.FC = () => {
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="학생 검색..."
-                            className="pl-7 pr-6 py-1.5 w-28 text-xs border border-gray-300 rounded bg-white outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
+                            className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-md bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
                         />
                         {searchQuery && (
                             <button
@@ -442,13 +452,19 @@ const TimetableManager: React.FC = () => {
                             </button>
                         )}
                     </div>
-                </div>
 
-                {/* Right Section */}
-                <div className="flex items-center gap-2">
+                    {/* View Settings */}
+                    <button
+                        onClick={() => setIsViewSettingsOpen(true)}
+                        className="p-1.5 border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        title="보기 설정"
+                    >
+                        <Settings size={14} />
+                    </button>
+
                     {/* Pending Moves */}
                     {pendingMoves.length > 0 && (
-                        <div className="flex items-center gap-1 bg-orange-50 border border-orange-300 rounded px-2 py-1">
+                        <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-md px-2 py-1">
                             <span className="text-xs font-bold text-orange-600">
                                 {pendingMoves.length}건 변경
                             </span>
@@ -462,7 +478,7 @@ const TimetableManager: React.FC = () => {
                             <button
                                 onClick={handleCancelPendingMoves}
                                 disabled={isSaving}
-                                className="px-2 py-0.5 bg-[#373d41] text-white rounded text-xs font-bold hover:bg-gray-600 disabled:opacity-50"
+                                className="px-2 py-0.5 bg-gray-500 text-white rounded text-xs font-bold hover:bg-gray-600 disabled:opacity-50"
                             >
                                 ↩ 취소
                             </button>
@@ -472,68 +488,9 @@ const TimetableManager: React.FC = () => {
                     {/* Add Class Button */}
                     <button
                         onClick={openAddModal}
-                        className="px-3 py-1.5 bg-[#081429] text-white rounded text-xs font-bold flex items-center gap-1 hover:bg-[#1e293b] transition-all"
+                        className="px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-md text-xs font-bold flex items-center gap-1 hover:brightness-110 transition-all active:scale-95 shadow-sm"
                     >
                         <Plus size={14} /> 수업추가
-                    </button>
-                </div>
-            </div>
-
-            {/* Week Navigation Bar */}
-            <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100 flex-shrink-0">
-                {/* Week Days */}
-                <div className="flex items-center gap-1">
-                    {ALL_WEEKDAYS.map(day => {
-                        const dateInfo = weekDates[day];
-                        const isWeekend = day === '토' || day === '일';
-                        const isSelected = selectedDays.includes(day);
-                        return (
-                            <button
-                                key={day}
-                                onClick={() => setSelectedDays(prev =>
-                                    prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-                                )}
-                                className={`px-3 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1 ${isSelected
-                                    ? 'bg-[#fdb813] text-[#081429]'
-                                    : isWeekend ? 'bg-orange-50 text-orange-500 hover:bg-orange-100' : 'bg-gray-100 text-[#373d41] hover:bg-gray-200'
-                                    }`}
-                            >
-                                <span className="text-[10px]">{dateInfo.formatted}</span>
-                                <span className="font-bold">{day}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* Week Navigation */}
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={goToPrevWeek}
-                        className="p-1.5 border border-gray-300 rounded hover:bg-gray-100 text-[#373d41]"
-                    >
-                        <ChevronLeft size={14} />
-                    </button>
-                    <span className="px-3 py-1 text-xs font-bold text-[#081429] min-w-[120px] text-center">
-                        {weekLabel}
-                    </span>
-                    <button
-                        onClick={goToNextWeek}
-                        className="p-1.5 border border-gray-300 rounded hover:bg-gray-100 text-[#373d41]"
-                    >
-                        <ChevronRight size={14} />
-                    </button>
-                    <button
-                        onClick={goToThisWeek}
-                        className="px-2 py-1 text-[10px] border border-gray-300 rounded hover:bg-gray-100 text-[#373d41]"
-                    >
-                        이번주
-                    </button>
-                    <button
-                        onClick={() => setIsViewSettingsOpen(true)}
-                        className="p-1.5 border border-gray-300 rounded hover:bg-gray-100 text-[#373d41]"
-                        title="보기 설정"
-                    >
-                        <Settings size={14} />
                     </button>
                 </div>
             </div>
