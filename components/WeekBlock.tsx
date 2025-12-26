@@ -241,7 +241,12 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
       {departments.map((dept) => {
         const weekEvents = events.filter(e => {
           // Compatibility: Match by ID or Name (for cases where old IDs like 'school' exist but new events use '학교일정')
-          if (e.departmentId !== dept.id && e.departmentId !== dept.name) return false;
+          // Multi-Department Support: Check departmentIds array OR single departmentId
+          const isMatch = (e.departmentIds && e.departmentIds.includes(dept.id)) ||
+            e.departmentId === dept.id ||
+            e.departmentId === dept.name;
+
+          if (!isMatch) return false;
           const start = parseISO(e.startDate);
           const end = parseISO(e.endDate);
           return (start <= weekEnd && end >= weekStart);
