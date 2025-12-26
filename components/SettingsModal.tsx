@@ -138,6 +138,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
   const [editTeacherName, setEditTeacherName] = useState('');
   const [editTeacherSubjects, setEditTeacherSubjects] = useState<string[]>([]);
+  const [editTeacherBgColor, setEditTeacherBgColor] = useState('#3b82f6'); // 기본 파란색
+  const [editTeacherTextColor, setEditTeacherTextColor] = useState('#ffffff'); // 기본 흰색
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
 
   // --- Category Management State ---
@@ -195,7 +197,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleUpdateTeacher = async (id: string) => {
     if (!editTeacherName.trim()) return;
     try {
-      await updateDoc(doc(db, '강사목록', id), { name: editTeacherName.trim(), subjects: editTeacherSubjects });
+      await updateDoc(doc(db, '강사목록', id), {
+        name: editTeacherName.trim(),
+        subjects: editTeacherSubjects,
+        bgColor: editTeacherBgColor,
+        textColor: editTeacherTextColor
+      });
       setEditingTeacherId(null);
     } catch (e) {
       console.error(e);
@@ -1134,14 +1141,49 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   <span className="text-[10px] text-gray-600">영어</span>
                                 </label>
                               </div>
+                              <div className="flex items-center gap-2 px-1 pt-1">
+                                <span className="text-[10px] text-gray-500 font-medium">퍼스널 컬러:</span>
+                                <label className="flex items-center gap-1">
+                                  <span className="text-[10px] text-gray-500">배경</span>
+                                  <input
+                                    type="color"
+                                    value={editTeacherBgColor}
+                                    onChange={(e) => setEditTeacherBgColor(e.target.value)}
+                                    className="w-6 h-6 rounded border border-gray-200 cursor-pointer"
+                                  />
+                                </label>
+                                <label className="flex items-center gap-1">
+                                  <span className="text-[10px] text-gray-500">글자</span>
+                                  <input
+                                    type="color"
+                                    value={editTeacherTextColor}
+                                    onChange={(e) => setEditTeacherTextColor(e.target.value)}
+                                    className="w-6 h-6 rounded border border-gray-200 cursor-pointer"
+                                  />
+                                </label>
+                                <div
+                                  className="px-2 py-0.5 rounded text-[10px] font-bold border"
+                                  style={{ backgroundColor: editTeacherBgColor, color: editTeacherTextColor, borderColor: editTeacherBgColor }}
+                                >
+                                  미리보기
+                                </div>
+                              </div>
                             </div>
                           ) : (
                             <>
                               <div className="flex flex-col gap-1">
                                 <span className="font-bold text-gray-700">{teacher.name}</span>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 items-center">
                                   {(!teacher.subjects || teacher.subjects.includes('math')) && <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-medium">수학</span>}
                                   {(!teacher.subjects || teacher.subjects.includes('english')) && <span className="text-[10px] bg-[#fff8e1] text-[#b45309] px-1.5 py-0.5 rounded border border-[#fef3c7] font-medium">영어</span>}
+                                  {(teacher.bgColor || teacher.textColor) && (
+                                    <span
+                                      className="text-[9px] px-1.5 py-0.5 rounded font-bold ml-1"
+                                      style={{ backgroundColor: teacher.bgColor || '#3b82f6', color: teacher.textColor || '#ffffff' }}
+                                    >
+                                      컬러
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1157,6 +1199,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                     setEditingTeacherId(teacher.id);
                                     setEditTeacherName(teacher.name);
                                     setEditTeacherSubjects(teacher.subjects || ['math', 'english']);
+                                    setEditTeacherBgColor(teacher.bgColor || '#3b82f6');
+                                    setEditTeacherTextColor(teacher.textColor || '#ffffff');
                                   }}
                                   className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
                                 >

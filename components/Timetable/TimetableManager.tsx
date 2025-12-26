@@ -181,7 +181,8 @@ const TimetableManager: React.FC = () => {
             return;
         }
 
-        const classId = `${newClassName.trim().replace(/\s/g, '_')}_${Date.now()}`;
+        // Document ID: 과목_강사_수업명 (읽기 쉬운 형태)
+        const classId = `${newSubject}_${newTeacher.trim().replace(/\s/g, '')}_${newClassName.trim().replace(/\s/g, '_')}`;
         const newClass: TimetableClass = {
             id: classId,
             className: newClassName.trim(),
@@ -594,16 +595,27 @@ const TimetableManager: React.FC = () => {
                                         );
                                     }
 
-                                    return teachersForDay.map(resource => (
-                                        <th
-                                            key={`${day}-${resource}`}
-                                            className="p-1.5 text-[10px] font-bold text-white border-b border-r border-blue-400 bg-blue-500 truncate"
-                                            style={{ width: '130px', minWidth: '130px' }}
-                                            title={resource}
-                                        >
-                                            {resource}
-                                        </th>
-                                    ));
+                                    return teachersForDay.map(resource => {
+                                        const teacherData = teachers.find(t => t.name === resource);
+                                        const bgColor = teacherData?.bgColor || '#3b82f6';
+                                        const textColor = teacherData?.textColor || '#ffffff';
+                                        return (
+                                            <th
+                                                key={`${day}-${resource}`}
+                                                className="p-1.5 text-[10px] font-bold border-b border-r truncate"
+                                                style={{
+                                                    width: '130px',
+                                                    minWidth: '130px',
+                                                    backgroundColor: bgColor,
+                                                    color: textColor,
+                                                    borderColor: bgColor
+                                                }}
+                                                title={resource}
+                                            >
+                                                {resource}
+                                            </th>
+                                        );
+                                    });
                                 })}
                             </tr>
                         </thead>
