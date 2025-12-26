@@ -67,21 +67,32 @@ const DailyView: React.FC<{
           </div>
           <div className="flex-1 p-2 space-y-1 overflow-y-auto max-h-[120px]">
             {allDayEvents.map(event => {
-              const dept = departments.find(d => d.id === event.departmentId);
+              const primaryDept = departments.find(d => d.id === event.departmentId);
+              const relatedDepts = event.departmentIds
+                ? departments.filter(d => event.departmentIds?.includes(d.id))
+                : (primaryDept ? [primaryDept] : []);
+
               return (
                 <div
                   key={event.id}
                   onClick={() => onEventClick(event)}
-                  className={`px - 3 py - 1.5 rounded - lg text - sm font - bold border - l - 4 shadow - sm cursor - pointer hover: brightness - 95 flex items - center gap - 2 
-                    ${dept?.color && !dept.color.startsWith('#') ? dept.color : 'bg-gray-100 border-gray-300'}
-`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border-l-4 shadow-sm cursor-pointer hover:brightness-95 flex items-center gap-2 
+                    ${primaryDept?.color && !primaryDept.color.startsWith('#') ? primaryDept.color : 'bg-gray-100 border-gray-300'}
+                  `}
                   style={{
-                    backgroundColor: event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined),
-                    borderLeftColor: event.borderColor?.startsWith('#') ? event.borderColor : (event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined)),
+                    backgroundColor: event.color?.startsWith('#') ? event.color : (primaryDept?.color?.startsWith('#') ? primaryDept.color : undefined),
+                    borderLeftColor: event.borderColor?.startsWith('#') ? event.borderColor : (event.color?.startsWith('#') ? event.color : (primaryDept?.color?.startsWith('#') ? primaryDept.color : undefined)),
                     color: event.textColor || '#ffffff'
                   }}
                 >
                   <span className="bg-white/50 px-1.5 rounded text-[10px] uppercase tracking-wider text-inherit mix-blend-multiply opacity-80">All Day</span>
+                  {relatedDepts.length > 1 && (
+                    <div className="flex gap-1">
+                      {relatedDepts.map(d => (
+                        <span key={d.id} className="text-[10px] bg-white/40 px-1 rounded text-inherit mix-blend-multiply border border-black/5">{d.name}</span>
+                      ))}
+                    </div>
+                  )}
                   <span className="truncate">{event.title}</span>
                 </div>
               );
@@ -130,20 +141,23 @@ const DailyView: React.FC<{
               const top = (startMinutes * HOUR_HEIGHT) / 60;
               const height = ((endMinutes - startMinutes) * HOUR_HEIGHT) / 60;
 
-              const dept = departments.find(d => d.id === event.departmentId);
+              const primaryDept = departments.find(d => d.id === event.departmentId);
+              const relatedDepts = event.departmentIds
+                ? departments.filter(d => event.departmentIds?.includes(d.id))
+                : (primaryDept ? [primaryDept] : []);
 
               return (
                 <div
                   key={event.id}
                   onClick={() => onEventClick(event)}
-                  className={`absolute left - 2 right - 2 rounded - lg border - l - 4 p - 2 shadow - sm cursor - pointer hover: shadow - md transition - all overflow - hidden group z - 10 pointer - events - auto
-                    ${dept?.color && !dept.color.startsWith('#') ? dept.color : 'bg-white border-gray-200'}
-`}
+                  className={`absolute left-2 right-2 rounded-lg border-l-4 p-2 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden group z-10 pointer-events-auto
+                    ${primaryDept?.color && !primaryDept.color.startsWith('#') ? primaryDept.color : 'bg-white border-gray-200'}
+                  `}
                   style={{
-                    top: `${top} px`,
-                    height: `${Math.max(height, 30)} px`,
-                    backgroundColor: event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined),
-                    borderLeftColor: event.borderColor?.startsWith('#') ? event.borderColor : (event.color?.startsWith('#') ? event.color : (dept?.color?.startsWith('#') ? dept.color : undefined)),
+                    top: `${top}px`,
+                    height: `${Math.max(height, 30)}px`,
+                    backgroundColor: event.color?.startsWith('#') ? event.color : (primaryDept?.color?.startsWith('#') ? primaryDept.color : undefined),
+                    borderLeftColor: event.borderColor?.startsWith('#') ? event.borderColor : (event.color?.startsWith('#') ? event.color : (primaryDept?.color?.startsWith('#') ? primaryDept.color : undefined)),
                     color: event.textColor || '#ffffff'
                   }}
                 >
@@ -152,11 +166,13 @@ const DailyView: React.FC<{
                       <span className="text-xs font-bold text-inherit opacity-90 flex items-center gap-1">
                         <Clock size={10} /> {event.startTime} - {event.endTime}
                       </span>
-                      {dept && (
-                        <span className="text-xs font-extrabold uppercase bg-white/40 px-1.5 rounded text-inherit mix-blend-multiply shadow-sm border border-black/5">
-                          {dept.name}
-                        </span>
-                      )}
+                      <div className="flex gap-1 flex-wrap justify-end">
+                        {relatedDepts.map(d => (
+                          <span key={d.id} className="text-xs font-extrabold uppercase bg-white/40 px-1.5 rounded text-inherit mix-blend-multiply shadow-sm border border-black/5">
+                            {d.name}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                     <div className="font-bold text-sm text-inherit truncate mt-0.5">{event.title}</div>
                     <div className="text-xs text-gray-600 truncate mt-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
