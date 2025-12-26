@@ -159,6 +159,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
         startDate: newStartDate,
         endDate: newEndDate,
         departmentId: dropTargetDeptId,
+        departmentIds: [dropTargetDeptId], // Reset multi-dept info to target dept only
       };
 
       onEventMove(draggingEvent, updatedEvent);
