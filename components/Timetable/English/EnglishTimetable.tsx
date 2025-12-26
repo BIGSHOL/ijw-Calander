@@ -7,10 +7,12 @@ import { Teacher } from '../../../types';
 import EnglishTeacherTab from './EnglishTeacherTab';
 import EnglishClassTab from './EnglishClassTab';
 import EnglishRoomTab from './EnglishRoomTab';
+import TeacherOrderModal from './TeacherOrderModal';
 
 interface EnglishTimetableProps {
     onClose?: () => void;
     onSwitchToMath?: () => void;
+    viewType: 'teacher' | 'class' | 'room';
 }
 
 interface ScheduleCell {
@@ -22,28 +24,55 @@ interface ScheduleCell {
 
 type ScheduleData = Record<string, ScheduleCell>;
 
-const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath }) => {
-    const [activeTab, setActiveTab] = useState<'teacher' | 'class' | 'room'>('teacher');
+const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType }) => {
+    // Removed local activeTab state, using viewType prop
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
     const [teachers, setTeachers] = useState<string[]>([]);
     const [teachersData, setTeachersData] = useState<Teacher[]>([]);  // 색상 정보 포함
+    const [teacherOrder, setTeacherOrder] = useState<string[]>([]);
+    const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
-    const fetchScheduleData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const querySnapshot = await getDocs(collection(db, EN_COLLECTION));
+    // Optimized: Use Real-time listener instead of manual fetch
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, EN_COLLECTION), (snapshot) => {
             const mergedData: ScheduleData = {};
-            querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                Object.assign(mergedData, data);
+            snapshot.docs.forEach((docSnap) => {
+                const data = docSnap.data();
+                // Handle both FLAT (ijw-calander new) and NESTED (academy-app legacy) formats
+                Object.entries(data).forEach(([key, value]) => {
+                    if (typeof value === 'object' && value !== null) {
+                        // Check if this is a nested structure (academy-app format: {teacher-period: {day: cell}})
+                        // Keys like "Sarah-5" with values like {월: {...}, 화: {...}}
+                        const isNested = Object.keys(value).some(k => ['월', '화', '수', '목', '금', '토', '일'].includes(k));
+                        if (isNested) {
+                            // Flatten nested structure
+                            Object.entries(value as Record<string, ScheduleCell>).forEach(([day, cell]) => {
+                                const flatKey = `${key}-${day}`;
+                                mergedData[flatKey] = cell;
+                            });
+                        } else {
+                            // Already flat format
+                            mergedData[key] = value as ScheduleCell;
+                        }
+                    }
+                });
             });
             setScheduleData(mergedData);
-        } catch (error) {
-            console.error('데이터 로딩 실패:', error);
-        } finally {
             setLoading(false);
-        }
+        }, (error) => {
+            console.error('데이터 로딩 실패:', error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    // Manual refresh is no longer strictly needed for data, but can trigger re-sync if needed.
+    // We'll keep it as a simple re-fetch of teachers or just no-op for schedule.
+    const handleRefresh = useCallback(() => {
+        // Optional: Force re-fetch logic if needed, but snapshot handles it.
+        // We can just log or show a toast.
     }, []);
 
     // Subscribe to teachers list
@@ -55,15 +84,54 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
             }) as Teacher);
             const filtered = teacherList
                 .filter(t => (!t.subjects || t.subjects.includes('english')) && !t.isHidden);
-            setTeachersData(filtered);  // 색상 정보 포함 저장
+            setTeachersData(filtered);
             setTeachers(filtered.map(t => t.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ko')));
         });
-        return () => unsubscribe();
+
+        // Fetch Order Config
+        const unsubscribeOrder = onSnapshot(doc(db, 'settings', 'english_config'), (doc) => {
+            if (doc.exists()) {
+                setTeacherOrder(doc.data().teacherOrder || []);
+            }
+        });
+
+        return () => {
+            unsubscribe();
+            unsubscribeOrder();
+        };
     }, []);
 
-    useEffect(() => {
-        fetchScheduleData();
-    }, [fetchScheduleData]);
+    // Derived sorted teachers
+    const sortedTeachers = React.useMemo(() => {
+        if (!teachers) return [];
+        if (teacherOrder.length === 0) return teachers;
+
+        const sorted = [...teachers].sort((a, b) => {
+            const indexA = teacherOrder.indexOf(a);
+            const indexB = teacherOrder.indexOf(b);
+
+            // If both are in the order list, sort by index
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            // If only A is in list, A comes first
+            if (indexA !== -1) return -1;
+            // If only B is in list, B comes first
+            if (indexB !== -1) return 1;
+            // If neither, alphabetical
+            return a.localeCompare(b, 'ko');
+        });
+        return sorted;
+    }, [teachers, teacherOrder]);
+
+    const handleSaveOrder = async (newOrder: string[]) => {
+        try {
+            await setDoc(doc(db, 'settings', 'english_config'), { teacherOrder: newOrder }, { merge: true });
+        } catch (error) {
+            console.error('순서 저장 실패:', error);
+            alert('순서 저장에 실패했습니다.');
+        }
+    };
+
+
 
     const handleLocalUpdate = (newData: ScheduleData) => {
         setScheduleData(newData);
@@ -71,52 +139,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
 
     return (
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                    {/* Title */}
-                    <div className="flex items-center gap-2">
-                        <Clock size={18} className="text-[#fdb813]" />
-                        <span className="font-bold text-[#081429] text-sm">시간표</span>
-                    </div>
-
-                    {/* Subject Tabs - 수학 시간표와 동일한 스타일 */}
-                    <div className="flex rounded overflow-hidden border border-gray-300">
-                        <button
-                            onClick={onSwitchToMath}
-                            className="px-3 py-1.5 text-xs font-bold transition-all bg-white text-[#373d41] hover:bg-gray-100"
-                        >
-                            📐 수학
-                        </button>
-                        <button
-                            className="px-3 py-1.5 text-xs font-bold transition-all border-l border-gray-300 bg-[#fdb813] text-[#081429]"
-                        >
-                            📕 영어
-                        </button>
-                    </div>
-
-                    {/* View Type - 수학 시간표와 동일한 스타일 */}
-                    <select
-                        value={activeTab}
-                        onChange={(e) => setActiveTab(e.target.value as 'teacher' | 'class' | 'room')}
-                        className="px-2 py-1.5 text-xs font-bold border border-gray-300 rounded bg-white text-[#373d41] cursor-pointer outline-none"
-                    >
-                        <option value="teacher">👨‍🏫 강사별</option>
-                        <option value="class">📋 통합</option>
-                        <option value="room">🏫 강의실</option>
-                    </select>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={fetchScheduleData}
-                        className="p-1.5 text-gray-400 hover:text-[#fdb813] hover:bg-yellow-50 rounded"
-                        title="새로고침"
-                    >
-                        <RefreshCw size={16} />
-                    </button>
-                </div>
-            </div>
+            {/* Header Removed - Controlled by Parent */}
 
             {/* Content */}
             <div className="flex-1 overflow-hidden">
@@ -126,22 +149,34 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                     </div>
                 ) : (
                     <>
-                        {activeTab === 'teacher' && (
-                            <EnglishTeacherTab
+                        {viewType === 'teacher' && (
+                            <>
+                                <EnglishTeacherTab
+                                    teachers={sortedTeachers}
+                                    teachersData={teachersData}
+                                    scheduleData={scheduleData}
+                                    onRefresh={handleRefresh}
+                                    onUpdateLocal={handleLocalUpdate}
+                                    onOpenOrderModal={() => setIsOrderModalOpen(true)}
+                                />
+
+                                <TeacherOrderModal
+                                    isOpen={isOrderModalOpen}
+                                    onClose={() => setIsOrderModalOpen(false)}
+                                    currentOrder={teacherOrder}
+                                    allTeachers={teachers}
+                                    onSave={handleSaveOrder}
+                                />
+                            </>
+                        )}
+                        {viewType === 'class' && (
+                            <EnglishClassTab
                                 teachers={teachers}
                                 teachersData={teachersData}
                                 scheduleData={scheduleData}
-                                onRefresh={fetchScheduleData}
-                                onUpdateLocal={handleLocalUpdate}
                             />
                         )}
-                        {activeTab === 'class' && (
-                            <EnglishClassTab
-                                teachers={teachers}
-                                scheduleData={scheduleData}
-                            />
-                        )}
-                        {activeTab === 'room' && (
+                        {viewType === 'room' && (
                             <EnglishRoomTab
                                 scheduleData={scheduleData}
                             />

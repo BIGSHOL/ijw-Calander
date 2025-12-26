@@ -13,7 +13,7 @@ import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
-type ViewMode = 'daily' | 'weekly' | 'monthly';
+type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 // Import Firestore Converters from separate file
 import { departmentConverter, eventConverter } from './converters';
@@ -49,7 +49,7 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedEndDate, setSelectedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedDeptId, setSelectedDeptId] = useState<string>(''); // For creating new events
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
   const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(2); // 1단, 2단, 3단
 
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -68,7 +68,7 @@ const App: React.FC = () => {
   // Timetable Filter State (for App-level filter bar)
   const [isTimetableFilterOpen, setIsTimetableFilterOpen] = useState(false);
   const [timetableSubject, setTimetableSubject] = useState<'math' | 'english'>('math');
-  const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room'>('teacher');
+  const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room' | 'class'>('teacher');
   const [timetableShowStudents, setTimetableShowStudents] = useState(true);
   const [timetableSelectedDays, setTimetableSelectedDays] = useState<string[]>(['월', '화', '수', '목', '금']);
 
@@ -313,6 +313,8 @@ const App: React.FC = () => {
     localStorage.setItem('dept_hidden_ids', JSON.stringify(hiddenDeptIds));
   }, [hiddenDeptIds]);
 
+  const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
+
   const handleCellClick = (date: string, deptId: string) => {
     if (!hasPermission('events.create')) {
       // Silent return or alert
@@ -321,15 +323,18 @@ const App: React.FC = () => {
     setSelectedDate(date);
     setSelectedEndDate(date);
     setSelectedDeptId(deptId);
+    setSelectedDeptIds([deptId]); // Reset to single
     setEditingEvent(null);
     setIsEventModalOpen(true);
   };
 
-  const handleRangeSelect = (startDate: string, endDate: string, deptId: string) => {
+  const handleRangeSelect = (startDate: string, endDate: string, deptId: string, deptIds?: string[]) => {
+    console.log('DEBUG: App handleRangeSelect', { startDate, endDate, deptId, deptIds });
     if (!hasPermission('events.create')) return;
     setSelectedDate(startDate);
     setSelectedEndDate(endDate);
     setSelectedDeptId(deptId);
+    setSelectedDeptIds(deptIds || [deptId]); // Set multi-dept if present
     setEditingEvent(null);
     setIsEventModalOpen(true);
   };
@@ -347,13 +352,21 @@ const App: React.FC = () => {
       const recurrenceCount = (event as any)._recurrenceCount;
       delete (event as any)._recurrenceCount; // Clean up temp property
 
+      // 1. Identify Target Departments
+      // Use departmentIds if present and valid, otherwise fallback to single departmentId
+      const targetDeptIds = (event.departmentIds && event.departmentIds.length > 0)
+        ? event.departmentIds
+        : [event.departmentId];
+
+      const isMultiDept = targetDeptIds.length > 1;
+
+      // Handle Batch Creation for Recurrence
       if (recurrenceCount && recurrenceCount > 1 && event.recurrenceType) {
-        // Batch create recurring events
         const batch = writeBatch(db);
         const baseStart = parseISO(event.startDate);
         const baseEnd = parseISO(event.endDate);
         const duration = differenceInDays(baseEnd, baseStart);
-        const groupId = event.id; // Use first event ID as group ID
+        const seriesGroupId = event.id; // Use first event ID as Recurrence Group ID
 
         let createdCount = 0;
         let currentDate = baseStart;
@@ -366,14 +379,12 @@ const App: React.FC = () => {
                 currentDate = addDays(baseStart, i);
                 break;
               case 'weekdays':
-                // Skip to next weekday
                 currentDate = addDays(currentDate, 1);
                 while (getDay(currentDate) === 0 || getDay(currentDate) === 6) {
                   currentDate = addDays(currentDate, 1);
                 }
                 break;
               case 'weekends':
-                // Skip to next weekend day
                 currentDate = addDays(currentDate, 1);
                 while (getDay(currentDate) !== 0 && getDay(currentDate) !== 6) {
                   currentDate = addDays(currentDate, 1);
@@ -391,30 +402,170 @@ const App: React.FC = () => {
             }
           }
 
-          const eventId = i === 0 ? event.id : `${event.id}_r${i + 1}`;
+          // Generate a unique Related Group ID for THIS instance if multi-dept
+          // (This links Dept A's Mon event with Dept B's Mon event)
+          const instanceRelatedGroupId = isMultiDept ? `group_${Math.random().toString(36).substr(2, 9)}_${Date.now()}_${i}` : undefined;
+
+          // Determine Base Event ID for this recurrence instance
+          const baseEventId = i === 0 ? event.id : `${event.id}_r${i + 1}`;
           const newStartDate = format(currentDate, 'yyyy-MM-dd');
           const newEndDate = format(addDays(currentDate, duration), 'yyyy-MM-dd');
 
-          const recurringEvent: CalendarEvent = {
-            ...event,
-            id: eventId,
-            startDate: newStartDate,
-            endDate: newEndDate,
-            recurrenceGroupId: groupId,
-            recurrenceIndex: i + 1,
-          };
+          // Create docs for each department
+          for (const deptId of targetDeptIds) {
+            // Distinguish ID for secondary departments
+            // Primary (event.departmentId) gets the base ID to preserve logic? 
+            // Or just make sure they are unique.
+            // If we use baseEventId for one and suffix for others, it works.
+            const isPrimary = deptId === event.departmentId;
+            const finalId = isPrimary ? baseEventId : `${baseEventId}_${deptId}`;
 
-          const ref = doc(db, "일정", eventId).withConverter(eventConverter);
-          batch.set(ref, recurringEvent);
-          createdCount++;
+            const recurringEvent: CalendarEvent = {
+              ...event,
+              id: finalId,
+              departmentId: deptId, // Specific context
+              departmentIds: targetDeptIds, // Maintain list of all
+              startDate: newStartDate,
+              endDate: newEndDate,
+              recurrenceGroupId: seriesGroupId,
+              recurrenceIndex: i + 1,
+              relatedGroupId: instanceRelatedGroupId,
+            };
+
+            const ref = doc(db, "일정", finalId).withConverter(eventConverter);
+            batch.set(ref, recurringEvent);
+            createdCount++;
+          }
         }
 
         await batch.commit();
         alert(`${createdCount}개의 반복 일정이 생성되었습니다.`);
+
       } else {
-        // Single event save
-        const ref = doc(db, "일정", event.id).withConverter(eventConverter);
-        await setDoc(ref, event);
+        // Single Event Save (Create or Update)
+        const batch = writeBatch(db);
+
+        // Check if updating an existing Linked Group
+        if (event.relatedGroupId) {
+          // Strategy: Query all siblings and update them
+          const q = query(
+            collection(db, "일정").withConverter(eventConverter),
+            where("연결그룹ID", "==", event.relatedGroupId)
+          );
+
+          const snapshot = await import('firebase/firestore').then(mod => mod.getDocs(q));
+
+          if (!snapshot.empty) {
+            // 1. Update Existing Siblings (and Create Missing Ones if necessary)
+            // But 'snapshot' only gives us what exists.
+            // We need to ensure we cover ALL targetDeptIds.
+
+            // Map existing siblings by Dept ID for easy lookup
+            const existingSiblingsMap = new Map();
+            snapshot.forEach(d => {
+              const data = d.data();
+              existingSiblingsMap.set(data.departmentId, d.id);
+            });
+
+            // A. Create or Update for all Target Depts
+            for (const deptId of targetDeptIds) {
+              const isPrimary = deptId === event.departmentId;
+              // Determine ID: If it already exists in group, reuse it. If not, generate new.
+              // Note: Reuse ID to preserve history/references if possible.
+              let finalId = existingSiblingsMap.get(deptId);
+              if (!finalId) {
+                finalId = isPrimary ? event.id : `${event.id}_${deptId}`;
+              }
+
+              const singleEvent: CalendarEvent = {
+                ...event,
+                id: finalId,
+                departmentId: deptId,
+                departmentIds: targetDeptIds,
+                relatedGroupId: event.relatedGroupId
+              };
+
+              batch.set(doc(db, "일정", finalId).withConverter(eventConverter), singleEvent);
+            }
+
+            // B. Delete Orphans (Siblings that are in DB but NOT in targetDeptIds)
+            snapshot.forEach(d => {
+              const data = d.data();
+              const siblingDeptId = data.departmentId;
+              // If this sibling's department is NOT in the new selection, delete it.
+              if (!targetDeptIds.includes(siblingDeptId)) {
+                batch.delete(doc(db, "일정", d.id));
+              }
+            });
+
+          } else {
+            // Fallback: If group checked but not found (data corruption?), treat as new set.
+            // ... (Existing fallback logic)
+            // Fallback: If group checked but not found (weird), just save as single or recreate?
+            // Treat as new creation of set.
+            // (See New Set Logic below)
+            // Copy-paste creation logic...
+            // 2. Generate Grouping if needed
+            let relatedGroupId = event.relatedGroupId;
+            if (isMultiDept && !relatedGroupId) {
+              relatedGroupId = `group_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
+            }
+
+            for (const deptId of targetDeptIds) {
+              const isPrimary = deptId === event.departmentId;
+              const finalId = isPrimary ? event.id : `${event.id}_${deptId}`;
+
+              const singleEvent: CalendarEvent = {
+                ...event,
+                id: finalId,
+                departmentId: deptId,
+                departmentIds: targetDeptIds,
+                relatedGroupId: relatedGroupId
+              };
+
+              // Check if we need to DELETE an old ID if we renamed/switched primary? 
+              // For now, simpler set.
+              batch.set(doc(db, "일정", finalId).withConverter(eventConverter), singleEvent);
+            }
+          }
+        } else {
+          // New Single Event (or existing one becoming a group)
+          let relatedGroupId = event.relatedGroupId;
+          if (isMultiDept && !relatedGroupId) {
+            relatedGroupId = `group_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
+          }
+
+          const plannedIds: string[] = [];
+
+          for (const deptId of targetDeptIds) {
+            const isPrimary = deptId === event.departmentId;
+            // Careful: If 'event.id' already has a suffix, adding another is bad.
+            // Ideally event.id is clean.
+            const finalId = isPrimary ? event.id : `${event.id}_${deptId}`;
+
+            plannedIds.push(finalId);
+
+            const singleEvent: CalendarEvent = {
+              ...event,
+              id: finalId,
+              departmentId: deptId,
+              departmentIds: targetDeptIds,
+              relatedGroupId: relatedGroupId
+            };
+
+            batch.set(doc(db, "일정", finalId).withConverter(eventConverter), singleEvent);
+          }
+
+          // Cleanup: If the original event ID is NOT in the new set (meaning Primary Dept changed), delete it.
+          if (!plannedIds.includes(event.id)) {
+            if (event.createdAt) {
+              batch.delete(doc(db, "일정", event.id));
+            }
+          }
+        }
+
+        await batch.commit();
+        // Silent success for single saves updates, or alert if preferred
       }
     } catch (e) {
       console.error("Error saving event: ", e);
@@ -424,6 +575,27 @@ const App: React.FC = () => {
 
   const handleDeleteEvent = async (id: string, event?: CalendarEvent) => {
     try {
+      const batch = writeBatch(db);
+      let deleteCount = 0;
+
+      // Helper to delete a linked group for a single event instance
+      const deleteLinkedGroup = async (evt: CalendarEvent, existingBatch: any) => {
+        if (evt.relatedGroupId) {
+          const q = query(
+            collection(db, "일정").withConverter(eventConverter),
+            where("연결그룹ID", "==", evt.relatedGroupId)
+          );
+          const snapshot = await import('firebase/firestore').then(mod => mod.getDocs(q));
+          snapshot.forEach(d => {
+            existingBatch.delete(doc(db, "일정", d.id));
+            deleteCount++;
+          });
+        } else {
+          existingBatch.delete(doc(db, "일정", evt.id));
+          deleteCount++;
+        }
+      };
+
       // Check if this is a recurring event (index starts at 1, so > 0 is valid)
       if (event?.recurrenceGroupId && event.recurrenceIndex && event.recurrenceIndex > 0) {
         const deleteAll = window.confirm(
@@ -436,23 +608,50 @@ const App: React.FC = () => {
           const currentIndex = event.recurrenceIndex;
 
           // Find all events in this group with index >= current
+          // Note: Since RecurrenceGroupId is shared across Depts, this catches ALL dept copies too.
           const toDelete = events.filter(
             e => e.recurrenceGroupId === groupId && (e.recurrenceIndex || 0) >= currentIndex
           );
 
-          const batch = writeBatch(db);
           toDelete.forEach(e => {
             batch.delete(doc(db, "일정", e.id));
+            deleteCount++;
           });
+
           await batch.commit();
-          alert(`${toDelete.length}개의 반복 일정이 삭제되었습니다.`);
+          alert(`${deleteCount}개의 반복 일정이 삭제되었습니다.`);
         } else {
-          // Delete only this event
-          await deleteDoc(doc(db, "일정", id));
+          // Delete only this event (and its linked siblings)
+          if (event.relatedGroupId) {
+            const deleteLinked = window.confirm("해당 일정은 다른 부서와 연동되어 있습니다.\n\n[확인]: 연동된 모든 부서의 일정 삭제\n[취소]: 현재 부서의 일정만 삭제");
+            if (deleteLinked) {
+              await deleteLinkedGroup(event, batch);
+            } else {
+              batch.delete(doc(db, "일정", event.id));
+            }
+          } else {
+            await deleteLinkedGroup(event, batch);
+          }
+          await batch.commit();
         }
       } else {
-        // Regular single event delete
-        await deleteDoc(doc(db, "일정", id));
+        // Regular single event delete (and siblings)
+        if (event) {
+          if (event.relatedGroupId) {
+            const deleteLinked = window.confirm("해당 일정은 다른 부서와 연동되어 있습니다.\n\n[확인]: 연동된 모든 부서의 일정 삭제\n[취소]: 현재 부서의 일정만 삭제");
+            if (deleteLinked) {
+              await deleteLinkedGroup(event, batch);
+            } else {
+              batch.delete(doc(db, "일정", event.id));
+            }
+          } else {
+            await deleteLinkedGroup(event, batch);
+          }
+        } else {
+          // Fallback if event object missing (rare)
+          batch.delete(doc(db, "일정", id));
+        }
+        await batch.commit();
       }
     } catch (e) {
       console.error("Error deleting event: ", e);
@@ -534,11 +733,14 @@ const App: React.FC = () => {
   const handleSavePendingMoves = async () => {
     if (pendingEventMoves.length === 0) return;
     try {
+      let totalCount = 0;
       for (const move of pendingEventMoves) {
         await handleSaveEvent(move.updated);
+        // Count linked events if present, otherwise 1
+        totalCount += (move.updated.departmentIds?.length || 1);
       }
       setPendingEventMoves([]);
-      alert(`${pendingEventMoves.length}개의 일정이 이동되었습니다.`);
+      alert(`${totalCount}개의 일정이 이동되었습니다.`);
     } catch (e) {
       console.error(e);
       alert('일정 이동 중 오류가 발생했습니다.');
@@ -740,7 +942,7 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2 ml-auto pl-4 border-l border-gray-700 h-[24px] my-auto">
               {/* Daily/Weekly/Monthly */}
               <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                {(['daily', 'weekly', 'monthly'] as const).map((m) => (
+                {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((m) => (
                   <button
                     key={m}
                     onClick={() => setViewMode(m)}
@@ -755,28 +957,31 @@ const App: React.FC = () => {
                     {m === 'daily' && '일간'}
                     {m === 'weekly' && '주간'}
                     {m === 'monthly' && '월간'}
+                    {m === 'yearly' && '연간'}
                   </button>
                 ))}
               </div>
 
-              {/* Column View Toggle (1단/2단/3단) */}
-              <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                {([1, 2, 3] as const).map((cols) => (
-                  <button
-                    key={cols}
-                    onClick={() => setViewColumns(cols)}
-                    className={`
+              {/* Column View Toggle (1단/2단/3단) - Hide in Yearly View */}
+              {viewMode !== 'yearly' && (
+                <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+                  {([1, 2, 3] as const).map((cols) => (
+                    <button
+                      key={cols}
+                      onClick={() => setViewColumns(cols)}
+                      className={`
                        px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
                        ${viewColumns === cols
-                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      }
+                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }
                      `}
-                  >
-                    {cols}단
-                  </button>
-                ))}
-              </div>
+                    >
+                      {cols}단
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -902,7 +1107,7 @@ const App: React.FC = () => {
 
         {/* Row 2: Timetable Filter Bar - Only show in timetable mode */}
         {appMode === 'timetable' && (
-          <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
+          <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-[60] text-xs">
             {/* Main Filter Toggle */}
             <button
               onClick={() => setIsTimetableFilterOpen(!isTimetableFilterOpen)}
@@ -919,7 +1124,7 @@ const App: React.FC = () => {
                 {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
               </span>
               <span className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs">
-                {timetableViewType === 'teacher' ? '👨‍🏫 강사별' : '🏫 교실별'}
+                {timetableViewType === 'teacher' ? '👨‍🏫 강사별' : (timetableViewType === 'class' ? '📋 통합' : '🏫 교실별')}
               </span>
               <span className="text-gray-400">|</span>
               <span className="text-gray-400">
@@ -930,6 +1135,8 @@ const App: React.FC = () => {
                   학생목록 ON
                 </span>
               )}
+
+
             </div>
           </div>
         )}
@@ -981,6 +1188,17 @@ const App: React.FC = () => {
                         >
                           👨‍🏫 강사별
                         </button>
+                        {/* Integrated View - Only for English */}
+                        {timetableSubject === 'english' && (
+                          <button
+                            onClick={() => setTimetableViewType('class')}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableViewType === 'class'
+                              ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                              : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                          >
+                            📋 통합
+                          </button>
+                        )}
                         <button
                           onClick={() => setTimetableViewType('room')}
                           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableViewType === 'room'
@@ -1085,6 +1303,7 @@ const App: React.FC = () => {
                 onEventMove={handleEventMove}
                 canEditDepartment={canEditDepartment}
                 pendingEventIds={pendingEventIds}
+                onViewChange={setViewMode}
               />
             </div>
 
@@ -1105,6 +1324,7 @@ const App: React.FC = () => {
                 canEditDepartment={canEditDepartment}
                 pendingEventIds={pendingEventIds}
                 isPrimaryView={false} // Hide My Events
+                onViewChange={setViewMode}
               />
             </div>
 
@@ -1125,6 +1345,7 @@ const App: React.FC = () => {
                 canEditDepartment={canEditDepartment}
                 pendingEventIds={pendingEventIds}
                 isPrimaryView={false} // Hide My Events
+                onViewChange={setViewMode}
               />
             </div>
           </div>
@@ -1172,6 +1393,7 @@ const App: React.FC = () => {
         initialDate={selectedDate}
         initialEndDate={selectedEndDate}
         initialDepartmentId={selectedDeptId}
+        initialDepartmentIds={selectedDeptIds} // Pass multi-select
         initialStartTime={initialStartTime}
         initialEndTime={initialEndTime}
         existingEvent={editingEvent}
