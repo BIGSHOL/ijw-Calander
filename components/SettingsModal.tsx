@@ -174,9 +174,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // --- Teacher Management Handlers ---
   const handleAddTeacher = async () => {
     if (!newTeacherName.trim()) return alert("강사 이름을 입력해주세요.");
+    const name = newTeacherName.trim();
     try {
-      const newRef = doc(collection(db, '강사목록'));
-      await setDoc(newRef, { name: newTeacherName.trim(), subjects: newTeacherSubjects });
+      const docRef = doc(db, '강사목록', name);
+      // Check for duplicates
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return alert("이미 존재하는 강사 이름입니다.");
+      }
+
+      await setDoc(docRef, { name: name, subjects: newTeacherSubjects, isHidden: false });
       setNewTeacherName('');
       setNewTeacherSubjects(['math', 'english']); // Reset to default
     } catch (e) {
