@@ -27,6 +27,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
     const [teachers, setTeachers] = useState<string[]>([]);
+    const [teachersData, setTeachersData] = useState<Teacher[]>([]);  // 색상 정보 포함
 
     const fetchScheduleData = useCallback(async () => {
         setLoading(true);
@@ -48,13 +49,14 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
     // Subscribe to teachers list
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, '강사목록'), (snapshot) => {
-            const teacherList = snapshot.docs.map(doc => doc.data() as Teacher);
-            const filteredNames = teacherList
-                .filter(t => (!t.subjects || t.subjects.includes('english')) && !t.isHidden)
-                .map(t => t.name)
-                .filter(Boolean)
-                .sort((a, b) => a.localeCompare(b, 'ko'));
-            setTeachers(filteredNames);
+            const teacherList = snapshot.docs.map(doc => ({
+                ...doc.data(),
+                id: doc.id
+            }) as Teacher);
+            const filtered = teacherList
+                .filter(t => (!t.subjects || t.subjects.includes('english')) && !t.isHidden);
+            setTeachersData(filtered);  // 색상 정보 포함 저장
+            setTeachers(filtered.map(t => t.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ko')));
         });
         return () => unsubscribe();
     }, []);
@@ -127,6 +129,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                         {activeTab === 'teacher' && (
                             <EnglishTeacherTab
                                 teachers={teachers}
+                                teachersData={teachersData}
                                 scheduleData={scheduleData}
                                 onRefresh={fetchScheduleData}
                                 onUpdateLocal={handleLocalUpdate}
