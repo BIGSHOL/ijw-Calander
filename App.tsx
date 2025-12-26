@@ -962,26 +962,25 @@ const App: React.FC = () => {
                 ))}
               </div>
 
-              {/* Column View Toggle (1단/2단/3단) - Hide in Yearly View */}
-              {viewMode !== 'yearly' && (
-                <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                  {([1, 2, 3] as const).map((cols) => (
-                    <button
-                      key={cols}
-                      onClick={() => setViewColumns(cols)}
-                      className={`
+              {/* Column View Toggle (1단/2단/3단) */}
+              <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+                {([1, 2, 3] as const).map((cols) => (
+                  <button
+                    key={cols}
+                    onClick={() => setViewColumns(cols)}
+                    className={`
                        px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
                        ${viewColumns === cols
-                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
-                        }
+                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }
                      `}
-                    >
-                      {cols}단
-                    </button>
-                  ))}
-                </div>
-              )}
+                  >
+                    {cols}단
+                  </button>
+                ))}
+              </div>
+
             </div>
           </div>
         )}
@@ -1304,11 +1303,12 @@ const App: React.FC = () => {
                 canEditDepartment={canEditDepartment}
                 pendingEventIds={pendingEventIds}
                 onViewChange={setViewMode}
+                showSidePanel={viewColumns === 1} // Only show detail side panel in single column mode
               />
             </div>
 
-            {/* 2단: 1년 전 (viewColumns >= 2 일 때 표시) - 연간 뷰에서는 숨김 */}
-            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 2 && viewMode !== 'yearly' ? '' : 'hidden'}`}>
+            {/* 2단: 1년 전 (viewColumns >= 2 일 때 표시) */}
+            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 2 ? '' : 'hidden'}`}>
               <CalendarBoard
                 currentDate={rightDate}
                 onDateChange={(date) => setBaseDate(addYears(date, 1))}
@@ -1325,11 +1325,12 @@ const App: React.FC = () => {
                 pendingEventIds={pendingEventIds}
                 isPrimaryView={false} // Hide My Events
                 onViewChange={setViewMode}
+                showSidePanel={false} // Always hide side panel for comparison views
               />
             </div>
 
-            {/* 3단: 2년 전 (viewColumns >= 3 일 때 표시) - 연간 뷰에서는 숨김 */}
-            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 3 && viewMode !== 'yearly' ? '' : 'hidden'}`}>
+            {/* 3단: 2년 전 (viewColumns >= 3 일 때 표시) */}
+            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 3 ? '' : 'hidden'}`}>
               <CalendarBoard
                 currentDate={thirdDate}
                 onDateChange={(date) => setBaseDate(addYears(date, 2))}
@@ -1346,6 +1347,7 @@ const App: React.FC = () => {
                 pendingEventIds={pendingEventIds}
                 isPrimaryView={false} // Hide My Events
                 onViewChange={setViewMode}
+                showSidePanel={false}
               />
             </div>
           </div>
