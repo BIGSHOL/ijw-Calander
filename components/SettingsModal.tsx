@@ -677,8 +677,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   // Master can delete Admin and User (Not other Masters)
                   if (!isTargetMaster) canDelete = true;
                 } else if (isAdmin) {
-                  // Admin can delete User only
-                  if (!isTargetMaster && !isTargetAdmin) canDelete = true;
+                  // Admin can delete everyone except Master (including other Admins)
+                  if (!isTargetMaster) canDelete = true;
                 }
 
                 if (!canDelete) return null;
@@ -1049,9 +1049,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div className="col-span-2 flex justify-center">
                           <button
                             onClick={() => {
-                              // Security Check: Only Master can edit other Admins or Master
-                              if (!isMaster && (user.role === 'master' || user.role === 'admin')) {
-                                alert("접근 권한이 없습니다. 관리자(Admin) 및 마스터 계정은 마스터만 관리할 수 있습니다.");
+                              // Security Check: Only Master can edit Master accounts
+                              // Admin can edit everyone except Master (including themselves and other Admins)
+                              if (user.role === 'master' && !isMaster) {
+                                alert("접근 권한이 없습니다. 마스터 계정은 마스터만 관리할 수 있습니다.");
                                 return;
                               }
 
