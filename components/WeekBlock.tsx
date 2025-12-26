@@ -39,7 +39,13 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
   const weekStart = weekDays[0];
   const weekEnd = weekDays[6];
 
-  // Helper to check visibility
+  // Helper to check if date is in other month (for styling)
+  const isOtherMonth = (date: Date) => {
+    if (!currentMonthDate) return false;
+    return date.getMonth() !== currentMonthDate.getMonth();
+  };
+
+  // Helper to check visibility (keep for backward compatibility, but now always visible)
   const isDateVisible = (date: Date) => {
     if (!limitToCurrentMonth || !currentMonthDate) return true;
     return date.getMonth() === currentMonthDate.getMonth();
@@ -210,9 +216,9 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
             <div
               key={date.toISOString()}
               className={`border-r border-gray-300 last:border-r-0 p-1 text-center flex flex-col items-center justify-center min-h-[52px]
-                ${isHoliday ? 'text-red-600 bg-gradient-to-b from-red-50 to-red-100/50' : isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-[#373d41]'}
-                ${isToday(date) ? 'bg-[#fdb813]/20 font-bold' : ''}
-                ${!isDateVisible(date) ? 'opacity-25 bg-gray-50' : ''} 
+                ${isOtherMonth(date) ? 'opacity-40 bg-gray-100' : ''}
+                ${isHoliday && !isOtherMonth(date) ? 'text-red-600 bg-gradient-to-b from-red-50 to-red-100/50' : isHoliday ? 'text-red-400' : isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-[#373d41]'}
+                ${isToday(date) && !isOtherMonth(date) ? 'bg-[#fdb813]/20 font-bold' : ''}
               `}
             >
               <>
@@ -271,24 +277,22 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
               return (
                 <div
                   key={date.toISOString()}
-                  onMouseDown={() => !draggingEvent && isDateVisible(date) && handleMouseDown(date, dept.id)}
+                  onMouseDown={() => !draggingEvent && handleMouseDown(date, dept.id)}
                   onMouseEnter={() => {
-                    if (isDateVisible(date)) {
-                      handleMouseEnter(date, dept.id);
-                      handleCellMouseEnterForEventDrag(date, dept.id);
-                    }
+                    handleMouseEnter(date, dept.id);
+                    handleCellMouseEnterForEventDrag(date, dept.id);
                   }}
                   className={`border-r border-gray-300 last:border-r-0 cursor-pointer relative transition-colors
-                    ${isDrag ? 'bg-[#fdb813]/30' : (isDateVisible(date) ? 'hover:bg-gray-50' : '')}
-                    ${!isDrag && isWeekend(date) && isDateVisible(date) ? 'bg-gray-[0.01]' : ''}
-                    ${!isDateVisible(date) ? 'bg-gray-50 cursor-default' : ''}
+                    ${isOtherMonth(date) ? 'bg-gray-100/80' : ''}
+                    ${isDrag ? 'bg-[#fdb813]/30' : !isOtherMonth(date) ? 'hover:bg-gray-50' : 'hover:bg-gray-200/60'}
+                    ${!isDrag && isWeekend(date) && !isOtherMonth(date) ? 'bg-gray-[0.01]' : ''}
                     ${isDropTarget && canDrop ? 'bg-[#fdb813]/40 ring-2 ring-[#fdb813] ring-inset' : ''}
                     ${isDropTarget && !canDrop ? 'bg-red-100 cursor-not-allowed' : ''}
                     ${draggingEvent && !isDropTarget && canDrop ? 'hover:bg-[#fdb813]/20' : ''}
                   `}
                   style={{
                     gridRow: 1,
-                    gridColumn: idx + 2 // Explicitly place in columns 2 through 8
+                    gridColumn: idx + 2
                   }}
                 />
               );
