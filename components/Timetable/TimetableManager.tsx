@@ -38,6 +38,7 @@ interface TimetableManagerProps {
     onShowStudentsChange?: (show: boolean) => void;
     selectedDays?: string[];
     onSelectedDaysChange?: (days: string[]) => void;
+    teachers?: Teacher[];  // Centralized from App.tsx
 }
 
 const TimetableManager: React.FC<TimetableManagerProps> = ({
@@ -49,6 +50,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
     onShowStudentsChange,
     selectedDays: externalSelectedDays,
     onSelectedDaysChange,
+    teachers: propsTeachers = [],
 }) => {
     // Subject Tab (use external if provided)
     const [internalSubjectTab, setInternalSubjectTab] = useState<'math' | 'english'>('math');
@@ -57,7 +59,10 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
 
     // Data State
     const [classes, setClasses] = useState<TimetableClass[]>([]);
-    const [teachers, setTeachers] = useState<Teacher[]>([]);
+    // teachers는 propsTeachers에서 받아서 수학 과목 필터링하여 사용
+    const teachers = React.useMemo(() =>
+        propsTeachers.filter(t => !t.subjects || t.subjects.includes('math')),
+        [propsTeachers]);
     const [loading, setLoading] = useState(true);
 
     // Week State (for date display)
@@ -167,21 +172,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
         return () => unsubscribe();
     }, []);
 
-    // Subscribe to Teachers
-    useEffect(() => {
-        const q = query(collection(db, '강사목록'), orderBy('name'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const loadedTeachers = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as Teacher));
-
-            // Filter: Show only if 'math' is in subjects OR subjects field is missing (legacy support)
-            const filtered = loadedTeachers.filter(t => !t.subjects || t.subjects.includes('math'));
-            setTeachers(filtered);
-        });
-        return () => unsubscribe();
-    }, []);
+    // NOTE: Teachers list is now passed as props from App.tsx (centralized subscription)
 
     // Filter classes by current subject (use localClasses for pending moves)
     const filteredClasses = useMemo(() => {
@@ -402,6 +393,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
         return <EnglishTimetable
             onSwitchToMath={() => setSubjectTab('math')}
             viewType={viewType}
+            teachers={propsTeachers}
         />;
     }
 

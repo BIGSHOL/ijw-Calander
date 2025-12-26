@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Department, UserProfile, CalendarEvent, UserRole, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS, Teacher } from '../types';
+import { Department, UserProfile, CalendarEvent, UserRole, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS, Teacher, ClassKeywordColor } from '../types';
 import { usePermissions, canAssignRole, getAssignableRoles } from '../hooks/usePermissions';
 import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar, Lock, List, LayoutGrid, Eye, EyeOff } from 'lucide-react';
 import { STANDARD_HOLIDAYS } from '../constants_holidays';
@@ -18,9 +18,11 @@ interface SettingsModalProps {
   holidays: Holiday[];
   events: CalendarEvent[];
   sysCategories: string[];
+  teachers: Teacher[];  // Centralized from App.tsx
 }
 
-type TabMode = 'departments' | 'users' | 'teachers' | 'system' | 'calendar_manage' | 'role_permissions';
+type MainTabMode = 'calendar' | 'timetable' | 'permissions';
+type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -31,6 +33,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   holidays,
   events,
   sysCategories = [],
+  teachers = [],
 }) => {
   const { hasPermission } = usePermissions(currentUserProfile || null);
 
@@ -52,6 +55,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const canManageMenus = canViewDepartments;
   const canManageUsers = canViewUsers;
 
+  const [mainTab, setMainTab] = useState<MainTabMode>('calendar');
   const [activeTab, setActiveTab] = useState<TabMode>('departments');
   const [newDeptName, setNewDeptName] = useState('');
   // Default Colors for New Department
@@ -132,8 +136,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null);
   const [editHolidayName, setEditHolidayName] = useState('');
 
-  // --- Teacher Management State ---
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  // --- Teacher Management State (teachers는 props로 받음) ---
   const [newTeacherName, setNewTeacherName] = useState('');
   const [newTeacherSubjects, setNewTeacherSubjects] = useState<string[]>([]); // 기본 체크 해제
   const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
@@ -144,6 +147,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
   const [teacherSubjectFilter, setTeacherSubjectFilter] = useState<'all' | 'math' | 'english'>('all'); // 과목 필터
   const [draggedTeacherId, setDraggedTeacherId] = useState<string | null>(null); // 드래그 대상
+  const [selectedTeacherForRoom, setSelectedTeacherForRoom] = useState<string>(''); // 강의실 설정용 강사 선택
+  const [teacherDefaultRoom, setTeacherDefaultRoom] = useState<string>(''); // 강의실 입력값
+
+  // --- Class Keyword Color State ---
+  const [classKeywords, setClassKeywords] = useState<ClassKeywordColor[]>([]);
+  const [newKeyword, setNewKeyword] = useState('');
+  const [newKeywordBgColor, setNewKeywordBgColor] = useState('#fee2e2');
+  const [newKeywordTextColor, setNewKeywordTextColor] = useState('#dc2626');
 
   // --- Category Management State ---
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -298,6 +309,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [activeTab, isMaster]);
 
+  // Class Keywords subscription
+  useEffect(() => {
+    if (activeTab === 'classes' && isMaster) {
+      const unsubscribe = onSnapshot(collection(db, 'classKeywords'), (snapshot) => {
+        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ClassKeywordColor));
+        setClassKeywords(data.sort((a, b) => (a.order || 0) - (b.order || 0)));
+      });
+      return () => unsubscribe();
+    }
+  }, [activeTab, isMaster]);
+
   // Role Permissions loading (MASTER, ADMIN, MANAGER can view)
   const canViewRolePermissions = isMaster || isAdmin || currentUserProfile?.role === 'manager';
   useEffect(() => {
@@ -323,19 +345,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [activeTab, isMaster]);
 
-  // --- Teacher List Subscription ---
-  useEffect(() => {
-    if (activeTab === 'teachers' && isMaster) {
-      const unsubscribe = onSnapshot(collection(db, '강사목록'), (snapshot) => {
-        const teacherList = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Teacher)).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-        setTeachers(teacherList);
-      });
-      return () => unsubscribe();
-    }
-  }, [activeTab, isMaster]);
+  // NOTE: Teacher list is now passed as props from App.tsx (centralized subscription)
 
   const handleUpdateLookback = async (years: number) => {
     try {
@@ -735,30 +745,77 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <FolderKanban size={20} className="text-[#fdb813]" />
                 시스템 관리
               </h2>
-              <div className="flex bg-white/10 rounded-lg p-1 gap-1">
-                {/* Always show Departments if allowed */}
-                {canManageMenus && (
-                  <button onClick={() => setActiveTab('departments')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'departments' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>부서 관리</button>
-                )}
-                {/* Users Tab available to Master AND Admin */}
-                {canManageUsers && (
-                  <button onClick={() => setActiveTab('users')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'users' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>사용자 관리</button>
-                )}
-
-                {/* Teachers Tab - MASTER only */}
-                {isMaster && (
-                  <button onClick={() => setActiveTab('teachers')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'teachers' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>강사 관리</button>
-                )}
-                {/* System Tab Master OR Admin */}
-                {(isMaster || isAdmin) && (
-                  <button onClick={() => setActiveTab('system')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${activeTab === 'system' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>시스템 설정</button>
-                )}
-                {/* Role Permissions Tab - Visible to MASTER, ADMIN, MANAGER (Read-only for non-MASTER) */}
-                {(isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
-                  <button onClick={() => setActiveTab('role_permissions')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${activeTab === 'role_permissions' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}>
-                    <Lock size={12} /> 역할 권한
+              <div className="flex flex-col gap-2">
+                {/* Main Tab Selector */}
+                <div className="flex bg-white/10 rounded-lg p-1 gap-1">
+                  <button
+                    onClick={() => { setMainTab('calendar'); setActiveTab('departments'); }}
+                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'calendar' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
+                  >
+                    📅 연간 일정
                   </button>
-                )}
+                  {isMaster && (
+                    <button
+                      onClick={() => { setMainTab('timetable'); setActiveTab('teachers'); }}
+                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'timetable' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
+                    >
+                      🕐 시간표
+                    </button>
+                  )}
+                  {(isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
+                    <button
+                      onClick={() => { setMainTab('permissions'); setActiveTab('role_permissions'); }}
+                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'permissions' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
+                    >
+                      ⚙️ 시스템 설정
+                    </button>
+                  )}
+                </div>
+                {/* Sub Tab Selector */}
+                <div className="flex gap-1 pl-2">
+                  {mainTab === 'calendar' && (
+                    <>
+                      {canManageMenus && (
+                        <button onClick={() => setActiveTab('departments')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          부서 관리
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {mainTab === 'timetable' && (
+                    <>
+                      {isMaster && (
+                        <button onClick={() => setActiveTab('teachers')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'teachers' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          강사 관리
+                        </button>
+                      )}
+                      {isMaster && (
+                        <button onClick={() => setActiveTab('classes')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'classes' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          수업 관리
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {mainTab === 'permissions' && (
+                    <>
+                      {(isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
+                        <button onClick={() => setActiveTab('role_permissions')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'role_permissions' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          역할 권한
+                        </button>
+                      )}
+                      {canManageUsers && (
+                        <button onClick={() => setActiveTab('users')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'users' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          사용자 관리
+                        </button>
+                      )}
+                      {(isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
+                        <button onClick={() => setActiveTab('system')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'system' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          기타 설정
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
@@ -890,7 +947,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div className="bg-white border-x border-b border-gray-200 text-sm rounded-b-xl divide-y divide-gray-100 shadow-sm border-t-0">
                     {localDepartments
                       .filter(d => d.name.includes(deptSearchTerm))
-                      .filter(d => canViewDepartments || currentUserProfile?.departmentPermissions?.[d.id])
+                      .filter(d => isMaster || isAdmin || currentUserProfile?.departmentPermissions?.[d.id] === 'edit')
                       .map((dept, index) => (
                         <div
                           key={dept.id}
@@ -1347,8 +1404,204 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
+            {/* CLASSES MANAGEMENT TAB - 수업 키워드 색상 관리 */}
+            {activeTab === 'classes' && isMaster && (
+              <div className="max-w-4xl mx-auto space-y-8 pb-20">
+                {/* 수업 키워드 색상 관리 */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                  <h3 className="font-bold mb-2 flex items-center gap-2 text-purple-700">
+                    🎨 수업 키워드 색상 관리
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-4">
+                    수업명에 특정 단어가 포함되면 색상을 자동으로 적용합니다. (예: 'Phonics', 'Grammar')
+                    <br />
+                    <span className="text-purple-500">* 강사별 고유 색상은 '강사 관리' 메뉴에서 설정하세요.</span>
+                  </p>
+
+                  {/* 입력 폼 */}
+                  <div className="flex items-center gap-3 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="flex-1">
+                      <label className="text-xs font-bold text-gray-600 block mb-1">키워드</label>
+                      <input
+                        type="text"
+                        placeholder="예: Phonics"
+                        value={newKeyword}
+                        onChange={(e) => setNewKeyword(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 block mb-1">배경색</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={newKeywordBgColor}
+                          onChange={(e) => setNewKeywordBgColor(e.target.value)}
+                          className="w-8 h-8 rounded cursor-pointer"
+                        />
+                        <span className="text-xs text-gray-500 font-mono">{newKeywordBgColor}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 block mb-1">글자색</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={newKeywordTextColor}
+                          onChange={(e) => setNewKeywordTextColor(e.target.value)}
+                          className="w-8 h-8 rounded cursor-pointer"
+                        />
+                        <span className="text-xs text-gray-500 font-mono">{newKeywordTextColor}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!newKeyword.trim()) return;
+                        try {
+                          const id = `keyword_${Date.now()}`;
+                          await setDoc(doc(db, 'classKeywords', id), {
+                            keyword: newKeyword.trim(),
+                            bgColor: newKeywordBgColor,
+                            textColor: newKeywordTextColor,
+                            order: classKeywords.length
+                          });
+                          setNewKeyword('');
+                          setNewKeywordBgColor('#fee2e2');
+                          setNewKeywordTextColor('#dc2626');
+                        } catch (e) {
+                          console.error(e);
+                          alert('저장 실패');
+                        }
+                      }}
+                      className="mt-5 px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-110"
+                    >
+                      추가
+                    </button>
+                  </div>
+
+                  {/* 키워드 목록 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {classKeywords.map(kw => (
+                      <div
+                        key={kw.id}
+                        className="relative group p-3 rounded-lg border shadow-sm"
+                        style={{ backgroundColor: kw.bgColor, color: kw.textColor }}
+                      >
+                        <span className="font-bold">{kw.keyword}</span>
+                        <button
+                          onClick={async () => {
+                            if (confirm(`'${kw.keyword}' 키워드를 삭제하시겠습니까?`)) {
+                              try {
+                                await deleteDoc(doc(db, 'classKeywords', kw.id));
+                              } catch (e) {
+                                console.error(e);
+                                alert('삭제 실패');
+                              }
+                            }
+                          }}
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-black/10 transition-opacity"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    {classKeywords.length === 0 && (
+                      <div className="col-span-full py-8 text-center text-gray-400 text-sm">
+                        등록된 키워드가 없습니다.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 선생님 전용 강의실 설정 */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                  <h3 className="font-bold mb-4 flex items-center gap-2 text-blue-700">
+                    🏫 선생님 전용 강의실 설정
+                  </h3>
+
+                  {/* 입력 폼 */}
+                  <div className="flex items-end gap-4 mb-6 p-4 bg-blue-50/50 rounded-lg border border-blue-100">
+                    <div className="flex-1">
+                      <label className="text-xs font-bold text-gray-600 block mb-1">강사 선택</label>
+                      <select
+                        value={selectedTeacherForRoom}
+                        onChange={(e) => {
+                          setSelectedTeacherForRoom(e.target.value);
+                          const t = teachers.find(t => t.id === e.target.value);
+                          setTeacherDefaultRoom(t?.defaultRoom || '');
+                        }}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none bg-white"
+                      >
+                        <option value="">선택하세요</option>
+                        {teachers.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs font-bold text-gray-600 block mb-1">고정 강의실</label>
+                      <input
+                        type="text"
+                        placeholder="예: 601"
+                        value={teacherDefaultRoom}
+                        onChange={(e) => setTeacherDefaultRoom(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
+                      />
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!selectedTeacherForRoom) {
+                          alert('강사를 선택하세요');
+                          return;
+                        }
+                        try {
+                          await updateDoc(doc(db, 'teachers', selectedTeacherForRoom), {
+                            defaultRoom: teacherDefaultRoom.trim()
+                          });
+                          alert('저장되었습니다');
+                        } catch (e) {
+                          console.error(e);
+                          alert('저장 실패');
+                        }
+                      }}
+                      className="px-6 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-110"
+                    >
+                      저장
+                    </button>
+                  </div>
+
+                  {/* 강사별 강의실 목록 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {teachers.map(t => (
+                      <div
+                        key={t.id}
+                        className="relative group p-3 rounded-lg bg-blue-50 border border-blue-100"
+                      >
+                        <div className="font-bold text-gray-800">{t.name}</div>
+                        <div className="text-xs text-blue-600">{t.defaultRoom || '-'}</div>
+                        {t.defaultRoom && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                await updateDoc(doc(db, 'teachers', t.id), { defaultRoom: '' });
+                              } catch (e) {
+                                console.error(e);
+                              }
+                            }}
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-opacity"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* SYSTEM TAB */}
-            {activeTab === 'system' && (isMaster || isAdmin) && (
+            {activeTab === 'system' && (isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
               <div className="max-w-2xl mx-auto space-y-8 pb-20">
 
 
@@ -1499,6 +1752,58 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
 
+                {/* 1.5 Calendar Display Settings */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                  <h3 className="font-bold mb-4 flex gap-2"><CalendarClock size={18} /> 캘린더 표시 설정</h3>
+
+                  {/* Default View Mode */}
+                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">기본 뷰 모드</span>
+                      <p className="text-xs text-gray-400">앱 시작 시 기본으로 표시할 뷰</p>
+                    </div>
+                    <select
+                      value={localStorage.getItem('default_view_mode') || 'monthly'}
+                      onChange={(e) => {
+                        localStorage.setItem('default_view_mode', e.target.value);
+                        setHasChanges(true);
+                      }}
+                      className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none"
+                    >
+                      <option value="daily">일간</option>
+                      <option value="weekly">주간</option>
+                      <option value="monthly">월간</option>
+                      <option value="yearly">연간</option>
+                    </select>
+                  </div>
+
+                  {/* Dark Mode Toggle */}
+                  <div className="flex items-center justify-between py-3">
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">다크 모드</span>
+                      <p className="text-xs text-gray-400">어두운 테마 사용</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const current = localStorage.getItem('dark_mode') === 'true';
+                        localStorage.setItem('dark_mode', String(!current));
+                        if (!current) {
+                          document.documentElement.classList.add('dark');
+                        } else {
+                          document.documentElement.classList.remove('dark');
+                        }
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localStorage.getItem('dark_mode') === 'true' ? 'bg-[#081429]' : 'bg-gray-200'
+                        }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localStorage.getItem('dark_mode') === 'true' ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
                 {/* 2. System Config (Data Retention) */}
                 {isMaster && (
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -1556,17 +1861,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* ROLE PERMISSIONS TAB - Viewable by MASTER, ADMIN, MANAGER */}
             {activeTab === 'role_permissions' && canViewRolePermissions && (
               <div className="max-w-6xl mx-auto">
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="bg-gradient-to-r from-[#081429] to-[#1e3a5f] p-6 text-white">
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                      <Lock size={20} /> 역할별 권한 설정
-                      {!isMaster && <span className="text-xs bg-yellow-500 text-[#081429] px-2 py-0.5 rounded font-bold ml-2">읽기 전용</span>}
-                    </h3>
-                    <p className="text-sm text-gray-300 mt-1">
-                      {isMaster
-                        ? '각 역할이 수행할 수 있는 기능을 세부적으로 설정합니다. MASTER는 항상 모든 권한을 가집니다.'
-                        : '현재 설정된 역할별 권한을 확인할 수 있습니다. 수정은 MASTER만 가능합니다.'}
-                    </p>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  {/* Simplified header - no dark gradient */}
+                  <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-500">
+                          {isMaster
+                            ? '각 역할이 수행할 수 있는 기능을 세부적으로 설정합니다.'
+                            : '현재 설정된 역할별 권한을 확인할 수 있습니다.'}
+                        </p>
+                      </div>
+                      {!isMaster && (
+                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full font-bold">읽기 전용</span>
+                      )}
+                    </div>
                   </div>
 
                   {!rolePermissionsLoaded ? (
@@ -1598,16 +1907,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             <td colSpan={7} className="px-4 py-2 font-bold text-blue-700 text-xs uppercase tracking-wider">📅 일정 관리</td>
                           </tr>
                           {[
-                            { id: 'events.create' as PermissionId, label: '일정 생성' },
-                            { id: 'events.edit_own' as PermissionId, label: '본인 일정 수정' },
-                            { id: 'events.edit_others' as PermissionId, label: '타인 일정 수정' },
-                            { id: 'events.delete_own' as PermissionId, label: '본인 일정 삭제' },
-                            { id: 'events.delete_others' as PermissionId, label: '타인 일정 삭제' },
-                            { id: 'events.drag_move' as PermissionId, label: '일정 드래그 이동' },
-                            { id: 'events.attendance' as PermissionId, label: '참가 현황 변경' },
+                            { id: 'events.create' as PermissionId, label: '일정 생성', desc: '새 일정 추가 (버튼, 드래그)' },
+                            { id: 'events.edit_own' as PermissionId, label: '본인 일정 수정', desc: '본인이 만든 일정 수정' },
+                            { id: 'events.edit_others' as PermissionId, label: '타인 일정 수정', desc: '다른 사용자 일정 수정' },
+                            { id: 'events.delete_own' as PermissionId, label: '본인 일정 삭제', desc: '본인이 만든 일정 삭제' },
+                            { id: 'events.delete_others' as PermissionId, label: '타인 일정 삭제', desc: '다른 사용자 일정 삭제' },
+                            { id: 'events.drag_move' as PermissionId, label: '일정 드래그 이동', desc: '드래그로 날짜/시간 변경' },
+                            { id: 'events.attendance' as PermissionId, label: '참가 현황 변경', desc: '참석/불참 표시 관리' },
                           ].map(perm => (
                             <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                              <td className="px-4 py-2.5 text-gray-700 sticky left-0 bg-white">{perm.label}</td>
+                              <td className="px-4 py-2.5 sticky left-0 bg-white">
+                                <div className="text-gray-700">{perm.label}</div>
+                                <div className="text-[10px] text-gray-400">{perm.desc}</div>
+                              </td>
                               {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
                                 <td key={role} className="text-center px-3 py-2.5">
                                   <input
@@ -1636,14 +1948,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             <td colSpan={7} className="px-4 py-2 font-bold text-indigo-700 text-xs uppercase tracking-wider">🏢 부서(메뉴) 관리</td>
                           </tr>
                           {[
-                            { id: 'departments.view_all' as PermissionId, label: '모든 부서 조회' },
-                            { id: 'departments.create' as PermissionId, label: '부서 생성' },
-                            { id: 'departments.edit' as PermissionId, label: '부서 수정' },
-                            { id: 'departments.delete' as PermissionId, label: '부서 삭제' },
-                            { id: 'settings.manage_categories' as PermissionId, label: '카테고리 관리' },
+                            { id: 'departments.view_all' as PermissionId, label: '모든 부서 조회', desc: '전체 부서 목록/필터 접근' },
+                            { id: 'departments.create' as PermissionId, label: '부서 생성', desc: '새 부서 추가' },
+                            { id: 'departments.edit' as PermissionId, label: '부서 수정', desc: '부서명/색상/순서 변경' },
+                            { id: 'departments.delete' as PermissionId, label: '부서 삭제', desc: '부서 완전 삭제' },
+                            { id: 'settings.manage_categories' as PermissionId, label: '카테고리 관리', desc: '부서 그룹 카테고리 추가/삭제' },
                           ].map(perm => (
                             <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                              <td className="px-4 py-2.5 text-gray-700 sticky left-0 bg-white">{perm.label}</td>
+                              <td className="px-4 py-2.5 sticky left-0 bg-white">
+                                <div className="text-gray-700">{perm.label}</div>
+                                <div className="text-[10px] text-gray-400">{perm.desc}</div>
+                              </td>
                               {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
                                 <td key={role} className="text-center px-3 py-2.5">
                                   <input
@@ -1672,13 +1987,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             <td colSpan={7} className="px-4 py-2 font-bold text-purple-700 text-xs uppercase tracking-wider">👥 사용자 관리</td>
                           </tr>
                           {[
-                            { id: 'users.view' as PermissionId, label: '사용자 목록 조회' },
-                            { id: 'users.approve' as PermissionId, label: '가입 승인/거부' },
-                            { id: 'users.change_role' as PermissionId, label: '역할 변경' },
-                            { id: 'users.change_permissions' as PermissionId, label: '개별 권한 변경' },
+                            { id: 'users.view' as PermissionId, label: '사용자 목록 조회', desc: '전체 사용자 목록 열람' },
+                            { id: 'users.approve' as PermissionId, label: '가입 승인/거부', desc: '신규 가입자 상태 변경' },
+                            { id: 'users.change_role' as PermissionId, label: '역할 변경', desc: '사용자 역할(Role) 변경' },
+                            { id: 'users.change_permissions' as PermissionId, label: '부서 권한 변경', desc: '부서별 차단/조회/수정 설정' },
                           ].map(perm => (
                             <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                              <td className="px-4 py-2.5 text-gray-700 sticky left-0 bg-white">{perm.label}</td>
+                              <td className="px-4 py-2.5 sticky left-0 bg-white">
+                                <div className="text-gray-700">{perm.label}</div>
+                                <div className="text-[10px] text-gray-400">{perm.desc}</div>
+                              </td>
                               {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
                                 <td key={role} className="text-center px-3 py-2.5">
                                   <input
@@ -1707,14 +2025,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             <td colSpan={7} className="px-4 py-2 font-bold text-orange-700 text-xs uppercase tracking-wider">⚙️ 시스템 설정</td>
                           </tr>
                           {[
-                            { id: 'settings.access' as PermissionId, label: '설정 메뉴 접근' },
-                            { id: 'settings.holidays' as PermissionId, label: '공휴일 관리' },
-                            { id: 'settings.role_permissions' as PermissionId, label: '역할별 권한 설정', disabled: true },
+                            { id: 'settings.access' as PermissionId, label: '설정 메뉴 접근', desc: '설정 화면 열기 및 접근' },
+                            { id: 'settings.holidays' as PermissionId, label: '공휴일 관리', desc: '공휴일 추가/수정/삭제' },
+                            { id: 'settings.role_permissions' as PermissionId, label: '역할별 권한 설정', desc: '역할 기반 권한 체계 설정', disabled: true },
                           ].map(perm => (
                             <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                              <td className="px-4 py-2.5 text-gray-700 sticky left-0 bg-white">
-                                {perm.label}
-                                {perm.disabled && <span className="text-[10px] text-gray-400 ml-2">(MASTER 전용)</span>}
+                              <td className="px-4 py-2.5 sticky left-0 bg-white">
+                                <div className="text-gray-700">
+                                  {perm.label}
+                                  {perm.disabled && <span className="text-[10px] text-red-400 ml-2">(MASTER 전용)</span>}
+                                </div>
+                                <div className="text-[10px] text-gray-400">{perm.desc}</div>
                               </td>
                               {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
                                 <td key={role} className="text-center px-3 py-2.5">

@@ -1,1 +1,250 @@
 /* Tailwind is loaded via CDN in index.html */
+
+/* Dark Mode Styles */
+:root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --text-primary: #081429;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+}
+
+.dark {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --border-color: #334155;
+}
+
+/* Apply dark mode to key elements */
+.dark body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.dark .bg-white {
+    background-color: var(--bg-secondary) !important;
+}
+
+.dark .bg-gray-50,
+.dark .bg-gray-100 {
+    background-color: var(--bg-primary) !important;
+}
+
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-gray-600 {
+    color: var(--text-primary) !important;
+}
+
+.dark .text-gray-500,
+.dark .text-gray-400 {
+    color: var(--text-secondary) !important;
+}
+
+.dark .border-gray-200,
+.dark .border-gray-100 {
+    border-color: var(--border-color) !important;
+}
+
+.dark .shadow-xl,
+.dark .shadow-lg,
+.dark .shadow-md,
+.dark .shadow-sm {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Dark Mode - Additional Text Colors */
+.dark .text-black,
+.dark .text-gray-900 {
+    color: var(--text-primary) !important;
+}
+
+.dark .text-gray-300 {
+    color: #cbd5e1 !important;
+}
+
+/* Dark Mode - Input Fields */
+.dark input,
+.dark select,
+.dark textarea {
+    background-color: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.dark input::placeholder {
+    color: var(--text-secondary) !important;
+}
+
+/* Dark Mode - Department Names in Sidebar (specific selector) */
+.dark [class*="text-white"] {
+    color: #ffffff !important;
+}
+
+/* Dark Mode - Table Elements */
+.dark th,
+.dark td {
+    color: var(--text-primary);
+}
+
+.dark thead {
+    background-color: var(--bg-primary) !important;
+}
+
+.dark tbody tr {
+    border-color: var(--border-color) !important;
+}
+
+/* Dark Mode - Timetable Cell Text */
+.dark .text-xs,
+.dark .text-sm {
+    color: inherit;
+}
+
+/* Dark Mode - Force light text on dark colored backgrounds */
+.dark [style*="background-color: #081429"],
+.dark [style*="background-color: #1e293b"] {
+    color: #ffffff !important;
+}
+
+/* Dark Mode - Settings Modal Specific */
+.dark h3,
+.dark h4 {
+    color: var(--text-primary) !important;
+}
+
+.dark label {
+    color: var(--text-primary) !important;
+}
+
+.dark p {
+    color: var(--text-secondary) !important;
+}
+
+/* Dark Mode - Buttons */
+.dark button.bg-gray-100,
+.dark button.bg-gray-200 {
+    background-color: #334155 !important;
+    color: var(--text-primary) !important;
+}
+
+/* Dark Mode - Hover States */
+.dark [class*="hover:bg-gray"]:hover {
+    background-color: #334155 !important;
+}
+
+/* Dark Mode - Red/Danger Sections */
+.dark .bg-red-50 {
+    background-color: #450a0a !important;
+}
+
+.dark .text-red-600,
+.dark .text-red-700,
+.dark .text-red-900 {
+    color: #fca5a5 !important;
+}
+
+.dark .border-red-100,
+.dark .border-red-200 {
+    border-color: #7f1d1d !important;
+}
+
+/* Dark Mode - Blue Sections */
+.dark .bg-blue-50 {
+    background-color: #172554 !important;
+}
+
+.dark .text-blue-700 {
+    color: #93c5fd !important;
+}
+
+/* Dark Mode - Indigo Sections */
+.dark .bg-indigo-50 {
+    background-color: #1e1b4b !important;
+}
+
+.dark .text-indigo-700 {
+    color: #a5b4fc !important;
+}
+
+/* Dark Mode - Purple Sections */
+.dark .bg-purple-50 {
+    background-color: #2e1065 !important;
+}
+
+.dark .text-purple-700 {
+    color: #c4b5fd !important;
+}
+
+/* Dark Mode - Orange Sections */
+.dark .bg-orange-50 {
+    background-color: #431407 !important;
+}
+
+.dark .text-orange-700 {
+    color: #fdba74 !important;
+}
+
+/* Dark Mode - Links and User Names */
+.dark a,
+.dark .text-blue-500,
+.dark .text-blue-600 {
+    color: #60a5fa !important;
+}
+
+.dark .text-indigo-600,
+.dark .text-indigo-500 {
+    color: #818cf8 !important;
+}
+
+/* Dark Mode - Spans and small text */
+.dark span {
+    color: inherit;
+}
+
+/* Dark Mode - Green Status */
+.dark .bg-green-50 {
+    background-color: #052e16 !important;
+}
+
+.dark .text-green-600,
+.dark .text-green-700 {
+    color: #86efac !important;
+}
+
+/* Dark Mode - Yellow/Amber Status */
+.dark .bg-yellow-50,
+.dark .bg-amber-50 {
+    background-color: #422006 !important;
+}
+
+.dark .text-yellow-600,
+.dark .text-yellow-700,
+.dark .text-amber-600 {
+    color: #fcd34d !important;
+}
+
+/* Dark Mode - Ring/Outline Focus */
+.dark .ring-2,
+.dark .ring-4 {
+    --tw-ring-color: #475569 !important;
+}
+
+/* Dark Mode - Yearly View Selected Month - No inset shadow */
+.dark .shadow-inner {
+    box-shadow: none !important;
+}
+
+/* Dark Mode - Yearly View Month Card Selected State */
+.dark [class*="ring-yellow"],
+.dark [class*="ring-amber"] {
+    box-shadow: 0 0 0 2px #fdb813 !important;
+}
+
+/* Dark Mode - Gray backgrounds for cards */
+.dark [class*="bg-gray-50"],
+.dark [class*="bg-gray-100"] {
+    background-color: var(--bg-primary) !important;
+}

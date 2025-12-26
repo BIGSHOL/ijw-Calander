@@ -13,6 +13,7 @@ interface EnglishTimetableProps {
     onClose?: () => void;
     onSwitchToMath?: () => void;
     viewType: 'teacher' | 'class' | 'room';
+    teachers?: Teacher[];  // Centralized from App.tsx via TimetableManager
 }
 
 interface ScheduleCell {
@@ -24,7 +25,7 @@ interface ScheduleCell {
 
 type ScheduleData = Record<string, ScheduleCell>;
 
-const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType }) => {
+const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [] }) => {
     // Removed local activeTab state, using viewType prop
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
@@ -75,30 +76,23 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
         // We can just log or show a toast.
     }, []);
 
-    // Subscribe to teachers list
+    // Filter teachers for English from props and set local state
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, '강사목록'), (snapshot) => {
-            const teacherList = snapshot.docs.map(doc => ({
-                ...doc.data(),
-                id: doc.id
-            }) as Teacher);
-            const filtered = teacherList
-                .filter(t => (!t.subjects || t.subjects.includes('english')) && !t.isHidden);
-            setTeachersData(filtered);
-            setTeachers(filtered.map(t => t.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ko')));
-        });
+        const filtered = propsTeachers.filter(t =>
+            (!t.subjects || t.subjects.includes('english')) && !t.isHidden
+        );
+        setTeachersData(filtered);
+        setTeachers(filtered.map(t => t.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ko')));
+    }, [propsTeachers]);
 
-        // Fetch Order Config
+    // Subscribe to Order Config only
+    useEffect(() => {
         const unsubscribeOrder = onSnapshot(doc(db, 'settings', 'english_config'), (doc) => {
             if (doc.exists()) {
                 setTeacherOrder(doc.data().teacherOrder || []);
             }
         });
-
-        return () => {
-            unsubscribe();
-            unsubscribeOrder();
-        };
+        return () => unsubscribeOrder();
     }, []);
 
     // Derived sorted teachers
