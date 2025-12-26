@@ -34,6 +34,7 @@ const EventModal: React.FC<EventModalProps> = ({
   initialDate,
   initialEndDate,
   initialDepartmentId,
+  initialDepartmentIds,
   initialStartTime,
   initialEndTime,
   existingEvent,
@@ -146,8 +147,13 @@ const EventModal: React.FC<EventModalProps> = ({
             setAuthorId('');
             setAuthorName('');
           }
-          const targetDeptId = initialDepartmentId || departments[0]?.id || '';
-          setDepartmentIds(targetDeptId ? [targetDeptId] : []);
+
+          if (initialDepartmentIds && initialDepartmentIds.length > 0) {
+            setDepartmentIds(initialDepartmentIds);
+          } else {
+            const targetDeptId = initialDepartmentId || departments[0]?.id || '';
+            setDepartmentIds(targetDeptId ? [targetDeptId] : []);
+          }
           setStartDate(initialDate || format(new Date(), 'yyyy-MM-dd'));
           setEndDate(initialEndDate || initialDate || format(new Date(), 'yyyy-MM-dd'));
 
@@ -164,8 +170,14 @@ const EventModal: React.FC<EventModalProps> = ({
           setRecurrenceType('none');
           setRecurrenceCount(1);
 
+
           // Apply Department Defaults
-          const targetDept = departments.find(d => d.id === targetDeptId);
+          // Resolution: If multi-selected, pick the FIRST one for default color.
+          const effectiveTargetDeptId = (initialDepartmentIds && initialDepartmentIds[0])
+            ? initialDepartmentIds[0]
+            : (initialDepartmentId || departments[0]?.id || '');
+
+          const targetDept = departments.find(d => d.id === effectiveTargetDeptId);
           setSelectedColor(targetDept?.defaultColor || '#fee2e2');
           setSelectedTextColor(targetDept?.defaultTextColor || '#ffffff');
           setSelectedBorderColor(targetDept?.defaultBorderColor || targetDept?.defaultColor || '#fee2e2');
@@ -222,6 +234,8 @@ const EventModal: React.FC<EventModalProps> = ({
       attendance: attendance,
       // Include recurrence info for new events
       recurrenceType: recurrenceType !== 'none' ? recurrenceType : undefined,
+      // Fix: Pass relatedGroupId to persist Linked Group association
+      relatedGroupId: existingEvent?.relatedGroupId,
     };
 
     console.log('DEBUG: selectedColor', selectedColor);

@@ -10,7 +10,7 @@ interface WeekBlockProps {
   departments: Department[];
   events: CalendarEvent[];
   onCellClick: (date: string, deptId: string) => void;
-  onRangeSelect: (startDate: string, endDate: string, deptId: string) => void;
+  onRangeSelect: (startDate: string, endDate: string, deptId: string, deptIds?: string[]) => void;
   onEventClick: (event: CalendarEvent) => void;
   // New Props
   currentMonthDate?: Date;
@@ -52,8 +52,9 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
   };
 
   // Drag State (Cell Selection)
+  // Store Dept ID to find index later.
   const [dragStart, setDragStart] = useState<{ date: Date, deptId: string } | null>(null);
-  const [dragEnd, setDragEnd] = useState<Date | null>(null);
+  const [dragEnd, setDragEnd] = useState<{ date: Date, deptId: string } | null>(null);
 
   // Event Drag State
   const [draggingEvent, setDraggingEvent] = useState<CalendarEvent | null>(null);
@@ -69,24 +70,56 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
 
   const handleMouseDown = (date: Date, deptId: string) => {
     setDragStart({ date, deptId });
-    setDragEnd(date);
+    setDragEnd({ date, deptId });
   };
 
   const handleMouseEnter = (date: Date, deptId: string) => {
-    if (dragStart && dragStart.deptId === deptId) {
-      setDragEnd(date);
+    // Enable Multi-Dept selection by updating end state regardless of Dept ID
+    if (dragStart) {
+      setDragEnd({ date, deptId });
     }
   };
 
   const handleMouseUp = () => {
     if (dragStart && dragEnd) {
-      const start = dragStart.date < dragEnd ? dragStart.date : dragEnd;
-      const end = dragStart.date < dragEnd ? dragEnd : dragStart.date;
+      // Date Range
+      const start = dragStart.date < dragEnd.date ? dragStart.date : dragEnd.date;
+      const end = dragStart.date < dragEnd.date ? dragEnd.date : dragStart.date;
 
-      if (isSameDay(start, end)) {
-        onCellClick(format(start, 'yyyy-MM-dd'), dragStart.deptId);
+      // Dept Range
+      const startIdx = departments.findIndex(d => d.id === dragStart.deptId);
+      const endIdx = departments.findIndex(d => d.id === dragEnd.deptId);
+      const minIdx = Math.min(startIdx, endIdx);
+      const maxIdx = Math.max(startIdx, endIdx);
+
+      const selectedDeptIds = departments
+        .slice(minIdx, maxIdx + 1)
+        .map(d => d.id);
+
+      // Pass array if supported, else fallback? 
+      // We will modify parent to support array.
+      // For backward compatibility (if needed), we can pass selectedDeptIds as extra arg.
+
+      // Note: We need to cast or update interface. 
+      // Assumption: onRangeSelect is updated to: (startDate, endDate, primaryDeptId, allDeptIds?)
+      // Or just cheat and pass it.
+
+      if (isSameDay(start, end) && selectedDeptIds.length === 1) {
+        onCellClick(format(start, 'yyyy-MM-dd'), selectedDeptIds[0]);
       } else {
-        onRangeSelect(format(start, 'yyyy-MM-dd'), format(end, 'yyyy-MM-dd'), dragStart.deptId);
+        // Hack: Pass the array as part of the 'deptId' argument wrapper or updated callback?
+        // Let's modify the interface in a separate step or strict type here.
+        // Actually, parent App.tsx expects (s, e, d). 
+        // I should invoke a NEW prop if I can, or Overload.
+        // Let's just pass `selectedDeptIds[0]` as primary and `selectedDeptIds` as 4th arg?
+        // Or better, just fix the interface first.
+        // But I am editing this file.
+        // I will assume `onRangeSelect` can take 4th arg `deptIds?: string[]`.
+
+        // Use the primary (first clicked) as the main one, but pass full list.
+        // Actually, dragStart is the anchor.
+        console.log('DEBUG: WeekBlock handleMouseUp', { startIdx, endIdx, selectedDeptIds });
+        onRangeSelect(format(start, 'yyyy-MM-dd'), format(end, 'yyyy-MM-dd'), dragStart.deptId, selectedDeptIds);
       }
     }
     setDragStart(null);
@@ -105,10 +138,23 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
   };
 
   const isDraggingCell = (date: Date, deptId: string) => {
-    if (!dragStart || !dragEnd || dragStart.deptId !== deptId) return false;
-    const start = dragStart.date < dragEnd ? dragStart.date : dragEnd;
-    const end = dragStart.date < dragEnd ? dragEnd : dragStart.date;
-    return isWithinInterval(date, { start: startOfDay(start), end: startOfDay(end) });
+    if (!dragStart || !dragEnd) return false;
+
+    // Date Range
+    const start = dragStart.date < dragEnd.date ? dragStart.date : dragEnd.date;
+    const end = dragStart.date < dragEnd.date ? dragEnd.date : dragStart.date;
+    const inDateRange = isWithinInterval(date, { start: startOfDay(start), end: startOfDay(end) });
+
+    // Dept Range
+    const startIdx = departments.findIndex(d => d.id === dragStart.deptId);
+    const endIdx = departments.findIndex(d => d.id === dragEnd.deptId);
+    const currentIdx = departments.findIndex(d => d.id === deptId);
+
+    const minIdx = Math.min(startIdx, endIdx);
+    const maxIdx = Math.max(startIdx, endIdx);
+    const inDeptRange = currentIdx >= minIdx && currentIdx <= maxIdx;
+
+    return inDateRange && inDeptRange;
   };
 
   // --- Event Drag Handlers ---
@@ -154,12 +200,22 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
       const newStartDate = format(dropTargetDate, 'yyyy-MM-dd');
       const newEndDate = format(addDays(dropTargetDate, duration), 'yyyy-MM-dd');
 
+      // Logic to preserve Linked Group departments
+      let newDeptIds = draggingEvent.departmentIds ? [...draggingEvent.departmentIds] : [draggingEvent.departmentId];
+
+      if (draggingEvent.departmentId !== dropTargetDeptId) {
+        // Swap the old department ID with the new one
+        newDeptIds = newDeptIds.map(id => id === draggingEvent.departmentId ? dropTargetDeptId : id);
+        // Ensure uniqueness
+        newDeptIds = [...new Set(newDeptIds)];
+      }
+
       const updatedEvent: CalendarEvent = {
         ...draggingEvent,
         startDate: newStartDate,
         endDate: newEndDate,
         departmentId: dropTargetDeptId,
-        departmentIds: [dropTargetDeptId], // Reset multi-dept info to target dept only
+        departmentIds: newDeptIds, // Pass the updated list
       };
 
       onEventMove(draggingEvent, updatedEvent);
@@ -242,10 +298,18 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
       {departments.map((dept) => {
         const weekEvents = events.filter(e => {
           // Compatibility: Match by ID or Name (for cases where old IDs like 'school' exist but new events use '학교일정')
-          // Multi-Department Support: Check departmentIds array OR single departmentId
-          const isMatch = (e.departmentIds && e.departmentIds.includes(dept.id)) ||
-            e.departmentId === dept.id ||
-            e.departmentId === dept.name;
+          // Linked Group Support: STRICTLY match departmentId. 
+          // The departmentIds array is for knowing which other depts share this event, NOT for display in this column.
+          // Exception: If departmentId is missing (legacy data) or it's a legacy multi-dept event without Linked Groups?
+          // We should prioritize departmentId if it exists.
+
+          let isMatch = false;
+          if (e.departmentId) {
+            isMatch = e.departmentId === dept.id || e.departmentId === dept.name;
+          } else {
+            // Legacy fallback (shouldn't happen with new events)
+            isMatch = (e.departmentIds && e.departmentIds.includes(dept.id)) || false;
+          }
 
           if (!isMatch) return false;
           const start = parseISO(e.startDate);

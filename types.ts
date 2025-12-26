@@ -34,6 +34,7 @@ export interface CalendarEvent {
   recurrenceGroupId?: string;  // ID of the first event in recurrence group
   recurrenceIndex?: number;    // 1-based index in the recurrence group
   recurrenceType?: 'daily' | 'weekdays' | 'weekends' | 'weekly' | 'monthly' | 'yearly';
+  relatedGroupId?: string;     // Group ID for multi-department linked events
 }
 
 export interface DragSelection {

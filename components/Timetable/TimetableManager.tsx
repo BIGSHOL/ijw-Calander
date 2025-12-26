@@ -32,8 +32,8 @@ const getSubjectTheme = (subject: string) => {
 interface TimetableManagerProps {
     subjectTab?: 'math' | 'english';
     onSubjectChange?: (subject: 'math' | 'english') => void;
-    viewType?: 'teacher' | 'room';
-    onViewTypeChange?: (viewType: 'teacher' | 'room') => void;
+    viewType?: 'teacher' | 'room' | 'class';
+    onViewTypeChange?: (viewType: 'teacher' | 'room' | 'class') => void;
     showStudents?: boolean;
     onShowStudentsChange?: (show: boolean) => void;
     selectedDays?: string[];
@@ -71,7 +71,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
     const selectedDays = externalSelectedDays ?? internalSelectedDays;
     const setSelectedDays = onSelectedDaysChange ?? setInternalSelectedDays;
 
-    const [internalViewType, setInternalViewType] = useState<'teacher' | 'room'>('teacher');
+    const [internalViewType, setInternalViewType] = useState<'teacher' | 'room' | 'class'>('teacher');
     const viewType = externalViewType ?? internalViewType;
     const setViewType = onViewTypeChange ?? setInternalViewType;
 
@@ -399,7 +399,10 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
 
     // 영어 탭이면 EnglishTimetable 컴포넌트 렌더링
     if (subjectTab === 'english') {
-        return <EnglishTimetable onSwitchToMath={() => setSubjectTab('math')} />;
+        return <EnglishTimetable
+            onSwitchToMath={() => setSubjectTab('math')}
+            viewType={viewType}
+        />;
     }
 
     return (
