@@ -179,5 +179,7 @@ export interface Teacher {
   subjects?: string[];  // 담당 과목
   isHidden?: boolean;   // 시간표 표시 여부
   color?: string;
+  bgColor?: string;     // 퍼스널 배경색
+  textColor?: string;   // 퍼스널 글자색
   order?: number;
 }
