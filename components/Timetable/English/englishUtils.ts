@@ -34,15 +34,21 @@ export const parseCellKey = (key: string): { teacher: string; periodId: string; 
 };
 
 // 강사 색상 (기본값)
-export const DEFAULT_TEACHER_COLORS: Record<string, string> = {
-    'Teacher1': '#3B82F6',
-    'Teacher2': '#10B981',
-    'Teacher3': '#F59E0B',
-    'Teacher4': '#EF4444',
-    'Teacher5': '#8B5CF6',
+export const DEFAULT_TEACHER_COLORS: Record<string, { bg: string; text: string }> = {
+    'Teacher1': { bg: '#3B82F6', text: '#ffffff' },
+    'Teacher2': { bg: '#10B981', text: '#ffffff' },
+    'Teacher3': { bg: '#F59E0B', text: '#ffffff' },
+    'Teacher4': { bg: '#EF4444', text: '#ffffff' },
+    'Teacher5': { bg: '#8B5CF6', text: '#ffffff' },
 };
 
-export const getTeacherColor = (teacherName: string, teachersData?: { name: string; color?: string }[]): string => {
+export const getTeacherColor = (
+    teacherName: string,
+    teachersData?: { name: string; bgColor?: string; textColor?: string }[]
+): { bg: string; text: string } => {
     const teacher = teachersData?.find(t => t.name === teacherName);
-    return teacher?.color || DEFAULT_TEACHER_COLORS[teacherName] || '#6B7280';
+    if (teacher?.bgColor) {
+        return { bg: teacher.bgColor, text: teacher.textColor || '#ffffff' };
+    }
+    return DEFAULT_TEACHER_COLORS[teacherName] || { bg: '#6B7280', text: '#ffffff' };
 };

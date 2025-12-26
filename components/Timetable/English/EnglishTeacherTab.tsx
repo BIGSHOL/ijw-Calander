@@ -6,6 +6,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { Plus, Edit3, Move, Eye, X } from 'lucide-react';
 import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor } from './englishUtils';
+import { Teacher } from '../../../types';
 
 interface ScheduleCell {
     className?: string;
@@ -18,6 +19,7 @@ type ScheduleData = Record<string, ScheduleCell>;
 
 interface EnglishTeacherTabProps {
     teachers: string[];
+    teachersData: Teacher[];  // 강사 데이터 (색상 포함)
     scheduleData: ScheduleData;
     onRefresh: () => void;
     onUpdateLocal: (data: ScheduleData) => void;
@@ -25,6 +27,7 @@ interface EnglishTeacherTabProps {
 
 const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({
     teachers,
+    teachersData,
     scheduleData,
     onRefresh,
     onUpdateLocal,
@@ -177,16 +180,19 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({
                     <thead className="sticky top-0 z-10">
                         <tr>
                             <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
-                            {filteredTeachers.map(teacher => (
-                                <th
-                                    key={teacher}
-                                    colSpan={EN_WEEKDAYS.length}
-                                    className="p-2 border text-xs font-bold text-white"
-                                    style={{ backgroundColor: getTeacherColor(teacher) }}
-                                >
-                                    {teacher}
-                                </th>
-                            ))}
+                            {filteredTeachers.map(teacher => {
+                                const colors = getTeacherColor(teacher, teachersData);
+                                return (
+                                    <th
+                                        key={teacher}
+                                        colSpan={EN_WEEKDAYS.length}
+                                        className="p-2 border text-xs font-bold"
+                                        style={{ backgroundColor: colors.bg, color: colors.text }}
+                                    >
+                                        {teacher}
+                                    </th>
+                                );
+                            })}
                         </tr>
                         <tr>
                             {filteredTeachers.map(teacher => (
@@ -219,10 +225,10 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({
                                                 key={cellKey}
                                                 onClick={() => handleCellClick(cellKey)}
                                                 className={`p-1 border text-center cursor-pointer transition-all min-h-[40px] ${isSelected
-                                                        ? 'bg-blue-100 ring-2 ring-blue-400'
-                                                        : cellData?.className
-                                                            ? 'bg-green-50 hover:bg-green-100'
-                                                            : 'hover:bg-gray-50'
+                                                    ? 'bg-blue-100 ring-2 ring-blue-400'
+                                                    : cellData?.className
+                                                        ? 'bg-green-50 hover:bg-green-100'
+                                                        : 'hover:bg-gray-50'
                                                     }`}
                                             >
                                                 {cellData?.className && (

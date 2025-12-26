@@ -134,13 +134,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // --- Teacher Management State ---
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [newTeacherName, setNewTeacherName] = useState('');
-  const [newTeacherSubjects, setNewTeacherSubjects] = useState<string[]>(['math', 'english']);
+  const [newTeacherSubjects, setNewTeacherSubjects] = useState<string[]>([]); // 기본 체크 해제
   const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
   const [editTeacherName, setEditTeacherName] = useState('');
   const [editTeacherSubjects, setEditTeacherSubjects] = useState<string[]>([]);
   const [editTeacherBgColor, setEditTeacherBgColor] = useState('#3b82f6'); // 기본 파란색
   const [editTeacherTextColor, setEditTeacherTextColor] = useState('#ffffff'); // 기본 흰색
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
+  const [teacherSubjectFilter, setTeacherSubjectFilter] = useState<'all' | 'math' | 'english'>('all'); // 과목 필터
+  const [draggedTeacherId, setDraggedTeacherId] = useState<string | null>(null); // 드래그 대상
 
   // --- Category Management State ---
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -227,6 +229,53 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       console.error(e);
       alert("강사 삭제 실패");
     }
+  };
+
+  // --- Teacher Drag and Drop Handlers ---
+  const handleTeacherDragStart = (e: React.DragEvent, teacherId: string) => {
+    setDraggedTeacherId(teacherId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleTeacherDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleTeacherDrop = async (e: React.DragEvent, targetTeacherId: string) => {
+    e.preventDefault();
+    if (!draggedTeacherId || draggedTeacherId === targetTeacherId) {
+      setDraggedTeacherId(null);
+      return;
+    }
+
+    const sortedTeachers = [...teachers].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const draggedIndex = sortedTeachers.findIndex(t => t.id === draggedTeacherId);
+    const targetIndex = sortedTeachers.findIndex(t => t.id === targetTeacherId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedTeacherId(null);
+      return;
+    }
+
+    // Reorder list
+    const newOrder = [...sortedTeachers];
+    const [draggedItem] = newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedItem);
+
+    // Update order values in Firebase
+    try {
+      const batch = writeBatch(db);
+      newOrder.forEach((teacher, index) => {
+        batch.update(doc(db, '강사목록', teacher.id), { order: index });
+      });
+      await batch.commit();
+    } catch (e) {
+      console.error('순서 저장 실패:', e);
+      alert('순서 저장 실패');
+    }
+
+    setDraggedTeacherId(null);
   };
 
   // --- Creation State ---
@@ -1093,12 +1142,51 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                 </div>
 
+                {/* Subject Filter Tabs */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xs font-bold text-gray-500">과목별 보기:</span>
+                  <div className="flex bg-gray-100 rounded-lg p-0.5">
+                    <button
+                      onClick={() => setTeacherSubjectFilter('all')}
+                      className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'all' ? 'bg-white text-gray-700 shadow-sm' : 'text-gray-500'}`}
+                    >
+                      전체
+                    </button>
+                    <button
+                      onClick={() => setTeacherSubjectFilter('math')}
+                      className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'math' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-500'}`}
+                    >
+                      수학
+                    </button>
+                    <button
+                      onClick={() => setTeacherSubjectFilter('english')}
+                      className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'english' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-500'}`}
+                    >
+                      영어
+                    </button>
+                  </div>
+                </div>
+
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 overflow-y-auto">
                   <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     {teachers
                       .filter(t => t.name.toLowerCase().includes(teacherSearchTerm.toLowerCase()))
+                      .filter(t => {
+                        if (teacherSubjectFilter === 'all') return true;
+                        return t.subjects?.includes(teacherSubjectFilter) || (!t.subjects && teacherSubjectFilter === 'math');
+                      })
+                      .sort((a, b) => (a.order || 0) - (b.order || 0))
                       .map(teacher => (
-                        <div key={teacher.id} className="p-3 border border-gray-100 rounded-lg flex justify-between items-start hover:bg-gray-50 group transition-all">
+                        <div
+                          key={teacher.id}
+                          className={`p-3 border border-gray-100 rounded-lg flex justify-between items-start hover:bg-gray-50 group transition-all cursor-move ${draggedTeacherId === teacher.id ? 'opacity-50 bg-blue-50 border-blue-300' : ''
+                            }`}
+                          draggable
+                          onDragStart={(e) => handleTeacherDragStart(e, teacher.id)}
+                          onDragOver={handleTeacherDragOver}
+                          onDrop={(e) => handleTeacherDrop(e, teacher.id)}
+                          onDragEnd={() => setDraggedTeacherId(null)}
+                        >
                           {editingTeacherId === teacher.id ? (
                             <div className="flex flex-col gap-2 w-full">
                               <div className="flex items-center gap-2 w-full">
