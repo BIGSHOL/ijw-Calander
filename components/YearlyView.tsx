@@ -108,7 +108,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
         <div className="flex flex-col lg:flex-row h-full gap-6 overflow-hidden">
             {/* Left Pane: 12 Month Grid */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-2 sm:gap-2 lg:gap-3 justify-items-center">
                     {months.map(month => {
                         const mStart = startOfMonth(month);
                         const mEnd = endOfMonth(month);
@@ -125,7 +125,8 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                 onClick={() => handleMonthClick(month)}
                                 onDoubleClick={() => handleMonthDoubleClick(month)}
                                 className={`
-                                    bg-white rounded-lg sm:rounded-xl shadow-sm border p-2 sm:p-3 lg:p-4 transition-all cursor-pointer
+                                    bg-white rounded-lg sm:rounded-xl shadow-sm border p-1.5 sm:p-2 lg:p-3 transition-all cursor-pointer
+                                    w-full max-w-[140px] sm:max-w-[160px] lg:max-w-[180px] aspect-square flex flex-col
                                     ${isSelected ? 'ring-2 ring-[#fdb813] border-transparent' : 'border-gray-200 hover:border-[#fdb813]/50'}
                                 `}
                             >
@@ -136,7 +137,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                     {isSelected && <span className="text-[8px] sm:text-[10px] bg-[#fdb813] text-[#081429] px-1 sm:px-1.5 py-0.5 rounded-full font-bold">선택됨</span>}
                                 </div>
 
-                                <div className="grid grid-cols-7 gap-0.5 sm:gap-1 text-center">
+                                <div className="grid grid-cols-7 gap-[1px] sm:gap-0.5 text-center flex-1">
                                     {['일', '월', '화', '수', '목', '금', '토'].map(d => (
                                         <div key={d} className="text-[6px] sm:text-[8px] lg:text-[10px] text-gray-400 font-medium pb-0.5 sm:pb-1">{d}</div>
                                     ))}
@@ -169,7 +170,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
 
             {/* Right Pane: Selected Month List (PC Only) */}
             {showSidePanel && (
-                <div className="hidden xl:flex w-72 2xl:w-80 flex-col bg-white border-l border-gray-200 flex-shrink-0">
+                <div className="hidden xl:flex w-64 2xl:w-72 flex-col bg-white border-l border-gray-200 flex-shrink-0">
                     <div className="p-5 border-b border-gray-100 bg-gray-50/50">
                         <h2 className="text-lg font-black text-[#081429] flex items-center gap-2">
                             <CalendarIcon size={18} className="text-[#fdb813]" />
