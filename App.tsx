@@ -52,6 +52,13 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
   const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(2); // 1단, 2단, 3단
 
+  // Force viewColumns to 2 if currently 3 when switching to yearly view
+  useEffect(() => {
+    if (viewMode === 'yearly' && viewColumns === 3) {
+      setViewColumns(2);
+    }
+  }, [viewMode, viewColumns]);
+
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // New Category Filter State
 
@@ -964,21 +971,23 @@ const App: React.FC = () => {
 
               {/* Column View Toggle (1단/2단/3단) */}
               <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                {([1, 2, 3] as const).map((cols) => (
-                  <button
-                    key={cols}
-                    onClick={() => setViewColumns(cols)}
-                    className={`
+                {([1, 2, 3] as const)
+                  .filter(cols => viewMode !== 'yearly' || cols !== 3)
+                  .map((cols) => (
+                    <button
+                      key={cols}
+                      onClick={() => setViewColumns(cols)}
+                      className={`
                        px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
                        ${viewColumns === cols
-                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      }
+                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }
                      `}
-                  >
-                    {cols}단
-                  </button>
-                ))}
+                    >
+                      {cols}단
+                    </button>
+                  ))}
               </div>
 
             </div>
@@ -1284,7 +1293,7 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {appMode === 'calendar' ? (
           /* Calendar View */
-          <div className="w-full flex-1 max-w-full mx-auto min-h-screen print:p-0 flex flex-col xl:flex-row gap-4 print:flex-row print:gap-2">
+          <div className="w-full flex-1 max-w-full mx-auto h-full print:p-0 flex flex-col xl:flex-row gap-4 print:flex-row print:gap-2">
             {/* 1단: 현재 년도 (항상 표시) */}
             <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0">
               <CalendarBoard
