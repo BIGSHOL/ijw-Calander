@@ -1307,8 +1307,8 @@ const App: React.FC = () => {
               />
             </div>
 
-            {/* 2단: 1년 전 (viewColumns >= 2 일 때 표시) */}
-            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 2 ? '' : 'hidden'}`}>
+            {/* 2단: 1년 전 (viewColumns >= 2 일 때 표시) - 연간 뷰에서는 숨김 */}
+            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 2 && viewMode !== 'yearly' ? '' : 'hidden'}`}>
               <CalendarBoard
                 currentDate={rightDate}
                 onDateChange={(date) => setBaseDate(addYears(date, 1))}
@@ -1328,8 +1328,8 @@ const App: React.FC = () => {
               />
             </div>
 
-            {/* 3단: 2년 전 (viewColumns >= 3 일 때 표시) */}
-            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 3 ? '' : 'hidden'}`}>
+            {/* 3단: 2년 전 (viewColumns >= 3 일 때 표시) - 연간 뷰에서는 숨김 */}
+            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 3 && viewMode !== 'yearly' ? '' : 'hidden'}`}>
               <CalendarBoard
                 currentDate={thirdDate}
                 onDateChange={(date) => setBaseDate(addYears(date, 2))}
