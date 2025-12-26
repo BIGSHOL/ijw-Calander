@@ -620,7 +620,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="flex-1 overflow-y-auto p-6 bg-white">
             <h4 className="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider flex items-center justify-between">
               부서별 접근 권한
-              {canChangePermissions && canAssignRole(currentUserProfile?.role as UserRole, user.role) && (
+              {canChangePermissions && (
                 <div className="flex gap-2 text-[10px]">
                   <button onClick={() => {
                     const newPerms: any = {};
