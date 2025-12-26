@@ -127,7 +127,8 @@ const App: React.FC = () => {
   const [appMode, setAppMode] = useState<'calendar' | 'timetable'>('calendar');
 
   const [baseDate, setBaseDate] = useState(new Date());
-  const rightDate = subYears(baseDate, 1);
+  const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
+  const thirdDate = subYears(baseDate, 2);  // 3단: 2년 전
 
   // Firestore Data State
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -149,7 +150,7 @@ const App: React.FC = () => {
   const [selectedEndDate, setSelectedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedDeptId, setSelectedDeptId] = useState<string>(''); // For creating new events
   const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
-  const [isCompareMode, setIsCompareMode] = useState<boolean>(true);
+  const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(2); // 1단, 2단, 3단
 
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // New Category Filter State
@@ -163,6 +164,13 @@ const App: React.FC = () => {
   // UI State for New Header
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // Timetable Filter State (for App-level filter bar)
+  const [isTimetableFilterOpen, setIsTimetableFilterOpen] = useState(false);
+  const [timetableSubject, setTimetableSubject] = useState<'math' | 'english'>('math');
+  const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room'>('teacher');
+  const [timetableShowStudents, setTimetableShowStudents] = useState(true);
+  const [timetableSelectedDays, setTimetableSelectedDays] = useState<string[]>(['월', '화', '수', '목', '금']);
 
   // Pending Event Moves State (for drag-and-drop)
   const [pendingEventMoves, setPendingEventMoves] = useState<{ original: CalendarEvent, updated: CalendarEvent }[]>([]);
@@ -679,12 +687,12 @@ const App: React.FC = () => {
             </h1>
 
             {/* Top-level App Mode Tabs */}
-            <div className="hidden md:flex bg-white/10 rounded-lg p-0.5 ml-4">
+            <div className="hidden md:flex bg-black/20 p-0.5 rounded-lg border border-white/5 ml-4">
               <button
                 onClick={() => setAppMode('calendar')}
                 className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'calendar'
                   ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                  : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
               >
                 📅 연간 일정
@@ -695,7 +703,7 @@ const App: React.FC = () => {
                   onClick={() => setAppMode('timetable')}
                   className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'timetable'
                     ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                 >
                   📋 시간표
@@ -851,32 +859,23 @@ const App: React.FC = () => {
                 ))}
               </div>
 
-              {/* Comparison Mode Toggle (Always visible) */}
+              {/* Column View Toggle (1단/2단/3단) */}
               <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                <button
-                  onClick={() => setIsCompareMode(false)}
-                  className={`
-                     px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
-                     ${!isCompareMode
-                      ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }
-                   `}
-                >
-                  기본
-                </button>
-                <button
-                  onClick={() => setIsCompareMode(true)}
-                  className={`
-                     px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
-                     ${isCompareMode
-                      ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }
-                   `}
-                >
-                  비교
-                </button>
+                {([1, 2, 3] as const).map((cols) => (
+                  <button
+                    key={cols}
+                    onClick={() => setViewColumns(cols)}
+                    className={`
+                       px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
+                       ${viewColumns === cols
+                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }
+                     `}
+                  >
+                    {cols}단
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -1000,12 +999,176 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Row 2: Timetable Filter Bar - Only show in timetable mode */}
+        {appMode === 'timetable' && (
+          <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
+            {/* Main Filter Toggle */}
+            <button
+              onClick={() => setIsTimetableFilterOpen(!isTimetableFilterOpen)}
+              className={`flex items-center gap-2 px-3 h-full border-r border-gray-700 hover:bg-white/5 transition-colors ${isTimetableFilterOpen ? 'text-[#fdb813] font-bold bg-white/5' : 'text-gray-300'}`}
+            >
+              <Filter size={14} />
+              <span>옵션 설정</span>
+              {isTimetableFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            {/* Current Settings Summary */}
+            <div className="flex items-center gap-2 px-4 overflow-hidden flex-1">
+              <span className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs">
+                {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs">
+                {timetableViewType === 'teacher' ? '👨‍🏫 강사별' : '🏫 교실별'}
+              </span>
+              <span className="text-gray-400">|</span>
+              <span className="text-gray-400">
+                {timetableSelectedDays.join(', ')}
+              </span>
+              {timetableShowStudents && (
+                <span className="px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 text-xs">
+                  학생목록 ON
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Timetable Filter Popover Panel */}
+        {appMode === 'timetable' && isTimetableFilterOpen && (
+          <div className="absolute top-[104px] left-0 w-full bg-[#1e293b]/95 backdrop-blur-xl border-b border-gray-700 shadow-2xl p-6 z-10 animate-in slide-in-from-top-2 duration-200">
+            <div className="w-full h-full">
+              {/* Section 1: Subject & View Type */}
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex flex-col gap-4">
+                  <h3 className="text-white font-bold flex items-center gap-2">
+                    <Filter size={16} className="text-[#fdb813]" /> 보기 옵션
+                  </h3>
+
+                  <div className="flex flex-wrap gap-4">
+                    {/* Subject Selection */}
+                    <div className="flex flex-col gap-2">
+                      <span className="text-gray-400 text-xs">과목</span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setTimetableSubject('math')}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableSubject === 'math'
+                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                        >
+                          📐 수학
+                        </button>
+                        <button
+                          onClick={() => setTimetableSubject('english')}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableSubject === 'english'
+                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                        >
+                          📕 영어
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* View Type Selection */}
+                    <div className="flex flex-col gap-2">
+                      <span className="text-gray-400 text-xs">보기 방식</span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setTimetableViewType('teacher')}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableViewType === 'teacher'
+                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                        >
+                          👨‍🏫 강사별
+                        </button>
+                        <button
+                          onClick={() => setTimetableViewType('room')}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableViewType === 'room'
+                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                        >
+                          🏫 교실별
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Student List Toggle */}
+                    <div className="flex flex-col gap-2">
+                      <span className="text-gray-400 text-xs">학생 목록</span>
+                      <button
+                        onClick={() => setTimetableShowStudents(!timetableShowStudents)}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableShowStudents
+                          ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                          : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
+                      >
+                        {timetableShowStudents ? <Eye size={14} /> : <EyeOff size={14} />}
+                        {timetableShowStudents ? '표시됨' : '숨김'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Week Days Selection */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400 text-xs font-bold">요일 선택</span>
+                  <div className="flex gap-2 items-center">
+                    <button
+                      onClick={() => setTimetableSelectedDays(['월', '화', '수', '목', '금'])}
+                      className="px-2 py-1 rounded text-xs font-bold bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20"
+                    >
+                      평일만
+                    </button>
+                    <button
+                      onClick={() => setTimetableSelectedDays(['월', '화', '수', '목', '금', '토', '일'])}
+                      className="px-2 py-1 rounded text-xs font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20"
+                    >
+                      모든 요일
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {['월', '화', '수', '목', '금', '토', '일'].map(day => {
+                    const isWeekend = day === '토' || day === '일';
+                    const isSelected = timetableSelectedDays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => setTimetableSelectedDays(prev =>
+                          prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+                        )}
+                        className={`px-4 py-2.5 rounded-lg text-xs font-bold transition-all flex flex-col items-center gap-0.5 border min-w-[50px] ${isSelected
+                          ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                          : isWeekend
+                            ? 'bg-transparent text-orange-400 border-orange-400/30 hover:border-orange-400'
+                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
+                          }`}
+                      >
+                        <span className="font-bold">{day}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Close Handle */}
+            <div
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full bg-[#1e293b] px-6 py-0.5 rounded-b-xl border-b border-x border-gray-700 cursor-pointer hover:bg-[#081429] transition-colors"
+              onClick={() => setIsTimetableFilterOpen(false)}
+            >
+              <ChevronUp size={16} className="text-gray-400" />
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {appMode === 'calendar' ? (
           /* Calendar View */
-          <div className="w-full flex-1 max-w-full mx-auto min-h-screen print:p-0 flex flex-col xl:flex-row gap-8 print:flex-row print:gap-4">
+          <div className="w-full flex-1 max-w-full mx-auto min-h-screen print:p-0 flex flex-col xl:flex-row gap-4 print:flex-row print:gap-2">
+            {/* 1단: 현재 년도 (항상 표시) */}
             <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0">
               <CalendarBoard
                 currentDate={baseDate}
@@ -1025,10 +1188,30 @@ const App: React.FC = () => {
               />
             </div>
 
-            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${isCompareMode ? '' : 'hidden'}`}>
+            {/* 2단: 1년 전 (viewColumns >= 2 일 때 표시) */}
+            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 2 ? '' : 'hidden'}`}>
               <CalendarBoard
                 currentDate={rightDate}
                 onDateChange={(date) => setBaseDate(addYears(date, 1))}
+                departments={visibleDepartments}
+                events={displayEvents}
+                onCellClick={handleCellClick}
+                onRangeSelect={handleRangeSelect}
+                onTimeSlotClick={handleTimeSlotClick}
+                onEventClick={handleEventClick}
+                holidays={holidays}
+                viewMode={viewMode}
+                onEventMove={handleEventMove}
+                canEditDepartment={canEditDepartment}
+                pendingEventIds={pendingEventIds}
+              />
+            </div>
+
+            {/* 3단: 2년 전 (viewColumns >= 3 일 때 표시) */}
+            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 3 ? '' : 'hidden'}`}>
+              <CalendarBoard
+                currentDate={thirdDate}
+                onDateChange={(date) => setBaseDate(addYears(date, 2))}
                 departments={visibleDepartments}
                 events={displayEvents}
                 onCellClick={handleCellClick}
@@ -1046,7 +1229,16 @@ const App: React.FC = () => {
         ) : (
           /* Timetable View */
           <div className="w-full flex-1 p-4 md:p-6">
-            <TimetableManager />
+            <TimetableManager
+              subjectTab={timetableSubject}
+              onSubjectChange={setTimetableSubject}
+              viewType={timetableViewType}
+              onViewTypeChange={setTimetableViewType}
+              showStudents={timetableShowStudents}
+              onShowStudentsChange={setTimetableShowStudents}
+              selectedDays={timetableSelectedDays}
+              onSelectedDaysChange={setTimetableSelectedDays}
+            />
           </div>
         )}
 
