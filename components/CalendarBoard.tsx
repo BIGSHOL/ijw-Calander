@@ -29,6 +29,7 @@ interface CalendarBoardProps {
   canEditDepartment?: (deptId: string) => boolean;
   pendingEventIds?: string[];
   isPrimaryView?: boolean; // Only show "My Events" button on primary view
+  showSidePanel?: boolean; // Control side panel visibility
 }
 
 
@@ -219,6 +220,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   canEditDepartment,
   pendingEventIds = [],
   isPrimaryView = true, // Default to true for backwards compatibility
+  showSidePanel = true, // Default to true
 }) => {
   const [isMyEventsOpen, setIsMyEventsOpen] = React.useState(false);
   const weeks = getMonthWeeks(currentDate); // Restore weeks definition
@@ -272,7 +274,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
 
 
   return (
-    <div className="flex-1 bg-white shadow-xl print:shadow-none p-4 md:p-8 print:p-0 rounded-2xl border border-gray-200 print:border-none min-w-[350px]">
+    <div className="flex-1 bg-white shadow-xl print:shadow-none p-4 md:p-8 print:p-0 rounded-2xl border border-gray-200 print:border-none min-w-[350px] flex flex-col overflow-hidden">
 
       {/* Yearly View Content */}
       {viewMode === 'yearly' ? (

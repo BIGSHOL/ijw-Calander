@@ -10,6 +10,7 @@ interface YearlyViewProps {
     onDateChange: (date: Date) => void;
     onViewChange: (mode: 'daily' | 'weekly' | 'monthly' | 'yearly') => void;
     departments: { id: string; name: string; color: string }[];
+    showSidePanel?: boolean;
 }
 
 const YearlyView: React.FC<YearlyViewProps> = ({
@@ -17,7 +18,8 @@ const YearlyView: React.FC<YearlyViewProps> = ({
     events,
     onDateChange,
     onViewChange,
-    departments
+    departments,
+    showSidePanel = true
 }) => {
     // Default selected month to current month if in the same year, otherwise Jan of that year
     const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
@@ -166,73 +168,75 @@ const YearlyView: React.FC<YearlyViewProps> = ({
             </div>
 
             {/* Right Pane: Selected Month List (PC Only) */}
-            <div className="hidden lg:flex w-96 flex-col bg-white border-l border-gray-200">
-                <div className="p-5 border-b border-gray-100 bg-gray-50/50">
-                    <h2 className="text-lg font-black text-[#081429] flex items-center gap-2">
-                        <CalendarIcon size={18} className="text-[#fdb813]" />
-                        {format(selectedMonth, 'yyyy년 M월')}
-                    </h2>
-                    <p className="text-xs text-gray-500 mt-1">
-                        총 {selectedMonthEvents.length}개의 일정이 있습니다.
-                    </p>
-                </div>
+            {showSidePanel && (
+                <div className="hidden lg:flex w-96 flex-col bg-white border-l border-gray-200">
+                    <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+                        <h2 className="text-lg font-black text-[#081429] flex items-center gap-2">
+                            <CalendarIcon size={18} className="text-[#fdb813]" />
+                            {format(selectedMonth, 'yyyy년 M월')}
+                        </h2>
+                        <p className="text-xs text-gray-500 mt-1">
+                            총 {selectedMonthEvents.length}개의 일정이 있습니다.
+                        </p>
+                    </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
-                    {selectedEventGroups.length > 0 ? (
-                        selectedEventGroups.map(([dateKey, groupEvents]) => (
-                            <div key={dateKey} className="flex gap-3">
-                                <div className="flex-shrink-0 w-12 pt-1 text-center">
-                                    <div className="text-lg font-bold text-gray-800 leading-none">
-                                        {format(new Date(dateKey), 'd')}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+                        {selectedEventGroups.length > 0 ? (
+                            selectedEventGroups.map(([dateKey, groupEvents]) => (
+                                <div key={dateKey} className="flex gap-3">
+                                    <div className="flex-shrink-0 w-12 pt-1 text-center">
+                                        <div className="text-lg font-bold text-gray-800 leading-none">
+                                            {format(new Date(dateKey), 'd')}
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 font-medium uppercase mt-0.5">
+                                            {format(new Date(dateKey), 'E', { locale: ko })}
+                                        </div>
                                     </div>
-                                    <div className="text-[10px] text-gray-400 font-medium uppercase mt-0.5">
-                                        {format(new Date(dateKey), 'E', { locale: ko })}
-                                    </div>
-                                </div>
-                                <div className="flex-1 space-y-2">
-                                    {groupEvents.map(evt => {
-                                        const dept = departments.find(d => d.id === evt.departmentId);
-                                        return (
-                                            <div
-                                                key={evt.id}
-                                                className="bg-gray-50 rounded-lg p-2.5 border border-gray-100 hover:bg-white hover:shadow-md transition-all group"
-                                            >
-                                                <div className="flex items-start justify-between gap-2 mb-1">
-                                                    <span className="text-xs font-bold text-gray-800 line-clamp-1 group-hover:text-[#081429]">
-                                                        {evt.title}
-                                                    </span>
-                                                    {dept && (
-                                                        <span
-                                                            className="text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap"
-                                                            style={{
-                                                                backgroundColor: dept.color + '20',
-                                                                color: dept.color
-                                                            }}
-                                                        >
-                                                            {dept.name}
+                                    <div className="flex-1 space-y-2">
+                                        {groupEvents.map(evt => {
+                                            const dept = departments.find(d => d.id === evt.departmentId);
+                                            return (
+                                                <div
+                                                    key={evt.id}
+                                                    className="bg-gray-50 rounded-lg p-2.5 border border-gray-100 hover:bg-white hover:shadow-md transition-all group"
+                                                >
+                                                    <div className="flex items-start justify-between gap-2 mb-1">
+                                                        <span className="text-xs font-bold text-gray-800 line-clamp-1 group-hover:text-[#081429]">
+                                                            {evt.title}
                                                         </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                                                    <div className="flex items-center gap-0.5">
-                                                        <Clock size={10} />
-                                                        {evt.isAllDay ? '종일' : format(new Date(evt.startDate), 'a h:mm')}
+                                                        {dept && (
+                                                            <span
+                                                                className="text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap"
+                                                                style={{
+                                                                    backgroundColor: dept.color + '20',
+                                                                    color: dept.color
+                                                                }}
+                                                            >
+                                                                {dept.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                                                        <div className="flex items-center gap-0.5">
+                                                            <Clock size={10} />
+                                                            {evt.isAllDay ? '종일' : format(new Date(evt.startDate), 'a h:mm')}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-gray-300 pb-20">
+                                <CalendarIcon size={48} className="mb-4 opacity-20" />
+                                <p className="text-xs">이 달에는 일정이 없습니다.</p>
                             </div>
-                        ))
-                    ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-300 pb-20">
-                            <CalendarIcon size={48} className="mb-4 opacity-20" />
-                            <p className="text-xs">이 달에는 일정이 없습니다.</p>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
