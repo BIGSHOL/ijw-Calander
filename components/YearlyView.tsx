@@ -206,29 +206,31 @@ const YearlyView: React.FC<YearlyViewProps> = ({
 
                                     {days.map(day => {
                                         const dateKey = format(day, 'yyyy-MM-dd');
-                                        const { className, customColor, opacityValue, isConflict } = getDayStyle(dateKey);
                                         const data = densityMap[dateKey];
+                                        const count = data?.total || 0;
+
+                                        // Determine background style based on event count
+                                        const getDensityClass = () => {
+                                            if (count === 0) return '';
+                                            if (count >= 5) return 'bg-indigo-500 text-white';
+                                            if (count >= 3) return 'bg-indigo-400 text-white';
+                                            if (count >= 2) return 'bg-indigo-300 text-indigo-900';
+                                            return 'bg-indigo-200 text-indigo-800';
+                                        };
 
                                         return (
                                             <div
                                                 key={dateKey}
-                                                className={`
-                                                    aspect-square rounded-[1px] sm:rounded-[2px] flex items-center justify-center 
-                                                    ${className}
-                                                `}
-                                                title={`${format(day, 'yyyy-MM-dd')}: ${data?.total || 0}개 일정`}
+                                                className="aspect-square flex items-center justify-center"
+                                                title={`${format(day, 'yyyy-MM-dd')}: ${count}개 일정`}
                                             >
-                                                {/* Color Overlay */}
-                                                <div
-                                                    className="absolute inset-0"
-                                                    style={{
-                                                        backgroundColor: customColor || 'transparent',
-                                                        opacity: opacityValue || 0
-                                                    }}
-                                                />
-                                                {/* Conflict Indicator */}
-                                                {isConflict && <div className="absolute top-0 right-0 w-1 h-1 rounded-full bg-red-500" />}
-                                                <span className="relative z-10 text-gray-700">
+                                                <span className={`
+                                                    w-full h-full flex items-center justify-center
+                                                    text-[6px] sm:text-[8px] lg:text-[10px] font-medium
+                                                    rounded-[2px] sm:rounded-[3px]
+                                                    ${getDensityClass()}
+                                                    ${count === 0 ? 'text-gray-600' : ''}
+                                                `}>
                                                     {format(day, 'd')}
                                                 </span>
                                             </div>
