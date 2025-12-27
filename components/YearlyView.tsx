@@ -11,6 +11,7 @@ interface YearlyViewProps {
     onViewChange: (mode: 'daily' | 'weekly' | 'monthly' | 'yearly') => void;
     departments: { id: string; name: string; color: string; category?: string }[];
     showSidePanel?: boolean;
+    onQuickAdd?: (date: Date) => void; // Quick Add: Click date to add event
 }
 
 const YearlyView: React.FC<YearlyViewProps> = ({
@@ -19,7 +20,8 @@ const YearlyView: React.FC<YearlyViewProps> = ({
     onDateChange,
     onViewChange,
     departments,
-    showSidePanel = true
+    showSidePanel = true,
+    onQuickAdd
 }) => {
     const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
         const now = new Date();
@@ -221,8 +223,12 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                         return (
                                             <div
                                                 key={dateKey}
-                                                className="aspect-square flex items-center justify-center"
+                                                className={`aspect-square flex items-center justify-center ${onQuickAdd ? 'cursor-pointer hover:ring-2 hover:ring-[#fdb813] hover:ring-offset-1' : ''}`}
                                                 title={`${format(day, 'yyyy-MM-dd')}: ${count}개 일정`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // Prevent month card click
+                                                    if (onQuickAdd) onQuickAdd(day);
+                                                }}
                                             >
                                                 <span
                                                     className={`

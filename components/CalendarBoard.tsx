@@ -30,6 +30,7 @@ interface CalendarBoardProps {
   pendingEventIds?: string[];
   isPrimaryView?: boolean; // Only show "My Events" button on primary view
   showSidePanel?: boolean; // Control side panel visibility
+  onQuickAdd?: (date: Date) => void; // Quick Add: Click date in yearly view
 }
 
 
@@ -221,6 +222,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   pendingEventIds = [],
   isPrimaryView = true, // Default to true for backwards compatibility
   showSidePanel = true, // Default to true
+  onQuickAdd, // Quick Add callback
 }) => {
   const [isMyEventsOpen, setIsMyEventsOpen] = React.useState(false);
   const weeks = getMonthWeeks(currentDate); // Restore weeks definition
@@ -284,6 +286,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           onDateChange={onDateChange}
           onViewChange={onViewChange || (() => { })}
           departments={departments}
+          onQuickAdd={onQuickAdd}
         />
       ) : (
         <>

@@ -385,6 +385,17 @@ const App: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
+  // Quick Add: Click date cell in Yearly View to create new event
+  const handleQuickAdd = (date: Date) => {
+    if (!hasPermission('events.create')) return;
+    const dateStr = format(date, 'yyyy-MM-dd');
+    setSelectedDate(dateStr);
+    setSelectedEndDate(dateStr);
+    setEditingEvent(null);
+    setSelectedDeptId(departments[0]?.id || ''); // Default to first department
+    setIsEventModalOpen(true);
+  };
+
   const handleSaveEvent = async (event: CalendarEvent) => {
     try {
       // Check for recurrence
@@ -1349,6 +1360,7 @@ const App: React.FC = () => {
                 pendingEventIds={pendingEventIds}
                 onViewChange={setViewMode}
                 showSidePanel={viewColumns === 1} // Only show detail side panel in single column mode
+                onQuickAdd={handleQuickAdd}
               />
             </div>
 
