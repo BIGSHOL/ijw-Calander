@@ -50,6 +50,8 @@ export interface BucketItem {
   departmentId?: string;
   priority: 'high' | 'medium' | 'low';
   createdAt: string; // ISO Date string
+  authorId?: string; // UID of the creator
+  authorName?: string; // Display name of the creator
 }
 
 export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];

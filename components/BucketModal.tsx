@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Flag } from 'lucide-react';
+import { X, Flag, Trash2 } from 'lucide-react';
 import { BucketItem } from '../types';
 
 interface BucketModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (title: string, priority: 'high' | 'medium' | 'low') => void;
+    onDelete?: (id: string) => void; // Delete handler for edit mode
     editingBucket?: BucketItem | null; // For edit mode
     targetMonth: string; // Display purpose
 }
@@ -14,6 +15,7 @@ const BucketModal: React.FC<BucketModalProps> = ({
     isOpen,
     onClose,
     onSave,
+    onDelete,
     editingBucket,
     targetMonth
 }) => {
@@ -111,6 +113,20 @@ const BucketModal: React.FC<BucketModalProps> = ({
 
                     {/* Buttons */}
                     <div className="flex gap-2 pt-2">
+                        {editingBucket && onDelete && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (confirm('정말 이 버킷을 삭제하시겠습니까?')) {
+                                        onDelete(editingBucket.id);
+                                        onClose();
+                                    }
+                                }}
+                                className="py-2 px-4 bg-red-500 text-white rounded-lg font-bold text-sm hover:bg-red-600 transition-colors"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={onClose}

@@ -421,6 +421,8 @@ const App: React.FC = () => {
       targetMonth,
       priority,
       createdAt: new Date().toISOString(),
+      authorId: userProfile?.uid || '',
+      authorName: userProfile?.displayName || userProfile?.email || '알 수 없음',
     };
     await setDoc(doc(db, "bucketItems", newItem.id), newItem);
   };
