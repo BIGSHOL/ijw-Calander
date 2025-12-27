@@ -1,15 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfYear, setYear, addYears, subYears } from 'date-fns';
+import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { CalendarEvent } from '../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { ChevronRight, Calendar as CalendarIcon, MapPin, Clock } from 'lucide-react';
 
 interface YearlyViewProps {
     currentDate: Date;
     events: CalendarEvent[];
     onDateChange: (date: Date) => void;
     onViewChange: (mode: 'daily' | 'weekly' | 'monthly' | 'yearly') => void;
-    departments: { id: string; name: string; color: string }[];
+    departments: { id: string; name: string; color: string; category?: string }[];
     showSidePanel?: boolean;
 }
 
@@ -32,45 +32,91 @@ const YearlyView: React.FC<YearlyViewProps> = ({
         return Array.from({ length: 12 }, (_, i) => addMonths(yearStart, i));
     }, [yearStart]);
 
-    // Calculate density map: { "yyyy-MM-dd": count }
+    // 1. Build Lookup Maps
+    const { deptCategoryMap, categoryColorMap } = useMemo(() => {
+        const dMap: Record<string, string> = {};
+        const cMap: Record<string, string> = {};
+
+        departments.forEach(d => {
+            if (d.category) {
+                dMap[d.id] = d.category;
+                // Assign first found color to category if not set
+                if (!cMap[d.category] && d.color) {
+                    cMap[d.category] = d.color;
+                }
+            }
+        });
+        return { deptCategoryMap: dMap, categoryColorMap: cMap };
+    }, [departments]);
+
+    // 2. Calculate density map with Category info
     const densityMap = useMemo(() => {
-        const map: Record<string, number> = {};
+        const map: Record<string, { total: number; categories: Record<string, number> }> = {};
+
         events.forEach(event => {
             if (!event.startDate) return;
             const start = new Date(event.startDate);
             const end = event.endDate ? new Date(event.endDate) : start;
 
-            // For simplicity in yearly view, just count the start date or range?
-            // "Density" usually implies all occupied days.
-            // Let's iterate days for each event (careful with performance for many long events)
-            // Optimization: If event is < 2 days, just mark start. If long, mark range.
+            // Get category
+            const category = deptCategoryMap[event.departmentId] || 'Uncategorized';
+
+            const processDay = (day: Date) => {
+                const key = format(day, 'yyyy-MM-dd');
+                if (!map[key]) map[key] = { total: 0, categories: {} as Record<string, number> };
+
+                map[key].total += 1;
+                map[key].categories[category] = (map[key].categories[category] || 0) + 1;
+            };
+
             try {
                 const days = eachDayOfInterval({ start, end });
-                days.forEach(day => {
-                    const key = format(day, 'yyyy-MM-dd');
-                    map[key] = (map[key] || 0) + 1;
-                });
+                days.forEach(processDay);
             } catch (e) {
-                // Fallback for invalid intervals
-                const key = format(start, 'yyyy-MM-dd');
-                map[key] = (map[key] || 0) + 1;
+                processDay(start);
             }
         });
         return map;
-    }, [events]);
+    }, [events, deptCategoryMap]);
 
-    const getDensityColor = (count: number) => {
-        if (!count) return 'bg-gray-50'; // Empty
-        if (count >= 10) return 'bg-indigo-900 text-white';
-        if (count >= 6) return 'bg-indigo-700 text-white';
-        if (count >= 3) return 'bg-indigo-500 text-white';
-        if (count >= 1) return 'bg-indigo-200 text-indigo-900';
-        return 'bg-gray-50';
+    // 3. Helper to determine cell style
+    const getDayStyle = (dateKey: string) => {
+        const data = densityMap[dateKey];
+        if (!data || data.total === 0) return { className: 'bg-gray-50' };
+
+        // Check for Conflict (Multiple categories with significant presence)
+        const categories = Object.keys(data.categories).filter(c => c !== 'Uncategorized');
+        const isConflict = categories.length > 1;
+
+        // Find dominant category
+        let dominantCategory = 'Uncategorized';
+        let maxCount = 0;
+        Object.entries(data.categories as Record<string, number>).forEach(([cat, count]) => {
+            if (count > maxCount) {
+                maxCount = count;
+                dominantCategory = cat;
+            }
+        });
+
+        const baseColor = categoryColorMap[dominantCategory] || '#6366f1'; // Default Indigo
+
+        // Calculate opacity based on total count (max out at 5 events)
+        const opacity = Math.min(data.total * 0.15 + 0.1, 0.9);
+
+        return {
+            style: {
+                backgroundColor: baseColor,
+                opacity: opacity,
+            },
+            // Use a semi-transparent overlay approach
+            className: `text-[9px] font-medium relative overflow-hidden ${isConflict ? 'ring-1 ring-red-500 z-10' : ''}`,
+            customColor: baseColor,
+            opacityValue: opacity,
+            isConflict
+        };
     };
 
     const handleMonthClick = (month: Date) => {
-        // Mobile: Maybe jump to monthly view?
-        // PC: Select for side panel
         setSelectedMonth(month);
     };
 
@@ -102,47 +148,27 @@ const YearlyView: React.FC<YearlyViewProps> = ({
         return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
     };
 
-    // Calculate department event counts for selected month
-    const departmentCounts = useMemo(() => {
-        const counts: Record<string, number> = {};
-        selectedMonthEvents.forEach(e => {
-            const deptId = e.departmentId;
-            if (deptId) counts[deptId] = (counts[deptId] || 0) + 1;
-        });
-        return counts;
-    }, [selectedMonthEvents]);
-
-    const currentYear = currentDate.getFullYear();
+    const selectedEventGroups = groupEventsByDate(selectedMonthEvents);
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
-            {/* Year Navigation Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 flex-shrink-0">
-                <div className="flex items-center gap-1 p-1 bg-[#f8fafc] rounded-xl border border-gray-200 shadow-sm">
-                    <button
-                        onClick={() => onDateChange(subYears(currentDate, 1))}
-                        className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
-                    >
-                        <ChevronLeft size={16} strokeWidth={3} />
-                    </button>
-                    <span className="px-3 py-1 text-sm font-bold text-[#081429]">
-                        {currentYear}년
-                    </span>
-                    <button
-                        onClick={() => onDateChange(addYears(currentDate, 1))}
-                        className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
-                    >
-                        <ChevronRight size={16} strokeWidth={3} />
-                    </button>
-                </div>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                    연간 일정
-                </div>
-            </div>
+        <div className="flex flex-col lg:flex-row h-full gap-6 overflow-hidden">
+            {/* Left Pane: 12 Month Grid */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
 
-            {/* 12 Month Grid */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-1 sm:gap-1.5 lg:gap-2">
+                {/* Legend */}
+                <div className="flex flex-wrap gap-3 items-center mb-4 px-2">
+                    {Object.entries(categoryColorMap).map(([cat, color]) => (
+                        <div key={cat} className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                            <span className="text-xs text-gray-600 font-medium">{cat}</span>
+                        </div>
+                    ))}
+                    {Object.keys(categoryColorMap).length === 0 && (
+                        <span className="text-xs text-gray-400">카테고리 정보 없음</span>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                     {months.map(month => {
                         const mStart = startOfMonth(month);
                         const mEnd = endOfMonth(month);
@@ -159,38 +185,56 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                 onClick={() => handleMonthClick(month)}
                                 onDoubleClick={() => handleMonthDoubleClick(month)}
                                 className={`
-                                    bg-white rounded-md sm:rounded-lg shadow-sm border p-1.5 sm:p-2 transition-all cursor-pointer
-                                    ${isSelected ? 'ring-2 ring-[#fdb813] border-transparent' : 'border-gray-100 hover:border-[#fdb813]/50'}
+                                    bg-white rounded-xl shadow-sm border p-4 transition-all cursor-pointer
+                                    ${isSelected ? 'ring-2 ring-[#fdb813] border-transparent' : 'border-gray-200 hover:border-[#fdb813]/50'}
                                 `}
                             >
-                                <div className="flex justify-between items-center mb-1 sm:mb-1.5">
-                                    <h3 className={`text-[10px] sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-[#081429]' : 'text-gray-600'}`}>
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className={`font-bold ${isSelected ? 'text-[#081429]' : 'text-gray-600'}`}>
                                         {format(month, 'M월')}
                                     </h3>
-                                    {isSelected && <span className="text-[6px] sm:text-[8px] bg-[#fdb813] text-[#081429] px-1 py-0.5 rounded-full font-bold">선택됨</span>}
+                                    {isSelected && <span className="text-[10px] bg-[#fdb813] text-[#081429] px-1.5 py-0.5 rounded-full font-bold">선택됨</span>}
                                 </div>
 
-                                <div className="grid grid-cols-7 gap-[1px] text-center">
+                                <div className="grid grid-cols-7 gap-1 text-center">
                                     {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-                                        <div key={d} className="text-[5px] sm:text-[6px] lg:text-[8px] text-gray-400 font-medium">{d}</div>
+                                        <div key={d} className="text-[10px] text-gray-400 font-medium pb-1">{d}</div>
                                     ))}
 
                                     {emptySlots.map((_, i) => <div key={`empty-${i}`} />)}
 
                                     {days.map(day => {
                                         const dateKey = format(day, 'yyyy-MM-dd');
-                                        const count = densityMap[dateKey] || 0;
+                                        const { className, style, customColor, opacityValue, isConflict } = getDayStyle(dateKey);
+                                        const data = densityMap[dateKey];
+
                                         return (
                                             <div
                                                 key={dateKey}
                                                 className={`
-                                                    aspect-square rounded-[1px] sm:rounded-[2px] flex items-center justify-center 
-                                                    text-[5px] sm:text-[6px] lg:text-[8px] font-medium
-                                                    ${getDensityColor(count)}
+                                                    aspect-square rounded-[3px] flex items-center justify-center
+                                                    ${className}
                                                 `}
-                                                title={`${format(day, 'yyyy-MM-dd')}: ${count}개 일정`}
+                                                style={{
+                                                    backgroundColor: customColor ? `${customColor}` : undefined,
+                                                    opacity: opacityValue ? 1 : undefined, // Check logic below
+                                                }}
+                                                title={`${format(day, 'yyyy-MM-dd')}: ${data?.total || 0}개 일정`}
                                             >
-                                                {format(day, 'd')}
+                                                {/* Overlay for opacity control to not affect text */}
+                                                <div
+                                                    className="absolute inset-0"
+                                                    style={{
+                                                        backgroundColor: customColor || 'transparent',
+                                                        opacity: opacityValue || 0
+                                                    }}
+                                                />
+                                                {/* Conflict Indicator */}
+                                                {isConflict && <div className="absolute top-0.5 right-0.5 w-1 h-1 rounded-full bg-red-500 ring-1 ring-white" />}
+
+                                                <span className="relative z-10 text-gray-700">
+                                                    {format(day, 'd')}
+                                                </span>
                                             </div>
                                         );
                                     })}
@@ -201,93 +245,73 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                 </div>
             </div>
 
-            {/* Bottom Pane: Hybrid (Option C) - Department Chips + Event Cards */}
+            {/* Right Pane: Selected Month List (PC Only) */}
             {showSidePanel && (
-                <div className="flex-shrink-0 bg-white border-t border-gray-200">
-                    {/* Header with Department Summary Chips */}
-                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50/80 border-b border-gray-100">
-                        <div className="flex items-center gap-2">
-                            <CalendarIcon size={14} className="text-[#fdb813]" />
-                            <span className="text-sm font-bold text-[#081429]">
-                                {format(selectedMonth, 'M월')}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                                {selectedMonthEvents.length}개
-                            </span>
-                        </div>
-                        {/* Department Chips */}
-                        <div className="flex items-center gap-1 flex-wrap justify-end">
-                            {departments.filter(d => departmentCounts[d.id] > 0).map(dept => (
-                                <div
-                                    key={dept.id}
-                                    className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border"
-                                    style={{
-                                        backgroundColor: dept.color + '15',
-                                        borderColor: dept.color + '40',
-                                        color: dept.color
-                                    }}
-                                >
-                                    {dept.name}
-                                    <span
-                                        className="text-[9px] bg-current/20 px-1 rounded-full"
-                                        style={{ backgroundColor: dept.color, color: '#fff' }}
-                                    >
-                                        {departmentCounts[dept.id]}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
+                <div className="hidden lg:flex w-96 flex-col bg-white border-l border-gray-200">
+                    <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+                        <h2 className="text-lg font-black text-[#081429] flex items-center gap-2">
+                            <CalendarIcon size={18} className="text-[#fdb813]" />
+                            {format(selectedMonth, 'yyyy년 M월')}
+                        </h2>
+                        <p className="text-xs text-gray-500 mt-1">
+                            총 {selectedMonthEvents.length}개의 일정이 있습니다.
+                        </p>
                     </div>
 
-                    {/* Compact Event Cards - Horizontal Scroll */}
-                    <div className="overflow-x-auto custom-scrollbar">
-                        <div className="flex gap-2 p-2 min-w-max">
-                            {selectedMonthEvents.length > 0 ? (
-                                selectedMonthEvents.map(evt => {
-                                    const dept = departments.find(d => d.id === evt.departmentId);
-                                    return (
-                                        <div
-                                            key={evt.id}
-                                            className="flex-shrink-0 w-36 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-all cursor-pointer overflow-hidden"
-                                        >
-                                            {/* Color Bar Top */}
-                                            <div
-                                                className="h-1"
-                                                style={{ backgroundColor: dept?.color || '#6b7280' }}
-                                            />
-                                            <div className="p-2">
-                                                {/* Date + Dept */}
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-[10px] font-bold text-gray-500">
-                                                        {format(new Date(evt.startDate), 'M/d')}
-                                                    </span>
-                                                    {dept && (
-                                                        <span
-                                                            className="text-[8px] px-1 py-0.5 rounded font-bold"
-                                                            style={{
-                                                                backgroundColor: dept.color + '20',
-                                                                color: dept.color
-                                                            }}
-                                                        >
-                                                            {dept.name}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {/* Title */}
-                                                <div className="text-xs font-medium text-gray-800 line-clamp-2 leading-tight">
-                                                    {evt.title}
-                                                </div>
-                                            </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+                        {selectedEventGroups.length > 0 ? (
+                            selectedEventGroups.map(([dateKey, groupEvents]) => (
+                                <div key={dateKey} className="flex gap-3">
+                                    <div className="flex-shrink-0 w-12 pt-1 text-center">
+                                        <div className="text-lg font-bold text-gray-800 leading-none">
+                                            {format(new Date(dateKey), 'd')}
                                         </div>
-                                    );
-                                })
-                            ) : (
-                                <div className="flex items-center justify-center w-full py-3 text-gray-300 text-xs">
-                                    <CalendarIcon size={14} className="mr-2 opacity-30" />
-                                    이 달에는 일정이 없습니다.
+                                        <div className="text-[10px] text-gray-400 font-medium uppercase mt-0.5">
+                                            {format(new Date(dateKey), 'E', { locale: ko })}
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 space-y-2">
+                                        {groupEvents.map(evt => {
+                                            const dept = departments.find(d => d.id === evt.departmentId);
+                                            return (
+                                                <div
+                                                    key={evt.id}
+                                                    className="bg-gray-50 rounded-lg p-2.5 border border-gray-100 hover:bg-white hover:shadow-md transition-all group"
+                                                >
+                                                    <div className="flex items-start justify-between gap-2 mb-1">
+                                                        <span className="text-xs font-bold text-gray-800 line-clamp-1 group-hover:text-[#081429]">
+                                                            {evt.title}
+                                                        </span>
+                                                        {dept && (
+                                                            <span
+                                                                className="text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap"
+                                                                style={{
+                                                                    backgroundColor: dept.color + '20',
+                                                                    color: dept.color
+                                                                }}
+                                                            >
+                                                                {dept.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                                                        <div className="flex items-center gap-0.5">
+                                                            <Clock size={10} />
+                                                            {evt.isAllDay ? '종일' : format(new Date(evt.startDate), 'a h:mm')}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            )}
-                        </div>
+                            ))
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-gray-300 pb-20">
+                                <CalendarIcon size={48} className="mb-4 opacity-20" />
+                                <p className="text-xs">이 달에는 일정이 없습니다.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
