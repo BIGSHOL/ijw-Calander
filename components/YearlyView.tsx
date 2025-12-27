@@ -194,7 +194,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                     <h3 className={`text-[10px] sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-[#081429]' : 'text-gray-600'}`}>
                                         {format(month, 'M월')}
                                     </h3>
-                                    {isSelected && <span className="text-[6px] sm:text-[8px] bg-[#fdb813] text-[#081429] px-1 py-0.5 rounded-full font-bold">선택됨</span>}
+                                    {isSelected && <span className="text-[6px] sm:text-[8px] px-1 py-0.5 rounded-full font-bold" style={{ backgroundColor: '#fdb813', color: '#081429' }}>선택됨</span>}
                                 </div>
 
                                 <div className="grid grid-cols-7 gap-[1px] text-center">
