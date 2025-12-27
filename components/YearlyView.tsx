@@ -456,6 +456,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                         onAddBucket?.(title, format(selectedMonth, 'yyyy-MM'), priority);
                     }
                 }}
+                onDelete={onDeleteBucket}
                 editingBucket={editingBucketItem}
                 targetMonth={format(selectedMonth, 'yyyy년 M월')}
             />
