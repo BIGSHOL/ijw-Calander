@@ -209,13 +209,13 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                         const data = densityMap[dateKey];
                                         const count = data?.total || 0;
 
-                                        // Determine background style based on event count
-                                        const getDensityClass = () => {
-                                            if (count === 0) return '';
-                                            if (count >= 5) return 'bg-indigo-500 text-white';
-                                            if (count >= 3) return 'bg-indigo-400 text-white';
-                                            if (count >= 2) return 'bg-indigo-300 text-indigo-900';
-                                            return 'bg-indigo-200 text-indigo-800';
+                                        // Brand colors: Navy #081429, Yellow #fdb813, Gray #373d41
+                                        const getDensityStyle = () => {
+                                            if (count === 0) return {};
+                                            if (count >= 5) return { backgroundColor: '#081429', color: '#fdb813' }; // Navy bg, Yellow text
+                                            if (count >= 3) return { backgroundColor: '#373d41', color: '#fdb813' }; // Gray bg, Yellow text
+                                            if (count >= 2) return { backgroundColor: '#fdb813', color: '#081429' }; // Yellow bg, Navy text
+                                            return { backgroundColor: '#fdb81340', color: '#081429' }; // Light Yellow bg, Navy text
                                         };
 
                                         return (
@@ -224,13 +224,15 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                                 className="aspect-square flex items-center justify-center"
                                                 title={`${format(day, 'yyyy-MM-dd')}: ${count}개 일정`}
                                             >
-                                                <span className={`
-                                                    w-full h-full flex items-center justify-center
-                                                    text-[6px] sm:text-[8px] lg:text-[10px] font-medium
-                                                    rounded-[2px] sm:rounded-[3px]
-                                                    ${getDensityClass()}
-                                                    ${count === 0 ? 'text-gray-600' : ''}
-                                                `}>
+                                                <span
+                                                    className={`
+                                                        w-full h-full flex items-center justify-center
+                                                        text-[6px] sm:text-[8px] lg:text-[10px] font-medium
+                                                        rounded-[2px] sm:rounded-[3px]
+                                                        ${count === 0 ? 'text-gray-600' : ''}
+                                                    `}
+                                                    style={getDensityStyle()}
+                                                >
                                                     {format(day, 'd')}
                                                 </span>
                                             </div>
