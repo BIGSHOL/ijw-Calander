@@ -42,6 +42,16 @@ export interface DragSelection {
   date: string;
 }
 
+// Monthly Bucket List - Unscheduled events for a target month
+export interface BucketItem {
+  id: string;
+  title: string;
+  targetMonth: string; // 'YYYY-MM' format
+  departmentId?: string;
+  priority: 'high' | 'medium' | 'low';
+  createdAt: string; // ISO Date string
+}
+
 export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
 // 7-tier role system (ordered from highest to lowest)

@@ -31,6 +31,10 @@ interface CalendarBoardProps {
   isPrimaryView?: boolean; // Only show "My Events" button on primary view
   showSidePanel?: boolean; // Control side panel visibility
   onQuickAdd?: (date: Date) => void; // Quick Add: Click date in yearly view
+  // Bucket List Props
+  bucketItems?: { id: string; title: string; targetMonth: string; priority: 'high' | 'medium' | 'low'; createdAt: string }[];
+  onAddBucket?: (title: string, targetMonth: string, priority: 'high' | 'medium' | 'low') => void;
+  onDeleteBucket?: (id: string) => void;
 }
 
 
@@ -223,6 +227,9 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   isPrimaryView = true, // Default to true for backwards compatibility
   showSidePanel = true, // Default to true
   onQuickAdd, // Quick Add callback
+  bucketItems = [], // Bucket List
+  onAddBucket,
+  onDeleteBucket,
 }) => {
   const [isMyEventsOpen, setIsMyEventsOpen] = React.useState(false);
   const weeks = getMonthWeeks(currentDate); // Restore weeks definition
@@ -287,6 +294,9 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           onViewChange={onViewChange || (() => { })}
           departments={departments}
           onQuickAdd={onQuickAdd}
+          bucketItems={bucketItems}
+          onAddBucket={onAddBucket}
+          onDeleteBucket={onDeleteBucket}
         />
       ) : (
         <>

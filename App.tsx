@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, differenceInDays } from 'date-fns';
-import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher } from './types';
+import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
 import EventModal from './components/EventModal';
@@ -354,6 +354,22 @@ const App: React.FC = () => {
 
   const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
 
+  // Monthly Bucket List State (Firebase with onSnapshot for cost efficiency)
+  const [bucketItems, setBucketItems] = useState<BucketItem[]>([]);
+
+  // Subscribe to Bucket Items (onSnapshot for caching/delta updates)
+  useEffect(() => {
+    const q = query(collection(db, "bucketItems"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as BucketItem[];
+      setBucketItems(items);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const handleCellClick = (date: string, deptId: string) => {
     if (!hasPermission('events.create')) {
       // Silent return or alert
@@ -393,6 +409,35 @@ const App: React.FC = () => {
     setSelectedEndDate(dateStr);
     setEditingEvent(null);
     setSelectedDeptId(departments[0]?.id || ''); // Default to first department
+    setIsEventModalOpen(true);
+  };
+
+  // Bucket List Handlers
+  const handleAddBucketItem = async (title: string, targetMonth: string, priority: 'high' | 'medium' | 'low') => {
+    if (!hasPermission('events.create')) return;
+    const newItem: BucketItem = {
+      id: crypto.randomUUID(),
+      title,
+      targetMonth,
+      priority,
+      createdAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, "bucketItems", newItem.id), newItem);
+  };
+
+  const handleDeleteBucketItem = async (id: string) => {
+    await deleteDoc(doc(db, "bucketItems", id));
+  };
+
+  const handleConvertBucketToEvent = (bucket: BucketItem, date: Date) => {
+    // Delete bucket item and open EventModal with prefilled data
+    handleDeleteBucketItem(bucket.id);
+    const dateStr = format(date, 'yyyy-MM-dd');
+    setSelectedDate(dateStr);
+    setSelectedEndDate(dateStr);
+    setEditingEvent(null);
+    setSelectedDeptId(bucket.departmentId || departments[0]?.id || '');
+    // Set custom title in modal - will need to pass through props
     setIsEventModalOpen(true);
   };
 
@@ -1361,6 +1406,9 @@ const App: React.FC = () => {
                 onViewChange={setViewMode}
                 showSidePanel={viewColumns === 1} // Only show detail side panel in single column mode
                 onQuickAdd={handleQuickAdd}
+                bucketItems={bucketItems}
+                onAddBucket={handleAddBucketItem}
+                onDeleteBucket={handleDeleteBucketItem}
               />
             </div>
 
