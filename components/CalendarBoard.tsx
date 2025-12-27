@@ -34,6 +34,7 @@ interface CalendarBoardProps {
   // Bucket List Props
   bucketItems?: { id: string; title: string; targetMonth: string; priority: 'high' | 'medium' | 'low'; createdAt: string }[];
   onAddBucket?: (title: string, targetMonth: string, priority: 'high' | 'medium' | 'low') => void;
+  onEditBucket?: (id: string, title: string, priority: 'high' | 'medium' | 'low') => void;
   onDeleteBucket?: (id: string) => void;
 }
 
@@ -229,6 +230,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   onQuickAdd, // Quick Add callback
   bucketItems = [], // Bucket List
   onAddBucket,
+  onEditBucket,
   onDeleteBucket,
 }) => {
   const [isMyEventsOpen, setIsMyEventsOpen] = React.useState(false);
@@ -296,6 +298,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           onQuickAdd={onQuickAdd}
           bucketItems={bucketItems}
           onAddBucket={onAddBucket}
+          onEditBucket={onEditBucket}
           onDeleteBucket={onDeleteBucket}
         />
       ) : (

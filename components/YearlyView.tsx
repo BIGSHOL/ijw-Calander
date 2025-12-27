@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, startOfYear, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { CalendarEvent, BucketItem } from '../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil } from 'lucide-react';
+import BucketModal from './BucketModal';
 
 interface YearlyViewProps {
     currentDate: Date;
@@ -15,6 +16,7 @@ interface YearlyViewProps {
     // Bucket List Props
     bucketItems?: BucketItem[];
     onAddBucket?: (title: string, targetMonth: string, priority: 'high' | 'medium' | 'low') => void;
+    onEditBucket?: (id: string, title: string, priority: 'high' | 'medium' | 'low') => void;
     onDeleteBucket?: (id: string) => void;
 }
 
@@ -28,12 +30,17 @@ const YearlyView: React.FC<YearlyViewProps> = ({
     onQuickAdd,
     bucketItems = [],
     onAddBucket,
+    onEditBucket,
     onDeleteBucket
 }) => {
     const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
         const now = new Date();
         return isSameMonth(now, currentDate) ? now : startOfYear(currentDate);
     });
+
+    // Bucket Modal State
+    const [isBucketModalOpen, setIsBucketModalOpen] = useState(false);
+    const [editingBucketItem, setEditingBucketItem] = useState<BucketItem | null>(null);
 
     const yearStart = startOfYear(currentDate);
     const months = useMemo(() => {
@@ -146,278 +153,313 @@ const YearlyView: React.FC<YearlyViewProps> = ({
     const currentYear = currentDate.getFullYear();
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
-            {/* Year Navigation Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 flex-shrink-0">
-                <div className="flex items-center gap-1 p-1 bg-[#f8fafc] rounded-xl border border-gray-200 shadow-sm">
-                    <button
-                        onClick={() => onDateChange(subYears(currentDate, 1))}
-                        className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
-                    >
-                        <ChevronLeft size={16} strokeWidth={3} />
-                    </button>
-                    <span className="px-3 py-1 text-sm font-bold text-[#081429]">
-                        {currentYear}년
-                    </span>
-                    <button
-                        onClick={() => onDateChange(addYears(currentDate, 1))}
-                        className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
-                    >
-                        <ChevronRight size={16} strokeWidth={3} />
-                    </button>
+        <>
+            <div className="flex flex-col h-full overflow-hidden">
+                {/* Year Navigation Header */}
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 flex-shrink-0">
+                    <div className="flex items-center gap-1 p-1 bg-[#f8fafc] rounded-xl border border-gray-200 shadow-sm">
+                        <button
+                            onClick={() => onDateChange(subYears(currentDate, 1))}
+                            className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
+                        >
+                            <ChevronLeft size={16} strokeWidth={3} />
+                        </button>
+                        <span className="px-3 py-1 text-sm font-bold text-[#081429]">
+                            {currentYear}년
+                        </span>
+                        <button
+                            onClick={() => onDateChange(addYears(currentDate, 1))}
+                            className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
+                        >
+                            <ChevronRight size={16} strokeWidth={3} />
+                        </button>
+                    </div>
+
+                    {/* Category Legend */}
+                    <div className="flex flex-wrap gap-2 items-center">
+                        {Object.entries(categoryColorMap).map(([cat, color]) => (
+                            <div key={cat} className="flex items-center gap-1">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                                <span className="text-[10px] text-gray-500 font-medium">{cat}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
-                {/* Category Legend */}
-                <div className="flex flex-wrap gap-2 items-center">
-                    {Object.entries(categoryColorMap).map(([cat, color]) => (
-                        <div key={cat} className="flex items-center gap-1">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                            <span className="text-[10px] text-gray-500 font-medium">{cat}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
+                {/* 12 Month Grid */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-1 sm:gap-1.5 lg:gap-2">
+                        {months.map(month => {
+                            const mStart = startOfMonth(month);
+                            const mEnd = endOfMonth(month);
+                            const days = eachDayOfInterval({ start: mStart, end: mEnd });
+                            const startDayOfWeek = mStart.getDay();
+                            const emptySlots = Array(startDayOfWeek).fill(null);
+                            const isSelected = isSameMonth(month, selectedMonth);
 
-            {/* 12 Month Grid */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-1 sm:gap-1.5 lg:gap-2">
-                    {months.map(month => {
-                        const mStart = startOfMonth(month);
-                        const mEnd = endOfMonth(month);
-                        const days = eachDayOfInterval({ start: mStart, end: mEnd });
-                        const startDayOfWeek = mStart.getDay();
-                        const emptySlots = Array(startDayOfWeek).fill(null);
-                        const isSelected = isSameMonth(month, selectedMonth);
-
-                        return (
-                            <div
-                                key={month.toString()}
-                                onClick={() => handleMonthClick(month)}
-                                onDoubleClick={() => handleMonthDoubleClick(month)}
-                                className={`
+                            return (
+                                <div
+                                    key={month.toString()}
+                                    onClick={() => handleMonthClick(month)}
+                                    onDoubleClick={() => handleMonthDoubleClick(month)}
+                                    className={`
                                     bg-white rounded-md sm:rounded-lg shadow-sm border p-1.5 sm:p-2 transition-all cursor-pointer
                                     ${isSelected ? 'ring-2 ring-[#fdb813] border-transparent' : 'border-gray-100 hover:border-[#fdb813]/50'}
                                 `}
-                            >
-                                <div className="flex justify-between items-center mb-1 sm:mb-1.5">
-                                    <h3 className={`text-[10px] sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-[#081429]' : 'text-gray-600'}`}>
-                                        {format(month, 'M월')}
-                                    </h3>
-                                    {isSelected && <span className="text-[6px] sm:text-[8px] px-1 py-0.5 rounded-full font-bold" style={{ backgroundColor: '#fdb813', color: '#081429' }}>선택됨</span>}
-                                </div>
+                                >
+                                    <div className="flex justify-between items-center mb-1 sm:mb-1.5">
+                                        <h3 className={`text-[10px] sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-[#081429]' : 'text-gray-600'}`}>
+                                            {format(month, 'M월')}
+                                        </h3>
+                                        {isSelected && <span className="text-[6px] sm:text-[8px] px-1 py-0.5 rounded-full font-bold" style={{ backgroundColor: '#fdb813', color: '#081429' }}>선택됨</span>}
+                                    </div>
 
-                                <div className="grid grid-cols-7 gap-[1px] text-center">
-                                    {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-                                        <div key={d} className="text-[5px] sm:text-[6px] lg:text-[8px] text-gray-400 font-medium">{d}</div>
-                                    ))}
+                                    <div className="grid grid-cols-7 gap-[1px] text-center">
+                                        {['일', '월', '화', '수', '목', '금', '토'].map(d => (
+                                            <div key={d} className="text-[5px] sm:text-[6px] lg:text-[8px] text-gray-400 font-medium">{d}</div>
+                                        ))}
 
-                                    {emptySlots.map((_, i) => <div key={`empty-${i}`} />)}
+                                        {emptySlots.map((_, i) => <div key={`empty-${i}`} />)}
 
-                                    {days.map(day => {
-                                        const dateKey = format(day, 'yyyy-MM-dd');
-                                        const data = densityMap[dateKey];
-                                        const count = data?.total || 0;
+                                        {days.map(day => {
+                                            const dateKey = format(day, 'yyyy-MM-dd');
+                                            const data = densityMap[dateKey];
+                                            const count = data?.total || 0;
 
-                                        // Brand colors: Navy #081429, Yellow #fdb813, Gray #373d41
-                                        const getDensityStyle = () => {
-                                            if (count === 0) return {};
-                                            if (count >= 5) return { backgroundColor: '#081429', color: '#fdb813' }; // Navy bg, Yellow text
-                                            if (count >= 3) return { backgroundColor: '#373d41', color: '#fdb813' }; // Gray bg, Yellow text
-                                            if (count >= 2) return { backgroundColor: '#fdb813', color: '#081429' }; // Yellow bg, Navy text
-                                            return { backgroundColor: '#fdb81340', color: '#081429' }; // Light Yellow bg, Navy text
-                                        };
+                                            // Brand colors: Navy #081429, Yellow #fdb813, Gray #373d41
+                                            const getDensityStyle = () => {
+                                                if (count === 0) return {};
+                                                if (count >= 5) return { backgroundColor: '#081429', color: '#fdb813' }; // Navy bg, Yellow text
+                                                if (count >= 3) return { backgroundColor: '#373d41', color: '#fdb813' }; // Gray bg, Yellow text
+                                                if (count >= 2) return { backgroundColor: '#fdb813', color: '#081429' }; // Yellow bg, Navy text
+                                                return { backgroundColor: '#fdb81340', color: '#081429' }; // Light Yellow bg, Navy text
+                                            };
 
-                                        return (
-                                            <div
-                                                key={dateKey}
-                                                className={`aspect-square flex items-center justify-center ${onQuickAdd ? 'cursor-pointer hover:ring-2 hover:ring-[#fdb813] hover:ring-offset-1' : ''}`}
-                                                title={`${format(day, 'yyyy-MM-dd')}: ${count}개 일정`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation(); // Prevent month card click
-                                                    if (onQuickAdd) onQuickAdd(day);
-                                                }}
-                                            >
-                                                <span
-                                                    className={`
+                                            return (
+                                                <div
+                                                    key={dateKey}
+                                                    className={`aspect-square flex items-center justify-center ${onQuickAdd ? 'cursor-pointer hover:ring-2 hover:ring-[#fdb813] hover:ring-offset-1' : ''}`}
+                                                    title={`${format(day, 'yyyy-MM-dd')}: ${count}개 일정`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // Prevent month card click
+                                                        if (onQuickAdd) onQuickAdd(day);
+                                                    }}
+                                                >
+                                                    <span
+                                                        className={`
                                                         w-full h-full flex items-center justify-center
                                                         text-[6px] sm:text-[8px] lg:text-[10px] font-medium
                                                         rounded-[2px] sm:rounded-[3px]
                                                         ${count === 0 ? 'text-gray-600' : ''}
                                                     `}
-                                                    style={getDensityStyle()}
-                                                >
-                                                    {format(day, 'd')}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
+                                                        style={getDensityStyle()}
+                                                    >
+                                                        {format(day, 'd')}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
-            </div>
 
-            {/* Bottom Pane: Horizontal Scroll Event Cards */}
-            {showSidePanel && (
-                <div className="flex-shrink-0 bg-white border-t border-gray-200">
-                    {/* Header with Department Summary Chips */}
-                    <div className="flex items-center justify-between px-3 py-2 bg-gray-50/80 border-b border-gray-100">
-                        <div className="flex items-center gap-2">
-                            <CalendarIcon size={14} className="text-[#fdb813]" />
-                            <span className="text-sm font-bold text-[#081429]">
-                                {format(selectedMonth, 'M월')}
-                            </span>
-                            <span className="text-xs text-gray-400">
-                                {selectedMonthEvents.length}개
-                            </span>
-                        </div>
-                        {/* Department Chips */}
-                        <div className="flex items-center gap-1 flex-wrap justify-end">
-                            {departments.filter(d => departmentCounts[d.id] > 0).map(dept => (
-                                <div
-                                    key={dept.id}
-                                    className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border"
-                                    style={{
-                                        backgroundColor: dept.color + '15',
-                                        borderColor: dept.color + '40',
-                                        color: dept.color
-                                    }}
-                                >
-                                    {dept.name}
-                                    <span
-                                        className="text-[9px] px-1 rounded-full"
-                                        style={{ backgroundColor: dept.color, color: '#fff' }}
+                {/* Bottom Pane: Horizontal Scroll Event Cards */}
+                {showSidePanel && (
+                    <div className="flex-shrink-0 bg-white border-t border-gray-200">
+                        {/* Header with Department Summary Chips */}
+                        <div className="flex items-center justify-between px-3 py-2 bg-gray-50/80 border-b border-gray-100">
+                            <div className="flex items-center gap-2">
+                                <CalendarIcon size={14} className="text-[#fdb813]" />
+                                <span className="text-sm font-bold text-[#081429]">
+                                    {format(selectedMonth, 'M월')}
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                    {selectedMonthEvents.length}개
+                                </span>
+                            </div>
+                            {/* Department Chips */}
+                            <div className="flex items-center gap-1 flex-wrap justify-end">
+                                {departments.filter(d => departmentCounts[d.id] > 0).map(dept => (
+                                    <div
+                                        key={dept.id}
+                                        className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                                        style={{
+                                            backgroundColor: dept.color + '15',
+                                            borderColor: dept.color + '40',
+                                            color: dept.color
+                                        }}
                                     >
-                                        {departmentCounts[dept.id]}
+                                        {dept.name}
+                                        <span
+                                            className="text-[9px] px-1 rounded-full"
+                                            style={{ backgroundColor: dept.color, color: '#fff' }}
+                                        >
+                                            {departmentCounts[dept.id]}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Bucket List Section */}
+                        {onAddBucket && (
+                            <div className="px-3 py-2 bg-[#fdb813]/10 border-b border-[#fdb813]/20">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Flag size={12} className="text-[#fdb813]" />
+                                    <span className="text-xs font-bold text-[#081429]">
+                                        {format(selectedMonth, 'M월')} 버킷리스트
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                        ({bucketItems.filter(b => b.targetMonth === format(selectedMonth, 'yyyy-MM')).length}개)
                                     </span>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
 
-                    {/* Bucket List Section */}
-                    {onAddBucket && (
-                        <div className="px-3 py-2 bg-[#fdb813]/10 border-b border-[#fdb813]/20">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Flag size={12} className="text-[#fdb813]" />
-                                <span className="text-xs font-bold text-[#081429]">
-                                    {format(selectedMonth, 'M월')} 버킷리스트
-                                </span>
-                                <span className="text-[10px] text-gray-400">
-                                    ({bucketItems.filter(b => b.targetMonth === format(selectedMonth, 'yyyy-MM')).length}개)
-                                </span>
-                            </div>
-
-                            {/* Bucket Cards */}
-                            <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
-                                {bucketItems
-                                    .filter(b => b.targetMonth === format(selectedMonth, 'yyyy-MM'))
-                                    .map(bucket => (
-                                        <div
-                                            key={bucket.id}
-                                            className={`
-                                                flex-shrink-0 w-28 p-2 rounded-lg border cursor-pointer group
-                                                ${bucket.priority === 'high' ? 'bg-red-50 border-red-200' :
-                                                    bucket.priority === 'medium' ? 'bg-[#fdb813]/20 border-[#fdb813]/40' :
-                                                        'bg-gray-50 border-gray-200'}
-                                            `}
-                                        >
-                                            <div className="flex items-start justify-between">
-                                                <div className={`text-[8px] px-1 py-0.5 rounded font-bold
-                                                    ${bucket.priority === 'high' ? 'bg-red-500 text-white' :
-                                                        bucket.priority === 'medium' ? 'bg-[#fdb813] text-[#081429]' :
-                                                            'bg-gray-400 text-white'}
-                                                `}>
-                                                    {bucket.priority === 'high' ? '높음' : bucket.priority === 'medium' ? '중간' : '낮음'}
-                                                </div>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onDeleteBucket?.(bucket.id);
-                                                    }}
-                                                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
-                                                >
-                                                    <Trash2 size={10} />
-                                                </button>
-                                            </div>
-                                            <div className="text-[10px] font-medium text-gray-700 mt-1 line-clamp-2">
-                                                {bucket.title}
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                {/* Add Bucket Button */}
-                                <button
-                                    onClick={() => {
-                                        const title = prompt('버킷 제목을 입력하세요:');
-                                        if (title) {
-                                            const priority = prompt('우선순위 (high/medium/low):', 'medium') as 'high' | 'medium' | 'low';
-                                            onAddBucket(title, format(selectedMonth, 'yyyy-MM'), priority || 'medium');
-                                        }
-                                    }}
-                                    className="flex-shrink-0 w-28 p-2 rounded-lg border-2 border-dashed border-gray-300 hover:border-[#fdb813] flex items-center justify-center gap-1 text-gray-400 hover:text-[#fdb813] transition-colors"
-                                >
-                                    <Plus size={12} />
-                                    <span className="text-[10px] font-bold">추가</span>
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Compact Event Cards - Horizontal Scroll */}
-                    <div className="overflow-x-auto custom-scrollbar">
-                        <div className="flex gap-2 p-2 min-w-max">
-                            {selectedMonthEvents.length > 0 ? (
-                                selectedMonthEvents.map(evt => {
-                                    const dept = departments.find(d => d.id === evt.departmentId);
-                                    return (
-                                        <div
-                                            key={evt.id}
-                                            className="flex-shrink-0 w-36 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-all cursor-pointer overflow-hidden"
-                                        >
-                                            {/* Color Bar Top */}
+                                {/* Bucket Cards */}
+                                <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                                    {bucketItems
+                                        .filter(b => b.targetMonth === format(selectedMonth, 'yyyy-MM'))
+                                        .map(bucket => (
                                             <div
-                                                className="h-1"
-                                                style={{ backgroundColor: dept?.color || '#6b7280' }}
-                                            />
-                                            <div className="p-2">
-                                                {/* Date + Dept */}
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-[10px] font-bold text-gray-500">
-                                                        {format(new Date(evt.startDate), 'M/d')}
-                                                    </span>
-                                                    {dept && (
-                                                        <span
-                                                            className="text-[8px] px-1 py-0.5 rounded font-bold"
-                                                            style={{
-                                                                backgroundColor: dept.color + '20',
-                                                                color: dept.color
+                                                key={bucket.id}
+                                                onClick={() => {
+                                                    setEditingBucketItem(bucket);
+                                                    setIsBucketModalOpen(true);
+                                                }}
+                                                className={`
+                                                flex-shrink-0 w-28 p-2 rounded-lg border cursor-pointer group hover:shadow-md transition-all
+                                                ${bucket.priority === 'high' ? 'bg-red-50 border-red-200' :
+                                                        bucket.priority === 'medium' ? 'bg-[#fdb813]/20 border-[#fdb813]/40' :
+                                                            'bg-gray-50 border-gray-200'}
+                                            `}
+                                            >
+                                                <div className="flex items-start justify-between">
+                                                    <div className={`text-[8px] px-1 py-0.5 rounded font-bold
+                                                    ${bucket.priority === 'high' ? 'bg-red-500 text-white' :
+                                                            bucket.priority === 'medium' ? 'bg-[#fdb813] text-[#081429]' :
+                                                                'bg-gray-400 text-white'}
+                                                `}>
+                                                        {bucket.priority === 'high' ? '높음' : bucket.priority === 'medium' ? '중간' : '낮음'}
+                                                    </div>
+                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setEditingBucketItem(bucket);
+                                                                setIsBucketModalOpen(true);
                                                             }}
+                                                            className="text-gray-400 hover:text-blue-500"
                                                         >
-                                                            {dept.name}
-                                                        </span>
-                                                    )}
+                                                            <Pencil size={10} />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onDeleteBucket?.(bucket.id);
+                                                            }}
+                                                            className="text-gray-400 hover:text-red-500"
+                                                        >
+                                                            <Trash2 size={10} />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                {/* Title */}
-                                                <div className="text-xs font-medium text-gray-800 line-clamp-2 leading-tight">
-                                                    {evt.title}
+                                                <div className="text-[10px] font-medium text-gray-700 mt-1 line-clamp-2">
+                                                    {bucket.title}
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })
-                            ) : (
-                                <div className="flex items-center justify-center w-full py-3 text-gray-300 text-xs">
-                                    <CalendarIcon size={14} className="mr-2 opacity-30" />
-                                    이 달에는 일정이 없습니다.
+                                        ))}
+
+                                    {/* Add Bucket Button */}
+                                    <button
+                                        onClick={() => {
+                                            setEditingBucketItem(null);
+                                            setIsBucketModalOpen(true);
+                                        }}
+                                        className="flex-shrink-0 w-28 p-2 rounded-lg border-2 border-dashed border-gray-300 hover:border-[#fdb813] flex items-center justify-center gap-1 text-gray-400 hover:text-[#fdb813] transition-colors"
+                                    >
+                                        <Plus size={12} />
+                                        <span className="text-[10px] font-bold">추가</span>
+                                    </button>
                                 </div>
-                            )}
+                            </div>
+                        )}
+
+                        {/* Compact Event Cards - Horizontal Scroll */}
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <div className="flex gap-2 p-2 min-w-max">
+                                {selectedMonthEvents.length > 0 ? (
+                                    selectedMonthEvents.map(evt => {
+                                        const dept = departments.find(d => d.id === evt.departmentId);
+                                        return (
+                                            <div
+                                                key={evt.id}
+                                                className="flex-shrink-0 w-36 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-all cursor-pointer overflow-hidden"
+                                            >
+                                                {/* Color Bar Top */}
+                                                <div
+                                                    className="h-1"
+                                                    style={{ backgroundColor: dept?.color || '#6b7280' }}
+                                                />
+                                                <div className="p-2">
+                                                    {/* Date + Dept */}
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-[10px] font-bold text-gray-500">
+                                                            {format(new Date(evt.startDate), 'M/d')}
+                                                        </span>
+                                                        {dept && (
+                                                            <span
+                                                                className="text-[8px] px-1 py-0.5 rounded font-bold"
+                                                                style={{
+                                                                    backgroundColor: dept.color + '20',
+                                                                    color: dept.color
+                                                                }}
+                                                            >
+                                                                {dept.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {/* Title */}
+                                                    <div className="text-xs font-medium text-gray-800 line-clamp-2 leading-tight">
+                                                        {evt.title}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="flex items-center justify-center w-full py-3 text-gray-300 text-xs">
+                                        <CalendarIcon size={14} className="mr-2 opacity-30" />
+                                        이 달에는 일정이 없습니다.
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+
+            {/* Bucket Modal */}
+            <BucketModal
+                isOpen={isBucketModalOpen}
+                onClose={() => {
+                    setIsBucketModalOpen(false);
+                    setEditingBucketItem(null);
+                }}
+                onSave={(title, priority) => {
+                    if (editingBucketItem) {
+                        // Edit mode
+                        onEditBucket?.(editingBucketItem.id, title, priority);
+                    } else {
+                        // Add mode
+                        onAddBucket?.(title, format(selectedMonth, 'yyyy-MM'), priority);
+                    }
+                }}
+                editingBucket={editingBucketItem}
+                targetMonth={format(selectedMonth, 'yyyy년 M월')}
+            />
+        </>
     );
 };
 

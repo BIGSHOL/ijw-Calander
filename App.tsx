@@ -429,6 +429,10 @@ const App: React.FC = () => {
     await deleteDoc(doc(db, "bucketItems", id));
   };
 
+  const handleEditBucketItem = async (id: string, title: string, priority: 'high' | 'medium' | 'low') => {
+    await updateDoc(doc(db, "bucketItems", id), { title, priority });
+  };
+
   const handleConvertBucketToEvent = (bucket: BucketItem, date: Date) => {
     // Delete bucket item and open EventModal with prefilled data
     handleDeleteBucketItem(bucket.id);
@@ -1408,6 +1412,7 @@ const App: React.FC = () => {
                 onQuickAdd={handleQuickAdd}
                 bucketItems={bucketItems}
                 onAddBucket={handleAddBucketItem}
+                onEditBucket={handleEditBucketItem}
                 onDeleteBucket={handleDeleteBucketItem}
               />
             </div>
