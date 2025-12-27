@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, startOfYear, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { CalendarEvent } from '../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { CalendarEvent, BucketItem } from '../types';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag } from 'lucide-react';
 
 interface YearlyViewProps {
     currentDate: Date;
@@ -12,6 +12,10 @@ interface YearlyViewProps {
     departments: { id: string; name: string; color: string; category?: string }[];
     showSidePanel?: boolean;
     onQuickAdd?: (date: Date) => void; // Quick Add: Click date to add event
+    // Bucket List Props
+    bucketItems?: BucketItem[];
+    onAddBucket?: (title: string, targetMonth: string, priority: 'high' | 'medium' | 'low') => void;
+    onDeleteBucket?: (id: string) => void;
 }
 
 const YearlyView: React.FC<YearlyViewProps> = ({
@@ -21,7 +25,10 @@ const YearlyView: React.FC<YearlyViewProps> = ({
     onViewChange,
     departments,
     showSidePanel = true,
-    onQuickAdd
+    onQuickAdd,
+    bucketItems = [],
+    onAddBucket,
+    onDeleteBucket
 }) => {
     const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
         const now = new Date();
@@ -288,6 +295,75 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                             ))}
                         </div>
                     </div>
+
+                    {/* Bucket List Section */}
+                    {onAddBucket && (
+                        <div className="px-3 py-2 bg-[#fdb813]/10 border-b border-[#fdb813]/20">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Flag size={12} className="text-[#fdb813]" />
+                                <span className="text-xs font-bold text-[#081429]">
+                                    {format(selectedMonth, 'M월')} 버킷리스트
+                                </span>
+                                <span className="text-[10px] text-gray-400">
+                                    ({bucketItems.filter(b => b.targetMonth === format(selectedMonth, 'yyyy-MM')).length}개)
+                                </span>
+                            </div>
+
+                            {/* Bucket Cards */}
+                            <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                                {bucketItems
+                                    .filter(b => b.targetMonth === format(selectedMonth, 'yyyy-MM'))
+                                    .map(bucket => (
+                                        <div
+                                            key={bucket.id}
+                                            className={`
+                                                flex-shrink-0 w-28 p-2 rounded-lg border cursor-pointer group
+                                                ${bucket.priority === 'high' ? 'bg-red-50 border-red-200' :
+                                                    bucket.priority === 'medium' ? 'bg-[#fdb813]/20 border-[#fdb813]/40' :
+                                                        'bg-gray-50 border-gray-200'}
+                                            `}
+                                        >
+                                            <div className="flex items-start justify-between">
+                                                <div className={`text-[8px] px-1 py-0.5 rounded font-bold
+                                                    ${bucket.priority === 'high' ? 'bg-red-500 text-white' :
+                                                        bucket.priority === 'medium' ? 'bg-[#fdb813] text-[#081429]' :
+                                                            'bg-gray-400 text-white'}
+                                                `}>
+                                                    {bucket.priority === 'high' ? '높음' : bucket.priority === 'medium' ? '중간' : '낮음'}
+                                                </div>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onDeleteBucket?.(bucket.id);
+                                                    }}
+                                                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                                                >
+                                                    <Trash2 size={10} />
+                                                </button>
+                                            </div>
+                                            <div className="text-[10px] font-medium text-gray-700 mt-1 line-clamp-2">
+                                                {bucket.title}
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                {/* Add Bucket Button */}
+                                <button
+                                    onClick={() => {
+                                        const title = prompt('버킷 제목을 입력하세요:');
+                                        if (title) {
+                                            const priority = prompt('우선순위 (high/medium/low):', 'medium') as 'high' | 'medium' | 'low';
+                                            onAddBucket(title, format(selectedMonth, 'yyyy-MM'), priority || 'medium');
+                                        }
+                                    }}
+                                    className="flex-shrink-0 w-28 p-2 rounded-lg border-2 border-dashed border-gray-300 hover:border-[#fdb813] flex items-center justify-center gap-1 text-gray-400 hover:text-[#fdb813] transition-colors"
+                                >
+                                    <Plus size={12} />
+                                    <span className="text-[10px] font-bold">추가</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Compact Event Cards - Horizontal Scroll */}
                     <div className="overflow-x-auto custom-scrollbar">
