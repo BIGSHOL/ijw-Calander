@@ -1281,14 +1281,36 @@ const App: React.FC = () => {
               {isTimetableFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
 
-            {/* Current Settings Summary */}
+            {/* Current Settings Summary - Clickable Toggles */}
             <div className="flex items-center gap-2 px-4 overflow-hidden flex-1">
-              <span className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs">
+              {/* Subject Toggle Button */}
+              <button
+                onClick={() => setTimetableSubject(prev => prev === 'math' ? 'english' : 'math')}
+                className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                title="클릭하여 과목 전환"
+              >
                 {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
-              </span>
-              <span className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs">
+              </button>
+
+              {/* View Type Toggle Button */}
+              <button
+                onClick={() => {
+                  if (timetableSubject === 'math') {
+                    // 수학: 강사별 ↔ 교실별
+                    setTimetableViewType(prev => prev === 'teacher' ? 'room' : 'teacher');
+                  } else {
+                    // 영어: 통합 → 강사별 → 교실별 → 통합
+                    setTimetableViewType(prev =>
+                      prev === 'class' ? 'teacher' : prev === 'teacher' ? 'room' : 'class'
+                    );
+                  }
+                }}
+                className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+                title="클릭하여 보기방식 전환"
+              >
                 {timetableViewType === 'teacher' ? '👨‍🏫 강사별' : (timetableViewType === 'class' ? '📋 통합' : '🏫 교실별')}
-              </span>
+              </button>
+
               <span className="text-gray-400">|</span>
               <span className="text-gray-400">
                 {timetableSelectedDays.join(', ')}
@@ -1308,7 +1330,7 @@ const App: React.FC = () => {
         {appMode === 'timetable' && isTimetableFilterOpen && (
           <div className="absolute top-[104px] left-0 w-full bg-[#1e293b]/95 backdrop-blur-xl border-b border-gray-700 shadow-2xl p-6 z-10 animate-in slide-in-from-top-2 duration-200">
             <div className="w-full h-full">
-              {/* Section 1: Subject & View Type */}
+              {/* Section 1: Student List Toggle */}
               <div className="flex justify-between items-start mb-6">
                 <div className="flex flex-col gap-4">
                   <h3 className="text-white font-bold flex items-center gap-2">
@@ -1316,63 +1338,6 @@ const App: React.FC = () => {
                   </h3>
 
                   <div className="flex flex-wrap gap-4">
-                    {/* Subject Selection */}
-                    <div className="flex flex-col gap-2">
-                      <span className="text-gray-400 text-xs">과목</span>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setTimetableSubject('math')}
-                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableSubject === 'math'
-                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
-                        >
-                          📐 수학
-                        </button>
-                        <button
-                          onClick={() => setTimetableSubject('english')}
-                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableSubject === 'english'
-                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
-                        >
-                          📕 영어
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* View Type Selection */}
-                    <div className="flex flex-col gap-2">
-                      <span className="text-gray-400 text-xs">보기 방식</span>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setTimetableViewType('teacher')}
-                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableViewType === 'teacher'
-                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
-                        >
-                          👨‍🏫 강사별
-                        </button>
-                        {/* Integrated View - Only for English */}
-                        {timetableSubject === 'english' && (
-                          <button
-                            onClick={() => setTimetableViewType('class')}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableViewType === 'class'
-                              ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                              : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
-                          >
-                            📋 통합
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setTimetableViewType('room')}
-                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableViewType === 'room'
-                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
-                        >
-                          🏫 교실별
-                        </button>
-                      </div>
-                    </div>
-
                     {/* Student List Toggle */}
                     <div className="flex flex-col gap-2">
                       <span className="text-gray-400 text-xs">학생 목록</span>
