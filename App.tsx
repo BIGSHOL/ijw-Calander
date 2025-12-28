@@ -21,6 +21,12 @@ import { departmentConverter, eventConverter } from './converters';
 // Import Style Utilities
 import { INJAEWON_LOGO, getJobTitleStyle } from './utils/styleUtils';
 
+// Helper to format user display: Name (JobTitle) or Email (JobTitle)
+const formatUserDisplay = (u: UserProfile) => {
+  const name = u.displayName || u.email.split('@')[0];
+  return u.jobTitle ? `${name} (${u.jobTitle})` : name;
+};
+
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation)
@@ -37,6 +43,8 @@ const App: React.FC = () => {
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); // New State
+
+
 
   // Local Settings
   const [hiddenDeptIds, setHiddenDeptIds] = useState<string[]>(() => {
@@ -376,8 +384,9 @@ const App: React.FC = () => {
   const [taskMemos, setTaskMemos] = useState<TaskMemo[]>([]);
   const [isMemoDropdownOpen, setIsMemoDropdownOpen] = useState(false);
   const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
-  const [memoRecipient, setMemoRecipient] = useState('');
+  const [memoRecipients, setMemoRecipients] = useState<string[]>([]);
   const [memoMessage, setMemoMessage] = useState('');
+  const [selectedMemo, setSelectedMemo] = useState<TaskMemo | null>(null);
 
   // Subscribe to Task Memos (only current user's received memos)
   useEffect(() => {
@@ -403,28 +412,41 @@ const App: React.FC = () => {
   // Unread memo count
   const unreadMemoCount = taskMemos.filter(m => !m.isRead).length;
 
-  // Send Task Memo
+  // Send Task Memo (Multi-recipient)
   const handleSendMemo = async () => {
-    if (!currentUser || !userProfile || !memoRecipient || !memoMessage.trim()) return;
-    const recipient = users.find(u => u.uid === memoRecipient);
-    if (!recipient) return;
+    if (!currentUser || !userProfile || memoRecipients.length === 0 || !memoMessage.trim()) return;
 
-    const newMemo: TaskMemo = {
-      id: `memo_${Date.now()}`,
-      from: currentUser.uid,
-      fromName: userProfile.displayName || currentUser.email || '익명',
-      to: memoRecipient,
-      toName: recipient.displayName || recipient.email || '익명',
-      message: memoMessage.trim(),
-      createdAt: new Date().toISOString(),
-      isRead: false
-    };
+    const batch = writeBatch(db);
+    const now = new Date().toISOString();
 
-    await setDoc(doc(db, "taskMemos", newMemo.id), newMemo);
-    setMemoMessage('');
-    setMemoRecipient('');
-    setIsMemoModalOpen(false);
-    alert('메모를 보냈습니다.');
+    memoRecipients.forEach(recipientId => {
+      const recipient = users.find(u => u.uid === recipientId);
+      if (recipient) {
+        const newDocRef = doc(collection(db, "taskMemos"));
+        const newMemo: TaskMemo = {
+          id: newDocRef.id,
+          from: currentUser.uid,
+          fromName: formatUserDisplay(userProfile),
+          to: recipientId,
+          toName: formatUserDisplay(recipient),
+          message: memoMessage.trim(),
+          createdAt: now,
+          isRead: false
+        };
+        batch.set(newDocRef, newMemo);
+      }
+    });
+
+    try {
+      await batch.commit();
+      setMemoMessage('');
+      setMemoRecipients([]);
+      setIsMemoModalOpen(false);
+      alert('메모를 보냈습니다.');
+    } catch (error) {
+      console.error("Error sending memos:", error);
+      alert('메모 전송 중 오류가 발생했습니다.');
+    }
   };
 
   // Mark memo as read
@@ -1094,7 +1116,7 @@ const App: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setIsMemoDropdownOpen(!isMemoDropdownOpen)}
-                  className={`relative transition-colors ${isMemoDropdownOpen ? 'text-[#fdb813]' : 'text-gray-400 hover:text-white'}`}
+                  className={`relative transition-colors mt-[5px] ${isMemoDropdownOpen ? 'text-[#fdb813]' : 'text-gray-400 hover:text-white'}`}
                 >
                   <Bell size={20} />
                   {unreadMemoCount > 0 && (
@@ -1127,7 +1149,11 @@ const App: React.FC = () => {
                             <div
                               key={memo.id}
                               className={`p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer ${!memo.isRead ? 'bg-blue-50/50' : ''}`}
-                              onClick={() => handleMarkMemoRead(memo.id)}
+                              onClick={() => {
+                                setSelectedMemo(memo);
+                                setIsMemoDropdownOpen(false);
+                                handleMarkMemoRead(memo.id);
+                              }}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
@@ -1737,16 +1763,31 @@ const App: React.FC = () => {
             <div className="p-4 space-y-4">
               <div>
                 <label className="text-xs font-bold text-gray-600 block mb-1">받는 사람</label>
-                <select
-                  value={memoRecipient}
-                  onChange={(e) => setMemoRecipient(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
-                >
-                  <option value="">선택하세요</option>
-                  {users.filter(u => u.uid !== currentUser?.uid).map(u => (
-                    <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>
-                  ))}
-                </select>
+                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
+                  {users
+                    .filter(u => u.uid !== currentUser?.uid)
+                    .sort((a, b) => formatUserDisplay(a).localeCompare(formatUserDisplay(b)))
+                    .map(u => {
+                      const isSelected = memoRecipients.includes(u.uid);
+                      return (
+                        <label key={u.uid} className={`flex items-center gap-3 p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 ${isSelected ? 'bg-blue-50' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setMemoRecipients(prev => [...prev, u.uid]);
+                              } else {
+                                setMemoRecipients(prev => prev.filter(id => id !== u.uid));
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
+                          />
+                          <span className="text-sm text-gray-700">{formatUserDisplay(u)}</span>
+                        </label>
+                      );
+                    })}
+                </div>
               </div>
               <div>
                 <label className="text-xs font-bold text-gray-600 block mb-1">메모 내용</label>
@@ -1767,11 +1808,67 @@ const App: React.FC = () => {
               </button>
               <button
                 onClick={handleSendMemo}
-                disabled={!memoRecipient || !memoMessage.trim()}
+                disabled={memoRecipients.length === 0 || !memoMessage.trim()}
                 className="px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-125 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                <Send size={14} /> 보내기
+                <Send size={14} /> 보내기 ({memoRecipients.length}명)
               </button>
+            </div>
+          </div>
+        </div>
+      {/* Memo Detail Modal */}
+      {selectedMemo && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+          <div className="bg-white rounded-xl shadow-2xl w-[400px] overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between bg-gray-50">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                <Mail size={16} /> 받은 메모
+              </h3>
+              <button onClick={() => setSelectedMemo(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <span className="text-xs font-bold text-gray-500 block mb-1">보낸 사람</span>
+                <div className="text-gray-800 font-bold flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                    <UserIcon size={16} />
+                  </div>
+                  {selectedMemo.fromName}
+                </div>
+              </div>
+              <div className="mb-6">
+                <span className="text-xs font-bold text-gray-500 block mb-1">내용</span>
+                <div className="bg-gray-50 p-4 rounded-lg text-gray-700 text-sm whitespace-pre-wrap leading-relaxed border border-gray-100">
+                  {selectedMemo.message}
+                </div>
+                <div className="text-right mt-2 text-xs text-gray-400">
+                  {new Date(selectedMemo.createdAt).toLocaleString('ko-KR')}
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    handleMarkMemoRead(selectedMemo.id);
+                    setSelectedMemo(null);
+                  }}
+                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-50"
+                >
+                  확인 (닫기)
+                </button>
+                <button
+                  onClick={() => {
+                    setMemoRecipients([selectedMemo.from]); // Set recipient to sender
+                    setIsMemoModalOpen(true); // Open send modal
+                    setSelectedMemo(null); // Close detail modal
+                    handleMarkMemoRead(selectedMemo.id); // Mark as read
+                  }}
+                  className="px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-125 flex items-center gap-2"
+                >
+                  <Send size={14} /> 답장하기
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -503,7 +503,8 @@ const EventModal: React.FC<EventModalProps> = ({
                   return nameA.localeCompare(nameB);
                 })
                 .map(u => {
-                  const displayName = `${u.email.split('@')[0]} ${u.jobTitle ? `(${u.jobTitle})` : ''}`;
+                  const name = u.displayName || u.email.split('@')[0];
+                  const displayName = u.jobTitle ? `${name} (${u.jobTitle})` : name;
                   const isSelected = participants.includes(displayName);
                   const currentStatus = attendance[u.uid] || 'pending';
 
