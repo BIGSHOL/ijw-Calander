@@ -84,6 +84,7 @@ const App: React.FC = () => {
 
   const [initialStartTime, setInitialStartTime] = useState('');
   const [initialTitle, setInitialTitle] = useState(''); // For bucket-to-event conversion
+  const [pendingBucketId, setPendingBucketId] = useState<string | null>(null); // Bucket to delete after event save
 
   // Derive unique categories from available departments
   const uniqueCategories = Array.from(new Set(departments.map(d => d.category).filter(Boolean))) as string[];
@@ -448,10 +449,9 @@ const App: React.FC = () => {
     setEditingEvent(null);
     setSelectedDeptId(bucket.departmentId || departments[0]?.id || '');
     setInitialTitle(bucket.title); // Pass bucket title to modal
+    setPendingBucketId(bucket.id); // Mark bucket for deletion after save
     setIsEventModalOpen(true);
-
-    // Delete bucket after opening modal
-    handleDeleteBucketItem(bucket.id);
+    // NOTE: Do NOT delete bucket here - wait for save confirmation
   };
 
   const handleSaveEvent = async (event: CalendarEvent) => {
@@ -675,9 +675,19 @@ const App: React.FC = () => {
         await batch.commit();
         // Silent success for single saves updates, or alert if preferred
       }
+
+      // If converting from bucket, delete the bucket now after successful save
+      if (pendingBucketId) {
+        await handleDeleteBucketItem(pendingBucketId);
+        setPendingBucketId(null);
+        setInitialTitle('');
+      }
     } catch (e) {
       console.error("Error saving event: ", e);
       alert("일정 저장 실패");
+      // Reset pending bucket on error too
+      setPendingBucketId(null);
+      setInitialTitle('');
     }
   };
 
@@ -1510,7 +1520,7 @@ const App: React.FC = () => {
 
       <EventModal
         isOpen={isEventModalOpen}
-        onClose={() => { setIsEventModalOpen(false); setInitialTitle(''); }}
+        onClose={() => { setIsEventModalOpen(false); setInitialTitle(''); setPendingBucketId(null); }}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
         initialDate={selectedDate}
