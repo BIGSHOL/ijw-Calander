@@ -456,7 +456,13 @@ const App: React.FC = () => {
 
   // Delete memo
   const handleDeleteMemo = async (id: string) => {
-    await deleteDoc(doc(db, "taskMemos", id));
+    if (!window.confirm("이 메모를 삭제하시겠습니까?")) return;
+    try {
+      await deleteDoc(doc(db, "taskMemos", id));
+    } catch (error) {
+      console.error("Error deleting memo:", error);
+      alert("메모 삭제 중 오류가 발생했습니다.");
+    }
   };
 
   const handleCellClick = (date: string, deptId: string) => {
