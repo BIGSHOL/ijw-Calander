@@ -404,7 +404,7 @@ const App: React.FC = () => {
         id: doc.id,
         ...doc.data()
       })) as TaskMemo[];
-      setTaskMemos(memos);
+      setTaskMemos(memos.filter(m => !m.isDeleted)); // Filter out soft-deleted memos
     });
     return () => unsubscribe();
   }, [currentUser]);
@@ -454,11 +454,12 @@ const App: React.FC = () => {
     await updateDoc(doc(db, "taskMemos", id), { isRead: true });
   };
 
-  // Delete memo
+  // Delete memo (Soft Delete)
   const handleDeleteMemo = async (id: string) => {
     if (!window.confirm("이 메모를 삭제하시겠습니까?")) return;
     try {
-      await deleteDoc(doc(db, "taskMemos", id));
+      // Soft delete: Mark as deleted instead of removing document
+      await updateDoc(doc(db, "taskMemos", id), { isDeleted: true });
     } catch (error) {
       console.error("Error deleting memo:", error);
       alert("메모 삭제 중 오류가 발생했습니다.");

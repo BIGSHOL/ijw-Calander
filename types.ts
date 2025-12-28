@@ -64,6 +64,7 @@ export interface TaskMemo {
   message: string;
   createdAt: string;    // ISO Date string
   isRead: boolean;
+  isDeleted?: boolean;
 }
 
 export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
