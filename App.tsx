@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, differenceInDays } from 'date-fns';
-import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem } from './types';
+import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
 import EventModal from './components/EventModal';
@@ -8,7 +8,7 @@ import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
 import CalendarBoard from './components/CalendarBoard';
 import TimetableManager from './components/Timetable/TimetableManager';
-import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, User as UserIcon, Star } from 'lucide-react';
+import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, User as UserIcon, Star, Bell, Mail, Send, Trash2, X } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
@@ -371,6 +371,71 @@ const App: React.FC = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Task Memo State - One-way notifications between users
+  const [taskMemos, setTaskMemos] = useState<TaskMemo[]>([]);
+  const [isMemoDropdownOpen, setIsMemoDropdownOpen] = useState(false);
+  const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
+  const [memoRecipient, setMemoRecipient] = useState('');
+  const [memoMessage, setMemoMessage] = useState('');
+
+  // Subscribe to Task Memos (only current user's received memos)
+  useEffect(() => {
+    if (!currentUser) {
+      setTaskMemos([]);
+      return;
+    }
+    const q = query(
+      collection(db, "taskMemos"),
+      where("to", "==", currentUser.uid),
+      orderBy("createdAt", "desc")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const memos = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as TaskMemo[];
+      setTaskMemos(memos);
+    });
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // Unread memo count
+  const unreadMemoCount = taskMemos.filter(m => !m.isRead).length;
+
+  // Send Task Memo
+  const handleSendMemo = async () => {
+    if (!currentUser || !userProfile || !memoRecipient || !memoMessage.trim()) return;
+    const recipient = users.find(u => u.uid === memoRecipient);
+    if (!recipient) return;
+
+    const newMemo: TaskMemo = {
+      id: `memo_${Date.now()}`,
+      from: currentUser.uid,
+      fromName: userProfile.displayName || currentUser.email || '익명',
+      to: memoRecipient,
+      toName: recipient.displayName || recipient.email || '익명',
+      message: memoMessage.trim(),
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+
+    await setDoc(doc(db, "taskMemos", newMemo.id), newMemo);
+    setMemoMessage('');
+    setMemoRecipient('');
+    setIsMemoModalOpen(false);
+    alert('메모를 보냈습니다.');
+  };
+
+  // Mark memo as read
+  const handleMarkMemoRead = async (id: string) => {
+    await updateDoc(doc(db, "taskMemos", id), { isRead: true });
+  };
+
+  // Delete memo
+  const handleDeleteMemo = async (id: string) => {
+    await deleteDoc(doc(db, "taskMemos", id));
+  };
 
   const handleCellClick = (date: string, deptId: string) => {
     if (!hasPermission('events.create')) {
@@ -1023,6 +1088,75 @@ const App: React.FC = () => {
             <button onClick={() => window.print()} className="text-gray-400 hover:text-white transition-colors">
               <Printer size={20} />
             </button>
+
+            {/* Memo Notification Bell */}
+            {currentUser && (
+              <div className="relative">
+                <button
+                  onClick={() => setIsMemoDropdownOpen(!isMemoDropdownOpen)}
+                  className={`relative transition-colors ${isMemoDropdownOpen ? 'text-[#fdb813]' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <Bell size={20} />
+                  {unreadMemoCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {unreadMemoCount}
+                    </span>
+                  )}
+                </button>
+
+                {isMemoDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsMemoDropdownOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                      <div className="p-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                        <span className="font-bold text-gray-700 text-sm flex items-center gap-2">
+                          <Mail size={14} /> 받은 메모
+                        </span>
+                        <button
+                          onClick={() => { setIsMemoModalOpen(true); setIsMemoDropdownOpen(false); }}
+                          className="text-xs px-2 py-1 bg-[#081429] text-white rounded font-bold hover:brightness-125"
+                        >
+                          + 새 메모
+                        </button>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {taskMemos.length === 0 ? (
+                          <div className="p-6 text-center text-gray-400 text-sm">받은 메모가 없습니다</div>
+                        ) : (
+                          taskMemos.map(memo => (
+                            <div
+                              key={memo.id}
+                              className={`p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer ${!memo.isRead ? 'bg-blue-50/50' : ''}`}
+                              onClick={() => handleMarkMemoRead(memo.id)}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-gray-800 text-sm">{memo.fromName}</span>
+                                    {!memo.isRead && <span className="w-2 h-2 bg-blue-500 rounded-full" />}
+                                  </div>
+                                  <p className="text-gray-600 text-xs mt-1 line-clamp-2">{memo.message}</p>
+                                  <span className="text-gray-400 text-[10px] mt-1 block">
+                                    {new Date(memo.createdAt).toLocaleString('ko-KR')}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteMemo(memo.id); }}
+                                  className="text-gray-400 hover:text-red-500 p-1"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Profile Dropdown */}
             {currentUser && (
               <div className="relative">
@@ -1587,6 +1721,61 @@ const App: React.FC = () => {
           </div>
         )
       }
+
+      {/* Memo Send Modal */}
+      {isMemoModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+          <div className="bg-white rounded-xl shadow-2xl w-[400px] max-h-[90vh] overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between bg-gray-50">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                <Send size={16} /> 메모 보내기
+              </h3>
+              <button onClick={() => setIsMemoModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-gray-600 block mb-1">받는 사람</label>
+                <select
+                  value={memoRecipient}
+                  onChange={(e) => setMemoRecipient(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
+                >
+                  <option value="">선택하세요</option>
+                  {users.filter(u => u.uid !== currentUser?.uid).map(u => (
+                    <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-600 block mb-1">메모 내용</label>
+                <textarea
+                  value={memoMessage}
+                  onChange={(e) => setMemoMessage(e.target.value)}
+                  placeholder="예: 오늘 회의 일정 만들어주세요"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none resize-none h-24"
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
+              <button
+                onClick={() => setIsMemoModalOpen(false)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-bold"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSendMemo}
+                disabled={!memoRecipient || !memoMessage.trim()}
+                className="px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-125 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Send size={14} /> 보내기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };

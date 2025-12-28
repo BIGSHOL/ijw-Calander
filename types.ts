@@ -54,6 +54,18 @@ export interface BucketItem {
   authorName?: string; // Display name of the creator
 }
 
+// Task Memo - One-way notification/request between users
+export interface TaskMemo {
+  id: string;
+  from: string;         // sender uid
+  fromName: string;     // sender display name
+  to: string;           // receiver uid
+  toName: string;       // receiver display name
+  message: string;
+  createdAt: string;    // ISO Date string
+  isRead: boolean;
+}
+
 export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
 // 7-tier role system (ordered from highest to lowest)
