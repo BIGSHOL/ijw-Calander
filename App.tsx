@@ -1816,6 +1816,7 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
       {/* Memo Detail Modal */}
       {selectedMemo && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
