@@ -1943,6 +1943,42 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             </tr>
                           ))}
 
+                          {/* 버킷리스트 관리 섹션 */}
+                          <tr className="bg-amber-50/50">
+                            <td colSpan={7} className="px-4 py-2 font-bold text-amber-700 text-xs uppercase tracking-wider">🎯 버킷리스트 관리</td>
+                          </tr>
+                          {[
+                            { id: 'buckets.edit_lower_roles' as PermissionId, label: '하위 역할 버킷 수정', desc: '하위 역할 사용자가 만든 버킷 수정' },
+                            { id: 'buckets.delete_lower_roles' as PermissionId, label: '하위 역할 버킷 삭제', desc: '하위 역할 사용자가 만든 버킷 삭제' },
+                          ].map(perm => (
+                            <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                              <td className="px-4 py-2.5 sticky left-0 bg-white">
+                                <div className="text-gray-700">{perm.label}</div>
+                                <div className="text-[10px] text-gray-400">{perm.desc}</div>
+                              </td>
+                              {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
+                                <td key={role} className="text-center px-3 py-2.5">
+                                  <input
+                                    type="checkbox"
+                                    checked={rolePermissions[role as keyof RolePermissions]?.[perm.id] ?? false}
+                                    disabled={!isMaster}
+                                    onChange={(e) => {
+                                      if (!isMaster) return;
+                                      setRolePermissions(prev => ({
+                                        ...prev,
+                                        [role]: {
+                                          ...prev[role as keyof RolePermissions],
+                                          [perm.id]: e.target.checked
+                                        }
+                                      }));
+                                    }}
+                                    className={`w-4 h-4 accent-[#081429] ${!isMaster ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+
                           {/* 부서 관리 섹션 */}
                           <tr className="bg-indigo-50/50">
                             <td colSpan={7} className="px-4 py-2 font-bold text-indigo-700 text-xs uppercase tracking-wider">🏢 부서(메뉴) 관리</td>
