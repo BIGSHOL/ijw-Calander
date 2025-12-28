@@ -76,6 +76,7 @@ export type PermissionId =
   | 'events.create' | 'events.edit_own' | 'events.edit_others'
   | 'events.delete_own' | 'events.delete_others' | 'events.drag_move'
   | 'events.attendance'
+  | 'buckets.edit_lower_roles' | 'buckets.delete_lower_roles'
   | 'departments.view_all' | 'departments.create' | 'departments.edit' | 'departments.delete'
   | 'users.view' | 'users.approve' | 'users.change_role' | 'users.change_permissions'
   | 'settings.access' | 'settings.holidays' | 'settings.role_permissions' | 'settings.manage_categories';
@@ -91,6 +92,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': true,
     'events.delete_own': true, 'events.delete_others': true, 'events.drag_move': true,
     'events.attendance': true,
+    'buckets.edit_lower_roles': true, 'buckets.delete_lower_roles': true,
     'departments.view_all': true, 'departments.create': true, 'departments.edit': true, 'departments.delete': false,
     'users.view': true, 'users.approve': true, 'users.change_role': false, 'users.change_permissions': true,
     'settings.access': true, 'settings.holidays': true, 'settings.role_permissions': false, 'settings.manage_categories': true,
@@ -99,6 +101,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': true,
     'events.delete_own': true, 'events.delete_others': true, 'events.drag_move': true,
     'events.attendance': true,
+    'buckets.edit_lower_roles': true, 'buckets.delete_lower_roles': true,
     'departments.view_all': true, 'departments.create': false, 'departments.edit': true, 'departments.delete': false,
     'users.view': true, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
@@ -107,6 +110,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
     'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
     'events.attendance': true,
+    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
     'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
@@ -115,6 +119,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
     'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
     'events.attendance': true,
+    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
     'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
@@ -123,6 +128,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'events.create': false, 'events.edit_own': false, 'events.edit_others': false,
     'events.delete_own': false, 'events.delete_others': false, 'events.drag_move': false,
     'events.attendance': false,
+    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
     'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
@@ -131,6 +137,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'events.create': false, 'events.edit_own': false, 'events.edit_others': false,
     'events.delete_own': false, 'events.delete_others': false, 'events.drag_move': false,
     'events.attendance': false,
+    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
     'departments.view_all': false, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,

@@ -429,11 +429,51 @@ const App: React.FC = () => {
     await setDoc(doc(db, "bucketItems", newItem.id), newItem);
   };
 
+  // Helper: Check if user's role is higher than author's role
+  const isHigherRole = (authorId: string | undefined): boolean => {
+    if (!userProfile || !authorId) return false;
+    const hierarchy = ['master', 'admin', 'manager', 'editor', 'user', 'viewer', 'guest'];
+    const author = users.find(u => u.uid === authorId);
+    if (!author) return false;
+    const myIndex = hierarchy.indexOf(userProfile.role);
+    const authorIndex = hierarchy.indexOf(author.role);
+    return myIndex < authorIndex; // Lower index = higher role
+  };
+
+  // Helper: Check if current user can edit/delete a bucket
+  const canModifyBucket = (bucket: BucketItem, action: 'edit' | 'delete'): boolean => {
+    if (!userProfile) return false;
+    // Master can do everything
+    if (userProfile.role === 'master') return true;
+    // Author can always modify own bucket
+    if (bucket.authorId === userProfile.uid) return true;
+    // Check permission for lower roles
+    const permId = action === 'edit' ? 'buckets.edit_lower_roles' : 'buckets.delete_lower_roles';
+    if (hasPermission(permId) && isHigherRole(bucket.authorId)) return true;
+    return false;
+  };
+
   const handleDeleteBucketItem = async (id: string) => {
+    const bucket = bucketItems.find(b => b.id === id);
+    if (!bucket) return;
+
+    if (!canModifyBucket(bucket, 'delete')) {
+      alert('삭제 권한이 없습니다. 본인이 작성한 버킷만 삭제할 수 있습니다.');
+      return;
+    }
+
     await deleteDoc(doc(db, "bucketItems", id));
   };
 
   const handleEditBucketItem = async (id: string, title: string, priority: 'high' | 'medium' | 'low') => {
+    const bucket = bucketItems.find(b => b.id === id);
+    if (!bucket) return;
+
+    if (!canModifyBucket(bucket, 'edit')) {
+      alert('수정 권한이 없습니다. 본인이 작성한 버킷만 수정할 수 있습니다.');
+      return;
+    }
+
     await updateDoc(doc(db, "bucketItems", id), { title, priority });
   };
 
