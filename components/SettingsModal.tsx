@@ -144,6 +144,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editTeacherSubjects, setEditTeacherSubjects] = useState<string[]>([]);
   const [editTeacherBgColor, setEditTeacherBgColor] = useState('#3b82f6'); // 기본 파란색
   const [editTeacherTextColor, setEditTeacherTextColor] = useState('#ffffff'); // 기본 흰색
+  const [editTeacherDefaultRoom, setEditTeacherDefaultRoom] = useState(''); // 고정 강의실
   const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
   const [teacherSubjectFilter, setTeacherSubjectFilter] = useState<'all' | 'math' | 'english'>('all'); // 과목 필터
   const [draggedTeacherId, setDraggedTeacherId] = useState<string | null>(null); // 드래그 대상
@@ -215,7 +216,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         name: editTeacherName.trim(),
         subjects: editTeacherSubjects,
         bgColor: editTeacherBgColor,
-        textColor: editTeacherTextColor
+        textColor: editTeacherTextColor,
+        defaultRoom: editTeacherDefaultRoom.trim()
       });
       setEditingTeacherId(null);
     } catch (e) {
@@ -1347,6 +1349,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                   미리보기
                                 </div>
                               </div>
+                              {/* 고정 강의실 입력 */}
+                              <div className="flex items-center gap-2 px-1 pt-1">
+                                <span className="text-[10px] text-gray-500 font-medium">🏫 고정 강의실:</span>
+                                <input
+                                  type="text"
+                                  value={editTeacherDefaultRoom}
+                                  onChange={(e) => setEditTeacherDefaultRoom(e.target.value)}
+                                  placeholder="예: 601"
+                                  className="flex-1 max-w-[100px] px-2 py-1 border border-gray-200 rounded text-[10px] focus:border-[#fdb813] outline-none"
+                                />
+                              </div>
                             </div>
                           ) : (
                             <>
@@ -1361,6 +1374,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                       style={{ backgroundColor: teacher.bgColor || '#3b82f6', color: teacher.textColor || '#ffffff' }}
                                     >
                                       컬러
+                                    </span>
+                                  )}
+                                  {teacher.defaultRoom && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 font-medium ml-1">
+                                      🏫 {teacher.defaultRoom}
                                     </span>
                                   )}
                                 </div>
@@ -1380,6 +1398,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                     setEditTeacherSubjects(teacher.subjects || ['math', 'english']);
                                     setEditTeacherBgColor(teacher.bgColor || '#3b82f6');
                                     setEditTeacherTextColor(teacher.textColor || '#ffffff');
+                                    setEditTeacherDefaultRoom(teacher.defaultRoom || '');
                                   }}
                                   className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
                                 >
@@ -1510,91 +1529,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         등록된 키워드가 없습니다.
                       </div>
                     )}
-                  </div>
-                </div>
-
-                {/* 선생님 전용 강의실 설정 */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <h3 className="font-bold mb-4 flex items-center gap-2 text-blue-700">
-                    🏫 선생님 전용 강의실 설정
-                  </h3>
-
-                  {/* 입력 폼 */}
-                  <div className="flex items-end gap-4 mb-6 p-4 bg-blue-50/50 rounded-lg border border-blue-100">
-                    <div className="flex-1">
-                      <label className="text-xs font-bold text-gray-600 block mb-1">강사 선택</label>
-                      <select
-                        value={selectedTeacherForRoom}
-                        onChange={(e) => {
-                          setSelectedTeacherForRoom(e.target.value);
-                          const t = teachers.find(t => t.id === e.target.value);
-                          setTeacherDefaultRoom(t?.defaultRoom || '');
-                        }}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none bg-white"
-                      >
-                        <option value="">선택하세요</option>
-                        {teachers.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-xs font-bold text-gray-600 block mb-1">고정 강의실</label>
-                      <input
-                        type="text"
-                        placeholder="예: 601"
-                        value={teacherDefaultRoom}
-                        onChange={(e) => setTeacherDefaultRoom(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
-                      />
-                    </div>
-                    <button
-                      onClick={async () => {
-                        if (!selectedTeacherForRoom) {
-                          alert('강사를 선택하세요');
-                          return;
-                        }
-                        try {
-                          await updateDoc(doc(db, 'teachers', selectedTeacherForRoom), {
-                            defaultRoom: teacherDefaultRoom.trim()
-                          });
-                          alert('저장되었습니다');
-                        } catch (e) {
-                          console.error(e);
-                          alert('저장 실패');
-                        }
-                      }}
-                      className="px-6 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-110"
-                    >
-                      저장
-                    </button>
-                  </div>
-
-                  {/* 강사별 강의실 목록 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {teachers.map(t => (
-                      <div
-                        key={t.id}
-                        className="relative group p-3 rounded-lg bg-blue-50 border border-blue-100"
-                      >
-                        <div className="font-bold text-gray-800">{t.name}</div>
-                        <div className="text-xs text-blue-600">{t.defaultRoom || '-'}</div>
-                        {t.defaultRoom && (
-                          <button
-                            onClick={async () => {
-                              try {
-                                await updateDoc(doc(db, 'teachers', t.id), { defaultRoom: '' });
-                              } catch (e) {
-                                console.error(e);
-                              }
-                            }}
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-opacity"
-                          >
-                            <X size={12} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
                   </div>
                 </div>
               </div>
