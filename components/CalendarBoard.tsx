@@ -32,10 +32,11 @@ interface CalendarBoardProps {
   showSidePanel?: boolean; // Control side panel visibility
   onQuickAdd?: (date: Date) => void; // Quick Add: Click date in yearly view
   // Bucket List Props
-  bucketItems?: { id: string; title: string; targetMonth: string; priority: 'high' | 'medium' | 'low'; createdAt: string }[];
+  bucketItems?: { id: string; title: string; targetMonth: string; priority: 'high' | 'medium' | 'low'; createdAt: string; authorId?: string; authorName?: string }[];
   onAddBucket?: (title: string, targetMonth: string, priority: 'high' | 'medium' | 'low') => void;
   onEditBucket?: (id: string, title: string, priority: 'high' | 'medium' | 'low') => void;
   onDeleteBucket?: (id: string) => void;
+  onConvertBucket?: (bucket: { id: string; title: string; targetMonth: string; priority: 'high' | 'medium' | 'low' }) => void;
 }
 
 
@@ -232,6 +233,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   onAddBucket,
   onEditBucket,
   onDeleteBucket,
+  onConvertBucket,
 }) => {
   const [isMyEventsOpen, setIsMyEventsOpen] = React.useState(false);
   const weeks = getMonthWeeks(currentDate); // Restore weeks definition
@@ -300,6 +302,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           onAddBucket={onAddBucket}
           onEditBucket={onEditBucket}
           onDeleteBucket={onDeleteBucket}
+          onConvertBucket={onConvertBucket}
         />
       ) : (
         <>
