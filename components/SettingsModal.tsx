@@ -582,7 +582,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <input
                       value={user.jobTitle || ''}
                       onChange={(e) => handleUserUpdate(user.uid, { jobTitle: e.target.value })}
-                      placeholder="직급 입력"
+                      placeholder="호칭 입력"
                       className="bg-white border border-gray-200 rounded px-2 py-1 text-sm font-medium w-32 focus:border-[#fdb813] outline-none"
                     />
                     {/* Role Dropdown - 7-tier */}
@@ -1076,8 +1076,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* Table Header */}
                 <div className="bg-gray-100 rounded-t-xl border-x border-t border-gray-200 grid grid-cols-12 gap-4 p-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  <div className="col-span-4 pl-2">사용자 정보</div>
-                  <div className="col-span-2 text-center">직급</div>
+                  <div className="col-span-4 pl-2">이메일</div>
+                  <div className="col-span-2 text-center">호칭</div>
                   <div className="col-span-2 text-center">권한(Role)</div>
                   <div className="col-span-2 text-center">상태</div>
                   <div className="col-span-2 text-center">관리</div>
@@ -1105,7 +1105,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           </div>
                           <div className="min-w-0">
                             <div className="font-bold text-[#081429] truncate">{user.email}</div>
-                            <div className="text-[10px] text-gray-400 font-mono truncate">{user.uid.slice(0, 6)}...</div>
                           </div>
                         </div>
 

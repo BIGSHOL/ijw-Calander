@@ -174,7 +174,8 @@ export interface UserProfile {
   canManageMenus?: boolean;
   /** @deprecated Use 'events.edit_others' permission */
   canManageEventAuthors?: boolean;
-  jobTitle?: string;
+  displayName?: string; // 이름 (표시명)
+  jobTitle?: string; // 호칭
 }
 
 export interface Holiday {
