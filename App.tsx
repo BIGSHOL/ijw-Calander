@@ -466,6 +466,7 @@ const App: React.FC = () => {
     try {
       // Soft delete: Mark as deleted instead of removing document
       await updateDoc(doc(db, "taskMemos", id), { isDeleted: true });
+      setSelectedMemo(null); // Close modal if open
     } catch (error) {
       console.error("Error deleting memo:", error);
       alert("메모 삭제 중 오류가 발생했습니다.");
@@ -1179,12 +1180,6 @@ const App: React.FC = () => {
                                     {new Date(memo.createdAt).toLocaleString('ko-KR')}
                                   </span>
                                 </div>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteMemo(memo.id); }}
-                                  className="text-gray-400 hover:text-red-500 p-1"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
                               </div>
                             </div>
                           ))
@@ -1868,6 +1863,12 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => handleDeleteMemo(selectedMemo.id)}
+                  className="mr-auto px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm font-bold flex items-center gap-2"
+                >
+                  <Trash2 size={14} /> 삭제
+                </button>
                 <button
                   onClick={() => {
                     handleMarkMemoRead(selectedMemo.id);
