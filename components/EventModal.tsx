@@ -17,6 +17,7 @@ interface EventModalProps {
   initialDepartmentId?: string;
   initialStartTime?: string;
   initialEndTime?: string;
+  initialTitle?: string; // For bucket-to-event conversion
   existingEvent?: CalendarEvent | null;
   departments: Department[];
   users: UserProfile[];
@@ -37,6 +38,7 @@ const EventModal: React.FC<EventModalProps> = ({
   initialDepartmentIds,
   initialStartTime,
   initialEndTime,
+  initialTitle,
   existingEvent,
   departments,
   users,
@@ -134,7 +136,7 @@ const EventModal: React.FC<EventModalProps> = ({
           setRecurrenceType(existingEvent.recurrenceType || 'none');
           setRecurrenceCount(1); // Default count for edit mode (usually not used unless new recurrence started)
         } else {
-          setTitle('');
+          setTitle(initialTitle || '');
           setDescription('');
           // Default Logic: Auto-select Current User
           if (currentUser) {

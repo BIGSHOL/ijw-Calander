@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, startOfYear, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { CalendarEvent, BucketItem } from '../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil, ArrowRightCircle } from 'lucide-react';
 import BucketModal from './BucketModal';
 
 interface YearlyViewProps {
@@ -18,6 +18,7 @@ interface YearlyViewProps {
     onAddBucket?: (title: string, targetMonth: string, priority: 'high' | 'medium' | 'low') => void;
     onEditBucket?: (id: string, title: string, priority: 'high' | 'medium' | 'low') => void;
     onDeleteBucket?: (id: string) => void;
+    onConvertBucket?: (bucket: BucketItem) => void; // Convert bucket to main event
 }
 
 const YearlyView: React.FC<YearlyViewProps> = ({
@@ -31,7 +32,8 @@ const YearlyView: React.FC<YearlyViewProps> = ({
     bucketItems = [],
     onAddBucket,
     onEditBucket,
-    onDeleteBucket
+    onDeleteBucket,
+    onConvertBucket
 }) => {
     const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
         const now = new Date();
@@ -344,6 +346,18 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                                         {bucket.priority === 'high' ? '높음' : bucket.priority === 'medium' ? '중간' : '낮음'}
                                                     </div>
                                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        {onConvertBucket && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    onConvertBucket(bucket);
+                                                                }}
+                                                                className="text-gray-400 hover:text-green-500"
+                                                                title="일정으로 변환"
+                                                            >
+                                                                <ArrowRightCircle size={10} />
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -368,6 +382,12 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                                 <div className="text-[10px] font-medium text-gray-700 mt-1 line-clamp-2">
                                                     {bucket.title}
                                                 </div>
+                                                {/* Author Display */}
+                                                {bucket.authorName && (
+                                                    <div className="text-[8px] text-gray-400 mt-1 truncate">
+                                                        by {bucket.authorName}
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
 

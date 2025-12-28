@@ -83,6 +83,7 @@ const App: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // New Category Filter State
 
   const [initialStartTime, setInitialStartTime] = useState('');
+  const [initialTitle, setInitialTitle] = useState(''); // For bucket-to-event conversion
 
   // Derive unique categories from available departments
   const uniqueCategories = Array.from(new Set(departments.map(d => d.category).filter(Boolean))) as string[];
@@ -435,16 +436,22 @@ const App: React.FC = () => {
     await updateDoc(doc(db, "bucketItems", id), { title, priority });
   };
 
-  const handleConvertBucketToEvent = (bucket: BucketItem, date: Date) => {
-    // Delete bucket item and open EventModal with prefilled data
-    handleDeleteBucketItem(bucket.id);
-    const dateStr = format(date, 'yyyy-MM-dd');
+  const handleConvertBucketToEvent = (bucket: BucketItem) => {
+    // Get first day of target month as default date
+    const [year, month] = bucket.targetMonth.split('-').map(Number);
+    const targetDate = new Date(year, month - 1, 1);
+    const dateStr = format(targetDate, 'yyyy-MM-dd');
+
+    // Set up modal with bucket data
     setSelectedDate(dateStr);
     setSelectedEndDate(dateStr);
     setEditingEvent(null);
     setSelectedDeptId(bucket.departmentId || departments[0]?.id || '');
-    // Set custom title in modal - will need to pass through props
+    setInitialTitle(bucket.title); // Pass bucket title to modal
     setIsEventModalOpen(true);
+
+    // Delete bucket after opening modal
+    handleDeleteBucketItem(bucket.id);
   };
 
   const handleSaveEvent = async (event: CalendarEvent) => {
@@ -1416,6 +1423,7 @@ const App: React.FC = () => {
                 onAddBucket={handleAddBucketItem}
                 onEditBucket={handleEditBucketItem}
                 onDeleteBucket={handleDeleteBucketItem}
+                onConvertBucket={handleConvertBucketToEvent}
               />
             </div>
 
@@ -1502,7 +1510,7 @@ const App: React.FC = () => {
 
       <EventModal
         isOpen={isEventModalOpen}
-        onClose={() => setIsEventModalOpen(false)}
+        onClose={() => { setIsEventModalOpen(false); setInitialTitle(''); }}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
         initialDate={selectedDate}
@@ -1511,6 +1519,7 @@ const App: React.FC = () => {
         initialDepartmentIds={selectedDeptIds} // Pass multi-select
         initialStartTime={initialStartTime}
         initialEndTime={initialEndTime}
+        initialTitle={initialTitle}
         existingEvent={editingEvent}
         departments={visibleDepartments} // ONLY Pass visible
         // Granular Permission Update: 
