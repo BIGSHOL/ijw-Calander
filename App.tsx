@@ -1772,7 +1772,13 @@ const App: React.FC = () => {
                 <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
                   {users
                     .filter(u => u.uid !== currentUser?.uid)
-                    .sort((a, b) => formatUserDisplay(a).localeCompare(formatUserDisplay(b)))
+                    .sort((a, b) => {
+                      const isASel = memoRecipients.includes(a.uid);
+                      const isBSel = memoRecipients.includes(b.uid);
+                      if (isASel && !isBSel) return -1;
+                      if (!isASel && isBSel) return 1;
+                      return formatUserDisplay(a).localeCompare(formatUserDisplay(b));
+                    })
                     .map(u => {
                       const isSelected = memoRecipients.includes(u.uid);
                       return (
