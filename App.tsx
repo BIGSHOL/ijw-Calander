@@ -396,15 +396,21 @@ const App: React.FC = () => {
     }
     const q = query(
       collection(db, "taskMemos"),
-      where("to", "==", currentUser.uid),
-      orderBy("createdAt", "desc")
+      where("to", "==", currentUser.uid)
+      // orderBy("createdAt", "desc") // Removed to avoid index requirement
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const memos = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as TaskMemo[];
-      setTaskMemos(memos.filter(m => !m.isDeleted)); // Filter out soft-deleted memos
+
+      // Client-side sort and filter
+      const sortedMemos = memos
+        .filter(m => !m.isDeleted)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      setTaskMemos(sortedMemos);
     });
     return () => unsubscribe();
   }, [currentUser]);
