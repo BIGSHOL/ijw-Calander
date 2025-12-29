@@ -1,0 +1,247 @@
+import React, { useState, useEffect } from 'react';
+import {
+    RolePermissions,
+    DEFAULT_ROLE_PERMISSIONS,
+    ROLE_HIERARCHY,
+    ROLE_LABELS,
+    PermissionId
+} from '../../types';
+import { db } from '../../firebaseConfig';
+import { setDoc, doc, onSnapshot } from 'firebase/firestore';
+import { RotateCcw, Save } from 'lucide-react';
+
+interface RolePermissionsTabProps {
+    isMaster: boolean;
+    isAdmin: boolean;
+    currentUserRole?: string;
+}
+
+const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
+    isMaster,
+    isAdmin,
+    currentUserRole
+}) => {
+    // --- State ---
+    const [rolePermissions, setRolePermissions] = useState<RolePermissions>(DEFAULT_ROLE_PERMISSIONS);
+    const [rolePermissionsLoaded, setRolePermissionsLoaded] = useState(false);
+
+    const canViewRolePermissions = isMaster || isAdmin || currentUserRole === 'manager';
+
+    // --- Firestore Subscription ---
+    useEffect(() => {
+        if (!canViewRolePermissions) return;
+
+        const unsubscribe = onSnapshot(doc(db, 'settings', 'rolePermissions'), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data() as RolePermissions;
+                // Merge with defaults
+                const merged: RolePermissions = {};
+                for (const role of ROLE_HIERARCHY.filter(r => r !== 'master') as (keyof RolePermissions)[]) {
+                    merged[role] = {
+                        ...DEFAULT_ROLE_PERMISSIONS[role],
+                        ...(data[role] || {})
+                    };
+                }
+                setRolePermissions(merged);
+            } else {
+                setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+            }
+            setRolePermissionsLoaded(true);
+        });
+        return () => unsubscribe();
+    }, [canViewRolePermissions]);
+
+    // --- Handlers ---
+    const handleResetToDefaults = () => {
+        if (confirm('모든 권한을 기본값으로 초기화하시겠습니까?')) {
+            setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+        }
+    };
+
+    const handleSave = async () => {
+        try {
+            await setDoc(doc(db, 'settings', 'rolePermissions'), rolePermissions);
+            alert('역할별 권한이 저장되었습니다.');
+        } catch (e) {
+            console.error(e);
+            alert('저장 중 오류가 발생했습니다.');
+        }
+    };
+
+    const handlePermissionChange = (role: string, permId: PermissionId, checked: boolean) => {
+        if (!isMaster) return;
+        setRolePermissions(prev => ({
+            ...prev,
+            [role]: {
+                ...prev[role as keyof RolePermissions],
+                [permId]: checked
+            }
+        }));
+    };
+
+    // --- Permission Sections ---
+    const eventPermissions = [
+        { id: 'events.create' as PermissionId, label: '일정 생성', desc: '새 일정 추가 (버튼, 드래그)' },
+        { id: 'events.edit_own' as PermissionId, label: '본인 일정 수정', desc: '본인이 만든 일정 수정' },
+        { id: 'events.edit_others' as PermissionId, label: '타인 일정 수정', desc: '다른 사용자 일정 수정' },
+        { id: 'events.delete_own' as PermissionId, label: '본인 일정 삭제', desc: '본인이 만든 일정 삭제' },
+        { id: 'events.delete_others' as PermissionId, label: '타인 일정 삭제', desc: '다른 사용자 일정 삭제' },
+        { id: 'events.drag_move' as PermissionId, label: '일정 드래그 이동', desc: '드래그로 날짜/시간 변경' },
+        { id: 'events.attendance' as PermissionId, label: '참가 현황 변경', desc: '참석/불참 표시 관리' },
+    ];
+
+    const bucketPermissions = [
+        { id: 'buckets.edit_lower_roles' as PermissionId, label: '하위 역할 버킷 수정', desc: '하위 역할의 버킷아이템 수정' },
+        { id: 'buckets.delete_lower_roles' as PermissionId, label: '하위 역할 버킷 삭제', desc: '하위 역할의 버킷아이템 삭제' },
+    ];
+
+    const deptPermissions = [
+        { id: 'departments.view_all' as PermissionId, label: '모든 부서 조회', desc: '숨겨진 부서 포함 조회' },
+        { id: 'departments.create' as PermissionId, label: '부서 생성', desc: '새 부서 추가' },
+        { id: 'departments.edit' as PermissionId, label: '부서 정보 수정', desc: '부서 이름/색상 수정' },
+        { id: 'departments.delete' as PermissionId, label: '부서 삭제', desc: '부서 삭제' },
+    ];
+
+    const userPermissions = [
+        { id: 'users.view' as PermissionId, label: '사용자 목록 조회', desc: '전체 사용자 조회' },
+        { id: 'users.approve' as PermissionId, label: '신규 사용자 승인', desc: '가입 신청 승인/거부' },
+        { id: 'users.change_role' as PermissionId, label: '역할 변경', desc: '사용자 역할 변경' },
+        { id: 'users.change_permissions' as PermissionId, label: '세부 권한 변경', desc: '부서별 접근 권한 설정' },
+    ];
+
+    const settingsPermissions = [
+        { id: 'settings.access' as PermissionId, label: '설정 메뉴 접근', desc: '설정 화면 열기 및 접근' },
+        { id: 'settings.holidays' as PermissionId, label: '공휴일 관리', desc: '공휴일 추가/수정/삭제' },
+        { id: 'settings.role_permissions' as PermissionId, label: '역할별 권한 설정', desc: '역할 기반 권한 체계 설정', disabled: true },
+    ];
+
+    // --- Render Permission Row ---
+    const renderPermissionRow = (perm: { id: PermissionId; label: string; desc: string; disabled?: boolean }) => (
+        <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+            <td className="px-4 py-2.5 sticky left-0 bg-white">
+                <div className="text-gray-700">
+                    {perm.label}
+                    {perm.disabled && <span className="text-[10px] text-red-400 ml-2">(MASTER 전용)</span>}
+                </div>
+                <div className="text-[10px] text-gray-400">{perm.desc}</div>
+            </td>
+            {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
+                <td key={role} className="text-center px-3 py-2.5">
+                    <input
+                        type="checkbox"
+                        checked={perm.disabled ? false : (rolePermissions[role as keyof RolePermissions]?.[perm.id] ?? false)}
+                        disabled={!isMaster || perm.disabled}
+                        onChange={(e) => {
+                            if (isMaster && !perm.disabled) {
+                                handlePermissionChange(role, perm.id, e.target.checked);
+                            }
+                        }}
+                        className={`w-4 h-4 accent-[#081429] ${(!isMaster || perm.disabled) ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                    />
+                </td>
+            ))}
+        </tr>
+    );
+
+    if (!canViewRolePermissions) return null;
+
+    return (
+        <div className="max-w-6xl mx-auto">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                {/* Header */}
+                <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-gray-500">
+                                {isMaster
+                                    ? '각 역할이 수행할 수 있는 기능을 세부적으로 설정합니다.'
+                                    : '현재 설정된 역할별 권한을 확인할 수 있습니다.'}
+                            </p>
+                        </div>
+                        {!isMaster && (
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full font-bold">읽기 전용</span>
+                        )}
+                    </div>
+                </div>
+
+                {!rolePermissionsLoaded ? (
+                    <div className="p-8 text-center text-gray-500">권한 정보를 불러오는 중...</div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th className="text-left px-4 py-3 font-bold text-gray-700 sticky left-0 bg-gray-50 min-w-[200px]">권한</th>
+                                    {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
+                                        <th key={role} className="text-center px-3 py-3 font-bold text-gray-700 min-w-[80px]">
+                                            <span className={`px-2 py-1 rounded text-[10px] font-black ${role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
+                                                    role === 'manager' ? 'bg-purple-100 text-purple-700' :
+                                                        role === 'editor' ? 'bg-blue-100 text-blue-700' :
+                                                            role === 'user' ? 'bg-gray-100 text-gray-600' :
+                                                                role === 'viewer' ? 'bg-yellow-100 text-yellow-700' :
+                                                                    'bg-gray-100 text-gray-400'
+                                                }`}>
+                                                {ROLE_LABELS[role]}
+                                            </span>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {/* 일정 관리 섹션 */}
+                                <tr className="bg-blue-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-blue-700 text-xs uppercase tracking-wider">📅 일정 관리</td>
+                                </tr>
+                                {eventPermissions.map(renderPermissionRow)}
+
+                                {/* 버킷리스트 관리 섹션 */}
+                                <tr className="bg-amber-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-amber-700 text-xs uppercase tracking-wider">🎯 버킷리스트 관리</td>
+                                </tr>
+                                {bucketPermissions.map(renderPermissionRow)}
+
+                                {/* 부서 관리 섹션 */}
+                                <tr className="bg-green-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-green-700 text-xs uppercase tracking-wider">🏢 부서 관리</td>
+                                </tr>
+                                {deptPermissions.map(renderPermissionRow)}
+
+                                {/* 사용자 관리 섹션 */}
+                                <tr className="bg-purple-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-purple-700 text-xs uppercase tracking-wider">👥 사용자 관리</td>
+                                </tr>
+                                {userPermissions.map(renderPermissionRow)}
+
+                                {/* 시스템 설정 섹션 */}
+                                <tr className="bg-orange-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-orange-700 text-xs uppercase tracking-wider">⚙️ 시스템 설정</td>
+                                </tr>
+                                {settingsPermissions.map(renderPermissionRow)}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {/* Actions (MASTER only) */}
+                {isMaster && (
+                    <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                        <button
+                            onClick={handleResetToDefaults}
+                            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 flex items-center gap-2"
+                        >
+                            <RotateCcw size={14} /> 기본값으로 초기화
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            className="px-6 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:bg-[#0a1a35] flex items-center gap-2"
+                        >
+                            <Save size={14} /> 저장
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default RolePermissionsTab;

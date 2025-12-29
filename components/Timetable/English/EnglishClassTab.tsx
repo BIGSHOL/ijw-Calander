@@ -2,11 +2,12 @@
 // 영어 통합 시간표 탭 - 수업별 컬럼 뷰 (Refactored to match academy-app style with Logic Port)
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Eye, EyeOff, Settings } from 'lucide-react';
+import { Search, Eye, EyeOff, Settings, UserPlus } from 'lucide-react';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor } from './englishUtils';
-import { Teacher } from '../../../types';
+import { Teacher, TimetableStudent } from '../../../types';
 import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewSettings';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import StudentModal from './StudentModal';
+import { doc, onSnapshot, setDoc, collection, query, where } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 
 interface ScheduleCell {
@@ -477,77 +478,115 @@ const ClassCard: React.FC<{
     onToggleHidden: () => void,
     teachersData: Teacher[]
 }> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData }) => {
+    const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+    const [studentCount, setStudentCount] = useState<number>(0);
+
+    // Realtime student count subscription
+    useEffect(() => {
+        const q = query(collection(db, '수업목록'), where('className', '==', classInfo.name));
+        const unsub = onSnapshot(q, (snapshot) => {
+            if (!snapshot.empty) {
+                setStudentCount(snapshot.docs[0].data().studentList?.length || 0);
+            } else {
+                setStudentCount(0);
+            }
+        });
+        return () => unsub();
+    }, [classInfo.name]);
+
     return (
-        <div className={`w-[250px] flex flex-col border-r border-gray-300 shrink-0 bg-white transition-opacity ${isHidden && mode === 'hide' ? 'opacity-50' : ''}`}>
-            {/* Header */}
-            <div className="p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight bg-blue-50 text-gray-800 relative group">
-                {classInfo.name}
-                {mode === 'hide' && (
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
-                        className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-500"
-                    >
-                        {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
-                    </button>
-                )}
-            </div>
-
-            {/* Info Summary */}
-            <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
-                <div className="flex border-b border-orange-200">
-                    <div className="w-[70px] bg-orange-100 p-1 text-center font-bold border-r border-orange-200 flex items-center justify-center text-orange-800">
-                        담임
-                    </div>
-                    <div className="flex-1 p-1 text-center font-bold text-gray-900 flex items-center justify-center">
-                        {classInfo.mainTeacher}
-                    </div>
+        <>
+            <div className={`w-[250px] flex flex-col border-r border-gray-300 shrink-0 bg-white transition-opacity ${isHidden && mode === 'hide' ? 'opacity-50' : ''}`}>
+                {/* Header */}
+                <div className="p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight bg-blue-50 text-gray-800 relative group">
+                    {classInfo.name}
+                    {mode === 'hide' && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
+                            className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-500"
+                        >
+                            {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                        </button>
+                    )}
                 </div>
-                <div className="flex">
-                    <div className="w-[70px] bg-orange-100 p-1 text-center font-bold border-r border-orange-200 flex items-center justify-center text-orange-800">
-                        강의실
-                    </div>
-                    <div className="flex-1 p-1 text-center font-bold text-navy flex items-center justify-center break-words px-1 leading-tight py-1.5 min-h-[40px]">
-                        {classInfo.mainRoom}
-                    </div>
-                </div>
-            </div>
 
-            <div className="border-b border-gray-300 flex-none">
-                {/* Grid Header */}
-                <div className="flex bg-gray-200 text-[10px] font-bold border-b border-gray-400 h-[24px]">
-                    <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">교시</div>
-                    {classInfo.finalDays.map((d) => (
-                        <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
-                            {d}
+                {/* Info Summary */}
+                <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
+                    <div className="flex border-b border-orange-200">
+                        <div className="w-[70px] bg-orange-100 p-1 text-center font-bold border-r border-orange-200 flex items-center justify-center text-orange-800">
+                            담임
                         </div>
-                    ))}
+                        <div className="flex-1 p-1 text-center font-bold text-gray-900 flex items-center justify-center">
+                            {classInfo.mainTeacher}
+                        </div>
+                    </div>
+                    <div className="flex">
+                        <div className="w-[70px] bg-orange-100 p-1 text-center font-bold border-r border-orange-200 flex items-center justify-center text-orange-800">
+                            강의실
+                        </div>
+                        <div className="flex-1 p-1 text-center font-bold text-navy flex items-center justify-center break-words px-1 leading-tight py-1.5 min-h-[40px]">
+                            {classInfo.mainRoom}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Grid Rows */}
-                <div className="bg-white">
-                    {classInfo.visiblePeriods.map(p => (
-                        <MiniGridRow
-                            key={p.id}
-                            period={p}
-                            scheduleMap={classInfo.scheduleMap}
-                            weekendShift={classInfo.weekendShift}
-                            teachersData={teachersData}
-                            displayDays={classInfo.finalDays}
-                            className={classInfo.name}
-                        />
-                    ))}
+                <div className="border-b border-gray-300 flex-none">
+                    {/* Grid Header */}
+                    <div className="flex bg-gray-200 text-[10px] font-bold border-b border-gray-400 h-[24px]">
+                        <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">교시</div>
+                        {classInfo.finalDays.map((d) => (
+                            <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
+                                {d}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Grid Rows */}
+                    <div className="bg-white">
+                        {classInfo.visiblePeriods.map(p => (
+                            <MiniGridRow
+                                key={p.id}
+                                period={p}
+                                scheduleMap={classInfo.scheduleMap}
+                                weekendShift={classInfo.weekendShift}
+                                teachersData={teachersData}
+                                displayDays={classInfo.finalDays}
+                                className={classInfo.name}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                {/* Student Section */}
+                <div className="flex-1 flex flex-col bg-white min-h-[100px]">
+                    <div
+                        className="p-1.5 text-center text-[10px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-600 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors"
+                        onClick={() => setIsStudentModalOpen(true)}
+                    >
+                        <span>학생 명단</span>
+                        <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[9px]">
+                            {studentCount}명
+                        </span>
+                        <UserPlus size={12} className="text-gray-400" />
+                    </div>
+                    <div
+                        className="flex-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsStudentModalOpen(true)}
+                    >
+                        <button className="text-xs text-indigo-500 font-bold flex items-center gap-1 hover:underline">
+                            <UserPlus size={14} /> 학생 관리
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col bg-white min-h-[100px]">
-                <div className="p-1 text-center text-[10px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-500">
-                    학생 명단
-                </div>
-                <div className="p-4 text-center text-gray-300 text-xs mt-2">
-                    준비중
-                </div>
-            </div>
-        </div>
+            {/* Student Modal */}
+            <StudentModal
+                isOpen={isStudentModalOpen}
+                onClose={() => setIsStudentModalOpen(false)}
+                className={classInfo.name}
+            />
+        </>
     );
 };
 

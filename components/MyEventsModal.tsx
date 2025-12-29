@@ -31,13 +31,36 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
     const filteredEvents = useMemo(() => {
         if (!currentUser || !isOpen) return [];
 
-        // First, filter by participation
+        // First, filter by participation (user is in participants list)
         const participated = events.filter(event => {
-            if (event.attendance && event.attendance[currentUser.uid]) {
-                return true;
-            }
+            // Check 1: User's displayName is in participants string
             const userName = currentUser.email.split('@')[0];
-            return event.participants?.includes(userName) || false;
+            const displayName = currentUser.displayName || userName;
+            const jobTitle = currentUser.jobTitle;
+
+            // Extract name from jobTitle if it contains it (e.g., "박소선 부장" -> "박소선")
+            const nameFromJobTitle = jobTitle ? jobTitle.split(' ')[0] : null;
+
+            // Build possible name formats to check
+            const possibleNames = [
+                userName,
+                displayName,
+                nameFromJobTitle,  // Add extracted name from jobTitle
+                jobTitle,          // Add full jobTitle
+                jobTitle ? `${userName} (${jobTitle})` : null,
+                jobTitle ? `${displayName} (${jobTitle})` : null,
+                nameFromJobTitle ? `${userName} (${nameFromJobTitle})` : null,
+                nameFromJobTitle ? `${nameFromJobTitle} (${jobTitle})` : null,
+            ].filter(Boolean);
+
+            const isInParticipants = possibleNames.some(name =>
+                event.participants?.includes(name as string)
+            );
+
+            // Check 2: User has explicit attendance entry (regardless of status)
+            const hasAttendanceEntry = event.attendance && currentUser.uid in event.attendance;
+
+            return isInParticipants || hasAttendanceEntry;
         });
 
         // Then, filter by status
@@ -61,9 +84,31 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
         if (!currentUser || !isOpen) return { all: 0, pending: 0, joined: 0, declined: 0 };
 
         const participated = events.filter(event => {
-            if (event.attendance && event.attendance[currentUser.uid]) return true;
             const userName = currentUser.email.split('@')[0];
-            return event.participants?.includes(userName) || false;
+            const displayName = currentUser.displayName || userName;
+            const jobTitle = currentUser.jobTitle;
+
+            // Extract name from jobTitle if it contains it (e.g., "박소선 부장" -> "박소선")
+            const nameFromJobTitle = jobTitle ? jobTitle.split(' ')[0] : null;
+
+            const possibleNames = [
+                userName,
+                displayName,
+                nameFromJobTitle,  // Add extracted name from jobTitle
+                jobTitle,          // Add full jobTitle
+                jobTitle ? `${userName} (${jobTitle})` : null,
+                jobTitle ? `${displayName} (${jobTitle})` : null,
+                nameFromJobTitle ? `${userName} (${nameFromJobTitle})` : null,
+                nameFromJobTitle ? `${nameFromJobTitle} (${jobTitle})` : null,
+            ].filter(Boolean);
+
+            const isInParticipants = possibleNames.some(name =>
+                event.participants?.includes(name as string)
+            );
+
+            const hasAttendanceEntry = event.attendance && currentUser.uid in event.attendance;
+
+            return isInParticipants || hasAttendanceEntry;
         });
 
         return {
