@@ -9,7 +9,17 @@ import EnglishTimetable from './English/EnglishTimetable';
 
 // Constants
 const ALL_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
-const MATH_PERIODS = ['1교시', '2교시', '3교시', '4교시'];
+const MATH_PERIODS = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'];
+const MATH_PERIOD_TIMES: Record<string, string> = {
+    '1-1': '14:30~15:25',
+    '1-2': '15:25~16:20',
+    '2-1': '16:20~17:15',
+    '2-2': '17:15~18:10',
+    '3-1': '18:20~19:15',
+    '3-2': '19:15~20:10',
+    '4-1': '20:10~21:05',
+    '4-2': '21:05~22:00',
+};
 const ENGLISH_PERIODS = ['1교시', '2교시', '3교시', '4교시', '5교시', '6교시', '7교시', '8교시'];
 
 // Subject Theme Colors
@@ -94,6 +104,62 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
     const [newSubject, setNewSubject] = useState('수학');
     const [newSchedule, setNewSchedule] = useState<string[]>([]);
 
+    // Edit Class States
+    const [isEditingClass, setIsEditingClass] = useState(false);
+    const [editRoom, setEditRoom] = useState('');
+    const [editSchedule, setEditSchedule] = useState<string[]>([]);
+
+    // Reset edit state when selected class changes
+    useEffect(() => {
+        if (selectedClass) {
+            setEditRoom(selectedClass.room);
+            setEditSchedule(selectedClass.schedule || []);
+            setIsEditingClass(false);
+        }
+    }, [selectedClass]);
+
+    const toggleEditScheduleSlot = (day: string, period: string) => {
+        const slot = `${day} ${period}`;
+        setEditSchedule(prev =>
+            prev.includes(slot)
+                ? prev.filter(s => s !== slot)
+                : [...prev, slot]
+        );
+    };
+
+    const handleUpdateClass = async () => {
+        if (!selectedClass) return;
+
+        if (editSchedule.length === 0) {
+            alert('최소 1개 이상의 시간대를 선택해주세요.');
+            return;
+        }
+
+        // Validate consecutive schedule
+        if (!checkConsecutiveSchedule(editSchedule, currentPeriods)) {
+            alert('같은 요일의 수업 시간은 연속되어야 합니다.\n\n예: 1-1, 1-2 (O) / 1-1, 2-1 (X - 중간에 1-2번이 비어있음)');
+            return;
+        }
+
+        try {
+            await updateDoc(doc(db, '수업목록', selectedClass.id), {
+                room: editRoom,
+                schedule: editSchedule
+            });
+
+            // Update local state immediately for better UX
+            setSelectedClass({
+                ...selectedClass,
+                room: editRoom,
+                schedule: editSchedule
+            });
+            setIsEditingClass(false);
+        } catch (error) {
+            console.error('Error updating class:', error);
+            alert('수업 수정 중 오류가 발생했습니다.');
+        }
+    };
+
     // New Student Form
     const [newStudentName, setNewStudentName] = useState('');
     const [newStudentGrade, setNewStudentGrade] = useState('');
@@ -127,6 +193,13 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
 
     // Search State
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Reset viewType when switching to math if it's 'class' (통합 뷰는 영어만 지원)
+    useEffect(() => {
+        if (subjectTab === 'math' && viewType === 'class') {
+            setViewType('teacher');
+        }
+    }, [subjectTab, viewType, setViewType]);
 
     // Current periods based on subject tab
     const currentPeriods = subjectTab === 'math' ? MATH_PERIODS : ENGLISH_PERIODS;
@@ -197,15 +270,96 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
         });
     };
 
+    // Calculate how many consecutive periods a class spans starting from given period
+    const getConsecutiveSpan = (cls: TimetableClass, day: string, startPeriodIndex: number): number => {
+        const periods = currentPeriods;
+        let span = 1;
+        for (let i = startPeriodIndex + 1; i < periods.length; i++) {
+            const nextPeriod = periods[i];
+            const hasNextSlot = cls.schedule?.some(s => s.includes(day) && s.includes(nextPeriod));
+            if (hasNextSlot) {
+                span++;
+            } else {
+                break;
+            }
+        }
+        return span;
+    };
+
+    // Check if this cell should be skipped (already covered by a rowspan from above)
+    const shouldSkipCell = (cls: TimetableClass, day: string, periodIndex: number): boolean => {
+        const periods = currentPeriods;
+        // Look backwards to see if any previous consecutive period started a rowspan that covers this cell
+        for (let i = periodIndex - 1; i >= 0; i--) {
+            const prevPeriod = periods[i];
+            const hasPrevSlot = cls.schedule?.some(s => s.includes(day) && s.includes(prevPeriod));
+            if (hasPrevSlot) {
+                // Previous period has this class, so this cell is already merged
+                return true;
+            } else {
+                // Break in the chain, so this is a new start
+                break;
+            }
+        }
+        return false;
+    };
+
+    // Check for consecutive periods
+    const checkConsecutiveSchedule = (schedule: string[], periods: string[]): boolean => {
+        // Group by day
+        const dayMap: Record<string, string[]> = {};
+        schedule.forEach(slot => {
+            const [day, period] = slot.split(' ');
+            if (!dayMap[day]) dayMap[day] = [];
+            dayMap[day].push(period);
+        });
+
+        // Check each day
+        for (const day in dayMap) {
+            const dayPeriods = dayMap[day];
+            if (dayPeriods.length <= 1) continue;
+
+            // Sort periods by their index in the master period list
+            const sortedIndices = dayPeriods.map(p => periods.indexOf(p)).sort((a, b) => a - b);
+
+            // Check for gaps
+            for (let i = 0; i < sortedIndices.length - 1; i++) {
+                // If the difference between adjacent period indices is not 1, they are not consecutive
+                if (sortedIndices[i + 1] - sortedIndices[i] !== 1) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
+
     // Add new class
     const handleAddClass = async () => {
         if (!newClassName.trim() || !newTeacher.trim()) {
             alert('수업명과 담당 강사를 입력해주세요.');
             return;
         }
+        if (newSchedule.length === 0) {
+            alert('최소 1개 이상의 시간대를 선택해주세요.');
+            return;
+        }
 
         // Document ID: 과목_강사_수업명 (읽기 쉬운 형태)
         const classId = `${newSubject}_${newTeacher.trim().replace(/\s/g, '')}_${newClassName.trim().replace(/\s/g, '_')}`;
+
+        // Check for duplicate
+        const existingClass = classes.find(c => c.id === classId);
+        if (existingClass) {
+            alert(`이미 동일한 수업이 존재합니다.\n\n수업명: ${existingClass.className}\n강사: ${existingClass.teacher}\n\n기존 수업을 수정하려면 시간표에서 해당 수업을 클릭해주세요.`);
+            return;
+        }
+
+        // Validate consecutive schedule
+        if (!checkConsecutiveSchedule(newSchedule, currentPeriods)) {
+            alert('같은 요일의 수업 시간은 연속되어야 합니다.\n\n예: 1-1, 1-2 (O) / 1-1, 2-1 (X - 중간에 1-2번이 비어있음)');
+            return;
+        }
+
         const newClass: TimetableClass = {
             id: classId,
             className: newClassName.trim(),
@@ -574,8 +728,8 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                         <tbody>
                             {currentPeriods.map(period => (
                                 <tr key={period} className="hover:bg-gray-50/50">
-                                    <td className="p-1.5 text-[10px] font-bold text-gray-500 border-b border-r border-gray-200 text-center bg-gray-50 sticky left-0 z-10" style={{ width: '60px', minWidth: '60px' }}>
-                                        {period}
+                                    <td className="p-1.5 text-[10px] font-bold text-gray-600 border-b border-r border-gray-200 text-center bg-gray-50 sticky left-0 z-10" style={{ width: '90px', minWidth: '90px' }}>
+                                        {MATH_PERIOD_TIMES[period] || period}
                                     </td>
                                     {selectedDays.map(day => {
                                         const teachersForDay = allResources.filter(r =>
@@ -593,13 +747,30 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
 
                                         return teachersForDay.map(resource => {
                                             const cellClasses = getClassesForCell(day, period, resource);
+                                            const periodIndex = currentPeriods.indexOf(period);
+
+                                            // Check if ANY class in this cell is part of a merged span from above
+                                            const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) => shouldSkipCell(cls, day, periodIndex));
+
+                                            if (shouldSkipThisCell) {
+                                                // 이 셀은 위 교시에서 병합된 영역이므로 <td> 자체를 렌더링하지 않음
+                                                return null;
+                                            }
+
+                                            // Calculate rowspan for this cell (if any class spans multiple periods)
+                                            const maxSpan = Math.max(...cellClasses.map((cls: TimetableClass) => getConsecutiveSpan(cls, day, periodIndex)));
+
                                             return (
                                                 <td
                                                     key={`${day}-${period}-${resource}`}
                                                     className="p-1 border-b border-r border-gray-200 align-top bg-white"
                                                     style={{ width: '130px', minWidth: '130px' }}
+                                                    rowSpan={maxSpan > 1 ? maxSpan : undefined}
                                                 >
-                                                    {cellClasses.map(cls => {
+                                                    {cellClasses.map((cls: TimetableClass) => {
+                                                        // 연속 교시 수 계산 (병합할 셀 개수)
+                                                        const span = getConsecutiveSpan(cls, day, periodIndex);
+
                                                         const theme = getSubjectTheme(cls.subject);
                                                         const hasSearchMatch = searchQuery && cls.studentList?.some(s => s.name.includes(searchQuery));
                                                         const sortedStudents = [...(cls.studentList || [])].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
@@ -612,6 +783,9 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                                                                 onDragLeave={handleDragLeave}
                                                                 onDrop={(e) => handleDrop(e, cls.id)}
                                                                 className={`flex flex-col rounded-lg border ${theme.border} ${theme.bg} overflow-hidden shadow-sm transition-all mb-1 ${dragOverClassId === cls.id ? 'ring-2 ring-indigo-400 scale-[1.02]' : 'hover:shadow-md'} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
+                                                                style={{
+                                                                    minHeight: span > 1 ? `${span * 80}px` : undefined
+                                                                }}
                                                             >
                                                                 {/* 수업명 헤더 */}
                                                                 <div className={`text-center font-bold py-1 px-1 text-[10px] border-b ${theme.border} bg-white/50 text-gray-800`}>
@@ -692,26 +866,26 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
             {/* Add Class Modal */}
             {
                 isAddClassOpen && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-2xl shadow-xl p-5 w-full max-w-md max-h-[80vh] overflow-y-auto">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-base font-bold flex items-center gap-2">
-                                    <Plus size={18} className="text-[#fdb813]" />
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                            <div className="flex justify-between items-center mb-5">
+                                <h3 className="text-lg font-bold flex items-center gap-2">
+                                    <Plus size={22} className="text-[#fdb813]" />
                                     새 {newSubject} 수업
                                 </h3>
                                 <button onClick={() => setIsAddClassOpen(false)} className="text-gray-400 hover:text-gray-600">
-                                    <X size={18} />
+                                    <X size={22} />
                                 </button>
                             </div>
 
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 mb-1">수업명 *</label>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">수업명 *</label>
                                     <input
                                         type="text"
                                         value={newClassName}
                                         onChange={(e) => setNewClassName(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
                                         placeholder="예: 수학 기초반"
                                     />
                                 </div>
@@ -746,29 +920,42 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 mb-1">시간표</label>
-                                    <div className="grid grid-cols-7 gap-0.5">
-                                        {ALL_WEEKDAYS.map(day => (
-                                            <div key={day} className="text-center">
-                                                <div className={`text-[9px] font-bold mb-0.5 ${(day === '토' || day === '일') ? 'text-orange-500' : 'text-gray-400'}`}>{day}</div>
-                                                {(newSubject === '수학' ? MATH_PERIODS : ENGLISH_PERIODS).map(period => {
-                                                    const slot = `${day} ${period}`;
-                                                    const isSelected = newSchedule.includes(slot);
-                                                    return (
-                                                        <button
-                                                            key={slot}
-                                                            onClick={() => toggleScheduleSlot(day, period)}
-                                                            className={`w-full p-0.5 text-[9px] rounded mb-0.5 transition-all ${isSelected
-                                                                ? 'bg-[#fdb813] text-[#081429] font-bold'
-                                                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                                                }`}
-                                                        >
-                                                            {period.replace('교시', '')}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        ))}
+                                    <label className="block text-xs font-bold text-gray-500 mb-2">시간표</label>
+                                    <div className="flex">
+                                        {/* Time labels column */}
+                                        <div className="flex flex-col mr-2">
+                                            <div className="text-xs font-bold text-gray-400 mb-1 h-[24px]"></div>
+                                            {(newSubject === '수학' ? MATH_PERIODS : ENGLISH_PERIODS).map(period => (
+                                                <div key={period} className="text-[10px] text-gray-600 font-bold h-[32px] flex items-center justify-end pr-2 whitespace-nowrap">
+                                                    {MATH_PERIOD_TIMES[period] || period}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {/* Days grid */}
+                                        <div className="grid grid-cols-7 gap-1 flex-1">
+                                            {ALL_WEEKDAYS.map(day => (
+                                                <div key={day} className="text-center">
+                                                    <div className={`text-xs font-bold mb-1 ${(day === '토' || day === '일') ? 'text-orange-500' : 'text-gray-500'}`}>{day}</div>
+                                                    {(newSubject === '수학' ? MATH_PERIODS : ENGLISH_PERIODS).map(period => {
+                                                        const slot = `${day} ${period}`;
+                                                        const isSelected = newSchedule.includes(slot);
+                                                        return (
+                                                            <button
+                                                                key={slot}
+                                                                onClick={() => toggleScheduleSlot(day, period)}
+                                                                className={`w-full p-1.5 text-xs rounded mb-1 transition-all ${isSelected
+                                                                    ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
+                                                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                                                    }`}
+                                                                title={MATH_PERIOD_TIMES[period] || ''}
+                                                            >
+                                                                {period.replace('교시', '')}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -789,97 +976,191 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
             {/* Class Detail Modal */}
             {
                 selectedClass && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-xl shadow-2xl w-[400px] max-h-[80vh] overflow-hidden flex flex-col">
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <div className={`bg-white rounded-xl shadow-2xl ${isEditingClass ? 'w-full max-w-2xl' : 'w-[400px]'} max-h-[90vh] overflow-hidden flex flex-col transition-all duration-300`}>
                             {/* Header */}
                             <div className="flex justify-between items-center p-4 border-b">
                                 <h3 className="text-base font-bold flex items-center gap-2 text-[#081429]">
                                     <Users size={18} className="text-[#fdb813]" />
                                     {selectedClass.className}
+                                    {isEditingClass && <span className="text-xs text-gray-400 font-normal">(수정 중)</span>}
                                 </h3>
-                                <button onClick={() => setSelectedClass(null)} className="text-gray-400 hover:text-gray-600">
-                                    <X size={18} />
-                                </button>
-                            </div>
-
-                            {/* Sub Header */}
-                            <div className="px-4 py-2 bg-gray-50 border-b text-xs font-bold text-[#373d41]">
-                                {selectedClass.teacher}
-                                {selectedClass.room && <span className="text-gray-400 ml-2">| {selectedClass.room}</span>}
-                            </div>
-
-                            {/* Add Student Form */}
-                            <div className="p-4 border-b">
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={newStudentName}
-                                        onChange={(e) => setNewStudentName(e.target.value)}
-                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
-                                        placeholder="학생 이름"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={newStudentSchool}
-                                        onChange={(e) => setNewStudentSchool(e.target.value)}
-                                        className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
-                                        placeholder="학교"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={newStudentGrade}
-                                        onChange={(e) => setNewStudentGrade(e.target.value)}
-                                        className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
-                                        placeholder="학년"
-                                    />
-                                    <button onClick={handleAddStudent} className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg text-sm font-bold hover:bg-yellow-400 whitespace-nowrap">
-                                        추가
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Student List */}
-                            <div className="flex-1 overflow-y-auto max-h-[250px]">
-                                {selectedClass.studentList && selectedClass.studentList.length > 0 ? (
-                                    <div className="divide-y divide-gray-100">
-                                        {selectedClass.studentList.map(student => (
-                                            <div
-                                                key={student.id}
-                                                draggable
-                                                onDragStart={(e) => handleDragStart(e, student.id, selectedClass.id)}
-                                                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-grab group"
-                                            >
-                                                <span className="text-gray-300 text-sm">⋮⋮</span>
-                                                <span className="font-medium text-sm text-[#081429] flex-1">
-                                                    {student.name}
-                                                    {student.school && <span className="text-gray-400 ml-1 text-xs">{student.school}</span>}
-                                                    {student.grade && <span className="text-gray-400 text-xs">{student.grade}</span>}
-                                                </span>
-                                                <button
-                                                    onClick={() => handleRemoveStudent(student.id)}
-                                                    className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        ))}
+                                {!isEditingClass && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setIsEditingClass(true)}
+                                            className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                            title="수업 수정"
+                                        >
+                                            <Settings size={18} />
+                                        </button>
+                                        <button onClick={() => setSelectedClass(null)} className="text-gray-400 hover:text-gray-600">
+                                            <X size={18} />
+                                        </button>
                                     </div>
-                                ) : (
-                                    <div className="text-center text-gray-400 py-8 text-sm">등록된 학생이 없습니다.</div>
                                 )}
                             </div>
 
+                            {isEditingClass ? (
+                                // Edit View
+                                <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                                    {/* Room Edit */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">교실</label>
+                                        <input
+                                            type="text"
+                                            value={editRoom}
+                                            onChange={(e) => setEditRoom(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+                                            placeholder="교실 입력 (예: 301호)"
+                                        />
+                                    </div>
+
+                                    {/* Schedule Edit */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-2">시간표</label>
+                                        <div className="flex">
+                                            {/* Time labels column */}
+                                            <div className="flex flex-col mr-2">
+                                                <div className="text-xs font-bold text-gray-400 mb-1 h-[24px]"></div>
+                                                {(selectedClass.subject === '수학' ? MATH_PERIODS : ENGLISH_PERIODS).map(period => (
+                                                    <div key={period} className="text-[10px] text-gray-600 font-bold h-[32px] flex items-center justify-end pr-2 whitespace-nowrap">
+                                                        {MATH_PERIOD_TIMES[period] || period}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {/* Days grid */}
+                                            <div className="grid grid-cols-7 gap-1 flex-1">
+                                                {ALL_WEEKDAYS.map(day => (
+                                                    <div key={day} className="text-center">
+                                                        <div className={`text-xs font-bold mb-1 ${(day === '토' || day === '일') ? 'text-orange-500' : 'text-gray-500'}`}>{day}</div>
+                                                        {(selectedClass.subject === '수학' ? MATH_PERIODS : ENGLISH_PERIODS).map(period => {
+                                                            const slot = `${day} ${period}`;
+                                                            const isSelected = editSchedule.includes(slot);
+                                                            return (
+                                                                <button
+                                                                    key={slot}
+                                                                    onClick={() => toggleEditScheduleSlot(day, period)}
+                                                                    className={`w-full p-1.5 text-xs rounded mb-1 transition-all ${isSelected
+                                                                        ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
+                                                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                                                        }`}
+                                                                    title={MATH_PERIOD_TIMES[period] || ''}
+                                                                >
+                                                                    {period.replace('교시', '')}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                // Normal View (Students)
+                                <>
+                                    {/* Sub Header */}
+                                    <div className="px-4 py-2 bg-gray-50 border-b text-xs font-bold text-[#373d41]">
+                                        {selectedClass.teacher}
+                                        {selectedClass.room && <span className="text-gray-400 ml-2">| {selectedClass.room}</span>}
+                                    </div>
+
+                                    {/* Add Student Form */}
+                                    <div className="p-4 border-b">
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={newStudentName}
+                                                onChange={(e) => setNewStudentName(e.target.value)}
+                                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+                                                placeholder="학생 이름"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={newStudentSchool}
+                                                onChange={(e) => setNewStudentSchool(e.target.value)}
+                                                className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+                                                placeholder="학교"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={newStudentGrade}
+                                                onChange={(e) => setNewStudentGrade(e.target.value)}
+                                                className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+                                                placeholder="학년"
+                                            />
+                                            <button onClick={handleAddStudent} className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg text-sm font-bold hover:bg-yellow-400 whitespace-nowrap">
+                                                추가
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Student List */}
+                                    <div className="flex-1 overflow-y-auto max-h-[250px]">
+                                        {selectedClass.studentList && selectedClass.studentList.length > 0 ? (
+                                            <div className="divide-y divide-gray-100">
+                                                {selectedClass.studentList.map(student => (
+                                                    <div
+                                                        key={student.id}
+                                                        draggable
+                                                        onDragStart={(e) => handleDragStart(e, student.id, selectedClass.id)}
+                                                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-grab group"
+                                                    >
+                                                        <span className="text-gray-300 text-sm">⋮⋮</span>
+                                                        <span className="font-medium text-sm text-[#081429] flex-1">
+                                                            {student.name}
+                                                            {student.school && <span className="text-gray-400 ml-1 text-xs">{student.school}</span>}
+                                                            {student.grade && <span className="text-gray-400 text-xs">{student.grade}</span>}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleRemoveStudent(student.id)}
+                                                            className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center text-gray-400 py-8 text-sm">등록된 학생이 없습니다.</div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+
                             {/* Footer */}
                             <div className="flex justify-between items-center p-4 border-t bg-gray-50">
-                                <button
-                                    onClick={() => handleDeleteClass(selectedClass.id)}
-                                    className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm font-bold flex items-center gap-1"
-                                >
-                                    <Trash2 size={14} /> 삭제
-                                </button>
-                                <button onClick={() => setSelectedClass(null)} className="px-5 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:bg-[#1e293b]">
-                                    닫기
-                                </button>
+                                {isEditingClass ? (
+                                    <>
+                                        <button
+                                            onClick={() => setIsEditingClass(false)}
+                                            className="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm font-bold"
+                                        >
+                                            취소
+                                        </button>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleUpdateClass}
+                                                className="px-5 py-2 bg-[#fdb813] text-[#081429] rounded-lg text-sm font-bold hover:brightness-110"
+                                            >
+                                                저장
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => handleDeleteClass(selectedClass.id)}
+                                            className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm font-bold flex items-center gap-1"
+                                        >
+                                            <Trash2 size={14} /> 삭제
+                                        </button>
+                                        <button onClick={() => setSelectedClass(null)} className="px-5 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:bg-[#1e293b]">
+                                            닫기
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

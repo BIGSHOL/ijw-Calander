@@ -490,14 +490,28 @@ const EventModal: React.FC<EventModalProps> = ({
               <Users size={14} className="text-[#fdb813]" /> 참가자
             </label>
             <div className="border border-gray-300 rounded-xl p-3 max-h-40 overflow-y-auto bg-gray-50/50">
-              {/* Current User (Always first) and Alphabetical Order */}
+              {/* Current User (Always first), then Selected, then Unselected */}
               {users
                 .filter(u => u.status === 'approved')
                 .sort((a, b) => {
+                  // Helper: Get display name for selection check
+                  const getDisplayName = (user: typeof a) => {
+                    const name = user.displayName || user.email.split('@')[0];
+                    return user.jobTitle ? `${name} (${user.jobTitle})` : name;
+                  };
+
+                  const aSelected = participants.includes(getDisplayName(a));
+                  const bSelected = participants.includes(getDisplayName(b));
+
                   // 1. Current User comes first
                   if (currentUser && a.uid === currentUser.uid) return -1;
                   if (currentUser && b.uid === currentUser.uid) return 1;
-                  // 2. Alphabetical Order (Name/Email)
+
+                  // 2. Selected participants come before unselected
+                  if (aSelected && !bSelected) return -1;
+                  if (!aSelected && bSelected) return 1;
+
+                  // 3. Within same group, alphabetical order
                   const nameA = `${a.email.split('@')[0]} ${a.jobTitle || ''}`;
                   const nameB = `${b.email.split('@')[0]} ${b.jobTitle || ''}`;
                   return nameA.localeCompare(nameB);
