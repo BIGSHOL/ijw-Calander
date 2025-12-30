@@ -123,11 +123,14 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                         <thead className="sticky top-0 z-10">
                             <tr>
                                 <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
-                                {filteredRooms.map(room => (
+                                {filteredRooms.map((room, rIdx) => (
                                     <th
                                         key={room}
                                         colSpan={EN_WEEKDAYS.length}
-                                        className="p-2 border bg-indigo-600 text-white text-xs font-bold"
+                                        className={`p-2 bg-indigo-600 text-white text-xs font-bold
+                                            ${rIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
+                                            border-r border-t border-b
+                                        `}
                                     >
                                         {room}
                                     </th>
