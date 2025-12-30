@@ -515,9 +515,17 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
 
     // Helper for merged classes
     const addMerged = () => {
+        // Get teacher's default room
+        let defaultRoom = '';
+        if (selectionStart) {
+            const teacher = filteredTeachers[selectionStart.tIdx];
+            const teacherData = teachersData.find(t => t.name === teacher);
+            defaultRoom = teacherData?.defaultRoom || '';
+        }
+
         setInputData(prev => ({
             ...prev,
-            merged: [...prev.merged, { className: '', room: '' }]
+            merged: [...prev.merged, { className: '', room: defaultRoom }]
         }));
     };
 
