@@ -2,7 +2,7 @@
 // 영어 통합 시간표 탭 - 수업별 컬럼 뷰 (Refactored to match academy-app style with Logic Port)
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Eye, EyeOff, Settings, UserPlus, MoreVertical, TrendingUp, ArrowUpCircle } from 'lucide-react';
+import { Search, Eye, EyeOff, Settings, UserPlus, MoreVertical, TrendingUp, ArrowUpCircle, ChevronDown, Users, Home, User } from 'lucide-react';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, DEFAULT_ENGLISH_LEVELS } from './englishUtils';
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
 import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewSettings';
@@ -58,18 +58,49 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [isLevelSettingsOpen, setIsLevelSettingsOpen] = useState(false);
     const [settingsLoading, setSettingsLoading] = useState(true);
     const [openMenuClass, setOpenMenuClass] = useState<string | null>(null);
+    const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
     const [settings, setSettings] = useState<IntegrationSettings>({
-        viewMode: 'CUSTOM',  // Default to custom to minimize flicker
+        viewMode: 'CUSTOM_GROUP',  // Default to custom to minimize flicker
         customGroups: [],
         showOthersGroup: true,
-        othersGroupTitle: '기타 수업'
+        othersGroupTitle: '기타 수업',
+        displayOptions: {
+            showStudents: true,
+            showRoom: true,
+            showTeacher: true
+        }
     });
+
+    // Tooltip State for First Visit
+    const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+
+    useEffect(() => {
+        const hasSeenGuide = localStorage.getItem('english_timetable_guide_shown');
+        if (!hasSeenGuide) {
+            // Show tooltip after a slight delay to draw attention
+            const timer = setTimeout(() => setIsTooltipVisible(true), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, []);
+
+    const dismissTooltip = () => {
+        setIsTooltipVisible(false);
+        localStorage.setItem('english_timetable_guide_shown', 'true');
+    };
 
     // Load Settings
     useEffect(() => {
         const unsub = onSnapshot(doc(db, 'settings', 'english_class_integration'), (doc) => {
             if (doc.exists()) {
-                setSettings(doc.data() as IntegrationSettings);
+                const data = doc.data() as IntegrationSettings;
+                setSettings({
+                    ...data,
+                    displayOptions: data.displayOptions || {
+                        showStudents: true,
+                        showRoom: true,
+                        showTeacher: true
+                    }
+                });
             }
             setSettingsLoading(false);
         });
@@ -80,6 +111,19 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         setSettings(newSettings);
         await setDoc(doc(db, 'settings', 'english_class_integration'), newSettings);
     };
+
+    // Close Display Options when clicking outside
+    useEffect(() => {
+        if (!isDisplayOptionsOpen) return;
+        const handleClickOutside = () => setIsDisplayOptionsOpen(false);
+        const timeoutId = setTimeout(() => {
+            document.addEventListener('click', handleClickOutside);
+        }, 0);
+        return () => {
+            clearTimeout(timeoutId);
+            document.removeEventListener('click', handleClickOutside);
+        };
+    }, [isDisplayOptionsOpen]);
 
     // 1. Transform ScheduleData into Class-centric structure with Logic
     const classes = useMemo(() => {
@@ -481,6 +525,104 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                         </span>
                     )}
 
+                    {/* Display Options Dropdown */}
+                    <div className="relative group">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsDisplayOptionsOpen(!isDisplayOptionsOpen);
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
+                        >
+                            <Eye size={14} />
+                            <span className="hidden md:inline">표시 옵션</span>
+                            <ChevronDown size={12} className={`transition-transform ${isDisplayOptionsOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isDisplayOptionsOpen && (
+                            <div
+                                className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-2 min-w-[180px]"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.displayOptions?.showStudents ?? true}
+                                        onChange={(e) => updateSettings({
+                                            ...settings,
+                                            displayOptions: {
+                                                ...settings.displayOptions!,
+                                                showStudents: e.target.checked
+                                            }
+                                        })}
+                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <Users size={14} className="text-gray-500" />
+                                    <span className="text-xs text-gray-700">학생 목록</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.displayOptions?.showRoom ?? true}
+                                        onChange={(e) => updateSettings({
+                                            ...settings,
+                                            displayOptions: {
+                                                ...settings.displayOptions!,
+                                                showRoom: e.target.checked
+                                            }
+                                        })}
+                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <Home size={14} className="text-gray-500" />
+                                    <span className="text-xs text-gray-700">강의실</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.displayOptions?.showTeacher ?? true}
+                                        onChange={(e) => updateSettings({
+                                            ...settings,
+                                            displayOptions: {
+                                                ...settings.displayOptions!,
+                                                showTeacher: e.target.checked
+                                            }
+                                        })}
+                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <User size={14} className="text-gray-500" />
+                                    <span className="text-xs text-gray-700">담임 정보</span>
+                                </label>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Guide Tooltip */}
+                    {isTooltipVisible && (
+                        <div className="absolute top-full right-0 mt-2 bg-indigo-600 text-white text-xs p-3 rounded-lg shadow-xl z-50 w-64 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="absolute top-[-4px] right-4 w-2 h-2 bg-indigo-600 rotate-45"></div>
+                            <div className="flex flex-col gap-2">
+                                <div className="font-bold flex items-center gap-1">
+                                    💡 보기 설정이 여기로 이동했어요!
+                                </div>
+                                <p className="leading-relaxed opacity-90">
+                                    학생 목록, 강의실, 담임 정보 표시 여부를<br />
+                                    여기서 개별적으로 설정할 수 있습니다.
+                                </p>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        dismissTooltip();
+                                    }}
+                                    className="self-end bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-[10px] font-bold transition-colors"
+                                >
+                                    알겠습니다
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     <button
                         onClick={() => setIsSettingsOpen(true)}
                         className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
@@ -548,6 +690,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 classKeywords={classKeywords}
                                                 isMenuOpen={openMenuClass === cls.name}
                                                 onMenuToggle={(open) => setOpenMenuClass(open ? cls.name : null)}
+                                                displayOptions={settings.displayOptions}
                                             />
                                         ))}
                                     </div>
@@ -582,8 +725,8 @@ const ClassCard: React.FC<{
     teachersData: Teacher[],
     classKeywords: ClassKeywordColor[],
     isMenuOpen: boolean,
-    onMenuToggle: (open: boolean) => void
-}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords, isMenuOpen, onMenuToggle }) => {
+    displayOptions?: import('./IntegrationViewSettings').DisplayOptions
+}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords, isMenuOpen, onMenuToggle, displayOptions }) => {
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [studentCount, setStudentCount] = useState<number>(0);
     const [students, setStudents] = useState<TimetableStudent[]>([]);
@@ -670,25 +813,31 @@ const ClassCard: React.FC<{
                     );
                 })()}
 
-                {/* Info Summary */}
-                <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
-                    <div className="flex border-b border-orange-200">
-                        <div className="w-[70px] bg-orange-100 p-1 text-center font-bold border-r border-orange-200 flex items-center justify-center text-orange-800">
-                            담임
-                        </div>
-                        <div className="flex-1 p-1 text-center font-bold text-gray-900 flex items-center justify-center">
-                            {classInfo.mainTeacher}
-                        </div>
+                {/* Info Summary (Teacher/Room) */}
+                {(displayOptions?.showTeacher || displayOptions?.showRoom) && (
+                    <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
+                        {displayOptions?.showTeacher && (
+                            <div className="flex border-b border-orange-200">
+                                <div className="w-[70px] bg-orange-100 p-1 text-center font-bold border-r border-orange-200 flex items-center justify-center text-orange-800">
+                                    담임
+                                </div>
+                                <div className="flex-1 p-1 text-center font-bold text-gray-900 flex items-center justify-center">
+                                    {classInfo.mainTeacher}
+                                </div>
+                            </div>
+                        )}
+                        {displayOptions?.showRoom && (
+                            <div className="flex">
+                                <div className="w-[70px] bg-orange-100 p-1 text-center font-bold border-r border-orange-200 flex items-center justify-center text-orange-800">
+                                    강의실
+                                </div>
+                                <div className="flex-1 p-1 text-center font-bold text-navy flex items-center justify-center break-words px-1 leading-tight py-1.5 min-h-[40px]">
+                                    {classInfo.formattedRoomStr || classInfo.mainRoom}
+                                </div>
+                            </div>
+                        )}
                     </div>
-                    <div className="flex">
-                        <div className="w-[70px] bg-orange-100 p-1 text-center font-bold border-r border-orange-200 flex items-center justify-center text-orange-800">
-                            강의실
-                        </div>
-                        <div className="flex-1 p-1 text-center font-bold text-navy flex items-center justify-center break-words px-1 leading-tight py-1.5 min-h-[40px]">
-                            {classInfo.formattedRoomStr || classInfo.mainRoom}
-                        </div>
-                    </div>
-                </div>
+                )}
 
                 <div className="border-b border-gray-300 flex-none">
                     {/* Grid Header */}
@@ -716,54 +865,64 @@ const ClassCard: React.FC<{
                     </div>
                 </div>
 
-                {/* Student Section */}
-                <div className="flex-1 flex flex-col bg-white min-h-[100px]">
-                    <button
-                        className="p-1.5 text-center text-[10px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-600 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors w-full"
-                        onClick={() => setIsStudentModalOpen(true)}
-                        aria-label={`${classInfo.name} 학생 명단 열기. 현재 ${studentCount}명`}
-                    >
-                        <span>학생 명단</span>
-                        <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[9px]">
-                            {studentCount}명
-                        </span>
-                        <UserPlus size={12} className="text-gray-400" />
-                    </button>
-                    {/* Student Name Preview */}
-                    <div className="flex-1 overflow-y-auto px-2 py-1.5 text-[10px]">
-                        {students.length === 0 ? (
-                            <div
-                                className="flex flex-col items-center justify-center h-full text-gray-300 cursor-pointer hover:text-gray-400"
-                                onClick={() => setIsStudentModalOpen(true)}
-                            >
-                                <span>학생이 없습니다</span>
-                                <span className="text-indigo-400 mt-0.5 hover:underline">+ 추가</span>
-                            </div>
-                        ) : (
-                            <>
-                                {students.slice(0, 5).map((student) => (
-                                    <div key={student.id} className="flex items-center justify-between text-xs py-0.5">
-                                        <span className="font-medium text-gray-800">
-                                            {student.name}
-                                            {student.englishName && <span className="text-gray-500">({student.englishName})</span>}
-                                        </span>
-                                        {(student.school || student.grade) && (
-                                            <span className="text-gray-500 text-right">{student.school}{student.grade}</span>
-                                        )}
-                                    </div>
-                                ))}
-                                {students.length > 5 && (
-                                    <div
-                                        className="text-indigo-500 font-bold cursor-pointer hover:underline mt-0.5 text-xs"
-                                        onClick={() => setIsStudentModalOpen(true)}
-                                    >
-                                        +{students.length - 5}명 더보기...
-                                    </div>
-                                )}
-                            </>
-                        )}
+                {/* Dynamic Content Section: Student List */}
+                {displayOptions?.showStudents ? (
+                    <div className="flex-1 flex flex-col bg-white min-h-[100px]">
+                        <button
+                            className="p-1.5 text-center text-[10px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-600 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors w-full"
+                            onClick={() => setIsStudentModalOpen(true)}
+                            aria-label={`${classInfo.name} 학생 명단 열기. 현재 ${studentCount}명`}
+                        >
+                            <span>학생 명단</span>
+                            <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[9px]">
+                                {studentCount}명
+                            </span>
+                            <UserPlus size={12} className="text-gray-400" />
+                        </button>
+                        {/* Student Name Preview */}
+                        <div className="flex-1 overflow-y-auto px-2 py-1.5 text-[10px]">
+                            {students.length === 0 ? (
+                                <div
+                                    className="flex flex-col items-center justify-center h-full text-gray-300 cursor-pointer hover:text-gray-400"
+                                    onClick={() => setIsStudentModalOpen(true)}
+                                >
+                                    <span>학생이 없습니다</span>
+                                    <span className="text-indigo-400 mt-0.5 hover:underline">+ 추가</span>
+                                </div>
+                            ) : (
+                                <>
+                                    {students.slice(0, 12).map((student) => (
+                                        <div key={student.id} className="flex items-center justify-between text-xs py-0.5">
+                                            <span className="font-medium text-gray-800">
+                                                {student.name}
+                                                {student.englishName && <span className="text-gray-500">({student.englishName})</span>}
+                                            </span>
+                                            {(student.school || student.grade) && (
+                                                <span className="text-gray-500 text-right">{student.school}{student.grade}</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {students.length > 12 && (
+                                        <div
+                                            className="text-indigo-500 font-bold cursor-pointer hover:underline mt-0.5 text-xs"
+                                            onClick={() => setIsStudentModalOpen(true)}
+                                        >
+                                            +{students.length - 12}명 더보기...
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    // When Students are hidden, fill space or show placeholder
+                    !displayOptions?.showTeacher && !displayOptions?.showRoom && (
+                        <div className="flex-1 flex flex-col items-center justify-center min-h-[100px] text-gray-300 gap-1 bg-white">
+                            <EyeOff size={20} />
+                            <span className="text-[10px]">정보 숨김</span>
+                        </div>
+                    )
+                )}
             </div>
 
             {/* Student Modal */}

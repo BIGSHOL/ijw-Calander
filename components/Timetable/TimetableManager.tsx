@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { TimetableClass, Teacher, TimetableStudent, ClassKeywordColor } from '../../types';
-import { Plus, Trash2, Users, Clock, BookOpen, X, UserPlus, GripVertical, ChevronLeft, ChevronRight, Search, Settings } from 'lucide-react';
+import { Plus, Trash2, Users, Clock, BookOpen, X, UserPlus, GripVertical, ChevronLeft, ChevronRight, Search, Settings, Filter, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, getWeek, getMonth, getYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import EnglishTimetable from './English/EnglishTimetable';
@@ -94,6 +94,8 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
 
     const [isAddClassOpen, setIsAddClassOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<TimetableClass | null>(null);
+
+    const [isOptionOpen, setIsOptionOpen] = useState(false); // Local option popover state
 
     const [internalShowStudents, setInternalShowStudents] = useState(true);
     const showStudents = externalShowStudents ?? internalShowStudents;
@@ -605,6 +607,107 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                         )}
                     </div>
 
+                    {/* Separator */}
+                    <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
+                    {/* Option Settings Button */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsOptionOpen(!isOptionOpen)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-all ${isOptionOpen
+                                ? 'bg-[#fdb813] border-[#fdb813] text-[#081429]'
+                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                }`}
+                        >
+                            <Filter size={14} />
+                            <span>보기 옵션</span>
+                            {isOptionOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+
+                        {/* Options Dropdown */}
+                        {isOptionOpen && (
+                            <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-50 animate-in fade-in zoom-in-95 duration-200">
+                                {/* Header */}
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                                        <Filter size={16} className="text-[#fdb813]" />
+                                        보기 옵션 설정
+                                    </h3>
+                                    <button
+                                        onClick={() => setIsOptionOpen(false)}
+                                        className="text-gray-400 hover:text-gray-600"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {/* Student List Toggle */}
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-gray-500 block">학생 목록 표시</label>
+                                        <button
+                                            onClick={() => setShowStudents(!showStudents)}
+                                            className={`w-full px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between border ${showStudents
+                                                ? 'bg-[#fdb813]/10 text-[#081429] border-[#fdb813] hover:bg-[#fdb813]/20'
+                                                : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {showStudents ? <Eye size={14} /> : <EyeOff size={14} />}
+                                                <span>{showStudents ? '학생 목록 보이기' : '학생 목록 숨기기'}</span>
+                                            </div>
+                                            <div className={`w-8 h-4 rounded-full relative transition-colors ${showStudents ? 'bg-[#fdb813]' : 'bg-gray-300'}`}>
+                                                <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${showStudents ? 'left-4.5' : 'left-0.5'}`} style={{ left: showStudents ? '18px' : '2px' }}></div>
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <div className="w-full h-px bg-gray-100"></div>
+
+                                    {/* Days Selection */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-end">
+                                            <label className="text-xs font-bold text-gray-500 block">요일 선택</label>
+                                            <div className="flex gap-1">
+                                                <button
+                                                    onClick={() => setSelectedDays(['월', '화', '수', '목', '금'])}
+                                                    className="px-1.5 py-0.5 text-[10px] rounded bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-200"
+                                                >
+                                                    평일
+                                                </button>
+                                                <button
+                                                    onClick={() => setSelectedDays(ALL_WEEKDAYS)}
+                                                    className="px-1.5 py-0.5 text-[10px] rounded bg-gray-100 hover:bg-gray-200 text-gray-600 border border-gray-200"
+                                                >
+                                                    전체
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1 flex-wrap">
+                                            {ALL_WEEKDAYS.map(day => {
+                                                const isSelected = selectedDays.includes(day);
+                                                return (
+                                                    <button
+                                                        key={day}
+                                                        onClick={() => setSelectedDays(prev =>
+                                                            prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+                                                        )}
+                                                        className={`flex-1 min-w-[30px] py-2 rounded-md text-xs font-bold transition-all border ${isSelected
+                                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                                            : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300'
+                                                            }`}
+                                                    >
+                                                        {day}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* View Settings */}
                     <button
                         onClick={() => setIsViewSettingsOpen(true)}
@@ -645,95 +748,50 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                         <Plus size={14} /> 수업추가
                     </button>
                 </div>
-            </div>
+            </div >
 
             {/* Timetable Grid */}
-            <div className="flex-1 overflow-auto border-t border-gray-200 p-4">
-                {filteredClasses.length === 0 && allResources.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8">
-                        <BookOpen size={48} className="mb-4" />
-                        <p className="text-lg font-bold">등록된 {currentSubjectFilter} 수업이 없습니다</p>
-                        <p className="text-sm mt-1">위의 "수업추가" 버튼으로 시작하세요.</p>
-                    </div>
-                ) : (
-                    <table className="border-collapse" style={{ tableLayout: 'fixed' }}>
-                        <thead className="sticky top-0 z-10 bg-gray-50">
-                            {/* Date + Day Row */}
-                            <tr>
-                                <th className="p-1.5 text-[10px] font-bold text-gray-500 border-b border-r border-gray-200 bg-gray-100 sticky left-0 z-20" rowSpan={2} style={{ width: '60px', minWidth: '60px' }}>
-                                    교시
-                                </th>
-                                {selectedDays.map(day => {
-                                    const dateInfo = weekDates[day];
-                                    const teachersForDay = allResources.filter(r =>
-                                        filteredClasses.some(c =>
-                                            (viewType === 'teacher' ? c.teacher === r : c.room === r) &&
-                                            c.schedule?.some(s => s.includes(day))
-                                        )
-                                    );
-                                    const colspan = teachersForDay.length || 1;
-                                    const isWeekend = day === '토' || day === '일';
-
-                                    return (
-                                        <th
-                                            key={day}
-                                            colSpan={colspan}
-                                            className={`p-1.5 text-xs font-bold border-b border-r border-gray-200 text-center ${isWeekend ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-700'}`}
-                                            style={{ width: `${colspan * 120}px`, minWidth: `${colspan * 120}px` }}
-                                        >
-                                            {dateInfo.formatted}({day})
-                                        </th>
-                                    );
-                                })}
-                            </tr>
-                            {/* Teacher/Room Row */}
-                            <tr>
-                                {selectedDays.map(day => {
-                                    const teachersForDay = allResources.filter(r =>
-                                        filteredClasses.some(c =>
-                                            (viewType === 'teacher' ? c.teacher === r : c.room === r) &&
-                                            c.schedule?.some(s => s.includes(day))
-                                        )
-                                    );
-
-                                    if (teachersForDay.length === 0) {
-                                        return (
-                                            <th key={`${day}-empty`} className="p-1.5 text-[10px] text-blue-200 border-b border-r border-blue-400 bg-blue-500" style={{ width: '130px', minWidth: '130px' }}>
-                                                -
-                                            </th>
+            < div className="flex-1 overflow-auto border-t border-gray-200 p-4" >
+                {
+                    filteredClasses.length === 0 && allResources.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8">
+                            <BookOpen size={48} className="mb-4" />
+                            <p className="text-lg font-bold">등록된 {currentSubjectFilter} 수업이 없습니다</p>
+                            <p className="text-sm mt-1">위의 "수업추가" 버튼으로 시작하세요.</p>
+                        </div>
+                    ) : (
+                        <table className="border-collapse" style={{ tableLayout: 'fixed' }}>
+                            <thead className="sticky top-0 z-10 bg-gray-50">
+                                {/* Date + Day Row */}
+                                <tr>
+                                    <th className="p-1.5 text-[10px] font-bold text-gray-500 border-b border-r border-gray-200 bg-gray-100 sticky left-0 z-20" rowSpan={2} style={{ width: '60px', minWidth: '60px' }}>
+                                        교시
+                                    </th>
+                                    {selectedDays.map(day => {
+                                        const dateInfo = weekDates[day];
+                                        const teachersForDay = allResources.filter(r =>
+                                            filteredClasses.some(c =>
+                                                (viewType === 'teacher' ? c.teacher === r : c.room === r) &&
+                                                c.schedule?.some(s => s.includes(day))
+                                            )
                                         );
-                                    }
+                                        const colspan = teachersForDay.length || 1;
+                                        const isWeekend = day === '토' || day === '일';
 
-                                    return teachersForDay.map(resource => {
-                                        const teacherData = teachers.find(t => t.name === resource);
-                                        const bgColor = teacherData?.bgColor || '#3b82f6';
-                                        const textColor = teacherData?.textColor || '#ffffff';
                                         return (
                                             <th
-                                                key={`${day}-${resource}`}
-                                                className="p-1.5 text-[10px] font-bold border-b border-r truncate"
-                                                style={{
-                                                    width: '130px',
-                                                    minWidth: '130px',
-                                                    backgroundColor: bgColor,
-                                                    color: textColor,
-                                                    borderColor: bgColor
-                                                }}
-                                                title={resource}
+                                                key={day}
+                                                colSpan={colspan}
+                                                className={`p-1.5 text-xs font-bold border-b border-r border-gray-200 text-center ${isWeekend ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-700'}`}
+                                                style={{ width: `${colspan * 120}px`, minWidth: `${colspan * 120}px` }}
                                             >
-                                                {resource}
+                                                {dateInfo.formatted}({day})
                                             </th>
                                         );
-                                    });
-                                })}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {currentPeriods.map(period => (
-                                <tr key={period} className="hover:bg-gray-50/50">
-                                    <td className="p-1.5 text-[10px] font-bold text-gray-600 border-b border-r border-gray-200 text-center bg-gray-50 sticky left-0 z-10" style={{ width: '90px', minWidth: '90px' }}>
-                                        {MATH_PERIOD_TIMES[period] || period}
-                                    </td>
+                                    })}
+                                </tr>
+                                {/* Teacher/Room Row */}
+                                <tr>
                                     {selectedDays.map(day => {
                                         const teachersForDay = allResources.filter(r =>
                                             filteredClasses.some(c =>
@@ -744,108 +802,155 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
 
                                         if (teachersForDay.length === 0) {
                                             return (
-                                                <td key={`${day}-${period}-empty`} className="p-0.5 border-b border-r border-gray-100" style={{ width: '120px', minWidth: '120px', height: '50px' }} />
+                                                <th key={`${day}-empty`} className="p-1.5 text-[10px] text-blue-200 border-b border-r border-blue-400 bg-blue-500" style={{ width: '130px', minWidth: '130px' }}>
+                                                    -
+                                                </th>
                                             );
                                         }
 
                                         return teachersForDay.map(resource => {
-                                            const cellClasses = getClassesForCell(day, period, resource);
-                                            const periodIndex = currentPeriods.indexOf(period);
-
-                                            // Check if ANY class in this cell is part of a merged span from above
-                                            const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) => shouldSkipCell(cls, day, periodIndex));
-
-                                            if (shouldSkipThisCell) {
-                                                // 이 셀은 위 교시에서 병합된 영역이므로 <td> 자체를 렌더링하지 않음
-                                                return null;
-                                            }
-
-                                            // Calculate rowspan for this cell (if any class spans multiple periods)
-                                            const maxSpan = Math.max(...cellClasses.map((cls: TimetableClass) => getConsecutiveSpan(cls, day, periodIndex)));
-
+                                            const teacherData = teachers.find(t => t.name === resource);
+                                            const bgColor = teacherData?.bgColor || '#3b82f6';
+                                            const textColor = teacherData?.textColor || '#ffffff';
                                             return (
-                                                <td
-                                                    key={`${day}-${period}-${resource}`}
-                                                    className="p-1 border-b border-r border-gray-200 align-top bg-white"
-                                                    style={{ width: '130px', minWidth: '130px' }}
-                                                    rowSpan={maxSpan > 1 ? maxSpan : undefined}
+                                                <th
+                                                    key={`${day}-${resource}`}
+                                                    className="p-1.5 text-[10px] font-bold border-b border-r truncate"
+                                                    style={{
+                                                        width: '130px',
+                                                        minWidth: '130px',
+                                                        backgroundColor: bgColor,
+                                                        color: textColor,
+                                                        borderColor: bgColor
+                                                    }}
+                                                    title={resource}
                                                 >
-                                                    {cellClasses.map((cls: TimetableClass) => {
-                                                        // 연속 교시 수 계산 (병합할 셀 개수)
-                                                        const span = getConsecutiveSpan(cls, day, periodIndex);
-
-                                                        const theme = getSubjectTheme(cls.subject);
-                                                        const hasSearchMatch = searchQuery && cls.studentList?.some(s => s.name.includes(searchQuery));
-                                                        const sortedStudents = [...(cls.studentList || [])].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-
-                                                        return (
-                                                            <div
-                                                                key={cls.id}
-                                                                onClick={() => setSelectedClass(cls)}
-                                                                onDragOver={(e) => handleDragOver(e, cls.id)}
-                                                                onDragLeave={handleDragLeave}
-                                                                onDrop={(e) => handleDrop(e, cls.id)}
-                                                                className={`flex flex-col rounded-lg border ${theme.border} ${theme.bg} overflow-hidden shadow-sm transition-all mb-1 ${dragOverClassId === cls.id ? 'ring-2 ring-indigo-400 scale-[1.02]' : 'hover:shadow-md'} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
-                                                                style={{
-                                                                    minHeight: span > 1 ? `${span * 80}px` : undefined
-                                                                }}
-                                                            >
-                                                                {/* 수업명 헤더 */}
-                                                                <div className={`text-center font-bold py-1 px-1 text-[10px] border-b ${theme.border} bg-white/50 text-gray-800`}>
-                                                                    ({cls.className})
-                                                                </div>
-
-                                                                {/* 학생 리스트 */}
-                                                                {showStudents && (
-                                                                    <div className="flex-1 p-1 max-h-[150px] overflow-y-auto">
-                                                                        <ul className="flex flex-col gap-0.5">
-                                                                            {sortedStudents.map(s => {
-                                                                                const isHighlighted = searchQuery && s.name.includes(searchQuery);
-                                                                                // Format: 이름/학교학년
-                                                                                let displayText = s.name;
-                                                                                if (showSchool && s.school) {
-                                                                                    displayText += `/${s.school}`;
-                                                                                }
-                                                                                if (showGrade && s.grade) {
-                                                                                    displayText += showSchool ? s.grade : `/${s.grade}`;
-                                                                                }
-                                                                                return (
-                                                                                    <li
-                                                                                        key={s.id}
-                                                                                        draggable
-                                                                                        onDragStart={(e) => handleDragStart(e, s.id, cls.id)}
-                                                                                        className={`py-0.5 px-1 rounded text-center cursor-grab text-[10px] transition-colors truncate flex items-center justify-between group
-                                                                                            ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : `hover:bg-white/80 ${theme.text}`}`}
-                                                                                    >
-                                                                                        <span className="truncate flex-1">{displayText}</span>
-                                                                                        <span className="text-gray-400 opacity-0 group-hover:opacity-100 ml-1">⋮</span>
-                                                                                    </li>
-                                                                                );
-                                                                            })}
-                                                                        </ul>
-                                                                    </div>
-                                                                )}
-
-                                                                {/* 하단 인원수 */}
-                                                                <div className={`text-center py-1 font-bold border-t ${theme.border} ${theme.bg} text-[9px] ${theme.text}`}>
-                                                                    총 {cls.studentList?.length || 0}명
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </td>
+                                                    {resource}
+                                                </th>
                                             );
                                         });
                                     })}
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
+                            </thead>
+                            <tbody>
+                                {currentPeriods.map(period => (
+                                    <tr key={period} className="hover:bg-gray-50/50">
+                                        <td className="p-1.5 text-[10px] font-bold text-gray-600 border-b border-r border-gray-200 text-center bg-gray-50 sticky left-0 z-10" style={{ width: '90px', minWidth: '90px' }}>
+                                            {MATH_PERIOD_TIMES[period] || period}
+                                        </td>
+                                        {selectedDays.map(day => {
+                                            const teachersForDay = allResources.filter(r =>
+                                                filteredClasses.some(c =>
+                                                    (viewType === 'teacher' ? c.teacher === r : c.room === r) &&
+                                                    c.schedule?.some(s => s.includes(day))
+                                                )
+                                            );
+
+                                            if (teachersForDay.length === 0) {
+                                                return (
+                                                    <td key={`${day}-${period}-empty`} className="p-0.5 border-b border-r border-gray-100" style={{ width: '120px', minWidth: '120px', height: '50px' }} />
+                                                );
+                                            }
+
+                                            return teachersForDay.map(resource => {
+                                                const cellClasses = getClassesForCell(day, period, resource);
+                                                const periodIndex = currentPeriods.indexOf(period);
+
+                                                // Check if ANY class in this cell is part of a merged span from above
+                                                const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) => shouldSkipCell(cls, day, periodIndex));
+
+                                                if (shouldSkipThisCell) {
+                                                    // 이 셀은 위 교시에서 병합된 영역이므로 <td> 자체를 렌더링하지 않음
+                                                    return null;
+                                                }
+
+                                                // Calculate rowspan for this cell (if any class spans multiple periods)
+                                                const maxSpan = Math.max(...cellClasses.map((cls: TimetableClass) => getConsecutiveSpan(cls, day, periodIndex)));
+
+                                                return (
+                                                    <td
+                                                        key={`${day}-${period}-${resource}`}
+                                                        className="p-1 border-b border-r border-gray-200 align-top bg-white"
+                                                        style={{ width: '130px', minWidth: '130px' }}
+                                                        rowSpan={maxSpan > 1 ? maxSpan : undefined}
+                                                    >
+                                                        {cellClasses.map((cls: TimetableClass) => {
+                                                            // 연속 교시 수 계산 (병합할 셀 개수)
+                                                            const span = getConsecutiveSpan(cls, day, periodIndex);
+
+                                                            const theme = getSubjectTheme(cls.subject);
+                                                            const hasSearchMatch = searchQuery && cls.studentList?.some(s => s.name.includes(searchQuery));
+                                                            const sortedStudents = [...(cls.studentList || [])].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+                                                            return (
+                                                                <div
+                                                                    key={cls.id}
+                                                                    onClick={() => setSelectedClass(cls)}
+                                                                    onDragOver={(e) => handleDragOver(e, cls.id)}
+                                                                    onDragLeave={handleDragLeave}
+                                                                    onDrop={(e) => handleDrop(e, cls.id)}
+                                                                    className={`flex flex-col rounded-lg border ${theme.border} ${theme.bg} overflow-hidden shadow-sm transition-all mb-1 ${dragOverClassId === cls.id ? 'ring-2 ring-indigo-400 scale-[1.02]' : 'hover:shadow-md'} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
+                                                                    style={{
+                                                                        minHeight: span > 1 ? `${span * 80}px` : undefined
+                                                                    }}
+                                                                >
+                                                                    {/* 수업명 헤더 */}
+                                                                    <div className={`text-center font-bold py-1 px-1 text-[10px] border-b ${theme.border} bg-white/50 text-gray-800`}>
+                                                                        ({cls.className})
+                                                                    </div>
+
+                                                                    {/* 학생 리스트 */}
+                                                                    {showStudents && (
+                                                                        <div className="flex-1 p-1 max-h-[150px] overflow-y-auto">
+                                                                            <ul className="flex flex-col gap-0.5">
+                                                                                {sortedStudents.map(s => {
+                                                                                    const isHighlighted = searchQuery && s.name.includes(searchQuery);
+                                                                                    // Format: 이름/학교학년
+                                                                                    let displayText = s.name;
+                                                                                    if (showSchool && s.school) {
+                                                                                        displayText += `/${s.school}`;
+                                                                                    }
+                                                                                    if (showGrade && s.grade) {
+                                                                                        displayText += showSchool ? s.grade : `/${s.grade}`;
+                                                                                    }
+                                                                                    return (
+                                                                                        <li
+                                                                                            key={s.id}
+                                                                                            draggable
+                                                                                            onDragStart={(e) => handleDragStart(e, s.id, cls.id)}
+                                                                                            className={`py-0.5 px-1 rounded text-center cursor-grab text-[10px] transition-colors truncate flex items-center justify-between group
+                                                                                            ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : `hover:bg-white/80 ${theme.text}`}`}
+                                                                                        >
+                                                                                            <span className="truncate flex-1">{displayText}</span>
+                                                                                            <span className="text-gray-400 opacity-0 group-hover:opacity-100 ml-1">⋮</span>
+                                                                                        </li>
+                                                                                    );
+                                                                                })}
+                                                                            </ul>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* 하단 인원수 */}
+                                                                    <div className={`text-center py-1 font-bold border-t ${theme.border} ${theme.bg} text-[9px] ${theme.text}`}>
+                                                                        총 {cls.studentList?.length || 0}명
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </td>
+                                                );
+                                            });
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )
+                }
+            </div >
 
             {/* Class List Summary */}
-            <div className="mt-3 pt-3 border-t border-gray-200 flex-shrink-0">
+            < div className="mt-3 pt-3 border-t border-gray-200 flex-shrink-0" >
                 <div className="flex flex-wrap gap-1.5">
                     {filteredClasses.slice(0, 10).map(cls => {
                         const theme = getSubjectTheme(cls.subject);
@@ -864,7 +969,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                         <span className="text-[10px] text-gray-400 self-center">+{filteredClasses.length - 10}개</span>
                     )}
                 </div>
-            </div>
+            </div >
 
             {/* Add Class Modal */}
             {
@@ -1170,87 +1275,89 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                 )
             }
             {/* View Settings Modal */}
-            {isViewSettingsOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsViewSettingsOpen(false)}>
-                    <div className="bg-white rounded-xl shadow-2xl w-[300px] max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                        <div className="p-4 border-b flex items-center justify-between">
-                            <h3 className="font-bold text-sm text-[#081429]">보기 설정</h3>
-                            <button onClick={() => setIsViewSettingsOpen(false)} className="text-gray-400 hover:text-gray-600">
-                                <X size={16} />
-                            </button>
-                        </div>
-                        <div className="p-4 space-y-4">
-                            {/* Column Width */}
-                            <div>
-                                <div className="text-xs font-bold text-gray-600 mb-2">가로 폭</div>
-                                <div className="flex gap-1">
-                                    {(['narrow', 'normal', 'wide'] as const).map(w => (
-                                        <button
-                                            key={w}
-                                            onClick={() => setColumnWidth(w)}
-                                            className={`flex-1 py-1.5 text-xs rounded border ${columnWidth === w ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500'}`}
-                                        >
-                                            {w === 'narrow' ? '좁게' : w === 'normal' ? '보통' : '넓게'}
-                                        </button>
-                                    ))}
-                                </div>
+            {
+                isViewSettingsOpen && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setIsViewSettingsOpen(false)}>
+                        <div className="bg-white rounded-xl shadow-2xl w-[300px] max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                            <div className="p-4 border-b flex items-center justify-between">
+                                <h3 className="font-bold text-sm text-[#081429]">보기 설정</h3>
+                                <button onClick={() => setIsViewSettingsOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X size={16} />
+                                </button>
                             </div>
-
-                            {/* Row Height */}
-                            <div>
-                                <div className="text-xs font-bold text-gray-600 mb-2">세로 높이</div>
-                                <div className="flex gap-1">
-                                    {(['short', 'normal', 'tall', 'very-tall'] as const).map(h => (
-                                        <button
-                                            key={h}
-                                            onClick={() => setRowHeight(h)}
-                                            className={`flex-1 py-1.5 text-[10px] rounded border ${rowHeight === h ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500'}`}
-                                        >
-                                            {h === 'short' ? '좁게' : h === 'normal' ? '보통' : h === 'tall' ? '넓게' : '아주넓게'}
-                                        </button>
-                                    ))}
+                            <div className="p-4 space-y-4">
+                                {/* Column Width */}
+                                <div>
+                                    <div className="text-xs font-bold text-gray-600 mb-2">가로 폭</div>
+                                    <div className="flex gap-1">
+                                        {(['narrow', 'normal', 'wide'] as const).map(w => (
+                                            <button
+                                                key={w}
+                                                onClick={() => setColumnWidth(w)}
+                                                className={`flex-1 py-1.5 text-xs rounded border ${columnWidth === w ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500'}`}
+                                            >
+                                                {w === 'narrow' ? '좁게' : w === 'normal' ? '보통' : '넓게'}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Font Size */}
-                            <div>
-                                <div className="text-xs font-bold text-gray-600 mb-2">글자 크기</div>
-                                <div className="flex gap-1">
-                                    {(['small', 'normal', 'large', 'very-large'] as const).map(f => (
-                                        <button
-                                            key={f}
-                                            onClick={() => setFontSize(f)}
-                                            className={`flex-1 py-1.5 text-[10px] rounded border ${fontSize === f ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500'}`}
-                                        >
-                                            {f === 'small' ? '작게' : f === 'normal' ? '보통' : f === 'large' ? '크게' : '매우크게'}
-                                        </button>
-                                    ))}
+                                {/* Row Height */}
+                                <div>
+                                    <div className="text-xs font-bold text-gray-600 mb-2">세로 높이</div>
+                                    <div className="flex gap-1">
+                                        {(['short', 'normal', 'tall', 'very-tall'] as const).map(h => (
+                                            <button
+                                                key={h}
+                                                onClick={() => setRowHeight(h)}
+                                                className={`flex-1 py-1.5 text-[10px] rounded border ${rowHeight === h ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500'}`}
+                                            >
+                                                {h === 'short' ? '좁게' : h === 'normal' ? '보통' : h === 'tall' ? '넓게' : '아주넓게'}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Checkboxes */}
-                            <div className="space-y-2 pt-2 border-t">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" checked={showClassName} onChange={(e) => setShowClassName(e.target.checked)} className="w-4 h-4 accent-[#fdb813]" />
-                                    <span className="text-xs font-bold text-gray-700">수업명 보기</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" checked={showSchool} onChange={(e) => setShowSchool(e.target.checked)} className="w-4 h-4 accent-[#fdb813]" />
-                                    <span className="text-xs font-bold text-gray-700">학교 보기</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" checked={showGrade} onChange={(e) => setShowGrade(e.target.checked)} className="w-4 h-4 accent-[#fdb813]" />
-                                    <span className="text-xs font-bold text-gray-700">학년 보기</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" checked={showEmptyRooms} onChange={(e) => setShowEmptyRooms(e.target.checked)} className="w-4 h-4 accent-[#fdb813]" />
-                                    <span className="text-xs font-bold text-gray-700">빈 강의실 표시</span>
-                                </label>
+                                {/* Font Size */}
+                                <div>
+                                    <div className="text-xs font-bold text-gray-600 mb-2">글자 크기</div>
+                                    <div className="flex gap-1">
+                                        {(['small', 'normal', 'large', 'very-large'] as const).map(f => (
+                                            <button
+                                                key={f}
+                                                onClick={() => setFontSize(f)}
+                                                className={`flex-1 py-1.5 text-[10px] rounded border ${fontSize === f ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500'}`}
+                                            >
+                                                {f === 'small' ? '작게' : f === 'normal' ? '보통' : f === 'large' ? '크게' : '매우크게'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Checkboxes */}
+                                <div className="space-y-2 pt-2 border-t">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={showClassName} onChange={(e) => setShowClassName(e.target.checked)} className="w-4 h-4 accent-[#fdb813]" />
+                                        <span className="text-xs font-bold text-gray-700">수업명 보기</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={showSchool} onChange={(e) => setShowSchool(e.target.checked)} className="w-4 h-4 accent-[#fdb813]" />
+                                        <span className="text-xs font-bold text-gray-700">학교 보기</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={showGrade} onChange={(e) => setShowGrade(e.target.checked)} className="w-4 h-4 accent-[#fdb813]" />
+                                        <span className="text-xs font-bold text-gray-700">학년 보기</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={showEmptyRooms} onChange={(e) => setShowEmptyRooms(e.target.checked)} className="w-4 h-4 accent-[#fdb813]" />
+                                        <span className="text-xs font-bold text-gray-700">빈 강의실 표시</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
         </div >
     );
 };

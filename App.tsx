@@ -109,11 +109,8 @@ const App: React.FC = () => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Timetable Filter State (for App-level filter bar)
-  const [isTimetableFilterOpen, setIsTimetableFilterOpen] = useState(false);
   const [timetableSubject, setTimetableSubject] = useState<'math' | 'english'>('math');
   const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room' | 'class'>('teacher');
-  const [timetableShowStudents, setTimetableShowStudents] = useState(true);
-  const [timetableSelectedDays, setTimetableSelectedDays] = useState<string[]>(['월', '화', '수', '목', '금']);
 
   // Pending Event Moves State (for drag-and-drop)
   const [pendingEventMoves, setPendingEventMoves] = useState<{ original: CalendarEvent, updated: CalendarEvent }[]>([]);
@@ -1463,15 +1460,10 @@ const App: React.FC = () => {
         {/* Row 2: Timetable Filter Bar - Only show in timetable mode */}
         {appMode === 'timetable' && (
           <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-[60] text-xs">
-            {/* Main Filter Toggle */}
-            <button
-              onClick={() => setIsTimetableFilterOpen(!isTimetableFilterOpen)}
-              className={`flex items-center gap-2 px-3 h-full border-r border-gray-700 hover:bg-white/5 transition-colors ${isTimetableFilterOpen ? 'text-[#fdb813] font-bold bg-white/5' : 'text-gray-300'}`}
-            >
-              <Filter size={14} />
-              <span>옵션 설정</span>
-              {isTimetableFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
+            {/* Main Filter Toggle - Only show for Math */}
+            {/* Main Filter Toggle - Only show for Math */
+              /* Removed Global Option Settings Button */
+            }
 
             {/* Current Settings Summary - Clickable Toggles */}
             <div className="flex items-center gap-2 px-4 overflow-hidden flex-1">
@@ -1503,103 +1495,14 @@ const App: React.FC = () => {
                 {timetableViewType === 'teacher' ? '👨‍🏫 강사별' : (timetableViewType === 'class' ? '📋 통합' : '🏫 교실별')}
               </button>
 
-              <span className="text-gray-400">|</span>
-              <span className="text-gray-400">
-                {timetableSelectedDays.join(', ')}
-              </span>
-              {timetableShowStudents && (
-                <span className="px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 text-xs">
-                  학생목록 ON
-                </span>
-              )}
+              {/* Removed Summary Indicators */}
 
 
             </div>
           </div>
         )}
 
-        {/* Timetable Filter Popover Panel */}
-        {appMode === 'timetable' && isTimetableFilterOpen && (
-          <div className="absolute top-[104px] left-0 w-full bg-[#1e293b]/95 backdrop-blur-xl border-b border-gray-700 shadow-2xl p-6 z-10 animate-in slide-in-from-top-2 duration-200">
-            <div className="w-full h-full">
-              {/* Section 1: Student List Toggle */}
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex flex-col gap-4">
-                  <h3 className="text-white font-bold flex items-center gap-2">
-                    <Filter size={16} className="text-[#fdb813]" /> 보기 옵션
-                  </h3>
-
-                  <div className="flex flex-wrap gap-4">
-                    {/* Student List Toggle */}
-                    <div className="flex flex-col gap-2">
-                      <span className="text-gray-400 text-xs">학생 목록</span>
-                      <button
-                        onClick={() => setTimetableShowStudents(!timetableShowStudents)}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${timetableShowStudents
-                          ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                          : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'}`}
-                      >
-                        {timetableShowStudents ? <Eye size={14} /> : <EyeOff size={14} />}
-                        {timetableShowStudents ? '표시됨' : '숨김'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 2: Week Days Selection */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400 text-xs font-bold">요일 선택</span>
-                  <div className="flex gap-2 items-center">
-                    <button
-                      onClick={() => setTimetableSelectedDays(['월', '화', '수', '목', '금'])}
-                      className="px-2 py-1 rounded text-xs font-bold bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20"
-                    >
-                      평일만
-                    </button>
-                    <button
-                      onClick={() => setTimetableSelectedDays(['월', '화', '수', '목', '금', '토', '일'])}
-                      className="px-2 py-1 rounded text-xs font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20"
-                    >
-                      모든 요일
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {['월', '화', '수', '목', '금', '토', '일'].map(day => {
-                    const isWeekend = day === '토' || day === '일';
-                    const isSelected = timetableSelectedDays.includes(day);
-                    return (
-                      <button
-                        key={day}
-                        onClick={() => setTimetableSelectedDays(prev =>
-                          prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-                        )}
-                        className={`px-4 py-2.5 rounded-lg text-xs font-bold transition-all flex flex-col items-center gap-0.5 border min-w-[50px] ${isSelected
-                          ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                          : isWeekend
-                            ? 'bg-transparent text-orange-400 border-orange-400/30 hover:border-orange-400'
-                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
-                          }`}
-                      >
-                        <span className="font-bold">{day}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Close Handle */}
-            <div
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full bg-[#1e293b] px-6 py-0.5 rounded-b-xl border-b border-x border-gray-700 cursor-pointer hover:bg-[#081429] transition-colors"
-              onClick={() => setIsTimetableFilterOpen(false)}
-            >
-              <ChevronUp size={16} className="text-gray-400" />
-            </div>
-          </div>
-        )}
+        {/* Timetable Filter Popover Panel Removed */}
       </header>
 
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
@@ -1686,10 +1589,7 @@ const App: React.FC = () => {
               onSubjectChange={setTimetableSubject}
               viewType={timetableViewType}
               onViewTypeChange={setTimetableViewType}
-              showStudents={timetableShowStudents}
-              onShowStudentsChange={setTimetableShowStudents}
-              selectedDays={timetableSelectedDays}
-              onSelectedDaysChange={setTimetableSelectedDays}
+              /* Removed global state props */
               teachers={teachers}
               classKeywords={classKeywords}
             />
