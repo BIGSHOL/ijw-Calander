@@ -11,6 +11,7 @@ export interface InputData {
     room: string;
     merged: MergedClass[];
     note?: string; // note is present in existing data, keeping it for compatibility or future use
+    underline?: boolean; // underline option for integration view
 }
 
 interface BatchInputBarProps {
@@ -85,10 +86,10 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
             <div className="flex gap-3 items-stretch h-[72px]">
 
                 {/* Main Class Input */}
-                <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex gap-2 items-center shadow-sm w-[350px] shrink-0">
+                <div className="bg-[#fff9db] p-2 rounded-lg border border-yellow-200 flex gap-2 items-center shadow-sm w-[380px] shrink-0">
                     <div className="flex-1">
-                        <div className="text-[10px] text-gray-400 mb-1 ml-1 font-bold">
-                            메인 수업
+                        <div className="text-[10px] text-yellow-700 mb-1 ml-1 font-bold">
+                            #1 메인 수업
                         </div>
                         <input
                             value={inputData.className}
@@ -114,6 +115,21 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                             className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-center h-8 focus:outline-none focus:border-[#fdb813]"
                         />
                     </div>
+
+                    {/* Underline Checkbox */}
+                    <div className="flex flex-col items-center justify-center gap-0.5">
+                        <label className="flex flex-col items-center gap-0.5 cursor-pointer select-none">
+                            <span className="text-[9px] text-yellow-700 font-bold whitespace-nowrap">밑줄</span>
+                            <input
+                                type="checkbox"
+                                checked={inputData.underline || false}
+                                onChange={(e) =>
+                                    setInputData({ ...inputData, underline: e.target.checked })
+                                }
+                                className="w-4 h-4 rounded border-yellow-300 text-[#fdb813] focus:ring-[#fdb813] cursor-pointer"
+                            />
+                        </label>
+                    </div>
                 </div>
 
                 {/* Add Merged Class Button */}
@@ -135,7 +151,7 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                             >
                                 <div className="flex justify-between -mt-1">
                                     <span className="text-[10px] font-bold text-yellow-700">
-                                        #{idx + 1}
+                                        #{idx + 2}
                                     </span>
                                     <button
                                         onClick={() => removeMerged(idx)}
