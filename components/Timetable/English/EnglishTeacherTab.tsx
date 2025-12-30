@@ -6,7 +6,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { doc, setDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { Edit3, Move, Eye, Settings } from 'lucide-react';
-import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor, getContrastColor } from './englishUtils';
+import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks } from './englishUtils';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import BatchInputBar, { InputData, MergedClass } from './BatchInputBar';
 import MoveConfirmBar from './MoveConfirmBar';
@@ -780,6 +780,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                     {cellData?.className && (
                                                         (() => {
                                                             const matchedKw = classKeywords.find(kw => cellData.className?.includes(kw.keyword));
+                                                            const classNameParts = formatClassNameWithBreaks(cellData.className);
                                                             return (
                                                                 <div
                                                                     className={`leading-tight px-0.5 text-center break-words w-full
@@ -792,7 +793,12 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                                         `}
                                                                     style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor, borderRadius: '4px', padding: '2px 4px' } : {}}
                                                                 >
-                                                                    {cellData.className}
+                                                                    {classNameParts.map((part, idx) => (
+                                                                        <React.Fragment key={idx}>
+                                                                            {part}
+                                                                            {idx < classNameParts.length - 1 && <br />}
+                                                                        </React.Fragment>
+                                                                    ))}
                                                                 </div>
                                                             );
                                                         })()
