@@ -1,12 +1,13 @@
-
 import React, { useMemo } from 'react';
-import { format, setMonth, setYear, isToday, isPast, isFuture, parseISO, startOfDay, isSameDay, addDays, subDays, differenceInMinutes, setHours, setMinutes, getHours, getMinutes, getDaysInMonth, getDate, setDate } from 'date-fns';
-import { Department, CalendarEvent, UserProfile } from '../types';
+import { format, setMonth, setYear, isToday, isPast, isFuture, parseISO, startOfDay, endOfDay, isSameDay, addDays, subDays, differenceInMinutes, setHours, setMinutes, getHours, getMinutes, getDaysInMonth, getDate, setDate, addWeeks, subWeeks, addMonths, subMonths, addYears, subYears } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { Department, CalendarEvent, UserProfile, DEFAULT_ROLE_PERMISSIONS } from '../types';
 import { getMonthWeeks } from '../utils/dateUtils';
 import WeekBlock from './WeekBlock';
 import MyEventsModal from './MyEventsModal'; // Import
 import CustomSelect from './CustomSelect'; // Import CustomSelect
-import { Clock, Users, Edit3, ChevronLeft, ChevronRight, Calendar as CalendarIcon, List } from 'lucide-react';
+import { Clock, Users, Edit3, ChevronLeft, ChevronRight, Calendar as CalendarIcon, List, Search, Filter, X, Check } from 'lucide-react';
 import { EVENT_COLORS } from '../constants';
 import YearlyView from './YearlyView'; // Import YearlyView
 
@@ -87,8 +88,7 @@ const DailyView: React.FC<{
                   key={event.id}
                   onClick={() => onEventClick(event)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-bold border-l-4 shadow-sm cursor-pointer hover:brightness-95 flex items-center gap-2 
-                    ${primaryDept?.color && !primaryDept.color.startsWith('#') ? primaryDept.color : 'bg-gray-100 border-gray-300'}
-                  `}
+                    ${primaryDept?.color && !primaryDept.color.startsWith('#') ? primaryDept.color : 'bg-gray-100 border-gray-300'}`}
                   style={{
                     backgroundColor: event.color?.startsWith('#') ? event.color : (primaryDept?.color?.startsWith('#') ? primaryDept.color : undefined),
                     borderLeftColor: event.borderColor?.startsWith('#') ? event.borderColor : (event.color?.startsWith('#') ? event.color : (primaryDept?.color?.startsWith('#') ? primaryDept.color : undefined)),
@@ -161,8 +161,7 @@ const DailyView: React.FC<{
                   key={event.id}
                   onClick={() => onEventClick(event)}
                   className={`absolute left-2 right-2 rounded-lg border-l-4 p-2 shadow-sm cursor-pointer hover:shadow-md transition-all overflow-hidden group z-10 pointer-events-auto
-                    ${primaryDept?.color && !primaryDept.color.startsWith('#') ? primaryDept.color : 'bg-white border-gray-200'}
-                  `}
+                    ${primaryDept?.color && !primaryDept.color.startsWith('#') ? primaryDept.color : 'bg-white border-gray-200'}`}
                   style={{
                     top: `${top}px`,
                     height: `${Math.max(height, 30)}px`,
@@ -242,6 +241,121 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
 
+  // --- Search & Filter Logic Start ---
+  // A. Input State (Pending)
+  const [searchQueryInput, setSearchQueryInput] = React.useState('');
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [selectedDeptsInput, setSelectedDeptsInput] = React.useState<string[]>([]);
+
+  // Smart Date Range State (Defaults: Today, 1 Week, Before)
+  // Ensure we have a stable initial date to avoid hydration mismatches
+  const [filterBaseDateInput, setFilterBaseDateInput] = React.useState<Date | null>(() => new Date());
+  const [filterDurationInput, setFilterDurationInput] = React.useState<'1w' | '1m' | '1y' | null>('1w');
+  const [filterDirectionInput, setFilterDirectionInput] = React.useState<'before' | 'after'>('before');
+
+  // B. Active State (Applied) - Used for filtering
+  const [activeSearch, setActiveSearch] = React.useState({
+    query: '',
+    depts: [] as string[],
+    baseDate: null,
+    duration: null,
+    direction: 'before' as 'before' | 'after'
+  });
+
+  // Apply filters handler
+  const handleApplyFilter = () => {
+    setActiveSearch({
+      query: searchQueryInput,
+      depts: selectedDeptsInput,
+      baseDate: filterBaseDateInput,
+      duration: filterDurationInput,
+      direction: filterDirectionInput
+    });
+    setIsFilterOpen(false);
+  };
+
+  // Reset handler
+  const handleResetFilter = () => {
+    setSearchQueryInput('');
+    setSelectedDeptsInput([]);
+    setFilterBaseDateInput(new Date());
+    setFilterDurationInput('1w');
+    setFilterDirectionInput('before');
+  };
+
+
+
+  // Filter visible departments based on permissions
+  const visibleDepartments = useMemo(() => {
+    if (!currentUser) return [];
+    if (currentUser.role === 'master' || currentUser.role === 'admin') return departments;
+
+    const rolePerms = DEFAULT_ROLE_PERMISSIONS[currentUser.role as keyof typeof DEFAULT_ROLE_PERMISSIONS];
+    const canViewAll = rolePerms?.['departments.view_all'];
+
+    if (canViewAll) return departments;
+
+    return departments.filter(d => {
+      const perm = currentUser.departmentPermissions?.[d.id];
+      return perm === 'view' || perm === 'edit';
+    });
+  }, [departments, currentUser]);
+
+  const filteredEvents = useMemo(() => {
+    // Determine which criteria to use
+    const { query: q, depts, baseDate, duration, direction } = activeSearch;
+
+    // Only filter if there is active criteria
+    const hasSearch = !!q || depts.length > 0 || !!baseDate;
+
+    if (!hasSearch) {
+      return [];
+    }
+
+    // Calculate Date Range based on smart filter
+    let startRange: Date | null = null;
+    let endRange: Date | null = null;
+
+    if (baseDate && duration) {
+      const base = startOfDay(baseDate);
+      if (direction === 'after') {
+        startRange = base;
+        if (duration === '1w') endRange = addWeeks(base, 1);
+        else if (duration === '1m') endRange = addMonths(base, 1);
+        else if (duration === '1y') endRange = addYears(base, 1);
+      } else {
+        endRange = endOfDay(base);
+        if (duration === '1w') startRange = subWeeks(base, 1);
+        else if (duration === '1m') startRange = subMonths(base, 1);
+        else if (duration === '1y') startRange = subYears(base, 1);
+      }
+    }
+
+    return events.filter(e => {
+      // 1. Text Search
+      const queryText = q.toLowerCase();
+      const matchesText = !q ||
+        e.title.toLowerCase().includes(queryText) ||
+        (e.description && e.description.toLowerCase().includes(queryText)) ||
+        (e.participants && typeof e.participants === 'string' && e.participants.toLowerCase().includes(queryText));
+
+      // 2. Department Filter
+      const matchesDept = depts.length === 0 ||
+        (e.departmentId && depts.includes(e.departmentId));
+
+      // 3. Date Range Filter
+      let matchesDate = true;
+      if (startRange && endRange) {
+        const eventStart = parseISO(e.startDate);
+        matchesDate = eventStart >= startRange && eventStart <= endRange;
+      }
+
+      return matchesText && matchesDept && matchesDate;
+    }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  }, [events, activeSearch]);
+  // --- Search & Filter Logic End ---
+
+
   // Handle year navigation for Yearly View
   const handleYearPrev = () => onDateChange(setYear(currentDate, currentYear - 1));
   const handleYearNext = () => onDateChange(setYear(currentDate, currentYear + 1));
@@ -307,10 +421,10 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
       ) : (
         <>
           {/* Unified Header */}
-          <div className="mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
 
-            {/* Navigation Group */}
-            <div className="flex items-center gap-1 w-full md:w-auto p-1.5 bg-[#f8fafc] rounded-2xl border border-gray-200 shadow-sm">
+            {/* Navigation Group (Left) */}
+            <div className="flex items-center gap-1 w-full md:w-auto p-1.5 bg-[#f8fafc] rounded-2xl border border-gray-200 shadow-sm flex-none">
               <button
                 onClick={handlePrev}
                 className="p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-xl transition-all text-gray-400 hover:text-[#081429]"
@@ -319,21 +433,18 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
               </button>
 
               <div className="flex items-center justify-center px-1">
-
                 {/* Year Selector */}
                 <CustomSelect
                   value={currentYear}
                   options={yearOptions}
                   onChange={(y) => onDateChange(setYear(currentDate, y))}
                 />
-
                 {/* Month Selector */}
                 <CustomSelect
                   value={currentMonth}
                   options={monthOptions}
                   onChange={(m) => onDateChange(setMonth(currentDate, m))}
                 />
-
                 {/* Weekly Selector */}
                 {viewMode === 'weekly' && (
                   <CustomSelect
@@ -348,7 +459,6 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                     }}
                   />
                 )}
-
                 {/* Daily Selector */}
                 {viewMode === 'daily' && (
                   <CustomSelect
@@ -357,7 +467,6 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                     onChange={(d) => onDateChange(setDate(currentDate, d))}
                   />
                 )}
-
               </div>
 
               <button
@@ -368,9 +477,241 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
               </button>
             </div>
 
-            {/* Right Action Group - Only show My Events on Primary View */}
             {isPrimaryView && (
-              <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+              <div className="flex-1 w-full md:max-w-md relative z-30 mx-2">
+                <div className="flex items-center gap-2 w-full">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                      type="text"
+                      placeholder="일정 검색..."
+                      value={searchQueryInput}
+                      onChange={(e) => setSearchQueryInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleApplyFilter();
+                          setIsFilterOpen(false);
+                        }
+                      }}
+                      onFocus={() => setIsFilterOpen(true)}
+                      className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#fdb813]/50 transition-all font-medium text-sm"
+                    />
+
+                    {/* Global ESC Handler for Search */}
+                    {React.useEffect(() => {
+                      const handleKeyDown = (e: KeyboardEvent) => {
+                        if (e.key === 'Escape') {
+                          // Priority 1: If Results are visible, Clear Results & Return to Filter Input Mode
+                          if (activeSearch.query || activeSearch.depts.length > 0 || activeSearch.baseDate) {
+                            handleResetFilter(); // Reset Inputs to Defaults
+                            setActiveSearch({ query: '', depts: [], baseDate: null, duration: null, direction: 'before' }); // Clear Active Results
+                            setIsFilterOpen(true); // Open Filter Panel (Search Mode)
+                          }
+                          // Priority 2: If No Results but Filter is Open, Close Filter
+                          else if (isFilterOpen) {
+                            setIsFilterOpen(false);
+                          }
+                        }
+                      };
+                      window.addEventListener('keydown', handleKeyDown);
+                      return () => window.removeEventListener('keydown', handleKeyDown);
+                    }, [isFilterOpen, activeSearch])}
+
+                    {searchQueryInput && (
+                      <button
+                        onClick={() => setSearchQueryInput('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    className={`p-2 rounded-xl border transition-all flex items-center gap-2 font-bold whitespace-nowrap ${isFilterOpen || activeSearch.depts.length > 0 || activeSearch.baseDate ? 'bg-[#081429] text-white border-[#081429]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    <Filter size={18} />
+                    <span className="hidden md:inline text-sm">필터</span>
+                    {(activeSearch.depts.length > 0 || activeSearch.baseDate) && (
+                      <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Filter Panel */}
+                {isFilterOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-3 p-4 bg-white border border-gray-200 rounded-xl shadow-lg animate-in slide-in-from-top-2 z-40">
+
+                    {/* 1. Category Filter (Departments) */}
+                    <div className="mb-4">
+                      <div className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider flex justify-between items-center">
+                        <span>카테고리</span>
+
+                        {selectedDeptsInput.length > 0 && (
+                          <button onClick={() => setSelectedDeptsInput([])} className="text-[10px] text-gray-400 hover:text-red-500">초기화</button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {visibleDepartments.map(dept => (
+                          <button
+                            key={dept.id}
+                            onClick={() => {
+                              if (selectedDeptsInput.includes(dept.id)) setSelectedDeptsInput(selectedDeptsInput.filter(id => id !== dept.id));
+                              else setSelectedDeptsInput([...selectedDeptsInput, dept.id]);
+                            }}
+                            className={`px-2 py-1 rounded text-xs font-bold border transition-colors ${selectedDeptsInput.includes(dept.id)
+                              ? 'bg-[#081429] text-white border-[#081429]'
+                              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                              }`}
+                          >
+                            {dept.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 2. Smart Date Filter */}
+                    <div>
+                      <div className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider flex justify-between items-center">
+                        <span>기간 설정</span>
+
+                        {(filterBaseDateInput || filterDurationInput) && (
+                          <button onClick={() => { setFilterBaseDateInput(null); setFilterDurationInput(null); }} className="text-[10px] text-gray-400 hover:text-red-500">초기화</button>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        {/* Base Date */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-600 w-12 shrink-0">기준일:</span>
+                          <div className="bg-gray-100 rounded-lg px-2 py-1 flex items-center gap-2">
+                            <CalendarIcon size={14} className="text-gray-400" />
+                            <input
+                              type="date"
+                              value={filterBaseDateInput ? format(filterBaseDateInput, 'yyyy-MM-dd') : ''}
+                              onChange={(e) => setFilterBaseDateInput(e.target.valueAsDate)}
+                              className="bg-transparent text-sm font-bold text-gray-700 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Duration & Direction */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-medium text-gray-600 w-12 shrink-0">범위:</span>
+                          <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                            {(['1w', '1m', '1y'] as const).map(d => (
+                              <button
+                                key={d}
+                                onClick={() => setFilterDurationInput(d)}
+                                className={`px-3 py-1 rounded text-xs font-bold transition-all ${filterDurationInput === d ? 'bg-white shadow text-[#081429]' : 'text-gray-500 hover:text-gray-700'}`}
+                              >
+                                {d === '1w' ? '1주일' : d === '1m' ? '1개월' : '1년'}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                            <button onClick={() => setFilterDirectionInput('before')} className={`px-3 py-1 rounded text-xs font-bold transition-all ${filterDirectionInput === 'before' ? 'bg-white shadow text-red-600' : 'text-gray-500'}`}>이전</button>
+                            <button onClick={() => setFilterDirectionInput('after')} className={`px-3 py-1 rounded text-xs font-bold transition-all ${filterDirectionInput === 'after' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>이후</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Search Button */}
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end gap-2">
+                      <button
+                        onClick={handleResetFilter}
+                        className="px-4 py-2 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+                      >
+                        초기화
+                      </button>
+                      <button
+                        onClick={handleApplyFilter}
+                        className="px-6 py-2 rounded-lg text-sm font-bold text-white bg-[#081429] hover:bg-[#081429]/90 shadow-lg shadow-[#081429]/20 transition-all flex items-center gap-2"
+                      >
+                        <Search size={14} />
+                        조회하기
+                      </button>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* Search Results Panel - Option B */}
+                {/* Search Results Panel - Option B */}
+                {(filteredEvents.length > 0) && (activeSearch.query || activeSearch.depts.length > 0 || activeSearch.baseDate) && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 max-h-[400px] overflow-y-auto animate-in fade-in zoom-in-95 duration-200 p-2 z-50">
+                    <div className="px-3 py-2 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 sticky top-0 backdrop-blur-sm rounded-t-lg">
+                      <span className="text-xs font-bold text-gray-500">검색 결과 ({filteredEvents.length}건)</span>
+                      <button onClick={() => {
+                        // Reset Inputs to Defaults (User Request: "Default values")
+                        handleResetFilter();
+                        // Clear Active Search (So results disappear)
+                        setActiveSearch({ query: '', depts: [], baseDate: null, duration: null, direction: 'before' });
+                        // Re-open Filter Panel (Search Mode)
+                        setIsFilterOpen(true);
+                      }} className="text-[10px] text-indigo-500 hover:underline">
+                        모두 지우기
+                      </button>
+                    </div>
+                    <div className="space-y-1 mt-2">
+                      {filteredEvents.map(event => {
+                        const primaryDept = departments.find(d => d.id === event.departmentId);
+                        return (
+                          <div
+                            key={event.id}
+                            onClick={() => {
+                              onDateChange(parseISO(event.startDate));
+                              setIsFilterOpen(false);
+                            }}
+                            className="p-2 hover:bg-indigo-50 cursor-pointer rounded-lg group transition-colors border border-transparent hover:border-indigo-100"
+                          >
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-[10px] font-bold bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 group-hover:bg-white transition-colors">
+                                {format(parseISO(event.startDate), 'yyyy. MM. dd (EEE)', { locale: ko })}
+                              </span>
+                              <span className="text-[10px] text-gray-400">
+                                {event.startTime ? `${event.startTime} - ${event.endTime} ` : '하루종일'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-1 h-6 rounded-full shrink-0"
+                                style={{ backgroundColor: event.color || primaryDept?.color }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold text-xs text-gray-800 truncate group-hover:text-indigo-700 transition-colors">
+                                  {event.title}
+                                </div>
+                                {event.description && event.description !== event.title && (
+                                  <div className="text-[10px] text-gray-500 truncate">{event.description}</div>
+                                )}
+                              </div>
+                              {primaryDept && (
+                                <span className="text-[10px] px-2 py-1 rounded bg-gray-50 font-medium text-gray-500 whitespace-nowrap">
+                                  {primaryDept.name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* No Results State */}
+                {(filteredEvents.length === 0) && (activeSearch.query) && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 p-8 text-center animate-in fade-in zoom-in-95 z-50">
+                    <Search size={32} className="mx-auto text-gray-300 mb-2" />
+                    <p className="text-gray-500 font-bold text-sm">검색 결과가 없습니다.</p>
+                    <p className="text-xs text-gray-400 mt-1">다른 검색어나 필터를 사용해보세요.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Right Action Group (Right) - Only show My Events on Primary View */}
+            {isPrimaryView && (
+              <div className="flex items-center gap-3 w-full md:w-auto justify-end flex-none">
                 <div className="hidden md:flex text-sm font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/10 px-4 py-2 rounded-xl border border-[#fdb813]/20">
                   {format(currentDate, 'yyyy. MM')}
                 </div>
@@ -384,26 +725,21 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                   </button>
                   {/* Notification Badge */}
                   {(() => {
+                    // ... existing badge logic ...
                     if (!currentUser) return null;
                     const pendingCount = events.filter(e => {
-                      // Check if user is relevant to this event (participant)
                       const isRelevant = (e.attendance && e.attendance[currentUser.uid]) ||
                         (e.participants && e.participants.includes(currentUser.email.split('@')[0]));
-
                       if (!isRelevant) return false;
-
-                      // Check status
                       const status = e.attendance ? e.attendance[currentUser.uid] : 'pending';
                       return status === 'pending' || !status;
                     }).length;
-
                     if (pendingCount === 0) return null;
-
                     return (
                       <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-extrabold px-1.5 h-4 min-w-[16px] flex items-center justify-center rounded-full shadow-sm ring-2 ring-white animate-pulse">
                         {pendingCount > 99 ? '99+' : pendingCount}
                       </div>
-                    );
+                    )
                   })()}
                 </div>
               </div>

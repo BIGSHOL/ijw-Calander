@@ -4,7 +4,7 @@ import { CalendarEvent, Department, UserProfile } from '../types';
 import { usePermissions } from '../hooks/usePermissions';
 import { EVENT_COLORS } from '../constants';
 // Added Edit3 and Plus to the imports to fix "Cannot find name" errors on line 95
-import { X, Trash2, Clock, Users, AlignLeft, Type, Edit3, Plus, Link as LinkIcon, Eye } from 'lucide-react';
+import { X, Trash2, Clock, Users, AlignLeft, Type, Edit3, Plus, Link as LinkIcon, Eye, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface EventModalProps {
@@ -25,6 +25,8 @@ interface EventModalProps {
   readOnly?: boolean;
   allEvents?: CalendarEvent[]; // For counting recurring events
   onBatchUpdateAttendance?: (groupId: string, uid: string, status: 'pending' | 'joined' | 'declined') => void;
+  onCopy?: (event: CalendarEvent) => void;
+  templateEvent?: CalendarEvent | null;
 }
 
 const EventModal: React.FC<EventModalProps> = ({
@@ -45,7 +47,9 @@ const EventModal: React.FC<EventModalProps> = ({
   currentUser,
   readOnly,
   allEvents = [],
-  onBatchUpdateAttendance
+  onBatchUpdateAttendance,
+  onCopy,
+  templateEvent
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -140,6 +144,52 @@ const EventModal: React.FC<EventModalProps> = ({
           // Fix: Reset recurrence state for existing events to prevent state pollution
           setRecurrenceType(existingEvent.recurrenceType || 'none');
           setRecurrenceCount(1); // Default count for edit mode (usually not used unless new recurrence started)
+          setRecurrenceType(existingEvent.recurrenceType || 'none');
+          setRecurrenceCount(1); // Default count for edit mode (usually not used unless new recurrence started)
+        } else if (templateEvent) {
+          // --- COPY MODE (Template) ---
+          setIsViewMode(false); // Edit Mode for new event
+          setTitle(templateEvent.title); // Or `[복사] ${templateEvent.title}` if requested
+          setDescription(templateEvent.description || '');
+
+          const rawParticipants = templateEvent.participants;
+          if (typeof rawParticipants === 'string') {
+            setParticipants(rawParticipants.split(', '));
+          } else if (Array.isArray(rawParticipants)) {
+            setParticipants(rawParticipants);
+          } else {
+            setParticipants([]);
+          }
+
+          setReferenceUrl(templateEvent.referenceUrl || '');
+          setDepartmentIds(templateEvent.departmentIds || [templateEvent.departmentId]);
+          // Author: Should be CURRENT USER because they are creating the copy
+          if (currentUser) {
+            const myName = `${currentUser.email.split('@')[0]} ${currentUser.jobTitle ? `(${currentUser.jobTitle})` : ''}`;
+            setAuthorId(currentUser.uid);
+            setAuthorName(myName);
+          } else {
+            setAuthorId('');
+            setAuthorName('');
+          }
+
+          // Dates: Keep original dates but user can edit
+          setStartDate(templateEvent.startDate);
+          setEndDate(templateEvent.endDate);
+          setStartTime(templateEvent.startTime || '');
+          setEndTime(templateEvent.endTime || '');
+          const isTimeEmpty = !templateEvent.startTime && !templateEvent.endTime;
+          setIsAllDay(templateEvent.isAllDay || isTimeEmpty);
+
+          const colorVal = templateEvent.color;
+          const knownColor = EVENT_COLORS.find(c => c.value === colorVal);
+          const initialBgColor = knownColor ? knownColor.value : (colorVal.startsWith('#') ? colorVal : '#fee2e2');
+          setSelectedColor(initialBgColor);
+          setSelectedTextColor(templateEvent.textColor || '#ffffff');
+          setSelectedBorderColor(templateEvent.borderColor || initialBgColor);
+
+          setRecurrenceType('none'); // Do not copy recurrence rules by default to avoid complexity
+          setRecurrenceCount(1);
         } else {
           setIsViewMode(false); // Default to Edit Mode for new events
           setTitle(initialTitle || '');
@@ -849,6 +899,19 @@ const EventModal: React.FC<EventModalProps> = ({
                 {/* Logic: Existing + EditMode = '취소', Else (ViewMode or New) = '닫기' */}
                 {(existingEvent && !isViewMode) ? '취소' : '닫기'}
               </button>
+
+              {/* Copy Button (View Mode Only) */}
+              {isViewMode && existingEvent && onCopy && (
+                <button
+                  type="button"
+                  onClick={() => onCopy(existingEvent)}
+                  className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 text-sm font-bold transition-all flex items-center gap-2"
+                  title="일정 복사"
+                >
+                  <Copy size={16} />
+                  <span className="hidden sm:inline">복사</span>
+                </button>
+              )}
 
               {/* Edit Button (View Mode Only) */}
               {isViewMode && canEditCurrent && existingEvent && (
