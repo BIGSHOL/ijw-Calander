@@ -882,7 +882,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                     </table>
 
                     {/* Bottom Spacer for Input Bar */}
-                    {mode === 'edit' && selectedCells.size > 0 && <div className="h-[160px]" />}
+                    {mode === 'edit' && selectedCells.size > 0 && <div className="h-[200px]" />}
                 </div>
             </div>
 
