@@ -10,11 +10,30 @@ export const EN_PERIODS = [
     { id: '4', label: '4교시', time: '16:20~17:00' },
     { id: '5', label: '5교시', time: '17:00~17:40' },
     { id: '6', label: '6교시', time: '17:40~18:20' },
-    { id: '7', label: '7교시', time: '18:20~19:10' },
-    { id: '8', label: '8교시', time: '19:10~20:00' },
-    { id: '9', label: '9교시', time: '20:00~20:50' },
-    { id: '10', label: '10교시', time: '20:50~21:40' },
+    { id: '7', label: '7교시', time: '18:20~19:15' },
+    { id: '8', label: '8교시', time: '19:15~20:10' },
+    { id: '9', label: '9교시', time: '20:10~21:05' },
+    { id: '10', label: '10교시', time: '21:05~22:00' },
 ] as const;
+
+// 인재원 수업용 시간대 (50분 단위, 쉬는시간 포함)
+export const INJAE_PERIODS = [
+    { id: '1', label: '1교시', time: '14:20~15:00' },
+    { id: '2', label: '2교시', time: '15:00~15:40' },
+    { id: '3', label: '3교시', time: '15:40~16:20' },
+    { id: '4', label: '4교시', time: '16:20~17:15' },  // 인재원: 55분
+    { id: '5', label: '5교시', time: '17:15~18:10' },  // 인재원: 55분
+    // 6교시 제거 (18:10~18:20 쉬는시간)
+    { id: '7', label: '7교시', time: '18:20~19:15' },
+    { id: '8', label: '8교시', time: '19:15~20:10' },
+    { id: '9', label: '9교시', time: '20:10~21:05' },
+    { id: '10', label: '10교시', time: '21:05~22:00' },
+] as const;
+
+// 인재원 수업 판별 (수업명에 'E_' 포함)
+export const isInjaeClass = (className: string): boolean => {
+    return className?.includes('E_') || false;
+};
 
 export const EN_COLLECTION = 'english_schedules';
 

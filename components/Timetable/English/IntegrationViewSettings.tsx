@@ -145,6 +145,42 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
         onChange(next as IntegrationSettings);
     };
 
+    const handleMoveGroup = (index: number, direction: 'up' | 'down') => {
+        if (direction === 'up' && index === 0) return;
+        if (direction === 'down' && index === customGroups.length - 1) return;
+
+        const newGroups = [...customGroups];
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+        // Swap
+        [newGroups[index], newGroups[targetIndex]] = [newGroups[targetIndex], newGroups[index]];
+
+        const next = {
+            ...safeSettings,
+            customGroups: newGroups,
+        };
+        onChange(next as IntegrationSettings);
+    };
+
+    const handleMoveClassInGroup = (groupId: string, classIndex: number, direction: 'up' | 'down') => {
+        const nextGroups = customGroups.map((g) => {
+            if (g.id !== groupId) return g;
+
+            const newClasses = [...(g.classes || [])];
+            if (direction === 'up') {
+                if (classIndex === 0) return g;
+                [newClasses[classIndex - 1], newClasses[classIndex]] = [newClasses[classIndex], newClasses[classIndex - 1]];
+            } else {
+                if (classIndex === newClasses.length - 1) return g;
+                [newClasses[classIndex], newClasses[classIndex + 1]] = [newClasses[classIndex + 1], newClasses[classIndex]];
+            }
+            return { ...g, classes: newClasses };
+        });
+
+        const next = { ...safeSettings, customGroups: nextGroups };
+        onChange(next as IntegrationSettings);
+    };
+
     const handleMigrateFromAcademy = async () => {
         if (!confirm('기존 Academy App (injaewon-project-8ea38)에서 데이터를 가져오시겠습니까?')) return;
 
@@ -269,7 +305,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                             </div>
                         )}
 
-                        {customGroups.map((group) => (
+                        {customGroups.map((group, index) => (
                             <GroupCard
                                 key={group.id}
                                 group={group}
@@ -278,6 +314,11 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                                 onTitleChange={(title) => handleGroupTitleChange(group.id, title)}
                                 onToggleClass={(className, checked) => handleToggleClassInGroup(group.id, className, checked)}
                                 onDelete={() => handleRemoveGroup(group.id)}
+                                isFirst={index === 0}
+                                isLast={index === customGroups.length - 1}
+                                onMoveUp={() => handleMoveGroup(index, 'up')}
+                                onMoveDown={() => handleMoveGroup(index, 'down')}
+                                onMoveClass={(clsIdx, dir) => handleMoveClassInGroup(group.id, clsIdx, dir)}
                             />
                         ))}
                     </section>
@@ -335,6 +376,11 @@ interface GroupCardProps {
     onTitleChange: (title: string) => void;
     onToggleClass: (className: string, checked: boolean) => void;
     onDelete: () => void;
+    isFirst: boolean;
+    isLast: boolean;
+    onMoveUp: () => void;
+    onMoveDown: () => void;
+    onMoveClass: (classIndex: number, direction: 'up' | 'down') => void;
 }
 
 const GroupCard = React.memo<GroupCardProps>(({
@@ -344,6 +390,11 @@ const GroupCard = React.memo<GroupCardProps>(({
     onTitleChange,
     onToggleClass,
     onDelete,
+    isFirst,
+    isLast,
+    onMoveUp,
+    onMoveDown,
+    onMoveClass,
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -366,54 +417,125 @@ const GroupCard = React.memo<GroupCardProps>(({
                     className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
                     placeholder="그룹 제목"
                 />
-                <button
-                    type="button"
-                    onClick={onDelete}
-                    className="text-xs text-red-500 hover:text-red-600"
-                >
-                    삭제
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={onMoveUp}
+                        disabled={isFirst}
+                        className={`p-1 rounded text-xs border ${isFirst ? 'text-gray-300 border-gray-200' : 'text-gray-500 border-gray-300 hover:bg-gray-50'}`}
+                        title="위로 이동"
+                    >
+                        ▲
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onMoveDown}
+                        disabled={isLast}
+                        className={`p-1 rounded text-xs border ${isLast ? 'text-gray-300 border-gray-200' : 'text-gray-500 border-gray-300 hover:bg-gray-50'}`}
+                        title="아래로 이동"
+                    >
+                        ▼
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onDelete}
+                        className="ml-1 text-xs text-red-500 hover:text-red-600 px-2 py-1 border border-red-200 rounded hover:bg-red-50"
+                    >
+                        삭제
+                    </button>
+                </div>
             </div>
 
-            {/* Class Search */}
-            <div>
+            {/* Selected Classes (Ordered List) */}
+            <div className="space-y-1 bg-gray-50 p-2 rounded border border-gray-100">
+                <div className="text-[10px] text-gray-500 font-bold mb-1">
+                    선택된 수업 (순서 변경 가능)
+                </div>
+                {checkedClasses.length === 0 && (
+                    <div className="text-xs text-gray-400 italic text-center py-2">
+                        선택된 수업이 없습니다. 아래에서 검색하여 추가하세요.
+                    </div>
+                )}
+                {checkedClasses.map((cls, idx) => (
+                    <div key={`${cls}-${idx}`} className="flex items-center justify-between text-xs bg-white px-2 py-1.5 rounded border border-gray-200 shadow-sm">
+                        <span className="font-medium text-gray-700 truncate flex-1">{cls}</span>
+                        <div className="flex items-center gap-1 ml-2">
+                            <button
+                                onClick={() => onMoveClass(idx, 'up')}
+                                disabled={idx === 0}
+                                className={`p-0.5 rounded ${idx === 0 ? 'text-gray-200' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                                title="위로"
+                            >
+                                ▲
+                            </button>
+                            <button
+                                onClick={() => onMoveClass(idx, 'down')}
+                                disabled={idx === checkedClasses.length - 1}
+                                className={`p-0.5 rounded ${idx === checkedClasses.length - 1 ? 'text-gray-200' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                                title="아래로"
+                            >
+                                ▼
+                            </button>
+                            <button
+                                onClick={() => onToggleClass(cls, false)}
+                                className="ml-1 text-gray-400 hover:text-red-500 px-1"
+                                title="제거"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Class Search & Add */}
+            <div className="pt-2 border-t border-gray-100">
+                <div className="text-[10px] text-gray-500 font-bold mb-1 px-1">
+                    수업 추가
+                </div>
                 <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="수업 검색..."
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-gray-50 focus:bg-white"
+                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
             </div>
 
             {/* Class Checkbox List */}
-            <div className="max-h-40 overflow-auto border-t border-gray-100 pt-2 space-y-1">
-                {filteredClasses.length === 0 ? (
-                    <div className="text-xs text-gray-400 px-1 py-1">
-                        검색 결과가 없습니다.
-                    </div>
-                ) : (
-                    filteredClasses.map((className) => {
+            <div className="max-h-32 overflow-auto space-y-0.5 mt-1">
+                {(() => {
+                    const displayedClasses = filteredClasses.filter(c => !checkedClasses.includes(c.toString()));
+
+                    if (displayedClasses.length === 0) {
+                        return (
+                            <div className="text-xs text-gray-400 px-1 py-1 italic">
+                                {searchTerm ? "검색 결과가 없거나 이미 추가되었습니다." : "추가할 수업을 검색하세요."}
+                            </div>
+                        );
+                    }
+
+                    return displayedClasses.map((className) => {
                         const strClass = className.toString();
-                        const checked = checkedClasses.includes(strClass);
                         const assignedToOther = classToGroupId[strClass] && classToGroupId[strClass] !== group.id;
 
                         return (
                             <label
                                 key={strClass}
-                                className="flex items-center gap-2 cursor-pointer"
+                                className="flex items-center gap-2 cursor-pointer px-1 py-0.5 hover:bg-gray-50 rounded"
                             >
                                 <input
                                     type="checkbox"
-                                    checked={checked}
+                                    checked={false} // Always unchecked as it's an "Add" list now
                                     onChange={(e) =>
-                                        onToggleClass(strClass, e.target.checked)
+                                        onToggleClass(strClass, true) // Only allow adding here
                                     }
+                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-3 w-3"
                                 />
                                 <span
-                                    className={`truncate ${assignedToOther
+                                    className={`truncate text-xs ${assignedToOther
                                         ? "text-gray-400 line-through"
-                                        : ""
+                                        : "text-gray-700"
                                         }`}
                                     title={strClass}
                                 >
@@ -421,8 +543,8 @@ const GroupCard = React.memo<GroupCardProps>(({
                                 </span>
                             </label>
                         );
-                    })
-                )}
+                    });
+                })()}
             </div>
         </div>
     );
