@@ -636,7 +636,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                         <div className="text-center py-8 text-gray-400 text-sm">등록된 학생이 없습니다.</div>
                     ) : (
                         <div className="space-y-1.5">
-                            {students.map((student, idx) => (
+                            {[...students].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map((student, idx) => (
                                 <div
                                     key={student.id}
                                     className={`flex items-center justify-between py-2 px-3 rounded-lg transition-colors group ${editingStudentId === student.id ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 hover:bg-gray-100'}`}
