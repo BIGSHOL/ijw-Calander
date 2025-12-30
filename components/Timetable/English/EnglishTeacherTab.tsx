@@ -574,11 +574,11 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
 
         setInputData(prev => ({
             ...prev,
-            merged: [...prev.merged, { className: '', room: defaultRoom }]
+            merged: [...prev.merged, { className: '', room: defaultRoom, underline: false }]
         }));
     };
 
-    const updateMerged = (index: number, field: keyof MergedClass, value: string) => {
+    const updateMerged = (index: number, field: keyof MergedClass, value: string | boolean) => {
         const newMerged = [...inputData.merged];
         newMerged[index] = { ...newMerged[index], [field]: value };
         setInputData(prev => ({ ...prev, merged: newMerged }));
