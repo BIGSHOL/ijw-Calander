@@ -43,6 +43,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
     const [filterTeacher, setFilterTeacher] = useState<string>('all');
     const [viewSize, setViewSize] = useState<ViewSize>('medium');
+    const [visibleWeekdays, setVisibleWeekdays] = useState<Set<string>>(new Set(EN_WEEKDAYS));
 
     // Drag Selection State
     const [isSelectionDragging, setIsSelectionDragging] = useState(false);
@@ -73,6 +74,24 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         if (filterTeacher === 'all') return teachers;
         return teachers.filter(t => t === filterTeacher);
     }, [teachers, filterTeacher]);
+
+    // Filter weekdays
+    const filteredWeekdays = useMemo(() => {
+        return EN_WEEKDAYS.filter(day => visibleWeekdays.has(day));
+    }, [visibleWeekdays]);
+
+    // Toggle weekday visibility
+    const toggleWeekday = (day: string) => {
+        setVisibleWeekdays(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(day)) {
+                newSet.delete(day);
+            } else {
+                newSet.add(day);
+            }
+            return newSet;
+        });
+    };
 
     // --- Drag Selection Logic ---
 
@@ -627,6 +646,24 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                             <option key={t} value={t}>{t}</option>
                         ))}
                     </select>
+
+                    <div className="h-6 w-px bg-gray-300 mx-2" />
+
+                    {/* Weekday Visibility Toggles */}
+                    <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
+                        <span className="text-[10px] text-gray-500 mr-1">요일:</span>
+                        {EN_WEEKDAYS.map(day => (
+                            <label key={day} className="flex items-center gap-0.5 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={visibleWeekdays.has(day)}
+                                    onChange={() => toggleWeekday(day)}
+                                    className="w-3 h-3 cursor-pointer"
+                                />
+                                <span className="text-[10px] text-gray-700">{day}</span>
+                            </label>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -648,7 +685,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                 return (
                                     <th
                                         key={teacher}
-                                        colSpan={EN_WEEKDAYS.length}
+                                        colSpan={filteredWeekdays.length}
                                         className={`p-2 text-xs font-bold
                                             ${tIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
                                             border-r border-t border-b
@@ -662,7 +699,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         </tr>
                         <tr>
                             {filteredTeachers.map((teacher, tIdx) => (
-                                EN_WEEKDAYS.map((day, dIdx) => (
+                                filteredWeekdays.map((day, dIdx) => (
                                     <th
                                         key={`${teacher}-${day}`}
                                         className={`p-1 bg-gray-50 text-[10px] text-gray-500
@@ -687,7 +724,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                     <div className="text-[9px] text-gray-400">{period.time}</div>
                                 </td>
                                 {filteredTeachers.map((teacher, tIdx) => (
-                                    EN_WEEKDAYS.map((day, dIdx) => {
+                                    filteredWeekdays.map((day, dIdx) => {
                                         const cellKey = getCellKey(teacher, period.id, day);
                                         const cellData = scheduleData[cellKey];
 
