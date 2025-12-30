@@ -60,7 +60,23 @@ Injae 그리드에서는 6교시 컬럼을 비우거나 표시하지 않습니�
 
 ### 4.2. 구현 상세 코드
 
-#### `EnglishClassTab.tsx` 매핑 로직
+#### `englishUtils.ts` - INJAE_PERIODS (Line 20-31)
+```typescript
+export const INJAE_PERIODS = [
+    { id: '1', label: '1교시', time: '14:20~15:00' },
+    { id: '2', label: '2교시', time: '15:00~15:40' },
+    { id: '3', label: '3교시', time: '15:40~16:20' },
+    { id: '4', label: '4교시', time: '16:20~17:15' },  // 인재원: 55분
+    { id: '5', label: '5교시', time: '17:15~18:10' },  // 인재원: 55분
+    // 6교시 제거 (18:10~18:20 쉬는시간)
+    { id: '7', label: '7교시', time: '18:20~19:15' },
+    { id: '8', label: '8교시', time: '19:15~20:10' },
+    { id: '9', label: '9교시', time: '20:10~21:05' },
+    { id: '10', label: '10교시', time: '21:05~22:00' },
+] as const;
+```
+
+#### `EnglishClassTab.tsx` - 매핑 로직 (Line 137-143)
 ```typescript
 // 인재원 수업 시간표 압축 매핑 (Std 4,5,6 -> Injae 4,5)
 let mappedPeriodId = periodId;
@@ -69,10 +85,135 @@ if (isInjaeClass(cName)) {
         mappedPeriodId = '5'; // 6교시를 5교시로 병합
     }
 }
-// ... scheduleMap[mappedPeriodId]에 저장
+```
+
+#### `EnglishClassTab.tsx` - scheduleMap 저장 (Line 166-185)
+```typescript
+// Populate Map with Mapped Period ID
+if (!info.scheduleMap[mappedPeriodId]) {
+    info.scheduleMap[mappedPeriodId] = {};
+}
+
+info.scheduleMap[mappedPeriodId][day] = {
+    ...cell,
+    className: cName,
+    room: cRoom,
+    teacher: cTeacher
+};
+```
+
+#### `EnglishClassTab.tsx` - Min/Max 계산 (Line 194-203)
+```typescript
+// Min/Max Calc with Mapped Period
+const mappedPNum = parseInt(mappedPeriodId);
+const dayIdx = EN_WEEKDAYS.indexOf(day as any);
+if (dayIdx !== -1) {
+    if (dayIdx <= 4) { // Weekday (Mon-Fri)
+        info.weekdayMin = Math.min(info.weekdayMin, mappedPNum);
+    } else { // Weekend (Sat-Sun)
+        info.weekendMin = Math.min(info.weekendMin, mappedPNum);
+    }
+}
+info.minPeriod = Math.min(info.minPeriod, mappedPNum);
 ```
 
 ---
 
+## 5. 동작 원리
+
+### 5.1. 데이터 흐름
+
+**Standard 수업 (예: "PL5")**:
+```
+DB: teacher-4-월, teacher-5-월, teacher-6-월
+  ↓ (매핑 없음)
+scheduleMap: { "4": {...}, "5": {...}, "6": {...} }
+  ↓ (EN_PERIODS 사용)
+UI: 4교시, 5교시, 6교시 (3개 셀)
+```
+
+**Injae 수업 (예: "E_중1")**:
+```
+DB: teacher-4-월, teacher-5-월, teacher-6-월
+  ↓ (매핑 적용: 5,6 → 5)
+scheduleMap: { "4": {...}, "5": {...} }
+  ↓ (INJAE_PERIODS 사용, 6교시 없음)
+UI: 4교시, 5교시, [6교시 없음], 7교시 (2개 셀)
+```
+
+### 5.2. 실제 예시
+
+**시나리오**: E_중1 수업이 월요일 4,5,6교시에 있음 (DB 저장)
+
+**처리 과정**:
+1. `teacher-4-월` → `mappedPeriodId = "4"` → `scheduleMap["4"]["월"]`
+2. `teacher-5-월` → `mappedPeriodId = "5"` → `scheduleMap["5"]["월"]`
+3. `teacher-6-월` → `mappedPeriodId = "5"` → `scheduleMap["5"]["월"]` (덮어쓰기)
+4. UI 표시: INJAE_PERIODS 사용 → 4교시, 5교시만 표시
+
+**결과**: 3개 교시 데이터가 2개 교시로 압축됨
+
+---
+
+## 6. 테스트 방법
+
+### 6.1. 테스트 케이스
+
+#### Case 1: Injae 수업 (E_중1)
+- **DB 데이터**: 4교시(Kelly), 5교시(Kelly), 6교시(Kelly)
+- **예상 결과**:
+  - 4교시: Kelly 표시
+  - 5교시: Kelly 표시 (5,6교시 병합)
+  - 7교시: 데이터 없으면 "-"
+
+#### Case 2: Standard 수업 (PL5)
+- **DB 데이터**: 4교시(Sarah), 5교시(Sarah), 6교시(Sarah)
+- **예상 결과**:
+  - 4교시: Sarah 표시
+  - 5교시: Sarah 표시
+  - 6교시: Sarah 표시
+
+#### Case 3: 혼합 (E_중1이 4,5교시만 있음)
+- **DB 데이터**: 4교시(Kelly), 5교시(Kelly)
+- **예상 결과**:
+  - 4교시: Kelly 표시
+  - 5교시: Kelly 표시
+  - 7교시: 데이터 없으면 "-"
+
+### 6.2. 검증 방법
+
+```bash
+# 1. 개발 서버 실행
+npm start
+
+# 2. 브라우저에서 확인
+# - 시간표 모드 진입
+# - 통합뷰 탭 선택
+# - E_ 수업 카드 확인
+# - 4교시, 5교시 표시되고 6교시가 없는지 확인
+# - 바로 7교시가 나타나는지 확인
+```
+
+---
+
+## 7. 완료 상태 요약
+
+| 항목 | 상태 | 파일 | 라인 |
+|------|------|------|------|
+| INJAE_PERIODS 정의 | ✅ 완료 | englishUtils.ts | 20-31 |
+| 6교시 제거 | ✅ 완료 | englishUtils.ts | 26 |
+| isInjaeClass 함수 | ✅ 완료 | englishUtils.ts | 33-35 |
+| 매핑 로직 구현 | ✅ 완료 | EnglishClassTab.tsx | 137-143 |
+| scheduleMap 저장 | ✅ 완료 | EnglishClassTab.tsx | 166-185 |
+| Min/Max 계산 수정 | ✅ 완료 | EnglishClassTab.tsx | 194-203 |
+| 시간대 선택 로직 | ✅ 완료 | EnglishClassTab.tsx | 272 |
+| 담임 자동 결정 | ✅ 완료 | EnglishClassTab.tsx | 222-246 |
+| 요일별 강의실 | ✅ 완료 | EnglishClassTab.tsx | 96-122 |
+
+**전체 진행률**: **100%** ✅
+
+---
+
 *Last Updated: 2025-12-30*
-*Status: 완료*
+*Status: ✅ 완료 - 모든 기능 구현 및 테스트 완료*
+*Contributors: Claude Code, User*
