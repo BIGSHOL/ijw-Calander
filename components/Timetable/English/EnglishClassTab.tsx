@@ -266,8 +266,19 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             }
         });
 
-        // Pass 2: Calculate Logic (Weekend Shift & Visible Periods)
-        return Array.from(classMap.values())
+        // Pass 2: Filter out empty classes (classes with no actual schedule data)
+        // This prevents duplicates after level-up when old class names linger in data
+        const validClasses = Array.from(classMap.values()).filter(c => {
+            // Count total cells in scheduleMap
+            const cellCount = Object.values(c.scheduleMap).reduce(
+                (sum, dayMap) => sum + Object.keys(dayMap).length,
+                0
+            );
+            return cellCount > 0; // Only include classes with actual schedule data
+        });
+
+        // Pass 3: Calculate Logic (Weekend Shift & Visible Periods)
+        return validClasses
             .map(c => {
                 // 0. 담임 결정: 가장 많이 수업하는 선생님, 동점시 원어민 제외
                 let determinedMainTeacher = c.mainTeacher;
