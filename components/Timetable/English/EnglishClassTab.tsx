@@ -563,8 +563,6 @@ const ClassCard: React.FC<{
                                 weekendShift={classInfo.weekendShift}
                                 teachersData={teachersData}
                                 displayDays={classInfo.finalDays}
-                                className={classInfo.name}
-                                classKeywords={classKeywords}
                             />
                         ))}
                     </div>
@@ -608,10 +606,8 @@ const MiniGridRow: React.FC<{
     scheduleMap: Record<string, Record<string, ScheduleCell>>,
     weekendShift: number,
     teachersData: Teacher[],
-    displayDays: string[],
-    className: string,
-    classKeywords: ClassKeywordColor[]
-}> = ({ period, scheduleMap, weekendShift, teachersData, displayDays, className, classKeywords }) => {
+    displayDays: string[]
+}> = ({ period, scheduleMap, weekendShift, teachersData, displayDays }) => {
 
     // Parse time for display (e.g. 14:20~15:00 -> 14:20 \n ~15:00)
     const [start, end] = period.time.split('~');
@@ -653,22 +649,12 @@ const MiniGridRow: React.FC<{
                 // So we just access correct period key
                 const cell = scheduleMap[effectivePeriodId]?.[day];
 
-                // 키워드 매칭 (className 기준)
-                const matchedKw = classKeywords.find(kw => className?.includes(kw.keyword));
-
                 // Get style based on teacher
                 let teacherStyle = {};
                 if (cell?.teacher) {
                     const colors = getTeacherColor(cell.teacher, teachersData);
                     teacherStyle = { backgroundColor: colors.bg, color: colors.text, fontWeight: 800 };
                 }
-
-                // 최종 스타일: 키워드 우선, 없으면 teacher 스타일
-                const finalStyle = matchedKw ? {
-                    backgroundColor: matchedKw.bgColor,
-                    color: matchedKw.textColor,
-                    fontWeight: 800
-                } : teacherStyle;
 
                 return (
                     <div
