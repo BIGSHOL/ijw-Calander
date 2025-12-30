@@ -1,7 +1,7 @@
 // English Room Schedule Tab
 // 영어 강의실별 시간표 탭 - 자동 생성, 읽기 전용
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { EN_PERIODS, EN_WEEKDAYS, getContrastColor } from './englishUtils';
 import { ClassKeywordColor } from '../../../types';
 
@@ -19,7 +19,12 @@ interface EnglishRoomTabProps {
     classKeywords?: ClassKeywordColor[];  // For keyword color coding
 }
 
+type ViewSize = 'small' | 'medium' | 'large';
+
 const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeywords = [] }) => {
+    const [viewSize, setViewSize] = useState<ViewSize>('medium');
+    const [filterRoom, setFilterRoom] = useState<string>('all');
+
     // Extract unique rooms from schedule data
     const rooms = useMemo(() => {
         const roomSet = new Set<string>();
@@ -28,6 +33,12 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
         });
         return Array.from(roomSet).sort((a, b) => a.localeCompare(b, 'ko'));
     }, [scheduleData]);
+
+    // Filter rooms
+    const filteredRooms = useMemo(() => {
+        if (filterRoom === 'all') return rooms;
+        return rooms.filter(r => r === filterRoom);
+    }, [rooms, filterRoom]);
 
     // Transform data to room-based view
     const roomScheduleData = useMemo(() => {
@@ -58,9 +69,44 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
 
     return (
         <div className="flex flex-col h-full">
-            {/* Info Bar */}
-            <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 text-xs text-indigo-700 font-bold flex justify-between items-center flex-shrink-0">
-                <span>🚪 강의실별 시간표 (자동 생성)</span>
+            {/* Toolbar */}
+            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b flex-shrink-0 relative z-20">
+                <div className="flex items-center gap-2">
+                    {/* View Size Controls */}
+                    <div className="flex items-center bg-gray-100 rounded-lg p-0.5 mr-2 flex-shrink-0">
+                        <button
+                            onClick={() => setViewSize('small')}
+                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                        >
+                            작게
+                        </button>
+                        <button
+                            onClick={() => setViewSize('medium')}
+                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                        >
+                            보통
+                        </button>
+                        <button
+                            onClick={() => setViewSize('large')}
+                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                        >
+                            크게
+                        </button>
+                    </div>
+
+                    {/* Room Filter */}
+                    <select
+                        value={filterRoom}
+                        onChange={(e) => setFilterRoom(e.target.value)}
+                        className="px-2 py-1 text-xs border rounded"
+                    >
+                        <option value="all">전체 강의실</option>
+                        {rooms.map(r => (
+                            <option key={r} value={r}>{r}</option>
+                        ))}
+                    </select>
+                </div>
+
                 <span className="text-[10px] text-indigo-400 font-normal">
                     * 수정은 '강사별 시간표'에서만 가능합니다.
                 </span>
@@ -68,16 +114,16 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
 
             {/* Schedule Grid */}
             <div className="flex-1 overflow-auto p-2 bg-gray-100">
-                {rooms.length === 0 ? (
+                {filteredRooms.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-gray-400 text-sm">
                         강의실 데이터가 없습니다.
                     </div>
                 ) : (
-                    <table className="border-collapse bg-white rounded shadow">
+                    <table className="border-collapse bg-white rounded shadow w-max table-fixed">
                         <thead className="sticky top-0 z-10">
                             <tr>
                                 <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
-                                {rooms.map(room => (
+                                {filteredRooms.map(room => (
                                     <th
                                         key={room}
                                         colSpan={EN_WEEKDAYS.length}
@@ -88,11 +134,15 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                                 ))}
                             </tr>
                             <tr>
-                                {rooms.map(room => (
+                                {filteredRooms.map(room => (
                                     EN_WEEKDAYS.map(day => (
                                         <th
                                             key={`${room}-${day}`}
-                                            className="p-1 border bg-gray-50 text-[10px] font-bold text-gray-500 min-w-[60px]"
+                                            className={`p-1 border bg-gray-50 text-[10px] font-bold text-gray-500
+                                                ${viewSize === 'large' ? 'w-[100px]' : ''}
+                                                ${viewSize === 'medium' ? 'w-[60px]' : ''}
+                                                ${viewSize === 'small' ? 'w-[40px]' : ''}
+                                            `}
                                         >
                                             {day}
                                         </th>
@@ -107,7 +157,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                                         <div>{period.label}</div>
                                         <div className="text-[9px] text-gray-400">{period.time}</div>
                                     </td>
-                                    {rooms.map(room => (
+                                    {filteredRooms.map(room => (
                                         EN_WEEKDAYS.map(day => {
                                             const cellKey = getCellKey(room, period.id, day);
                                             const cellData = roomScheduleData[cellKey];
@@ -122,26 +172,34 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                                                 ? { backgroundColor: matchedKw.bgColor }
                                                 : {};
 
+                                            // 셀 높이를 너비와 동일하게 설정 (정사각형)
+                                            const cellHeightClass =
+                                                viewSize === 'large' ? 'h-[100px]' :
+                                                viewSize === 'medium' ? 'h-[60px]' :
+                                                'h-[40px]';
+
                                             return (
                                                 <td
                                                     key={cellKey}
-                                                    className={`p-1 border text-center min-h-[40px] ${!matchedKw && cellData?.className ? 'bg-indigo-50' : ''}`}
+                                                    className={`p-1 border text-center ${cellHeightClass} ${!matchedKw && cellData?.className ? 'bg-indigo-50' : ''}`}
                                                     style={cellBgStyle}
                                                 >
                                                     {cellData?.className && (
                                                         <>
                                                             <div
-                                                                className="text-[10px] font-bold"
+                                                                className={`font-bold ${viewSize === 'small' ? 'text-[9px]' : 'text-[10px]'}`}
                                                                 style={matchedKw ? { color: matchedKw.textColor } : { color: '#374151' }}
                                                             >
                                                                 {cellData.className}
                                                             </div>
-                                                            <div
-                                                                className="text-[9px]"
-                                                                style={{ color: matchedKw ? getContrastColor(matchedKw.bgColor) : '#9CA3AF', opacity: matchedKw ? 0.85 : 1 }}
-                                                            >
-                                                                {cellData.teacher}
-                                                            </div>
+                                                            {viewSize !== 'small' && (
+                                                                <div
+                                                                    className="text-[9px]"
+                                                                    style={{ color: matchedKw ? getContrastColor(matchedKw.bgColor) : '#9CA3AF', opacity: matchedKw ? 0.85 : 1 }}
+                                                                >
+                                                                    {cellData.teacher}
+                                                                </div>
+                                                            )}
                                                         </>
                                                     )}
                                                 </td>
