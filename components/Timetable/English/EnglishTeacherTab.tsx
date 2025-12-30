@@ -635,13 +635,16 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                     <thead className="sticky top-0 z-10">
                         <tr>
                             <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
-                            {filteredTeachers.map(teacher => {
+                            {filteredTeachers.map((teacher, tIdx) => {
                                 const colors = getTeacherColor(teacher, teachersData);
                                 return (
                                     <th
                                         key={teacher}
                                         colSpan={EN_WEEKDAYS.length}
-                                        className="p-2 border text-xs font-bold"
+                                        className={`p-2 text-xs font-bold
+                                            ${tIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
+                                            border-r border-t border-b
+                                        `}
                                         style={{ backgroundColor: colors.bg, color: colors.text }}
                                     >
                                         {teacher}
