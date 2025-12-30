@@ -134,7 +134,7 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                 {/* Merged List */}
                 {inputData.merged.map((m, idx) => (
                     <div
-                        key={idx}
+                        key={`merged-${idx}-${m.className}-${m.room}`}
                         className="bg-[#fff9db] p-2 rounded-lg border border-yellow-200 shadow-sm flex flex-col gap-1 w-[140px] shrink-0 relative group animate-in zoom-in duration-200"
                     >
                         <div className="flex justify-between items-center -mt-1">
