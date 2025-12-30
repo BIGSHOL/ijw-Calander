@@ -650,14 +650,16 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                             })}
                         </tr>
                         <tr>
-                            {filteredTeachers.map(teacher => (
-                                EN_WEEKDAYS.map(day => (
+                            {filteredTeachers.map((teacher, tIdx) => (
+                                EN_WEEKDAYS.map((day, dIdx) => (
                                     <th
                                         key={`${teacher}-${day}`}
-                                        className={`p-1 border bg-gray-50 text-[10px] font-bold text-gray-500
+                                        className={`p-1 bg-gray-50 text-[10px] text-gray-500
                                             ${viewSize === 'large' ? 'w-[100px]' : ''}
                                             ${viewSize === 'medium' ? 'w-[60px]' : ''}
                                             ${viewSize === 'small' ? 'w-[40px]' : ''}
+                                            ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
+                                            border-r border-t border-b
                                         `}
                                     >
                                         {day}
@@ -710,11 +712,13 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                 onMouseDown={(e) => handleMouseDown(e, tIdx, pIdx, dIdx)}
                                                 onMouseEnter={() => handleMouseEnter(tIdx, pIdx, dIdx)}
 
-                                                className={`p-0 border text-center transition-all relative
+                                                className={`p-0 text-center transition-all relative
                                                     ${isMoveMode && hasContent ? 'cursor-grab active:cursor-grabbing hover:bg-orange-50' : ''}
                                                     ${isMoveMode && !hasContent ? 'hover:bg-orange-50/30' : ''}
                                                     ${!isMoveMode ? 'cursor-pointer' : ''}
                                                     ${isHighlighted ? 'bg-blue-100 ring-2 ring-blue-400 z-10' : (!matchedKw && cellData?.className ? 'bg-green-50' : 'hover:bg-gray-50')}
+                                                    ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
+                                                    border-r border-t border-b
                                                     hover:z-50
                                                 `}
                                                 style={!isHighlighted ? cellBgStyle : {}}
@@ -729,7 +733,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                             const matchedKw = classKeywords.find(kw => cellData.className?.includes(kw.keyword));
                                                             return (
                                                                 <div
-                                                                    className={`font-bold leading-tight px-0.5 text-center break-words w-full
+                                                                    className={`leading-tight px-0.5 text-center break-words w-full
                                                                             ${viewSize === 'large'
                                                                             ? (cellData.className.length > 12 ? 'text-[13px]' : (cellData.className.length > 8 ? 'text-[14px]' : 'text-[16px]'))
                                                                             : viewSize === 'medium'
