@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Eye, EyeOff, Settings, UserPlus } from 'lucide-react';
-import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor } from './englishUtils';
+import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass } from './englishUtils';
 import { Teacher, TimetableStudent, ClassKeywordColor } from '../../../types';
 import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewSettings';
 import StudentModal from './StudentModal';
@@ -81,6 +81,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             name: string;
             mainTeacher: string;
             mainRoom: string;
+            roomByDay: Record<string, string>; // 요일별 강의실 저장
+            teacherCounts: Record<string, number>; // 선생님별 수업 횟수
             // Internal use for logic
             minPeriod: number;
             // Map
@@ -89,6 +91,35 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             weekdayMin: number;
             weekendMin: number;
         }>();
+
+        // Helper: 요일별 강의실을 포맷팅 (예: "월수 301 / 목 304")
+        const formatRoomByDay = (roomByDay: Record<string, string>): string => {
+            if (!roomByDay || Object.keys(roomByDay).length === 0) return '';
+
+            // 강의실 -> 요일들 매핑
+            const roomToDays: Record<string, string[]> = {};
+            Object.entries(roomByDay).forEach(([day, room]) => {
+                if (!room) return;
+                if (!roomToDays[room]) roomToDays[room] = [];
+                roomToDays[room].push(day);
+            });
+
+            // 정렬된 결과 생성 (요일 순서대로)
+            const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+            const parts = Object.entries(roomToDays)
+                .map(([room, days]) => {
+                    const sortedDays = days.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+                    return `${sortedDays.join('')} ${room}`;
+                })
+                .sort((a, b) => {
+                    // 첫 번째 요일을 기준으로 정렬
+                    const aFirstDay = a.split(' ')[0][0];
+                    const bFirstDay = b.split(' ')[0][0];
+                    return dayOrder.indexOf(aFirstDay) - dayOrder.indexOf(bFirstDay);
+                });
+
+            return parts.join(' / ');
+        };
 
         // Pass 1: Gather Raw Data
         Object.entries(scheduleData).forEach(([key, cell]: [string, ScheduleCell]) => {
@@ -102,12 +133,22 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             if (isNaN(pNum)) return;
 
             // Helper to process a class entry
-            const processClassEntry = (cName: string, cRoom: string, cTeacher: string) => {
+            const processClassEntry = (cName: string, cRoom: string, cTeacher: string, currentDay: string) => {
+                // 인재원 수업 시간표 압축 매핑 (Std 4,5,6 -> Injae 4,5)
+                let mappedPeriodId = periodId;
+                if (isInjaeClass(cName)) {
+                    if (periodId === '5' || periodId === '6') {
+                        mappedPeriodId = '5'; // 6교시를 5교시로 병합
+                    }
+                }
+
                 if (!classMap.has(cName)) {
                     classMap.set(cName, {
                         name: cName,
-                        mainTeacher: cTeacher || '',
+                        mainTeacher: '',
                         mainRoom: cRoom || '',
+                        roomByDay: {},
+                        teacherCounts: {},
                         minPeriod: 99,
                         scheduleMap: {},
                         weekdayMin: 99,
@@ -116,9 +157,14 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 }
                 const info = classMap.get(cName)!;
 
-                // Populate Map
-                if (!info.scheduleMap[periodId]) {
-                    info.scheduleMap[periodId] = {};
+                // 요일별 강의실 추적
+                if (cRoom && !info.roomByDay[currentDay]) {
+                    info.roomByDay[currentDay] = cRoom;
+                }
+
+                // Populate Map with Mapped Period ID
+                if (!info.scheduleMap[mappedPeriodId]) {
+                    info.scheduleMap[mappedPeriodId] = {};
                 }
 
                 // For merged classes, we create a cell-like object effectively
@@ -131,37 +177,40 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 // The Integration View displays "Teacher" in the cell.
                 // So for KW6, it should show the same teacher "Sarah".
 
-                info.scheduleMap[periodId][day] = {
+                info.scheduleMap[mappedPeriodId][day] = {
                     ...cell,
                     className: cName,
                     room: cRoom,
                     teacher: cTeacher
                 };
 
-                // Simple heuristic for main teacher/room
-                if (cTeacher) info.mainTeacher = cTeacher;
+                // 선생님별 수업 횟수 카운트
+                if (cTeacher) {
+                    info.teacherCounts[cTeacher] = (info.teacherCounts[cTeacher] || 0) + 1;
+                }
                 if (cRoom) info.mainRoom = cRoom;
 
                 // Min/Max Calc
+                const mappedPNum = parseInt(mappedPeriodId);
                 const dayIdx = EN_WEEKDAYS.indexOf(day as any);
                 if (dayIdx !== -1) {
                     if (dayIdx <= 4) { // Weekday (Mon-Fri)
-                        info.weekdayMin = Math.min(info.weekdayMin, pNum);
+                        info.weekdayMin = Math.min(info.weekdayMin, mappedPNum);
                     } else { // Weekend (Sat-Sun)
-                        info.weekendMin = Math.min(info.weekendMin, pNum);
+                        info.weekendMin = Math.min(info.weekendMin, mappedPNum);
                     }
                 }
-                info.minPeriod = Math.min(info.minPeriod, pNum);
+                info.minPeriod = Math.min(info.minPeriod, mappedPNum);
             };
 
             // Process Main Class
-            processClassEntry(clsName, cell.room || '', cell.teacher || '');
+            processClassEntry(clsName, cell.room || '', cell.teacher || '', day);
 
             // Process Merged Classes
             if (cell.merged && cell.merged.length > 0) {
                 cell.merged.forEach(m => {
                     if (m.className) {
-                        processClassEntry(m.className, m.room || '', cell.teacher || '');
+                        processClassEntry(m.className, m.room || '', cell.teacher || '', day);
                     }
                 });
             }
@@ -170,6 +219,32 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         // Pass 2: Calculate Logic (Weekend Shift & Visible Periods)
         return Array.from(classMap.values())
             .map(c => {
+                // 0. 담임 결정: 가장 많이 수업하는 선생님, 동점시 원어민 제외
+                let determinedMainTeacher = c.mainTeacher;
+                const teacherEntries = Object.entries(c.teacherCounts);
+                if (teacherEntries.length > 0) {
+                    const maxCount = Math.max(...teacherEntries.map(([, count]) => count));
+                    const topTeachers = teacherEntries.filter(([, count]) => count === maxCount);
+
+                    if (topTeachers.length === 1) {
+                        determinedMainTeacher = topTeachers[0][0];
+                    } else {
+                        // 동점: 원어민 제외
+                        const nonNativeTopTeachers = topTeachers.filter(([name]) => {
+                            const teacherData = teachersData.find(t => t.name === name);
+                            return !teacherData?.isNative;
+                        });
+
+                        if (nonNativeTopTeachers.length > 0) {
+                            determinedMainTeacher = nonNativeTopTeachers[0][0];
+                        } else {
+                            // 모두 원어민이면 첫 번째
+                            determinedMainTeacher = topTeachers[0][0];
+                        }
+                    }
+                }
+                c.mainTeacher = determinedMainTeacher;
+
                 // 1. Weekend Shift Logic
                 let weekendShift = 0;
                 if (c.weekdayMin !== 99 && c.weekendMin !== 99 && c.weekdayMin > c.weekendMin) {
@@ -222,7 +297,9 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     if (end < 10) end = Math.min(10, start + 4);
                 }
 
-                const visiblePeriods = EN_PERIODS.filter(p => {
+                // 인재원 수업 여부에 따라 시간대 선택
+                const periodsToUse = isInjaeClass(c.name) ? INJAE_PERIODS : EN_PERIODS;
+                const visiblePeriods = periodsToUse.filter(p => {
                     const pid = parseInt(p.id);
                     return pid >= start && pid <= end;
                 });
@@ -268,7 +345,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     startPeriod: effectiveMin, // Use effective min for grouping
                     weekendShift,
                     visiblePeriods,
-                    finalDays
+                    finalDays,
+                    formattedRoomStr: formatRoomByDay(c.roomByDay) || c.mainRoom // 요일별 강의실 또는 기본 강의실
                 } as ClassInfo;
             })
             .filter(c => !searchTerm || c.name.includes(searchTerm))
@@ -537,7 +615,7 @@ const ClassCard: React.FC<{
                             강의실
                         </div>
                         <div className="flex-1 p-1 text-center font-bold text-navy flex items-center justify-center break-words px-1 leading-tight py-1.5 min-h-[40px]">
-                            {classInfo.mainRoom}
+                            {classInfo.formattedRoomStr || classInfo.mainRoom}
                         </div>
                     </div>
                 </div>

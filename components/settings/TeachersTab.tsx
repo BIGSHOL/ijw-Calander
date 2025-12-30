@@ -27,6 +27,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
     const [editTeacherBgColor, setEditTeacherBgColor] = useState('#3b82f6');
     const [editTeacherTextColor, setEditTeacherTextColor] = useState('#ffffff');
     const [editTeacherDefaultRoom, setEditTeacherDefaultRoom] = useState('');
+    const [editTeacherIsNative, setEditTeacherIsNative] = useState(false);
 
     // Drag and Drop
     const [draggedTeacherId, setDraggedTeacherId] = useState<string | null>(null);
@@ -63,6 +64,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
                 bgColor: editTeacherBgColor,
                 textColor: editTeacherTextColor,
                 defaultRoom: editTeacherDefaultRoom || null,
+                isNative: editTeacherIsNative,
             }, { merge: true });
             setEditingTeacherId(null);
         } catch (e) {
@@ -323,6 +325,18 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
                                                 className="flex-1 max-w-[100px] px-2 py-1 border border-gray-200 rounded text-[10px] focus:border-[#fdb813] outline-none"
                                             />
                                         </div>
+                                        <div className="flex items-center gap-2 px-1 pt-1">
+                                            <span className="text-[10px] text-gray-500 font-medium">🌐 원어민 강사:</span>
+                                            <label className="flex items-center gap-1 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={editTeacherIsNative}
+                                                    onChange={(e) => setEditTeacherIsNative(e.target.checked)}
+                                                    className="w-3.5 h-3.5 accent-green-600"
+                                                />
+                                                <span className="text-[10px] text-gray-600">{editTeacherIsNative ? '예' : '아니오'}</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 ) : (
                                     <>
@@ -344,6 +358,11 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
                                                         🏫 {teacher.defaultRoom}
                                                     </span>
                                                 )}
+                                                {teacher.isNative && (
+                                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-200 font-medium ml-1">
+                                                        🌐 원어민
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -362,6 +381,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
                                                     setEditTeacherBgColor(teacher.bgColor || '#3b82f6');
                                                     setEditTeacherTextColor(teacher.textColor || '#ffffff');
                                                     setEditTeacherDefaultRoom(teacher.defaultRoom || '');
+                                                    setEditTeacherIsNative(teacher.isNative || false);
                                                 }}
                                                 className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
                                             >

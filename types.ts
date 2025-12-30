@@ -213,6 +213,7 @@ export interface Teacher {
   name: string;
   subjects?: string[];  // 담당 과목
   isHidden?: boolean;   // 시간표 표시 여부
+  isNative?: boolean;   // 원어민 강사 여부
   color?: string;
   bgColor?: string;     // 퍼스널 배경색
   textColor?: string;   // 퍼스널 글자색
