@@ -425,6 +425,11 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         console.log('handleBatchSave called!', { size: selectedCells.size, inputData });
         if (selectedCells.size === 0) return;
 
+        // Save current scroll position before clearing selection
+        const scrollContainer = document.querySelector('.overflow-auto');
+        const scrollTop = scrollContainer?.scrollTop || 0;
+        const scrollLeft = scrollContainer?.scrollLeft || 0;
+
         let overwrite = false;
         if (!isWarningOff) {
             for (const key of Array.from(selectedCells)) {
@@ -494,6 +499,14 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             onUpdateLocal(updates);
             setSelectedCells(new Set());
             setOriginalData(JSON.parse(JSON.stringify(updates)));
+
+            // Restore scroll position after state update
+            requestAnimationFrame(() => {
+                if (scrollContainer) {
+                    scrollContainer.scrollTop = scrollTop;
+                    scrollContainer.scrollLeft = scrollLeft;
+                }
+            });
         } catch (e) {
             console.error('저장 실패:', e);
             alert('저장 실패');
@@ -502,6 +515,11 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
 
     const handleBatchDelete = async () => {
         if (!confirm('선택한 셀을 삭제하시겠습니까?')) return;
+
+        // Save current scroll position before clearing selection
+        const scrollContainer = document.querySelector('.overflow-auto');
+        const scrollTop = scrollContainer?.scrollTop || 0;
+        const scrollLeft = scrollContainer?.scrollLeft || 0;
 
         const updates: ScheduleData = { ...scheduleData };
 
@@ -526,6 +544,14 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             onUpdateLocal(updates);
             setSelectedCells(new Set());
             setOriginalData(JSON.parse(JSON.stringify(updates)));
+
+            // Restore scroll position after state update
+            requestAnimationFrame(() => {
+                if (scrollContainer) {
+                    scrollContainer.scrollTop = scrollTop;
+                    scrollContainer.scrollLeft = scrollLeft;
+                }
+            });
         } catch (e) {
             console.error('삭제 실패:', e);
             alert('삭제 실패');
