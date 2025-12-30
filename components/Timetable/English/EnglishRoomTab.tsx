@@ -2,7 +2,7 @@
 // 영어 강의실별 시간표 탭 - 자동 생성, 읽기 전용
 
 import React, { useMemo, useState } from 'react';
-import { EN_PERIODS, EN_WEEKDAYS, getContrastColor } from './englishUtils';
+import { EN_PERIODS, EN_WEEKDAYS, getContrastColor, formatClassNameWithBreaks } from './englishUtils';
 import { ClassKeywordColor } from '../../../types';
 
 interface ScheduleCell {
@@ -235,7 +235,12 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                                                                 className={`${viewSize === 'small' ? 'text-[9px]' : 'text-[10px]'}`}
                                                                 style={matchedKw ? { color: matchedKw.textColor } : { color: '#374151' }}
                                                             >
-                                                                {cellData.className}
+                                                                {formatClassNameWithBreaks(cellData.className).map((part, idx, arr) => (
+                                                                    <React.Fragment key={idx}>
+                                                                        {part}
+                                                                        {idx < arr.length - 1 && <br />}
+                                                                    </React.Fragment>
+                                                                ))}
                                                             </div>
                                                             {viewSize !== 'small' && (
                                                                 <div
