@@ -134,14 +134,16 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                                 ))}
                             </tr>
                             <tr>
-                                {filteredRooms.map(room => (
-                                    EN_WEEKDAYS.map(day => (
+                                {filteredRooms.map((room, rIdx) => (
+                                    EN_WEEKDAYS.map((day, dIdx) => (
                                         <th
                                             key={`${room}-${day}`}
-                                            className={`p-1 border bg-gray-50 text-[10px] font-bold text-gray-500
+                                            className={`p-1 bg-gray-50 text-[10px] text-gray-500
                                                 ${viewSize === 'large' ? 'w-[100px]' : ''}
                                                 ${viewSize === 'medium' ? 'w-[60px]' : ''}
                                                 ${viewSize === 'small' ? 'w-[40px]' : ''}
+                                                ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
+                                                border-r border-t border-b
                                             `}
                                         >
                                             {day}
@@ -157,8 +159,8 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                                         <div>{period.label}</div>
                                         <div className="text-[9px] text-gray-400">{period.time}</div>
                                     </td>
-                                    {filteredRooms.map(room => (
-                                        EN_WEEKDAYS.map(day => {
+                                    {filteredRooms.map((room, rIdx) => (
+                                        EN_WEEKDAYS.map((day, dIdx) => {
                                             const cellKey = getCellKey(room, period.id, day);
                                             const cellData = roomScheduleData[cellKey];
 
@@ -181,13 +183,16 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                                             return (
                                                 <td
                                                     key={cellKey}
-                                                    className={`p-1 border text-center ${cellHeightClass} ${!matchedKw && cellData?.className ? 'bg-indigo-50' : ''}`}
+                                                    className={`p-1 text-center ${cellHeightClass} ${!matchedKw && cellData?.className ? 'bg-indigo-50' : ''}
+                                                        ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
+                                                        border-r border-t border-b
+                                                    `}
                                                     style={cellBgStyle}
                                                 >
                                                     {cellData?.className && (
                                                         <>
                                                             <div
-                                                                className={`font-bold ${viewSize === 'small' ? 'text-[9px]' : 'text-[10px]'}`}
+                                                                className={`${viewSize === 'small' ? 'text-[9px]' : 'text-[10px]'}`}
                                                                 style={matchedKw ? { color: matchedKw.textColor } : { color: '#374151' }}
                                                             >
                                                                 {cellData.className}
