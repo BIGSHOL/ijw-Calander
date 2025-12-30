@@ -97,15 +97,20 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         // Initialize Input Data from first clicked cell if exists
         const existing = key ? scheduleData[key] : undefined;
 
+        // Get teacher's default room
+        const teacher = filteredTeachers[tIdx];
+        const teacherData = teachersData.find(t => t.name === teacher);
+        const defaultRoom = teacherData?.defaultRoom || '';
+
         if (existing) {
             setInputData({
                 className: existing.className || '',
-                room: existing.room || '',
+                room: existing.room || defaultRoom,
                 merged: existing.merged || []
             });
         } else if (!isAddMode) {
-            // New selection, clear input
-            setInputData({ className: '', room: '', merged: [] });
+            // New selection, use teacher's default room
+            setInputData({ className: '', room: defaultRoom, merged: [] });
         }
 
         setSelectionStart(coords);
@@ -157,14 +162,20 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         if (selectedCells.size === 1) {
             const key = Array.from(selectedCells)[0] as string;
             const cellData = scheduleData[key];
+
+            // Extract teacher from cell key (format: "teacherName-period-day")
+            const teacherName = key.split('-')[0];
+            const teacherData = teachersData.find(t => t.name === teacherName);
+            const defaultRoom = teacherData?.defaultRoom || '';
+
             if (cellData) {
                 setInputData({
                     className: cellData.className || '',
-                    room: cellData.room || '',
+                    room: cellData.room || defaultRoom,
                     merged: cellData.merged || []
                 });
             } else {
-                setInputData({ className: '', room: '', merged: [] });
+                setInputData({ className: '', room: defaultRoom, merged: [] });
             }
         } else if (selectedCells.size > 1) {
             // Optional: Clear or show 'Mixed'
@@ -174,7 +185,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             // But the user issue was "Nothing shown".
             // Let's NOT clear if > 1, so batch edit works (user types one value for all).
         }
-    }, [selectedCells, scheduleData]);
+    }, [selectedCells, scheduleData, teachersData]);
 
     const isCellInDragArea = (tIdx: number, pIdx: number, dIdx: number) => {
         if (mode !== 'edit' || !isSelectionDragging || !selectionStart || !currentHover) return false;
