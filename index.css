@@ -26,63 +26,63 @@
 }
 
 .dark .bg-white {
-    background-color: var(--bg-secondary) !important;
+    background-color: var(--bg-secondary);
 }
 
 .dark .bg-gray-50,
 .dark .bg-gray-100 {
-    background-color: var(--bg-primary) !important;
+    background-color: var(--bg-primary);
 }
 
 .dark .text-gray-800,
 .dark .text-gray-700,
 .dark .text-gray-600 {
-    color: var(--text-primary) !important;
+    color: var(--text-primary);
 }
 
 .dark .text-gray-500,
 .dark .text-gray-400 {
-    color: var(--text-secondary) !important;
+    color: var(--text-secondary);
 }
 
 .dark .border-gray-200,
 .dark .border-gray-100 {
-    border-color: var(--border-color) !important;
+    border-color: var(--border-color);
 }
 
 .dark .shadow-xl,
 .dark .shadow-lg,
 .dark .shadow-md,
 .dark .shadow-sm {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
 }
 
 /* Dark Mode - Additional Text Colors */
 .dark .text-black,
 .dark .text-gray-900 {
-    color: var(--text-primary) !important;
+    color: var(--text-primary);
 }
 
 .dark .text-gray-300 {
-    color: #cbd5e1 !important;
+    color: #cbd5e1;
 }
 
 /* Dark Mode - Input Fields */
 .dark input,
 .dark select,
 .dark textarea {
-    background-color: var(--bg-primary) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border-color) !important;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
 }
 
 .dark input::placeholder {
-    color: var(--text-secondary) !important;
+    color: var(--text-secondary);
 }
 
 /* Dark Mode - Department Names in Sidebar (specific selector) */
 .dark [class*="text-white"] {
-    color: #ffffff !important;
+    color: #ffffff;
 }
 
 /* Dark Mode - Table Elements */
@@ -108,97 +108,97 @@
 /* Dark Mode - Force light text on dark colored backgrounds */
 .dark [style*="background-color: #081429"],
 .dark [style*="background-color: #1e293b"] {
-    color: #ffffff !important;
+    color: #ffffff;
 }
 
 /* Dark Mode - Settings Modal Specific */
 .dark h3,
 .dark h4 {
-    color: var(--text-primary) !important;
+    color: var(--text-primary);
 }
 
 .dark label {
-    color: var(--text-primary) !important;
+    color: var(--text-primary);
 }
 
 .dark p {
-    color: var(--text-secondary) !important;
+    color: var(--text-secondary);
 }
 
 /* Dark Mode - Buttons */
 .dark button.bg-gray-100,
 .dark button.bg-gray-200 {
-    background-color: #334155 !important;
-    color: var(--text-primary) !important;
+    background-color: #334155;
+    color: var(--text-primary);
 }
 
 /* Dark Mode - Hover States */
 .dark [class*="hover:bg-gray"]:hover {
-    background-color: #334155 !important;
+    background-color: #334155;
 }
 
 /* Dark Mode - Red/Danger Sections */
 .dark .bg-red-50 {
-    background-color: #450a0a !important;
+    background-color: #450a0a;
 }
 
 .dark .text-red-600,
 .dark .text-red-700,
 .dark .text-red-900 {
-    color: #fca5a5 !important;
+    color: #fca5a5;
 }
 
 .dark .border-red-100,
 .dark .border-red-200 {
-    border-color: #7f1d1d !important;
+    border-color: #7f1d1d;
 }
 
 /* Dark Mode - Blue Sections */
 .dark .bg-blue-50 {
-    background-color: #172554 !important;
+    background-color: #172554;
 }
 
 .dark .text-blue-700 {
-    color: #93c5fd !important;
+    color: #93c5fd;
 }
 
 /* Dark Mode - Indigo Sections */
 .dark .bg-indigo-50 {
-    background-color: #1e1b4b !important;
+    background-color: #1e1b4b;
 }
 
 .dark .text-indigo-700 {
-    color: #a5b4fc !important;
+    color: #a5b4fc;
 }
 
 /* Dark Mode - Purple Sections */
 .dark .bg-purple-50 {
-    background-color: #2e1065 !important;
+    background-color: #2e1065;
 }
 
 .dark .text-purple-700 {
-    color: #c4b5fd !important;
+    color: #c4b5fd;
 }
 
 /* Dark Mode - Orange Sections */
 .dark .bg-orange-50 {
-    background-color: #431407 !important;
+    background-color: #431407;
 }
 
 .dark .text-orange-700 {
-    color: #fdba74 !important;
+    color: #fdba74;
 }
 
 /* Dark Mode - Links and User Names */
 .dark a,
 .dark .text-blue-500,
 .dark .text-blue-600 {
-    color: #60a5fa !important;
+    color: #60a5fa;
 }
 
 .dark .text-indigo-600,
 .dark .text-indigo-500 {
-    color: #818cf8 !important;
+    color: #818cf8;
 }
 
 /* Dark Mode - Spans and small text */
@@ -208,45 +208,45 @@
 
 /* Dark Mode - Green Status */
 .dark .bg-green-50 {
-    background-color: #052e16 !important;
+    background-color: #052e16;
 }
 
 .dark .text-green-600,
 .dark .text-green-700 {
-    color: #86efac !important;
+    color: #86efac;
 }
 
 /* Dark Mode - Yellow/Amber Status */
 .dark .bg-yellow-50,
 .dark .bg-amber-50 {
-    background-color: #422006 !important;
+    background-color: #422006;
 }
 
 .dark .text-yellow-600,
 .dark .text-yellow-700,
 .dark .text-amber-600 {
-    color: #fcd34d !important;
+    color: #fcd34d;
 }
 
 /* Dark Mode - Ring/Outline Focus */
 .dark .ring-2,
 .dark .ring-4 {
-    --tw-ring-color: #475569 !important;
+    --tw-ring-color: #475569;
 }
 
 /* Dark Mode - Yearly View Selected Month - No inset shadow */
 .dark .shadow-inner {
-    box-shadow: none !important;
+    box-shadow: none;
 }
 
 /* Dark Mode - Yearly View Month Card Selected State */
 .dark [class*="ring-yellow"],
 .dark [class*="ring-amber"] {
-    box-shadow: 0 0 0 2px #fdb813 !important;
+    box-shadow: 0 0 0 2px #fdb813;
 }
 
-/* Dark Mode - Gray backgrounds for cards */
-.dark [class*="bg-gray-50"],
-.dark [class*="bg-gray-100"] {
-    background-color: var(--bg-primary) !important;
+/* Dark Mode - Gray backgrounds for cards - 특정 클래스만 대상으로 제한 */
+.dark .bg-gray-50:not([class*="hover:"]),
+.dark .bg-gray-100:not([class*="hover:"]) {
+    background-color: var(--bg-primary);
 }
