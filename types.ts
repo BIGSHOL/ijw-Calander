@@ -192,6 +192,7 @@ export interface Holiday {
 export interface TimetableStudent {
   id: string;
   name: string;
+  englishName?: string; // 영어 이름
   grade?: string;       // 학년
   school?: string;      // 학교
   personalSchedule?: { day: string; period: string }[];
@@ -229,4 +230,24 @@ export interface ClassKeywordColor {
   bgColor: string;      // 배경색
   textColor: string;    // 글자색
   order?: number;
+}
+
+// English Level System
+export interface EnglishLevel {
+  id: string;          // e.g., "dp", "pl"
+  abbreviation: string;// e.g., "DP"
+  fullName: string;    // e.g., "Dr. Phonics"
+  order: number;       // Sort order index
+  color?: string;      // Optional color
+}
+
+export interface LevelSettings {
+  levels: EnglishLevel[];
+}
+
+// Parsed Class Name for Level Up
+export interface ParsedClassName {
+  levelAbbr: string;  // "DP", "RTT", "LE"
+  number: number;     // 3, 6, 5
+  suffix: string;     // "", "a", "b"
 }

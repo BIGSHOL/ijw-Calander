@@ -1,6 +1,8 @@
 // English Timetable Utilities
 // 영어 시간표 상수 및 유틸리티
 
+import { EnglishLevel, ParsedClassName } from '../../../types';
+
 export const EN_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'] as const;
 
 export const EN_PERIODS = [
@@ -52,6 +54,22 @@ export const parseCellKey = (key: string): { teacher: string; periodId: string; 
     return { teacher: parts[0], periodId: parts[1], day: parts[2] };
 };
 
+// 기본 영어 레벨 데이터
+export const DEFAULT_ENGLISH_LEVELS = [
+    { id: 'dp', abbreviation: 'DP', fullName: 'Dr. Phonics', order: 0 },
+    { id: 'pl', abbreviation: 'PL', fullName: "Pre Let's", order: 1 },
+    { id: 'rtt', abbreviation: 'RTT', fullName: 'Ready To Talk', order: 2 },
+    { id: 'lt', abbreviation: 'LT', fullName: "Let's Talk", order: 3 },
+    { id: 'rts', abbreviation: 'RTS', fullName: 'Ready To Speak', order: 4 },
+    { id: 'ls', abbreviation: 'LS', fullName: "Let's Speak", order: 5 },
+    { id: 'le', abbreviation: 'LE', fullName: "Let's Express", order: 6 },
+    { id: 'kw', abbreviation: 'KW', fullName: 'Kopi Wang', order: 7 },
+    { id: 'pj', abbreviation: 'PJ', fullName: 'Pre Junior', order: 8 },
+    { id: 'jp', abbreviation: 'JP', fullName: 'Junior Plus', order: 9 },
+    { id: 'sp', abbreviation: 'SP', fullName: 'Senior Plus', order: 10 },
+    { id: 'mec', abbreviation: 'MEC', fullName: 'Middle School English Course', order: 11 }
+];
+
 // 강사 색상 (기본값)
 export const DEFAULT_TEACHER_COLORS: Record<string, { bg: string; text: string }> = {
     'Teacher1': { bg: '#3B82F6', text: '#ffffff' },
@@ -86,4 +104,89 @@ export const getContrastColor = (hexColor: string | undefined): string => {
 
     // 밝으면 어두운 글씨, 어두우면 밝은 글씨
     return luminance > 0.55 ? '#374151' : '#ffffff';
+};
+
+// ============ LEVEL UP UTILITIES ============
+
+/**
+ * Parse class name into components
+ * @example parseClassName("DP3") → { levelAbbr: "DP", number: 3, suffix: "" }
+ * @example parseClassName("RTT6a") → { levelAbbr: "RTT", number: 6, suffix: "a" }
+ */
+export const parseClassName = (name: string): ParsedClassName | null => {
+    if (!name) return null;
+
+    // Match: 1+ uppercase letters, 1+ digits, optional single lowercase letter
+    const regex = /^([A-Z]+)(\d+)([a-z]?)$/;
+    const match = name.match(regex);
+
+    if (!match) return null;
+
+    return {
+        levelAbbr: match[1],
+        number: parseInt(match[2], 10),
+        suffix: match[3] || ''
+    };
+};
+
+/**
+ * Build class name from parsed components
+ * @example buildClassName({ levelAbbr: "DP", number: 4, suffix: "" }) → "DP4"
+ */
+export const buildClassName = (parsed: ParsedClassName): string => {
+    return `${parsed.levelAbbr}${parsed.number}${parsed.suffix}`;
+};
+
+/**
+ * Number Level Up: DP3 → DP4 (increment number, preserve suffix)
+ */
+export const numberLevelUp = (className: string): string | null => {
+    const parsed = parseClassName(className);
+    if (!parsed) return null;
+
+    return buildClassName({
+        ...parsed,
+        number: parsed.number + 1
+    });
+};
+
+/**
+ * Class Level Up: DP3 → PL1 (move to next level, reset number to 1, preserve suffix)
+ * @returns null if already at max level (MEC) or invalid class
+ */
+export const classLevelUp = (className: string, levelOrder: EnglishLevel[]): string | null => {
+    const parsed = parseClassName(className);
+    if (!parsed) return null;
+
+    // Find current level index
+    const currentIndex = levelOrder.findIndex(
+        lvl => lvl.abbreviation.toUpperCase() === parsed.levelAbbr.toUpperCase()
+    );
+
+    // If not found or last level, return null
+    if (currentIndex === -1 || currentIndex >= levelOrder.length - 1) {
+        return null;
+    }
+
+    const nextLevel = levelOrder[currentIndex + 1];
+
+    return buildClassName({
+        levelAbbr: nextLevel.abbreviation,
+        number: 1,
+        suffix: parsed.suffix
+    });
+};
+
+/**
+ * Check if class is at maximum level (MEC by default)
+ */
+export const isMaxLevel = (className: string, levelOrder: EnglishLevel[]): boolean => {
+    const parsed = parseClassName(className);
+    if (!parsed) return false;
+
+    const currentIndex = levelOrder.findIndex(
+        lvl => lvl.abbreviation.toUpperCase() === parsed.levelAbbr.toUpperCase()
+    );
+
+    return currentIndex === levelOrder.length - 1;
 };
