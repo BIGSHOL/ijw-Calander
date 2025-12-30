@@ -2,7 +2,8 @@
 // 영어 강의실별 시간표 탭 - 자동 생성, 읽기 전용
 
 import React, { useMemo } from 'react';
-import { EN_PERIODS, EN_WEEKDAYS } from './englishUtils';
+import { EN_PERIODS, EN_WEEKDAYS, getContrastColor } from './englishUtils';
+import { ClassKeywordColor } from '../../../types';
 
 interface ScheduleCell {
     className?: string;
@@ -15,9 +16,10 @@ type ScheduleData = Record<string, ScheduleCell>;
 
 interface EnglishRoomTabProps {
     scheduleData: ScheduleData;
+    classKeywords?: ClassKeywordColor[];  // For keyword color coding
 }
 
-const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData }) => {
+const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeywords = [] }) => {
     // Extract unique rooms from schedule data
     const rooms = useMemo(() => {
         const roomSet = new Set<string>();
@@ -110,20 +112,34 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData }) => {
                                             const cellKey = getCellKey(room, period.id, day);
                                             const cellData = roomScheduleData[cellKey];
 
+                                            // 키워드 색상 매칭
+                                            const matchedKw = cellData?.className
+                                                ? classKeywords.find(kw => cellData.className?.includes(kw.keyword))
+                                                : null;
+
+                                            // 셀 배경 스타일
+                                            const cellBgStyle = matchedKw
+                                                ? { backgroundColor: matchedKw.bgColor }
+                                                : {};
+
                                             return (
                                                 <td
                                                     key={cellKey}
-                                                    className={`p-1 border text-center min-h-[40px] ${cellData?.className
-                                                            ? 'bg-indigo-50'
-                                                            : ''
-                                                        }`}
+                                                    className={`p-1 border text-center min-h-[40px] ${!matchedKw && cellData?.className ? 'bg-indigo-50' : ''}`}
+                                                    style={cellBgStyle}
                                                 >
                                                     {cellData?.className && (
                                                         <>
-                                                            <div className="text-[10px] font-bold text-gray-700">
+                                                            <div
+                                                                className="text-[10px] font-bold"
+                                                                style={matchedKw ? { color: matchedKw.textColor } : { color: '#374151' }}
+                                                            >
                                                                 {cellData.className}
                                                             </div>
-                                                            <div className="text-[9px] text-gray-400">
+                                                            <div
+                                                                className="text-[9px]"
+                                                                style={{ color: matchedKw ? getContrastColor(matchedKw.bgColor) : '#9CA3AF', opacity: matchedKw ? 0.85 : 1 }}
+                                                            >
                                                                 {cellData.teacher}
                                                             </div>
                                                         </>

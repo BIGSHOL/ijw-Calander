@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, differenceInDays } from 'date-fns';
-import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo } from './types';
+import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
 import EventModal from './components/EventModal';
@@ -40,6 +40,7 @@ const App: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [classKeywords, setClassKeywords] = useState<ClassKeywordColor[]>([]);
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); // New State
@@ -354,6 +355,18 @@ const App: React.FC = () => {
         ...d.data()
       } as Teacher)).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
       setTeachers(teacherList);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Subscribe to Class Keywords (classKeywords) - for timetable color coding
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'classKeywords'), (snapshot) => {
+      const keywords = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      } as ClassKeywordColor)).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+      setClassKeywords(keywords);
     });
     return () => unsubscribe();
   }, []);
@@ -1667,6 +1680,7 @@ const App: React.FC = () => {
               selectedDays={timetableSelectedDays}
               onSelectedDaysChange={setTimetableSelectedDays}
               teachers={teachers}
+              classKeywords={classKeywords}
             />
           </div>
         )}

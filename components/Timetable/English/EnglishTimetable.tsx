@@ -3,7 +3,7 @@ import { collection, onSnapshot, getDocs, doc, setDoc } from 'firebase/firestore
 import { db } from '../../../firebaseConfig';
 import { Clock, RefreshCw } from 'lucide-react';
 import { EN_COLLECTION } from './englishUtils';
-import { Teacher } from '../../../types';
+import { Teacher, ClassKeywordColor } from '../../../types';
 import EnglishTeacherTab from './EnglishTeacherTab';
 import EnglishClassTab from './EnglishClassTab';
 import EnglishRoomTab from './EnglishRoomTab';
@@ -14,6 +14,7 @@ interface EnglishTimetableProps {
     onSwitchToMath?: () => void;
     viewType: 'teacher' | 'class' | 'room';
     teachers?: Teacher[];  // Centralized from App.tsx via TimetableManager
+    classKeywords?: ClassKeywordColor[];  // For keyword color coding
 }
 
 interface ScheduleCell {
@@ -25,7 +26,7 @@ interface ScheduleCell {
 
 type ScheduleData = Record<string, ScheduleCell>;
 
-const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [] }) => {
+const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [] }) => {
     // Removed local activeTab state, using viewType prop
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
@@ -152,6 +153,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                     onRefresh={handleRefresh}
                                     onUpdateLocal={handleLocalUpdate}
                                     onOpenOrderModal={() => setIsOrderModalOpen(true)}
+                                    classKeywords={classKeywords}
                                 />
 
                                 <TeacherOrderModal
@@ -168,11 +170,13 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                 teachers={teachers}
                                 teachersData={teachersData}
                                 scheduleData={scheduleData}
+                                classKeywords={classKeywords}
                             />
                         )}
                         {viewType === 'room' && (
                             <EnglishRoomTab
                                 scheduleData={scheduleData}
+                                classKeywords={classKeywords}
                             />
                         )}
                     </>

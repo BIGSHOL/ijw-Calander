@@ -198,12 +198,12 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="absolute inset-0 z-50">
+        <div className="fixed inset-0 z-50">
             {/* Overlay */}
-            <div className="absolute inset-0 bg-black/20" onClick={onClose} />
+            <div className="fixed inset-0 bg-black/20" onClick={onClose} />
 
             {/* Right Panel */}
-            <div className="absolute top-0 right-0 h-full w-[420px] bg-white shadow-xl border-l border-gray-200 flex flex-col">
+            <div className="fixed top-0 right-0 h-full w-[420px] bg-white shadow-xl border-l border-gray-200 flex flex-col">
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                     <div className="flex items-center gap-2">
@@ -314,14 +314,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                 </div>
 
                 {/* Footer Buttons */}
-                <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 flex justify-between">
-                    <button
-                        type="button"
-                        onClick={handleMigrateFromAcademy}
-                        className="px-3 py-1.5 text-xs rounded border border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100"
-                    >
-                        📤 기존 데이터 가져오기
-                    </button>
+                <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 flex justify-end">
                     <button
                         type="button"
                         onClick={onClose}

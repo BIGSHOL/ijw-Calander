@@ -6,8 +6,8 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { doc, setDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { Edit3, Move, Eye, Settings } from 'lucide-react';
-import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor } from './englishUtils';
-import { Teacher } from '../../../types';
+import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor, getContrastColor } from './englishUtils';
+import { Teacher, ClassKeywordColor } from '../../../types';
 import BatchInputBar, { InputData, MergedClass } from './BatchInputBar';
 import MoveConfirmBar from './MoveConfirmBar';
 import MoveSelectionModal from './MoveSelectionModal';
@@ -30,6 +30,7 @@ interface EnglishTeacherTabProps {
     onRefresh?: () => void;
     onUpdateLocal?: (newData: ScheduleData) => void;
     onOpenOrderModal?: () => void;
+    classKeywords?: ClassKeywordColor[];  // For keyword color coding
 }
 
 type ViewSize = 'small' | 'medium' | 'large';
@@ -37,7 +38,7 @@ type ViewSize = 'small' | 'medium' | 'large';
 // Helper interface for delete logic
 type GenericObject = { [key: string]: any };
 
-const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onRefresh, onUpdateLocal, onOpenOrderModal }) => {
+const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onRefresh, onUpdateLocal, onOpenOrderModal, classKeywords = [] }) => {
     const [mode, setMode] = useState<'view' | 'edit' | 'move'>('view');
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
     const [filterTeacher, setFilterTeacher] = useState<string>('all');
@@ -674,6 +675,16 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                         const isMoveMode = mode === 'move';
                                         const hasContent = !!cellData?.className;
 
+                                        // 키워드 색상 매칭
+                                        const matchedKw = cellData?.className
+                                            ? classKeywords.find(kw => cellData.className?.includes(kw.keyword))
+                                            : null;
+
+                                        // 셀 배경 스타일 결정
+                                        const cellBgStyle = matchedKw
+                                            ? { backgroundColor: matchedKw.bgColor }
+                                            : {};
+
                                         return (
                                             <td
                                                 key={cellKey}
@@ -692,9 +703,10 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                     ${isMoveMode && hasContent ? 'cursor-grab active:cursor-grabbing hover:bg-orange-50' : ''}
                                                     ${isMoveMode && !hasContent ? 'hover:bg-orange-50/30' : ''}
                                                     ${!isMoveMode ? 'cursor-pointer' : ''}
-                                                    ${isHighlighted ? 'bg-blue-100 ring-2 ring-blue-400 z-10' : (cellData?.className ? 'bg-green-50' : 'hover:bg-gray-50')}
+                                                    ${isHighlighted ? 'bg-blue-100 ring-2 ring-blue-400 z-10' : (!matchedKw && cellData?.className ? 'bg-green-50' : 'hover:bg-gray-50')}
                                                     hover:z-50
                                                 `}
+                                                style={!isHighlighted ? cellBgStyle : {}}
                                             >
                                                 <div className={`w-full flex flex-col justify-center items-center p-0.5 relative group overflow-hidden
                                                     ${viewSize === 'large' ? 'h-[100px] min-h-[100px]' : ''}
@@ -702,16 +714,24 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                     ${viewSize === 'small' ? 'h-[40px] min-h-[40px]' : ''}
                                                 `}>
                                                     {cellData?.className && (
-                                                        <div className={`font-bold text-gray-800 leading-tight px-0.5 text-center break-words w-full
-                                                            ${viewSize === 'large'
-                                                                ? (cellData.className.length > 12 ? 'text-[13px]' : (cellData.className.length > 8 ? 'text-[14px]' : 'text-[16px]'))
-                                                                : viewSize === 'medium'
-                                                                    ? 'text-[10px]'
-                                                                    : 'text-[8px] leading-[1.1]'
-                                                            }
-                                                        `}>
-                                                            {cellData.className}
-                                                        </div>
+                                                        (() => {
+                                                            const matchedKw = classKeywords.find(kw => cellData.className?.includes(kw.keyword));
+                                                            return (
+                                                                <div
+                                                                    className={`font-bold leading-tight px-0.5 text-center break-words w-full
+                                                                            ${viewSize === 'large'
+                                                                            ? (cellData.className.length > 12 ? 'text-[13px]' : (cellData.className.length > 8 ? 'text-[14px]' : 'text-[16px]'))
+                                                                            : viewSize === 'medium'
+                                                                                ? 'text-[10px]'
+                                                                                : 'text-[8px] leading-[1.1]'
+                                                                        }
+                                                                        `}
+                                                                    style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor, borderRadius: '4px', padding: '2px 4px' } : {}}
+                                                                >
+                                                                    {cellData.className}
+                                                                </div>
+                                                            );
+                                                        })()
                                                     )}
 
                                                     {/* Separator Line (Only for Large/Medium) */}
@@ -720,8 +740,10 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                     )}
 
                                                     {cellData?.room && (
-                                                        <div className={`${viewSize === 'large' ? 'text-[14px]' : (viewSize === 'medium' ? 'text-[9px]' : 'text-[8px]')
-                                                            } text-gray-500 font-medium`}>
+                                                        <div
+                                                            className={`${viewSize === 'large' ? 'text-[14px]' : (viewSize === 'medium' ? 'text-[9px]' : 'text-[8px]')} font-medium`}
+                                                            style={{ color: matchedKw ? getContrastColor(matchedKw.bgColor) : '#6B7280' }}
+                                                        >
                                                             {cellData.room}
                                                         </div>
                                                     )}

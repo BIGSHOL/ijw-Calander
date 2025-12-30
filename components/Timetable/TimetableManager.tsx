@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import { TimetableClass, Teacher, TimetableStudent } from '../../types';
+import { TimetableClass, Teacher, TimetableStudent, ClassKeywordColor } from '../../types';
 import { Plus, Trash2, Users, Clock, BookOpen, X, UserPlus, GripVertical, ChevronLeft, ChevronRight, Search, Settings } from 'lucide-react';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, getWeek, getMonth, getYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -49,6 +49,7 @@ interface TimetableManagerProps {
     selectedDays?: string[];
     onSelectedDaysChange?: (days: string[]) => void;
     teachers?: Teacher[];  // Centralized from App.tsx
+    classKeywords?: ClassKeywordColor[]; // For keyword color coding
 }
 
 const TimetableManager: React.FC<TimetableManagerProps> = ({
@@ -61,6 +62,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
     selectedDays: externalSelectedDays,
     onSelectedDaysChange,
     teachers: propsTeachers = [],
+    classKeywords = [],
 }) => {
     // Subject Tab (use external if provided)
     const [internalSubjectTab, setInternalSubjectTab] = useState<'math' | 'english'>('math');
@@ -548,6 +550,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
             onSwitchToMath={() => setSubjectTab('math')}
             viewType={viewType}
             teachers={propsTeachers}
+            classKeywords={classKeywords}
         />;
     }
 
