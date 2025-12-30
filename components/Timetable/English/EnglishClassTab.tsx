@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Eye, EyeOff, Settings, UserPlus } from 'lucide-react';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor } from './englishUtils';
-import { Teacher, TimetableStudent } from '../../../types';
+import { Teacher, TimetableStudent, ClassKeywordColor } from '../../../types';
 import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewSettings';
 import StudentModal from './StudentModal';
 import { doc, onSnapshot, setDoc, collection, query, where } from 'firebase/firestore';
@@ -24,6 +24,7 @@ interface EnglishClassTabProps {
     teachers: string[];
     scheduleData: ScheduleData;
     teachersData?: Teacher[];
+    classKeywords?: ClassKeywordColor[];  // For keyword color coding
 }
 
 interface ClassInfo {
@@ -45,7 +46,8 @@ const KOR_DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     teachers,
     scheduleData,
-    teachersData = []
+    teachersData = [],
+    classKeywords = []
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [mode, setMode] = useState<'view' | 'hide'>('view');
@@ -449,6 +451,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 isHidden={hiddenClasses.has(cls.name)}
                                                 onToggleHidden={() => toggleHidden(cls.name)}
                                                 teachersData={teachersData}
+                                                classKeywords={classKeywords}
                                             />
                                         ))}
                                     </div>
@@ -476,8 +479,9 @@ const ClassCard: React.FC<{
     mode: 'view' | 'hide',
     isHidden: boolean,
     onToggleHidden: () => void,
-    teachersData: Teacher[]
-}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData }) => {
+    teachersData: Teacher[],
+    classKeywords: ClassKeywordColor[]
+}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords }) => {
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [studentCount, setStudentCount] = useState<number>(0);
 
@@ -497,18 +501,26 @@ const ClassCard: React.FC<{
     return (
         <>
             <div className={`w-[250px] flex flex-col border-r border-gray-300 shrink-0 bg-white transition-opacity ${isHidden && mode === 'hide' ? 'opacity-50' : ''}`}>
-                {/* Header */}
-                <div className="p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight bg-blue-50 text-gray-800 relative group">
-                    {classInfo.name}
-                    {mode === 'hide' && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
-                            className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-500"
+                {/* Header - 키워드 색상 적용 */}
+                {(() => {
+                    const matchedKw = classKeywords.find(kw => classInfo.name?.includes(kw.keyword));
+                    return (
+                        <div
+                            className="p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group"
+                            style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor } : { backgroundColor: '#EFF6FF', color: '#1F2937' }}
                         >
-                            {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
-                        </button>
-                    )}
-                </div>
+                            {classInfo.name}
+                            {mode === 'hide' && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
+                                    className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-500"
+                                >
+                                    {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                                </button>
+                            )}
+                        </div>
+                    );
+                })()}
 
                 {/* Info Summary */}
                 <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
@@ -552,6 +564,7 @@ const ClassCard: React.FC<{
                                 teachersData={teachersData}
                                 displayDays={classInfo.finalDays}
                                 className={classInfo.name}
+                                classKeywords={classKeywords}
                             />
                         ))}
                     </div>
@@ -596,8 +609,9 @@ const MiniGridRow: React.FC<{
     weekendShift: number,
     teachersData: Teacher[],
     displayDays: string[],
-    className: string
-}> = ({ period, scheduleMap, weekendShift, teachersData, displayDays, className }) => {
+    className: string,
+    classKeywords: ClassKeywordColor[]
+}> = ({ period, scheduleMap, weekendShift, teachersData, displayDays, className, classKeywords }) => {
 
     // Parse time for display (e.g. 14:20~15:00 -> 14:20 \n ~15:00)
     const [start, end] = period.time.split('~');
@@ -639,18 +653,28 @@ const MiniGridRow: React.FC<{
                 // So we just access correct period key
                 const cell = scheduleMap[effectivePeriodId]?.[day];
 
+                // 키워드 매칭 (className 기준)
+                const matchedKw = classKeywords.find(kw => className?.includes(kw.keyword));
+
                 // Get style based on teacher
-                let style = {};
+                let teacherStyle = {};
                 if (cell?.teacher) {
                     const colors = getTeacherColor(cell.teacher, teachersData);
-                    style = { backgroundColor: colors.bg, color: colors.text, fontWeight: 800 };
+                    teacherStyle = { backgroundColor: colors.bg, color: colors.text, fontWeight: 800 };
                 }
+
+                // 최종 스타일: 키워드 우선, 없으면 teacher 스타일
+                const finalStyle = matchedKw ? {
+                    backgroundColor: matchedKw.bgColor,
+                    color: matchedKw.textColor,
+                    fontWeight: 800
+                } : teacherStyle;
 
                 return (
                     <div
                         key={day}
                         className="flex-1 border-r border-gray-100 last:border-r-0 flex flex-col justify-center items-center text-center px-0.5 overflow-hidden text-[10px]"
-                        style={style}
+                        style={teacherStyle}
                         title={cell?.teacher || ''}
                     >
                         {cell ? (

@@ -52,3 +52,19 @@ export const getTeacherColor = (
     }
     return DEFAULT_TEACHER_COLORS[teacherName] || { bg: '#6B7280', text: '#ffffff' };
 };
+
+// 배경색 밝기에 따른 대비 색상 계산
+export const getContrastColor = (hexColor: string | undefined): string => {
+    if (!hexColor || !hexColor.startsWith('#')) return '#374151'; // 기본: 어두운 회색
+
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+
+    // 밝기 계산 (ITU-R BT.709)
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    // 밝으면 어두운 글씨, 어두우면 밝은 글씨
+    return luminance > 0.55 ? '#374151' : '#ffffff';
+};
