@@ -4,6 +4,7 @@ import { Trash2, Check, X, Plus } from 'lucide-react';
 export interface MergedClass {
     className: string;
     room: string;
+    underline?: boolean;
 }
 
 export interface InputData {
@@ -21,7 +22,7 @@ interface BatchInputBarProps {
     isWarningOff: boolean;
     setIsWarningOff: (val: boolean) => void;
     addMerged: () => void;
-    updateMerged: (index: number, field: keyof MergedClass, value: string) => void;
+    updateMerged: (index: number, field: keyof MergedClass, value: string | boolean) => void;
     removeMerged: (index: number) => void;
     handleBatchSave: () => void;
     handleBatchDelete: () => void;
@@ -83,101 +84,97 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
             </div>
 
             {/* Main Input Area */}
-            <div className="flex gap-3 items-stretch h-[72px]">
+            <div className="flex gap-2 items-center overflow-x-auto">
 
-                {/* Main Class Input */}
-                <div className="bg-[#fff9db] p-2 rounded-lg border border-yellow-200 flex gap-2 items-center shadow-sm w-[380px] shrink-0">
-                    <div className="flex-1">
-                        <div className="text-[10px] text-yellow-700 mb-1 ml-1 font-bold">
-                            #1 메인 수업
-                        </div>
-                        <input
-                            value={inputData.className}
-                            onChange={(e) =>
-                                setInputData({ ...inputData, className: e.target.value })
-                            }
-                            placeholder="수업명"
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm h-8 focus:outline-none focus:border-[#fdb813]"
-                        />
-                    </div>
-
-                    {/* Room Input */}
-                    <div className="w-20">
-                        <div className="text-[10px] text-gray-400 mb-1 ml-1 font-bold">
-                            강의실
-                        </div>
-                        <input
-                            value={inputData.room}
-                            onChange={(e) =>
-                                setInputData({ ...inputData, room: e.target.value })
-                            }
-                            placeholder="호실"
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm text-center h-8 focus:outline-none focus:border-[#fdb813]"
-                        />
-                    </div>
-
-                    {/* Underline Checkbox */}
-                    <div className="flex flex-col items-center justify-center gap-0.5">
-                        <label className="flex flex-col items-center gap-0.5 cursor-pointer select-none">
-                            <span className="text-[9px] text-yellow-700 font-bold whitespace-nowrap">밑줄</span>
+                {/* Main Class Card */}
+                <div className="bg-[#fff9db] p-2 rounded-lg border border-yellow-200 shadow-sm flex flex-col gap-1 w-[140px] shrink-0 animate-in zoom-in duration-200">
+                    <div className="flex justify-between items-center -mt-1">
+                        <span className="text-[10px] font-bold text-yellow-700">#1</span>
+                        <label className="flex items-center gap-0.5 cursor-pointer select-none">
+                            <span className="text-[8px] text-yellow-700 font-bold">밑줄</span>
                             <input
                                 type="checkbox"
                                 checked={inputData.underline || false}
                                 onChange={(e) =>
                                     setInputData({ ...inputData, underline: e.target.checked })
                                 }
-                                className="w-4 h-4 rounded border-yellow-300 text-[#fdb813] focus:ring-[#fdb813] cursor-pointer"
+                                className="w-3 h-3 rounded border-yellow-300 text-[#fdb813] focus:ring-[#fdb813] cursor-pointer"
                             />
                         </label>
                     </div>
+
+                    <input
+                        value={inputData.className}
+                        onChange={(e) =>
+                            setInputData({ ...inputData, className: e.target.value })
+                        }
+                        placeholder="수업명"
+                        className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
+                    />
+
+                    <input
+                        value={inputData.room}
+                        onChange={(e) =>
+                            setInputData({ ...inputData, room: e.target.value })
+                        }
+                        placeholder="강의실"
+                        className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
+                    />
                 </div>
 
                 {/* Add Merged Class Button */}
                 <button
                     onClick={addMerged}
-                    className="w-[60px] rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-[#fdb813] hover:text-[#fdb813] hover:bg-yellow-50 flex flex-col items-center justify-center gap-1 shrink-0 transition-all"
+                    className="w-[60px] h-[70px] rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-[#fdb813] hover:text-[#fdb813] hover:bg-yellow-50 flex flex-col items-center justify-center gap-1 shrink-0 transition-all"
                 >
                     <Plus size={20} />
                     <span className="text-[10px] font-bold">합반</span>
                 </button>
 
                 {/* Merged List */}
-                {inputData.merged.length > 0 && (
-                    <div className="flex-1 flex gap-2 overflow-x-auto items-center custom-scrollbar px-1 py-1">
-                        {inputData.merged.map((m, idx) => (
-                            <div
-                                key={idx}
-                                className="bg-[#fff9db] p-2 rounded-lg border border-yellow-200 shadow-sm flex flex-col gap-1 w-32 shrink-0 relative group animate-in zoom-in duration-200"
-                            >
-                                <div className="flex justify-between -mt-1">
-                                    <span className="text-[10px] font-bold text-yellow-700">
-                                        #{idx + 2}
-                                    </span>
-                                    <button
-                                        onClick={() => removeMerged(idx)}
-                                        className="text-red-400 hover:text-red-600 font-bold"
-                                    >
-                                        <X size={12} />
-                                    </button>
-                                </div>
-
-                                <input
-                                    value={m.className}
-                                    onChange={(e) => updateMerged(idx, "className", e.target.value)}
-                                    placeholder="수업명"
-                                    className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
-                                />
-
-                                <input
-                                    value={m.room}
-                                    onChange={(e) => updateMerged(idx, "room", e.target.value)}
-                                    placeholder="호실"
-                                    className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
-                                />
+                {inputData.merged.map((m, idx) => (
+                    <div
+                        key={idx}
+                        className="bg-[#fff9db] p-2 rounded-lg border border-yellow-200 shadow-sm flex flex-col gap-1 w-[140px] shrink-0 relative group animate-in zoom-in duration-200"
+                    >
+                        <div className="flex justify-between items-center -mt-1">
+                            <span className="text-[10px] font-bold text-yellow-700">
+                                #{idx + 2}
+                            </span>
+                            <div className="flex items-center gap-1">
+                                <label className="flex items-center gap-0.5 cursor-pointer select-none">
+                                    <span className="text-[8px] text-yellow-700 font-bold">밑줄</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={m.underline || false}
+                                        onChange={(e) => updateMerged(idx, "underline", e.target.checked)}
+                                        className="w-3 h-3 rounded border-yellow-300 text-[#fdb813] focus:ring-[#fdb813] cursor-pointer"
+                                    />
+                                </label>
+                                <button
+                                    onClick={() => removeMerged(idx)}
+                                    className="text-red-400 hover:text-red-600 font-bold ml-1"
+                                >
+                                    <X size={12} />
+                                </button>
                             </div>
-                        ))}
+                        </div>
+
+                        <input
+                            value={m.className}
+                            onChange={(e) => updateMerged(idx, "className", e.target.value)}
+                            placeholder="수업명"
+                            className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
+                        />
+
+                        <input
+                            value={m.room}
+                            onChange={(e) => updateMerged(idx, "room", e.target.value)}
+                            placeholder="강의실"
+                            className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
+                        />
                     </div>
-                )}
+                ))}
             </div>
         </div>
     );

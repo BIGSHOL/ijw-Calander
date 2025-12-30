@@ -1050,7 +1050,10 @@ const MiniGridRow: React.FC<{
                         title={cell?.teacher || ''}
                     >
                         {cell ? (
-                            <span className={`leading-tight line-clamp-2 break-all ${cell.underline ? 'underline italic' : ''}`}>
+                            <span
+                                className={`leading-tight line-clamp-2 break-all ${cell.underline ? 'underline italic' : ''}`}
+                                style={cell.underline ? { color: '#2563eb' } : undefined}
+                            >
                                 {cell.teacher}
                             </span>
                         ) : (
