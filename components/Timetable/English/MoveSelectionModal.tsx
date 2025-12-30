@@ -18,7 +18,7 @@ const MoveSelectionModal: React.FC<MoveSelectionModalProps> = ({
     const { source, target, sourceData } = pendingMove;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPendingMove(null)}>
+        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-start justify-center pt-20 p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPendingMove(null)}>
             <div className="bg-white rounded-xl shadow-2xl w-[350px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
 
                 {/* Header */}
