@@ -17,6 +17,7 @@ export interface CalendarEvent {
   title: string;
   description?: string;
   participants?: string;
+  referenceUrl?: string; // External link (e.g., Notion, Sheets)
   startDate: string; // ISO Date YYYY-MM-DD
   endDate: string;   // ISO Date YYYY-MM-DD
   startTime?: string; // HH:mm

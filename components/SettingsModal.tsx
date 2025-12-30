@@ -9,6 +9,7 @@ import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, 
 import { Holiday } from '../types';
 import MyEventsModal from './MyEventsModal';
 import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab } from './settings';
+import MigrationPanel from './settings/MigrationPanel';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ interface SettingsModalProps {
 }
 
 type MainTabMode = 'calendar' | 'timetable' | 'permissions';
-type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions';
+type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions' | 'migration';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -568,8 +569,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     if (!user) return null;
 
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+        onClick={() => setSelectedUserForEdit(null)}
+      >
+        <div
+          className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="bg-[#f8f9fa] border-b border-gray-200 p-6 pb-4">
             <div className="flex justify-between items-start mb-4">
@@ -738,8 +745,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-0 relative h-[85vh] overflow-hidden border border-gray-200 flex flex-col">
+      <div
+        className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
+        onClick={onClose}
+      >
+        <div
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-0 relative h-[85vh] overflow-hidden border border-gray-200 flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
 
           {/* Header */}
           <div className="bg-[#081429] p-4 flex justify-between items-center text-white shrink-0">
@@ -806,6 +819,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           역할 권한
                         </button>
                       )}
+
                       {canManageUsers && (
                         <button onClick={() => setActiveTab('users')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'users' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           사용자 관리
@@ -1267,6 +1281,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 currentUserRole={currentUserProfile?.role}
               />
             )}
+
+            {/* MIGRATION TAB */}
+
           </div>
 
           {/* Footer (Save Button) */}

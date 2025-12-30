@@ -143,8 +143,14 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden">
+        <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={onClose}
+        >
+            <div
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+            >
 
                 {/* Header - Dark bar */}
                 <div className="px-5 py-3 flex items-center justify-between bg-[#081429] text-white">
