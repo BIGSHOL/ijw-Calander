@@ -1039,7 +1039,12 @@ const MiniGridRow: React.FC<{
                 let teacherStyle = {};
                 if (cell?.teacher) {
                     const colors = getTeacherColor(cell.teacher, teachersData);
-                    teacherStyle = { backgroundColor: colors.bg, color: colors.text, fontWeight: 800 };
+                    // If underline is enabled, override color with blue
+                    if (cell.underline) {
+                        teacherStyle = { backgroundColor: colors.bg, color: '#2563eb', fontWeight: 800 };
+                    } else {
+                        teacherStyle = { backgroundColor: colors.bg, color: colors.text, fontWeight: 800 };
+                    }
                 }
 
                 return (
@@ -1050,10 +1055,7 @@ const MiniGridRow: React.FC<{
                         title={cell?.teacher || ''}
                     >
                         {cell ? (
-                            <span
-                                className={`leading-tight line-clamp-2 break-all ${cell.underline ? 'underline italic' : ''}`}
-                                style={cell.underline ? { color: '#2563eb' } : undefined}
-                            >
+                            <span className={`leading-tight line-clamp-2 break-all ${cell.underline ? 'underline italic' : ''}`}>
                                 {cell.teacher}
                             </span>
                         ) : (
