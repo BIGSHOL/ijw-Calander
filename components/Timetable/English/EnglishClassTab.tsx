@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Eye, EyeOff, Settings, UserPlus, MoreVertical, TrendingUp, ArrowUpCircle, ChevronDown, Users, Home, User } from 'lucide-react';
-import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, DEFAULT_ENGLISH_LEVELS } from './englishUtils';
+import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS } from './englishUtils';
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
 import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewSettings';
 import LevelSettingsModal from './LevelSettingsModal';
@@ -785,6 +785,13 @@ const ClassCard: React.FC<{
                                 <div className="absolute top-8 right-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
                                     <button
                                         onClick={() => {
+                                            // Check if class level is valid
+                                            if (!isValidLevel(classInfo.name, englishLevels)) {
+                                                alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+                                                onMenuToggle(false);
+                                                return;
+                                            }
+
                                             const newName = numberLevelUp(classInfo.name);
                                             if (newName) {
                                                 setLevelUpModal({ isOpen: true, type: 'number', newName });
@@ -798,6 +805,13 @@ const ClassCard: React.FC<{
                                     </button>
                                     <button
                                         onClick={() => {
+                                            // Check if class level is valid
+                                            if (!isValidLevel(classInfo.name, englishLevels)) {
+                                                alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+                                                onMenuToggle(false);
+                                                return;
+                                            }
+
                                             const newName = classLevelUp(classInfo.name, englishLevels);
                                             if (newName) {
                                                 setLevelUpModal({ isOpen: true, type: 'class', newName });

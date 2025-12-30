@@ -190,3 +190,18 @@ export const isMaxLevel = (className: string, levelOrder: EnglishLevel[]): boole
 
     return currentIndex === levelOrder.length - 1;
 };
+
+/**
+ * Check if class name is in the level settings
+ * Returns true if the class level abbreviation is found in the level order
+ */
+export const isValidLevel = (className: string, levelOrder: EnglishLevel[]): boolean => {
+    const parsed = parseClassName(className);
+    if (!parsed) return false;
+
+    const levelExists = levelOrder.some(
+        lvl => lvl.abbreviation.toUpperCase() === parsed.levelAbbr.toUpperCase()
+    );
+
+    return levelExists;
+};
