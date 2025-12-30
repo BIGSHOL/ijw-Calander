@@ -675,8 +675,9 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             />
 
             {/* Schedule Grid */}
-            <div className="flex-1 overflow-auto p-2 bg-gray-100 select-none">
-                <table className="border-collapse bg-white rounded shadow w-max table-fixed">
+            <div className="flex-1 overflow-auto bg-gray-100 select-none">
+                <div className="p-2">
+                    <table className="border-collapse bg-white rounded shadow w-max table-fixed">
                     <thead className="sticky top-0 z-10">
                         <tr>
                             <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
@@ -846,10 +847,11 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                             </tr>
                         ))}
                     </tbody>
-                </table>
+                    </table>
 
-                {/* Bottom Spacer for Input Bar */}
-                {mode === 'edit' && selectedCells.size > 0 && <div className="h-[120px]" />}
+                    {/* Bottom Spacer for Input Bar */}
+                    {mode === 'edit' && selectedCells.size > 0 && <div className="h-[120px]" />}
+                </div>
             </div>
 
             {/* Batch Input Bar */}
