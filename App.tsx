@@ -99,6 +99,11 @@ const App: React.FC = () => {
   const uniqueCategories = Array.from(new Set(departments.map(d => d.category).filter(Boolean))) as string[];
   const [initialEndTime, setInitialEndTime] = useState('');
 
+  // Template Event State for Copy Feature
+  const [templateEvent, setTemplateEvent] = useState<CalendarEvent | null>(null);
+
+
+
   // UI State for New Header
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -606,6 +611,12 @@ const App: React.FC = () => {
     setPendingBucketId(bucket.id); // Mark bucket for deletion after save
     setIsEventModalOpen(true);
     // NOTE: Do NOT delete bucket here - wait for save confirmation
+  };
+
+  const handleCopyEvent = (event: CalendarEvent) => {
+    setEditingEvent(null);
+    setTemplateEvent(event);
+    setIsEventModalOpen(true);
   };
 
   const handleSaveEvent = async (event: CalendarEvent) => {
@@ -1707,7 +1718,7 @@ const App: React.FC = () => {
 
       <EventModal
         isOpen={isEventModalOpen}
-        onClose={() => { setIsEventModalOpen(false); setInitialTitle(''); setPendingBucketId(null); }}
+        onClose={() => { setIsEventModalOpen(false); setInitialTitle(''); setPendingBucketId(null); setTemplateEvent(null); }}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
         initialDate={selectedDate}
@@ -1727,6 +1738,8 @@ const App: React.FC = () => {
         currentUser={userProfile}
         allEvents={events}
         onBatchUpdateAttendance={handleBatchUpdateAttendance}
+        onCopy={handleCopyEvent}
+        templateEvent={templateEvent}
       />
 
       <LoginModal
