@@ -210,10 +210,21 @@ export const isValidLevel = (className: string, levelOrder: EnglishLevel[]): boo
  * Format class name with smart line breaks
  * Splits class names on spaces for better readability in cells
  * Example: "중등E_중2 정규A" → ["중등E_중2", "정규A"]
+ * Example: "고등E_고2 정규 A" → ["고등E_고2", "정규 A"]
  */
 export const formatClassNameWithBreaks = (className: string): string[] => {
     if (!className || !className.trim()) return [className];
 
     // Split on spaces and filter out empty strings
-    return className.split(' ').filter(part => part.trim().length > 0);
+    const parts = className.split(' ').filter(part => part.trim().length > 0);
+
+    // If more than 2 parts, combine the last parts to ensure max 2 lines
+    if (parts.length > 2) {
+        // Combine all parts after the first one
+        const firstPart = parts[0];
+        const restParts = parts.slice(1).join(' ');
+        return [firstPart, restParts];
+    }
+
+    return parts;
 };
