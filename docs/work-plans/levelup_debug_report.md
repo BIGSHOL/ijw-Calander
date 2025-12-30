@@ -1,7 +1,14 @@
 # 클래스 레벨업 기능 수정 완료 리포트
 
-## 📋 문제 현상
-- 클래스 레벨업(예: RTT6a → LT1a) 실행 시 강사뷰/강의실뷰에는 반영되지만 **통합뷰에는 반영되지 않음**
+## 📋 문제 현상 및 수정 내역
+
+### 주요 버그
+1. **통합뷰 레벨업 미반영** - 클래스 레벨업(예: RTT6a → LT1a) 실행 시 강사뷰/강의실뷰에는 반영되지만 통합뷰에는 반영되지 않음 ⭐
+2. **미등록 레벨 처리** - 레벨 설정에 없는 클래스(예: Kelly, 중등E)에 대한 레벨업 시도 시 검증 없음
+3. **중복 클래스 표시** - 레벨업 후 이전 클래스와 새 클래스가 동시에 표시되는 현상
+
+### 개선 사항
+4. **학생 목록 정렬** - 학생 이름이 무작위 순서로 표시됨 (한글 가나다 순 필요)
 
 ---
 
@@ -126,6 +133,85 @@ console.log('[LevelUp] CustomGroups updated');
 // After
 console.log('[LevelUp] CustomGroups updated in settings/english_class_integration');
 ```
+
+### 3차 수정 (2025-12-31): 미등록 레벨 검증 추가
+**커밋**: `14dfd0a` - "Feat: Add validation for unregistered class levels"
+
+**파일**: `components/Timetable/English/englishUtils.ts`
+- ✅ isValidLevel() 함수 추가하여 레벨 존재 여부 검증
+```typescript
+export const isValidLevel = (className: string, levelOrder: EnglishLevel[]): boolean => {
+    const parsed = parseClassName(className);
+    if (!parsed) return false;
+
+    const levelExists = levelOrder.some(
+        lvl => lvl.abbreviation.toUpperCase() === parsed.levelAbbr.toUpperCase()
+    );
+
+    return levelExists;
+};
+```
+
+**파일**: `components/Timetable/English/EnglishClassTab.tsx`
+- ✅ 레벨업 실행 전 검증 로직 추가
+```typescript
+if (!isValidLevel(classInfo.name, englishLevels)) {
+    alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+    return;
+}
+```
+
+**효과**:
+- 레벨 설정에 없는 클래스(예: Kelly, 중등E 등)에 대해 레벨업 시도 시 경고 메시지 표시
+- 데이터 무결성 보호 및 사용자 오류 방지
+
+### 4차 수정 (2025-12-31): 중복 클래스 표시 버그 수정
+**커밋**: `b31d8e5` - "Fix: Prevent duplicate class display after level-up"
+
+**문제 상황**:
+- 레벨업 실행 시 같은 숫자/문자를 가진 클래스가 중복으로 표시됨
+- 예: LE1과 LE2가 동시에 표시되는 현상
+
+**원인 분석**:
+- `EnglishClassTab.tsx`의 useMemo 훅에서 classMap을 배열로 변환할 때 빈 클래스 필터링 없음
+- Firebase batch update 후 일시적으로 이전 클래스명과 새 클래스명이 모두 존재
+
+**파일**: `components/Timetable/English/EnglishClassTab.tsx` (Line 269-278)
+```typescript
+// Before
+const classes = Array.from(classMap.values());
+
+// After
+const validClasses = Array.from(classMap.values()).filter(c => {
+    const cellCount = Object.values(c.scheduleMap).reduce(
+        (sum, dayMap) => sum + Object.keys(dayMap).length,
+        0
+    );
+    return cellCount > 0;
+});
+```
+
+**효과**:
+- 스케줄이 비어있는 클래스(cellCount = 0)는 자동으로 제거
+- 레벨업 후 깔끔한 단일 클래스 표시
+- 데이터 일관성 및 UI 신뢰성 향상
+
+### 5차 수정 (2025-12-31): 학생 정렬 기능 추가
+**커밋**: `9318c89` - "Feat: Sort students by Korean name order in student modal"
+
+**파일**: `components/Timetable/English/StudentModal.tsx` (Line 639)
+```typescript
+// Before
+{students.map((student, idx) => (
+
+// After
+{[...students].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map((student, idx) => (
+```
+
+**효과**:
+- 학생 목록이 한글 가나다 순으로 자동 정렬
+- 사용자 경험 개선 (학생 찾기 용이)
+- localeCompare 사용으로 한글 정렬 정확성 보장
 
 ---
 
@@ -294,6 +380,9 @@ const settingsRef = doc(db, 'settings', 'english_class_integration');
 - [x] 코드 수정 완료 (올바른 경로로 변경)
 - [x] 디버그 로그 시스템 구축
 - [x] englishLevels 실시간 동기화
+- [x] 미등록 레벨 검증 기능 추가
+- [x] 중복 클래스 표시 버그 수정
+- [x] 학생 이름 정렬 기능 추가
 - [x] 빌드 및 배포 완료
 - [x] 문서 업데이트 완료
 
@@ -317,6 +406,10 @@ const settingsRef = doc(db, 'settings', 'english_class_integration');
 |----------|------|------|-------------|
 | `338908e` | 2025-12-31 | Fix: Implement level-up debug report recommendations | 디버그 로그, englishLevels 구독, onSuccess 콜백 |
 | `cfb5af4` | 2025-12-31 | Fix: Resolve integration view level-up bug | 문서 경로 수정 (핵심 버그 수정) |
+| `883c537` | 2025-12-31 | Docs: Update levelup_debug_report with complete fix details | 문서 업데이트 (수정사항 상세 기록) |
+| `14dfd0a` | 2025-12-31 | Feat: Add validation for unregistered class levels | 미등록 레벨 검증 추가 |
+| `b31d8e5` | 2025-12-31 | Fix: Prevent duplicate class display after level-up | 중복 클래스 표시 버그 수정 |
+| `9318c89` | 2025-12-31 | Feat: Sort students by Korean name order in student modal | 학생 이름 정렬 기능 |
 
 ---
 
@@ -369,4 +462,5 @@ useEffect(() => {
 
 **최종 업데이트**: 2025-12-31
 **작성자**: Claude Code AI Assistant
-**상태**: ✅ 버그 수정 완료, 테스트 대기 중
+**상태**: ✅ 모든 버그 수정 및 개선사항 완료 (5개 커밋), 운영 테스트 대기 중
+**총 수정 횟수**: 5차 수정 완료
