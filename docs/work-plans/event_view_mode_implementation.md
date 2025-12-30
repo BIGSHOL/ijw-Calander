@@ -161,11 +161,9 @@ if (existingEvent) {
 - Creating new event: Close modal
 
 **Actual**: Implemented to revert to View Mode and reset form data.
-
-
-
-
-**Issue**: No revert-to-View-Mode logic implemented.
+- Line 825: `setIsViewMode(true)` for existing events
+- Lines 828-841: Form data reset logic
+- Line 844: `onClose()` for new events
 
 ---
 

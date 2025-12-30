@@ -1,25 +1,48 @@
 // StudentModal.tsx - 영어 통합 뷰 학생 관리 모달
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, Users } from 'lucide-react';
-import { doc, onSnapshot, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { TimetableStudent } from '../../../types';
+import { TimetableStudent, EnglishLevel } from '../../../types';
+import { DEFAULT_ENGLISH_LEVELS, parseClassName } from './englishUtils';
 
 interface StudentModalProps {
     isOpen: boolean;
     onClose: () => void;
     className: string;  // 수업명 (EnglishClassTab에서 전달)
+    teacher?: string;   // 담당강사 (EnglishClassTab에서 전달)
 }
 
-const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className }) => {
+const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className, teacher }) => {
     // State
     const [students, setStudents] = useState<TimetableStudent[]>([]);
     const [classDocId, setClassDocId] = useState<string | null>(null);
     const [classTeacher, setClassTeacher] = useState<string>('');
     const [loading, setLoading] = useState(true);
+    const [englishLevels, setEnglishLevels] = useState<EnglishLevel[]>(DEFAULT_ENGLISH_LEVELS);
+
+    // Get full class name (e.g., PL5 -> Pre Let's 5)
+    const fullClassName = useMemo(() => {
+        const parsed = parseClassName(className);
+        if (!parsed) return className;
+        const level = englishLevels.find(l => l.abbreviation.toUpperCase() === parsed.levelAbbr.toUpperCase());
+        return level ? `${level.fullName} ${parsed.number}${parsed.suffix}` : className;
+    }, [className, englishLevels]);
+
+    // Load english levels from settings
+    useEffect(() => {
+        const fetchLevels = async () => {
+            const docSnap = await getDoc(doc(db, 'settings', 'english_levels'));
+            if (docSnap.exists() && docSnap.data().levels) {
+                setEnglishLevels(docSnap.data().levels);
+            }
+        };
+        fetchLevels();
+    }, []);
 
     // New student form
     const [newStudentName, setNewStudentName] = useState('');
+    const [newStudentEnglishName, setNewStudentEnglishName] = useState('');
     const [newStudentGrade, setNewStudentGrade] = useState('');
     const [newStudentSchool, setNewStudentSchool] = useState('');
 
@@ -87,8 +110,10 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className 
 
     // Add student
     const handleAddStudent = async () => {
-        if (!classDocId || !newStudentName.trim()) {
-            alert('학생 이름을 입력해주세요.');
+        if (!classDocId) return;
+
+        if (!newStudentName.trim() || !newStudentSchool.trim() || !newStudentGrade.trim()) {
+            alert('이름, 학교, 학년은 필수 입력입니다.');
             return;
         }
 
@@ -96,6 +121,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className 
         const newStudent: TimetableStudent = {
             id: studentId,
             name: newStudentName.trim(),
+            englishName: newStudentEnglishName.trim() || undefined,
             grade: newStudentGrade.trim(),
             school: newStudentSchool.trim(),
         };
@@ -105,6 +131,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className 
         try {
             await updateDoc(doc(db, '수업목록', classDocId), { studentList: updatedList });
             setNewStudentName('');
+            setNewStudentEnglishName('');
             setNewStudentGrade('');
             setNewStudentSchool('');
         } catch (e) {
@@ -156,7 +183,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className 
                 <div className="px-5 py-3 flex items-center justify-between bg-[#081429] text-white">
                     <h2 className="text-sm font-bold flex items-center gap-2">
                         <Users size={18} className="text-[#fdb813]" />
-                        {className} - 학생 관리
+                        {fullClassName} - 학생 관리
                     </h2>
                     <button
                         onClick={onClose}
@@ -168,38 +195,53 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className 
 
                 {/* Class Info Row */}
                 <div className="px-5 py-2 border-b border-gray-200 flex items-center gap-2 text-sm">
-                    <span className="text-[#373d41] font-bold">{classTeacher || '담당강사'}</span>
+                    <span className="text-gray-500">담당강사</span>
+                    <span className="text-[#373d41] font-bold">{teacher || classTeacher || '-'}</span>
                     <span className="text-gray-300">|</span>
                     <span className="bg-[#fdb813] text-[#081429] px-2 py-0.5 rounded font-bold text-xs">
-                        {students.length}
+                        {students.length}명
                     </span>
                 </div>
 
-                {/* Add Student Form - Single Row Style */}
-                <div className="px-5 py-3 bg-white border-b border-gray-100">
-                    <div className="flex gap-2">
+                {/* Add Student Form - Compact Single Row */}
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+                    <div className="flex gap-1.5 items-center">
                         <input
                             type="text"
                             value={newStudentName}
                             onChange={(e) => setNewStudentName(e.target.value)}
-                            placeholder="학생 이름"
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                            placeholder="이름"
+                            className="w-20 px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
                             onKeyDown={(e) => e.key === 'Enter' && handleAddStudent()}
+                        />
+                        <input
+                            type="text"
+                            value={newStudentEnglishName}
+                            onChange={(e) => setNewStudentEnglishName(e.target.value)}
+                            placeholder="E.Name"
+                            className="w-16 px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
                         />
                         <input
                             type="text"
                             value={newStudentSchool}
                             onChange={(e) => setNewStudentSchool(e.target.value)}
                             placeholder="학교"
-                            className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                            className="w-16 px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
                         />
                         <input
                             type="text"
                             value={newStudentGrade}
                             onChange={(e) => setNewStudentGrade(e.target.value)}
                             placeholder="학년"
-                            className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                            className="w-10 px-1 py-1.5 border border-gray-300 rounded text-xs text-center focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
                         />
+                        <button
+                            onClick={handleAddStudent}
+                            className="px-3 py-1.5 shrink-0 bg-[#fdb813] text-[#081429] rounded font-bold text-xs hover:bg-[#e5a610] transition-colors"
+                            title="학생 추가"
+                        >
+                            추가
+                        </button>
                     </div>
                 </div>
 
@@ -225,10 +267,13 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className 
                                         <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-[10px] font-bold flex items-center justify-center">
                                             {idx + 1}
                                         </span>
-                                        <span className="font-bold text-sm text-[#373d41]">{student.name}</span>
+                                        <span className="font-bold text-sm text-[#373d41]">
+                                            {student.name}
+                                            {student.englishName && <span className="text-gray-500 font-normal">({student.englishName})</span>}
+                                        </span>
                                         {(student.school || student.grade) && (
                                             <span className="text-xs text-gray-400">
-                                                {student.school}{student.school && student.grade && ' · '}{student.grade}
+                                                {student.school}{student.grade}
                                             </span>
                                         )}
                                     </div>

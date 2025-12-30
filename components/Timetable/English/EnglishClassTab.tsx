@@ -2,10 +2,12 @@
 // 영어 통합 시간표 탭 - 수업별 컬럼 뷰 (Refactored to match academy-app style with Logic Port)
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Eye, EyeOff, Settings, UserPlus } from 'lucide-react';
-import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass } from './englishUtils';
-import { Teacher, TimetableStudent, ClassKeywordColor } from '../../../types';
+import { Search, Eye, EyeOff, Settings, UserPlus, MoreVertical, TrendingUp, ArrowUpCircle } from 'lucide-react';
+import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, DEFAULT_ENGLISH_LEVELS } from './englishUtils';
+import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
 import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewSettings';
+import LevelSettingsModal from './LevelSettingsModal';
+import LevelUpConfirmModal from './LevelUpConfirmModal';
 import StudentModal from './StudentModal';
 import { doc, onSnapshot, setDoc, collection, query, where } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -53,8 +55,11 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [mode, setMode] = useState<'view' | 'hide'>('view');
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isLevelSettingsOpen, setIsLevelSettingsOpen] = useState(false);
+    const [settingsLoading, setSettingsLoading] = useState(true);
+    const [openMenuClass, setOpenMenuClass] = useState<string | null>(null);
     const [settings, setSettings] = useState<IntegrationSettings>({
-        viewMode: 'START_PERIOD',
+        viewMode: 'CUSTOM',  // Default to custom to minimize flicker
         customGroups: [],
         showOthersGroup: true,
         othersGroupTitle: '기타 수업'
@@ -66,6 +71,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             if (doc.exists()) {
                 setSettings(doc.data() as IntegrationSettings);
             }
+            setSettingsLoading(false);
         });
         return () => unsub();
     }, []);
@@ -467,19 +473,29 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     </div>
                 </div>
 
-                {hiddenClasses.size > 0 && (
-                    <span className="text-xs text-gray-400 font-medium mr-4">
-                        {hiddenClasses.size}개 숨김
-                    </span>
-                )}
+                {/* Right Section: Hidden Count + Settings Buttons */}
+                <div className="flex items-center gap-2">
+                    {hiddenClasses.size > 0 && (
+                        <span className="text-xs text-gray-400 font-medium">
+                            {hiddenClasses.size}개 숨김
+                        </span>
+                    )}
 
-                <button
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
-                >
-                    <Settings size={14} />
-                    뷰 설정
-                </button>
+                    <button
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
+                    >
+                        <Settings size={14} />
+                        뷰 설정
+                    </button>
+                    <button
+                        onClick={() => setIsLevelSettingsOpen(true)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
+                    >
+                        <Settings size={14} />
+                        레벨 설정
+                    </button>
+                </div>
             </div>
 
             {/* Teacher Legend */}
@@ -530,6 +546,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 onToggleHidden={() => toggleHidden(cls.name)}
                                                 teachersData={teachersData}
                                                 classKeywords={classKeywords}
+                                                isMenuOpen={openMenuClass === cls.name}
+                                                onMenuToggle={(open) => setOpenMenuClass(open ? cls.name : null)}
                                             />
                                         ))}
                                     </div>
@@ -546,6 +564,10 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 onChange={updateSettings}
                 allClasses={classes.map(c => c.name)}
             />
+            <LevelSettingsModal
+                isOpen={isLevelSettingsOpen}
+                onClose={() => setIsLevelSettingsOpen(false)}
+            />
         </div>
     );
 };
@@ -558,19 +580,28 @@ const ClassCard: React.FC<{
     isHidden: boolean,
     onToggleHidden: () => void,
     teachersData: Teacher[],
-    classKeywords: ClassKeywordColor[]
-}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords }) => {
+    classKeywords: ClassKeywordColor[],
+    isMenuOpen: boolean,
+    onMenuToggle: (open: boolean) => void
+}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords, isMenuOpen, onMenuToggle }) => {
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [studentCount, setStudentCount] = useState<number>(0);
+    const [students, setStudents] = useState<TimetableStudent[]>([]);
+    const [englishLevels, setEnglishLevels] = useState<EnglishLevel[]>(DEFAULT_ENGLISH_LEVELS);
+    const [levelUpModal, setLevelUpModal] = useState<{ isOpen: boolean; type: 'number' | 'class'; newName: string }>({ isOpen: false, type: 'number', newName: '' });
 
-    // Realtime student count subscription
+    // Realtime student list subscription
     useEffect(() => {
         const q = query(collection(db, '수업목록'), where('className', '==', classInfo.name));
         const unsub = onSnapshot(q, (snapshot) => {
             if (!snapshot.empty) {
-                setStudentCount(snapshot.docs[0].data().studentList?.length || 0);
+                const data = snapshot.docs[0].data();
+                const list = data.studentList || [];
+                setStudentCount(list.length);
+                setStudents(list);
             } else {
                 setStudentCount(0);
+                setStudents([]);
             }
         });
         return () => unsub();
@@ -588,6 +619,45 @@ const ClassCard: React.FC<{
                             style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor } : { backgroundColor: '#EFF6FF', color: '#1F2937' }}
                         >
                             {classInfo.name}
+                            {/* Level Up Menu Button */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onMenuToggle(!isMenuOpen); }}
+                                className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <MoreVertical size={14} />
+                            </button>
+                            {/* Level Up Dropdown */}
+                            {isMenuOpen && (
+                                <div className="absolute top-8 right-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                        onClick={() => {
+                                            const newName = numberLevelUp(classInfo.name);
+                                            if (newName) {
+                                                setLevelUpModal({ isOpen: true, type: 'number', newName });
+                                            }
+                                            onMenuToggle(false);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-indigo-50 text-gray-700"
+                                    >
+                                        <TrendingUp size={14} className="text-indigo-500" />
+                                        숫자 레벨업
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const newName = classLevelUp(classInfo.name, englishLevels);
+                                            if (newName) {
+                                                setLevelUpModal({ isOpen: true, type: 'class', newName });
+                                            }
+                                            onMenuToggle(false);
+                                        }}
+                                        disabled={isMaxLevel(classInfo.name, englishLevels)}
+                                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-orange-50 text-gray-700'}`}
+                                    >
+                                        <ArrowUpCircle size={14} className={isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300' : 'text-orange-500'} />
+                                        클래스 레벨업
+                                    </button>
+                                </div>
+                            )}
                             {mode === 'hide' && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
@@ -648,23 +718,50 @@ const ClassCard: React.FC<{
 
                 {/* Student Section */}
                 <div className="flex-1 flex flex-col bg-white min-h-[100px]">
-                    <div
-                        className="p-1.5 text-center text-[10px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-600 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors"
+                    <button
+                        className="p-1.5 text-center text-[10px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-600 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors w-full"
                         onClick={() => setIsStudentModalOpen(true)}
+                        aria-label={`${classInfo.name} 학생 명단 열기. 현재 ${studentCount}명`}
                     >
                         <span>학생 명단</span>
                         <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[9px]">
                             {studentCount}명
                         </span>
                         <UserPlus size={12} className="text-gray-400" />
-                    </div>
-                    <div
-                        className="flex-1 flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
-                        onClick={() => setIsStudentModalOpen(true)}
-                    >
-                        <button className="text-xs text-indigo-500 font-bold flex items-center gap-1 hover:underline">
-                            <UserPlus size={14} /> 학생 관리
-                        </button>
+                    </button>
+                    {/* Student Name Preview */}
+                    <div className="flex-1 overflow-y-auto px-2 py-1.5 text-[10px]">
+                        {students.length === 0 ? (
+                            <div
+                                className="flex flex-col items-center justify-center h-full text-gray-300 cursor-pointer hover:text-gray-400"
+                                onClick={() => setIsStudentModalOpen(true)}
+                            >
+                                <span>학생이 없습니다</span>
+                                <span className="text-indigo-400 mt-0.5 hover:underline">+ 추가</span>
+                            </div>
+                        ) : (
+                            <>
+                                {students.slice(0, 5).map((student) => (
+                                    <div key={student.id} className="flex items-center justify-between text-xs py-0.5">
+                                        <span className="font-medium text-gray-800">
+                                            {student.name}
+                                            {student.englishName && <span className="text-gray-500">({student.englishName})</span>}
+                                        </span>
+                                        {(student.school || student.grade) && (
+                                            <span className="text-gray-500 text-right">{student.school}{student.grade}</span>
+                                        )}
+                                    </div>
+                                ))}
+                                {students.length > 5 && (
+                                    <div
+                                        className="text-indigo-500 font-bold cursor-pointer hover:underline mt-0.5 text-xs"
+                                        onClick={() => setIsStudentModalOpen(true)}
+                                    >
+                                        +{students.length - 5}명 더보기...
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -674,6 +771,17 @@ const ClassCard: React.FC<{
                 isOpen={isStudentModalOpen}
                 onClose={() => setIsStudentModalOpen(false)}
                 className={classInfo.name}
+                teacher={classInfo.mainTeacher}
+            />
+
+            {/* Level Up Confirm Modal */}
+            <LevelUpConfirmModal
+                isOpen={levelUpModal.isOpen}
+                onClose={() => setLevelUpModal({ ...levelUpModal, isOpen: false })}
+                onSuccess={() => { }}
+                oldClassName={classInfo.name}
+                newClassName={levelUpModal.newName}
+                type={levelUpModal.type}
             />
         </>
     );
