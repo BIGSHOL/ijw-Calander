@@ -100,7 +100,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     const getCellKeyFromCoords = (tIdx: number, pIdx: number, dIdx: number) => {
         const teacher = filteredTeachers[tIdx];
         const period = EN_PERIODS[pIdx];
-        const day = EN_WEEKDAYS[dIdx];
+        const day = filteredWeekdays[dIdx];
         if (!teacher || !period || !day) return null;
         return `${teacher}-${period.id}-${day}`; // No spaces, matching academy-app format
     };
