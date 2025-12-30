@@ -379,7 +379,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                         groups.push({
                             periodIndex: idx, // Use index for sorting
                             label: g.title,
-                            classes: groupClasses.sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+                            classes: groupClasses
                         });
                     }
                 }
