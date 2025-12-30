@@ -180,7 +180,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                                             key={`${room}-${day}`}
                                             className={`p-1 bg-gray-50 text-[10px] text-gray-500
                                                 ${viewSize === 'large' ? 'w-[100px]' : ''}
-                                                ${viewSize === 'medium' ? 'w-[60px]' : ''}
+                                                ${viewSize === 'medium' ? 'w-[70px]' : ''}
                                                 ${viewSize === 'small' ? 'w-[40px]' : ''}
                                                 ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
                                                 border-r border-t border-b
@@ -217,7 +217,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                                             // 셀 높이를 너비와 동일하게 설정 (정사각형)
                                             const cellHeightClass =
                                                 viewSize === 'large' ? 'h-[100px]' :
-                                                viewSize === 'medium' ? 'h-[60px]' :
+                                                viewSize === 'medium' ? 'h-[70px]' :
                                                 'h-[40px]';
 
                                             return (

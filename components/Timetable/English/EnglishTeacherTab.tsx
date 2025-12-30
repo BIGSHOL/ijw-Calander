@@ -705,7 +705,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                         key={`${teacher}-${day}`}
                                         className={`p-1 bg-gray-50 text-[10px] text-gray-500
                                             ${viewSize === 'large' ? 'w-[100px]' : ''}
-                                            ${viewSize === 'medium' ? 'w-[60px]' : ''}
+                                            ${viewSize === 'medium' ? 'w-[70px]' : ''}
                                             ${viewSize === 'small' ? 'w-[40px]' : ''}
                                             ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
                                             border-r border-t border-b
@@ -774,7 +774,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                             >
                                                 <div className={`w-full flex flex-col justify-center items-center p-0.5 relative group overflow-hidden
                                                     ${viewSize === 'large' ? 'h-[100px] min-h-[100px]' : ''}
-                                                    ${viewSize === 'medium' ? 'h-[60px] min-h-[60px]' : ''}
+                                                    ${viewSize === 'medium' ? 'h-[70px] min-h-[70px]' : ''}
                                                     ${viewSize === 'small' ? 'h-[40px] min-h-[40px]' : ''}
                                                 `}>
                                                     {cellData?.className && (
