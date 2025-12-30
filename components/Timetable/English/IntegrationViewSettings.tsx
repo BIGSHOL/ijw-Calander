@@ -239,7 +239,10 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
             <div className="fixed inset-0 bg-black/20" onClick={onClose} />
 
             {/* Right Panel */}
-            <div className="fixed top-0 right-0 h-full w-[420px] bg-white shadow-xl border-l border-gray-200 flex flex-col">
+            <div
+                className="fixed top-0 right-0 h-full w-[420px] bg-white shadow-xl border-l border-gray-200 flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                     <div className="flex items-center gap-2">

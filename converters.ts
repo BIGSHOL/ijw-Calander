@@ -49,6 +49,7 @@ export const eventConverter = {
             생성일시: event.createdAt || new Date().toISOString(),
             수정일시: new Date().toISOString(),
             참가현황: event.attendance || {},
+            참조링크: event.referenceUrl || '',
             // Recurrence fields
             반복그룹ID: event.recurrenceGroupId || '',
             반복순서: event.recurrenceIndex || 0,
@@ -88,6 +89,7 @@ export const eventConverter = {
             createdAt: data.생성일시,
             updatedAt: data.수정일시,
             attendance: data.참가현황,
+            referenceUrl: data.참조링크,
             // Recurrence fields
             recurrenceGroupId: data.반복그룹ID || undefined,
             recurrenceIndex: data.반복순서 || undefined,
