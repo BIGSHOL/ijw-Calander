@@ -34,6 +34,9 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
             const schedulesRef = collection(db, EN_COLLECTION);
             const snapshot = await getDocs(schedulesRef);
 
+            console.log('[Level-up] Searching for:', oldClassName, '→', newClassName);
+            console.log('[Level-up] Found', snapshot.docs.length, 'schedule documents');
+
             const batch = writeBatch(db);
             let count = 0;
 
@@ -42,11 +45,17 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                 let hasUpdate = false;
                 const updates: Record<string, any> = {};
 
+                console.log('[Level-up] Checking doc:', docSnap.id, '- Fields:', Object.keys(data).length);
+
                 Object.entries(data).forEach(([key, cell]) => {
-                    if (typeof cell === 'object' && cell !== null && (cell as any).className === oldClassName) {
-                        updates[key] = { ...cell, className: newClassName };
-                        count++;
-                        hasUpdate = true;
+                    if (typeof cell === 'object' && cell !== null && (cell as any).className) {
+                        const cellClassName = (cell as any).className;
+                        if (cellClassName === oldClassName) {
+                            console.log('[Level-up] ✓ Match found in', docSnap.id, '- Cell:', key, '- className:', cellClassName);
+                            updates[key] = { ...cell, className: newClassName };
+                            count++;
+                            hasUpdate = true;
+                        }
                     }
                 });
 
@@ -54,6 +63,8 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                     batch.update(doc(db, EN_COLLECTION, docSnap.id), updates);
                 }
             });
+
+            console.log('[Level-up] Total matches found:', count);
 
             if (count === 0) {
                 setError('업데이트할 시간표 데이터가 없습니다.');
@@ -64,11 +75,11 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
             await batch.commit();
             setUpdateCount(count);
 
-            // Wait a moment then close
+            // Wait longer to show success message
             setTimeout(() => {
                 onSuccess();
                 onClose();
-            }, 1500);
+            }, 2500);
 
         } catch (err) {
             console.error('Level up failed:', err);

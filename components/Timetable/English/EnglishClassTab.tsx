@@ -733,6 +733,17 @@ const ClassCard: React.FC<{
     const [englishLevels, setEnglishLevels] = useState<EnglishLevel[]>(DEFAULT_ENGLISH_LEVELS);
     const [levelUpModal, setLevelUpModal] = useState<{ isOpen: boolean; type: 'number' | 'class'; newName: string }>({ isOpen: false, type: 'number', newName: '' });
 
+    // Realtime english levels subscription
+    useEffect(() => {
+        const unsub = onSnapshot(doc(db, 'settings', 'english_levels'), (docSnap) => {
+            if (docSnap.exists()) {
+                const levels = docSnap.data()?.levels || DEFAULT_ENGLISH_LEVELS;
+                setEnglishLevels(levels);
+            }
+        });
+        return () => unsub();
+    }, []);
+
     // Realtime student list subscription
     useEffect(() => {
         const q = query(collection(db, '수업목록'), where('className', '==', classInfo.name));
@@ -891,7 +902,7 @@ const ClassCard: React.FC<{
                                 </div>
                             ) : (
                                 <>
-                                    {students.slice(0, 12).map((student) => (
+                                    {[...students].sort((a, b) => a.name.localeCompare(b.name, 'ko')).slice(0, 12).map((student) => (
                                         <div key={student.id} className="flex items-center justify-between text-xs py-0.5">
                                             <span className="font-medium text-gray-800">
                                                 {student.name}
@@ -937,7 +948,11 @@ const ClassCard: React.FC<{
             <LevelUpConfirmModal
                 isOpen={levelUpModal.isOpen}
                 onClose={() => setLevelUpModal({ ...levelUpModal, isOpen: false })}
-                onSuccess={() => { }}
+                onSuccess={() => {
+                    console.log('[EnglishClassTab] Level-up succeeded for', classInfo.name, '→', levelUpModal.newName);
+                    // onSnapshot subscription will automatically update scheduleData
+                    // Optional: Add user notification here if needed
+                }}
                 oldClassName={classInfo.name}
                 newClassName={levelUpModal.newName}
                 type={levelUpModal.type}
