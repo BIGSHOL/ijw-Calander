@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, TrendingUp, ArrowUpCircle, AlertTriangle, Loader } from 'lucide-react';
-import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, getDocs, getDoc, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { EN_COLLECTION } from './englishUtils';
 
@@ -30,32 +30,28 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
         setError(null);
 
         try {
-            // Fetch all schedule documents
-            const schedulesRef = collection(db, EN_COLLECTION);
-            const snapshot = await getDocs(schedulesRef);
-
-            console.log('[Level-up] Searching for:', oldClassName, '→', newClassName);
-            console.log('[Level-up] Found', snapshot.docs.length, 'schedule documents');
-
+            console.log('[LevelUp] Starting:', oldClassName, '→', newClassName);
             const batch = writeBatch(db);
-            let count = 0;
+            let scheduleCount = 0;
+            let classListCount = 0;
+            let groupsUpdated = false;
 
-            snapshot.docs.forEach(docSnap => {
+            // 1. Update english_schedules (시간표 데이터)
+            const schedulesRef = collection(db, EN_COLLECTION);
+            const schedSnapshot = await getDocs(schedulesRef);
+            console.log('[LevelUp] Found', schedSnapshot.docs.length, 'teacher documents');
+
+            schedSnapshot.docs.forEach(docSnap => {
                 const data = docSnap.data();
                 let hasUpdate = false;
                 const updates: Record<string, any> = {};
 
-                console.log('[Level-up] Checking doc:', docSnap.id, '- Fields:', Object.keys(data).length);
-
                 Object.entries(data).forEach(([key, cell]) => {
-                    if (typeof cell === 'object' && cell !== null && (cell as any).className) {
-                        const cellClassName = (cell as any).className;
-                        if (cellClassName === oldClassName) {
-                            console.log('[Level-up] ✓ Match found in', docSnap.id, '- Cell:', key, '- className:', cellClassName);
-                            updates[key] = { ...cell, className: newClassName };
-                            count++;
-                            hasUpdate = true;
-                        }
+                    if (typeof cell === 'object' && cell !== null && (cell as any).className === oldClassName) {
+                        console.log('[LevelUp] Schedule match:', docSnap.id, key);
+                        updates[key] = { ...cell, className: newClassName };
+                        scheduleCount++;
+                        hasUpdate = true;
                     }
                 });
 
@@ -64,22 +60,62 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                 }
             });
 
-            console.log('[Level-up] Total matches found:', count);
+            // 2. Update 수업목록 (className field)
+            const classListRef = collection(db, '수업목록');
+            const classSnapshot = await getDocs(classListRef);
 
-            if (count === 0) {
-                setError('업데이트할 시간표 데이터가 없습니다.');
+            classSnapshot.docs.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data.className === oldClassName) {
+                    console.log('[LevelUp] ClassList match:', docSnap.id);
+                    batch.update(doc(db, '수업목록', docSnap.id), { className: newClassName });
+                    classListCount++;
+                }
+            });
+
+            // 3. Update integration_settings customGroups (CORRECT PATH)
+            const settingsRef = doc(db, 'settings', 'english_class_integration');
+            const settingsSnap = await getDoc(settingsRef);
+
+            if (settingsSnap.exists()) {
+                const settings = settingsSnap.data();
+                const customGroups = settings.customGroups || [];
+
+                const updatedGroups = customGroups.map((group: any) => ({
+                    ...group,
+                    classes: (group.classes || []).map((cls: string) =>
+                        cls === oldClassName ? newClassName : cls
+                    )
+                }));
+
+                // Check if any change was made
+                if (JSON.stringify(customGroups) !== JSON.stringify(updatedGroups)) {
+                    console.log('[LevelUp] CustomGroups updated in settings/english_class_integration');
+                    batch.update(settingsRef, { customGroups: updatedGroups });
+                    groupsUpdated = true;
+                }
+            } else {
+                console.log('[LevelUp] Integration settings document not found');
+            }
+
+            const totalUpdates = scheduleCount + classListCount + (groupsUpdated ? 1 : 0);
+            console.log('[LevelUp] Total updates:', { scheduleCount, classListCount, groupsUpdated });
+
+            if (totalUpdates === 0) {
+                setError('업데이트할 데이터가 없습니다.');
                 setIsProcessing(false);
                 return;
             }
 
             await batch.commit();
-            setUpdateCount(count);
+            console.log('[LevelUp] Batch commit successful');
+            setUpdateCount(scheduleCount);
 
-            // Wait longer to show success message
+            // Wait to show success message
             setTimeout(() => {
                 onSuccess();
                 onClose();
-            }, 2500);
+            }, 2000);
 
         } catch (err) {
             console.error('Level up failed:', err);
