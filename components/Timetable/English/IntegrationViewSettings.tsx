@@ -14,7 +14,13 @@ export interface IntegrationSettings {
     customGroups: CustomGroup[];
     showOthersGroup: boolean;
     othersGroupTitle: string;
-    // ... potentially other settings like teacherColors
+    displayOptions?: DisplayOptions;
+}
+
+export interface DisplayOptions {
+    showStudents: boolean;
+    showRoom: boolean;
+    showTeacher: boolean;
 }
 
 interface IntegrationViewSettingsProps {

@@ -1,4 +1,6 @@
-/* Tailwind is loaded via CDN in index.html */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Dark Mode Styles */
 :root {
