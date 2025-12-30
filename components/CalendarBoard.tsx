@@ -283,6 +283,26 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
     setFilterDirectionInput('before');
   };
 
+  // Global ESC Handler for Search
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // Priority 1: If Results are visible, Clear Results & Return to Filter Input Mode
+        if (activeSearch.query || activeSearch.depts.length > 0 || activeSearch.baseDate) {
+          handleResetFilter(); // Reset Inputs to Defaults
+          setActiveSearch({ query: '', depts: [], baseDate: null, duration: null, direction: 'before' }); // Clear Active Results
+          setIsFilterOpen(true); // Open Filter Panel (Search Mode)
+        }
+        // Priority 2: If No Results but Filter is Open, Close Filter
+        else if (isFilterOpen) {
+          setIsFilterOpen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFilterOpen, activeSearch]);
+
 
 
   // Filter visible departments based on permissions
@@ -497,25 +517,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                       className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#fdb813]/50 transition-all font-medium text-sm"
                     />
 
-                    {/* Global ESC Handler for Search */}
-                    {React.useEffect(() => {
-                      const handleKeyDown = (e: KeyboardEvent) => {
-                        if (e.key === 'Escape') {
-                          // Priority 1: If Results are visible, Clear Results & Return to Filter Input Mode
-                          if (activeSearch.query || activeSearch.depts.length > 0 || activeSearch.baseDate) {
-                            handleResetFilter(); // Reset Inputs to Defaults
-                            setActiveSearch({ query: '', depts: [], baseDate: null, duration: null, direction: 'before' }); // Clear Active Results
-                            setIsFilterOpen(true); // Open Filter Panel (Search Mode)
-                          }
-                          // Priority 2: If No Results but Filter is Open, Close Filter
-                          else if (isFilterOpen) {
-                            setIsFilterOpen(false);
-                          }
-                        }
-                      };
-                      window.addEventListener('keydown', handleKeyDown);
-                      return () => window.removeEventListener('keydown', handleKeyDown);
-                    }, [isFilterOpen, activeSearch])}
+
 
                     {searchQueryInput && (
                       <button
