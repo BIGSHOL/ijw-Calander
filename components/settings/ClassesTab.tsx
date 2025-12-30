@@ -203,7 +203,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster }) => {
                                     className="relative group p-2.5 rounded-lg border shadow-sm hover:shadow-md transition-shadow"
                                     style={{ backgroundColor: kw.bgColor, color: kw.textColor }}
                                 >
-                                    <span className="font-bold text-sm block truncate">{kw.keyword}</span>
+                                    <span className="text-sm block truncate">{kw.keyword}</span>
                                     <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-0.5">
                                         <button
                                             onClick={() => handleStartEdit(kw)}
