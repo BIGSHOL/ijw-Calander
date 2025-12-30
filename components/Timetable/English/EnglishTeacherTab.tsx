@@ -19,6 +19,7 @@ export interface ScheduleCell {
     teacher?: string;
     note?: string;
     merged?: MergedClass[];
+    underline?: boolean;
 }
 
 type ScheduleData = Record<string, ScheduleCell>;
@@ -52,7 +53,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     const [dragType, setDragType] = useState<'new' | 'add'>('new');
 
     // Batch Input State
-    const [inputData, setInputData] = useState<InputData>({ className: '', room: '', merged: [] });
+    const [inputData, setInputData] = useState<InputData>({ className: '', room: '', merged: [], underline: false });
     const [isWarningOff, setIsWarningOff] = useState(false);
 
     // Move Mode State
@@ -125,11 +126,12 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             setInputData({
                 className: existing.className || '',
                 room: existing.room || defaultRoom,
-                merged: existing.merged || []
+                merged: existing.merged || [],
+                underline: existing.underline || false
             });
         } else if (!isAddMode) {
             // New selection, use teacher's default room
-            setInputData({ className: '', room: defaultRoom, merged: [] });
+            setInputData({ className: '', room: defaultRoom, merged: [], underline: false });
         }
 
         setSelectionStart(coords);
@@ -191,10 +193,11 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                 setInputData({
                     className: cellData.className || '',
                     room: cellData.room || defaultRoom,
-                    merged: cellData.merged || []
+                    merged: cellData.merged || [],
+                    underline: cellData.underline || false
                 });
             } else {
-                setInputData({ className: '', room: defaultRoom, merged: [] });
+                setInputData({ className: '', room: defaultRoom, merged: [], underline: false });
             }
         } else if (selectedCells.size > 1) {
             // Optional: Clear or show 'Mixed'
@@ -458,6 +461,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         className: inputData.className,
                         room: inputData.room,
                         merged: inputData.merged || [],
+                        underline: inputData.underline || false,
                         teacher: teacherName.trim() // Ensure teacher name is trimmed
                     };
                     toUpdate.add(key);

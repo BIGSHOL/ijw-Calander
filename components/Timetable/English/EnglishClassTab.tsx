@@ -18,6 +18,7 @@ interface ScheduleCell {
     teacher?: string;
     note?: string;
     merged?: { className: string; room?: string, teacher?: string }[];
+    underline?: boolean;
 }
 
 type ScheduleData = Record<string, ScheduleCell>;
@@ -1049,7 +1050,7 @@ const MiniGridRow: React.FC<{
                         title={cell?.teacher || ''}
                     >
                         {cell ? (
-                            <span className="leading-tight line-clamp-2 break-all">
+                            <span className={`leading-tight line-clamp-2 break-all ${cell.underline ? 'underline italic' : ''}`}>
                                 {cell.teacher}
                             </span>
                         ) : (
