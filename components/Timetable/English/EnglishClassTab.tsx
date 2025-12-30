@@ -17,7 +17,7 @@ interface ScheduleCell {
     room?: string;
     teacher?: string;
     note?: string;
-    merged?: { className: string; room?: string, teacher?: string }[];
+    merged?: { className: string; room?: string, teacher?: string, underline?: boolean }[];
     underline?: boolean;
 }
 
@@ -184,7 +184,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             if (isNaN(pNum)) return;
 
             // Helper to process a class entry
-            const processClassEntry = (cName: string, cRoom: string, cTeacher: string, currentDay: string) => {
+            const processClassEntry = (cName: string, cRoom: string, cTeacher: string, currentDay: string, cUnderline?: boolean) => {
                 // 인재원 수업 시간표 압축 매핑 (Std 4,5,6 -> Injae 4,5)
                 let mappedPeriodId = periodId;
                 if (isInjaeClass(cName)) {
@@ -232,7 +232,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     ...cell,
                     className: cName,
                     room: cRoom,
-                    teacher: cTeacher
+                    teacher: cTeacher,
+                    underline: cUnderline ?? cell.underline
                 };
 
                 // 선생님별 수업 횟수 카운트
@@ -255,13 +256,13 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             };
 
             // Process Main Class
-            processClassEntry(clsName, cell.room || '', cell.teacher || '', day);
+            processClassEntry(clsName, cell.room || '', cell.teacher || '', day, cell.underline);
 
             // Process Merged Classes
             if (cell.merged && cell.merged.length > 0) {
                 cell.merged.forEach(m => {
                     if (m.className) {
-                        processClassEntry(m.className, m.room || '', cell.teacher || '', day);
+                        processClassEntry(m.className, m.room || '', cell.teacher || '', day, m.underline);
                     }
                 });
             }
