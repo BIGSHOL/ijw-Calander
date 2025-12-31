@@ -3,7 +3,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { EN_PERIODS, EN_WEEKDAYS, getContrastColor, formatClassNameWithBreaks } from './englishUtils';
-import { ClassKeywordColor } from '../../../types';
+import { ClassKeywordColor, Teacher } from '../../../types';
 
 interface ScheduleCell {
     className?: string;
@@ -15,13 +15,16 @@ interface ScheduleCell {
 type ScheduleData = Record<string, ScheduleCell>;
 
 interface EnglishRoomTabProps {
+    teachers: string[];
     scheduleData: ScheduleData;
+    teachersData: Teacher[];
     classKeywords?: ClassKeywordColor[];  // For keyword color coding
+    currentUser: any;
 }
 
 type ViewSize = 'small' | 'medium' | 'large';
 
-const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeywords = [] }) => {
+const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData, teachersData, classKeywords = [], currentUser }) => {
     const [viewSize, setViewSize] = useState<ViewSize>('medium');
     const [filterRoom, setFilterRoom] = useState<string>('all');
     const [visibleWeekdays, setVisibleWeekdays] = useState<Set<string>>(new Set(EN_WEEKDAYS));
@@ -217,8 +220,8 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ scheduleData, classKeyw
                                             // 셀 높이를 너비와 동일하게 설정 (정사각형)
                                             const cellHeightClass =
                                                 viewSize === 'large' ? 'h-[100px]' :
-                                                viewSize === 'medium' ? 'h-[70px]' :
-                                                'h-[40px]';
+                                                    viewSize === 'medium' ? 'h-[70px]' :
+                                                        'h-[40px]';
 
                                             return (
                                                 <td

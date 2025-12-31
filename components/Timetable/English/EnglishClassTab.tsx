@@ -4,6 +4,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Eye, EyeOff, Settings, UserPlus, MoreVertical, TrendingUp, ArrowUpCircle, ChevronDown, Users, Home, User } from 'lucide-react';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS } from './englishUtils';
+import { usePermissions } from '../../../hooks/usePermissions';
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
 import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewSettings';
 import LevelSettingsModal from './LevelSettingsModal';
@@ -28,6 +29,7 @@ interface EnglishClassTabProps {
     scheduleData: ScheduleData;
     teachersData?: Teacher[];
     classKeywords?: ClassKeywordColor[];  // For keyword color coding
+    currentUser: any;
 }
 
 interface ClassInfo {
@@ -50,8 +52,12 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     teachers,
     scheduleData,
     teachersData = [],
-    classKeywords = []
+    classKeywords = [],
+    currentUser
 }) => {
+    const { hasPermission } = usePermissions(currentUser);
+    const isMaster = currentUser?.role === 'master';
+    const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
     const [searchTerm, setSearchTerm] = useState('');
     const [mode, setMode] = useState<'view' | 'hide'>('view');
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
@@ -69,11 +75,16 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             showStudents: true,
             showRoom: true,
             showTeacher: true
-        }
+        },
+        hiddenTeachers: [],
+        hiddenLegendTeachers: []
     });
 
     // Tooltip State for First Visit
     const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+
+    // Student Statistics State
+    const [studentStats, setStudentStats] = useState({ active: 0, new1: 0, new2: 0, withdrawn: 0 });
 
     useEffect(() => {
         const hasSeenGuide = localStorage.getItem('english_timetable_guide_shown');
@@ -107,6 +118,71 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         });
         return () => unsub();
     }, []);
+
+    // Fetch Student Statistics from all classes in scheduleData
+    useEffect(() => {
+        // Get unique class names from scheduleData
+        const classNames = new Set<string>();
+        Object.values(scheduleData).forEach(cell => {
+            if (cell.className) classNames.add(cell.className);
+            if (cell.merged) {
+                cell.merged.forEach(m => {
+                    if (m.className) classNames.add(m.className);
+                });
+            }
+        });
+
+        if (classNames.size === 0) {
+            setStudentStats({ active: 0, new1: 0, new2: 0, withdrawn: 0 });
+            return;
+        }
+
+        // Subscribe to 수업목록 collection
+        const q = query(collection(db, '수업목록'));
+        const unsub = onSnapshot(q, (snapshot) => {
+            const now = new Date();
+            let active = 0, new1 = 0, new2 = 0, withdrawn = 0;
+
+            snapshot.docs.forEach(doc => {
+                const data = doc.data();
+                if (!classNames.has(data.className)) return;
+
+                const students = (data.studentList || []) as TimetableStudent[];
+                students.forEach((student: TimetableStudent) => {
+                    // Withdrawn check
+                    if (student.withdrawalDate) {
+                        const withdrawnDate = new Date(student.withdrawalDate);
+                        const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
+                        if (daysSinceWithdrawal <= 30) {
+                            withdrawn++;
+                        }
+                        return; // Skip further counting for withdrawn students
+                    }
+
+                    // Skip onHold students from active count
+                    if (student.onHold) return;
+
+                    // Active student
+                    active++;
+
+                    // New student check
+                    if (student.enrollmentDate) {
+                        const enrollDate = new Date(student.enrollmentDate);
+                        const daysSinceEnroll = Math.floor((now.getTime() - enrollDate.getTime()) / (1000 * 60 * 60 * 24));
+                        if (daysSinceEnroll <= 30) {
+                            new1++;
+                        } else if (daysSinceEnroll <= 60) {
+                            new2++;
+                        }
+                    }
+                });
+            });
+
+            setStudentStats({ active, new1, new2, withdrawn });
+        });
+
+        return () => unsub();
+    }, [scheduleData]);
 
     const updateSettings = async (newSettings: IntegrationSettings) => {
         setSettings(newSettings);
@@ -544,6 +620,28 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                             className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-full w-48 focus:ring-2 focus:ring-indigo-400 outline-none shadow-sm"
                         />
                     </div>
+
+                    {/* Student Stats Badges */}
+                    <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold">
+                            재원 {studentStats.active}
+                        </span>
+                        {studentStats.new1 > 0 && (
+                            <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full text-[10px] font-bold">
+                                신입1 {studentStats.new1}
+                            </span>
+                        )}
+                        {studentStats.new2 > 0 && (
+                            <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[10px] font-bold">
+                                신입2 {studentStats.new2}
+                            </span>
+                        )}
+                        {studentStats.withdrawn > 0 && (
+                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-[10px] font-bold">
+                                퇴원 {studentStats.withdrawn}
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 {/* Right Section: Hidden Count + Settings Buttons */}
@@ -652,27 +750,31 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                         </div>
                     )}
 
-                    <button
-                        onClick={() => setIsSettingsOpen(true)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
-                    >
-                        <Settings size={14} />
-                        뷰 설정
-                    </button>
-                    <button
-                        onClick={() => setIsLevelSettingsOpen(true)}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
-                    >
-                        <Settings size={14} />
-                        레벨 설정
-                    </button>
+                    {canEditEnglish && (
+                        <button
+                            onClick={() => setIsSettingsOpen(true)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
+                        >
+                            <Settings size={14} />
+                            뷰 설정
+                        </button>
+                    )}
+                    {canEditEnglish && (
+                        <button
+                            onClick={() => setIsLevelSettingsOpen(true)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
+                        >
+                            <Settings size={14} />
+                            레벨 설정
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Teacher Legend */}
             <div className="px-4 py-2 bg-white border-b flex flex-wrap gap-2 items-center flex-shrink-0">
                 <span className="text-[11px] font-bold text-gray-400 mr-1">강사 목록:</span>
-                {teachers.map(teacher => {
+                {teachers.filter(t => !settings.hiddenLegendTeachers?.includes(t)).map(teacher => {
                     const colors = getTeacherColor(teacher, teachersData);
 
                     return (
@@ -725,6 +827,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 isMenuOpen={openMenuClass === cls.name}
                                                 onMenuToggle={(open) => setOpenMenuClass(open ? cls.name : null)}
                                                 displayOptions={settings.displayOptions}
+                                                hiddenTeacherList={settings.hiddenTeachers}
+                                                currentUser={currentUser}
                                             />
                                         ))}
                                     </div>
@@ -740,6 +844,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 settings={settings}
                 onChange={updateSettings}
                 allClasses={classes.map(c => c.name)}
+                teachers={teachers}
+                teachersData={teachersData}
             />
             <LevelSettingsModal
                 isOpen={isLevelSettingsOpen}
@@ -759,8 +865,11 @@ const ClassCard: React.FC<{
     teachersData: Teacher[],
     classKeywords: ClassKeywordColor[],
     isMenuOpen: boolean,
-    displayOptions?: import('./IntegrationViewSettings').DisplayOptions
-}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords, isMenuOpen, onMenuToggle, displayOptions }) => {
+    onMenuToggle: (isOpen: boolean) => void,
+    displayOptions?: import('./IntegrationViewSettings').DisplayOptions,
+    hiddenTeacherList?: string[],
+    currentUser: any
+}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords, isMenuOpen, onMenuToggle, displayOptions, hiddenTeacherList, currentUser }) => {
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [studentCount, setStudentCount] = useState<number>(0);
     const [students, setStudents] = useState<TimetableStudent[]>([]);
@@ -784,8 +893,10 @@ const ClassCard: React.FC<{
         const unsub = onSnapshot(q, (snapshot) => {
             if (!snapshot.empty) {
                 const data = snapshot.docs[0].data();
-                const list = data.studentList || [];
-                setStudentCount(list.length);
+                const list = (data.studentList || []) as TimetableStudent[];
+                // Count only active students (exclude withdrawn and onHold)
+                const activeCount = list.filter(s => !s.withdrawalDate && !s.onHold).length;
+                setStudentCount(activeCount);
                 setStudents(list);
             } else {
                 setStudentCount(0);
@@ -797,7 +908,7 @@ const ClassCard: React.FC<{
 
     return (
         <>
-            <div className={`w-[250px] flex flex-col border-r border-gray-300 shrink-0 bg-white transition-opacity ${isHidden && mode === 'hide' ? 'opacity-50' : ''}`}>
+            <div className={`w-[280px] flex flex-col border-r border-gray-300 shrink-0 bg-white transition-opacity ${isHidden && mode === 'hide' ? 'opacity-50' : ''}`}>
                 {/* Header - 키워드 색상 적용 */}
                 {(() => {
                     const matchedKw = classKeywords.find(kw => classInfo.name?.includes(kw.keyword));
@@ -900,8 +1011,8 @@ const ClassCard: React.FC<{
 
                 <div className="border-b border-gray-300 flex-none">
                     {/* Grid Header */}
-                    <div className="flex bg-gray-200 text-[10px] font-bold border-b border-gray-400 h-[24px]">
-                        <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">교시</div>
+                    <div className="flex bg-gray-200 text-[10px] font-bold border-b border-gray-400 h-[30px]">
+                        <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
                         {classInfo.finalDays.map((d) => (
                             <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
                                 {d}
@@ -919,6 +1030,7 @@ const ClassCard: React.FC<{
                                 weekendShift={classInfo.weekendShift}
                                 teachersData={teachersData}
                                 displayDays={classInfo.finalDays}
+                                hiddenTeachers={hiddenTeacherList}
                             />
                         ))}
                     </div>
@@ -928,18 +1040,18 @@ const ClassCard: React.FC<{
                 {displayOptions?.showStudents ? (
                     <div className="flex-1 flex flex-col bg-white min-h-[100px]">
                         <button
-                            className="p-1.5 text-center text-[10px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-600 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors w-full"
+                            className="p-1.5 text-center text-[13px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-600 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors w-full"
                             onClick={() => setIsStudentModalOpen(true)}
                             aria-label={`${classInfo.name} 학생 명단 열기. 현재 ${studentCount}명`}
                         >
                             <span>학생 명단</span>
-                            <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[9px]">
+                            <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[12px]">
                                 {studentCount}명
                             </span>
                             <UserPlus size={12} className="text-gray-400" />
                         </button>
-                        {/* Student Name Preview */}
-                        <div className="flex-1 overflow-y-auto px-2 py-1.5 text-[10px]">
+                        {/* Student Name Preview - 3 Section Layout */}
+                        <div className="flex-1 overflow-y-auto px-2 py-1.5 text-[10px] flex flex-col">
                             {students.length === 0 ? (
                                 <div
                                     className="flex flex-col items-center justify-center h-full text-gray-300 cursor-pointer hover:text-gray-400"
@@ -948,35 +1060,103 @@ const ClassCard: React.FC<{
                                     <span>학생이 없습니다</span>
                                     <span className="text-indigo-400 mt-0.5 hover:underline">+ 추가</span>
                                 </div>
-                            ) : (
-                                <>
-                                    {[...students].sort((a, b) => {
-                                        // Underlined students first
-                                        if (a.underline && !b.underline) return -1;
-                                        if (!a.underline && b.underline) return 1;
-                                        // Then alphabetical
-                                        return a.name.localeCompare(b.name, 'ko');
-                                    }).slice(0, 12).map((student) => (
-                                        <div key={student.id} className="flex items-center justify-between text-xs py-0.5">
-                                            <span className={`font-medium ${student.underline ? 'underline text-blue-600' : 'text-gray-800'}`}>
-                                                {student.name}
-                                                {student.englishName && <span className={student.underline ? 'text-blue-400' : 'text-gray-500'}>({student.englishName})</span>}
-                                            </span>
-                                            {(student.school || student.grade) && (
-                                                <span className="text-gray-500 text-right">{student.school}{student.grade}</span>
+                            ) : (() => {
+                                // Split students into 3 groups
+                                const activeStudents = students.filter(s => !s.withdrawalDate && !s.onHold);
+                                const holdStudents = students.filter(s => s.onHold && !s.withdrawalDate);
+                                const withdrawnStudents = students.filter(s => s.withdrawalDate);
+
+                                // Sort active students: Underline(0) → Normal(1) → Pink(2) → Red(3)
+                                const sortedActive = [...activeStudents].sort((a, b) => {
+                                    const getWeight = (s: TimetableStudent) => {
+                                        if (s.underline) return 0; // 1순위: 밑줄
+                                        if (s.enrollmentDate) {
+                                            const days = Math.ceil((Date.now() - new Date(s.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                                            if (days <= 30) return 3; // 4순위: 1개월차 (Red)
+                                            if (days <= 60) return 2; // 3순위: 2개월차 (Pink)
+                                        }
+                                        return 1; // 2순위: 일반 학생
+                                    };
+                                    const wA = getWeight(a), wB = getWeight(b);
+                                    return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
+                                });
+
+                                // Helper to get row style based on enrollment date
+                                const getRowStyle = (student: TimetableStudent) => {
+                                    if (student.underline) return { className: 'bg-blue-50', textClass: 'underline text-blue-600', subTextClass: 'text-blue-500' };
+                                    if (student.enrollmentDate) {
+                                        const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                                        if (days <= 30) return { className: 'bg-red-500', textClass: 'text-white font-bold', subTextClass: 'text-white' }; // Red: 붉은 배경, 흰색 글씨
+                                        if (days <= 60) return { className: 'bg-pink-100', textClass: 'text-black font-bold', subTextClass: 'text-black' }; // Pink: 연분홍 배경, 검은 글씨
+                                    }
+                                    return { className: '', textClass: 'text-gray-800', subTextClass: 'text-gray-500' };
+                                };
+
+                                return (
+                                    <>
+                                        {/* Active Students Section */}
+                                        <div className="flex-1">
+                                            {sortedActive.slice(0, 12).map((student) => {
+                                                const style = getRowStyle(student);
+                                                return (
+                                                    <div
+                                                        key={student.id}
+                                                        className={`flex items-center justify-between text-[13px] py-0.5 px-1 rounded ${style.className}`}
+                                                        title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}` : undefined}
+                                                    >
+                                                        <span className={`font-medium ${style.textClass}`}>
+                                                            {student.name}
+                                                            {student.englishName && <span className="text-gray-500 font-normal">({student.englishName})</span>}
+                                                        </span>
+                                                        {(student.school || student.grade) && (
+                                                            <span className={`text-[12px] ml-1 ${style.subTextClass || 'text-gray-500'} text-right`}>{student.school}{student.grade}</span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                            {sortedActive.length > 12 && (
+                                                <div
+                                                    className="text-indigo-500 font-bold cursor-pointer hover:underline mt-0.5 text-xs"
+                                                    onClick={() => setIsStudentModalOpen(true)}
+                                                >
+                                                    +{sortedActive.length - 12}명 더보기...
+                                                </div>
                                             )}
                                         </div>
-                                    ))}
-                                    {students.length > 12 && (
-                                        <div
-                                            className="text-indigo-500 font-bold cursor-pointer hover:underline mt-0.5 text-xs"
-                                            onClick={() => setIsStudentModalOpen(true)}
-                                        >
-                                            +{students.length - 12}명 더보기...
-                                        </div>
-                                    )}
-                                </>
-                            )}
+
+                                        {/* Hold Students Section */}
+                                        {holdStudents.length > 0 && (
+                                            <div className="mt-2 pt-1 border-t border-yellow-200">
+                                                <div className="text-[9px] font-bold text-yellow-700 mb-0.5">대기 ({holdStudents.length})</div>
+                                                {holdStudents.slice(0, 3).map((student) => (
+                                                    <div key={student.id} className="flex items-center text-xs py-0.5 px-1 bg-yellow-50 rounded text-yellow-800">
+                                                        <span className="font-medium">{student.name}</span>
+                                                    </div>
+                                                ))}
+                                                {holdStudents.length > 3 && (
+                                                    <span className="text-[9px] text-yellow-600">+{holdStudents.length - 3}명</span>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Withdrawn Students Section */}
+                                        {withdrawnStudents.length > 0 && (
+                                            <div className="mt-2 pt-1 border-t border-gray-200">
+                                                <div className="text-[9px] font-bold text-gray-400 mb-0.5">퇴원 ({withdrawnStudents.length})</div>
+                                                {withdrawnStudents.slice(0, 3).map((student) => (
+                                                    <div key={student.id} className="flex items-center text-xs py-0.5 px-1 bg-black rounded text-white">
+                                                        <span>{student.name}</span>
+                                                        {student.englishName && <span className="ml-1 text-gray-400">({student.englishName})</span>}
+                                                    </div>
+                                                ))}
+                                                {withdrawnStudents.length > 3 && (
+                                                    <span className="text-[9px] text-gray-400">+{withdrawnStudents.length - 3}명</span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
                         </div>
                     </div>
                 ) : (
@@ -996,6 +1176,7 @@ const ClassCard: React.FC<{
                 onClose={() => setIsStudentModalOpen(false)}
                 className={classInfo.name}
                 teacher={classInfo.mainTeacher}
+                currentUser={currentUser}
             />
 
             {/* Level Up Confirm Modal */}
@@ -1020,20 +1201,18 @@ const MiniGridRow: React.FC<{
     scheduleMap: Record<string, Record<string, ScheduleCell>>,
     weekendShift: number,
     teachersData: Teacher[],
-    displayDays: string[]
-}> = ({ period, scheduleMap, weekendShift, teachersData, displayDays }) => {
+    displayDays: string[],
+    hiddenTeachers?: string[]
+}> = ({ period, scheduleMap, weekendShift, teachersData, displayDays, hiddenTeachers }) => {
 
     // Parse time for display (e.g. 14:20~15:00 -> 14:20 \n ~15:00)
     const [start, end] = period.time.split('~');
 
     return (
-        <div className="flex border-b border-gray-100 h-[36px]">
-            {/* Period Label */}
+        <div className="flex border-b border-gray-100 h-[30px]">
+            {/* Period Label - Time Only */}
             <div className="w-[48px] border-r border-gray-100 flex flex-col items-center justify-center bg-gray-50 shrink-0 leading-tight py-0.5">
-                <div className="flex items-center gap-0.5">
-                    <span className="text-[9px] font-extrabold text-indigo-900">[{period.id}]</span>
-                    <span className="text-[9px] text-gray-600 font-medium tracking-tighter">{start}</span>
-                </div>
+                <span className="text-[9px] font-bold text-gray-700 tracking-tighter">{start}</span>
                 <span className="text-[9px] text-gray-500 tracking-tighter">~{end}</span>
             </div>
 
@@ -1055,7 +1234,7 @@ const MiniGridRow: React.FC<{
                     const currentNum = parseInt(period.id, 10);
                     if (!isNaN(currentNum)) {
                         const shiftedNum = currentNum - weekendShift;
-                        effectivePeriodId = String(shiftedNum);
+                        effectivePeriodId = String(shiftedNum) as any;
                     }
                 }
 
@@ -1065,13 +1244,15 @@ const MiniGridRow: React.FC<{
 
                 // Get style based on teacher
                 let teacherStyle = {};
-                if (cell?.teacher) {
+                const isHidden = cell?.teacher && hiddenTeachers?.includes(cell.teacher);
+
+                if (cell?.teacher && !isHidden) {
                     const colors = getTeacherColor(cell.teacher, teachersData);
                     // If underline is enabled, override color with blue
                     if (cell.underline) {
-                        teacherStyle = { backgroundColor: colors.bg, color: '#2563eb', fontWeight: 800 };
+                        teacherStyle = { backgroundColor: colors.bg, color: '#2563eb' };
                     } else {
-                        teacherStyle = { backgroundColor: colors.bg, color: colors.text, fontWeight: 800 };
+                        teacherStyle = { backgroundColor: colors.bg, color: colors.text };
                     }
                 }
 
@@ -1082,7 +1263,7 @@ const MiniGridRow: React.FC<{
                         style={teacherStyle}
                         title={cell?.teacher || ''}
                     >
-                        {cell ? (
+                        {cell && !isHidden ? (
                             <span className={`leading-tight line-clamp-2 break-all ${cell.underline ? 'underline italic' : ''}`}>
                                 {cell.teacher}
                             </span>

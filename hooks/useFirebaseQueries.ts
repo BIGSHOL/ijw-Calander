@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, orderBy, query, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { Department, Teacher, Holiday, ClassKeywordColor } from '../types';
+import { Department, Teacher, Holiday, ClassKeywordColor, SystemConfig } from '../types';
 import { departmentConverter } from '../converters';
 
 // 부서목록 - 30분 캐시 (거의 변경 안됨)
@@ -72,12 +72,14 @@ export const useSystemConfig = () => {
         queryFn: async () => {
             const docSnap = await getDoc(doc(db, 'system', 'config'));
             if (docSnap.exists()) {
+                const data = docSnap.data();
                 return {
-                    eventLookbackYears: docSnap.data().eventLookbackYears || 2,
-                    categories: docSnap.data().categories || []
-                };
+                    eventLookbackYears: data.eventLookbackYears || 2,
+                    categories: data.categories || [],
+                    tabPermissions: data.tabPermissions || undefined
+                } as SystemConfig;
             }
-            return { eventLookbackYears: 2, categories: [] };
+            return { eventLookbackYears: 2, categories: [], tabPermissions: undefined } as SystemConfig;
         },
         staleTime: 1000 * 60 * 60, // 1시간
         gcTime: 1000 * 60 * 120, // 2시간

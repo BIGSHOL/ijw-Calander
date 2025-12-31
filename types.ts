@@ -93,7 +93,12 @@ export type PermissionId =
   | 'buckets.edit_lower_roles' | 'buckets.delete_lower_roles'
   | 'departments.view_all' | 'departments.create' | 'departments.edit' | 'departments.delete'
   | 'users.view' | 'users.approve' | 'users.change_role' | 'users.change_permissions'
-  | 'settings.access' | 'settings.holidays' | 'settings.role_permissions' | 'settings.manage_categories';
+  | 'settings.access' | 'settings.holidays' | 'settings.role_permissions' | 'settings.manage_categories'
+  | 'system.teachers.view' | 'system.teachers.edit'
+  | 'system.classes.view' | 'system.classes.edit'
+  | 'timetable.math.view' | 'timetable.math.edit'
+  | 'timetable.english.view' | 'timetable.english.edit'
+  | 'timetable.integrated.view';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -110,6 +115,11 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'departments.view_all': true, 'departments.create': true, 'departments.edit': true, 'departments.delete': false,
     'users.view': true, 'users.approve': true, 'users.change_role': false, 'users.change_permissions': true,
     'settings.access': true, 'settings.holidays': true, 'settings.role_permissions': false, 'settings.manage_categories': true,
+    'system.teachers.view': true, 'system.teachers.edit': true,
+    'system.classes.view': true, 'system.classes.edit': true,
+    'timetable.math.view': true, 'timetable.math.edit': true,
+    'timetable.english.view': true, 'timetable.english.edit': true,
+    'timetable.integrated.view': true,
   },
   manager: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': true,
@@ -196,6 +206,9 @@ export interface TimetableStudent {
   grade?: string;       // 학년
   school?: string;      // 학교
   underline?: boolean;  // 밑줄 표시 여부
+  enrollmentDate?: string; // 신입생 등록일 (YYYY-MM-DD)
+  withdrawalDate?: string; // 퇴원일 (YYYY-MM-DD)
+  onHold?: boolean; // 대기생 여부
   personalSchedule?: { day: string; period: string }[];
 }
 
@@ -251,4 +264,54 @@ export interface ParsedClassName {
   levelAbbr: string;  // "DP", "RTT", "LE"
   number: number;     // 3, 6, 5
   suffix: string;     // "", "a", "b"
+}
+
+// Payment Report Types
+export interface TuitionEntry {
+  id: string;
+  academyName: string; // 사업장(학원명)
+  projectedFee: number; // 발생시킬 수강료
+  reason: string; // 증감사유
+  category: 'increase' | 'decrease' | 'steady'; // For UI coloring logic
+}
+
+export interface ReportSummary {
+  totalFee: number;
+  entryCount: number;
+  maxFeeAcademy: string;
+}
+
+// ============ SYSTEM TAB PERMISSIONS ============
+
+// Top-level Application Tabs
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'system';
+
+export const APP_TABS: { id: AppTab; label: string }[] = [
+  { id: 'calendar', label: '연간 일정' },
+  { id: 'timetable', label: '시간표' },
+  { id: 'payment', label: '전자 결제' },
+  { id: 'system', label: '시스템 설정' },
+];
+
+// Configuration for Tab Access (Stored in system/config -> tabPermissions)
+// Key: UserRole, Value: Array of allowed AppTab IDs
+export type TabPermissionConfig = {
+  [key in UserRole]?: AppTab[];
+};
+
+// Default Tab Permissions (Fallback)
+export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
+  master: ['calendar', 'timetable', 'payment', 'system'],
+  admin: ['calendar', 'timetable'],
+  manager: ['calendar'],
+  editor: ['calendar'],
+  user: ['calendar'],
+  viewer: ['calendar'],
+  guest: ['calendar'],
+};
+
+export interface SystemConfig {
+  eventLookbackYears?: number;
+  categories?: string[];
+  tabPermissions?: TabPermissionConfig;
 }
