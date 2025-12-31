@@ -185,9 +185,10 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
             // Helper to process a class entry
             const processClassEntry = (cName: string, cRoom: string, cTeacher: string, currentDay: string, cUnderline?: boolean) => {
-                // 인재원 수업 시간표 압축 매핑 (Std 4,5,6 -> Injae 4,5)
+                // 인재원 수업 시간표 압축 매핑 (그룹 설정 기반)
                 let mappedPeriodId = periodId;
-                if (isInjaeClass(cName)) {
+                const classGroup = settings.customGroups?.find(g => g.classes.includes(cName));
+                if (classGroup?.useInjaePeriod) {
                     if (periodId === '5' || periodId === '6') {
                         mappedPeriodId = '5'; // 6교시를 5교시로 병합
                     }
@@ -360,8 +361,10 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     if (end < 10) end = Math.min(10, start + 4);
                 }
 
-                // 인재원 수업 여부에 따라 시간대 선택
-                const periodsToUse = isInjaeClass(c.name) ? INJAE_PERIODS : EN_PERIODS;
+                // 그룹 설정에 따른 시간대 선택
+                const classGroup = settings.customGroups?.find(g => g.classes.includes(c.name));
+                const useInjaePeriod = classGroup?.useInjaePeriod || false;
+                const periodsToUse = useInjaePeriod ? INJAE_PERIODS : EN_PERIODS;
                 const visiblePeriods = periodsToUse.filter(p => {
                     const pid = parseInt(p.id);
                     return pid >= start && pid <= end;
@@ -414,11 +417,11 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             })
             .filter(c => !searchTerm || c.name.includes(searchTerm))
             .sort((a, b) => a.startPeriod - b.startPeriod || a.name.localeCompare(b.name, 'ko'));
-    }, [scheduleData, searchTerm]);
+    }, [scheduleData, searchTerm, settings.customGroups]);
 
     // 2. Group classes by start period OR Custom Groups
     const groupedClasses = useMemo(() => {
-        const groups: { periodIndex: number; label: string; classes: ClassInfo[] }[] = [];
+        const groups: { periodIndex: number; label: string; classes: ClassInfo[]; useInjaePeriod?: boolean }[] = [];
 
         if (settings.viewMode === 'CUSTOM_GROUP') {
             // --- Custom Group Mode ---
@@ -442,7 +445,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                         groups.push({
                             periodIndex: idx, // Use index for sorting
                             label: g.title,
-                            classes: groupClasses
+                            classes: groupClasses,
+                            useInjaePeriod: g.useInjaePeriod
                         });
                     }
                 }
@@ -495,6 +499,18 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             return newSet;
         });
     };
+
+    // Show loading spinner while settings are loading to prevent flicker
+    if (settingsLoading) {
+        return (
+            <div className="flex items-center justify-center h-full bg-gray-100">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <span className="text-sm text-gray-500 font-medium">설정 로딩중...</span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-white select-none">
@@ -687,6 +703,11 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                     <span className="text-xs bg-gray-600 px-2 py-0.5 rounded text-gray-200 font-normal">
                                         {group.classes.length}개 수업
                                     </span>
+                                    {group.useInjaePeriod && (
+                                        <span className="text-xs bg-amber-500 px-2 py-0.5 rounded text-white font-medium">
+                                            인재원 시간표
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Classes Row (Horizontal Scroll) */}
@@ -929,11 +950,17 @@ const ClassCard: React.FC<{
                                 </div>
                             ) : (
                                 <>
-                                    {[...students].sort((a, b) => a.name.localeCompare(b.name, 'ko')).slice(0, 12).map((student) => (
+                                    {[...students].sort((a, b) => {
+                                        // Underlined students first
+                                        if (a.underline && !b.underline) return -1;
+                                        if (!a.underline && b.underline) return 1;
+                                        // Then alphabetical
+                                        return a.name.localeCompare(b.name, 'ko');
+                                    }).slice(0, 12).map((student) => (
                                         <div key={student.id} className="flex items-center justify-between text-xs py-0.5">
-                                            <span className="font-medium text-gray-800">
+                                            <span className={`font-medium ${student.underline ? 'underline text-blue-600' : 'text-gray-800'}`}>
                                                 {student.name}
-                                                {student.englishName && <span className="text-gray-500">({student.englishName})</span>}
+                                                {student.englishName && <span className={student.underline ? 'text-blue-400' : 'text-gray-500'}>({student.englishName})</span>}
                                             </span>
                                             {(student.school || student.grade) && (
                                                 <span className="text-gray-500 text-right">{student.school}{student.grade}</span>

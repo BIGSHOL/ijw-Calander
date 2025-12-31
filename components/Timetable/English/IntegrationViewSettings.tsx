@@ -7,6 +7,7 @@ export interface CustomGroup {
     id: string;
     title: string;
     classes: string[];
+    useInjaePeriod?: boolean;  // 인재원 시간표 사용 여부 (55분 단위)
 }
 
 export interface IntegrationSettings {
@@ -187,6 +188,14 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
         onChange(next as IntegrationSettings);
     };
 
+    const handleToggleInjaePeriod = (groupId: string, checked: boolean) => {
+        const nextGroups = customGroups.map((g) =>
+            g.id === groupId ? { ...g, useInjaePeriod: checked } : g
+        );
+        const next = { ...safeSettings, customGroups: nextGroups };
+        onChange(next as IntegrationSettings);
+    };
+
     const handleMigrateFromAcademy = async () => {
         if (!confirm('기존 Academy App (injaewon-project-8ea38)에서 데이터를 가져오시겠습니까?')) return;
 
@@ -328,6 +337,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                                 onMoveUp={() => handleMoveGroup(index, 'up')}
                                 onMoveDown={() => handleMoveGroup(index, 'down')}
                                 onMoveClass={(clsIdx, dir) => handleMoveClassInGroup(group.id, clsIdx, dir)}
+                                onToggleInjaePeriod={(checked) => handleToggleInjaePeriod(group.id, checked)}
                             />
                         ))}
                     </section>
@@ -390,6 +400,7 @@ interface GroupCardProps {
     onMoveUp: () => void;
     onMoveDown: () => void;
     onMoveClass: (classIndex: number, direction: 'up' | 'down') => void;
+    onToggleInjaePeriod: (checked: boolean) => void;
 }
 
 const GroupCard = React.memo<GroupCardProps>(({
@@ -404,6 +415,7 @@ const GroupCard = React.memo<GroupCardProps>(({
     onMoveUp,
     onMoveDown,
     onMoveClass,
+    onToggleInjaePeriod,
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -454,6 +466,17 @@ const GroupCard = React.memo<GroupCardProps>(({
                     </button>
                 </div>
             </div>
+
+            {/* Injae Period Toggle */}
+            <label className="flex items-center gap-2 text-xs cursor-pointer px-1 py-1.5 bg-amber-50 rounded border border-amber-200">
+                <input
+                    type="checkbox"
+                    checked={group.useInjaePeriod || false}
+                    onChange={(e) => onToggleInjaePeriod(e.target.checked)}
+                    className="rounded border-amber-300 text-amber-600 focus:ring-amber-500 h-3 w-3"
+                />
+                <span className="text-amber-700 font-medium">인재원 시간표 사용 (55분 단위)</span>
+            </label>
 
             {/* Selected Classes (Ordered List) */}
             <div className="space-y-1 bg-gray-50 p-2 rounded border border-gray-100">

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(if [ ! -d \"work-plans\" ])",
+      "Bash(then mkdir work-plans)",
+      "Bash(fi)"
+    ]
+  }
+}

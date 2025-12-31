@@ -1,7 +1,6 @@
 // StudentModal.tsx - 영어 통합 뷰 학생 관리 모달
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Plus, Trash2, Users, Image as ImageIcon, Check, Loader2, RefreshCw } from 'lucide-react';
-import Tesseract from 'tesseract.js';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Trash2, Users, Check, Underline } from 'lucide-react';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { TimetableStudent, EnglishLevel } from '../../../types';
@@ -49,151 +48,11 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
     const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({ name: '', englishName: '', school: '', grade: '' });
 
-    // OCR State
-    const [isOCRMode, setIsOCRMode] = useState(false);
-    const [ocrImage, setOcrImage] = useState<string | null>(null);
-    const [isScanning, setIsScanning] = useState(false);
-    const [ocrProgress, setOcrProgress] = useState(0);
-    const [ocrResults, setOcrResults] = useState<TimetableStudent[]>([]);
-    const [ocrStatus, setOcrStatus] = useState<string>(''); // For detailed status like 'Downloading language data...'
 
-    // Handle Paste Event for Image
-    useEffect(() => {
-        const handlePaste = (e: ClipboardEvent) => {
-            if (!isOCRMode) return;
 
-            const items = e.clipboardData?.items;
-            if (!items) return;
 
-            for (const item of items) {
-                if (item.type.indexOf('image') !== -1) {
-                    const blob = item.getAsFile();
-                    if (blob) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            if (event.target?.result) {
-                                setOcrImage(event.target.result as string);
-                                runOCR(event.target.result as string);
-                            }
-                        };
-                        reader.readAsDataURL(blob);
-                    }
-                    break;
-                }
-            }
-        };
 
-        window.addEventListener('paste', handlePaste);
-        return () => window.removeEventListener('paste', handlePaste);
-    }, [isOCRMode]);
 
-    const runOCR = async (imageSrc: string) => {
-        setIsScanning(true);
-        setOcrProgress(0);
-        setOcrStatus('엔진 초기화 중...');
-        setOcrResults([]);
-
-        try {
-            const result = await Tesseract.recognize(
-                imageSrc,
-                'kor+eng', // Korean and English
-                {
-                    logger: m => {
-                        if (m.status === 'recognizing text') {
-                            setOcrProgress(Math.round(m.progress * 100));
-                            setOcrStatus(`텍스트 인식 중... ${Math.round(m.progress * 100)}%`);
-                        } else {
-                            setOcrStatus(m.status);
-                        }
-                    }
-                }
-            );
-
-            parseOCRText(result.data.text);
-        } catch (error) {
-            console.error('OCR Error:', error);
-            alert('이미지 인식 중 오류가 발생했습니다.');
-        } finally {
-            setIsScanning(false);
-            setOcrStatus('');
-        }
-    };
-
-    const parseOCRText = (text: string) => {
-        // Simple line splitting
-        const lines = text.split('\n').filter(line => line.trim().length > 0);
-        const parsedStudents: TimetableStudent[] = [];
-
-        // Regex for "Name(Suffix)(EngName) SchoolGrade"
-        // Captures: 1:Name+Suffix, 2:EngName (optional), 3:School(ends with 초/중/고), 4:Grade (optional)
-        // Updated to support: 김윤아B, 달성초3 (Attached)
-        const rowRegex = /([가-힣]{2,4}[A-Za-z0-9]?)\s*(?:\((.*?)\))?\s*([가-힣]+[초중고])?\s*(\d+)?/;
-
-        lines.forEach((line, index) => {
-            // Basic Cleanup
-            const cleanLine = line.replace(/[|\]\[]/g, '').trim(); // Remove common OCR artifacts like list borders
-            const match = cleanLine.match(rowRegex);
-
-            if (match) {
-                const name = match[1];
-                const engName = match[2] || '';
-                const school = match[3] || '';
-                const grade = match[4] || '';
-
-                // Filter out obviously wrong data (e.g. headers)
-                if (name === '이름' || name === '담당강사') return;
-
-                parsedStudents.push({
-                    id: `ocr_${Date.now()}_${index}`,
-                    name: name,
-                    englishName: engName,
-                    school: school,
-                    grade: grade
-                });
-            }
-        });
-
-        if (parsedStudents.length === 0) {
-            alert('인식된 학생 데이터가 없습니다. 이미지가 선명한지 확인해주세요.');
-        }
-
-        setOcrResults(parsedStudents);
-    };
-
-    const handleAddOCRStudent = async (student: TimetableStudent) => {
-        await handleAddStudent(student.name, student.englishName || '', student.grade || '', student.school || '');
-        // Remove from OCR list after adding
-        setOcrResults(prev => prev.filter(s => s.id !== student.id));
-    };
-
-    const handleAddAllOCRStudents = async () => {
-        if (!classDocId || ocrResults.length === 0) return;
-        if (confirm(`${ocrResults.length}명의 학생을 일괄 추가하시겠습니까?`)) {
-            try {
-                const newStudentsToAdd = ocrResults.map(student => ({
-                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                    name: student.name.trim(),
-                    englishName: student.englishName?.trim() || '',
-                    grade: student.grade?.trim() || '',
-                    school: student.school?.trim() || '',
-                }));
-
-                const updatedList = [...students, ...newStudentsToAdd];
-                await updateDoc(doc(db, '수업목록', classDocId), {
-                    studentList: updatedList
-                });
-
-                // setStudents(updatedList); // Real-time listener will update this, but optimistic update is fine too
-                alert(`${ocrResults.length}명 추가 완료`);
-                setOcrResults([]);
-                setOcrImage(null);
-                setIsOCRMode(false);
-            } catch (e) {
-                console.error('Add failed:', e);
-                alert('일괄 추가 중 오류가 발생했습니다.');
-            }
-        }
-    };
 
     // Find class document by className, auto-create if not found
     useEffect(() => {
@@ -318,6 +177,24 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
         }
     };
 
+    // Toggle underline for a student
+    const handleToggleUnderline = async (studentId: string) => {
+        if (!classDocId) return;
+
+        const updatedList = students.map(s => {
+            if (s.id === studentId) {
+                return { ...s, underline: !s.underline };
+            }
+            return s;
+        });
+
+        try {
+            await updateDoc(doc(db, '수업목록', classDocId), { studentList: updatedList });
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const startEditing = (student: TimetableStudent) => {
         setEditingStudentId(student.id);
         setEditForm({
@@ -394,233 +271,64 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                     </span>
                 </div>
 
-                {/* Add Student Section (OCR Toggle) */}
+                {/* Add Student Section */}
                 <div className="p-4 border-b border-gray-100 bg-gray-50 flex flex-col gap-3">
-                    {/* Add Mode Toggle */}
-                    <div className="flex gap-2">
+                    {/* Manual Input Form */}
+                    <div className="flex items-end gap-2">
+                        <div className="flex-1 grid grid-cols-4 gap-2">
+                            <div className="col-span-1">
+                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">이름</label>
+                                <input
+                                    type="text"
+                                    placeholder="이름"
+                                    value={newStudentName}
+                                    onChange={(e) => setNewStudentName(e.target.value)}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddStudentFromInput()}
+                                />
+                            </div>
+                            <div className="col-span-1">
+                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">E.Name</label>
+                                <input
+                                    type="text"
+                                    placeholder="영어이름"
+                                    value={newStudentEnglishName}
+                                    onChange={(e) => setNewStudentEnglishName(e.target.value)}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddStudentFromInput()}
+                                />
+                            </div>
+                            <div className="col-span-1">
+                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">학교</label>
+                                <input
+                                    type="text"
+                                    placeholder="학교"
+                                    value={newStudentSchool}
+                                    onChange={(e) => setNewStudentSchool(e.target.value)}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddStudentFromInput()}
+                                />
+                            </div>
+                            <div className="col-span-1">
+                                <label className="text-[10px] text-gray-500 font-bold mb-1 block">학년</label>
+                                <input
+                                    type="text"
+                                    placeholder="학년"
+                                    value={newStudentGrade}
+                                    onChange={(e) => setNewStudentGrade(e.target.value)}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddStudentFromInput()}
+                                />
+                            </div>
+                        </div>
                         <button
-                            onClick={() => setIsOCRMode(false)}
-                            className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-all ${!isOCRMode ? 'bg-white border-indigo-200 text-indigo-700 shadow-sm' : 'bg-transparent border-transparent text-gray-400 hover:bg-gray-100'}`}
+                            onClick={handleAddStudentFromInput}
+                            disabled={!newStudentName.trim()}
+                            className="px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded font-bold text-xs hover:bg-[#e5a712] disabled:opacity-50 h-[34px] self-end"
                         >
-                            직접 입력
-                        </button>
-                        <button
-                            onClick={() => setIsOCRMode(true)}
-                            className={`flex-1 py-2 text-xs font-bold rounded-lg border transition-all ${isOCRMode ? 'bg-[#fdb813] border-[#fdb813] text-[#081429] shadow-sm' : 'bg-transparent border-transparent text-gray-400 hover:bg-gray-100'}`}
-                        >
-                            📷 이미지로 추가 (Beta)
+                            추가
                         </button>
                     </div>
-
-                    {!isOCRMode ? (
-                        /* Manual Input Form */
-                        <div className="flex items-end gap-2">
-                            <div className="flex-1 grid grid-cols-4 gap-2">
-                                <div className="col-span-1">
-                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">이름</label>
-                                    <input
-                                        type="text"
-                                        placeholder="이름"
-                                        value={newStudentName}
-                                        onChange={(e) => setNewStudentName(e.target.value)}
-                                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAddStudentFromInput()}
-                                    />
-                                </div>
-                                <div className="col-span-1">
-                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">E.Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="영어이름"
-                                        value={newStudentEnglishName}
-                                        onChange={(e) => setNewStudentEnglishName(e.target.value)}
-                                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAddStudentFromInput()}
-                                    />
-                                </div>
-                                <div className="col-span-1">
-                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">학교</label>
-                                    <input
-                                        type="text"
-                                        placeholder="학교"
-                                        value={newStudentSchool}
-                                        onChange={(e) => setNewStudentSchool(e.target.value)}
-                                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAddStudentFromInput()}
-                                    />
-                                </div>
-                                <div className="col-span-1">
-                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">학년</label>
-                                    <input
-                                        type="text"
-                                        placeholder="학년"
-                                        value={newStudentGrade}
-                                        onChange={(e) => setNewStudentGrade(e.target.value)}
-                                        className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAddStudentFromInput()}
-                                    />
-                                </div>
-                            </div>
-                            <button
-                                onClick={handleAddStudentFromInput}
-                                disabled={!newStudentName.trim()}
-                                className="px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded font-bold text-xs hover:bg-[#e5a712] disabled:opacity-50 h-[34px] self-end"
-                            >
-                                추가
-                            </button>
-                        </div>
-                    ) : (
-                        /* OCR Input Area */
-                        <div className="flex flex-col gap-4">
-                            {!ocrImage ? (
-                                <div
-                                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-100 transition-colors"
-                                    onClick={() => {
-                                        alert('이미지를 Ctrl+V (붙여넣기) 해주세요!');
-                                    }}
-                                >
-                                    <ImageIcon className="text-gray-400 mb-2" size={32} />
-                                    <p className="text-sm font-bold text-gray-600">이곳을 클릭 후 Ctrl+V 하여 이미지를 붙여넣으세요</p>
-                                    <p className="text-xs text-gray-400 mt-1">엑셀, 카카오톡 캡처 등 학생 명단이 포함된 이미지</p>
-                                </div>
-                            ) : (
-                                <div className="flex gap-4">
-                                    {/* Image Preview */}
-                                    <div className="w-1/3 relative group">
-                                        <img src={ocrImage} alt="Pasted" className="w-full h-auto rounded border border-gray-200" />
-                                        <button
-                                            onClick={() => { setOcrImage(null); setOcrResults([]); }}
-                                            className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full hover:bg-black/70"
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                        {isScanning && (
-                                            <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center backdrop-blur-sm">
-                                                <Loader2 className="animate-spin text-indigo-600 mb-2" />
-                                                <span className="text-xs font-bold text-indigo-800">{ocrStatus}</span>
-                                                <div className="w-2/3 h-1 bg-gray-200 rounded-full mt-2 overflow-hidden">
-                                                    <div className="h-full bg-indigo-500 transition-all duration-300" style={{ width: `${ocrProgress}%` }}></div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Parsed Result List */}
-                                    <div className="w-2/3 flex flex-col h-full max-h-[200px]">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-bold text-gray-600">
-                                                인식 결과 <span className="text-indigo-600">{ocrResults.length}명</span>
-                                            </span>
-                                            <div className="flex gap-1">
-                                                <button
-                                                    onClick={() => runOCR(ocrImage)}
-                                                    className="p-1 hover:bg-gray-200 rounded text-gray-500"
-                                                    title="재인식"
-                                                >
-                                                    <RefreshCw size={14} />
-                                                </button>
-                                                {ocrResults.length > 0 && (
-                                                    <button
-                                                        onClick={handleAddAllOCRStudents}
-                                                        className="px-2 py-1 bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-700 start-icon"
-                                                    >
-                                                        일괄 추가
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex-1 overflow-y-auto border border-gray-200 rounded bg-white">
-                                            {ocrResults.length === 0 ? (
-                                                <div className="h-full flex items-center justify-center text-gray-400 text-xs p-4">
-                                                    {isScanning ? '분석 중...' : '인식된 데이터가 없습니다.'}
-                                                </div>
-                                            ) : (
-                                                <table className="w-full text-[10px]">
-                                                    <thead className="bg-gray-50 text-gray-500 sticky top-0">
-                                                        <tr>
-                                                            <th className="py-1 px-2 text-left">이름</th>
-                                                            <th className="py-1 px-2 text-left">E.Name</th>
-                                                            <th className="py-1 px-2 text-left">학교/학년</th>
-                                                            <th className="py-1 px-2 text-center">추가</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-100">
-                                                        {ocrResults.map(student => (
-                                                            <tr key={student.id} className="hover:bg-gray-50 group">
-                                                                <td className="py-1 px-2">
-                                                                    <input
-                                                                        type="text"
-                                                                        value={student.name}
-                                                                        onChange={(e) => {
-                                                                            const newName = e.target.value;
-                                                                            setOcrResults(prev => prev.map(s => s.id === student.id ? { ...s, name: newName } : s));
-                                                                        }}
-                                                                        className="w-full bg-transparent outline-none focus:text-indigo-600 font-bold"
-                                                                    />
-                                                                </td>
-                                                                <td className="py-1 px-2">
-                                                                    <input
-                                                                        type="text"
-                                                                        value={student.englishName}
-                                                                        onChange={(e) => {
-                                                                            const newEng = e.target.value;
-                                                                            setOcrResults(prev => prev.map(s => s.id === student.id ? { ...s, englishName: newEng } : s));
-                                                                        }}
-                                                                        className="w-full bg-transparent outline-none focus:text-indigo-600"
-                                                                    />
-                                                                </td>
-                                                                <td className="py-1 px-2">
-                                                                    <div className="flex gap-1">
-                                                                        <input
-                                                                            type="text"
-                                                                            value={student.school}
-                                                                            onChange={(e) => {
-                                                                                const val = e.target.value;
-                                                                                setOcrResults(prev => prev.map(s => s.id === student.id ? { ...s, school: val } : s));
-                                                                            }}
-                                                                            className="w-12 bg-transparent outline-none focus:text-indigo-600 text-right"
-                                                                            placeholder="학교"
-                                                                        />
-                                                                        <input
-                                                                            type="text"
-                                                                            value={student.grade}
-                                                                            onChange={(e) => {
-                                                                                const val = e.target.value;
-                                                                                setOcrResults(prev => prev.map(s => s.id === student.id ? { ...s, grade: val } : s));
-                                                                            }}
-                                                                            className="w-4 bg-transparent outline-none focus:text-indigo-600 text-center"
-                                                                            placeholder="N"
-                                                                        />
-                                                                    </div>
-                                                                </td>
-                                                                <td className="py-1 px-2 text-center">
-                                                                    <button
-                                                                        onClick={() => handleAddOCRStudent(student)}
-                                                                        className="p-1 rounded hover:bg-green-100 text-green-600"
-                                                                        title="이 학생만 추가"
-                                                                    >
-                                                                        <Check size={12} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => setOcrResults(prev => prev.filter(s => s.id !== student.id))}
-                                                                        className="p-1 rounded hover:bg-red-100 text-red-500 ml-1"
-                                                                        title="목록에서 제거"
-                                                                    >
-                                                                        <X size={12} />
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
 
                 {/* Student List */}
@@ -636,7 +344,13 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                         <div className="text-center py-8 text-gray-400 text-sm">등록된 학생이 없습니다.</div>
                     ) : (
                         <div className="space-y-1.5">
-                            {[...students].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map((student, idx) => (
+                            {[...students].sort((a, b) => {
+                                // Underlined students first
+                                if (a.underline && !b.underline) return -1;
+                                if (!a.underline && b.underline) return 1;
+                                // Then alphabetical
+                                return a.name.localeCompare(b.name, 'ko');
+                            }).map((student, idx) => (
                                 <div
                                     key={student.id}
                                     className={`flex items-center justify-between py-2 px-3 rounded-lg transition-colors group ${editingStudentId === student.id ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 hover:bg-gray-100'}`}
@@ -694,9 +408,9 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                                                 <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-[10px] font-bold flex items-center justify-center shrink-0">
                                                     {idx + 1}
                                                 </span>
-                                                <span className="font-bold text-sm text-[#373d41]">
+                                                <span className={`font-bold text-sm ${student.underline ? 'underline text-blue-600' : 'text-[#373d41]'}`}>
                                                     {student.name}
-                                                    {student.englishName && <span className="text-gray-500 font-normal">({student.englishName})</span>}
+                                                    {student.englishName && <span className={`font-normal ${student.underline ? 'text-blue-400' : 'text-gray-500'}`}>({student.englishName})</span>}
                                                 </span>
                                                 {(student.school || student.grade) && (
                                                     <span className="text-xs text-gray-400">
@@ -704,12 +418,21 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                                                     </span>
                                                 )}
                                             </div>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleRemoveStudent(student.id); }}
-                                                className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                            >
-                                                <X size={14} />
-                                            </button>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleToggleUnderline(student.id); }}
+                                                    className={`p-1 rounded transition-colors ${student.underline ? 'text-blue-600 bg-blue-50' : 'text-gray-300 hover:text-blue-500 hover:bg-blue-50'}`}
+                                                    title="밑줄 토글"
+                                                >
+                                                    <Underline size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleRemoveStudent(student.id); }}
+                                                    className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
                                         </>
                                     )}
                                 </div>

@@ -195,6 +195,7 @@ export interface TimetableStudent {
   englishName?: string; // 영어 이름
   grade?: string;       // 학년
   school?: string;      // 학교
+  underline?: boolean;  // 밑줄 표시 여부
   personalSchedule?: { day: string; period: string }[];
 }
 
