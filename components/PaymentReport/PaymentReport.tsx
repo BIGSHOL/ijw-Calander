@@ -17,7 +17,7 @@ import {
 import { EntryForm } from './EntryForm';
 import { TuitionChart } from './TuitionChart';
 import { generateReportInsight } from '../../services/geminiService';
-import { fetchSheetData } from '../../services/sheetService';
+
 import { TuitionEntry } from '../../types';
 import ReactMarkdown from 'react-markdown';
 
@@ -50,7 +50,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
     const [editingEntry, setEditingEntry] = useState<TuitionEntry | null>(null);
     const [aiReport, setAiReport] = useState<string>('');
     const [isGenerating, setIsGenerating] = useState(false);
-    const [isSyncing, setIsSyncing] = useState(false);
+
     const [viewMode, setViewMode] = useState<'dashboard' | 'report'>('dashboard');
 
     useEffect(() => {
@@ -138,26 +138,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
         setIsGenerating(false);
     };
 
-    const handleSyncSheet = async () => {
-        if (!confirm(`[${currentPeriod}] 데이터를 구글 시트에서 가져오시겠습니까?\n현재 월의 기존 데이터는 덮어씌워집니다.`)) return;
 
-        setIsSyncing(true);
-        try {
-            const sheetData = await fetchSheetData();
-            if (sheetData.length === 0) {
-                alert('가져올 데이터가 없거나 시트를 읽을 수 없습니다.');
-            } else {
-                setEntries(sheetData);
-                updateHistory(sheetData);
-                alert(`${sheetData.length}건의 데이터를 ${currentPeriod}월에 동기화했습니다.`);
-                setAiReport('');
-            }
-        } catch (e) {
-            alert('데이터 동기화 실패: 시트 접근 권한을 확인해주세요.');
-        } finally {
-            setIsSyncing(false);
-        }
-    };
 
     const handleCopyPrevious = () => {
         const curr = new Date(currentPeriod + "-01");
@@ -235,22 +216,12 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {viewMode === 'dashboard' && (
-                            <button
-                                onClick={handleSyncSheet}
-                                disabled={isSyncing}
-                                className="text-[#fdb813] hover:bg-[#fdb813]/10 px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-[#fdb813]/30"
-                                title="구글 시트 동기화"
-                            >
-                                {isSyncing ? <RefreshCw size={18} className="animate-spin" /> : <Sheet size={18} />}
-                                <span className="hidden sm:inline">시트 동기화</span>
-                            </button>
-                        )}
+
                         <button
                             onClick={() => setViewMode(prev => prev === 'dashboard' ? 'report' : 'dashboard')}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${viewMode === 'report'
-                                    ? "bg-[#fdb813] text-[#081429]"
-                                    : "text-gray-300 hover:bg-white/10"
+                                ? "bg-[#fdb813] text-[#081429]"
+                                : "text-gray-300 hover:bg-white/10"
                                 }`}
                         >
                             {viewMode === 'report' ? <LayoutDashboard size={18} /> : <Printer size={18} />}
@@ -287,13 +258,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                                 <Copy size={18} className="text-[#fdb813]" />
                                 지난달 사업장 목록 가져오기
                             </button>
-                            <button
-                                onClick={handleSyncSheet}
-                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-[#373d41] rounded-lg hover:bg-gray-50 hover:border-green-400 transition-all shadow-sm"
-                            >
-                                <Sheet size={18} className="text-green-600" />
-                                구글 시트 가져오기
-                            </button>
+
                             <button
                                 onClick={() => { setEditingEntry(null); setIsFormOpen(true); }}
                                 className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg hover:brightness-110 shadow-sm font-bold"

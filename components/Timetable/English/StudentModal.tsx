@@ -13,9 +13,10 @@ interface StudentModalProps {
     className: string;  // 수업명 (EnglishClassTab에서 전달)
     teacher?: string;   // 담당강사 (EnglishClassTab에서 전달)
     currentUser: any;
+    readOnly?: boolean;
 }
 
-const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className, teacher, currentUser }) => {
+const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className, teacher, currentUser, readOnly = false }) => {
     // State
     const [students, setStudents] = useState<TimetableStudent[]>([]);
     const [classDocId, setClassDocId] = useState<string | null>(null);
@@ -103,7 +104,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
 
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
-    const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
+    const canEditEnglish = (hasPermission('timetable.english.edit') || isMaster) && !readOnly;
 
     // Ref for isDirty to access current value inside callback without re-subscribing.
     const isDirtyRef = useRef(isDirty);
