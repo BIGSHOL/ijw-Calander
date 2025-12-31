@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, differenceInDays } from 'date-fns';
-import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor } from './types';
+import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor, AppTab } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
 import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig } from './hooks/useFirebaseQueries';
+import { useTabPermissions } from './hooks/useTabPermissions';
 import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
 import CalendarBoard from './components/CalendarBoard';
 import TimetableManager from './components/Timetable/TimetableManager';
+import PaymentReport from './components/PaymentReport/PaymentReport';
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, User as UserIcon, Star, Bell, Mail, Send, Trash2, X } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
@@ -31,7 +33,7 @@ const formatUserDisplay = (u: UserProfile) => {
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation)
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable'>('calendar');
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment'>('calendar');
 
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
@@ -45,6 +47,9 @@ const App: React.FC = () => {
   const { data: systemConfig } = useSystemConfig();
   const lookbackYears = systemConfig?.eventLookbackYears || 2;
   const sysCategories = systemConfig?.categories || [];
+
+  // Tab Permissions
+
 
   // Real-time data (still uses onSnapshot for events)
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -130,6 +135,33 @@ const App: React.FC = () => {
 
   // Permission Hook
   const { hasPermission } = usePermissions(userProfile || null);
+
+  // Tab Permissions
+  /* ----------------------------------------------------
+     Tab Access Redirection Logic
+     ---------------------------------------------------- */
+  const { canAccessTab, accessibleTabs, isLoading: isTabPermissionLoading } = useTabPermissions(userProfile);
+
+  useEffect(() => {
+    // Wait for permissions to load
+    if (isTabPermissionLoading || !userProfile) return;
+
+    // Check if current mode is accessible
+    const isAccessible = canAccessTab(appMode);
+
+    // If not accessible, redirect to the first accessible VALID APP MODE
+    // Used to prevent flash of unauthorized content if default is 'calendar' but user has no access.
+    if (!isAccessible) {
+      const validModes: AppTab[] = ['calendar', 'timetable', 'payment'];
+      // Start checking from the filtered accessibleTabs list
+      const firstValidTab = accessibleTabs.find(t => validModes.includes(t));
+
+      if (firstValidTab) {
+        console.log(`[Access Control] Redirecting from ${appMode} to ${firstValidTab}`);
+        setAppMode(firstValidTab as 'calendar' | 'timetable' | 'payment');
+      }
+    }
+  }, [appMode, canAccessTab, accessibleTabs, isTabPermissionLoading, userProfile]);
 
   // Auth Listener
   // Auth Listener with Real-time Profile Sync
@@ -994,6 +1026,18 @@ const App: React.FC = () => {
 
   const pendingEventIds = pendingEventMoves.map(m => m.original.id);
 
+  // Initial Loading Screen (Waiting for Auth or Tab Permissions)
+  // This prevents flashing of "Calendar" (default) before we know if user can access it.
+  if (authLoading || (currentUser && isTabPermissionLoading)) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#f8f9fa] flex-col gap-4">
+        {/* Simple Spinner */}
+        <div className="w-8 h-8 border-4 border-[#081429] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-gray-500 font-medium">사용자 정보를 불러오는 중...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f4f8]">
       <header className="no-print z-40 sticky top-0 flex flex-col shadow-2xl relative">
@@ -1018,17 +1062,19 @@ const App: React.FC = () => {
 
             {/* Top-level App Mode Tabs */}
             <div className="hidden md:flex bg-black/20 p-0.5 rounded-lg border border-white/5 ml-4">
-              <button
-                onClick={() => setAppMode('calendar')}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'calendar'
-                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                📅 연간 일정
-              </button>
-              {/* Timetable - MASTER only */}
-              {userProfile?.role === 'master' && (
+              {canAccessTab('calendar') && (
+                <button
+                  onClick={() => setAppMode('calendar')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'calendar'
+                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  📅 연간 일정
+                </button>
+              )}
+              {/* Timetable */}
+              {canAccessTab('timetable') && (
                 <button
                   onClick={() => setAppMode('timetable')}
                   className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'timetable'
@@ -1037,6 +1083,18 @@ const App: React.FC = () => {
                     }`}
                 >
                   📋 시간표
+                </button>
+              )}
+              {/* Payment */}
+              {canAccessTab('payment') && (
+                <button
+                  onClick={() => setAppMode('payment')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'payment'
+                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  💳 전자 결제
                 </button>
               )}
             </div>
@@ -1087,9 +1145,11 @@ const App: React.FC = () => {
               <Plus size={14} /> <span className="hidden lg:inline">일정 추가</span>
             </button>
 
-            <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
-              <Settings size={20} />
-            </button>
+            {canAccessTab('system') && (
+              <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
+                <Settings size={20} />
+              </button>
+            )}
             <button onClick={() => window.print()} className="text-gray-400 hover:text-white transition-colors">
               <Printer size={20} />
             </button>
@@ -1416,13 +1476,19 @@ const App: React.FC = () => {
             {/* Current Settings Summary - Clickable Toggles */}
             <div className="flex items-center gap-2 px-4 overflow-hidden flex-1">
               {/* Subject Toggle Button */}
-              <button
-                onClick={() => setTimetableSubject(prev => prev === 'math' ? 'english' : 'math')}
-                className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-                title="클릭하여 과목 전환"
-              >
-                {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
-              </button>
+              {hasPermission('timetable.math.view') && hasPermission('timetable.english.view') ? (
+                <button
+                  onClick={() => setTimetableSubject(prev => prev === 'math' ? 'english' : 'math')}
+                  className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                  title="클릭하여 과목 전환"
+                >
+                  {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
+                </button>
+              ) : (
+                <div className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 font-bold text-xs">
+                  {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
+                </div>
+              )}
 
               {/* View Type Toggle Button */}
               <button
@@ -1431,10 +1497,14 @@ const App: React.FC = () => {
                     // 수학: 강사별 ↔ 교실별
                     setTimetableViewType(prev => prev === 'teacher' ? 'room' : 'teacher');
                   } else {
-                    // 영어: 통합 → 강사별 → 교실별 → 통합
-                    setTimetableViewType(prev =>
-                      prev === 'class' ? 'teacher' : prev === 'teacher' ? 'room' : 'class'
-                    );
+                    // 영어: 통합 → 강사별 → 교실별 → 통합 (권한 없으면 통합 스킵)
+                    const canViewIntegrated = hasPermission('timetable.integrated.view');
+                    setTimetableViewType(prev => {
+                      if (prev === 'class') return 'teacher';
+                      if (prev === 'teacher') return 'room';
+                      // room -> integrated (if permitted) or teacher
+                      return canViewIntegrated ? 'class' : 'teacher';
+                    });
                   }
                 }}
                 className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
@@ -1454,7 +1524,13 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {appMode === 'calendar' ? (
+        {/* Render Gating: If permission fails, show nothing (Redirect will happen in useEffect) */}
+        {!canAccessTab(appMode) ? (
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
+            {/* Optional: "Not Authorized" message or just blank while redirecting */}
+            <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+          </div>
+        ) : appMode === 'calendar' ? (
           /* Calendar View */
           <div className="w-full flex-1 max-w-full mx-auto h-full print:p-0 flex flex-col xl:flex-row gap-4 print:flex-row print:gap-2">
             {/* 1단: 현재 년도 (항상 표시) */}
@@ -1504,6 +1580,7 @@ const App: React.FC = () => {
                 isPrimaryView={false} // Hide My Events
                 onViewChange={setViewMode}
                 showSidePanel={false} // Always hide side panel for comparison views
+                currentUser={userProfile}
               />
             </div>
 
@@ -1526,10 +1603,11 @@ const App: React.FC = () => {
                 isPrimaryView={false} // Hide My Events
                 onViewChange={setViewMode}
                 showSidePanel={false}
+                currentUser={userProfile}
               />
             </div>
           </div>
-        ) : (
+        ) : appMode === 'timetable' ? (
           /* Timetable View */
           <div className="w-full flex-1 p-4 md:p-6">
             <TimetableManager
@@ -1537,10 +1615,16 @@ const App: React.FC = () => {
               onSubjectChange={setTimetableSubject}
               viewType={timetableViewType}
               onViewTypeChange={setTimetableViewType}
+              currentUser={userProfile}
               /* Removed global state props */
               teachers={teachers}
               classKeywords={classKeywords}
             />
+          </div>
+        ) : (
+          /* Payment Report View */
+          <div className="w-full flex-1 overflow-auto">
+            <PaymentReport />
           </div>
         )}
 

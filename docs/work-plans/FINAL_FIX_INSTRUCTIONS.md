@@ -3,6 +3,20 @@
 **파일**: `components/Timetable/English/EnglishClassTab.tsx`
 **수정 위치**: 3곳
 **예상 소요 시간**: 3분
+**현재 상태**: ❌ **미구현** (0/3 완료)
+**우선순위**: 🔴 **High** (통합뷰 키워드 색상 완전히 미작동)
+
+---
+
+## 📊 구현 상태 (2025-12-31 검증)
+
+| 수정 항목 | 위치 | 상태 | 비고 |
+|----------|------|------|------|
+| MiniGridRow Props | Line 1102-1108 | ❌ 미구현 | `classKeywords` 파라미터 없음 |
+| Props 전달 | Line 989-999 | ❌ 미구현 | `classKeywords={classKeywords}` 누락 |
+| 렌더링 로직 | Line 1143-1175 | ❌ 미구현 | 키워드 매칭 로직 없음, teacher만 표시 |
+
+**검증 방법**: code-reviewer 에이전트로 실제 코드 확인 완료
 
 ---
 
@@ -210,5 +224,96 @@ PL초2      고1수학      PL중2     ← 수업명 (키워드 색상!)
 
 ---
 
+## 🔍 현재 코드 상태 (실제 확인 결과)
+
+### 실제 Line 1102-1108 (MiniGridRow Props)
+```typescript
+const MiniGridRow: React.FC<{
+    period: typeof EN_PERIODS[number],
+    scheduleMap: Record<string, Record<string, ScheduleCell>>,
+    weekendShift: number,
+    teachersData: Teacher[],
+    displayDays: string[]
+    // ❌ className 파라미터 없음
+    // ❌ classKeywords 파라미터 없음
+}> = ({ period, scheduleMap, weekendShift, teachersData, displayDays }) => {
+```
+
+### 실제 Line 989-999 (Props 전달)
+```typescript
+{classInfo.visiblePeriods.map(p => (
+    <MiniGridRow
+        key={p.id}
+        period={p}
+        scheduleMap={classInfo.scheduleMap}
+        weekendShift={classInfo.weekendShift}
+        teachersData={teachersData}
+        displayDays={classInfo.finalDays}
+        // ❌ className 누락
+        // ❌ classKeywords 누락
+    />
+))}
+```
+
+### 실제 Line 1143-1175 (렌더링 로직)
+```typescript
+const cell = scheduleMap[effectivePeriodId]?.[day];
+
+// Get style based on teacher
+let teacherStyle = {};
+if (cell?.teacher) {
+    const colors = getTeacherColor(cell.teacher, teachersData);
+    // ❌ 키워드 매칭 로직 없음
+    teacherStyle = { backgroundColor: colors.bg, color: colors.text, fontWeight: 600 };
+}
+
+return (
+    <div style={teacherStyle} title={cell?.teacher || ''}>
+        {cell ? (
+            <span>{cell.teacher}</span>  // ❌ teacher만 표시, className 없음
+        ) : (
+            <span className="text-gray-200">-</span>
+        )}
+    </div>
+);
+```
+
+---
+
+## 📋 구현 체크리스트
+
+### Phase 1: Props 정의 (2분)
+- [ ] Line 1102: `className: string` 파라미터 추가
+- [ ] Line 1102: `classKeywords: ClassKeywordColor[]` 파라미터 추가
+- [ ] Line 1108: destructuring에 `className, classKeywords` 추가
+
+### Phase 2: Props 전달 (30초)
+- [ ] Line 996: `className={classInfo.name}` 추가
+- [ ] Line 997: `classKeywords={classKeywords}` 추가
+
+### Phase 3: 렌더링 로직 구현 (1분)
+- [ ] Line 1145: `const matchedKw = classKeywords.find(...)` 추가
+- [ ] Line 1151: `const finalStyle = matchedKw ? {...} : teacherStyle` 추가
+- [ ] Line 1160: title 속성에 className 포함
+- [ ] Line 1164-1173: div 구조로 변경, className과 teacher 모두 표시
+
+### Phase 4: 테스트 (2분)
+- [ ] 빌드 오류 없이 컴파일 성공
+- [ ] 통합뷰에서 className 표시 확인
+- [ ] 키워드 색상 적용 확인
+- [ ] teacher 이름도 함께 표시 확인
+
+---
+
+## 🚀 다음 단계
+
+1. **즉시 구현 가능**: 위 3개 수정사항은 모두 독립적이며 안전함
+2. **예상 소요 시간**: 총 3-5분
+3. **영향 범위**: EnglishClassTab 통합뷰만 영향
+4. **롤백**: 간단 (파일 되돌리기만 하면 됨)
+
+---
+
 *Created: 2025-12-30*
+*Updated: 2025-12-31 (코드 검증 완료)*
 *Instructions: 위 3개 수정만 완료하면 즉시 작동*

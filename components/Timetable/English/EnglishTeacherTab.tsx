@@ -3,11 +3,12 @@
 // 영어 강사별 시간표 탭
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { doc, setDoc, deleteField } from 'firebase/firestore';
+import { doc, setDoc, deleteField, collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { Edit3, Move, Eye, Settings } from 'lucide-react';
 import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks } from './englishUtils';
-import { Teacher, ClassKeywordColor } from '../../../types';
+import { usePermissions } from '../../../hooks/usePermissions';
+import { Teacher, ClassKeywordColor, PermissionId } from '../../../types';
 import BatchInputBar, { InputData, MergedClass } from './BatchInputBar';
 import MoveConfirmBar from './MoveConfirmBar';
 import MoveSelectionModal from './MoveSelectionModal';
@@ -32,6 +33,7 @@ interface EnglishTeacherTabProps {
     onUpdateLocal?: (newData: ScheduleData) => void;
     onOpenOrderModal?: () => void;
     classKeywords?: ClassKeywordColor[];  // For keyword color coding
+    currentUser: any;
 }
 
 type ViewSize = 'small' | 'medium' | 'large';
@@ -39,7 +41,10 @@ type ViewSize = 'small' | 'medium' | 'large';
 // Helper interface for delete logic
 type GenericObject = { [key: string]: any };
 
-const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onRefresh, onUpdateLocal, onOpenOrderModal, classKeywords = [] }) => {
+const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onRefresh, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser }) => {
+    const { hasPermission } = usePermissions(currentUser);
+    const isMaster = currentUser?.role === 'master';
+    const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
     const [mode, setMode] = useState<'view' | 'edit' | 'move'>('view');
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
     const [filterTeacher, setFilterTeacher] = useState<string>('all');
@@ -162,7 +167,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             const minD = Math.min(selectionStart.dIdx, currentHover.dIdx);
             const maxD = Math.max(selectionStart.dIdx, currentHover.dIdx);
 
-            const newSet = dragType === 'add' ? new Set(selectedCells) : new Set();
+            const newSet = dragType === 'add' ? new Set<string>(selectedCells) : new Set<string>();
 
             for (let t = minT; t <= maxT; t++) {
                 for (let p = minP; p <= maxP; p++) {
@@ -546,7 +551,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             await Promise.all(delPromises);
 
             onUpdateLocal(updates);
-            setSelectedCells(new Set());
+            setSelectedCells(new Set<string>());
             setOriginalData(JSON.parse(JSON.stringify(updates)));
 
             // Restore scroll position after state update
@@ -599,7 +604,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             setHasChanges(false);
         }
         setMode(newMode);
-        setSelectedCells(new Set());
+        setSelectedCells(new Set<string>());
     };
 
     return (
@@ -632,14 +637,16 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         </button>
                     </div>
 
-                    {/* Teacher Order Button */}
-                    <button
-                        onClick={onOpenOrderModal}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-bold shadow-sm"
-                    >
-                        <Settings size={14} />
-                        강사 순서
-                    </button>
+                    {/* Teacher Order Button - Gated by edit permission */}
+                    {canEditEnglish && (
+                        <button
+                            onClick={onOpenOrderModal}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-bold shadow-sm"
+                        >
+                            <Settings size={14} />
+                            강사 순서
+                        </button>
+                    )}
 
                     <div className="h-6 w-px bg-gray-300 mx-2" />
 
@@ -651,18 +658,22 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         >
                             <Eye size={10} className="mr-1" />조회
                         </button>
-                        <button
-                            onClick={() => changeMode('edit')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all flex items-center ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'} `}
-                        >
-                            <Edit3 size={10} className="mr-1" />편집
-                        </button>
-                        <button
-                            onClick={() => changeMode('move')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all flex items-center ${mode === 'move' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'} `}
-                        >
-                            <Move size={10} className="mr-1" />이동
-                        </button>
+                        {canEditEnglish && (
+                            <button
+                                onClick={() => changeMode('edit')}
+                                className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all flex items-center ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'} `}
+                            >
+                                <Edit3 size={10} className="mr-1" />편집
+                            </button>
+                        )}
+                        {canEditEnglish && (
+                            <button
+                                onClick={() => changeMode('move')}
+                                className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all flex items-center ${mode === 'move' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'} `}
+                            >
+                                <Move size={10} className="mr-1" />이동
+                            </button>
+                        )}
                     </div>
 
                     {/* Teacher Filter */}
@@ -708,90 +719,90 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             <div className="flex-1 overflow-auto bg-gray-100 select-none">
                 <div className="p-2">
                     <table className="border-collapse bg-white rounded shadow w-max table-fixed">
-                    <thead className="sticky top-0 z-10">
-                        <tr>
-                            <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
-                            {filteredTeachers.map((teacher, tIdx) => {
-                                const colors = getTeacherColor(teacher, teachersData);
-                                return (
-                                    <th
-                                        key={teacher}
-                                        colSpan={filteredWeekdays.length}
-                                        className={`p-2 text-xs font-bold
+                        <thead className="sticky top-0 z-10">
+                            <tr>
+                                <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
+                                {filteredTeachers.map((teacher, tIdx) => {
+                                    const colors = getTeacherColor(teacher, teachersData);
+                                    return (
+                                        <th
+                                            key={teacher}
+                                            colSpan={filteredWeekdays.length}
+                                            className={`p-2 text-xs font-bold
                                             ${tIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
                                             border-r border-t border-b
                                         `}
-                                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                                    >
-                                        {teacher}
-                                    </th>
-                                );
-                            })}
-                        </tr>
-                        <tr>
-                            {filteredTeachers.map((teacher, tIdx) => (
-                                filteredWeekdays.map((day, dIdx) => (
-                                    <th
-                                        key={`${teacher}-${day}`}
-                                        className={`p-1 bg-gray-50 text-[10px] text-gray-500
+                                            style={{ backgroundColor: colors.bg, color: colors.text }}
+                                        >
+                                            {teacher}
+                                        </th>
+                                    );
+                                })}
+                            </tr>
+                            <tr>
+                                {filteredTeachers.map((teacher, tIdx) => (
+                                    filteredWeekdays.map((day, dIdx) => (
+                                        <th
+                                            key={`${teacher}-${day}`}
+                                            className={`p-1 bg-gray-50 text-[10px] text-gray-500
                                             ${viewSize === 'large' ? 'w-[100px]' : ''}
                                             ${viewSize === 'medium' ? 'w-[70px]' : ''}
                                             ${viewSize === 'small' ? 'w-[40px]' : ''}
                                             ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
                                             border-r border-t border-b
                                         `}
-                                    >
-                                        {day}
-                                    </th>
-                                ))
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {EN_PERIODS.map((period, pIdx) => (
-                            <tr key={period.id}>
-                                <td className="p-2 border bg-gray-50 text-xs font-bold text-gray-600 text-center whitespace-nowrap">
-                                    <div>{period.label}</div>
-                                    <div className="text-[9px] text-gray-400">{period.time}</div>
-                                </td>
-                                {filteredTeachers.map((teacher, tIdx) => (
-                                    filteredWeekdays.map((day, dIdx) => {
-                                        const cellKey = getCellKey(teacher, period.id, day);
-                                        const cellData = scheduleData[cellKey];
+                                        >
+                                            {day}
+                                        </th>
+                                    ))
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {EN_PERIODS.map((period, pIdx) => (
+                                <tr key={period.id}>
+                                    <td className="p-2 border bg-gray-50 text-xs font-bold text-gray-600 text-center whitespace-nowrap">
+                                        <div>{period.label}</div>
+                                        <div className="text-[9px] text-gray-400">{period.time}</div>
+                                    </td>
+                                    {filteredTeachers.map((teacher, tIdx) => (
+                                        filteredWeekdays.map((day, dIdx) => {
+                                            const cellKey = getCellKey(teacher, period.id, day);
+                                            const cellData = scheduleData[cellKey];
 
-                                        const isSelected = selectedCells.has(cellKey);
-                                        const isInDrag = isCellInDragArea(tIdx, pIdx, dIdx);
-                                        const isHighlighted = isSelected || isInDrag;
+                                            const isSelected = selectedCells.has(cellKey);
+                                            const isInDrag = isCellInDragArea(tIdx, pIdx, dIdx);
+                                            const isHighlighted = isSelected || isInDrag;
 
-                                        // Move Mode Visuals
-                                        const isMoveMode = mode === 'move';
-                                        const hasContent = !!cellData?.className;
+                                            // Move Mode Visuals
+                                            const isMoveMode = mode === 'move';
+                                            const hasContent = !!cellData?.className;
 
-                                        // 키워드 색상 매칭
-                                        const matchedKw = cellData?.className
-                                            ? classKeywords.find(kw => cellData.className?.includes(kw.keyword))
-                                            : null;
+                                            // 키워드 색상 매칭
+                                            const matchedKw = cellData?.className
+                                                ? classKeywords.find(kw => cellData.className?.includes(kw.keyword))
+                                                : null;
 
-                                        // 셀 배경 스타일 결정
-                                        const cellBgStyle = matchedKw
-                                            ? { backgroundColor: matchedKw.bgColor }
-                                            : {};
+                                            // 셀 배경 스타일 결정
+                                            const cellBgStyle = matchedKw
+                                                ? { backgroundColor: matchedKw.bgColor }
+                                                : {};
 
-                                        return (
-                                            <td
-                                                key={cellKey}
-                                                // Drag Events for Move Mode
-                                                draggable={isMoveMode && hasContent}
-                                                onDragStart={(e) => handleDragStart(e, tIdx, pIdx, dIdx)}
-                                                onDragEnd={handleDragEnd}
-                                                onDragOver={handleDragOver}
-                                                onDrop={(e) => handleDrop(e, tIdx, pIdx, dIdx)}
+                                            return (
+                                                <td
+                                                    key={cellKey}
+                                                    // Drag Events for Move Mode
+                                                    draggable={isMoveMode && hasContent}
+                                                    onDragStart={(e) => handleDragStart(e, tIdx, pIdx, dIdx)}
+                                                    onDragEnd={handleDragEnd}
+                                                    onDragOver={handleDragOver}
+                                                    onDrop={(e) => handleDrop(e, tIdx, pIdx, dIdx)}
 
-                                                // Mouse Events for Edit Selection Mode
-                                                onMouseDown={(e) => handleMouseDown(e, tIdx, pIdx, dIdx)}
-                                                onMouseEnter={() => handleMouseEnter(tIdx, pIdx, dIdx)}
+                                                    // Mouse Events for Edit Selection Mode
+                                                    onMouseDown={(e) => handleMouseDown(e, tIdx, pIdx, dIdx)}
+                                                    onMouseEnter={() => handleMouseEnter(tIdx, pIdx, dIdx)}
 
-                                                className={`p-0 text-center transition-all relative
+                                                    className={`p-0 text-center transition-all relative
                                                     ${isMoveMode && hasContent ? 'cursor-grab active:cursor-grabbing hover:bg-orange-50' : ''}
                                                     ${isMoveMode && !hasContent ? 'hover:bg-orange-50/30' : ''}
                                                     ${!isMoveMode ? 'cursor-pointer' : ''}
@@ -800,89 +811,89 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                     border-r border-t border-b
                                                     hover:z-50
                                                 `}
-                                                style={!isHighlighted ? cellBgStyle : {}}
-                                            >
-                                                <div className={`w-full flex flex-col justify-center items-center p-0.5 relative group overflow-hidden
+                                                    style={!isHighlighted ? cellBgStyle : {}}
+                                                >
+                                                    <div className={`w-full flex flex-col justify-center items-center p-0.5 relative group overflow-hidden
                                                     ${viewSize === 'large' ? 'h-[100px] min-h-[100px]' : ''}
                                                     ${viewSize === 'medium' ? 'h-[70px] min-h-[70px]' : ''}
                                                     ${viewSize === 'small' ? 'h-[40px] min-h-[40px]' : ''}
                                                 `}>
-                                                    {cellData?.className && (
-                                                        (() => {
-                                                            const matchedKw = classKeywords.find(kw => cellData.className?.includes(kw.keyword));
-                                                            const classNameParts = formatClassNameWithBreaks(cellData.className);
-                                                            return (
-                                                                <div
-                                                                    className={`leading-tight px-0.5 text-center break-words w-full
+                                                        {cellData?.className && (
+                                                            (() => {
+                                                                const matchedKw = classKeywords.find(kw => cellData.className?.includes(kw.keyword));
+                                                                const classNameParts = formatClassNameWithBreaks(cellData.className);
+                                                                return (
+                                                                    <div
+                                                                        className={`leading-tight px-0.5 text-center break-words w-full
                                                                             ${viewSize === 'large'
-                                                                            ? (cellData.className.length > 12 ? 'text-[13px]' : (cellData.className.length > 8 ? 'text-[14px]' : 'text-[16px]'))
-                                                                            : viewSize === 'medium'
-                                                                                ? 'text-[10px]'
-                                                                                : 'text-[8px] leading-[1.1]'
-                                                                        }
+                                                                                ? (cellData.className.length > 12 ? 'text-[13px]' : (cellData.className.length > 8 ? 'text-[14px]' : 'text-[16px]'))
+                                                                                : viewSize === 'medium'
+                                                                                    ? 'text-[10px]'
+                                                                                    : 'text-[8px] leading-[1.1]'
+                                                                            }
                                                                         `}
-                                                                    style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor, borderRadius: '4px', padding: '2px 4px' } : {}}
-                                                                >
-                                                                    {classNameParts.map((part, idx) => (
-                                                                        <React.Fragment key={idx}>
-                                                                            {part}
-                                                                            {idx < classNameParts.length - 1 && <br />}
-                                                                        </React.Fragment>
-                                                                    ))}
-                                                                </div>
-                                                            );
-                                                        })()
-                                                    )}
-
-                                                    {/* Separator Line (Only for Large/Medium) */}
-                                                    {cellData?.className && cellData?.room && viewSize !== 'small' && (
-                                                        <div className="w-[80%] border-t border-gray-300 my-1"></div>
-                                                    )}
-
-                                                    {cellData?.room && (
-                                                        <div
-                                                            className={`${viewSize === 'large' ? 'text-[14px]' : (viewSize === 'medium' ? 'text-[9px]' : 'text-[8px]')} font-medium`}
-                                                            style={{ color: matchedKw ? getContrastColor(matchedKw.bgColor) : '#6B7280' }}
-                                                        >
-                                                            {cellData.room}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Render Merged Badge & Tooltip */}
-                                                    {cellData?.merged && cellData.merged.length > 0 && (
-                                                        <PortalTooltip
-                                                            position="top"
-                                                            triggerClassName="absolute top-0.5 right-0.5 bg-red-500 text-white text-[9px] font-bold px-1 rounded-sm shadow-sm z-20 cursor-help pointer-events-auto hover:scale-110 transition-transform"
-                                                            content={
-                                                                <div className="w-48 bg-slate-800 text-white p-2 rounded shadow-xl z-50 text-left pointer-events-none">
-                                                                    <div className="flex justify-between items-center bg-slate-700/50 px-2 py-1 -mx-2 -mt-2 mb-2 rounded-t border-b border-slate-700">
-                                                                        <span className="text-[10px] font-bold text-slate-300">합반 수업 목록</span>
-                                                                        <span className="text-[9px] bg-slate-700 px-1 rounded ml-1 text-slate-400">총 {cellData.merged.length}개</span>
-                                                                    </div>
-                                                                    <div className="flex flex-col gap-1.5">
-                                                                        {cellData.merged.map((m, idx) => (
-                                                                            <div key={idx} className="flex justify-between items-center">
-                                                                                <div className="text-[10px] font-bold text-slate-200">{m.className}</div>
-                                                                                {m.room && <div className="text-[9px] bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{m.room}</div>}
-                                                                            </div>
+                                                                        style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor, borderRadius: '4px', padding: '2px 4px' } : {}}
+                                                                    >
+                                                                        {classNameParts.map((part, idx) => (
+                                                                            <React.Fragment key={idx}>
+                                                                                {part}
+                                                                                {idx < classNameParts.length - 1 && <br />}
+                                                                            </React.Fragment>
                                                                         ))}
                                                                     </div>
-                                                                    {/* Arrow */}
-                                                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45 transform"></div>
-                                                                </div>
-                                                            }
-                                                        >
-                                                            +{cellData.merged.length}
-                                                        </PortalTooltip>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        );
-                                    })
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
+                                                                );
+                                                            })()
+                                                        )}
+
+                                                        {/* Separator Line (Only for Large/Medium) */}
+                                                        {cellData?.className && cellData?.room && viewSize !== 'small' && (
+                                                            <div className="w-[80%] border-t border-gray-300 my-1"></div>
+                                                        )}
+
+                                                        {cellData?.room && (
+                                                            <div
+                                                                className={`${viewSize === 'large' ? 'text-[14px]' : (viewSize === 'medium' ? 'text-[9px]' : 'text-[8px]')} font-medium`}
+                                                                style={{ color: matchedKw ? getContrastColor(matchedKw.bgColor) : '#6B7280' }}
+                                                            >
+                                                                {cellData.room}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Render Merged Badge & Tooltip */}
+                                                        {cellData?.merged && cellData.merged.length > 0 && (
+                                                            <PortalTooltip
+                                                                position="top"
+                                                                triggerClassName="absolute top-0.5 right-0.5 bg-red-500 text-white text-[9px] font-bold px-1 rounded-sm shadow-sm z-20 cursor-help pointer-events-auto hover:scale-110 transition-transform"
+                                                                content={
+                                                                    <div className="w-48 bg-slate-800 text-white p-2 rounded shadow-xl z-50 text-left pointer-events-none">
+                                                                        <div className="flex justify-between items-center bg-slate-700/50 px-2 py-1 -mx-2 -mt-2 mb-2 rounded-t border-b border-slate-700">
+                                                                            <span className="text-[10px] font-bold text-slate-300">합반 수업 목록</span>
+                                                                            <span className="text-[9px] bg-slate-700 px-1 rounded ml-1 text-slate-400">총 {cellData.merged.length}개</span>
+                                                                        </div>
+                                                                        <div className="flex flex-col gap-1.5">
+                                                                            {cellData.merged.map((m, idx) => (
+                                                                                <div key={idx} className="flex justify-between items-center">
+                                                                                    <div className="text-[10px] font-bold text-slate-200">{m.className}</div>
+                                                                                    {m.room && <div className="text-[9px] bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{m.room}</div>}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                        {/* Arrow */}
+                                                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45 transform"></div>
+                                                                    </div>
+                                                                }
+                                                            >
+                                                                +{cellData.merged.length}
+                                                            </PortalTooltip>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            );
+                                        })
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
                     </table>
 
                     {/* Bottom Spacer for Input Bar */}

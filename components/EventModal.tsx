@@ -18,6 +18,7 @@ interface EventModalProps {
   initialStartTime?: string;
   initialEndTime?: string;
   initialTitle?: string; // For bucket-to-event conversion
+  initialDepartmentIds?: string[]; // For multi-select initialization
   existingEvent?: CalendarEvent | null;
   departments: Department[];
   users: UserProfile[];

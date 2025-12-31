@@ -4,7 +4,12 @@
       "Bash(npm run build:*)",
       "Bash(if [ ! -d \"work-plans\" ])",
       "Bash(then mkdir work-plans)",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(wc:*)",
+      "Bash(git mv:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git restore:*)",
+      "Bash(cat:*)"
     ]
   }
 }

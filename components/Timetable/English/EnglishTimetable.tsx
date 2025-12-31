@@ -15,6 +15,7 @@ interface EnglishTimetableProps {
     viewType: 'teacher' | 'class' | 'room';
     teachers?: Teacher[];  // Centralized from App.tsx via TimetableManager
     classKeywords?: ClassKeywordColor[];  // For keyword color coding
+    currentUser: any; // Using any to avoid circular dependency
 }
 
 interface ScheduleCell {
@@ -26,7 +27,7 @@ interface ScheduleCell {
 
 type ScheduleData = Record<string, ScheduleCell>;
 
-const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [] }) => {
+const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser }) => {
     // Removed local activeTab state, using viewType prop
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
@@ -134,7 +135,12 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
 
     return (
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
-            {/* Header Removed - Controlled by Parent */}
+            {/* Header */}
+            <div className="text-center py-3 bg-gray-50 border-b border-gray-200 shrink-0">
+                <h1 className="text-2xl font-black text-gray-800 tracking-tight">
+                    인재원 본원 {new Date().getMonth() + 1}월 통합 영어시간표
+                </h1>
+            </div>
 
             {/* Content */}
             <div className="flex-1 overflow-hidden">
@@ -154,6 +160,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                     onUpdateLocal={handleLocalUpdate}
                                     onOpenOrderModal={() => setIsOrderModalOpen(true)}
                                     classKeywords={classKeywords}
+                                    currentUser={currentUser}
                                 />
 
                                 <TeacherOrderModal
@@ -171,12 +178,16 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                 teachersData={teachersData}
                                 scheduleData={scheduleData}
                                 classKeywords={classKeywords}
+                                currentUser={currentUser}
                             />
                         )}
                         {viewType === 'room' && (
                             <EnglishRoomTab
+                                teachers={teachers}
+                                teachersData={teachersData}
                                 scheduleData={scheduleData}
                                 classKeywords={classKeywords}
+                                currentUser={currentUser}
                             />
                         )}
                     </>

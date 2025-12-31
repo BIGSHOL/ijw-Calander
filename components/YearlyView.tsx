@@ -152,6 +152,16 @@ const YearlyView: React.FC<YearlyViewProps> = ({
         return counts;
     }, [selectedMonthEvents]);
 
+    // 월별 버킷리스트 카운트 맵 (성능 최적화)
+    const bucketCountByMonth = useMemo(() => {
+        const countMap: Record<string, number> = {};
+        bucketItems.forEach(bucket => {
+            const month = bucket.targetMonth; // 'YYYY-MM' format
+            countMap[month] = (countMap[month] || 0) + 1;
+        });
+        return countMap;
+    }, [bucketItems]);
+
     const currentYear = currentDate.getFullYear();
 
     return (
@@ -213,7 +223,43 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                         <h3 className={`text-[10px] sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-[#081429]' : 'text-gray-600'}`}>
                                             {format(month, 'M월')}
                                         </h3>
-                                        {isSelected && <span className="text-[6px] sm:text-[8px] px-1 py-0.5 rounded-full font-bold" style={{ backgroundColor: '#fdb813', color: '#081429' }}>선택됨</span>}
+
+                                        {/* 우측 배지 영역 */}
+                                        <div className="flex gap-1 items-center">
+                                            {/* 버킷 표시기 */}
+                                            {(() => {
+                                                const bucketCount = bucketCountByMonth[format(month, 'yyyy-MM')] || 0;
+                                                if (bucketCount === 0) return null;
+
+                                                const displayCount = bucketCount > 99 ? '99+' : bucketCount;
+
+                                                return (
+                                                    <div
+                                                        className="flex items-center gap-0.5 text-[8px] sm:text-[10px] lg:text-xs px-1 sm:px-1.5 lg:px-2 py-0.5 rounded-full font-bold transition-all"
+                                                        style={{
+                                                            backgroundColor: isSelected ? '#fdb813' : '#fdb81380',
+                                                            color: '#081429'
+                                                        }}
+                                                        role="status"
+                                                        aria-label={`${format(month, 'M월')}에 ${bucketCount}개의 버킷리스트 항목`}
+                                                        title={`${bucketCount}개의 버킷리스트`}
+                                                    >
+                                                        <Flag size={isSelected ? 10 : 8} strokeWidth={2.5} aria-hidden="true" />
+                                                        <span>{displayCount}</span>
+                                                    </div>
+                                                );
+                                            })()}
+
+                                            {/* 기존 "선택됨" 배지 */}
+                                            {isSelected && (
+                                                <span
+                                                    className="text-[6px] sm:text-[8px] px-1 py-0.5 rounded-full font-bold"
+                                                    style={{ backgroundColor: '#fdb813', color: '#081429' }}
+                                                >
+                                                    선택됨
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-7 gap-[1px] text-center">

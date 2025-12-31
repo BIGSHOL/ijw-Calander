@@ -3,6 +3,9 @@ import { doc, getDoc, getFirestore } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { initializeApp, deleteApp } from 'firebase/app';
 
+import { getTeacherColor } from './englishUtils';
+import { Teacher } from '../../../types';
+
 export interface CustomGroup {
     id: string;
     title: string;
@@ -16,6 +19,8 @@ export interface IntegrationSettings {
     showOthersGroup: boolean;
     othersGroupTitle: string;
     displayOptions?: DisplayOptions;
+    hiddenTeachers?: string[]; // 시간표에서 숨김 (Grid Cell)
+    hiddenLegendTeachers?: string[]; // 강사 목록에서 제외 (Top Legend)
 }
 
 export interface DisplayOptions {
@@ -30,6 +35,8 @@ interface IntegrationViewSettingsProps {
     settings: IntegrationSettings;
     onChange: (nextSettings: IntegrationSettings) => void;
     allClasses: String[]; // List of all class names
+    teachers?: string[];
+    teachersData?: Teacher[];
 }
 
 // Config from academy-app (injaewon-project-8ea38)
@@ -48,8 +55,10 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
     settings,
     onChange,
     allClasses,
+    teachers = [],
+    teachersData = [],
 }) => {
-    const safeSettings = settings || {};
+    const safeSettings = settings || ({} as IntegrationSettings);
     const viewMode = safeSettings.viewMode || "START_PERIOD";
     const showOthersGroup = typeof safeSettings.showOthersGroup === "boolean" ? safeSettings.showOthersGroup : true;
     const othersGroupTitle = safeSettings.othersGroupTitle || "기타 수업";
@@ -194,6 +203,32 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
         );
         const next = { ...safeSettings, customGroups: nextGroups };
         onChange(next as IntegrationSettings);
+    };
+
+    const handleToggleHiddenTeacher = (teacher: string) => {
+        const currentHidden = safeSettings.hiddenTeachers || [];
+        const isHidden = currentHidden.includes(teacher);
+        const newHidden = isHidden
+            ? currentHidden.filter(t => t !== teacher)
+            : [...currentHidden, teacher];
+
+        onChange({
+            ...safeSettings,
+            hiddenTeachers: newHidden
+        });
+    };
+
+    const handleToggleLegendTeacher = (teacher: string) => {
+        const currentHidden = safeSettings.hiddenLegendTeachers || [];
+        const isHidden = currentHidden.includes(teacher);
+        const newHidden = isHidden
+            ? currentHidden.filter(t => t !== teacher)
+            : [...currentHidden, teacher];
+
+        onChange({
+            ...safeSettings,
+            hiddenLegendTeachers: newHidden
+        });
     };
 
     const handleMigrateFromAcademy = async () => {
@@ -371,6 +406,76 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                             어떤 그룹에도 속하지 않은 수업은 "기타 그룹"에 자동으로 모아집니다.
                         </div>
                     </section>
+
+                    {/* 4. Filter Hidden Teachers */}
+                    <section className="border border-gray-200 rounded-lg p-3 space-y-2">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="font-bold text-gray-700">강사 설정 (표시/숨김)</span>
+                            <div className="text-[10px] text-gray-400 space-x-2">
+                                <span>시간표 숨김: {safeSettings.hiddenTeachers?.length || 0}</span>
+                                <span>목록 제외: {safeSettings.hiddenLegendTeachers?.length || 0}</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                            {/* Header */}
+                            <div className="flex items-center text-[10px] font-bold text-gray-500 bg-gray-100 border-b border-gray-200 px-2 py-1.5">
+                                <div className="flex-1">강사명</div>
+                                <div className="w-16 text-center" title="시간표 타임라인에서 숨깁니다">시간표 숨김</div>
+                                <div className="w-16 text-center" title="상단 강사 목록(범례)에서 제외합니다">목록 제외</div>
+                            </div>
+
+                            {/* List */}
+                            <div className="max-h-60 overflow-y-auto custom-scrollbar bg-white">
+                                {teachers.map(teacher => {
+                                    const isScheduleHidden = safeSettings.hiddenTeachers?.includes(teacher);
+                                    const isLegendHidden = safeSettings.hiddenLegendTeachers?.includes(teacher);
+                                    const colors = getTeacherColor(teacher, teachersData);
+
+                                    return (
+                                        <div key={teacher} className="flex items-center border-b border-gray-100 last:border-b-0 px-2 py-1.5 hover:bg-gray-50">
+                                            {/* Name Badge */}
+                                            <div className="flex-1 flex items-center">
+                                                <div
+                                                    className={`px-2 py-0.5 rounded text-[11px] font-bold border ${isScheduleHidden ? 'opacity-50 line-through' : ''}`}
+                                                    style={{ backgroundColor: colors.bg, color: colors.text, borderColor: 'rgba(0,0,0,0.1)' }}
+                                                >
+                                                    {teacher}
+                                                </div>
+                                            </div>
+
+                                            {/* Schedule Hidden Toggle */}
+                                            <div className="w-16 flex justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isScheduleHidden || false}
+                                                    onChange={() => handleToggleHiddenTeacher(teacher)}
+                                                    className="rounded border-gray-300 text-red-500 focus:ring-red-500 cursor-pointer"
+                                                    title="체크 시 시간표에서 숨김"
+                                                />
+                                            </div>
+
+                                            {/* Legend Hidden Toggle */}
+                                            <div className="w-16 flex justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isLegendHidden || false}
+                                                    onChange={() => handleToggleLegendTeacher(teacher)}
+                                                    className="rounded border-gray-300 text-gray-500 focus:ring-gray-500 cursor-pointer"
+                                                    title="체크 시 강사 목록에서 제외"
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div className="text-[10px] text-gray-400 mt-1">
+                            • <b>시간표 숨김</b>: 해당 강사의 수업이 시간표 셀에서 보이지 않게 됩니다.<br />
+                            • <b>목록 제외</b>: 상단 '강사 목록' 범례에서 해당 이름이 빠집니다. (LAB 등)
+                        </div>
+                    </section>
+
                 </div>
 
                 {/* Footer Buttons */}
@@ -383,8 +488,8 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                         닫기
                     </button>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

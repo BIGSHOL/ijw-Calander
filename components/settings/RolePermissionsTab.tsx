@@ -109,6 +109,24 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
         { id: 'users.change_permissions' as PermissionId, label: '세부 권한 변경', desc: '부서별 접근 권한 설정' },
     ];
 
+    const teacherPermissions = [
+        { id: 'system.teachers.view' as PermissionId, label: '강사 목록 조회', desc: '강사 리스트 보기' },
+        { id: 'system.teachers.edit' as PermissionId, label: '강사 정보 관리', desc: '강사 추가/수정/삭제' },
+    ];
+
+    const classPermissions = [
+        { id: 'system.classes.view' as PermissionId, label: '수업 키워드 조회', desc: '수업 색상 규칙 보기' },
+        { id: 'system.classes.edit' as PermissionId, label: '수업 키워드 관리', desc: '수업 자동 색상 규칙 관리' },
+    ];
+
+    const timetablePermissions = [
+        { id: 'timetable.math.view' as PermissionId, label: '수학 시간표 조회', desc: '수학 시간표 접근' },
+        { id: 'timetable.math.edit' as PermissionId, label: '수학 시간표 관리', desc: '수학 수업 수정/학급관리' },
+        { id: 'timetable.english.view' as PermissionId, label: '영어 시간표 조회', desc: '영어 시간표 접근' },
+        { id: 'timetable.english.edit' as PermissionId, label: '영어 시간표 관리', desc: '영어 수업 수정/학생관리' },
+        { id: 'timetable.integrated.view' as PermissionId, label: '통합 뷰/강사 뷰 접근', desc: '전체 강사/교실 통합 시간표 접근' },
+    ];
+
     const settingsPermissions = [
         { id: 'settings.access' as PermissionId, label: '설정 메뉴 접근', desc: '설정 화면 열기 및 접근' },
         { id: 'settings.holidays' as PermissionId, label: '공휴일 관리', desc: '공휴일 추가/수정/삭제' },
@@ -175,11 +193,11 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                                     {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
                                         <th key={role} className="text-center px-3 py-3 font-bold text-gray-700 min-w-[80px]">
                                             <span className={`px-2 py-1 rounded text-[10px] font-black ${role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
-                                                    role === 'manager' ? 'bg-purple-100 text-purple-700' :
-                                                        role === 'editor' ? 'bg-blue-100 text-blue-700' :
-                                                            role === 'user' ? 'bg-gray-100 text-gray-600' :
-                                                                role === 'viewer' ? 'bg-yellow-100 text-yellow-700' :
-                                                                    'bg-gray-100 text-gray-400'
+                                                role === 'manager' ? 'bg-purple-100 text-purple-700' :
+                                                    role === 'editor' ? 'bg-blue-100 text-blue-700' :
+                                                        role === 'user' ? 'bg-gray-100 text-gray-600' :
+                                                            role === 'viewer' ? 'bg-yellow-100 text-yellow-700' :
+                                                                'bg-gray-100 text-gray-400'
                                                 }`}>
                                                 {ROLE_LABELS[role]}
                                             </span>
@@ -190,27 +208,41 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                             <tbody>
                                 {/* 일정 관리 섹션 */}
                                 <tr className="bg-blue-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-blue-700 text-xs uppercase tracking-wider">📅 일정 관리</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-blue-700 text-xs uppercase tracking-wider">📅 연간 일정 (Calendar) - 일정</td>
                                 </tr>
                                 {eventPermissions.map(renderPermissionRow)}
 
                                 {/* 버킷리스트 관리 섹션 */}
                                 <tr className="bg-amber-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-amber-700 text-xs uppercase tracking-wider">🎯 버킷리스트 관리</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-amber-700 text-xs uppercase tracking-wider">📅 연간 일정 (Calendar) - 버킷리스트</td>
                                 </tr>
                                 {bucketPermissions.map(renderPermissionRow)}
 
                                 {/* 부서 관리 섹션 */}
                                 <tr className="bg-green-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-green-700 text-xs uppercase tracking-wider">🏢 부서 관리</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-green-700 text-xs uppercase tracking-wider">⚙️ 시스템 (System) - 부서 관리</td>
                                 </tr>
                                 {deptPermissions.map(renderPermissionRow)}
 
-                                {/* 사용자 관리 섹션 */}
-                                <tr className="bg-purple-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-purple-700 text-xs uppercase tracking-wider">👥 사용자 관리</td>
-                                </tr>
                                 {userPermissions.map(renderPermissionRow)}
+
+                                {/* 강사 관리 섹션 */}
+                                <tr className="bg-emerald-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-emerald-700 text-xs uppercase tracking-wider">⚙️ 시스템 (System) - 강사 관리</td>
+                                </tr>
+                                {teacherPermissions.map(renderPermissionRow)}
+
+                                {/* 수업 관리 섹션 */}
+                                <tr className="bg-rose-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-rose-700 text-xs uppercase tracking-wider">⚙️ 시스템 (System) - 수업 관리</td>
+                                </tr>
+                                {classPermissions.map(renderPermissionRow)}
+
+                                {/* 시간표 관리 섹션 */}
+                                <tr className="bg-indigo-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-indigo-700 text-xs uppercase tracking-wider">📋 시간표 (Timetable)</td>
+                                </tr>
+                                {timetablePermissions.map(renderPermissionRow)}
 
                                 {/* 시스템 설정 섹션 */}
                                 <tr className="bg-orange-50/50">

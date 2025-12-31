@@ -8,8 +8,8 @@ import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, 
 
 import { Holiday } from '../types';
 import MyEventsModal from './MyEventsModal';
-import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab } from './settings';
-import MigrationPanel from './settings/MigrationPanel';
+import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab } from './settings';
+// import MigrationPanel from './settings/MigrationPanel';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ interface SettingsModalProps {
 }
 
 type MainTabMode = 'calendar' | 'timetable' | 'permissions';
-type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions' | 'migration';
+type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions' | 'tab_access' | 'migration';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -56,6 +56,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // Legacy helpers mapped to permissions
   const canManageMenus = canViewDepartments;
   const canManageUsers = canViewUsers;
+  const canViewTeachers = hasPermission('system.teachers.view');
+  const canViewClasses = hasPermission('system.classes.view');
+  const canManageRolePermissions = hasPermission('settings.role_permissions');
 
   const [mainTab, setMainTab] = useState<MainTabMode>('calendar');
   const [activeTab, setActiveTab] = useState<TabMode>('departments');
@@ -778,7 +781,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       🕐 시간표
                     </button>
                   )}
-                  {(isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
+                  {(isMaster || isAdmin || canManageRolePermissions) && (
                     <button
                       onClick={() => { setMainTab('permissions'); setActiveTab('role_permissions'); }}
                       className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'permissions' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
@@ -800,12 +803,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                   {mainTab === 'timetable' && (
                     <>
-                      {isMaster && (
+                      {(isMaster || canViewTeachers) && (
                         <button onClick={() => setActiveTab('teachers')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'teachers' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           강사 관리
                         </button>
                       )}
-                      {isMaster && (
+                      {(isMaster || canViewClasses) && (
                         <button onClick={() => setActiveTab('classes')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'classes' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           수업 관리
                         </button>
@@ -814,9 +817,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                   {mainTab === 'permissions' && (
                     <>
-                      {(isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
+                      {(isMaster || canManageRolePermissions) && (
                         <button onClick={() => setActiveTab('role_permissions')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'role_permissions' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           역할 권한
+                        </button>
+                      )}
+
+                      {isMaster && (
+                        <button onClick={() => setActiveTab('tab_access')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'tab_access' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          탭 관리
                         </button>
                       )}
 
@@ -825,7 +834,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           사용자 관리
                         </button>
                       )}
-                      {(isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
+                      {(isMaster || hasPermission('settings.access')) && (
                         <button onClick={() => setActiveTab('system')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'system' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           기타 설정
                         </button>
@@ -1200,6 +1209,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
 
             {/* SYSTEM TAB */}
+            {activeTab === 'tab_access' && (
+              <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f8f9fa] p-4 md:p-8">
+                <TabAccessTab
+                  isMaster={isMaster}
+                  isAdmin={isAdmin}
+                  currentUserRole={currentUserProfile?.role}
+                />
+              </div>
+            )}
+
             {activeTab === 'system' && (isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
               <div className="max-w-2xl mx-auto space-y-8 pb-20">
                 {/* Holidays Tab Component */}

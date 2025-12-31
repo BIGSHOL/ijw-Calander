@@ -3,6 +3,7 @@ import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateD
 import { db } from '../../firebaseConfig';
 import { TimetableClass, Teacher, TimetableStudent, ClassKeywordColor } from '../../types';
 import { Plus, Trash2, Users, Clock, BookOpen, X, UserPlus, GripVertical, ChevronLeft, ChevronRight, Search, Settings, Filter, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { usePermissions } from '../../hooks/usePermissions';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, getWeek, getMonth, getYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import EnglishTimetable from './English/EnglishTimetable';
@@ -50,6 +51,7 @@ interface TimetableManagerProps {
     onSelectedDaysChange?: (days: string[]) => void;
     teachers?: Teacher[];  // Centralized from App.tsx
     classKeywords?: ClassKeywordColor[]; // For keyword color coding
+    currentUser: any; // Using any for now to avoid circular dependency or import issues if common
 }
 
 const TimetableManager: React.FC<TimetableManagerProps> = ({
@@ -63,7 +65,10 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
     onSelectedDaysChange,
     teachers: propsTeachers = [],
     classKeywords = [],
+    currentUser,
 }) => {
+    const { hasPermission } = usePermissions(currentUser);
+    const isMaster = currentUser?.role === 'master';
     // Subject Tab (use external if provided)
     const [internalSubjectTab, setInternalSubjectTab] = useState<'math' | 'english'>('math');
     const subjectTab = externalSubjectTab ?? internalSubjectTab;
@@ -553,6 +558,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
             viewType={viewType}
             teachers={propsTeachers}
             classKeywords={classKeywords}
+            currentUser={currentUser}
         />;
     }
 
@@ -689,9 +695,12 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                                                 return (
                                                     <button
                                                         key={day}
-                                                        onClick={() => setSelectedDays(prev =>
-                                                            prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-                                                        )}
+                                                        onClick={() => {
+                                                            const newDays = selectedDays.includes(day)
+                                                                ? selectedDays.filter(d => d !== day)
+                                                                : [...selectedDays, day];
+                                                            setSelectedDays(newDays);
+                                                        }}
                                                         className={`flex-1 min-w-[30px] py-2 rounded-md text-xs font-bold transition-all border ${isSelected
                                                             ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                                                             : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300'
@@ -740,13 +749,16 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                         </div>
                     )}
 
-                    {/* Add Class Button */}
-                    <button
-                        onClick={openAddModal}
-                        className="px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-md text-xs font-bold flex items-center gap-1 hover:brightness-110 transition-all active:scale-95 shadow-sm"
-                    >
-                        <Plus size={14} /> 수업추가
-                    </button>
+                    {/* Add Class Button - Gated by subject-specific edit permission */}
+                    {(((subjectTab as string) === 'math' && (hasPermission('timetable.math.edit') || isMaster)) ||
+                        ((subjectTab as string) === 'english' && (hasPermission('timetable.english.edit') || isMaster))) && (
+                            <button
+                                onClick={openAddModal}
+                                className="px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-md text-xs font-bold flex items-center gap-1 hover:brightness-110 transition-all active:scale-95 shadow-sm"
+                            >
+                                <Plus size={14} /> 수업추가
+                            </button>
+                        )}
                 </div>
             </div >
 
