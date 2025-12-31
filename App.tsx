@@ -3,6 +3,7 @@ import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startO
 import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
+import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig } from './hooks/useFirebaseQueries';
 import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
@@ -36,11 +37,17 @@ const App: React.FC = () => {
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
   const thirdDate = subYears(baseDate, 2);  // 3단: 2년 전
 
-  // Firestore Data State
-  const [departments, setDepartments] = useState<Department[]>([]);
+  // Firestore Data State - React Query for static data (cached 30-60min)
+  const { data: departments = [] } = useDepartments();
+  const { data: teachers = [] } = useTeachers();
+  const { data: holidays = [] } = useHolidays();
+  const { data: classKeywords = [] } = useClassKeywords();
+  const { data: systemConfig } = useSystemConfig();
+  const lookbackYears = systemConfig?.eventLookbackYears || 2;
+  const sysCategories = systemConfig?.categories || [];
+
+  // Real-time data (still uses onSnapshot for events)
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [classKeywords, setClassKeywords] = useState<ClassKeywordColor[]>([]);
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); // New State
@@ -294,45 +301,7 @@ const App: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
-  // Subscribe to Departments (부서목록)
-  useEffect(() => {
-    const q = query(collection(db, "부서목록").withConverter(departmentConverter), orderBy("순서"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadDepts = snapshot.docs.map(doc => doc.data());
-      setDepartments(loadDepts);
-    });
-    return () => unsubscribe();
-  }, []);
-
-
-  // Fetch System Configuration (Lookback Period)
-  // Fetch System Configuration (Lookback Period & Categories)
-  const [lookbackYears, setLookbackYears] = useState<number>(2);
-  const [sysCategories, setSysCategories] = useState<string[]>([]);
-
-  const [holidays, setHolidays] = useState<Holiday[]>([]);
-  useEffect(() => {
-    const q = collection(db, 'holidays');
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const loadHolidays = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Holiday));
-      setHolidays(loadHolidays);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, 'system', 'config'), (doc) => {
-      if (doc.exists()) {
-        const years = doc.data().eventLookbackYears || 2;
-        const categories = doc.data().categories || [];
-        setLookbackYears(years);
-        setSysCategories(categories);
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Subscribe to Events (일정)
+  // Subscribe to Events (일정) - REAL-TIME (필수)
   useEffect(() => {
     // Optimization: Fetch events from configured lookback years (default 2)
     const queryStartDate = format(subYears(new Date(), lookbackYears), 'yyyy-MM-dd');
@@ -349,29 +318,8 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [lookbackYears]);
 
-  // Subscribe to Teachers (강사목록) - CENTRALIZED to reduce Firestore reads
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, '강사목록'), (snapshot) => {
-      const teacherList = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      } as Teacher)).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-      setTeachers(teacherList);
-    });
-    return () => unsubscribe();
-  }, []);
+  // Note: 부서목록, 강사목록, 휴일, classKeywords, systemConfig are now handled by React Query hooks
 
-  // Subscribe to Class Keywords (classKeywords) - for timetable color coding
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'classKeywords'), (snapshot) => {
-      const keywords = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      } as ClassKeywordColor)).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-      setClassKeywords(keywords);
-    });
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     localStorage.setItem('dept_hidden_ids', JSON.stringify(hiddenDeptIds));

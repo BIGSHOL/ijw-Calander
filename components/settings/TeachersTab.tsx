@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Teacher } from '../../types';
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     Search, Plus, Check, X, Eye, EyeOff, Edit, Trash2
 } from 'lucide-react';
@@ -12,6 +13,9 @@ interface TeachersTabProps {
 }
 
 const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
+    // React Query client for cache invalidation
+    const queryClient = useQueryClient();
+
     // --- Local State ---
     const [teacherSearchTerm, setTeacherSearchTerm] = useState('');
     const [teacherSubjectFilter, setTeacherSubjectFilter] = useState<'all' | 'math' | 'english'>('all');
@@ -49,6 +53,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
             });
             setNewTeacherName('');
             setNewTeacherSubjects([]);
+            queryClient.invalidateQueries({ queryKey: ['teachers'] });
         } catch (e) {
             console.error(e);
             alert("강사 추가 실패");
@@ -67,6 +72,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
                 isNative: editTeacherIsNative,
             }, { merge: true });
             setEditingTeacherId(null);
+            queryClient.invalidateQueries({ queryKey: ['teachers'] });
         } catch (e) {
             console.error(e);
             alert("수정 실패");
@@ -76,6 +82,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
     const handleToggleVisibility = async (id: string, currentHidden: boolean) => {
         try {
             await setDoc(doc(db, '강사목록', id), { isHidden: !currentHidden }, { merge: true });
+            queryClient.invalidateQueries({ queryKey: ['teachers'] });
         } catch (e) {
             console.error(e);
             alert("변경 실패");
@@ -86,6 +93,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
         if (!confirm(`'${name}' 강사를 삭제하시겠습니까?`)) return;
         try {
             await deleteDoc(doc(db, '강사목록', id));
+            queryClient.invalidateQueries({ queryKey: ['teachers'] });
         } catch (e) {
             console.error(e);
             alert("삭제 실패");
@@ -131,6 +139,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
                 batch.update(doc(db, '강사목록', teacher.id), { order: index });
             });
             await batch.commit();
+            queryClient.invalidateQueries({ queryKey: ['teachers'] });
         } catch (e) {
             console.error(e);
             alert('순서 변경 실패');
