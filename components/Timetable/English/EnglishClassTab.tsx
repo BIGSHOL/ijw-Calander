@@ -59,13 +59,14 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
     const [searchTerm, setSearchTerm] = useState('');
-    const [mode, setMode] = useState<'view' | 'hide'>('view');
+    const [mode, setMode] = useState<'view' | 'edit'>('view');
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isLevelSettingsOpen, setIsLevelSettingsOpen] = useState(false);
     const [settingsLoading, setSettingsLoading] = useState(true);
     const [openMenuClass, setOpenMenuClass] = useState<string | null>(null);
     const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
+    const [englishLevels, setEnglishLevels] = useState<EnglishLevel[]>(DEFAULT_ENGLISH_LEVELS);
     const [settings, setSettings] = useState<IntegrationSettings>({
         viewMode: 'CUSTOM_GROUP',  // Default to custom to minimize flicker
         customGroups: [],
@@ -119,6 +120,17 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         return () => unsub();
     }, []);
 
+    // Load English Levels (once in parent to avoid duplicate subscriptions)
+    useEffect(() => {
+        const unsub = onSnapshot(doc(db, 'settings', 'english_levels'), (docSnap) => {
+            if (docSnap.exists()) {
+                const levels = docSnap.data()?.levels || DEFAULT_ENGLISH_LEVELS;
+                setEnglishLevels(levels);
+            }
+        });
+        return () => unsub();
+    }, []);
+
     // Fetch Student Statistics from all classes in scheduleData
     useEffect(() => {
         // Get unique class names from scheduleData
@@ -137,51 +149,69 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             return;
         }
 
-        // Subscribe to 수업목록 collection
-        const q = query(collection(db, '수업목록'));
-        const unsub = onSnapshot(q, (snapshot) => {
-            const now = new Date();
-            let active = 0, new1 = 0, new2 = 0, withdrawn = 0;
+        // Convert Set to Array for WHERE IN query (Firestore limit: 10 items per batch)
+        const classNamesArray = Array.from(classNames);
 
-            snapshot.docs.forEach(doc => {
-                const data = doc.data();
-                if (!classNames.has(data.className)) return;
+        // Split into batches of 10 for WHERE IN query
+        const batches: string[][] = [];
+        for (let i = 0; i < classNamesArray.length; i += 10) {
+            batches.push(classNamesArray.slice(i, i + 10));
+        }
 
-                const students = (data.studentList || []) as TimetableStudent[];
-                students.forEach((student: TimetableStudent) => {
-                    // Withdrawn check
-                    if (student.withdrawalDate) {
-                        const withdrawnDate = new Date(student.withdrawalDate);
-                        const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
-                        if (daysSinceWithdrawal <= 30) {
-                            withdrawn++;
+        // Subscribe to all batches
+        const unsubscribes: (() => void)[] = [];
+        const allStats = { active: 0, new1: 0, new2: 0, withdrawn: 0 };
+
+        batches.forEach((batch) => {
+            const q = query(collection(db, '수업목록'), where('className', 'in', batch));
+            const unsub = onSnapshot(q, (snapshot) => {
+                const now = new Date();
+                let active = 0, new1 = 0, new2 = 0, withdrawn = 0;
+
+                snapshot.docs.forEach(doc => {
+                    const students = (doc.data().studentList || []) as TimetableStudent[];
+                    students.forEach((student: TimetableStudent) => {
+                        // Withdrawn check
+                        if (student.withdrawalDate) {
+                            const withdrawnDate = new Date(student.withdrawalDate);
+                            const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
+                            if (daysSinceWithdrawal <= 30) {
+                                withdrawn++;
+                            }
+                            return; // Skip further counting for withdrawn students
                         }
-                        return; // Skip further counting for withdrawn students
-                    }
 
-                    // Skip onHold students from active count
-                    if (student.onHold) return;
+                        // Skip onHold students from active count
+                        if (student.onHold) return;
 
-                    // Active student
-                    active++;
+                        // Active student
+                        active++;
 
-                    // New student check
-                    if (student.enrollmentDate) {
-                        const enrollDate = new Date(student.enrollmentDate);
-                        const daysSinceEnroll = Math.floor((now.getTime() - enrollDate.getTime()) / (1000 * 60 * 60 * 24));
-                        if (daysSinceEnroll <= 30) {
-                            new1++;
-                        } else if (daysSinceEnroll <= 60) {
-                            new2++;
+                        // New student check
+                        if (student.enrollmentDate) {
+                            const enrollDate = new Date(student.enrollmentDate);
+                            const daysSinceEnroll = Math.floor((now.getTime() - enrollDate.getTime()) / (1000 * 60 * 60 * 24));
+                            if (daysSinceEnroll <= 30) {
+                                new1++;
+                            } else if (daysSinceEnroll <= 60) {
+                                new2++;
+                            }
                         }
-                    }
+                    });
                 });
-            });
 
-            setStudentStats({ active, new1, new2, withdrawn });
+                // Merge stats from this batch
+                allStats.active += active;
+                allStats.new1 += new1;
+                allStats.new2 += new2;
+                allStats.withdrawn += withdrawn;
+
+                setStudentStats({ ...allStats });
+            });
+            unsubscribes.push(unsub);
         });
 
-        return () => unsub();
+        return () => unsubscribes.forEach(unsub => unsub());
     }, [scheduleData]);
 
     const updateSettings = async (newSettings: IntegrationSettings) => {
@@ -515,9 +545,9 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     }
                 });
 
-                if (groupClasses.length > 0 || mode === 'hide') { // Show empty groups? Probably not unless editing. 
+                if (groupClasses.length > 0 || mode === 'edit') { // Show empty groups in edit mode
                     // Academy app shows them. Let's show if it has classes.
-                    if (groupClasses.length > 0) {
+                    if (groupClasses.length > 0 || mode === 'edit') {
                         groups.push({
                             periodIndex: idx, // Use index for sorting
                             label: g.title,
@@ -597,16 +627,18 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     <div className="flex bg-gray-200 rounded-lg p-0.5">
                         <button
                             onClick={() => setMode('view')}
-                            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'view' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500'}`}
+                            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                         >
                             👁️ 조회
                         </button>
-                        <button
-                            onClick={() => setMode('hide')}
-                            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'hide' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500'}`}
-                        >
-                            🙈 숨김
-                        </button>
+                        {canEditEnglish && (
+                            <button
+                                onClick={() => setMode('edit')}
+                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                            >
+                                ✏️ 수정
+                            </button>
+                        )}
                     </div>
 
                     {/* Search */}
@@ -750,7 +782,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                         </div>
                     )}
 
-                    {canEditEnglish && (
+                    {mode === 'edit' && canEditEnglish && (
                         <button
                             onClick={() => setIsSettingsOpen(true)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
@@ -759,7 +791,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                             뷰 설정
                         </button>
                     )}
-                    {canEditEnglish && (
+                    {mode === 'edit' && canEditEnglish && (
                         <button
                             onClick={() => setIsLevelSettingsOpen(true)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
@@ -829,6 +861,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 displayOptions={settings.displayOptions}
                                                 hiddenTeacherList={settings.hiddenTeachers}
                                                 currentUser={currentUser}
+                                                englishLevels={englishLevels}
                                             />
                                         ))}
                                     </div>
@@ -859,7 +892,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
 const ClassCard: React.FC<{
     classInfo: ClassInfo,
-    mode: 'view' | 'hide',
+    mode: 'view' | 'edit',
     isHidden: boolean,
     onToggleHidden: () => void,
     teachersData: Teacher[],
@@ -868,24 +901,13 @@ const ClassCard: React.FC<{
     onMenuToggle: (isOpen: boolean) => void,
     displayOptions?: import('./IntegrationViewSettings').DisplayOptions,
     hiddenTeacherList?: string[],
-    currentUser: any
-}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords, isMenuOpen, onMenuToggle, displayOptions, hiddenTeacherList, currentUser }) => {
+    currentUser: any,
+    englishLevels: EnglishLevel[]
+}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords, isMenuOpen, onMenuToggle, displayOptions, hiddenTeacherList, currentUser, englishLevels }) => {
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [studentCount, setStudentCount] = useState<number>(0);
     const [students, setStudents] = useState<TimetableStudent[]>([]);
-    const [englishLevels, setEnglishLevels] = useState<EnglishLevel[]>(DEFAULT_ENGLISH_LEVELS);
     const [levelUpModal, setLevelUpModal] = useState<{ isOpen: boolean; type: 'number' | 'class'; newName: string }>({ isOpen: false, type: 'number', newName: '' });
-
-    // Realtime english levels subscription
-    useEffect(() => {
-        const unsub = onSnapshot(doc(db, 'settings', 'english_levels'), (docSnap) => {
-            if (docSnap.exists()) {
-                const levels = docSnap.data()?.levels || DEFAULT_ENGLISH_LEVELS;
-                setEnglishLevels(levels);
-            }
-        });
-        return () => unsub();
-    }, []);
 
     // Realtime student list subscription
     useEffect(() => {
@@ -908,7 +930,7 @@ const ClassCard: React.FC<{
 
     return (
         <>
-            <div className={`w-[280px] flex flex-col border-r border-gray-300 shrink-0 bg-white transition-opacity ${isHidden && mode === 'hide' ? 'opacity-50' : ''}`}>
+            <div className={`w-[280px] flex flex-col border-r border-gray-300 shrink-0 bg-white transition-opacity ${isHidden && mode === 'edit' ? 'opacity-50' : ''}`}>
                 {/* Header - 키워드 색상 적용 */}
                 {(() => {
                     const matchedKw = classKeywords.find(kw => classInfo.name?.includes(kw.keyword));
@@ -918,66 +940,73 @@ const ClassCard: React.FC<{
                             style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor } : { backgroundColor: '#EFF6FF', color: '#1F2937' }}
                         >
                             {classInfo.name}
-                            {/* Level Up Menu Button */}
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onMenuToggle(!isMenuOpen); }}
-                                className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                                <MoreVertical size={14} />
-                            </button>
-                            {/* Level Up Dropdown */}
-                            {isMenuOpen && (
-                                <div className="absolute top-8 right-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                            {/* Edit Controls: Menu & Hide (Edit Mode Only) */}
+                            {mode === 'edit' && (
+                                <>
+                                    {/* Hide Toggle - Right 7 (approx 28px left of menu) */}
                                     <button
-                                        onClick={() => {
-                                            // Check if class level is valid
-                                            if (!isValidLevel(classInfo.name, englishLevels)) {
-                                                alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
-                                                onMenuToggle(false);
-                                                return;
-                                            }
-
-                                            const newName = numberLevelUp(classInfo.name);
-                                            if (newName) {
-                                                setLevelUpModal({ isOpen: true, type: 'number', newName });
-                                            }
-                                            onMenuToggle(false);
-                                        }}
-                                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-indigo-50 text-gray-700"
+                                        onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
+                                        className="absolute top-1 right-7 p-1 rounded hover:bg-black/10 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        title={isHidden ? "보이기" : "숨기기"}
                                     >
-                                        <TrendingUp size={14} className="text-indigo-500" />
-                                        숫자 레벨업
+                                        {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
                                     </button>
+
+                                    {/* Menu Button - Right 1 */}
                                     <button
-                                        onClick={() => {
-                                            // Check if class level is valid
-                                            if (!isValidLevel(classInfo.name, englishLevels)) {
-                                                alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
-                                                onMenuToggle(false);
-                                                return;
-                                            }
-
-                                            const newName = classLevelUp(classInfo.name, englishLevels);
-                                            if (newName) {
-                                                setLevelUpModal({ isOpen: true, type: 'class', newName });
-                                            }
-                                            onMenuToggle(false);
-                                        }}
-                                        disabled={isMaxLevel(classInfo.name, englishLevels)}
-                                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-orange-50 text-gray-700'}`}
+                                        onClick={(e) => { e.stopPropagation(); onMenuToggle(!isMenuOpen); }}
+                                        className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
                                     >
-                                        <ArrowUpCircle size={14} className={isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300' : 'text-orange-500'} />
-                                        클래스 레벨업
+                                        <MoreVertical size={14} />
                                     </button>
-                                </div>
-                            )}
-                            {mode === 'hide' && (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
-                                    className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-500"
-                                >
-                                    {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
-                                </button>
+
+                                    {/* Level Up Dropdown */}
+                                    {isMenuOpen && (
+                                        <div className="absolute top-8 right-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => {
+                                                    // Check if class level is valid
+                                                    if (!isValidLevel(classInfo.name, englishLevels)) {
+                                                        alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+                                                        onMenuToggle(false);
+                                                        return;
+                                                    }
+
+                                                    const newName = numberLevelUp(classInfo.name);
+                                                    if (newName) {
+                                                        setLevelUpModal({ isOpen: true, type: 'number', newName });
+                                                    }
+                                                    onMenuToggle(false);
+                                                }}
+                                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-indigo-50 text-gray-700"
+                                            >
+                                                <TrendingUp size={14} className="text-indigo-500" />
+                                                숫자 레벨업
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    // Check if class level is valid
+                                                    if (!isValidLevel(classInfo.name, englishLevels)) {
+                                                        alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+                                                        onMenuToggle(false);
+                                                        return;
+                                                    }
+
+                                                    const newName = classLevelUp(classInfo.name, englishLevels);
+                                                    if (newName) {
+                                                        setLevelUpModal({ isOpen: true, type: 'class', newName });
+                                                    }
+                                                    onMenuToggle(false);
+                                                }}
+                                                disabled={isMaxLevel(classInfo.name, englishLevels)}
+                                                className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-orange-50 text-gray-700'}`}
+                                            >
+                                                <ArrowUpCircle size={14} className={isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300' : 'text-orange-500'} />
+                                                클래스 레벨업
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     );
@@ -1040,25 +1069,25 @@ const ClassCard: React.FC<{
                 {displayOptions?.showStudents ? (
                     <div className="flex-1 flex flex-col bg-white min-h-[100px]">
                         <button
-                            className="p-1.5 text-center text-[13px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-600 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-200 transition-colors w-full"
-                            onClick={() => setIsStudentModalOpen(true)}
+                            className={`p-1.5 text-center text-[13px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-600 flex items-center justify-center gap-2 transition-colors w-full ${mode === 'edit' ? 'cursor-pointer hover:bg-gray-200' : 'cursor-default'}`}
+                            onClick={() => mode === 'edit' && setIsStudentModalOpen(true)}
                             aria-label={`${classInfo.name} 학생 명단 열기. 현재 ${studentCount}명`}
                         >
                             <span>학생 명단</span>
                             <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[12px]">
                                 {studentCount}명
                             </span>
-                            <UserPlus size={12} className="text-gray-400" />
+                            {mode === 'edit' && <UserPlus size={12} className="text-gray-400" />}
                         </button>
                         {/* Student Name Preview - 3 Section Layout */}
                         <div className="flex-1 overflow-y-auto px-2 py-1.5 text-[10px] flex flex-col">
                             {students.length === 0 ? (
                                 <div
-                                    className="flex flex-col items-center justify-center h-full text-gray-300 cursor-pointer hover:text-gray-400"
-                                    onClick={() => setIsStudentModalOpen(true)}
+                                    className={`flex flex-col items-center justify-center h-full text-gray-300 ${mode === 'edit' ? 'cursor-pointer hover:text-gray-400' : 'cursor-default'}`}
+                                    onClick={() => mode === 'edit' && setIsStudentModalOpen(true)}
                                 >
                                     <span>학생이 없습니다</span>
-                                    <span className="text-indigo-400 mt-0.5 hover:underline">+ 추가</span>
+                                    {mode === 'edit' && <span className="text-indigo-400 mt-0.5 hover:underline">+ 추가</span>}
                                 </div>
                             ) : (() => {
                                 // Split students into 3 groups
@@ -1083,13 +1112,13 @@ const ClassCard: React.FC<{
 
                                 // Helper to get row style based on enrollment date
                                 const getRowStyle = (student: TimetableStudent) => {
-                                    if (student.underline) return { className: 'bg-blue-50', textClass: 'underline text-blue-600', subTextClass: 'text-blue-500' };
+                                    if (student.underline) return { className: 'bg-blue-50', textClass: 'underline decoration-blue-600 text-blue-600 underline-offset-2', subTextClass: 'text-blue-500', englishTextClass: 'text-blue-600' };
                                     if (student.enrollmentDate) {
                                         const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
-                                        if (days <= 30) return { className: 'bg-red-500', textClass: 'text-white font-bold', subTextClass: 'text-white' }; // Red: 붉은 배경, 흰색 글씨
-                                        if (days <= 60) return { className: 'bg-pink-100', textClass: 'text-black font-bold', subTextClass: 'text-black' }; // Pink: 연분홍 배경, 검은 글씨
+                                        if (days <= 30) return { className: 'bg-red-500', textClass: 'text-white font-bold', subTextClass: 'text-white', englishTextClass: 'text-white/80' }; // Red: 붉은 배경, 흰색 글씨
+                                        if (days <= 60) return { className: 'bg-pink-100', textClass: 'text-black font-bold', subTextClass: 'text-black', englishTextClass: 'text-gray-600' }; // Pink: 연분홍 배경, 검은 글씨
                                     }
-                                    return { className: '', textClass: 'text-gray-800', subTextClass: 'text-gray-500' };
+                                    return { className: '', textClass: 'text-gray-800', subTextClass: 'text-gray-500', englishTextClass: 'text-gray-500' };
                                 };
 
                                 return (
@@ -1106,7 +1135,7 @@ const ClassCard: React.FC<{
                                                     >
                                                         <span className={`font-medium ${style.textClass}`}>
                                                             {student.name}
-                                                            {student.englishName && <span className="text-gray-500 font-normal">({student.englishName})</span>}
+                                                            {student.englishName && <span className={`font-normal ${style.englishTextClass || 'text-gray-500'}`}>({student.englishName})</span>}
                                                         </span>
                                                         {(student.school || student.grade) && (
                                                             <span className={`text-[12px] ml-1 ${style.subTextClass || 'text-gray-500'} text-right`}>{student.school}{student.grade}</span>
@@ -1116,8 +1145,8 @@ const ClassCard: React.FC<{
                                             })}
                                             {sortedActive.length > 12 && (
                                                 <div
-                                                    className="text-indigo-500 font-bold cursor-pointer hover:underline mt-0.5 text-xs"
-                                                    onClick={() => setIsStudentModalOpen(true)}
+                                                    className={`text-indigo-500 font-bold mt-0.5 text-xs ${mode === 'edit' ? 'cursor-pointer hover:underline' : 'cursor-default'}`}
+                                                    onClick={() => mode === 'edit' && setIsStudentModalOpen(true)}
                                                 >
                                                     +{sortedActive.length - 12}명 더보기...
                                                 </div>
@@ -1177,6 +1206,7 @@ const ClassCard: React.FC<{
                 className={classInfo.name}
                 teacher={classInfo.mainTeacher}
                 currentUser={currentUser}
+                readOnly={mode === 'view'}
             />
 
             {/* Level Up Confirm Modal */}

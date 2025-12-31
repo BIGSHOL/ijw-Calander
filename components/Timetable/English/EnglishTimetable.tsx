@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { Clock, RefreshCw } from 'lucide-react';
-import { EN_COLLECTION } from './englishUtils';
+import { Clock, RefreshCw, AlertTriangle, Copy, Upload, ArrowRightLeft } from 'lucide-react';
+import { EN_COLLECTION, EN_DRAFT_COLLECTION } from './englishUtils';
 import { Teacher, ClassKeywordColor } from '../../../types';
+import { usePermissions } from '../../../hooks/usePermissions';
 import EnglishTeacherTab from './EnglishTeacherTab';
 import EnglishClassTab from './EnglishClassTab';
 import EnglishRoomTab from './EnglishRoomTab';
@@ -35,10 +36,16 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
     const [teachersData, setTeachersData] = useState<Teacher[]>([]);  // 색상 정보 포함
     const [teacherOrder, setTeacherOrder] = useState<string[]>([]);
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+    const [isSimulationMode, setIsSimulationMode] = useState(false);
+
+    const { hasPermission } = usePermissions(currentUser);
+    const isMaster = currentUser?.role === 'master';
+    const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
 
     // Optimized: Use Real-time listener instead of manual fetch
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, EN_COLLECTION), (snapshot) => {
+        const targetCollection = isSimulationMode ? EN_DRAFT_COLLECTION : EN_COLLECTION;
+        const unsubscribe = onSnapshot(collection(db, targetCollection), (snapshot) => {
             const mergedData: ScheduleData = {};
             snapshot.docs.forEach((docSnap) => {
                 const data = docSnap.data();
@@ -69,7 +76,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [isSimulationMode]);
 
     // Manual refresh is no longer strictly needed for data, but can trigger re-sync if needed.
     // We'll keep it as a simple re-fetch of teachers or just no-op for schedule.
@@ -133,13 +140,98 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
         setScheduleData(newData);
     };
 
+    // --- Simulation Actions ---
+
+    const handleCopyLiveToDraft = async () => {
+        if (!confirm('현재 실시간 시간표를 복사해 오시겠습니까?\n기존 시뮬레이션 작업 내용은 모두 사라집니다.')) return;
+        setLoading(true);
+        try {
+            const liveSnapshot = await getDocs(collection(db, EN_COLLECTION));
+            const batch = writeBatch(db);
+
+            // Note: Ideally we should delete all draft docs first, but simple overwrite is safer for now.
+            // A more robust way would be to delete relevant docs if we want a clean slate.
+
+            liveSnapshot.docs.forEach(docSnap => {
+                batch.set(doc(db, EN_DRAFT_COLLECTION, docSnap.id), docSnap.data());
+            });
+
+            await batch.commit();
+            alert('현재 시간표를 성공적으로 가져왔습니다.');
+        } catch (e) {
+            console.error(e);
+            alert('복사 중 오류가 발생했습니다.');
+        }
+        setLoading(false);
+    };
+
+    const handlePublishDraftToLive = async () => {
+        if (!confirm('⚠️ 정말로 실제 시간표에 반영하시겠습니까?\n이 작업은 되돌릴 수 없으며, 모든 사용자에게 즉시 반영됩니다.')) return;
+        setLoading(true);
+        try {
+            const draftSnapshot = await getDocs(collection(db, EN_DRAFT_COLLECTION));
+            const batch = writeBatch(db);
+
+            draftSnapshot.docs.forEach(docSnap => {
+                batch.set(doc(db, EN_COLLECTION, docSnap.id), docSnap.data());
+            });
+
+            await batch.commit();
+            alert('성공적으로 반영되었습니다.');
+            setIsSimulationMode(false); // Switch back to live
+        } catch (e) {
+            console.error(e);
+            alert('반영 중 오류가 발생했습니다.');
+        }
+        setLoading(false);
+    };
+
     return (
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="text-center py-3 bg-gray-50 border-b border-gray-200 shrink-0">
-                <h1 className="text-2xl font-black text-gray-800 tracking-tight">
-                    인재원 본원 {new Date().getMonth() + 1}월 통합 영어시간표
+            <div className={`text-center py-3 border-b shrink-0 relative transition-colors duration-300 ${isSimulationMode ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
+                <h1 className="text-2xl font-black text-gray-800 tracking-tight flex items-center justify-center gap-2">
+                    <span>인재원 본원 {new Date().getMonth() + 1}월 통합 영어시간표</span>
+                    {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">SIMULATION</span>}
                 </h1>
+
+                {/* Simulation Control Panel */}
+                <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
+                    {/* Toggle Switch */}
+                    <div
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                        onClick={() => setIsSimulationMode(!isSimulationMode)}
+                    >
+                        <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
+                        <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
+                            {isSimulationMode ? '시뮬레이션 모드' : '실시간 모드'}
+                        </span>
+                    </div>
+
+                    {isSimulationMode && canEditEnglish && (
+                        <>
+                            <div className="h-6 w-px bg-orange-300 mx-1"></div>
+                            <button
+                                onClick={handleCopyLiveToDraft}
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
+                                title="현재 실시간 시간표를 복사해옵니다 (기존 시뮬레이션 데이터 덮어쓰기)"
+                            >
+                                <Copy size={12} />
+                                현재 상태 가져오기
+                            </button>
+                            {isMaster && (
+                                <button
+                                    onClick={handlePublishDraftToLive}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
+                                    title="시뮬레이션 내용을 실제 시간표에 적용합니다 (주의)"
+                                >
+                                    <Upload size={12} />
+                                    실제 반영
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Content */}
@@ -161,6 +253,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                     onOpenOrderModal={() => setIsOrderModalOpen(true)}
                                     classKeywords={classKeywords}
                                     currentUser={currentUser}
+                                    targetCollection={isSimulationMode ? EN_DRAFT_COLLECTION : EN_COLLECTION}
                                 />
 
                                 <TeacherOrderModal

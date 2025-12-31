@@ -34,6 +34,7 @@ interface EnglishTeacherTabProps {
     onOpenOrderModal?: () => void;
     classKeywords?: ClassKeywordColor[];  // For keyword color coding
     currentUser: any;
+    targetCollection?: string;
 }
 
 type ViewSize = 'small' | 'medium' | 'large';
@@ -41,7 +42,7 @@ type ViewSize = 'small' | 'medium' | 'large';
 // Helper interface for delete logic
 type GenericObject = { [key: string]: any };
 
-const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onRefresh, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser }) => {
+const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onRefresh, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser, targetCollection = EN_COLLECTION }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
@@ -338,13 +339,13 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             let targetMerged = tData?.merged ? [...tData.merged] : [];
 
             // Simplified logic: The Moved items LAND on the target. Overwrite if necessary or standard behavior?
-            // "Move" usually implies placing ON TOP. 
+            // "Move" usually implies placing ON TOP.
             // We'll treat moved items as the new content.
 
             let finalMain = moveMain;
             let finalMerged = moveMerged;
 
-            // If main exists in target, effectively it's lost/overwritten by this simple logic 
+            // If main exists in target, effectively it's lost/overwritten by this simple logic
             // OR we should try to preserve?
             // Let's assume overwrite for now as per previous logic.
 
@@ -423,7 +424,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         });
 
         const promises = Object.keys(teacherGroups).map((teacherName) => {
-            return setDoc(doc(db, EN_COLLECTION, teacherName), teacherGroups[teacherName], { merge: true });
+            return setDoc(doc(db, targetCollection, teacherName), teacherGroups[teacherName], { merge: true });
         });
 
         await Promise.all(promises);
@@ -484,7 +485,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                 });
 
                 const updatePromises = Object.keys(teacherGroups).map(teacherName => {
-                    return setDoc(doc(db, EN_COLLECTION, teacherName), teacherGroups[teacherName], { merge: true });
+                    return setDoc(doc(db, targetCollection, teacherName), teacherGroups[teacherName], { merge: true });
                 });
                 await Promise.all(updatePromises);
             }
@@ -500,7 +501,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                 });
 
                 const deletePromises = Object.keys(deleteGroups).map(teacherName =>
-                    setDoc(doc(db, EN_COLLECTION, teacherName), deleteGroups[teacherName], { merge: true })
+                    setDoc(doc(db, targetCollection, teacherName), deleteGroups[teacherName], { merge: true })
                 );
                 await Promise.all(deletePromises);
             }
@@ -546,7 +547,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             });
 
             const delPromises = Object.keys(deletions).map(t =>
-                setDoc(doc(db, EN_COLLECTION, t), deletions[t], { merge: true })
+                setDoc(doc(db, targetCollection, t), deletions[t], { merge: true })
             );
             await Promise.all(delPromises);
 
