@@ -11,6 +11,7 @@ import LoginModal from './components/LoginModal';
 import CalendarBoard from './components/CalendarBoard';
 import TimetableManager from './components/Timetable/TimetableManager';
 import PaymentReport from './components/PaymentReport/PaymentReport';
+import GanttManager from './components/Gantt/GanttManager';
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, User as UserIcon, Star, Bell, Mail, Send, Trash2, X } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
@@ -32,8 +33,8 @@ const formatUserDisplay = (u: UserProfile) => {
 
 const App: React.FC = () => {
 
-  // App Mode (Top-level navigation)
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment'>('calendar');
+  // App Mode (Top-level navigation) - null until permissions are loaded
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | null>(null);
 
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
@@ -136,6 +137,49 @@ const App: React.FC = () => {
   // Permission Hook
   const { hasPermission } = usePermissions(userProfile || null);
 
+  // Initialize timetable subject based on user's permissions (edit permission takes priority)
+  useEffect(() => {
+    if (!userProfile) return;
+
+    let initialSubject: 'math' | 'english' = 'math';
+
+    // Priority 1: Edit permission (user's primary subject)
+    if (hasPermission('timetable.english.edit')) {
+      initialSubject = 'english';
+    } else if (hasPermission('timetable.math.edit')) {
+      initialSubject = 'math';
+    }
+    // Priority 2: View permission (if no edit permission)
+    else if (hasPermission('timetable.english.view') && !hasPermission('timetable.math.view')) {
+      initialSubject = 'english';
+    }
+    // else: default 'math'
+
+    console.log(`[Init] Setting initial timetableSubject to: ${initialSubject}`);
+    setTimetableSubject(initialSubject);
+  }, [userProfile, hasPermission]);
+
+  // Guard: Strictly enforce permission access to subjects
+  // If a user somehow lands on a subject they don't have permission for, switch them.
+  useEffect(() => {
+    if (!userProfile) return;
+
+    const canViewMath = hasPermission('timetable.math.view') || hasPermission('timetable.math.edit');
+    const canViewEnglish = hasPermission('timetable.english.view') || hasPermission('timetable.english.edit');
+
+    if (timetableSubject === 'math' && !canViewMath) {
+      if (canViewEnglish) {
+        console.log('[Guard] Switching to English due to missing Math permission');
+        setTimetableSubject('english');
+      }
+    } else if (timetableSubject === 'english' && !canViewEnglish) {
+      if (canViewMath) {
+        console.log('[Guard] Switching to Math due to missing English permission');
+        setTimetableSubject('math');
+      }
+    }
+  }, [timetableSubject, hasPermission, userProfile]);
+
   // Tab Permissions
   /* ----------------------------------------------------
      Tab Access Redirection Logic
@@ -146,19 +190,30 @@ const App: React.FC = () => {
     // Wait for permissions to load
     if (isTabPermissionLoading || !userProfile) return;
 
-    // Check if current mode is accessible
+    // Priority order for tabs
+    const priority: ('calendar' | 'timetable' | 'payment' | 'gantt')[] = ['calendar', 'timetable', 'payment', 'gantt'];
+
+    // Initial setup: if appMode is null, set to first accessible tab
+    if (appMode === null) {
+      const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
+      if (firstAccessibleTab) {
+        console.log(`[Init] Setting initial appMode to: ${firstAccessibleTab}`);
+        setAppMode(firstAccessibleTab);
+      } else {
+        // Fallback: no accessible tab, show calendar (will display error)
+        console.warn('[Init] No accessible tab found, falling back to calendar');
+        setAppMode('calendar');
+      }
+      return;
+    }
+
+    // Redirect: if current mode is not accessible, redirect to first accessible tab
     const isAccessible = canAccessTab(appMode);
-
-    // If not accessible, redirect to the first accessible VALID APP MODE
-    // Used to prevent flash of unauthorized content if default is 'calendar' but user has no access.
     if (!isAccessible) {
-      const validModes: AppTab[] = ['calendar', 'timetable', 'payment'];
-      // Start checking from the filtered accessibleTabs list
-      const firstValidTab = accessibleTabs.find(t => validModes.includes(t));
-
+      const firstValidTab = priority.find(tab => canAccessTab(tab));
       if (firstValidTab) {
         console.log(`[Access Control] Redirecting from ${appMode} to ${firstValidTab}`);
-        setAppMode(firstValidTab as 'calendar' | 'timetable' | 'payment');
+        setAppMode(firstValidTab);
       }
     }
   }, [appMode, canAccessTab, accessibleTabs, isTabPermissionLoading, userProfile]);
@@ -1026,9 +1081,9 @@ const App: React.FC = () => {
 
   const pendingEventIds = pendingEventMoves.map(m => m.original.id);
 
-  // Initial Loading Screen (Waiting for Auth or Tab Permissions)
-  // This prevents flashing of "Calendar" (default) before we know if user can access it.
-  if (authLoading || (currentUser && isTabPermissionLoading)) {
+  // Initial Loading Screen (Waiting for Auth or Tab Permissions or appMode initialization)
+  // This prevents flashing of unauthorized content before we know which tab user can access.
+  if (authLoading || (currentUser && isTabPermissionLoading) || (currentUser && appMode === null)) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#f8f9fa] flex-col gap-4">
         {/* Simple Spinner */}
@@ -1097,6 +1152,18 @@ const App: React.FC = () => {
                   💳 전자 결제
                 </button>
               )}
+              {/* Gantt */}
+              {canAccessTab('gantt') && (
+                <button
+                  onClick={() => setAppMode('gantt')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'gantt'
+                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  📊 간트 차트
+                </button>
+              )}
             </div>
 
             {/* User Info Display (Moved to Left) */}
@@ -1108,8 +1175,10 @@ const App: React.FC = () => {
                     userProfile.role === 'admin' ? 'bg-indigo-600' :
                       userProfile.role === 'manager' ? 'bg-purple-600' :
                         userProfile.role === 'editor' ? 'bg-blue-600' :
-                          userProfile.role === 'user' ? 'bg-gray-500' :
-                            userProfile.role === 'viewer' ? 'bg-yellow-600' : 'bg-gray-400'
+                          userProfile.role === 'math_lead' ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
+                            userProfile.role === 'english_lead' ? 'bg-gradient-to-r from-orange-500 to-red-500' :
+                              userProfile.role === 'user' ? 'bg-gray-500' :
+                                userProfile.role === 'viewer' ? 'bg-yellow-600' : 'bg-gray-400'
                     }`}>
                     {ROLE_LABELS[userProfile.role] || userProfile.role.toUpperCase()}
                   </span>
@@ -1230,29 +1299,7 @@ const App: React.FC = () => {
                   <UserIcon size={20} />
                 </button>
 
-                {isProfileMenuOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                    />
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 overflow-hidden text-sm">
-                      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-                        <p className="font-bold text-gray-800">{userProfile?.email?.split('@')[0]}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{userProfile?.jobTitle || '직급 미설정'}</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          handleLogout();
-                          setIsProfileMenuOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium transition-colors"
-                      >
-                        <LogOut size={16} /> 로그아웃
-                      </button>
-                    </div>
-                  </>
-                )}
+
               </div>
             )}
           </div>
@@ -1621,12 +1668,17 @@ const App: React.FC = () => {
               classKeywords={classKeywords}
             />
           </div>
-        ) : (
+        ) : appMode === 'payment' ? (
           /* Payment Report View */
           <div className="w-full flex-1 overflow-auto">
             <PaymentReport />
           </div>
-        )}
+        ) : appMode === 'gantt' ? (
+          /* Gantt Chart View */
+          <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
+            <GanttManager userProfile={userProfile} />
+          </div>
+        ) : null}
 
         {/* Floating Save Button for Pending Moves */}
         {pendingEventMoves.length > 0 && (
@@ -1647,6 +1699,40 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        canClose={false} // Prevent closing without login when forced
+      />
+
+      {/* Profile Dropdown Menu (Moved to Root to avoid z-index trap) */}
+      {isProfileMenuOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[99998]"
+            onClick={() => setIsProfileMenuOpen(false)}
+          />
+          <div
+            className="fixed right-4 top-16 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-[99999] overflow-hidden text-sm"
+            style={{ display: isProfileMenuOpen ? 'block' : 'none' }}
+          >
+            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+              <p className="font-bold text-gray-800">{userProfile?.email?.split('@')[0]}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{userProfile?.jobTitle || '직급 미설정'}</p>
+            </div>
+            <button
+              onClick={() => {
+                handleLogout();
+                setIsProfileMenuOpen(false);
+              }}
+              className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium transition-colors"
+            >
+              <LogOut size={16} /> 로그아웃
+            </button>
+          </div>
+        </>
+      )}
 
       <EventModal
         isOpen={isEventModalOpen}

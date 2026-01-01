@@ -6,7 +6,8 @@ import {
     UserRole,
     PermissionId,
     RolePermissions,
-    DEFAULT_ROLE_PERMISSIONS
+    DEFAULT_ROLE_PERMISSIONS,
+    ROLE_HIERARCHY
 } from '../types';
 
 interface UsePermissionsReturn {
@@ -89,9 +90,8 @@ export function usePermissions(userProfile: UserProfile | null): UsePermissionsR
 
 // Helper to check if a role can be assigned by another role
 export function canAssignRole(assignerRole: UserRole, targetRole: UserRole): boolean {
-    const hierarchy: UserRole[] = ['master', 'admin', 'manager', 'editor', 'user', 'viewer', 'guest'];
-    const assignerIndex = hierarchy.indexOf(assignerRole);
-    const targetIndex = hierarchy.indexOf(targetRole);
+    const assignerIndex = ROLE_HIERARCHY.indexOf(assignerRole);
+    const targetIndex = ROLE_HIERARCHY.indexOf(targetRole);
 
     // Can only assign roles lower than own role
     // MASTER can assign all, ADMIN can assign manager and below, etc.
@@ -100,8 +100,7 @@ export function canAssignRole(assignerRole: UserRole, targetRole: UserRole): boo
 
 // Get assignable roles for a user
 export function getAssignableRoles(assignerRole: UserRole): UserRole[] {
-    const hierarchy: UserRole[] = ['master', 'admin', 'manager', 'editor', 'user', 'viewer', 'guest'];
-    const assignerIndex = hierarchy.indexOf(assignerRole);
+    const assignerIndex = ROLE_HIERARCHY.indexOf(assignerRole);
 
-    return hierarchy.filter((_, index) => index > assignerIndex);
+    return ROLE_HIERARCHY.filter((_, index) => index > assignerIndex);
 }
