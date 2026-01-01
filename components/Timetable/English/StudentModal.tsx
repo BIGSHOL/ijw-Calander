@@ -5,7 +5,7 @@ import { usePermissions } from '../../../hooks/usePermissions';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { TimetableStudent, EnglishLevel } from '../../../types';
-import { DEFAULT_ENGLISH_LEVELS, parseClassName } from './englishUtils';
+import { DEFAULT_ENGLISH_LEVELS, parseClassName, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 
 interface StudentModalProps {
     isOpen: boolean;
@@ -14,9 +14,10 @@ interface StudentModalProps {
     teacher?: string;   // 담당강사 (EnglishClassTab에서 전달)
     currentUser: any;
     readOnly?: boolean;
+    isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
 }
 
-const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className, teacher, currentUser, readOnly = false }) => {
+const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className, teacher, currentUser, readOnly = false, isSimulationMode = false }) => {
     // State
     const [students, setStudents] = useState<TimetableStudent[]>([]);
     const [classDocId, setClassDocId] = useState<string | null>(null);
@@ -62,7 +63,8 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
         const findOrCreateClass = async () => {
             setLoading(true);
             try {
-                const q = query(collection(db, '수업목록'), where('className', '==', className));
+                const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
+                const q = query(collection(db, targetCollection), where('className', '==', className));
                 const snapshot = await getDocs(q);
 
                 if (!snapshot.empty) {
@@ -74,33 +76,64 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                     setClassTeacher(data.teacher || '');
                 } else {
                     // Auto-create class
-                    const { setDoc: setDocFn } = await import('firebase/firestore');
-                    const newDocId = `영어_${className.replace(/\s/g, '_')}_${Date.now()}`;
-                    const newClassData = {
-                        id: newDocId,
-                        className: className,
-                        teacher: '',
-                        subject: '영어',
-                        room: '',
-                        schedule: [],
-                        studentList: [],
-                        order: 999,  // 끝에 배치
-                    };
-
-                    await setDocFn(doc(db, '수업목록', newDocId), newClassData);
-                    setClassDocId(newDocId);
-                    setStudents([]);
-                    setClassTeacher('');
-                    console.log(`Auto-created class: ${className}`);
+                    if (isSimulationMode) {
+                        // 시뮬레이션 모드: 자동 생성 허용
+                        const { setDoc: setDocFn } = await import('firebase/firestore');
+                        const newDocId = `영어_${className.replace(/\s/g, '_')}_${Date.now()}`;
+                        const newClassData = {
+                            id: newDocId,
+                            className: className,
+                            teacher: teacher || '',
+                            subject: '영어',
+                            room: '',
+                            schedule: [],
+                            studentList: [],
+                            order: 999,
+                        };
+                        await setDocFn(doc(db, targetCollection, newDocId), newClassData);
+                        setClassDocId(newDocId);
+                        setStudents([]);
+                        setClassTeacher(teacher || '');
+                        console.log(`[Simulation] Auto-created class: ${className}`);
+                    } else {
+                        // 실시간 모드: 사용자 확인 필요
+                        const confirmed = confirm(
+                            `⚠️ "${className}" 수업이 수업목록에 없습니다.\n\n` +
+                            `새로 생성하시겠습니까?\n(취소 시 모달이 닫힙니다)`
+                        );
+                        if (!confirmed) {
+                            onClose();
+                            setLoading(false);
+                            return;
+                        }
+                        const { setDoc: setDocFn } = await import('firebase/firestore');
+                        const newDocId = `영어_${className.replace(/\s/g, '_')}_${Date.now()}`;
+                        const newClassData = {
+                            id: newDocId,
+                            className: className,
+                            teacher: teacher || '',
+                            subject: '영어',
+                            room: '',
+                            schedule: [],
+                            studentList: [],
+                            order: 999,
+                        };
+                        await setDocFn(doc(db, targetCollection, newDocId), newClassData);
+                        setClassDocId(newDocId);
+                        setStudents([]);
+                        setClassTeacher(teacher || '');
+                        console.log(`[Live] User-confirmed class creation: ${className}`);
+                    }
                 }
             } catch (e) {
                 console.error('Error finding/creating class:', e);
+                alert('수업 데이터 로드 중 오류가 발생했습니다.\n\n' + (e instanceof Error ? e.message : String(e)));
             }
             setLoading(false);
         };
 
         findOrCreateClass();
-    }, [isOpen, className]);
+    }, [isOpen, className, isSimulationMode, teacher, onClose]);
 
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -113,16 +146,24 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
     // Real-time sync when classDocId is available - Optimized single listener
     useEffect(() => {
         if (!classDocId) return;
-        const unsub = onSnapshot(doc(db, '수업목록', classDocId), (docSnap) => {
+        const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
+        const unsub = onSnapshot(doc(db, targetCollection, classDocId), (docSnap) => {
             if (isDirtyRef.current) return; // Use Ref to check current dirty state
             if (docSnap.exists()) {
                 const data = docSnap.data();
                 setStudents(data.studentList || []);
                 setClassTeacher(data.teacher || '');
             }
+        }, (error) => {
+            console.error('Real-time listener error:', error);
+            if (error.code === 'permission-denied') {
+                alert('데이터 접근 권한이 없습니다.');
+            } else if (error.code === 'unavailable') {
+                alert('네트워크 연결을 확인해주세요.');
+            }
         });
         return () => unsub();
-    }, [classDocId]);
+    }, [classDocId, isSimulationMode]);
 
 
     // Save Changes to Firestore
@@ -142,14 +183,18 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                 return cleanStudent;
             });
 
-            await updateDoc(doc(db, '수업목록', classDocId), { studentList: sanitizedStudents });
+            const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
+            await updateDoc(doc(db, targetCollection, classDocId), { studentList: sanitizedStudents });
             setIsDirty(false);
-            alert('저장되었습니다.');
+
+            const mode = isSimulationMode ? '[시뮬레이션]' : '';
+            alert(`${mode} 저장되었습니다.`);
         } catch (error: any) {
-            console.error(error);
+            console.error('Save error:', error);
             let message = '저장 실패: ';
             if (error.code === 'permission-denied') message += '권한이 없습니다.';
             else if (error.code === 'unavailable') message += '네트워크를 확인해주세요.';
+            else if (error.code === 'not-found') message += '수업 문서를 찾을 수 없습니다.';
             else message += error.message || '알 수 없는 오류';
             alert(message);
         }

@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // === Helper Functions ===
+
+    // Get user role from users collection
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user has one of the specified roles
+    function hasRole(roles) {
+      return isAuthenticated() && getUserRole() in roles;
+    }
+
+    // === User Management ===
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() &&
+                      (request.auth.uid == userId || hasRole(['master', 'admin']));
+    }
+
+    // === Settings ===
+
+    match /settings/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole(['master', 'admin']);
+    }
+
+    // === Timetable Collections ===
+
+    // English Schedules (Live)
+    match /english_schedules/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole(['master', 'admin']);
+    }
+
+    // English Schedules (Draft - Simulation Mode)
+    match /english_schedules_draft/{scheduleId} {
+      allow read: if hasRole(['master', 'admin', 'manager']);
+      allow write: if hasRole(['master']);
+    }
+
+    // English Backups
+    match /english_backups/{backupId} {
+      allow read: if hasRole(['master', 'admin', 'manager']);
+      allow write: if hasRole(['master', 'admin']);
+      allow delete: if hasRole(['master']);
+    }
+
+    // === Class & Teacher Management (Korean collection names) ===
+    // Using wildcard match for Korean collection names
+
+    match /{collection}/{docId} {
+      // 강사목록 - Teacher list
+      allow read: if isAuthenticated();
+      
+      // 수업목록 - Class list (Live)
+      allow write: if collection in ['수업목록'] && hasRole(['master', 'admin']);
+      
+      // 수업목록_draft - Class list (Draft/Simulation)
+      allow read: if collection == '수업목록_draft' && hasRole(['master', 'admin', 'manager']);
+      allow write: if collection == '수업목록_draft' && hasRole(['master']);
+    }
+
+    // === Default: Allow authenticated read for other collections ===
+    
+    match /{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole(['master', 'admin']);
+    }
+  }
+}

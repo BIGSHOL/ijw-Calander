@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { collection, onSnapshot, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, doc, setDoc, writeBatch, query, orderBy } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { Clock, RefreshCw, AlertTriangle, Copy, Upload, ArrowRightLeft } from 'lucide-react';
-import { EN_COLLECTION, EN_DRAFT_COLLECTION } from './englishUtils';
+import { Clock, RefreshCw, AlertTriangle, Copy, Upload, ArrowRightLeft, History } from 'lucide-react';
+import { EN_COLLECTION, EN_DRAFT_COLLECTION, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import EnglishTeacherTab from './EnglishTeacherTab';
 import EnglishClassTab from './EnglishClassTab';
 import EnglishRoomTab from './EnglishRoomTab';
 import TeacherOrderModal from './TeacherOrderModal';
+import BackupHistoryModal from './BackupHistoryModal';
 
 interface EnglishTimetableProps {
     onClose?: () => void;
@@ -37,10 +38,13 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
     const [teacherOrder, setTeacherOrder] = useState<string[]>([]);
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isSimulationMode, setIsSimulationMode] = useState(false);
+    const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
 
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
+    const canSimulation = hasPermission('timetable.english.simulation') || isMaster;
+    const canViewBackup = hasPermission('timetable.english.backup.view') || isMaster;
 
     // Optimized: Use Real-time listener instead of manual fetch
     useEffect(() => {
@@ -145,45 +149,156 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
     const handleCopyLiveToDraft = async () => {
         if (!confirm('현재 실시간 시간표를 복사해 오시겠습니까?\n기존 시뮬레이션 작업 내용은 모두 사라집니다.')) return;
         setLoading(true);
-        try {
-            const liveSnapshot = await getDocs(collection(db, EN_COLLECTION));
-            const batch = writeBatch(db);
 
-            // Note: Ideally we should delete all draft docs first, but simple overwrite is safer for now.
-            // A more robust way would be to delete relevant docs if we want a clean slate.
+        try {
+            // Step 1: 시간표 Draft 복사
+            const liveSnapshot = await getDocs(collection(db, EN_COLLECTION));
+            const timetableBatch = writeBatch(db);
 
             liveSnapshot.docs.forEach(docSnap => {
-                batch.set(doc(db, EN_DRAFT_COLLECTION, docSnap.id), docSnap.data());
+                timetableBatch.set(doc(db, EN_DRAFT_COLLECTION, docSnap.id), docSnap.data());
             });
 
-            await batch.commit();
-            alert('현재 시간표를 성공적으로 가져왔습니다.');
+            await timetableBatch.commit();
+            console.log(`✅ Timetable copied: ${liveSnapshot.docs.length} docs`);
+
+            // Step 2: 학생 데이터 Draft 복사
+            const classSnapshot = await getDocs(collection(db, CLASS_COLLECTION));
+
+            // Firestore Batch Write 제한: 최대 500개
+            if (classSnapshot.docs.length > 500) {
+                throw new Error(`수업 문서가 너무 많습니다 (${classSnapshot.docs.length}개). 개발자에게 문의하세요.`);
+            }
+
+            const studentBatch = writeBatch(db);
+            classSnapshot.docs.forEach(docSnap => {
+                studentBatch.set(doc(db, CLASS_DRAFT_COLLECTION, docSnap.id), docSnap.data());
+            });
+
+            await studentBatch.commit();
+            console.log(`✅ Student data copied: ${classSnapshot.docs.length} docs`);
+
+            alert(`현재 시간표를 성공적으로 가져왔습니다.\n(시간표: ${liveSnapshot.docs.length}개, 수업: ${classSnapshot.docs.length}개)`);
         } catch (e) {
-            console.error(e);
-            alert('복사 중 오류가 발생했습니다.');
+            console.error('Copy failed:', e);
+            const errorMsg = e instanceof Error ? e.message : '알 수 없는 오류';
+            alert(`복사 중 오류가 발생했습니다.\n\n${errorMsg}`);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handlePublishDraftToLive = async () => {
-        if (!confirm('⚠️ 정말로 실제 시간표에 반영하시겠습니까?\n이 작업은 되돌릴 수 없으며, 모든 사용자에게 즉시 반영됩니다.')) return;
+        // 백업 이름 입력 받기
+        const backupName = prompt('📝 백업 이름을 입력하세요 (선택사항)\\n예: 1월 시간표 확정, 신입생 추가 반영 등', '');
+
+        if (!confirm('⚠️ 정말로 실제 시간표에 반영하시겠습니까?\\n이 작업은 되돌릴 수 없으며, 모든 사용자에게 즉시 반영됩니다.')) return;
         setLoading(true);
+
+        let backupId = '';
+
         try {
-            const draftSnapshot = await getDocs(collection(db, EN_DRAFT_COLLECTION));
-            const batch = writeBatch(db);
+            // Step 1: 백업 생성 (시간표 + 학생 데이터)
+            try {
+                const liveSnapshot = await getDocs(collection(db, EN_COLLECTION));
+                const classSnapshot = await getDocs(collection(db, CLASS_COLLECTION));
 
-            draftSnapshot.docs.forEach(docSnap => {
-                batch.set(doc(db, EN_COLLECTION, docSnap.id), docSnap.data());
+                if (liveSnapshot.docs.length > 0 || classSnapshot.docs.length > 0) {
+                    backupId = `backup_${Date.now()}`;
+                    const timetableBackupData: Record<string, any> = {};
+                    const studentBackupData: Record<string, any> = {};
+
+                    liveSnapshot.docs.forEach(docSnap => {
+                        timetableBackupData[docSnap.id] = docSnap.data();
+                    });
+
+                    classSnapshot.docs.forEach(docSnap => {
+                        studentBackupData[docSnap.id] = docSnap.data();
+                    });
+
+                    await setDoc(doc(db, 'english_backups', backupId), {
+                        createdAt: new Date().toISOString(),
+                        createdBy: currentUser?.displayName || currentUser?.email || 'Unknown',
+                        createdByUid: currentUser?.uid || '',
+                        name: backupName?.trim() || null,  // 백업 이름 추가
+                        data: timetableBackupData,
+                        studentData: studentBackupData  // 학생 데이터 추가
+                    });
+
+                    console.log(`✅ Backup created: ${backupId} (timetable: ${liveSnapshot.docs.length}, students: ${classSnapshot.docs.length})`);
+                } else {
+                    console.log('No live data to backup (empty collections)');
+                }
+            } catch (backupError) {
+                console.error('Backup creation failed:', backupError);
+                throw new Error('백업 생성에 실패했습니다. 안전을 위해 반영 작업을 중단합니다.\n\n오류: ' + (backupError instanceof Error ? backupError.message : String(backupError)));
+            }
+
+            // Step 2: Draft → Live 복사 (시간표)
+            const draftTimetableSnapshot = await getDocs(collection(db, EN_DRAFT_COLLECTION));
+
+            if (draftTimetableSnapshot.docs.length === 0) {
+                throw new Error('시뮬레이션 시간표 데이터가 비어있습니다. 반영할 내용이 없습니다.');
+            }
+
+            const timetableBatch = writeBatch(db);
+            draftTimetableSnapshot.docs.forEach(docSnap => {
+                timetableBatch.set(doc(db, EN_COLLECTION, docSnap.id), docSnap.data());
             });
+            await timetableBatch.commit();
+            console.log(`✅ Timetable published: ${draftTimetableSnapshot.docs.length} docs`);
 
-            await batch.commit();
-            alert('성공적으로 반영되었습니다.');
-            setIsSimulationMode(false); // Switch back to live
+            // Step 3: Draft → Live 복사 (학생 데이터)
+            const draftClassSnapshot = await getDocs(collection(db, CLASS_DRAFT_COLLECTION));
+
+            if (draftClassSnapshot.docs.length > 0) {
+                if (draftClassSnapshot.docs.length > 500) {
+                    throw new Error(`수업 문서가 너무 많습니다 (${draftClassSnapshot.docs.length}개). 개발자에게 문의하세요.`);
+                }
+
+                const classBatch = writeBatch(db);
+                draftClassSnapshot.docs.forEach(docSnap => {
+                    classBatch.set(doc(db, CLASS_COLLECTION, docSnap.id), docSnap.data());
+                });
+                await classBatch.commit();
+                console.log(`✅ Student data published: ${draftClassSnapshot.docs.length} docs`);
+            } else {
+                console.log('⚠️ No draft student data to publish (empty collection)');
+            }
+
+            // Step 4: 백업 정리 (최대 50개 유지)
+            try {
+                const MAX_BACKUP_COUNT = 50;
+                const allBackupsQuery = query(
+                    collection(db, 'english_backups'),
+                    orderBy('createdAt', 'asc')
+                );
+                const allBackups = await getDocs(allBackupsQuery);
+
+                if (allBackups.docs.length > MAX_BACKUP_COUNT) {
+                    const excessCount = allBackups.docs.length - MAX_BACKUP_COUNT;
+                    const cleanupBatch = writeBatch(db);
+
+                    allBackups.docs.slice(0, excessCount).forEach(docSnap => {
+                        cleanupBatch.delete(docSnap.ref);
+                    });
+
+                    await cleanupBatch.commit();
+                    console.log(`🗑️ ${excessCount}개의 오래된 백업이 자동 삭제되었습니다.`);
+                }
+            } catch (cleanupError) {
+                console.warn('백업 정리 중 오류 발생 (무시됨):', cleanupError);
+            }
+
+            alert(`성공적으로 반영되었습니다.\n${backupId ? `(기존 데이터는 자동 백업되었습니다: ${backupId})` : '(백업 데이터 없음)'}`);
+            setIsSimulationMode(false);
         } catch (e) {
-            console.error(e);
-            alert('반영 중 오류가 발생했습니다.');
+            console.error('Publish failed:', e);
+            const errorMessage = e instanceof Error ? e.message : '반영 중 오류가 발생했습니다.';
+            alert(`⚠️ 오류 발생\n\n${errorMessage}\n\n데이터가 변경되지 않았습니다.`);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (
@@ -197,16 +312,18 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
 
                 {/* Simulation Control Panel */}
                 <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
-                    {/* Toggle Switch */}
-                    <div
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
-                        onClick={() => setIsSimulationMode(!isSimulationMode)}
-                    >
-                        <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
-                        <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
-                            {isSimulationMode ? '시뮬레이션 모드' : '실시간 모드'}
-                        </span>
-                    </div>
+                    {/* Toggle Switch - only visible to users with simulation permission */}
+                    {canSimulation && (
+                        <div
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                            onClick={() => setIsSimulationMode(!isSimulationMode)}
+                        >
+                            <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
+                            <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
+                                {isSimulationMode ? '시뮬레이션 모드' : '실시간 모드'}
+                            </span>
+                        </div>
+                    )}
 
                     {isSimulationMode && canEditEnglish && (
                         <>
@@ -227,6 +344,16 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                 >
                                     <Upload size={12} />
                                     실제 반영
+                                </button>
+                            )}
+                            {canViewBackup && (
+                                <button
+                                    onClick={() => setIsBackupModalOpen(true)}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-100 border border-blue-300 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-200 shadow-sm transition-colors"
+                                    title="백업 기록 보기"
+                                >
+                                    <History size={12} />
+                                    백업 기록
                                 </button>
                             )}
                         </>
@@ -272,6 +399,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                 scheduleData={scheduleData}
                                 classKeywords={classKeywords}
                                 currentUser={currentUser}
+                                isSimulationMode={isSimulationMode}
                             />
                         )}
                         {viewType === 'room' && (
@@ -286,6 +414,13 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                     </>
                 )}
             </div>
+
+            {/* Backup History Modal */}
+            <BackupHistoryModal
+                isOpen={isBackupModalOpen}
+                onClose={() => setIsBackupModalOpen(false)}
+                currentUser={currentUser}
+            />
         </div>
     );
 };
