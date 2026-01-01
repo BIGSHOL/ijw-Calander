@@ -624,19 +624,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <button onClick={() => setSelectedUserForEdit(null)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
             </div>
 
-            {/* Global Permissions Checkboxes */}
-            {canChangePermissions && canAssignRole(currentUserProfile?.role as UserRole, user.role) && (
-              <div className="flex gap-4 mt-2">
-                <label className="flex items-center gap-2 cursor-pointer select-none px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-gray-300">
-                  <input type="checkbox" checked={!!user.canManageMenus} onChange={() => handleUserUpdate(user.uid, { canManageMenus: !user.canManageMenus })} className="accent-[#081429]" />
-                  <span className="text-xs font-bold text-gray-700">메뉴 관리 (부서 생성/삭제)</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer select-none px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-gray-300">
-                  <input type="checkbox" checked={!!user.canManageEventAuthors} onChange={() => handleUserUpdate(user.uid, { canManageEventAuthors: !user.canManageEventAuthors })} className="accent-[#081429]" />
-                  <span className="text-xs font-bold text-gray-700">작성자 명의 수정</span>
-                </label>
-              </div>
-            )}
+            {/* Global Permissions now handled via Role Permissions tab */}
           </div>
 
           {/* Body: Dept Permissions */}

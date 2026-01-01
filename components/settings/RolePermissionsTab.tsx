@@ -70,13 +70,36 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
 
     const handlePermissionChange = (role: string, permId: PermissionId, checked: boolean) => {
         if (!isMaster) return;
-        setRolePermissions(prev => ({
-            ...prev,
-            [role]: {
-                ...prev[role as keyof RolePermissions],
-                [permId]: checked
+
+        setRolePermissions(prev => {
+            const rolePerms = { ...prev[role as keyof RolePermissions] };
+            rolePerms[permId] = checked;
+
+            // Define Linked Pairs (Manage -> View)
+            const linkedPairs: { manage: PermissionId; view: PermissionId }[] = [
+                { manage: 'timetable.math.edit', view: 'timetable.math.view' },
+                { manage: 'timetable.english.edit', view: 'timetable.english.view' },
+                { manage: 'system.teachers.edit', view: 'system.teachers.view' },
+                { manage: 'system.classes.edit', view: 'system.classes.view' },
+            ];
+
+            // 1. If "Manage" is CHECKED -> Auto-check "View"
+            const pairForManage = linkedPairs.find(p => p.manage === permId);
+            if (checked && pairForManage) {
+                rolePerms[pairForManage.view] = true;
             }
-        }));
+
+            // 2. If "View" is UNCHECKED -> Auto-uncheck "Manage"
+            const pairForView = linkedPairs.find(p => p.view === permId);
+            if (!checked && pairForView) {
+                rolePerms[pairForView.manage] = false;
+            }
+
+            return {
+                ...prev,
+                [role]: rolePerms
+            };
+        });
     };
 
     // --- Permission Sections ---
@@ -127,7 +150,7 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
         { id: 'timetable.english.simulation' as PermissionId, label: '영어 시뮬레이션 모드', desc: '시뮬레이션 모드 진입 및 토글' },
         { id: 'timetable.english.backup.view' as PermissionId, label: '영어 백업 조회', desc: '시간표 백업 기록 보기' },
         { id: 'timetable.english.backup.restore' as PermissionId, label: '영어 백업 복원', desc: '이전 백업으로 복원' },
-        { id: 'timetable.integrated.view' as PermissionId, label: '통합 뷰/강사 뷰 접근', desc: '전체 강사/교실 통합 시간표 접근' },
+        { id: 'timetable.integrated.view' as PermissionId, label: '영어 통합/강사 뷰 접근', desc: '영어 전체 강사/교실 통합 시간표 접근' },
     ];
 
     const settingsPermissions = [
@@ -198,9 +221,11 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                                             <span className={`px-2 py-1 rounded text-[10px] font-black ${role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
                                                 role === 'manager' ? 'bg-purple-100 text-purple-700' :
                                                     role === 'editor' ? 'bg-blue-100 text-blue-700' :
-                                                        role === 'user' ? 'bg-gray-100 text-gray-600' :
-                                                            role === 'viewer' ? 'bg-yellow-100 text-yellow-700' :
-                                                                'bg-gray-100 text-gray-400'
+                                                        role === 'math_lead' ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700' :
+                                                            role === 'english_lead' ? 'bg-gradient-to-r from-orange-100 to-red-100 text-orange-700' :
+                                                                role === 'user' ? 'bg-gray-100 text-gray-600' :
+                                                                    role === 'viewer' ? 'bg-yellow-100 text-yellow-700' :
+                                                                        'bg-gray-100 text-gray-400'
                                                 }`}>
                                                 {ROLE_LABELS[role]}
                                             </span>

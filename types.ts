@@ -68,18 +68,53 @@ export interface TaskMemo {
   isDeleted?: boolean;
 }
 
+// ============ GANTT CHART TYPES ============
+
+export interface GanttSubTask {
+  id: string;
+  title: string;
+  description: string;
+  startOffset: number;  // Relative start day from 0
+  duration: number;     // Duration in days
+  completed: boolean;
+}
+
+export interface GanttTemplate {
+  id: string;
+  title: string;
+  description: string;
+  tasks: GanttSubTask[];
+  createdAt: number;
+  createdBy?: string;       // Author UID
+  createdByEmail?: string;  // Author email
+  isShared?: boolean;       // Shared with team
+}
+
+export interface GanttProject {
+  id: string;
+  templateId: string;
+  title: string;
+  tasks: GanttSubTask[];
+  progress: number;         // 0-100
+  startedAt: number;
+  lastUpdated: number;
+  ownerId: string;
+}
+
 export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
-// 7-tier role system (ordered from highest to lowest)
-export type UserRole = 'master' | 'admin' | 'manager' | 'editor' | 'user' | 'viewer' | 'guest';
+// 9-tier role system (ordered from highest to lowest)
+export type UserRole = 'master' | 'admin' | 'manager' | 'editor' | 'math_lead' | 'english_lead' | 'user' | 'viewer' | 'guest';
 
-export const ROLE_HIERARCHY: UserRole[] = ['master', 'admin', 'manager', 'editor', 'user', 'viewer', 'guest'];
+export const ROLE_HIERARCHY: UserRole[] = ['master', 'admin', 'manager', 'editor', 'math_lead', 'english_lead', 'user', 'viewer', 'guest'];
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   master: 'MASTER',
   admin: 'ADMIN',
   manager: 'MANAGER',
   editor: 'EDITOR',
+  math_lead: '수학팀장',
+  english_lead: '영어팀장',
   user: 'USER',
   viewer: 'VIEWER',
   guest: 'GUEST'
@@ -100,7 +135,8 @@ export type PermissionId =
   | 'timetable.english.view' | 'timetable.english.edit'
   | 'timetable.english.simulation'
   | 'timetable.english.backup.view' | 'timetable.english.backup.restore'
-  | 'timetable.integrated.view';
+  | 'timetable.integrated.view'
+  | 'gantt.view' | 'gantt.create' | 'gantt.edit' | 'gantt.delete';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -124,6 +160,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'timetable.english.simulation': true,
     'timetable.english.backup.view': true, 'timetable.english.backup.restore': true,
     'timetable.integrated.view': true,
+    'gantt.view': true, 'gantt.create': true, 'gantt.edit': true, 'gantt.delete': true,
   },
   manager: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': true,
@@ -135,6 +172,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
     'timetable.english.simulation': true,
     'timetable.english.backup.view': true, 'timetable.english.backup.restore': false,
+    'gantt.view': true, 'gantt.create': true, 'gantt.edit': true, 'gantt.delete': false,
   },
   editor: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
@@ -144,6 +182,30 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+  },
+  math_lead: {
+    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
+    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
+    'events.attendance': true,
+    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
+    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    'timetable.math.view': true, 'timetable.math.edit': true,
+    'timetable.english.view': true, 'timetable.english.edit': false,
+    'system.classes.view': true, 'system.classes.edit': true,
+  },
+  english_lead: {
+    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
+    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
+    'events.attendance': true,
+    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
+    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    'timetable.math.view': true, 'timetable.math.edit': false,
+    'timetable.english.view': true, 'timetable.english.edit': true,
+    'system.classes.view': true, 'system.classes.edit': true,
   },
   user: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
@@ -290,12 +352,13 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'system';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'system';
 
 export const APP_TABS: { id: AppTab; label: string }[] = [
   { id: 'calendar', label: '연간 일정' },
   { id: 'timetable', label: '시간표' },
   { id: 'payment', label: '전자 결제' },
+  { id: 'gantt', label: '간트 차트' },
   { id: 'system', label: '시스템 설정' },
 ];
 
@@ -307,10 +370,12 @@ export type TabPermissionConfig = {
 
 // Default Tab Permissions (Fallback)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['calendar', 'timetable', 'payment', 'system'],
+  master: ['calendar', 'timetable', 'payment', 'gantt', 'system'],
   admin: ['calendar', 'timetable'],
   manager: ['calendar'],
   editor: ['calendar'],
+  math_lead: ['timetable'],
+  english_lead: ['timetable'],
   user: ['calendar'],
   viewer: ['calendar'],
   guest: ['calendar'],
