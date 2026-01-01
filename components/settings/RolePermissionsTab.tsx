@@ -124,6 +124,9 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
         { id: 'timetable.math.edit' as PermissionId, label: '수학 시간표 관리', desc: '수학 수업 수정/학급관리' },
         { id: 'timetable.english.view' as PermissionId, label: '영어 시간표 조회', desc: '영어 시간표 접근' },
         { id: 'timetable.english.edit' as PermissionId, label: '영어 시간표 관리', desc: '영어 수업 수정/학생관리' },
+        { id: 'timetable.english.simulation' as PermissionId, label: '영어 시뮬레이션 모드', desc: '시뮬레이션 모드 진입 및 토글' },
+        { id: 'timetable.english.backup.view' as PermissionId, label: '영어 백업 조회', desc: '시간표 백업 기록 보기' },
+        { id: 'timetable.english.backup.restore' as PermissionId, label: '영어 백업 복원', desc: '이전 백업으로 복원' },
         { id: 'timetable.integrated.view' as PermissionId, label: '통합 뷰/강사 뷰 접근', desc: '전체 강사/교실 통합 시간표 접근' },
     ];
 
@@ -136,7 +139,7 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
     // --- Render Permission Row ---
     const renderPermissionRow = (perm: { id: PermissionId; label: string; desc: string; disabled?: boolean }) => (
         <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-            <td className="px-4 py-2.5 sticky left-0 bg-white">
+            <td className="px-4 py-2.5 sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                 <div className="text-gray-700">
                     {perm.label}
                     {perm.disabled && <span className="text-[10px] text-red-400 ml-2">(MASTER 전용)</span>}
@@ -185,11 +188,11 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                 {!rolePermissionsLoaded ? (
                     <div className="p-8 text-center text-gray-500">권한 정보를 불러오는 중...</div>
                 ) : (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-auto max-h-[60vh]">
                         <table className="w-full text-sm">
-                            <thead className="bg-gray-50 border-b border-gray-200">
+                            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-30">
                                 <tr>
-                                    <th className="text-left px-4 py-3 font-bold text-gray-700 sticky left-0 bg-gray-50 min-w-[200px]">권한</th>
+                                    <th className="text-left px-4 py-3 font-bold text-gray-700 sticky left-0 z-20 bg-gray-50 min-w-[200px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">권한</th>
                                     {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
                                         <th key={role} className="text-center px-3 py-3 font-bold text-gray-700 min-w-[80px]">
                                             <span className={`px-2 py-1 rounded text-[10px] font-black ${role === 'admin' ? 'bg-indigo-100 text-indigo-700' :

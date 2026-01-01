@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     Plus,
     FileText,
@@ -27,22 +27,48 @@ interface PaymentReportProps {
     // Future props if needed
 }
 
+// Date 헬퍼 함수들 - 브라우저 일관성 보장
+const getPreviousMonth = (periodStr: string): string => {
+    const [year, month] = periodStr.split('-').map(Number);
+    const date = new Date(year, month - 1, 1);
+    date.setMonth(date.getMonth() - 1);
+    const newYear = date.getFullYear();
+    const newMonth = String(date.getMonth() + 1).padStart(2, '0');
+    return `${newYear}-${newMonth}`;
+};
+
+const getNextMonth = (periodStr: string): string => {
+    const [year, month] = periodStr.split('-').map(Number);
+    const date = new Date(year, month - 1, 1);
+    date.setMonth(date.getMonth() + 1);
+    const newYear = date.getFullYear();
+    const newMonth = String(date.getMonth() + 1).padStart(2, '0');
+    return `${newYear}-${newMonth}`;
+};
+
 const PaymentReport: React.FC<PaymentReportProps> = () => {
     const [currentPeriod, setCurrentPeriod] = useState<string>(() => {
         return new Date().toISOString().slice(0, 7);
     });
 
     const [history, setHistory] = useState<TuitionHistory>(() => {
-        const savedHistory = localStorage.getItem('tuition_history');
-        if (savedHistory) {
-            return JSON.parse(savedHistory);
+        try {
+            const savedHistory = localStorage.getItem('tuition_history');
+            if (savedHistory) {
+                return JSON.parse(savedHistory);
+            }
+            const oldData = localStorage.getItem('tuition_entries');
+            if (oldData) {
+                const currentMonth = new Date().toISOString().slice(0, 7);
+                return { [currentMonth]: JSON.parse(oldData) };
+            }
+            return {};
+        } catch (error) {
+            console.error('Failed to parse localStorage data:', error);
+            localStorage.removeItem('tuition_history');
+            localStorage.removeItem('tuition_entries');
+            return {};
         }
-        const oldData = localStorage.getItem('tuition_entries');
-        if (oldData) {
-            const currentMonth = new Date().toISOString().slice(0, 7);
-            return { [currentMonth]: JSON.parse(oldData) };
-        }
-        return {};
     });
 
     const [entries, setEntries] = useState<TuitionEntry[]>([]);
@@ -58,12 +84,19 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
         setAiReport('');
     }, [currentPeriod, history]);
 
-    const updateHistory = (newEntries: TuitionEntry[]) => {
+    const updateHistory = useCallback((newEntries: TuitionEntry[]) => {
         const newHistory = { ...history, [currentPeriod]: newEntries };
         setHistory(newHistory);
-        localStorage.setItem('tuition_history', JSON.stringify(newHistory));
-        localStorage.setItem('tuition_entries', JSON.stringify(newEntries));
-    };
+
+        queueMicrotask(() => {
+            try {
+                localStorage.setItem('tuition_history', JSON.stringify(newHistory));
+                localStorage.setItem('tuition_entries', JSON.stringify(newEntries));
+            } catch (error) {
+                console.error('Failed to save to localStorage:', error);
+            }
+        });
+    }, [history, currentPeriod]);
 
     const totalRevenue = useMemo(() => entries.reduce((acc, curr) => acc + curr.projectedFee, 0), [entries]);
     const formattedTotal = new Intl.NumberFormat('ko-KR').format(totalRevenue);
@@ -75,29 +108,27 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
     }, [history]);
 
     const previousMonthData = useMemo(() => {
-        const date = new Date(currentPeriod + "-01");
-        date.setMonth(date.getMonth() - 1);
-        const prevKey = date.toISOString().slice(0, 7);
+        const prevKey = getPreviousMonth(currentPeriod);
         return history[prevKey] || [];
     }, [currentPeriod, history]);
 
-    const getDiff = (academyName: string, currentFee: number) => {
+    const getDiff = useCallback((academyName: string, currentFee: number) => {
         const prevEntry = previousMonthData.find(e => e.academyName === academyName);
         const prevFee = prevEntry ? prevEntry.projectedFee : 0;
         return currentFee - prevFee;
-    };
+    }, [previousMonthData]);
 
-    const handlePeriodChange = (direction: 'prev' | 'next') => {
-        const date = new Date(currentPeriod + "-01");
-        date.setMonth(date.getMonth() + (direction === 'next' ? 1 : -1));
-        setCurrentPeriod(date.toISOString().slice(0, 7));
-    };
+    const handlePeriodChange = useCallback((direction: 'prev' | 'next') => {
+        setCurrentPeriod(prevPeriod =>
+            direction === 'next' ? getNextMonth(prevPeriod) : getPreviousMonth(prevPeriod)
+        );
+    }, []);
 
-    const handleDateInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleDateInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.value) setCurrentPeriod(e.target.value);
-    };
+    }, []);
 
-    const handleSave = (entryData: Omit<TuitionEntry, 'id'> | TuitionEntry) => {
+    const handleSave = useCallback((entryData: Omit<TuitionEntry, 'id'> | TuitionEntry) => {
         let newEntries;
         if ('id' in entryData) {
             newEntries = entries.map(e => e.id === entryData.id ? entryData : e);
@@ -112,38 +143,50 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
         updateHistory(newEntries);
         setIsFormOpen(false);
         setEditingEntry(null);
-    };
+    }, [entries, updateHistory]);
 
-    const handleDelete = (id: string) => {
+    const handleDelete = useCallback((id: string) => {
         if (confirm('정말 삭제하시겠습니까?')) {
             const newEntries = entries.filter(e => e.id !== id);
             setEntries(newEntries);
             updateHistory(newEntries);
         }
-    };
+    }, [entries, updateHistory]);
 
-    const handleEdit = (entry: TuitionEntry) => {
+    const handleEdit = useCallback((entry: TuitionEntry) => {
         setEditingEntry(entry);
         setIsFormOpen(true);
-    };
+    }, []);
 
-    const handleGenerateAI = async () => {
-        setIsGenerating(true);
-        const enrichedEntries = entries.map(e => ({
-            ...e,
-            diff: getDiff(e.academyName, e.projectedFee)
-        }));
-        const report = await generateReportInsight(enrichedEntries);
-        setAiReport(report || '');
-        setIsGenerating(false);
-    };
+    const handleGenerateAI = useCallback(async () => {
+        const abortController = new AbortController();
 
+        try {
+            setIsGenerating(true);
+            const enrichedEntries = entries.map(e => ({
+                ...e,
+                diff: getDiff(e.academyName, e.projectedFee)
+            }));
+            const report = await generateReportInsight(enrichedEntries);
+            setAiReport(report || '');
+        } catch (error) {
+            console.error('Failed to generate AI report:', error);
+            setAiReport('');
+        } finally {
+            setIsGenerating(false);
+        }
 
+        return () => {
+            abortController.abort();
+        };
+    }, [entries, getDiff]);
 
-    const handleCopyPrevious = () => {
-        const curr = new Date(currentPeriod + "-01");
-        curr.setMonth(curr.getMonth() - 1);
-        const prevMonthStr = curr.toISOString().slice(0, 7);
+    const handleToggleViewMode = useCallback(() => {
+        setViewMode(prev => prev === 'dashboard' ? 'report' : 'dashboard');
+    }, []);
+
+    const handleCopyPrevious = useCallback(() => {
+        const prevMonthStr = getPreviousMonth(currentPeriod);
         const prevData = history[prevMonthStr];
 
         if (!prevData || prevData.length === 0) {
@@ -163,9 +206,14 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
         setEntries(clonedData);
         updateHistory(clonedData);
-    };
+    }, [currentPeriod, history, updateHistory]);
 
-    const ApprovalBox = () => (
+    const handleOpenForm = useCallback(() => {
+        setEditingEntry(null);
+        setIsFormOpen(true);
+    }, []);
+
+    const ApprovalBox = useMemo(() => (
         <div className="flex justify-end mb-8 print:mb-4">
             <table className="border-collapse border border-[#373d41] text-center text-xs">
                 <tbody>
@@ -182,7 +230,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                 </tbody>
             </table>
         </div>
-    );
+    ), []);
 
     return (
         <div className="min-h-screen bg-gray-50 text-[#373d41] font-sans pb-20 print:bg-white print:pb-0">
@@ -195,7 +243,11 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                         </div>
 
                         <div className="flex items-center bg-white/10 rounded-lg p-1">
-                            <button onClick={() => handlePeriodChange('prev')} className="p-1 hover:bg-white/10 rounded-md text-gray-300 transition-colors">
+                            <button
+                                onClick={() => handlePeriodChange('prev')}
+                                className="p-1 hover:bg-white/10 rounded-md text-gray-300 transition-colors"
+                                aria-label="이전 달로 이동"
+                            >
                                 <ChevronLeft size={20} />
                             </button>
                             <div className="relative mx-2 group">
@@ -204,12 +256,17 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                                     value={currentPeriod}
                                     onChange={handleDateInput}
                                     className="bg-transparent border-none font-bold text-white text-lg focus:ring-0 p-0 cursor-pointer w-[140px] text-center"
+                                    aria-label="월 선택"
                                 />
                                 <span className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <Calendar size={14} />
                                 </span>
                             </div>
-                            <button onClick={() => handlePeriodChange('next')} className="p-1 hover:bg-white/10 rounded-md text-gray-300 transition-colors">
+                            <button
+                                onClick={() => handlePeriodChange('next')}
+                                className="p-1 hover:bg-white/10 rounded-md text-gray-300 transition-colors"
+                                aria-label="다음 달로 이동"
+                            >
                                 <ChevronRight size={20} />
                             </button>
                         </div>
@@ -218,19 +275,21 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                     <div className="flex items-center gap-2">
 
                         <button
-                            onClick={() => setViewMode(prev => prev === 'dashboard' ? 'report' : 'dashboard')}
+                            onClick={handleToggleViewMode}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${viewMode === 'report'
                                 ? "bg-[#fdb813] text-[#081429]"
                                 : "text-gray-300 hover:bg-white/10"
                                 }`}
+                            aria-label={viewMode === 'report' ? '대시보드 보기' : '인쇄용 뷰 보기'}
                         >
                             {viewMode === 'report' ? <LayoutDashboard size={18} /> : <Printer size={18} />}
                             {viewMode === 'report' ? '대시보드' : '인쇄용 뷰'}
                         </button>
                         {viewMode === 'dashboard' && (
                             <button
-                                onClick={() => { setEditingEntry(null); setIsFormOpen(true); }}
+                                onClick={handleOpenForm}
                                 className="bg-[#fdb813] hover:brightness-110 text-[#081429] px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 shadow-sm"
+                                aria-label="신규 등록"
                             >
                                 <Plus size={18} />
                                 <span className="hidden sm:inline">신규 등록</span>
@@ -254,14 +313,16 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                             <button
                                 onClick={handleCopyPrevious}
                                 className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-[#373d41] rounded-lg hover:bg-gray-50 hover:border-[#fdb813] transition-all shadow-sm"
+                                aria-label="지난달 사업장 목록 가져오기"
                             >
                                 <Copy size={18} className="text-[#fdb813]" />
                                 지난달 사업장 목록 가져오기
                             </button>
 
                             <button
-                                onClick={() => { setEditingEntry(null); setIsFormOpen(true); }}
+                                onClick={handleOpenForm}
                                 className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg hover:brightness-110 shadow-sm font-bold"
+                                aria-label="직접 등록하기"
                             >
                                 <Plus size={18} />
                                 직접 등록하기
@@ -307,7 +368,13 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                                 <Sparkles className="text-[#fdb813]" size={18} />
                                 AI 분석 리포트 ({currentPeriod})
                             </h3>
-                            <button onClick={() => setAiReport('')} className="text-xs text-gray-400 hover:text-white">닫기</button>
+                            <button
+                                onClick={() => setAiReport('')}
+                                className="text-xs text-gray-400 hover:text-white"
+                                aria-label="AI 리포트 닫기"
+                            >
+                                닫기
+                            </button>
                         </div>
                         <div className="p-6 prose prose-slate prose-headings:text-[#081429] prose-p:text-[#373d41] max-w-none text-sm">
                             <ReactMarkdown>{aiReport}</ReactMarkdown>
@@ -334,7 +401,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                                         <p className="text-[#373d41] font-medium text-lg">대상 기간: {currentPeriod}</p>
                                         <p className="text-gray-400 text-sm mt-1">작성일: {new Date().toLocaleDateString()}</p>
                                     </div>
-                                    <ApprovalBox />
+                                    {ApprovalBox}
                                 </div>
                             </div>
                         )}
@@ -385,12 +452,14 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                                                                 <button
                                                                     onClick={() => handleEdit(entry)}
                                                                     className="p-1.5 rounded text-gray-400 hover:text-[#fdb813] hover:bg-[#fdb813]/10 transition-colors"
+                                                                    aria-label={`${entry.academyName} 수정`}
                                                                 >
                                                                     <Edit2 size={16} />
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleDelete(entry.id)}
                                                                     className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                                                    aria-label={`${entry.academyName} 삭제`}
                                                                 >
                                                                     <Trash2 size={16} />
                                                                 </button>

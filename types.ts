@@ -98,6 +98,8 @@ export type PermissionId =
   | 'system.classes.view' | 'system.classes.edit'
   | 'timetable.math.view' | 'timetable.math.edit'
   | 'timetable.english.view' | 'timetable.english.edit'
+  | 'timetable.english.simulation'
+  | 'timetable.english.backup.view' | 'timetable.english.backup.restore'
   | 'timetable.integrated.view';
 
 // Role-based permission configuration (stored in Firestore)
@@ -119,6 +121,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'system.classes.view': true, 'system.classes.edit': true,
     'timetable.math.view': true, 'timetable.math.edit': true,
     'timetable.english.view': true, 'timetable.english.edit': true,
+    'timetable.english.simulation': true,
+    'timetable.english.backup.view': true, 'timetable.english.backup.restore': true,
     'timetable.integrated.view': true,
   },
   manager: {
@@ -129,6 +133,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'departments.view_all': true, 'departments.create': false, 'departments.edit': true, 'departments.delete': false,
     'users.view': true, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    'timetable.english.simulation': true,
+    'timetable.english.backup.view': true, 'timetable.english.backup.restore': false,
   },
   editor: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,

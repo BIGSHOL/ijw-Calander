@@ -9,7 +9,10 @@
       "Bash(git mv:*)",
       "Bash(npx tsc:*)",
       "Bash(git restore:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm install)",
+      "Bash(rm:*)",
+      "Bash(firebase deploy:*)"
     ]
   }
 }

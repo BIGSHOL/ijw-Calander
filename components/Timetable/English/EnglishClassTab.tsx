@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Eye, EyeOff, Settings, UserPlus, MoreVertical, TrendingUp, ArrowUpCircle, ChevronDown, Users, Home, User } from 'lucide-react';
-import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS } from './englishUtils';
+import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
 import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewSettings';
@@ -30,6 +30,7 @@ interface EnglishClassTabProps {
     teachersData?: Teacher[];
     classKeywords?: ClassKeywordColor[];  // For keyword color coding
     currentUser: any;
+    isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
 }
 
 interface ClassInfo {
@@ -44,6 +45,7 @@ interface ClassInfo {
     weekendShift: number;
     visiblePeriods: (typeof EN_PERIODS)[number][];
     finalDays: string[];
+    formattedRoomStr?: string;  // 요일별 강의실 포맷팅 문자열
 }
 
 const KOR_DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
@@ -53,7 +55,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     scheduleData,
     teachersData = [],
     classKeywords = [],
-    currentUser
+    currentUser,
+    isSimulationMode = false
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -162,8 +165,11 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         const unsubscribes: (() => void)[] = [];
         const allStats = { active: 0, new1: 0, new2: 0, withdrawn: 0 };
 
+        // Dynamic collection selection based on simulation mode
+        const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
+
         batches.forEach((batch) => {
-            const q = query(collection(db, '수업목록'), where('className', 'in', batch));
+            const q = query(collection(db, targetCollection), where('className', 'in', batch));
             const unsub = onSnapshot(q, (snapshot) => {
                 const now = new Date();
                 let active = 0, new1 = 0, new2 = 0, withdrawn = 0;
@@ -212,7 +218,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         });
 
         return () => unsubscribes.forEach(unsub => unsub());
-    }, [scheduleData]);
+    }, [scheduleData, isSimulationMode]);
 
     const updateSettings = async (newSettings: IntegrationSettings) => {
         setSettings(newSettings);
@@ -862,6 +868,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 hiddenTeacherList={settings.hiddenTeachers}
                                                 currentUser={currentUser}
                                                 englishLevels={englishLevels}
+                                                isSimulationMode={isSimulationMode}
                                             />
                                         ))}
                                     </div>
@@ -902,8 +909,9 @@ const ClassCard: React.FC<{
     displayOptions?: import('./IntegrationViewSettings').DisplayOptions,
     hiddenTeacherList?: string[],
     currentUser: any,
-    englishLevels: EnglishLevel[]
-}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords, isMenuOpen, onMenuToggle, displayOptions, hiddenTeacherList, currentUser, englishLevels }) => {
+    englishLevels: EnglishLevel[],
+    isSimulationMode?: boolean
+}> = ({ classInfo, mode, isHidden, onToggleHidden, teachersData, classKeywords, isMenuOpen, onMenuToggle, displayOptions, hiddenTeacherList, currentUser, englishLevels, isSimulationMode = false }) => {
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [studentCount, setStudentCount] = useState<number>(0);
     const [students, setStudents] = useState<TimetableStudent[]>([]);
@@ -911,7 +919,8 @@ const ClassCard: React.FC<{
 
     // Realtime student list subscription
     useEffect(() => {
-        const q = query(collection(db, '수업목록'), where('className', '==', classInfo.name));
+        const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
+        const q = query(collection(db, targetCollection), where('className', '==', classInfo.name));
         const unsub = onSnapshot(q, (snapshot) => {
             if (!snapshot.empty) {
                 const data = snapshot.docs[0].data();
@@ -926,7 +935,7 @@ const ClassCard: React.FC<{
             }
         });
         return () => unsub();
-    }, [classInfo.name]);
+    }, [classInfo.name, isSimulationMode]);
 
     return (
         <>
@@ -1173,7 +1182,11 @@ const ClassCard: React.FC<{
                                             <div className="mt-2 pt-1 border-t border-gray-200">
                                                 <div className="text-[9px] font-bold text-gray-400 mb-0.5">퇴원 ({withdrawnStudents.length})</div>
                                                 {withdrawnStudents.slice(0, 3).map((student) => (
-                                                    <div key={student.id} className="flex items-center text-xs py-0.5 px-1 bg-black rounded text-white">
+                                                    <div
+                                                        key={student.id}
+                                                        className="flex items-center text-[13px] py-0.5 px-1 bg-black rounded text-white"
+                                                        title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
+                                                    >
                                                         <span>{student.name}</span>
                                                         {student.englishName && <span className="ml-1 text-gray-400">({student.englishName})</span>}
                                                     </div>
@@ -1206,7 +1219,8 @@ const ClassCard: React.FC<{
                 className={classInfo.name}
                 teacher={classInfo.mainTeacher}
                 currentUser={currentUser}
-                readOnly={mode === 'view'}
+                readOnly={mode === 'view' || (isSimulationMode && currentUser?.role !== 'master')}
+                isSimulationMode={isSimulationMode}
             />
 
             {/* Level Up Confirm Modal */}

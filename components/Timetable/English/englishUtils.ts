@@ -39,6 +39,8 @@ export const isInjaeClass = (className: string): boolean => {
 
 export const EN_COLLECTION = 'english_schedules';
 export const EN_DRAFT_COLLECTION = 'english_schedules_draft';
+export const CLASS_COLLECTION = '수업목록';
+export const CLASS_DRAFT_COLLECTION = '수업목록_draft';
 
 export type EnglishPeriod = typeof EN_PERIODS[number];
 export type EnglishWeekday = typeof EN_WEEKDAYS[number];
