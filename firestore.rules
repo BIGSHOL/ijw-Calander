@@ -55,23 +55,69 @@ service cloud.firestore {
       allow delete: if hasRole(['master']);
     }
 
+    // === Gantt Chart Collections ===
+
+    // Gantt Templates
+    match /gantt_templates/{templateId} {
+      // 모든 인증된 사용자가 읽기 가능 (본인 것 + 공유된 것)
+      allow read: if isAuthenticated();
+
+      // 생성: master, admin, manager 권한 필요
+      allow create: if isAuthenticated() &&
+                       hasRole(['master', 'admin', 'manager']) &&
+                       request.resource.data.createdBy == request.auth.uid;
+
+      // 수정: 본인이 만든 것 또는 master/admin
+      allow update: if isAuthenticated() &&
+                       (resource.data.createdBy == request.auth.uid ||
+                        hasRole(['master', 'admin']));
+
+      // 삭제: 본인이 만든 것 또는 master/admin
+      allow delete: if isAuthenticated() &&
+                       (resource.data.createdBy == request.auth.uid ||
+                        hasRole(['master', 'admin']));
+    }
+
+    // Gantt Projects
+    match /gantt_projects/{projectId} {
+      // 읽기: 본인 프로젝트만 또는 master/admin
+      allow read: if isAuthenticated() &&
+                     (resource.data.ownerId == request.auth.uid ||
+                      hasRole(['master', 'admin']));
+
+      // 생성: master, admin, manager, editor 권한
+      allow create: if isAuthenticated() &&
+                       hasRole(['master', 'admin', 'manager', 'editor']) &&
+                       request.resource.data.ownerId == request.auth.uid;
+
+      // 수정: 본인 프로젝트만 또는 master/admin
+      allow update: if isAuthenticated() &&
+                       (resource.data.ownerId == request.auth.uid ||
+                        hasRole(['master', 'admin']));
+
+      // 삭제: 본인 프로젝트만 또는 master/admin
+      allow delete: if isAuthenticated() &&
+                       (resource.data.ownerId == request.auth.uid ||
+                        hasRole(['master', 'admin']));
+    }
+
     // === Class & Teacher Management (Korean collection names) ===
     // Using wildcard match for Korean collection names
 
     match /{collection}/{docId} {
       // 강사목록 - Teacher list
       allow read: if isAuthenticated();
-      
+
       // 수업목록 - Class list (Live)
       allow write: if collection in ['수업목록'] && hasRole(['master', 'admin']);
-      
+
       // 수업목록_draft - Class list (Draft/Simulation)
       allow read: if collection == '수업목록_draft' && hasRole(['master', 'admin', 'manager']);
       allow write: if collection == '수업목록_draft' && hasRole(['master']);
     }
 
     // === Default: Allow authenticated read for other collections ===
-    
+
     match /{document=**} {
       allow read: if isAuthenticated();
       allow write: if hasRole(['master', 'admin']);

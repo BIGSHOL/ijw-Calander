@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { GanttSubTask, GanttTemplate, UserProfile } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useGanttTemplates, useCreateTemplate, useUpdateTemplate, useDeleteTemplate } from '../../hooks/useGanttTemplates';
 import GanttBuilder from './GanttBuilder';
 import GanttChart from './GanttChart';
 import GanttTaskList from './GanttTaskList';
@@ -15,7 +16,6 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile }) => {
     const { hasPermission } = usePermissions(userProfile);
 
     const [viewMode, setViewMode] = useState<'home' | 'create' | 'edit' | 'execute'>('home');
-    const [templates, setTemplates] = useState<GanttTemplate[]>([]);
     const [activeTasks, setActiveTasks] = useState<GanttSubTask[]>([]);
     const [activeProjectTitle, setActiveProjectTitle] = useState<string>('');
     const [editingTemplate, setEditingTemplate] = useState<GanttTemplate | null>(null);
@@ -26,45 +26,34 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile }) => {
     const canEdit = hasPermission('gantt.edit');
     const canDelete = hasPermission('gantt.delete');
 
-    // Load templates from localStorage (will be replaced with Firestore later)
-    useEffect(() => {
-        const savedTemplates = localStorage.getItem('custom-gantt-templates');
-        if (savedTemplates) {
-            try {
-                setTemplates(JSON.parse(savedTemplates));
-            } catch (e) {
-                console.error("Failed to parse templates", e);
-            }
-        }
-    }, []);
+    // Firestore hooks
+    const { data: templates = [], isLoading } = useGanttTemplates(userProfile?.uid);
+    const createTemplate = useCreateTemplate();
+    const updateTemplate = useUpdateTemplate();
+    const deleteTemplate = useDeleteTemplate();
 
     const saveNewTemplate = (newTemplate: GanttTemplate) => {
         const templateWithAuthor = {
             ...newTemplate,
-            createdBy: userProfile?.uid,
-            createdByEmail: userProfile?.email,
+            createdBy: userProfile?.uid || '',
+            createdByEmail: userProfile?.email || '',
         };
-        const updatedTemplates = [templateWithAuthor, ...templates];
-        setTemplates(updatedTemplates);
-        localStorage.setItem('custom-gantt-templates', JSON.stringify(updatedTemplates));
+        createTemplate.mutate(templateWithAuthor);
         setViewMode('home');
     };
 
-    const updateTemplate = (updatedTemplate: GanttTemplate) => {
-        const updatedTemplates = templates.map(t =>
-            t.id === updatedTemplate.id ? updatedTemplate : t
-        );
-        setTemplates(updatedTemplates);
-        localStorage.setItem('custom-gantt-templates', JSON.stringify(updatedTemplates));
+    const handleUpdateTemplate = (updatedTemplate: GanttTemplate) => {
+        updateTemplate.mutate({
+            id: updatedTemplate.id,
+            updates: updatedTemplate,
+        });
         setEditingTemplate(null);
         setViewMode('home');
     };
 
-    const deleteTemplate = (templateId: string) => {
-        if (window.confirm("정말로 이 프로젝트를 삭제하시겠습니까?")) {
-            const updatedTemplates = templates.filter(t => t.id !== templateId);
-            setTemplates(updatedTemplates);
-            localStorage.setItem('custom-gantt-templates', JSON.stringify(updatedTemplates));
+    const handleDeleteTemplate = (templateId: string) => {
+        if (window.confirm("정말로 이 템플릿을 삭제하시겠습니까?")) {
+            deleteTemplate.mutate(templateId);
         }
     };
 
@@ -119,6 +108,18 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile }) => {
         );
     }
 
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-[60vh]">
+                <div className="text-center">
+                    <div className="text-4xl mb-4">📊</div>
+                    <p className="text-gray-500">템플릿을 불러오는 중...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-6 max-w-7xl mx-auto">
 
@@ -128,7 +129,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile }) => {
                     templates={templates}
                     onSelect={selectTemplate}
                     onCreateNew={() => setViewMode('create')}
-                    onDelete={deleteTemplate}
+                    onDelete={handleDeleteTemplate}
                     onEdit={handleEditStart}
                     canCreate={canCreate}
                     canEdit={canEdit}
@@ -148,7 +149,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile }) => {
             {viewMode === 'edit' && editingTemplate && canEdit && (
                 <GanttBuilder
                     initialData={editingTemplate}
-                    onSave={updateTemplate}
+                    onSave={handleUpdateTemplate}
                     onCancel={() => {
                         setEditingTemplate(null);
                         setViewMode('home');
