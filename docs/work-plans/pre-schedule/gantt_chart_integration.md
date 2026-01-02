@@ -2,9 +2,9 @@
 
 > 작성일: 2026-01-02
 > 구현일: 2026-01-02
-> 상태: **✅ Phase 1-3 완료 (MVP 작동 중)**
-> 우선순위: 🟡 중간
-> 버전: v1.1 (구현 완료)
+> 상태: **✅ Phase 1-5 완료 (Firebase 연동 완료)**
+> 우선순위: 🟢 완료
+> 버전: v2.0 (Firebase 연동 완료)
 
 ---
 
@@ -105,19 +105,21 @@ interface GanttTemplate {
 | 헤더에 간트 탭 버튼 추가 | `App.tsx` | ✅ |
 | GanttManager 렌더링 | `App.tsx` | ✅ |
 
-### Phase 4: Firestore 연동 (향후)
+### Phase 4: Firestore 연동 ✅
 
 | 작업 | 설명 | 상태 |
 |------|------|:------:|
-| 컬렉션 생성 | `gantt_templates`, `gantt_projects` | ⏳ |
-| CRUD 함수 작성 | 생성, 읽기, 수정, 삭제 | ⏳ |
-| localStorage 제거 | Firebase로 마이그레이션 | ⏳ |
+| useGanttTemplates.ts 작성 | React Query 기반 템플릿 CRUD | ✅ |
+| useGanttProjects.ts 작성 | React Query 기반 프로젝트 CRUD | ✅ |
+| GanttManager 리팩토링 | localStorage → Firestore 전환 | ✅ |
+| Loading/Error 상태 추가 | UX 개선 | ✅ |
 
-### Phase 5: 권한 시스템 연동 (향후)
+### Phase 5: 권한 시스템 연동 ✅
 
 | 작업 | 설명 | 상태 |
 |------|------|:------:|
-| RolePermissionsTab UI | 간트 권한 체크박스 추가 | ⏳ |
+| Security Rules 작성 | gantt_templates, gantt_projects 규칙 | ✅ |
+| 권한별 접근 제어 | MASTER/ADMIN/MANAGER/EDITOR/USER | ✅ |
 
 ---
 
@@ -127,16 +129,20 @@ interface GanttTemplate {
 ijw-calander/
 ├── components/
 │   └── Gantt/
-│       ├── GanttManager.tsx         # 메인 래퍼 (NEW)
-│       ├── GanttBuilder.tsx         # 프로젝트 생성/편집
-│       ├── GanttChart.tsx           # 간트 차트 시각화
-│       ├── GanttTaskList.tsx        # 작업 목록
-│       ├── GanttProgressBar.tsx     # 진행률 표시
-│       ├── GanttTemplateSelector.tsx # 템플릿 선택
-│       └── GanttInputSection.tsx    # 입력 섹션
+│       ├── GanttManager.tsx         ✅ 메인 래퍼 (Firestore 연동)
+│       ├── GanttBuilder.tsx         ✅ 프로젝트 생성/편집
+│       ├── GanttChart.tsx           ✅ 간트 차트 시각화
+│       ├── GanttTaskList.tsx        ✅ 작업 목록
+│       ├── GanttProgressBar.tsx     ✅ 진행률 표시
+│       └── GanttTemplateSelector.tsx ✅ 템플릿 선택
+├── hooks/
+│   ├── useGanttTemplates.ts         ✅ 템플릿 CRUD hooks (NEW)
+│   ├── useGanttProjects.ts          ✅ 프로젝트 CRUD hooks (NEW)
+│   └── usePermissions.ts            ✅ 권한 체크
 ├── services/
-│   └── geminiService.ts             # Gemini AI 서비스
-└── types.ts                         # 타입 정의 (확장)
+│   └── geminiService.ts             ✅ Gemini AI 서비스
+├── types.ts                         ✅ 타입 정의
+└── firestore.rules                  ✅ Security Rules (간트 규칙 추가)
 ```
 
 ---
@@ -256,7 +262,14 @@ interface FirestoreGanttProject {
 | 버전 | 날짜 | 변경 내용 |
 |------|------|----------|
 | v1.0 | 2026-01-02 | 초안 작성 |
-| v1.1 | 2026-01-02 | Phase 1-3 구현 완료 |
+| v1.1 | 2026-01-02 | Phase 1-3 구현 완료 (localStorage 기반) |
+| v2.0 | 2026-01-02 | Phase 4-5 구현 완료 (Firebase 연동) |
+
+---
+
+## 관련 문서
+
+- [gantt_firebase_implementation.md](./gantt_firebase_implementation.md) - Phase 4-5 상세 구현 가이드
 
 ---
 
