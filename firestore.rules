@@ -65,7 +65,12 @@ service cloud.firestore {
       // 생성: master, admin, manager 권한 필요
       allow create: if isAuthenticated() &&
                        hasRole(['master', 'admin', 'manager']) &&
-                       request.resource.data.createdBy == request.auth.uid;
+                       request.resource.data.createdBy == request.auth.uid &&
+                       // Phase 7 Validation
+                       (!('tasks' in request.resource.data) || 
+                        request.resource.data.tasks.size() == 0 ||
+                        (!('assigneeId' in request.resource.data.tasks[0]) || request.resource.data.tasks[0].assigneeId is string) &&
+                        (!('departmentIds' in request.resource.data.tasks[0]) || request.resource.data.tasks[0].departmentIds is list));
 
       // 수정: 본인이 만든 것 또는 master/admin
       allow update: if isAuthenticated() &&

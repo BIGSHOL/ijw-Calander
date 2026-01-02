@@ -10,14 +10,16 @@ import GanttTemplateSelector from './GanttTemplateSelector';
 
 interface GanttManagerProps {
     userProfile: UserProfile | null;
+    allUsers: UserProfile[]; // Prop drilled to avoid duplicate fetching
 }
 
-const GanttManager: React.FC<GanttManagerProps> = ({ userProfile }) => {
+const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) => {
     const { hasPermission } = usePermissions(userProfile);
 
     const [viewMode, setViewMode] = useState<'home' | 'create' | 'edit' | 'execute'>('home');
     const [activeTasks, setActiveTasks] = useState<GanttSubTask[]>([]);
     const [activeProjectTitle, setActiveProjectTitle] = useState<string>('');
+    const [activeStartDate, setActiveStartDate] = useState<string | undefined>(undefined);
     const [editingTemplate, setEditingTemplate] = useState<GanttTemplate | null>(null);
 
     // Permission checks
@@ -33,22 +35,40 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile }) => {
     const deleteTemplate = useDeleteTemplate();
 
     const saveNewTemplate = (newTemplate: GanttTemplate) => {
+        if (!userProfile?.uid) {
+            alert("로그인이 필요합니다.");
+            return;
+        }
         const templateWithAuthor = {
             ...newTemplate,
-            createdBy: userProfile?.uid || '',
-            createdByEmail: userProfile?.email || '',
+            createdBy: userProfile.uid,
+            createdByEmail: userProfile.email || '',
         };
-        createTemplate.mutate(templateWithAuthor);
-        setViewMode('home');
+        createTemplate.mutate(templateWithAuthor, {
+            onSuccess: () => {
+                setViewMode('home');
+            },
+            onError: (error) => {
+                console.error("Failed to create template:", error);
+                alert("프로젝트 생성 중 오류가 발생했습니다.");
+            }
+        });
     };
 
     const handleUpdateTemplate = (updatedTemplate: GanttTemplate) => {
         updateTemplate.mutate({
             id: updatedTemplate.id,
             updates: updatedTemplate,
+        }, {
+            onSuccess: () => {
+                setEditingTemplate(null);
+                setViewMode('home');
+            },
+            onError: (error) => {
+                console.error("Failed to update template:", error);
+                alert("프로젝트 수정 중 오류가 발생했습니다.");
+            }
         });
-        setEditingTemplate(null);
-        setViewMode('home');
     };
 
     const handleDeleteTemplate = (templateId: string) => {
@@ -66,6 +86,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile }) => {
         const freshTasks = template.tasks.map(t => ({ ...t, completed: false }));
         setActiveTasks(freshTasks);
         setActiveProjectTitle(template.title);
+        setActiveStartDate(template.startDate);
         setViewMode('execute');
     };
 
@@ -120,70 +141,138 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile }) => {
         );
     }
 
+    // Dashboard Layout for Execute/Home Mode
     return (
-        <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex h-full bg-[#0f1115] overflow-hidden font-sans text-slate-300">
+            {/* Left Sidebar - Firebase Style */}
+            {/* Icon Navigation Strip */}
+            <div className="w-14 bg-[#0d0f14] border-r border-white/5 flex flex-col items-center py-4 shrink-0">
+                {/* Logo */}
+                <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6 shadow-lg">
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
 
-            {/* Home View: Template Selector */}
-            {viewMode === 'home' && (
-                <GanttTemplateSelector
-                    templates={templates}
-                    onSelect={selectTemplate}
-                    onCreateNew={() => setViewMode('create')}
-                    onDelete={handleDeleteTemplate}
-                    onEdit={handleEditStart}
-                    canCreate={canCreate}
-                    canEdit={canEdit}
-                    canDelete={canDelete}
-                />
-            )}
+                {/* Icon Buttons */}
+                <div className="flex flex-col gap-2">
+                    <button className="w-9 h-9 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center" title="프로젝트">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                    </button>
+                    <button className="w-9 h-9 rounded-lg text-slate-500 hover:bg-white/5 hover:text-white flex items-center justify-center transition-colors" title="알림">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                    </button>
+                    <button className="w-9 h-9 rounded-lg text-slate-500 hover:bg-white/5 hover:text-white flex items-center justify-center transition-colors" title="검색">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </button>
+                </div>
 
-            {/* Create View: Gantt Builder */}
-            {viewMode === 'create' && canCreate && (
-                <GanttBuilder
-                    onSave={saveNewTemplate}
-                    onCancel={() => setViewMode('home')}
-                />
-            )}
+                {/* Bottom Icons */}
+                <div className="mt-auto flex flex-col gap-2">
+                    <button className="w-9 h-9 rounded-lg text-slate-500 hover:bg-white/5 hover:text-white flex items-center justify-center transition-colors" title="설정">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    </button>
+                </div>
+            </div>
 
-            {/* Edit View: Gantt Builder with Initial Data */}
-            {viewMode === 'edit' && editingTemplate && canEdit && (
-                <GanttBuilder
-                    initialData={editingTemplate}
-                    onSave={handleUpdateTemplate}
-                    onCancel={() => {
-                        setEditingTemplate(null);
-                        setViewMode('home');
-                    }}
-                />
-            )}
+            {/* Main Sidebar Panel */}
+            <div className="w-56 bg-[#15171e] border-r border-white/5 flex flex-col shrink-0 overflow-hidden">
+                {/* Header */}
+                <div className="px-4 py-4 border-b border-white/5">
+                    <h2 className="text-lg font-bold text-white">간트 차트</h2>
+                </div>
 
-            {/* Execute View: Running the Project */}
-            {viewMode === 'execute' && (
-                <div className="animate-fade-in-up">
-                    <div
-                        className="flex items-center gap-2 mb-6 text-[#373d41] text-sm cursor-pointer hover:text-[#081429] w-fit"
-                        onClick={handleGoHome}
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
-                        </svg>
-                        목록으로 돌아가기
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto py-4 scrollbar-thin scrollbar-thumb-white/10">
+                    {/* 프로젝트 바로가기 Section */}
+                    <div className="px-3 mb-6">
+                        <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3 px-1">
+                            프로젝트 바로가기
+                        </div>
+                        <div className="space-y-1">
+                            {templates.map(tmpl => (
+                                <div
+                                    key={tmpl.id}
+                                    className={`group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all ${activeProjectTitle === tmpl.title
+                                        ? 'bg-blue-500/20 text-blue-400'
+                                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                        }`}
+                                >
+                                    <div
+                                        className="flex items-center gap-2 flex-1 min-w-0"
+                                        onClick={() => selectTemplate(tmpl)}
+                                    >
+                                        <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                                        </svg>
+                                        <span className="text-sm font-medium truncate">{tmpl.title}</span>
+                                    </div>
+
+                                    {/* Edit/Delete Buttons */}
+                                    <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                                        {canEdit && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleEditStart(tmpl); }}
+                                                className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-blue-400 transition-colors"
+                                                title="수정"
+                                            >
+                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                            </button>
+                                        )}
+                                        {canDelete && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(tmpl.id); }}
+                                                className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-red-400 transition-colors"
+                                                title="삭제"
+                                            >
+                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    <h2 className="text-3xl font-bold text-[#081429] mb-6">{activeProjectTitle}</h2>
-
-                    <GanttProgressBar progress={progress} />
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="h-full">
-                            <GanttTaskList tasks={activeTasks} onToggleTask={handleToggleTask} />
+                    {/* 프로젝트 관리 Section */}
+                    <div className="px-3 mb-6">
+                        <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3 px-1">
+                            프로젝트 관리
                         </div>
-                        <div className="h-full">
-                            <GanttChart tasks={activeTasks} />
+                        <div className="space-y-1">
+                            {canCreate && (
+                                <button
+                                    onClick={() => setViewMode('create')}
+                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:bg-white/5 hover:text-white transition-colors"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                    <span className="text-sm font-medium">새 프로젝트</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
-            )}
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 bg-[#15171e] relative overflow-hidden">
+                {viewMode === 'create' && canCreate ? (
+                    <GanttBuilder onSave={saveNewTemplate} onCancel={() => setViewMode('home')} allUsers={allUsers} />
+                ) : viewMode === 'edit' && editingTemplate ? (
+                    <GanttBuilder initialData={editingTemplate} onSave={handleUpdateTemplate} onCancel={() => { setEditingTemplate(null); setViewMode('home'); }} allUsers={allUsers} />
+                ) : activeTasks.length > 0 ? (
+                    <GanttChart tasks={activeTasks} title={activeProjectTitle} startDate={activeStartDate} />
+                ) : (
+                    // Empty State or Welcome
+                    <div className="h-full flex flex-col items-center justify-center text-center p-12">
+                        <div className="w-24 h-24 bg-[#1c202b] rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-black/50">
+                            <span className="text-4xl">🚀</span>
+                        </div>
+                        <h2 className="text-2xl font-bold text-white mb-2">프로젝트를 선택하세요</h2>
+                        <p className="text-slate-500 max-w-md">사이드바에서 프로젝트를 선택하면 타임라인이 표시됩니다.</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

@@ -77,6 +77,14 @@ export interface GanttSubTask {
   startOffset: number;  // Relative start day from 0
   duration: number;     // Duration in days
   completed: boolean;
+  // Phase 7: Academy Specifics
+  assigneeId?: string;       // UID
+  assigneeName?: string;     // Display Name
+  assigneeEmail?: string;    // Email for identification
+  departmentIds?: string[];  // Department IDs
+  // Phase 9: Category & Dependencies
+  category?: 'planning' | 'development' | 'testing' | 'other';  // Task category for grouping
+  dependsOn?: string[];  // IDs of tasks this task depends on
 }
 
 export interface GanttTemplate {
@@ -85,6 +93,7 @@ export interface GanttTemplate {
   description: string;
   tasks: GanttSubTask[];
   createdAt: number;
+  startDate?: string;         // Project start date (YYYY-MM-DD format)
   createdBy?: string;       // Author UID
   createdByEmail?: string;  // Author email
   isShared?: boolean;       // Shared with team

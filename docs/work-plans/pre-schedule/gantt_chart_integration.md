@@ -267,9 +267,91 @@ interface FirestoreGanttProject {
 
 ---
 
+## ✅ 검증 체크리스트 (2026-01-02 완료)
+
+### 도메인 적합성 검증
+- [x] 학원 업무 시나리오 적합성 확인
+- [x] 데이터 모델 학원 특화 검토
+- [x] 권한 시스템 9단계 역할 체계 일치
+- [ ] ⚠️ 연간 일정 시스템 통합 (추후 개선)
+- [ ] ⚠️ 알림 시스템 연동 (추후 개선)
+
+### 기술 아키텍처 검증
+- [x] 컴포넌트 구조 및 파일 조직
+- [x] TypeScript 타입 정의 완전성
+- [x] Firestore 스키마 설계
+- [x] Phase별 마이그레이션 순서
+- [x] 의존성 관리 (recharts, @google/genai)
+- [x] Firebase Security Rules 작성
+- [ ] ⚠️ Firestore 복합 인덱스 설정 (수동 생성 필요)
+
+### Firebase 비용 최적화 검증
+- [x] 현재 설계 비용 분석 (무료 범위 내)
+- [ ] ⚠️ Meta 컬렉션 분리 권장 (향후 확장성)
+- [ ] ⚠️ 서브컬렉션 활용 고려
+- [x] React Query 캐싱 전략
+- [x] 페이지네이션 적용
+
+---
+
+## ⚠️ 알려진 제한사항 및 개선 권장사항
+
+### 우선순위 🔴 높음
+1. **Firestore 인덱스 수동 생성 필요**
+   - `gantt_templates`: `createdBy ASC, createdAt DESC`
+   - `gantt_templates`: `isShared ASC, createdAt DESC`
+   - Firebase Console에서 수동 생성 또는 첫 쿼리 시 자동 생성 링크 제공
+
+2. **AppTab 타입 정의 명확화**
+   - 현재: `'calendar' | 'timetable' | 'payment' | 'system'`
+   - 'gantt' 탭 추가 시 'system'과의 관계 정리 필요
+
+### 우선순위 🟡 중간
+3. **학원 특화 데이터 모델 확장 (선택적)**
+   - 담당자 필드 추가 (`assigneeId`, `assigneeName`)
+   - 부서 연동 (`departmentIds[]`)
+   - 작업 의존성 (`dependencies[]`)
+   - 상태 세분화 (`not_started`, `in_progress`, `on_hold`, `completed`)
+
+4. **연간 일정 시스템 통합**
+   - 프로젝트 마일스톤을 캘린더에 자동 표시
+   - 시작일/마감일 이벤트 생성
+
+5. **비용 최적화 (사용자 증가 시)**
+   - Meta 컬렉션 분리 (목록 조회 최적화)
+   - 서브컬렉션 활용 (tasks 배열 → tasks 서브컬렉션)
+   - 예상 효과: 읽기 61% 감소, 네트워크 92% 절감
+
+### 우선순위 🟢 낮음
+6. **UI/UX 개선**
+   - 모바일 최적화 (타임라인 리스트 뷰)
+   - 접근성 개선 (ARIA 레이블)
+   - Safari 브라우저 호환성
+
+7. **고급 기능**
+   - 실시간 협업 모드
+   - 알림 및 리마인더 시스템
+   - 진행 상황 대시보드
+
+---
+
+## 📊 성능 메트릭 (예상)
+
+| 지표 | 현재 구현 | 최적화 후 |
+|------|----------|----------|
+| 템플릿 목록 로딩 | ~200ms | ~150ms |
+| 초기 번들 크기 | +12KB | +12KB |
+| Firestore 읽기/월 | 110K | 44K |
+| 네트워크 전송/월 | 1.4GB | 0.11GB |
+
+---
+
 ## 관련 문서
 
 - [gantt_firebase_implementation.md](./gantt_firebase_implementation.md) - Phase 4-5 상세 구현 가이드
+- [types.ts](../../../types.ts) - 타입 정의
+- [useGanttTemplates.ts](../../../hooks/useGanttTemplates.ts) - 템플릿 CRUD Hooks
+- [useGanttProjects.ts](../../../hooks/useGanttProjects.ts) - 프로젝트 CRUD Hooks
 
 ---
 

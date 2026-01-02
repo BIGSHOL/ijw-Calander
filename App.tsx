@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, differenceInDays } from 'date-fns';
 import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor, AppTab } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
 import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig } from './hooks/useFirebaseQueries';
+import { useGanttProjects } from './hooks/useGanttProjects';
+import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
 import { useTabPermissions } from './hooks/useTabPermissions';
 import EventModal from './components/EventModal';
 import SettingsModal from './components/SettingsModal';
@@ -1073,11 +1075,20 @@ const App: React.FC = () => {
     return permission === 'edit';
   };
 
-  // Compute display events (apply pending moves for preview)
-  const displayEvents = events.map(event => {
-    const pendingMove = pendingEventMoves.find(m => m.original.id === event.id);
-    return pendingMove ? pendingMove.updated : event;
-  });
+  // Fetch Gantt Projects for Calendar Integration (Phase 7.3)
+  const { data: ganttProjects = [] } = useGanttProjects(userProfile?.uid);
+  const ganttCalendarEvents = useMemo(() =>
+    convertGanttProjectsToCalendarEvents(ganttProjects),
+    [ganttProjects]);
+
+  // Compute display events (apply pending moves for preview) + Merge Gantt Events
+  const displayEvents = useMemo(() => {
+    const calendarEventsWithMoves = events.map(event => {
+      const pendingMove = pendingEventMoves.find(m => m.original.id === event.id);
+      return pendingMove ? pendingMove.updated : event;
+    });
+    return [...calendarEventsWithMoves, ...ganttCalendarEvents];
+  }, [events, pendingEventMoves, ganttCalendarEvents]);
 
   const pendingEventIds = pendingEventMoves.map(m => m.original.id);
 
@@ -1676,7 +1687,7 @@ const App: React.FC = () => {
         ) : appMode === 'gantt' ? (
           /* Gantt Chart View */
           <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
-            <GanttManager userProfile={userProfile} />
+            <GanttManager userProfile={userProfile} allUsers={users} />
           </div>
         ) : null}
 
