@@ -55,32 +55,67 @@ service cloud.firestore {
       allow delete: if hasRole(['master']);
     }
 
-    // === Gantt Chart Collections ===
+    // === Gantt Chart Collections (Phase 10: Access Control) ===
+
+    // Phase 10 Helper Functions for Gantt Access Control
+    function isProjectOwner(projectData) {
+      return isAuthenticated() &&
+             (projectData.createdBy == request.auth.uid ||
+              (('ownerId' in projectData) && projectData.ownerId == request.auth.uid));
+    }
+
+    // Note: Firestore Rules don't support .map() on arrays of objects
+    // Member check is done via assignees array (legacy) for simplicity
+    // Complex member role checks are done client-side with checkProjectAccess()
+
+    function canAccessProject(projectData) {
+      // Master/Admin: Full access to all projects
+      return hasRole(['master', 'admin']) ||
+             // Owner: Full access
+             isProjectOwner(projectData) ||
+             // Public visibility: All authenticated users can view
+             (('visibility' in projectData) && projectData.visibility == 'public') ||
+             // Department visibility: Allow read, further filtering client-side
+             (('visibility' in projectData) && projectData.visibility == 'department') ||
+             (('visibility' in projectData) && projectData.visibility == 'department_shared') ||
+             // Legacy: isShared flag
+             (('isShared' in projectData) && projectData.isShared == true) ||
+             // Legacy: assignees array (also used for new members)
+             (('assignees' in projectData) && 
+              projectData.assignees != null && 
+              request.auth.uid in projectData.assignees);
+    }
 
     // Gantt Templates
     match /gantt_templates/{templateId} {
-      // 모든 인증된 사용자가 읽기 가능 (본인 것 + 공유된 것)
-      allow read: if isAuthenticated();
+      // Critical Issue #1 Fix: Fine-grained access control (2026-01-03)
+      // Read: Only accessible projects (not all authenticated users)
+      allow read: if canAccessProject(resource.data);
 
-      // 생성: master, admin, manager 권한 필요
+      // Create: master, admin, manager, editor roles
       allow create: if isAuthenticated() &&
-                       hasRole(['master', 'admin', 'manager']) &&
+                       hasRole(['master', 'admin', 'manager', 'editor']) &&
                        request.resource.data.createdBy == request.auth.uid &&
+                       (('ownerId' in request.resource.data) &&
+                        request.resource.data.ownerId == request.auth.uid) &&
                        // Phase 7 Validation
-                       (!('tasks' in request.resource.data) || 
+                       (!('tasks' in request.resource.data) ||
                         request.resource.data.tasks.size() == 0 ||
                         (!('assigneeId' in request.resource.data.tasks[0]) || request.resource.data.tasks[0].assigneeId is string) &&
                         (!('departmentIds' in request.resource.data.tasks[0]) || request.resource.data.tasks[0].departmentIds is list));
 
-      // 수정: 본인이 만든 것 또는 master/admin
-      allow update: if isAuthenticated() &&
-                       (resource.data.createdBy == request.auth.uid ||
-                        hasRole(['master', 'admin']));
+      // Update: Owner, Master/Admin, or Project Member with admin/editor role
+      allow update: if isAuthenticated() && (
+        isProjectOwner(resource.data) ||
+        hasRole(['master', 'admin']) ||
+        isProjectMember(resource.data)
+      );
 
-      // 삭제: 본인이 만든 것 또는 master/admin
-      allow delete: if isAuthenticated() &&
-                       (resource.data.createdBy == request.auth.uid ||
-                        hasRole(['master', 'admin']));
+      // Delete: Owner or Master/Admin only
+      allow delete: if isAuthenticated() && (
+        isProjectOwner(resource.data) ||
+        hasRole(['master', 'admin'])
+      );
     }
 
     // Gantt Projects

@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { format, addDays, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { GanttSubTask, GanttTemplate, UserProfile } from '../../types';
-import { Plus, X, User, Building2, Calendar, Clock, FileText, ChevronRight, Save, Edit2, RotateCcw } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { GanttSubTask, GanttTemplate, UserProfile, ProjectVisibility, ProjectMember, ProjectMemberRole, GanttDepartment } from '../../types';
+import { Plus, X, User, Building2, Calendar, Clock, FileText, ChevronRight, Save, Edit2, RotateCcw, Lock, Globe } from 'lucide-react';
 
 interface GanttBuilderProps {
     onSave: (template: GanttTemplate) => void;
@@ -33,9 +36,29 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
     const [assigneeEmail, setAssigneeEmail] = useState<string>(currentUser?.email || '');
     const [departmentIds, setDepartmentIds] = useState<string[]>([]);
 
+    // Phase 10: Visibility & Members
+    const [visibility, setVisibility] = useState<ProjectVisibility>(initialData?.visibility || 'private');
+    const [projectMembers, setProjectMembers] = useState<ProjectMember[]>(initialData?.members || []);
+    const [projectDepartmentIds, setProjectDepartmentIds] = useState<string[]>(initialData?.departmentIds || []);
+
     // Phase 9: Category & Dependencies
     const [category, setCategory] = useState<'planning' | 'development' | 'testing' | 'other'>('planning');
     const [dependsOn, setDependsOn] = useState<string[]>([]);
+
+    // Phase 6: Dynamic Department Loading
+    const { data: dynamicDepartments = [] } = useQuery({
+        queryKey: ['ganttDepartments'],
+        queryFn: async () => {
+            const q = query(collection(db, 'gantt_departments'), orderBy('order', 'asc'));
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) return [];
+            return snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as GanttDepartment));
+        },
+        staleTime: 5 * 60 * 1000,
+    });
 
     // Sorted users: current user first, then by displayName (가나다순)
     const sortedUsers = useMemo(() => {
@@ -72,19 +95,50 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
         }
     };
 
-    const DEPARTMENTS = [
-        { id: 'math', label: '수학부', color: 'bg-cyan-500' },
-        { id: 'english', label: '영어부', color: 'bg-orange-500' },
-        { id: 'admin', label: '행정팀', color: 'bg-pink-500' },
-        { id: 'facilities', label: '시설관리', color: 'bg-emerald-500' }
-    ];
 
-    const CATEGORIES = [
-        { id: 'planning', label: '기획', color: 'bg-blue-600', inactiveColor: 'bg-blue-900/40' },
-        { id: 'development', label: '개발', color: 'bg-purple-600', inactiveColor: 'bg-purple-900/40' },
-        { id: 'testing', label: '테스트', color: 'bg-green-600', inactiveColor: 'bg-green-900/40' },
-        { id: 'other', label: '기타', color: 'bg-slate-600', inactiveColor: 'bg-slate-700/60' }
-    ];
+
+    // Dynamic Categories (Phase 11)
+    const { data: dynamicCategories = [] } = useQuery<{ id: string; label: string; backgroundColor: string; textColor: string }[]>({
+        queryKey: ['ganttCategories'],
+        queryFn: async () => {
+            const q = query(collection(db, 'gantt_categories'), orderBy('order', 'asc'));
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) {
+                // Fallback defaults
+                return [
+                    { id: 'planning', label: '기획', backgroundColor: '#dbeafe', textColor: '#1d4ed8' },
+                    { id: 'development', label: '개발', backgroundColor: '#f3e8ff', textColor: '#7e22ce' },
+                    { id: 'testing', label: '테스트', backgroundColor: '#d1fae5', textColor: '#047857' },
+                    { id: 'other', label: '기타', backgroundColor: '#f3f4f6', textColor: '#374151' }
+                ];
+            }
+            return snapshot.docs.map(doc => ({
+                id: doc.id,
+                label: doc.data().label,
+                backgroundColor: doc.data().backgroundColor,
+                textColor: doc.data().textColor
+            }));
+        },
+        staleTime: 1000 * 60 * 5
+    });
+
+    const CATEGORIES = useMemo(() => {
+        return dynamicCategories.map(cat => ({
+            id: cat.id,
+            label: cat.label,
+            // Map dynamic colors to class-like strings or use style directly?
+            // GanttBuilder uses `color` prop for classNames like `bg-blue-600` in the CONSTANT.
+            // But now we have hex values.
+            // We need to adjust how these are consumed.
+            // The existing `color` prop was `bg-blue-600`.
+            // We should change the consumer to use `style` instead or adapt.
+            // For now, let's keep the object structure but add `style` field and use it in rendering.
+            color: '', // Deprecated class
+            inactiveColor: '', // Deprecated class
+            style: { backgroundColor: cat.backgroundColor, color: cat.textColor, borderColor: cat.backgroundColor }, // Active style
+            inactiveStyle: { backgroundColor: '#ffffff', color: '#9ca3af', borderColor: '#e5e7eb' } // Default inactive
+        }));
+    }, [dynamicCategories]);
 
     const resetForm = () => {
         setEditingTaskId(null);
@@ -157,6 +211,35 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
         }
     };
 
+    // Phase 10: Toggle Project Member with Role
+    const toggleProjectMember = (uid: string, role: ProjectMemberRole = 'viewer') => {
+        const user = allUsers.find(u => u.uid === uid);
+        if (!user) return;
+
+        setProjectMembers(prev => {
+            const existingIndex = prev.findIndex(m => m.userId === uid);
+            if (existingIndex >= 0) {
+                return prev.filter(m => m.userId !== uid);
+            } else {
+                const newMember: ProjectMember = {
+                    userId: uid,
+                    userName: user.displayName || user.email.split('@')[0],
+                    userEmail: user.email,
+                    role: role,
+                    addedAt: Date.now(),
+                    addedBy: currentUser?.uid || ''
+                };
+                return [...prev, newMember];
+            }
+        });
+    };
+
+    const updateMemberRole = (uid: string, newRole: ProjectMemberRole) => {
+        setProjectMembers(prev => prev.map(m =>
+            m.userId === uid ? { ...m, role: newRole } : m
+        ));
+    };
+
     const handleSaveTemplate = () => {
         if (!title.trim() || tasks.length === 0) {
             alert("프로젝트 제목과 최소 1개 이상의 항목이 필요합니다.");
@@ -170,6 +253,12 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
             startDate,
             tasks,
             createdAt: initialData?.createdAt || Date.now(),
+            // Phase 10
+            visibility,
+            members: projectMembers,
+            ownerId: initialData?.ownerId || currentUser?.uid,
+            departmentIds: visibility === 'department' ? projectDepartmentIds : undefined,
+            memberIds: projectMembers.map(m => m.userId), // Phase 10: Query optimization
         };
         // Sanitize to remove undefined values (Firestore rejects explicitly undefined fields)
         const sanitizedTemplate = JSON.parse(JSON.stringify(template));
@@ -216,21 +305,21 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
     };
 
     return (
-        <div className="h-full bg-[#15171e] text-slate-300 font-sans flex flex-col overflow-hidden">
+        <div className="h-full bg-white text-gray-700 font-sans flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="flex-none px-8 py-6 bg-[#15171e] border-b border-white/5">
+            <div className="flex-none px-8 py-6 bg-white border-b border-gray-200">
                 <div className="flex items-center gap-2 text-yellow-400 mb-1">
                     <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
                     <span className="text-xs font-bold tracking-wider">프로젝트</span>
-                    <ChevronRight size={14} className="text-slate-500" />
+                    <ChevronRight size={14} className="text-gray-400" />
                 </div>
-                <h1 className="text-3xl font-bold text-white">
+                <h1 className="text-3xl font-bold text-gray-800">
                     {initialData ? '프로젝트 수정' : '새 프로젝트 생성'}
                 </h1>
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-auto p-8 bg-[#1c202b] rounded-tl-3xl border-t border-l border-white/5">
+            <div className="flex-1 overflow-auto p-8 bg-gray-50 rounded-tl-3xl border-t border-l border-gray-200">
 
                 {/* Template Import (Only for New Projects) */}
                 {!initialData && templates && templates.length > 0 && (
@@ -245,7 +334,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                             템플릿에서 불러오기
                         </label>
                         <select
-                            className="w-full p-3 bg-[#15171e] text-slate-300 text-sm rounded-lg border border-white/10 focus:border-blue-500 outline-none shadow-inner"
+                            className="w-full p-3 bg-white text-gray-700 text-sm rounded-lg border border-gray-200 focus:border-blue-500 outline-none shadow-inner"
                             onChange={(e) => handleImportTemplate(e.target.value)}
                             defaultValue=""
                         >
@@ -262,24 +351,24 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                     {/* Row 1: Title (left) + Start Date (right) */}
                     <div className="flex gap-4">
                         <div className="flex-1">
-                            <label className="block text-xs font-bold text-slate-500 mb-1">
+                            <label className="block text-xs font-bold text-gray-400 mb-1">
                                 <FileText size={10} className="inline mr-1" /> 프로젝트 제목
                             </label>
                             <input
                                 type="text"
-                                className="w-full p-2.5 bg-[#252a38] border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition"
+                                className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:border-emerald-500 outline-none transition"
                                 placeholder="예: 내신 대비 4주 완성"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                             />
                         </div>
                         <div className="w-40">
-                            <label className="block text-xs font-bold text-slate-500 mb-1">
+                            <label className="block text-xs font-bold text-gray-400 mb-1">
                                 📅 시작일
                             </label>
                             <input
                                 type="date"
-                                className="w-full p-2.5 bg-[#252a38] border border-white/10 rounded-lg text-sm text-white focus:border-emerald-500 outline-none transition"
+                                className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 focus:border-emerald-500 outline-none transition"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
                             />
@@ -287,10 +376,10 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                     </div>
                     {/* Row 2: Description */}
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 mb-1">설명 (선택)</label>
+                        <label className="block text-xs font-bold text-gray-400 mb-1">설명 (선택)</label>
                         <input
                             type="text"
-                            className="w-full p-2.5 bg-[#252a38] border border-white/10 rounded-lg text-sm text-white placeholder-slate-500 focus:border-emerald-500 outline-none transition"
+                            className="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:border-emerald-500 outline-none transition"
                             placeholder="프로젝트에 대한 간단한 설명"
                             value={desc}
                             onChange={(e) => setDesc(e.target.value)}
@@ -298,16 +387,141 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                     </div>
                 </div>
 
+                {/* Phase 10: Project Members */}
+                <div className="mb-6">
+                    <label className="block text-xs font-bold text-gray-400 mb-2">
+                        👥 프로젝트 멤버 (역할 지정 가능)
+                    </label>
+                    <div className="bg-white border border-gray-200 rounded-lg p-3">
+                        <div className="flex flex-wrap gap-2 mb-3">
+                            {sortedUsers.map(user => {
+                                const member = projectMembers.find(m => m.userId === user.uid);
+                                const isSelected = !!member;
+                                return (
+                                    <button
+                                        key={user.uid}
+                                        type="button"
+                                        onClick={() => toggleProjectMember(user.uid, 'viewer')}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isSelected
+                                            ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                                            : 'bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-800 border border-gray-200'
+                                            }`}
+                                    >
+                                        {formatUserDisplay(user)}
+                                        {isSelected && <span className="ml-1.5 opacity-70">✓</span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {projectMembers.length > 0 && (
+                            <div className="border-t border-gray-200 pt-3">
+                                <p className="text-[10px] text-gray-400 mb-2">멤버 역할 설정:</p>
+                                <div className="space-y-1.5">
+                                    {projectMembers.map(member => (
+                                        <div key={member.userId} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                                            <span className="text-xs text-gray-700">{member.userName || member.userEmail}</span>
+                                            <select
+                                                value={member.role}
+                                                onChange={(e) => updateMemberRole(member.userId, e.target.value as ProjectMemberRole)}
+                                                className="text-[10px] px-2 py-1 rounded-full font-medium cursor-pointer outline-none bg-white border border-gray-200"
+                                            >
+                                                <option value="viewer">👁 관찰자</option>
+                                                <option value="editor">✏️ 편집자</option>
+                                                <option value="admin">⚙️ 관리자</option>
+                                                <option value="owner">👑 소유자</option>
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Phase 10: Visibility */}
+                <div className="mb-6">
+                    <label className="block text-xs font-bold text-gray-400 mb-2 flex items-center gap-1.5">
+                        <User size={10} /> 공개 범위
+                    </label>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setVisibility('private')}
+                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${visibility === 'private'
+                                ? 'bg-gray-600 text-white ring-2 ring-gray-400'
+                                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
+                                }`}
+                        >
+                            <Lock size={14} />
+                            <span>비공개</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setVisibility('department')}
+                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${visibility === 'department'
+                                ? 'bg-purple-600 text-white ring-2 ring-purple-400'
+                                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
+                                }`}
+                        >
+                            <Building2 size={14} />
+                            <span>부서 공개</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setVisibility('public')}
+                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${visibility === 'public'
+                                ? 'bg-green-600 text-white ring-2 ring-green-400'
+                                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:border-gray-300'
+                                }`}
+                        >
+                            <Globe size={14} />
+                            <span>전체 공개</span>
+                        </button>
+                    </div>
+
+                    {/* Phase 6: Department Selector */}
+                    {visibility === 'department' && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-purple-200">
+                            <p className="text-[10px] text-purple-600 mb-2 font-medium">공개할 부서 선택:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {dynamicDepartments.map(dept => {
+                                    const isSelected = projectDepartmentIds.includes(dept.id);
+                                    return (
+                                        <button
+                                            key={dept.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setProjectDepartmentIds(prev =>
+                                                    prev.includes(dept.id)
+                                                        ? prev.filter(id => id !== dept.id)
+                                                        : [...prev, dept.id]
+                                                );
+                                            }}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isSelected
+                                                ? 'bg-purple-500 text-white shadow-lg'
+                                                : 'bg-white text-gray-500 hover:text-gray-800 border border-gray-200'
+                                                }`}
+                                        >
+                                            {dept.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* Side-by-Side Layout: Form (Left) + Task List (Right) */}
                 <div className="flex gap-4 flex-1 min-h-0">
                     {/* LEFT: Task Form - Compact */}
-                    <div id="task-form" className={`w-1/2 bg-[#252a38] border ${editingTaskId ? 'border-yellow-500/50' : 'border-white/10'} rounded-xl p-3 shadow-lg transition-all flex flex-col`}>
+                    <div id="task-form" className={`w-1/2 bg-white border ${editingTaskId ? 'border-yellow-500/50' : 'border-gray-200'} rounded-xl p-3 shadow-lg transition-all flex flex-col`}>
                         <div className="flex justify-between items-center mb-2">
-                            <h3 className={`text-xs font-bold flex items-center gap-1.5 ${editingTaskId ? 'text-yellow-400' : 'text-white'}`}>
+                            <h3 className={`text-xs font-bold flex items-center gap-1.5 ${editingTaskId ? 'text-yellow-400' : 'text-gray-800'}`}>
                                 {editingTaskId ? <><Edit2 size={12} /> 항목 수정</> : <><Plus size={12} className="text-emerald-400" /> 항목 추가</>}
                             </h3>
                             {editingTaskId && (
-                                <button onClick={resetForm} className="text-[9px] text-slate-400 hover:text-white flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded">
+                                <button onClick={resetForm} className="text-[9px] text-gray-500 hover:text-gray-800 flex items-center gap-1 bg-white/5 px-1.5 py-0.5 rounded">
                                     <RotateCcw size={8} />재설정
                                 </button>
                             )}
@@ -318,7 +532,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                             <div className="flex-1">
                                 <input
                                     type="text"
-                                    className="w-full p-1.5 bg-[#1c202b] border border-white/5 rounded text-xs text-white placeholder-slate-600 focus:border-emerald-500 outline-none"
+                                    className="w-full p-1.5 bg-gray-50 border border-gray-200 rounded text-xs text-gray-800 placeholder-slate-600 focus:border-emerald-500 outline-none"
                                     placeholder="항목명"
                                     value={taskTitle}
                                     onChange={(e) => setTaskTitle(e.target.value)}
@@ -328,7 +542,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                 <input
                                     type="number"
                                     min="0"
-                                    className="w-full p-1.5 bg-[#1c202b] border border-white/5 rounded text-xs text-white text-center focus:border-emerald-500 outline-none"
+                                    className="w-full p-1.5 bg-gray-50 border border-gray-200 rounded text-xs text-gray-800 text-center focus:border-emerald-500 outline-none placeholder-gray-500"
                                     placeholder="D0"
                                     title="시작일 (Day)"
                                     value={startOffset}
@@ -339,7 +553,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                 <input
                                     type="number"
                                     min="1"
-                                    className="w-full p-1.5 bg-[#1c202b] border border-white/5 rounded text-xs text-white text-center focus:border-emerald-500 outline-none"
+                                    className="w-full p-1.5 bg-gray-50 border border-gray-200 rounded text-xs text-gray-800 text-center focus:border-emerald-500 outline-none placeholder-gray-500"
                                     placeholder="1일"
                                     title="기간 (일)"
                                     value={duration}
@@ -351,7 +565,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                         {/* Row 2: Assignee + Category */}
                         <div className="flex gap-2 mb-2">
                             <select
-                                className="w-32 p-1.5 bg-[#1c202b] border border-white/5 rounded text-xs text-white focus:border-emerald-500 outline-none cursor-pointer truncate"
+                                className="w-32 p-1.5 bg-gray-50 border border-gray-200 rounded text-xs text-gray-800 focus:border-emerald-500 outline-none cursor-pointer truncate"
                                 value={assigneeId}
                                 onChange={(e) => handleAssigneeChange(e.target.value)}
                             >
@@ -360,33 +574,43 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                     <option key={u.uid} value={u.uid}>{formatUserDisplay(u)}</option>
                                 ))}
                             </select>
-                            <div className="flex gap-1 flex-1 justify-end">
-                                {CATEGORIES.map(cat => (
-                                    <button
-                                        key={cat.id}
-                                        type="button"
-                                        onClick={() => setCategory(cat.id as typeof category)}
-                                        className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${category === cat.id
-                                            ? `${cat.color} text-white shadow-lg`
-                                            : `${cat.inactiveColor} text-slate-400 hover:text-white`
-                                            }`}
-                                    >
-                                        {cat.label}
-                                    </button>
-                                ))}
+                            <div className="flex gap-1 flex-1 justify-end flex-wrap">
+                                {CATEGORIES.map(cat => {
+                                    const isSelected = category === cat.id;
+                                    const activeStyle = {
+                                        backgroundColor: cat.style?.backgroundColor,
+                                        color: cat.style?.color,
+                                        borderColor: cat.style?.borderColor
+                                    };
+
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={() => setCategory(cat.id as typeof category)}
+                                            style={isSelected ? activeStyle : undefined}
+                                            className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all border ${isSelected
+                                                    ? 'shadow-sm ring-1 ring-offset-1 ring-gray-200'
+                                                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            {cat.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
-                        {/* Row 3: Departments */}
-                        <div className="flex gap-1 mb-2">
-                            {DEPARTMENTS.map(dept => (
+                        {/* Row 3: Departments (Task Level - Phase 6: Dynamic) */}
+                        <div className="flex gap-1 mb-2 overflow-x-auto pb-1 scrollbar-hide">
+                            {dynamicDepartments.map(dept => (
                                 <button
                                     key={dept.id}
                                     type="button"
                                     onClick={() => toggleDepartment(dept.id)}
-                                    className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${departmentIds.includes(dept.id)
-                                        ? `${dept.color} text-white`
-                                        : 'bg-[#1c202b] text-slate-500 hover:text-slate-300'
+                                    className={`px-2 py-1 rounded text-[10px] font-medium whitespace-nowrap transition-all ${departmentIds.includes(dept.id)
+                                        ? 'bg-purple-500 text-white'
+                                        : 'bg-gray-50 text-gray-400 hover:text-gray-700 border border-gray-200'
                                         }`}
                                 >
                                     {dept.label}
@@ -397,7 +621,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                         {/* Row 4: Dependency */}
                         <div className="mb-2">
                             <select
-                                className="w-full p-1.5 bg-[#1c202b] border border-white/5 rounded text-xs text-white focus:border-emerald-500 outline-none cursor-pointer"
+                                className="w-full p-1.5 bg-gray-50 border border-gray-200 rounded text-xs text-gray-800 focus:border-emerald-500 outline-none cursor-pointer"
                                 value=""
                                 onChange={(e) => {
                                     if (e.target.value && !dependsOn.includes(e.target.value)) {
@@ -421,7 +645,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                         return (
                                             <span key={depId} className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] rounded flex items-center gap-1">
                                                 {depTask?.title || depId}
-                                                <button type="button" onClick={() => setDependsOn(dependsOn.filter(id => id !== depId))} className="hover:text-white">
+                                                <button type="button" onClick={() => setDependsOn(dependsOn.filter(id => id !== depId))} className="hover:text-gray-800">
                                                     <X size={10} />
                                                 </button>
                                             </span>
@@ -435,9 +659,9 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                         <button
                             onClick={handleSaveTask}
                             disabled={!taskTitle.trim()}
-                            className={`w-full py-2 text-xs text-white rounded font-bold flex items-center justify-center gap-1 transition-all disabled:bg-slate-700 disabled:text-slate-500 ${editingTaskId
-                                ? 'bg-yellow-500 hover:bg-yellow-600'
-                                : 'bg-emerald-500 hover:bg-emerald-600'
+                            className={`w-full py-2 text-xs text-gray-800 rounded font-bold flex items-center justify-center gap-1 transition-all disabled:bg-gray-200 disabled:text-gray-400 ${editingTaskId
+                                ? 'bg-yellow-400 hover:bg-yellow-500'
+                                : 'bg-emerald-400 hover:bg-emerald-500'
                                 }`}
                         >
                             {editingTaskId ? <><Save size={12} /> 수정 완료</> : <><Plus size={12} /> 추가</>}
@@ -445,12 +669,12 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                     </div>
 
                     {/* RIGHT: Task List */}
-                    <div className="w-1/2 bg-[#252a38] border border-white/10 rounded-xl p-3 flex flex-col">
-                        <h4 className="text-xs font-bold text-slate-400 mb-2">등록된 항목 ({tasks.length})</h4>
+                    <div className="w-1/2 bg-white border border-gray-200 rounded-xl p-3 flex flex-col">
+                        <h4 className="text-xs font-bold text-gray-500 mb-2">등록된 항목 ({tasks.length})</h4>
                         {tasks.length === 0 ? (
                             <div className="flex-1 flex flex-col items-center justify-center text-center">
                                 <span className="text-2xl mb-2">📋</span>
-                                <p className="text-slate-500 text-xs">항목이 없습니다</p>
+                                <p className="text-gray-400 text-xs">항목이 없습니다</p>
                             </div>
                         ) : (
                             <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-white/10">
@@ -463,15 +687,15 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                     return (
                                         <div
                                             key={task.id}
-                                            className={`flex items-center gap-3 bg-[#252a38] border p-2.5 rounded-lg transition-all cursor-pointer group ${isEditing
+                                            className={`flex items-center gap-3 bg-white border p-2.5 rounded-lg transition-all cursor-pointer group ${isEditing
                                                 ? 'border-yellow-500 ring-1 ring-yellow-500/50'
-                                                : 'border-white/5 hover:border-white/20'
+                                                : 'border-gray-200 hover:border-white/20'
                                                 }`}
                                         >
                                             <div className={`w-1 h-10 rounded-full ${barColor}`}></div>
                                             <div className="flex-1 min-w-0" onClick={() => handleEditTask(task)}>
                                                 <div className="flex items-center gap-1.5 mb-0.5">
-                                                    <span className={`text-sm font-bold truncate ${isEditing ? 'text-yellow-400' : 'text-white'}`}>
+                                                    <span className={`text-sm font-bold truncate ${isEditing ? 'text-yellow-400' : 'text-gray-800'}`}>
                                                         {task.title}
                                                     </span>
                                                     {isEditing && (
@@ -480,7 +704,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                                                <div className="flex flex-wrap items-center gap-2 text-[10px] text-gray-400">
                                                     <span style={{ color: '#fdb813' }}>{formatTaskDate(task.startOffset)}</span>
                                                     <span>• {task.duration}일</span>
                                                     {task.assigneeName && (
@@ -494,14 +718,14 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleEditTask(task); }}
-                                                    className="p-1.5 rounded hover:bg-blue-500/20 text-slate-500 hover:text-blue-400 transition-all"
+                                                    className="p-1.5 rounded hover:bg-blue-500/20 text-gray-400 hover:text-blue-400 transition-all"
                                                     title="수정"
                                                 >
                                                     <Edit2 size={14} />
                                                 </button>
                                                 <button
                                                     onClick={(e) => handleRemoveTask(task.id, e)}
-                                                    className="p-1.5 rounded hover:bg-red-500/20 text-slate-500 hover:text-red-400 transition-all"
+                                                    className="p-1.5 rounded hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-all"
                                                     title="삭제"
                                                 >
                                                     <X size={14} />
@@ -516,16 +740,16 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-4 justify-end pt-6 border-t border-white/5">
+                <div className="flex gap-4 justify-end pt-6 border-t border-gray-200">
                     <button
                         onClick={onCancel}
-                        className="px-6 py-3 rounded-xl border border-white/10 text-slate-400 font-medium hover:bg-white/5 hover:text-white transition-all"
+                        className="px-6 py-3 rounded-xl border border-gray-200 text-gray-500 font-medium hover:bg-gray-100 hover:text-gray-800 transition-all"
                     >
                         취소
                     </button>
                     <button
                         onClick={handleSaveTemplate}
-                        className="px-8 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
+                        className="px-8 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-gray-800 font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
                     >
                         <Save size={16} />
                         {initialData ? '수정 완료' : '프로젝트 생성'}
