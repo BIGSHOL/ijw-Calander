@@ -97,6 +97,7 @@ export interface GanttTemplate {
   createdBy?: string;       // Author UID
   createdByEmail?: string;  // Author email
   isShared?: boolean;       // Shared with team
+  isTemplate?: boolean;     // Reusable template flag
 }
 
 export interface GanttProject {

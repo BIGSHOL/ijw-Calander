@@ -12,7 +12,8 @@
       "Bash(cat:*)",
       "Bash(npm install)",
       "Bash(rm:*)",
-      "Bash(firebase deploy:*)"
+      "Bash(firebase deploy:*)",
+      "Bash(ls:*)"
     ]
   }
 }

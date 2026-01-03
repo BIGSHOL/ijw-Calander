@@ -18,8 +18,8 @@ export const useGanttTemplates = (userId?: string) => {
 
       const snapshot = await getDocs(q);
       const templates = snapshot.docs.map(doc => ({
-        id: doc.id,
         ...doc.data(),
+        id: doc.id,
         createdAt: doc.data().createdAt?.toMillis() || Date.now()
       } as GanttTemplate));
 
@@ -40,8 +40,12 @@ export const useCreateTemplate = () => {
 
   return useMutation({
     mutationFn: async (template: Omit<GanttTemplate, 'id' | 'createdAt'>) => {
+      // Remove 'id' from the data being saved to Firestore
+      // (The template comes with a temporary ID from builder, but we want Firestore to generate one)
+      const { id, ...dataToSave } = template as any;
+
       const docRef = await addDoc(collection(db, 'gantt_templates'), {
-        ...template,
+        ...dataToSave,
         createdAt: Timestamp.now(),
         isShared: template.isShared || false,
       });
