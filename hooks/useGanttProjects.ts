@@ -27,6 +27,10 @@ export const useGanttProjects = (userId?: string) => {
     enabled: !!userId,
     staleTime: 1000 * 60 * 2, // 2분
     gcTime: 1000 * 60 * 10, // 10분
+    // Critical Issue #3: Firebase React Query 최적화 - 불필요한 재페칭 방지
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 };
 
@@ -56,7 +60,8 @@ export const useUpdateProject = () => {
   return useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<GanttProject> }) => {
       const docRef = doc(db, 'gantt_projects', id);
-      const { id: _, startedAt, lastUpdated, ...updateData } = updates as any;
+      // Important Improvement #5: as any 제거 - 적절한 타입 정의로 교체
+      const { id: _id, startedAt, lastUpdated, ...updateData } = updates as Partial<GanttProject> & { id?: string; startedAt?: number; lastUpdated?: number };
       await updateDoc(docRef, {
         ...updateData,
         lastUpdated: Timestamp.now(),

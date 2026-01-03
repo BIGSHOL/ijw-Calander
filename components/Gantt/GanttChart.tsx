@@ -3,6 +3,10 @@ import { GanttSubTask } from '../../types';
 import { ZoomIn, ZoomOut, Maximize, Calendar, Filter, CheckCircle2, MoreHorizontal, ChevronRight } from 'lucide-react';
 import { format, addDays, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { db } from '../../firebaseConfig';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { useQuery } from '@tanstack/react-query';
+
 
 interface GanttChartProps {
     tasks: GanttSubTask[];
@@ -27,40 +31,82 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
     const [isFitToScreen, setIsFitToScreen] = useState(false);
     const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null); // Phase A: Hover Highlight
 
-    // Category-based grouping (Phase 9)
-    const CATEGORY_CONFIG = {
-        planning: { title: '기획', color: 'text-blue-400' },
-        development: { title: '개발', color: 'text-purple-400' },
-        testing: { title: '테스트', color: 'text-green-400' },
-        other: { title: '기타', color: 'text-slate-400' }
-    };
+
+
+    // Dynamic Categories Loading (Phase 11)
+    const { data: categories = [] } = useQuery<{ id: string; label: string; backgroundColor: string; textColor: string }[]>({
+        queryKey: ['ganttCategories'],
+        queryFn: async () => {
+            const q = query(collection(db, 'gantt_categories'), orderBy('order', 'asc'));
+            const snapshot = await getDocs(q);
+            if (snapshot.empty) {
+                // Fallback / Hardcoded defaults if empty (should correspond to seeded data)
+                return [
+                    { id: 'planning', label: '기획', backgroundColor: '#dbeafe', textColor: '#1d4ed8' }, // blue-100, blue-700
+                    { id: 'development', label: '개발', backgroundColor: '#f3e8ff', textColor: '#7e22ce' }, // purple-100, purple-700
+                    { id: 'testing', label: '테스트', backgroundColor: '#d1fae5', textColor: '#047857' }, // emerald-100, emerald-700
+                    { id: 'other', label: '기타', backgroundColor: '#f3f4f6', textColor: '#374151' } // gray-100, gray-700
+                ];
+            }
+            return snapshot.docs.map(doc => ({
+                id: doc.id,
+                label: doc.data().label,
+                backgroundColor: doc.data().backgroundColor,
+                textColor: doc.data().textColor
+            }));
+        },
+        staleTime: 1000 * 60 * 5 // 5 minutes
+    });
+
+    const categoryConfig = useMemo(() => {
+        const config: Record<string, { title: string; color: string; style?: React.CSSProperties }> = {};
+        categories.forEach(cat => {
+            // We use inline styles for dynamic colors now, but keeping 'color' prop for compatibility or class-based fallback
+            config[cat.id] = {
+                title: cat.label,
+                color: '', // Deprecated in favor of style
+                style: { backgroundColor: cat.backgroundColor, color: cat.textColor, borderColor: cat.backgroundColor } // simplified border
+            };
+        });
+        // Ensure default fallback exists
+        if (!config['other']) config['other'] = { title: '기타', color: 'bg-gray-100 text-gray-700', style: { backgroundColor: '#f3f4f6', color: '#374151' } };
+        return config;
+    }, [categories]);
 
     const groups = useMemo(() => {
-        const grouped: Record<string, typeof tasks> = {
-            planning: [],
-            development: [],
-            testing: [],
-            other: []
-        };
+        // Dynamic grouping based on available categories
+        // We want to preserve the order of categories as fetched (sorted by order)
+        // plus an 'other' bucket if needed (though 'other' should be in categories)
+
+        const grouped: Record<string, typeof tasks> = {};
+        categories.forEach(cat => grouped[cat.id] = []);
+        // Extra catch-all if tasks have category not in list?
+        if (!grouped['other']) grouped['other'] = [];
 
         tasks.forEach(task => {
             const cat = task.category || 'other';
             if (grouped[cat]) {
                 grouped[cat].push(task);
             } else {
-                grouped.other.push(task);
+                // Determine fallback
+                if (grouped['other']) grouped['other'].push(task);
+                else {
+                    // If no 'other' category defined dynamically, force create it or just push to first? 
+                    // Safest is to just add to the first available or create a temp bucket.
+                    // Let's assume 'other' exists or add it.
+                    if (!grouped['other']) grouped['other'] = [];
+                    grouped['other'].push(task);
+                }
             }
         });
 
-        return Object.entries(grouped)
-            .filter(([, catTasks]) => catTasks.length > 0)
-            .map(([id, catTasks]) => ({
-                id,
-                title: CATEGORY_CONFIG[id as keyof typeof CATEGORY_CONFIG]?.title || id,
-                tasks: catTasks,
-                color: CATEGORY_CONFIG[id as keyof typeof CATEGORY_CONFIG]?.color || 'text-slate-400'
-            }));
-    }, [tasks]);
+        return categories.map(cat => ({
+            id: cat.id,
+            title: cat.label,
+            tasks: grouped[cat.id] || [],
+            style: { backgroundColor: cat.backgroundColor, color: cat.textColor }
+        })).filter(g => g.tasks.length > 0);
+    }, [tasks, categories]);
 
     // Dimensions
     const rowHeight = 60; // Taller rows for 2-line task bars
@@ -260,24 +306,24 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
     }, [groups, taskPositions]);
 
     return (
-        <div className="w-full h-full bg-[#15171e] text-slate-300 font-sans flex flex-col overflow-hidden">
+        <div className="w-full h-full bg-white text-gray-700 font-sans flex flex-col overflow-hidden">
 
             {/* Dashboard Header Content (Simulated as part of the chart area based on image) */}
-            <div className="flex-none px-8 py-6 bg-[#15171e]">
+            <div className="flex-none px-8 py-6 bg-white">
                 <div className="flex justify-between items-end mb-8">
                     <div>
                         <div className="flex items-center gap-2 text-yellow-400 mb-1">
                             <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
                             <span className="text-xs font-bold tracking-wider">프로젝트</span>
-                            <ChevronRight size={14} className="text-slate-500" />
+                            <ChevronRight size={14} className="text-gray-400" />
                         </div>
-                        <h1 className="text-3xl font-bold text-white mb-6">{title}</h1>
+                        <h1 className="text-3xl font-bold text-gray-800 mb-6">{title}</h1>
 
                         {/* Tab Navigation - Only Timeline is active for now */}
-                        <div className="flex items-center gap-8 text-sm font-medium border-b border-white/10 pb-px">
+                        <div className="flex items-center gap-8 text-sm font-medium border-b border-gray-200 pb-px">
                             <span className="text-emerald-400 border-b-2 border-emerald-400 pb-2 cursor-pointer">타임라인</span>
                             {/* Future tabs - hidden until implemented */}
-                            {/* <span className="text-slate-500">List</span> */}
+                            {/* <span className="text-gray-400">List</span> */}
                         </div>
                     </div>
                 </div>
@@ -286,7 +332,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                     <div className="flex items-center gap-3">
                         {/* Filter Button - Will be implemented in Phase 8 */}
                         <button
-                            className="text-slate-400 hover:text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-white/5 transition-all opacity-50 cursor-not-allowed"
+                            className="text-gray-500 hover:text-gray-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-100 transition-all opacity-50 cursor-not-allowed"
                             title="필터 기능은 곧 추가됩니다"
                             disabled
                         >
@@ -297,7 +343,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                         {onSaveAsTemplate && (
                             <button
                                 onClick={onSaveAsTemplate}
-                                className="text-slate-400 hover:text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-white/5 transition-all border border-white/10"
+                                className="text-gray-500 hover:text-gray-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-100 transition-all border border-gray-200"
                             >
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 01-2-2V5a2 2 0 012-2h4.586" />
@@ -307,8 +353,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 bg-[#202532] p-1 rounded-full border border-white/5">
-                        <ZoomOut size={14} className="text-slate-500 ml-2" />
+                    <div className="flex items-center gap-2 bg-[#202532] p-1 rounded-full border border-gray-200">
+                        <ZoomOut size={14} className="text-gray-400 ml-2" />
                         <input
                             type="range"
                             min="30"
@@ -320,10 +366,10 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                             }}
                             className="w-24 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                         />
-                        <ZoomIn size={14} className="text-slate-500 mr-2" />
+                        <ZoomIn size={14} className="text-gray-400 mr-2" />
                         <button
                             onClick={() => setIsFitToScreen(true)}
-                            className="p-1 rounded-full hover:bg-white/10 text-slate-400"
+                            className="p-1 rounded-full hover:bg-white/10 text-gray-500"
                         >
                             <Maximize size={14} />
                         </button>
@@ -332,7 +378,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
             </div>
 
             {/* Main Graph Area */}
-            <div className="flex-1 w-full overflow-hidden relative bg-[#1c202b] rounded-tl-3xl border-t border-l border-white/5 shadow-2xl mx-auto max-w-[98%]">
+            <div className="flex-1 w-full overflow-hidden relative bg-gray-50 rounded-tl-3xl border-t border-l border-gray-200 shadow-2xl mx-auto max-w-[98%]">
                 <div
                     ref={containerRef}
                     className="h-full overflow-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
@@ -342,7 +388,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                         style={{ width: chartWidth, paddingLeft: 40, paddingRight: 40 }}
                     >
                         {/* Timeline Header */}
-                        <div className="sticky top-0 z-40 bg-[#1c202b]/95 backdrop-blur-sm pt-4 pb-2 border-b border-white/5">
+                        <div className="sticky top-0 z-40 bg-gray-50/95 backdrop-blur-sm pt-4 pb-2 border-b border-gray-200">
                             {/* Days with Month Labels */}
                             <div className="flex">
                                 {Array.from({ length: maxDay + 2 }).map((_, i) => {
@@ -362,13 +408,13 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                     return (
                                         <div
                                             key={i}
-                                            className={`text-[10px] font-mono flex flex-col items-center justify-end border-r border-white/5 ${isWeekend ? 'text-red-400' : 'text-slate-500'}`}
+                                            className={`text-[10px] font-mono flex flex-col items-center justify-end border-r border-gray-200 ${isWeekend ? 'text-red-400' : 'text-gray-400'}`}
                                             style={{ width: dayWidth, height: 50 }}
                                         >
                                             {showMonth && (
                                                 <span className="text-sm font-bold text-emerald-400 mb-1">{monthLabel}</span>
                                             )}
-                                            <span className={isWeekend ? 'text-red-400' : 'text-slate-300'}>{dayNum}</span>
+                                            <span className={isWeekend ? 'text-red-400' : 'text-gray-700'}>{dayNum}</span>
                                             <span className="opacity-50">{weekday}</span>
                                         </div>
                                     );
@@ -462,8 +508,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                             <div key={group.id} className="mt-8">
                                 {/* Group Header */}
                                 <div className="flex items-center gap-2 mb-4 sticky left-0 px-2">
-                                    <CheckCircle2 size={16} className="text-blue-500" />
-                                    <span className="text-xs font-bold text-slate-300 tracking-wider">{group.title}</span>
+                                    <CheckCircle2 size={16} style={{ color: (group as any).style?.color || '#3b82f6' }} />
+                                    <span className="text-xs font-bold tracking-wider" style={{ color: (group as any).style?.color || '#374151' }}>{group.title}</span>
                                 </div>
 
                                 {/* Tasks Grid */}
@@ -473,7 +519,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                         {Array.from({ length: maxDay + 2 }).map((_, i) => (
                                             <div
                                                 key={`grid-${i}`}
-                                                className="border-r border-white/5 h-full"
+                                                className="border-r border-gray-200 h-full"
                                                 style={{ width: dayWidth }}
                                             />
                                         ))}
@@ -494,7 +540,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                             >
                                                 {/* Bar - Pill Style with Gradient */}
                                                 <div
-                                                    className={`absolute h-[38px] rounded-full flex items-center justify-center gap-2 px-4 ${theme.bg} shadow-xl transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 cursor-pointer z-10 group/bar border border-white/20`}
+                                                    className={`absolute h-[38px] rounded-full flex items-center justify-center gap-2 px-4 ${theme.bg} shadow-xl transition duration-300 hover:scale-105 hover:-translate-y-0.5 cursor-pointer z-10 hover:z-50 group/bar border border-white/20`}
                                                     style={{
                                                         left: task.startOffset * dayWidth,
                                                         width: Math.max(dayWidth * task.duration, 70),
@@ -502,7 +548,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                                     }}
                                                 >
                                                     {/* Single Line: Title + Assignee */}
-                                                    <span className="text-[10px] font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis">
+                                                    <span className="text-[10px] font-bold text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis">
                                                         {task.title}
                                                     </span>
                                                     {task.assigneeName && task.duration > 2 && (
@@ -513,26 +559,26 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
 
                                                     {/* Tooltip */}
                                                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/bar:block z-[9999] w-max max-w-xs">
-                                                        <div className="bg-[#1f2937] text-white text-xs rounded-lg p-3 shadow-xl border border-white/10">
-                                                            <div className="font-bold mb-1 text-sm">{task.title}</div>
-                                                            <div className="text-slate-400 mb-2">{task.description}</div>
+                                                        <div className="bg-white text-gray-800 text-xs rounded-lg p-3 shadow-xl border border-gray-200">
+                                                            <div className="font-bold mb-1 text-sm text-gray-900">{task.title}</div>
+                                                            <div className="text-gray-500 mb-2">{task.description}</div>
 
                                                             <div className="space-y-1">
                                                                 <div className="flex justify-between gap-4">
-                                                                    <span className="text-slate-500">기간</span>
+                                                                    <span className="text-gray-400">기간</span>
                                                                     <span>{task.duration}일</span>
                                                                 </div>
 
                                                                 {task.assigneeName && (
-                                                                    <div className="flex justify-between gap-4 border-t border-white/10 pt-1 mt-1">
-                                                                        <span className="text-slate-500">담당자</span>
+                                                                    <div className="flex justify-between gap-4 border-t border-gray-200 pt-1 mt-1">
+                                                                        <span className="text-gray-400">담당자</span>
                                                                         <span className="text-emerald-400 font-medium">@{task.assigneeName}</span>
                                                                     </div>
                                                                 )}
 
                                                                 {task.departmentIds && task.departmentIds.length > 0 && (
-                                                                    <div className="flex flex-col gap-1 border-t border-white/10 pt-1 mt-1">
-                                                                        <span className="text-slate-500">관련 부서</span>
+                                                                    <div className="flex flex-col gap-1 border-t border-gray-200 pt-1 mt-1">
+                                                                        <span className="text-gray-400">관련 부서</span>
                                                                         <div className="flex flex-wrap gap-1">
                                                                             {task.departmentIds.map(d => (
                                                                                 <span key={d} className="bg-white/10 px-1.5 py-0.5 rounded text-[10px]">
@@ -545,7 +591,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                                             </div>
 
                                                             {/* Arrow */}
-                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-[#1f2937]"></div>
+                                                            <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-white"></div>
                                                         </div>
                                                     </div>
                                                 </div>

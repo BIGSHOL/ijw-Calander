@@ -8,7 +8,7 @@ import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, 
 
 import { Holiday } from '../types';
 import MyEventsModal from './MyEventsModal';
-import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab } from './settings';
+import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab, DepartmentsTab, GanttCategoriesTab } from './settings';
 // import MigrationPanel from './settings/MigrationPanel';
 
 interface SettingsModalProps {
@@ -23,8 +23,8 @@ interface SettingsModalProps {
   teachers: Teacher[];  // Centralized from App.tsx
 }
 
-type MainTabMode = 'calendar' | 'timetable' | 'permissions';
-type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions' | 'tab_access' | 'migration';
+type MainTabMode = 'calendar' | 'timetable' | 'permissions' | 'gantt';
+type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions' | 'tab_access' | 'migration' | 'gantt_departments' | 'gantt_categories';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -777,6 +777,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       ⚙️ 시스템 설정
                     </button>
                   )}
+                  {isMaster && (
+                    <button
+                      onClick={() => { setMainTab('gantt'); setActiveTab('gantt_departments'); }}
+                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'gantt' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
+                    >
+                      📊 간트 관리
+                    </button>
+                  )}
                 </div>
                 {/* Sub Tab Selector */}
                 <div className="flex gap-1 pl-2">
@@ -827,6 +835,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           기타 설정
                         </button>
                       )}
+                    </>
+                  )}
+                  {mainTab === 'gantt' && (
+                    <>
+                      <button onClick={() => setActiveTab('gantt_departments')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'gantt_departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        부서 관리
+                      </button>
+                      <button onClick={() => setActiveTab('gantt_categories')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'gantt_categories' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        카테고리 관리
+                      </button>
                     </>
                   )}
                 </div>
@@ -1287,6 +1305,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 isAdmin={isAdmin}
                 currentUserRole={currentUserProfile?.role}
               />
+            )}
+
+            {/* GANTT DEPARTMENTS TAB */}
+            {activeTab === 'gantt_departments' && isMaster && (
+              <DepartmentsTab isMaster={isMaster} />
+            )}
+
+            {/* GANTT CATEGORIES TAB */}
+            {activeTab === 'gantt_categories' && isMaster && (
+              <GanttCategoriesTab isMaster={isMaster} />
             )}
 
             {/* MIGRATION TAB */}

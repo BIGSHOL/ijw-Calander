@@ -29,8 +29,11 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
     const canEdit = hasPermission('gantt.edit');
     const canDelete = hasPermission('gantt.delete');
 
-    // Firestore hooks
-    const { data: templates = [], isLoading } = useGanttTemplates(userProfile?.uid);
+    // Firestore hooks (Phase 10: Pass userProfile for permission filtering)
+    const { data: templates = [], isLoading } = useGanttTemplates({
+        userId: userProfile?.uid,
+        userProfile: userProfile
+    });
     const createTemplate = useCreateTemplate();
     const updateTemplate = useUpdateTemplate();
     const deleteTemplate = useDeleteTemplate();
@@ -199,12 +202,11 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
         );
     }
 
-    // Dashboard Layout for Execute/Home Mode
     return (
-        <div className="flex h-full bg-[#0f1115] overflow-hidden font-sans text-slate-300">
+        <div className="flex h-full bg-gray-50 overflow-hidden font-sans text-gray-600">
             {/* Left Sidebar - Firebase Style */}
             {/* Icon Navigation Strip */}
-            <div className="w-14 bg-[#0d0f14] border-r border-white/5 flex flex-col items-center py-4 shrink-0">
+            <div className="w-14 bg-white border-r border-gray-200 flex flex-col items-center py-4 shrink-0">
                 {/* Logo */}
                 <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6 shadow-lg">
                     <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -214,37 +216,37 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
 
                 {/* Icon Buttons */}
                 <div className="flex flex-col gap-2">
-                    <button className="w-9 h-9 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center" title="프로젝트">
+                    <button className="w-9 h-9 rounded-lg bg-blue-50/50 text-blue-500 flex items-center justify-center" title="프로젝트">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
                     </button>
-                    <button className="w-9 h-9 rounded-lg text-slate-500 hover:bg-white/5 hover:text-white flex items-center justify-center transition-colors" title="알림">
+                    <button className="w-9 h-9 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-800 flex items-center justify-center transition-colors" title="알림">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                     </button>
-                    <button className="w-9 h-9 rounded-lg text-slate-500 hover:bg-white/5 hover:text-white flex items-center justify-center transition-colors" title="검색">
+                    <button className="w-9 h-9 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-800 flex items-center justify-center transition-colors" title="검색">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                     </button>
                 </div>
 
                 {/* Bottom Icons */}
                 <div className="mt-auto flex flex-col gap-2">
-                    <button className="w-9 h-9 rounded-lg text-slate-500 hover:bg-white/5 hover:text-white flex items-center justify-center transition-colors" title="설정">
+                    <button className="w-9 h-9 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-800 flex items-center justify-center transition-colors" title="설정">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     </button>
                 </div>
             </div>
 
             {/* Main Sidebar Panel */}
-            <div className="w-56 bg-[#15171e] border-r border-white/5 flex flex-col shrink-0 overflow-hidden">
+            <div className="w-56 bg-white border-r border-gray-200 flex flex-col shrink-0 overflow-hidden">
                 {/* Header */}
-                <div className="px-4 py-4 border-b border-white/5">
-                    <h2 className="text-lg font-bold text-white">간트 차트</h2>
+                <div className="px-4 py-4 border-b border-gray-200">
+                    <h2 className="text-lg font-bold text-gray-800">간트 차트</h2>
                 </div>
 
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto py-4 scrollbar-thin scrollbar-thumb-white/10">
+                <div className="flex-1 overflow-y-auto py-4 scrollbar-thin scrollbar-thumb-gray-200">
                     {/* 프로젝트 바로가기 Section */}
                     <div className="px-3 mb-6">
-                        <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3 px-1">
+                        <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-3 px-1">
                             프로젝트 바로가기
                         </div>
                         <div className="space-y-1">
@@ -371,7 +373,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
             </div>
 
             {/* Main Content Area */}
-            <div className="flex-1 bg-[#15171e] relative overflow-hidden">
+            <div className="flex-1 bg-gray-50 relative overflow-hidden">
                 {viewMode === 'create' && canCreate ? (
                     <GanttBuilder
                         onSave={saveNewTemplate}
@@ -392,11 +394,11 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                 ) : (
                     // Empty State or Welcome
                     <div className="h-full flex flex-col items-center justify-center text-center p-12">
-                        <div className="w-24 h-24 bg-[#1c202b] rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-black/50">
+                        <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-xl shadow-gray-200">
                             <span className="text-4xl">🚀</span>
                         </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">프로젝트를 선택하세요</h2>
-                        <p className="text-slate-500 max-w-md">사이드바에서 프로젝트를 선택하면 타임라인이 표시됩니다.</p>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">프로젝트를 선택하세요</h2>
+                        <p className="text-gray-500 max-w-md">사이드바에서 프로젝트를 선택하면 타임라인이 표시됩니다.</p>
                     </div>
                 )}
             </div>
