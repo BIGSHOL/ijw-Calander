@@ -8,22 +8,24 @@ interface GanttChartProps {
     tasks: GanttSubTask[];
     title?: string;
     startDate?: string; // YYYY-MM-DD format
+    onSaveAsTemplate?: () => void;
 }
 
-// Neon Palette from the image
+// Phase 2: Neon Gradient Palette with Glow + Arrow Color
 const COLORS = [
-    { bg: 'bg-[#0ea5e9]', shadow: 'shadow-[#0ea5e9]/40' }, // Cyan
-    { bg: 'bg-[#f59e0b]', shadow: 'shadow-[#f59e0b]/40' }, // Orange
-    { bg: 'bg-[#ec4899]', shadow: 'shadow-[#ec4899]/40' }, // Pink
-    { bg: 'bg-[#10b981]', shadow: 'shadow-[#10b981]/40' }, // Green
-    { bg: 'bg-[#8b5cf6]', shadow: 'shadow-[#8b5cf6]/40' }, // Purple
-    { bg: 'bg-[#3b82f6]', shadow: 'shadow-[#3b82f6]/40' }, // Blue
+    { bg: 'bg-gradient-to-r from-cyan-500 to-blue-500', shadow: 'shadow-cyan-500/50', glow: 'rgba(6, 182, 212, 0.4)', arrow: '#06b6d4' },
+    { bg: 'bg-gradient-to-r from-orange-500 to-amber-500', shadow: 'shadow-orange-500/50', glow: 'rgba(249, 115, 22, 0.4)', arrow: '#f97316' },
+    { bg: 'bg-gradient-to-r from-pink-500 to-rose-500', shadow: 'shadow-pink-500/50', glow: 'rgba(236, 72, 153, 0.4)', arrow: '#ec4899' },
+    { bg: 'bg-gradient-to-r from-emerald-500 to-green-500', shadow: 'shadow-emerald-500/50', glow: 'rgba(16, 185, 129, 0.4)', arrow: '#10b981' },
+    { bg: 'bg-gradient-to-r from-violet-500 to-purple-500', shadow: 'shadow-violet-500/50', glow: 'rgba(139, 92, 246, 0.4)', arrow: '#8b5cf6' },
+    { bg: 'bg-gradient-to-r from-blue-600 to-indigo-600', shadow: 'shadow-blue-600/50', glow: 'rgba(59, 130, 246, 0.4)', arrow: '#3b82f6' },
 ];
 
-const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesign", startDate }) => {
+const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesign", startDate, onSaveAsTemplate }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [dayWidth, setDayWidth] = useState(50);
     const [isFitToScreen, setIsFitToScreen] = useState(false);
+    const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null); // Phase A: Hover Highlight
 
     // Category-based grouping (Phase 9)
     const CATEGORY_CONFIG = {
@@ -61,14 +63,14 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
     }, [tasks]);
 
     // Dimensions
-    const rowHeight = 48; // Taller rows
+    const rowHeight = 60; // Taller rows for 2-line task bars
     const headerHeight = 70;
-    const barHeight = 28;
+    const barHeight = 42; // Increased for 2-line content
 
     const maxDay = useMemo(() => {
-        if (tasks.length === 0) return 10;
+        if (tasks.length === 0) return 7;
         const lastDay = Math.max(...tasks.map(t => t.startOffset + t.duration));
-        return Math.max(lastDay + 2, 10); // 최소 10일, 마지막 작업 후 2일 여유
+        return lastDay + 1; // 최소 7일, 마지막 작업 후 1일 여유
     }, [tasks]);
 
     // Auto Fit
@@ -85,48 +87,177 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
     // Phase 9: Calculate task positions for dependency arrows
     const taskPositions = useMemo(() => {
         const positions: Record<string, { x: number; y: number; endX: number }> = {};
-        let globalRowIndex = 0;
 
-        groups.forEach(group => {
-            globalRowIndex++; // Group header takes a row
+        // Timeline header height: pt-4(16px) + height(50px) + pb-2(8px) = 74px
+        const timelineHeaderHeight = 74;
+        // Padding offset (matches chart container paddingLeft)
+        const paddingLeft = 40;
+        let cumulativeY = timelineHeaderHeight;
+
+        groups.forEach((group, groupIndex) => {
+            // Add group top margin (mt-8 = 32px) for ALL groups to match rendering
+            cumulativeY += 32; // mt-8 applied to all groups in actual DOM
+
+            // Group header height (flex items-center gap-2 mb-4)
+            const groupHeaderHeight = 24 + 16; // ~24px height + 16px margin-bottom
+            cumulativeY += groupHeaderHeight;
+
             group.tasks.forEach(task => {
-                const startX = task.startOffset * dayWidth;
-                const endX = (task.startOffset + task.duration) * dayWidth;
-                const y = globalRowIndex * rowHeight + rowHeight / 2;
+                // Include paddingLeft offset in X coordinates
+                const startX = paddingLeft + (task.startOffset * dayWidth);
+                const endX = paddingLeft + ((task.startOffset + task.duration) * dayWidth);
+                const y = cumulativeY + rowHeight / 2; // Center of task row
                 positions[task.id] = { x: startX, y, endX };
-                globalRowIndex++;
+                cumulativeY += rowHeight; // Move to next task
             });
         });
 
         return positions;
     }, [groups, dayWidth, rowHeight]);
 
-    // Phase 9: Generate dependency arrows
+    // Generate dependency arrows: LEFT VERTICAL LANE pattern
+    // All arrows route through a vertical lane on the left side
+    const LANE_BASE_X = 25; // Left margin for vertical lane
+    const LANE_SPACING = 6; // Spacing between multiple lanes
+    const Y_OFFSET_STEP = 4; // Subtle Y offset for arrows from same source
+
     const dependencyArrows = useMemo(() => {
-        const arrows: Array<{ fromId: string; toId: string; path: string }> = [];
+        const arrows: Array<{ fromId: string; toId: string; path: string; startX: number; startY: number; endX: number; endY: number; color: string }> = [];
 
-        tasks.forEach(task => {
-            if (task.dependsOn && task.dependsOn.length > 0) {
-                task.dependsOn.forEach(depId => {
-                    const fromPos = taskPositions[depId];
-                    const toPos = taskPositions[task.id];
-                    if (fromPos && toPos) {
-                        // Bezier curve from end of dependency task to start of current task
-                        const startX = fromPos.endX;
-                        const startY = fromPos.y;
-                        const endX = toPos.x;
-                        const endY = toPos.y;
-                        const midX = (startX + endX) / 2;
+        // Collect all unique dependency relationships with source color index
+        const allDeps: Array<{ fromId: string; toId: string; fromY: number; toY: number; toX: number; fromX: number; colorIndex: number }> = [];
 
-                        const path = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`;
-                        arrows.push({ fromId: depId, toId: task.id, path });
-                    }
-                });
+        // Build a map of taskId -> colorIndex
+        let globalTaskIndex = 0;
+        const taskColorMap: Record<string, number> = {};
+        groups.forEach((group, gIndex) => {
+            group.tasks.forEach((task, tIndex) => {
+                taskColorMap[task.id] = gIndex * 10 + tIndex; // Same logic as rendering
+            });
+        });
+
+        groups.forEach((group) => {
+            group.tasks.forEach((task) => {
+                if (task.dependsOn && task.dependsOn.length > 0) {
+                    task.dependsOn.forEach((depId) => {
+                        const fromPos = taskPositions[depId];
+                        const toPos = taskPositions[task.id];
+                        if (fromPos && toPos) {
+                            allDeps.push({
+                                fromId: depId,
+                                toId: task.id,
+                                fromY: fromPos.y,
+                                toY: toPos.y,
+                                toX: toPos.x,
+                                fromX: fromPos.x,
+                                colorIndex: taskColorMap[depId] || 0
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
+        // Group arrows by source task to calculate Y offsets
+        const sourceGroups: Record<string, typeof allDeps> = {};
+        allDeps.forEach(dep => {
+            if (!sourceGroups[dep.fromId]) sourceGroups[dep.fromId] = [];
+            sourceGroups[dep.fromId].push(dep);
+        });
+
+        // Group arrows by target task to calculate arrival Y offsets
+        const targetGroups: Record<string, typeof allDeps> = {};
+        allDeps.forEach(dep => {
+            if (!targetGroups[dep.toId]) targetGroups[dep.toId] = [];
+            targetGroups[dep.toId].push(dep);
+        });
+
+        // Sort dependencies by the range they span (larger spans get outer lanes)
+        const sortedDeps = [...allDeps].sort((a, b) => {
+            const rangeA = Math.abs(a.toY - a.fromY);
+            const rangeB = Math.abs(b.toY - b.fromY);
+            return rangeB - rangeA; // Larger ranges first (outer lanes)
+        });
+
+        // Track which index each dep has within its source group
+        const sourceIndexMap = new Map<string, number>();
+        Object.values(sourceGroups).forEach(group => {
+            group.sort((a, b) => a.toY - b.toY);
+            group.forEach((dep, idx) => {
+                const key = `${dep.fromId}-${dep.toId}`;
+                sourceIndexMap.set(key, idx);
+            });
+        });
+
+        // Track which index each dep has within its target group
+        const targetIndexMap = new Map<string, number>();
+        Object.values(targetGroups).forEach(group => {
+            group.sort((a, b) => a.fromY - b.fromY);
+            group.forEach((dep, idx) => {
+                const key = `${dep.fromId}-${dep.toId}`;
+                targetIndexMap.set(key, idx);
+            });
+        });
+
+        // Assign lane indices
+        sortedDeps.forEach((dep, idx) => {
+            const fromPos = taskPositions[dep.fromId];
+            const toPos = taskPositions[dep.toId];
+            if (!fromPos || !toPos) return;
+
+            const depKey = `${dep.fromId}-${dep.toId}`;
+
+            // Calculate source Y offset
+            const sourceGroup = sourceGroups[dep.fromId];
+            const sourceGroupSize = sourceGroup.length;
+            const sourceIndex = sourceIndexMap.get(depKey) || 0;
+            const sourceYOffset = sourceGroupSize > 1
+                ? (sourceIndex - (sourceGroupSize - 1) / 2) * Y_OFFSET_STEP
+                : 0;
+
+            // Calculate target Y offset
+            const targetGroup = targetGroups[dep.toId];
+            const targetGroupSize = targetGroup.length;
+            const targetIndex = targetIndexMap.get(depKey) || 0;
+            const targetYOffset = targetGroupSize > 1
+                ? (targetIndex - (targetGroupSize - 1) / 2) * Y_OFFSET_STEP
+                : 0;
+
+            const startY = fromPos.y + sourceYOffset;
+            const endY = toPos.y + targetYOffset;
+            const endX = toPos.x - 8;
+
+            // Lane X position: further left for larger spans
+            const laneX = LANE_BASE_X - (idx * LANE_SPACING);
+
+            const sourceStartX = fromPos.x - 8;
+
+            let path: string;
+            if (Math.abs(startY - endY) < 2) {
+                // Same row: simple connection
+                path = `M ${sourceStartX} ${startY} L ${endX} ${endY}`;
+            } else {
+                // Different rows: use left vertical lane
+                path = `M ${sourceStartX} ${startY} L ${laneX} ${startY} L ${laneX} ${endY} L ${endX} ${endY}`;
             }
+
+            // Get color from source task
+            const arrowColor = COLORS[dep.colorIndex % COLORS.length].arrow;
+
+            arrows.push({
+                fromId: dep.fromId,
+                toId: dep.toId,
+                path,
+                startX: sourceStartX,
+                startY,
+                endX,
+                endY,
+                color: arrowColor
+            });
         });
 
         return arrows;
-    }, [tasks, taskPositions]);
+    }, [groups, taskPositions]);
 
     return (
         <div className="w-full h-full bg-[#15171e] text-slate-300 font-sans flex flex-col overflow-hidden">
@@ -161,6 +292,19 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                         >
                             <Filter size={16} /> 필터
                         </button>
+
+                        {/* Save as Template Button */}
+                        {onSaveAsTemplate && (
+                            <button
+                                onClick={onSaveAsTemplate}
+                                className="text-slate-400 hover:text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-white/5 transition-all border border-white/10"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 01-2-2V5a2 2 0 012-2h4.586" />
+                                </svg>
+                                템플릿으로 저장
+                            </button>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2 bg-[#202532] p-1 rounded-full border border-white/5">
@@ -232,39 +376,84 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                             </div>
                         </div>
 
-                        {/* Phase 9: Dependency Arrows SVG Overlay */}
+                        {/* Dependency Arrows with Mini Nodes */}
                         {dependencyArrows.length > 0 && (
                             <svg
                                 className="absolute inset-0 pointer-events-none z-20 overflow-visible"
-                                style={{ top: headerHeight + 60 }}
+                                style={{ top: 0, left: 0 }}
                             >
-                                <defs>
-                                    <marker
-                                        id="arrowhead"
-                                        markerWidth="10"
-                                        markerHeight="7"
-                                        refX="9"
-                                        refY="3.5"
-                                        orient="auto"
-                                    >
-                                        <polygon
-                                            points="0 0, 10 3.5, 0 7"
-                                            fill="#60a5fa"
-                                        />
-                                    </marker>
-                                </defs>
-                                {dependencyArrows.map((arrow, idx) => (
-                                    <path
-                                        key={`arrow-${idx}`}
-                                        d={arrow.path}
-                                        fill="none"
-                                        stroke="#60a5fa"
-                                        strokeWidth="2"
-                                        strokeDasharray="6 4"
-                                        markerEnd="url(#arrowhead)"
-                                        opacity="0.6"
-                                    />
-                                ))}
+                                {dependencyArrows.map((arrow, idx) => {
+                                    // Hover highlight: calculate opacity based on hovered task
+                                    const isHighlighted = hoveredTaskId &&
+                                        (arrow.fromId === hoveredTaskId || arrow.toId === hoveredTaskId);
+                                    const arrowOpacity = !hoveredTaskId ? 0.6 : (isHighlighted ? 1 : 0.15);
+
+                                    return (
+                                        <g key={`arrow-${idx}`} className="transition-opacity duration-200">
+                                            {/* Unique marker for this arrow's color */}
+                                            <defs>
+                                                <marker
+                                                    id={`arrowhead-${idx}`}
+                                                    markerWidth="8"
+                                                    markerHeight="6"
+                                                    refX="7"
+                                                    refY="3"
+                                                    orient="auto"
+                                                >
+                                                    <polygon
+                                                        points="0 0, 8 3, 0 6"
+                                                        fill={arrow.color}
+                                                    />
+                                                </marker>
+                                            </defs>
+
+                                            {/* Start node - outer */}
+                                            <circle
+                                                cx={arrow.startX}
+                                                cy={arrow.startY}
+                                                r="5"
+                                                fill={arrow.color}
+                                                opacity={arrowOpacity * 0.3}
+                                            />
+                                            {/* Start node - inner */}
+                                            <circle
+                                                cx={arrow.startX}
+                                                cy={arrow.startY}
+                                                r="2"
+                                                fill="white"
+                                                opacity={arrowOpacity}
+                                            />
+
+                                            {/* Solid line */}
+                                            <path
+                                                d={arrow.path}
+                                                fill="none"
+                                                stroke={arrow.color}
+                                                strokeWidth="2"
+                                                markerEnd={`url(#arrowhead-${idx})`}
+                                                strokeLinejoin="round"
+                                                opacity={arrowOpacity}
+                                            />
+
+                                            {/* End node - outer */}
+                                            <circle
+                                                cx={arrow.endX}
+                                                cy={arrow.endY}
+                                                r="5"
+                                                fill={arrow.color}
+                                                opacity={arrowOpacity * 0.3}
+                                            />
+                                            {/* End node - inner */}
+                                            <circle
+                                                cx={arrow.endX}
+                                                cy={arrow.endY}
+                                                r="2"
+                                                fill="white"
+                                                opacity={arrowOpacity}
+                                            />
+                                        </g>
+                                    );
+                                })}
                             </svg>
                         )}
 
@@ -299,21 +488,26 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                         return (
                                             <div
                                                 key={task.id}
-                                                className="relative h-[48px] flex items-center group"
+                                                className="relative h-[60px] flex items-center group"
+                                                onMouseEnter={() => setHoveredTaskId(task.id)}
+                                                onMouseLeave={() => setHoveredTaskId(null)}
                                             >
-                                                {/* Bar */}
+                                                {/* Bar - Pill Style with Gradient */}
                                                 <div
-                                                    className={`absolute h-[32px] rounded-full flex items-center px-4 ${theme.bg} ${theme.shadow} shadow-lg transition-all hover:scale-[1.02] cursor-pointer z-10 group/bar`}
+                                                    className={`absolute h-[38px] rounded-full flex items-center justify-center gap-2 px-4 ${theme.bg} shadow-xl transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 cursor-pointer z-10 group/bar border border-white/20`}
                                                     style={{
                                                         left: task.startOffset * dayWidth,
-                                                        width: Math.max(dayWidth * task.duration, 40)
+                                                        width: Math.max(dayWidth * task.duration, 70),
+                                                        boxShadow: `0 8px 24px ${theme.glow}, 0 0 0 1px rgba(255,255,255,0.1)`
                                                     }}
                                                 >
-                                                    {/* Internal Text: Only if duration > 2 */}
-                                                    {task.duration > 2 && (
-                                                        <span className="text-[11px] font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis flex items-center gap-2">
-                                                            {task.title}
-                                                            {task.assigneeName && <span className="text-[9px] bg-black/20 px-1.5 rounded text-white/90">@{task.assigneeName}</span>}
+                                                    {/* Single Line: Title + Assignee */}
+                                                    <span className="text-[10px] font-bold text-white whitespace-nowrap overflow-hidden text-ellipsis">
+                                                        {task.title}
+                                                    </span>
+                                                    {task.assigneeName && task.duration > 2 && (
+                                                        <span className="text-[9px] text-white/70 whitespace-nowrap">
+                                                            @{task.assigneeName}
                                                         </span>
                                                     )}
 
@@ -325,20 +519,20 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
 
                                                             <div className="space-y-1">
                                                                 <div className="flex justify-between gap-4">
-                                                                    <span className="text-slate-500">Duration</span>
-                                                                    <span>{task.duration} days</span>
+                                                                    <span className="text-slate-500">기간</span>
+                                                                    <span>{task.duration}일</span>
                                                                 </div>
 
                                                                 {task.assigneeName && (
                                                                     <div className="flex justify-between gap-4 border-t border-white/10 pt-1 mt-1">
-                                                                        <span className="text-slate-500">Assignee</span>
+                                                                        <span className="text-slate-500">담당자</span>
                                                                         <span className="text-emerald-400 font-medium">@{task.assigneeName}</span>
                                                                     </div>
                                                                 )}
 
                                                                 {task.departmentIds && task.departmentIds.length > 0 && (
                                                                     <div className="flex flex-col gap-1 border-t border-white/10 pt-1 mt-1">
-                                                                        <span className="text-slate-500">Departments</span>
+                                                                        <span className="text-slate-500">관련 부서</span>
                                                                         <div className="flex flex-wrap gap-1">
                                                                             {task.departmentIds.map(d => (
                                                                                 <span key={d} className="bg-white/10 px-1.5 py-0.5 rounded text-[10px]">
@@ -355,26 +549,6 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                                         </div>
                                                     </div>
                                                 </div>
-
-                                                {/* External Text: Only if duration <= 2 */}
-                                                {task.duration <= 2 && (
-                                                    <div
-                                                        className="absolute flex items-center gap-2 z-0 animate-fadeIn"
-                                                        style={{
-                                                            left: (task.startOffset * dayWidth) + Math.max(dayWidth * task.duration, 40) + 12,
-                                                            opacity: 0.9
-                                                        }}
-                                                    >
-                                                        <span className="text-[12px] font-bold text-white/90 whitespace-nowrap shadow-black drop-shadow-md">
-                                                            {task.title}
-                                                        </span>
-                                                        {task.assigneeName && (
-                                                            <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-slate-300">
-                                                                @{task.assigneeName}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )}
                                             </div>
                                         );
                                     })}
