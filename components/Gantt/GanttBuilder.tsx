@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { GanttSubTask, GanttTemplate, UserProfile, ProjectVisibility, ProjectMember, ProjectMemberRole, GanttDepartment } from '../../types';
+import { useGanttCategories } from '../../hooks/useGanttCategories';
 import { Plus, X, User, Building2, Calendar, Clock, FileText, ChevronRight, Save, Edit2, RotateCcw, Lock, Globe } from 'lucide-react';
 
 interface GanttBuilderProps {
@@ -41,8 +42,8 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
     const [projectMembers, setProjectMembers] = useState<ProjectMember[]>(initialData?.members || []);
     const [projectDepartmentIds, setProjectDepartmentIds] = useState<string[]>(initialData?.departmentIds || []);
 
-    // Phase 9: Category & Dependencies
-    const [category, setCategory] = useState<'planning' | 'development' | 'testing' | 'other'>('planning');
+    // Phase 9: Category & Dependencies (Phase 11: Dynamic categories)
+    const [category, setCategory] = useState<string>('planning');
     const [dependsOn, setDependsOn] = useState<string[]>([]);
 
     // Phase 6: Dynamic Department Loading
@@ -97,30 +98,8 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
 
 
 
-    // Dynamic Categories (Phase 11)
-    const { data: dynamicCategories = [] } = useQuery<{ id: string; label: string; backgroundColor: string; textColor: string }[]>({
-        queryKey: ['ganttCategories'],
-        queryFn: async () => {
-            const q = query(collection(db, 'gantt_categories'), orderBy('order', 'asc'));
-            const snapshot = await getDocs(q);
-            if (snapshot.empty) {
-                // Fallback defaults
-                return [
-                    { id: 'planning', label: '기획', backgroundColor: '#dbeafe', textColor: '#1d4ed8' },
-                    { id: 'development', label: '개발', backgroundColor: '#f3e8ff', textColor: '#7e22ce' },
-                    { id: 'testing', label: '테스트', backgroundColor: '#d1fae5', textColor: '#047857' },
-                    { id: 'other', label: '기타', backgroundColor: '#f3f4f6', textColor: '#374151' }
-                ];
-            }
-            return snapshot.docs.map(doc => ({
-                id: doc.id,
-                label: doc.data().label,
-                backgroundColor: doc.data().backgroundColor,
-                textColor: doc.data().textColor
-            }));
-        },
-        staleTime: 1000 * 60 * 5
-    });
+    // Dynamic Categories (Phase 11 - P2 리팩토링: 중앙화된 hook 사용)
+    const { data: dynamicCategories = [] } = useGanttCategories();
 
     const CATEGORIES = useMemo(() => {
         return dynamicCategories.map(cat => ({
@@ -546,7 +525,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                     placeholder="D0"
                                     title="시작일 (Day)"
                                     value={startOffset}
-                                    onChange={(e) => setStartOffset(parseInt(e.target.value) || 0)}
+                                    onChange={(e) => setStartOffset(Math.max(0, parseInt(e.target.value, 10) || 0))}
                                 />
                             </div>
                             <div className="w-14">
@@ -557,7 +536,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                     placeholder="1일"
                                     title="기간 (일)"
                                     value={duration}
-                                    onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
+                                    onChange={(e) => setDuration(Math.max(1, parseInt(e.target.value, 10) || 1))}
                                 />
                             </div>
                         </div>
@@ -590,8 +569,8 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                             onClick={() => setCategory(cat.id as typeof category)}
                                             style={isSelected ? activeStyle : undefined}
                                             className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all border ${isSelected
-                                                    ? 'shadow-sm ring-1 ring-offset-1 ring-gray-200'
-                                                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                                                ? 'shadow-sm ring-1 ring-offset-1 ring-gray-200'
+                                                : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                                                 }`}
                                         >
                                             {cat.label}
@@ -624,9 +603,30 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                 className="w-full p-1.5 bg-gray-50 border border-gray-200 rounded text-xs text-gray-800 focus:border-emerald-500 outline-none cursor-pointer"
                                 value=""
                                 onChange={(e) => {
-                                    if (e.target.value && !dependsOn.includes(e.target.value)) {
-                                        setDependsOn([...dependsOn, e.target.value]);
+                                    const newDepId = e.target.value;
+                                    if (!newDepId || dependsOn.includes(newDepId)) return;
+
+                                    // BUG #9 Fix: 순환 의존성 검증 (2026-01-04)
+                                    const hasCycle = (taskId: string, depId: string): boolean => {
+                                        const visited = new Set<string>();
+                                        const stack = [depId];
+                                        while (stack.length > 0) {
+                                            const current = stack.pop()!;
+                                            if (current === taskId) return true;
+                                            if (visited.has(current)) continue;
+                                            visited.add(current);
+                                            const task = tasks.find(t => t.id === current);
+                                            if (task?.dependsOn) stack.push(...task.dependsOn);
+                                        }
+                                        return false;
+                                    };
+
+                                    if (editingTaskId && hasCycle(editingTaskId, newDepId)) {
+                                        alert('순환 의존성은 추가할 수 없습니다.');
+                                        return;
                                     }
+
+                                    setDependsOn([...dependsOn, newDepId]);
                                 }}
                             >
                                 <option value="">선행 작업 선택...</option>

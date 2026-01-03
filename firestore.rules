@@ -64,8 +64,17 @@ service cloud.firestore {
               (('ownerId' in projectData) && projectData.ownerId == request.auth.uid));
     }
 
+    // Critical Issue #1 Fix: isProjectMember() 함수 추가 (2026-01-04)
+    // memberIds 배열을 통해 프로젝트 멤버 여부 확인
+    function isProjectMember(projectData) {
+      return isAuthenticated() &&
+             (('memberIds' in projectData) &&
+              projectData.memberIds != null &&
+              request.auth.uid in projectData.memberIds);
+    }
+
     // Note: Firestore Rules don't support .map() on arrays of objects
-    // Member check is done via assignees array (legacy) for simplicity
+    // Member check is done via memberIds array for simplicity
     // Complex member role checks are done client-side with checkProjectAccess()
 
     function canAccessProject(projectData) {
@@ -73,6 +82,8 @@ service cloud.firestore {
       return hasRole(['master', 'admin']) ||
              // Owner: Full access
              isProjectOwner(projectData) ||
+             // Member: Access via memberIds
+             isProjectMember(projectData) ||
              // Public visibility: All authenticated users can view
              (('visibility' in projectData) && projectData.visibility == 'public') ||
              // Department visibility: Allow read, further filtering client-side
