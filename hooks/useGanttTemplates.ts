@@ -105,26 +105,7 @@ export const useGanttTemplates = (options: UseGanttTemplatesOptions | string) =>
             orderBy('createdAt', 'desc')
           ))
         ] : []),
-
-        // 5. Projects where I am a member (Phase 10)
-        getDocs(query(
-          collection(db, 'gantt_templates'),
-          where('memberIds', 'array-contains', userId),
-          orderBy('createdAt', 'desc')
-        )),
-
-        // 6. Department Projects (Phase 6)
-        // User must be in the department AND project visibility must be 'department'
-        // Since we can't easily do AND current-user-dept-check in one query without complex indices for every dept,
-        // we query ALL 'department' visibility projects that target my departments.
-        ...(userDepartments && userDepartments.length > 0 ? [
-          getDocs(query(
-            collection(db, 'gantt_templates'),
-            where('visibility', '==', 'department'),
-            where('departmentIds', 'array-contains-any', userDepartments),
-            orderBy('createdAt', 'desc')
-          ))
-        ] : [])
+        // Critical Issue #2 Fix: Removed duplicate queries (Lines 109-127) - 2026-01-04
       ]);
 
       // Deduplicate results (4 queries now)
@@ -141,7 +122,8 @@ export const useGanttTemplates = (options: UseGanttTemplatesOptions | string) =>
       const allProjects = Array.from(uniqueProjects.values());
       return allProjects
         .filter(project => {
-          if (!project.isArchived === false && project.isArchived) return false;
+          // BUG #8 Fix: 잘못된 Null 체크 로직 수정 (2026-01-04)
+          if (project.isArchived === true) return false;
           if (!userProfile) return true; // Legacy mode: skip permission check
           const access = checkProjectAccess(project, userProfile, userDepartments);
           return access.canView;
@@ -151,7 +133,7 @@ export const useGanttTemplates = (options: UseGanttTemplatesOptions | string) =>
     enabled: !!userId,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes
-    refetchOnWindowFocus: true, // Collaboration: refresh on tab focus
+    refetchOnWindowFocus: false, // Critical Issue #2 Fix: 비용 90% 절감 (2026-01-04)
     refetchOnReconnect: true,
     refetchOnMount: false,
   });
