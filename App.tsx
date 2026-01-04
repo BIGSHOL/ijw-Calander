@@ -14,6 +14,7 @@ import CalendarBoard from './components/CalendarBoard';
 import TimetableManager from './components/Timetable/TimetableManager';
 import PaymentReport from './components/PaymentReport/PaymentReport';
 import GanttManager from './components/Gantt/GanttManager';
+import ConsultationManager from './components/Consultation/ConsultationManager';
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, User as UserIcon, Star, Bell, Mail, Send, Trash2, X } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
@@ -36,7 +37,7 @@ const formatUserDisplay = (u: UserProfile) => {
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | null>(null);
 
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
@@ -193,7 +194,7 @@ const App: React.FC = () => {
     if (isTabPermissionLoading || !userProfile) return;
 
     // Priority order for tabs
-    const priority: ('calendar' | 'timetable' | 'payment' | 'gantt')[] = ['calendar', 'timetable', 'payment', 'gantt'];
+    const priority: ('calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation')[] = ['calendar', 'timetable', 'payment', 'gantt', 'consultation'];
 
     // Initial setup: if appMode is null, set to first accessible tab
     if (appMode === null) {
@@ -1207,6 +1208,18 @@ const App: React.FC = () => {
                   📊 간트 차트
                 </button>
               )}
+              {/* Consultation */}
+              {canAccessTab('consultation') && (
+                <button
+                  onClick={() => setAppMode('consultation')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'consultation'
+                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  📝 상담 관리
+                </button>
+              )}
             </div>
 
             {/* User Info Display (Moved to Left) */}
@@ -1720,6 +1733,11 @@ const App: React.FC = () => {
           /* Gantt Chart View */
           <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
             <GanttManager userProfile={userProfile} allUsers={users} />
+          </div>
+        ) : appMode === 'consultation' ? (
+          /* Consultation Manager View */
+          <div className="w-full flex-1 overflow-auto">
+            <ConsultationManager userProfile={userProfile} />
           </div>
         ) : null}
 
