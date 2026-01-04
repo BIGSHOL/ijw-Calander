@@ -13,7 +13,10 @@
       "Bash(npm install)",
       "Bash(rm:*)",
       "Bash(firebase deploy:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(firebase firestore:get:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: Critical security fixes - P0 emergency patch\n\n🚨 SECURITY: Critical vulnerabilities resolved\n\n## Changes \\(5 P0 Issues Fixed\\)\n\n### 1. Firebase API Key Security \\(P0-1\\)\n- ✅ Move all API keys to environment variables \\(.env.local\\)\n- ✅ Add validation for missing environment variables\n- ✅ Create .env.example template for team setup\n- Files: firebaseConfig.ts, IntegrationViewSettings.tsx, geminiService.ts\n\n### 2. Firestore Security Rules \\(P0-2\\)\n- ✅ Add permission checks for Calendar Events \\(일정\\)\n- ✅ Add permission checks for BucketItems\n- ✅ Add permission checks for TaskMemos\n- ✅ Deploy security rules to production\n- File: firestore.rules \\(DEPLOYED ✅\\)\n\n### 3. Batch Operation Limits \\(P0-3\\)\n- ✅ Implement 499-operation batch size limit\n- ✅ Auto-split large recurring event creation\n- ✅ Fix leap year bug in monthly recurrence \\(bonus P1 fix\\)\n- File: App.tsx \\(lines 672-768\\)\n\n### 4. Race Condition Prevention \\(P0-4\\)\n- ✅ Add version field for optimistic concurrency control\n- ✅ Auto-increment version on all event updates\n- ✅ Prevent data loss in multi-user scenarios\n- Files: types.ts, converters.ts, App.tsx \\(lines 814, 853, 883\\)\n\n### 5. Hardcoded Master Email \\(P0-5\\)\n- ✅ Move master email list to SystemConfig\n- ✅ Support multiple master accounts\n- ✅ Fallback to hardcoded value for backward compatibility\n- Files: types.ts, App.tsx \\(lines 245-267\\)\n\n## Impact\n- Security: 🔴 CRITICAL → ✅ SECURE\n- Data Integrity: ⚠️ AT RISK → ✅ PROTECTED\n- Concurrency: ❌ UNSAFE → ✅ SAFE\n- Scalability: ⚠️ LIMITED → ✅ UNLIMITED\n\n## Testing\n- ✅ Build successful \\(npm run build\\)\n- ✅ Firestore rules deployed\n- ✅ Type checks passing\n\n## Documentation\n- Added comprehensive code review report\n- File: docs/work-plans/ijw_calander_comprehensive_code_review_20260104.md\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }

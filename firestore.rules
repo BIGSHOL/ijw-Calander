@@ -219,6 +219,19 @@ service cloud.firestore {
                         hasRole(['master', 'admin']));
     }
 
+    // === Consultation Records (Phase 13: EduCRM Integration) ===
+    match /consultations/{consultationId} {
+      // Read: All authenticated users can view
+      allow read: if isAuthenticated();
+      
+      // Create/Update: master, admin, manager roles
+      allow create, update: if isAuthenticated() &&
+                               hasRole(['master', 'admin', 'manager']);
+      
+      // Delete: Only master and admin
+      allow delete: if hasRole(['master', 'admin']);
+    }
+
     // === Class & Teacher Management (Korean collection names) ===
     // Using wildcard match for Korean collection names
 

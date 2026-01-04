@@ -428,13 +428,14 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'system';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'system';
 
 export const APP_TABS: { id: AppTab; label: string }[] = [
   { id: 'calendar', label: '연간 일정' },
   { id: 'timetable', label: '시간표' },
   { id: 'payment', label: '전자 결제' },
   { id: 'gantt', label: '간트 차트' },
+  { id: 'consultation', label: '상담 관리' },
   { id: 'system', label: '시스템 설정' },
 ];
 
@@ -446,8 +447,8 @@ export type TabPermissionConfig = {
 
 // Default Tab Permissions (Fallback)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['calendar', 'timetable', 'payment', 'gantt', 'system'],
-  admin: ['calendar', 'timetable'],
+  master: ['calendar', 'timetable', 'payment', 'gantt', 'consultation', 'system'],
+  admin: ['calendar', 'timetable'], // consultation removed - testing phase
   manager: ['calendar'],
   editor: ['calendar'],
   math_lead: ['timetable'],
@@ -463,3 +464,84 @@ export interface SystemConfig {
   tabPermissions?: TabPermissionConfig;
   masterEmails?: string[]; // List of master account emails
 }
+
+// ============ CONSULTATION TYPES (Phase 13: EduCRM Integration) ============
+
+export enum ConsultationStatus {
+  EngMathRegistered = '영수등록',
+  MathRegistered = '수학등록',
+  EngRegistered = '영어등록',
+  PendingThisMonth = '이번달 등록예정',
+  PendingFuture = '추후 등록예정',
+  NotRegistered = '미등록',
+}
+
+export enum ConsultationSubject {
+  English = '영어',
+  EiE = 'EiE',
+  Math = '수학',
+  Korean = '국어',
+  Other = '기타',
+}
+
+export enum SchoolGrade {
+  ElementaryLow = '초등 저학년',
+  ElementaryHigh = '초등 고학년',
+  Middle1 = '중1',
+  Middle2 = '중2',
+  Middle3 = '중3',
+  High1 = '고1',
+  High2 = '고2',
+  High3 = '고3',
+  Other = '기타',
+}
+
+export interface ConsultationRecord {
+  id: string;
+  studentName: string;
+  parentPhone: string;
+  schoolName: string;
+  grade: SchoolGrade;
+  consultationDate: string; // ISO Date string (YYYY-MM-DD)
+
+  subject: ConsultationSubject;
+  status: ConsultationStatus;
+
+  counselor: string;
+  registrar: string;
+
+  paymentAmount: string;
+  paymentDate: string;
+
+  notes: string;
+  nonRegistrationReason: string;
+
+  followUpDate: string;
+  followUpContent: string;
+
+  consultationPath: string;
+
+  createdAt: string;
+  updatedAt?: string;
+  authorId?: string;
+}
+
+export interface ConsultationStats {
+  totalConsultations: number;
+  registeredCount: number;
+  conversionRate: number;
+  pendingCount: number;
+}
+
+// Consultation Status Colors for UI
+export const CONSULTATION_STATUS_COLORS: Record<ConsultationStatus, string> = {
+  [ConsultationStatus.EngMathRegistered]: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  [ConsultationStatus.MathRegistered]: 'bg-teal-100 text-teal-800 border-teal-200',
+  [ConsultationStatus.EngRegistered]: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  [ConsultationStatus.PendingThisMonth]: 'bg-amber-100 text-amber-800 border-amber-200',
+  [ConsultationStatus.PendingFuture]: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  [ConsultationStatus.NotRegistered]: 'bg-slate-100 text-slate-800 border-slate-200',
+};
+
+export const CONSULTATION_CHART_COLORS = ['#059669', '#0d9488', '#0891b2', '#f59e0b', '#fbbf24', '#94a3b8'];
+
