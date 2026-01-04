@@ -34,6 +34,11 @@ service cloud.firestore {
       allow write: if hasRole(['master', 'admin']);
     }
 
+    match /system/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole(['master', 'admin']);
+    }
+
     // === Timetable Collections ===
 
     // English Schedules (Live)
@@ -53,6 +58,68 @@ service cloud.firestore {
       allow read: if hasRole(['master', 'admin', 'manager']);
       allow write: if hasRole(['master', 'admin']);
       allow delete: if hasRole(['master']);
+    }
+
+    // === Calendar Events (일정) ===
+
+    // Get permission from settings/rolePermissions
+    function hasPermission(permissionId) {
+      let userRole = getUserRole();
+      let rolePermissions = get(/databases/$(database)/documents/settings/rolePermissions).data;
+      return rolePermissions[userRole][permissionId] == true;
+    }
+
+    // Calendar Events Collection (Korean collection name: 일정)
+    // Note: Firestore Rules don't support Korean field names directly
+    // Field names in Rules use Unicode escape sequences
+    match /{collection}/{eventId} {
+      // Apply rules only to "일정" collection
+      allow read: if collection == '\uC77C\uC815' && isAuthenticated();
+
+      allow create: if collection == '\uC77C\uC815' &&
+                       isAuthenticated() &&
+                       hasPermission('events.create') &&
+                       request.resource.data['\uC791\uC131\uC790ID'] == request.auth.uid;
+
+      allow update: if collection == '\uC77C\uC815' &&
+                       isAuthenticated() && (
+                         (hasPermission('events.edit_own') &&
+                          resource.data['\uC791\uC131\uC790ID'] == request.auth.uid) ||
+                         hasPermission('events.edit_others')
+                       );
+
+      allow delete: if collection == '\uC77C\uC815' &&
+                       isAuthenticated() && (
+                         (hasPermission('events.delete_own') &&
+                          resource.data['\uC791\uC131\uC790ID'] == request.auth.uid) ||
+                         hasPermission('events.delete_others')
+                       );
+    }
+
+    // Bucket Items Collection
+    match /bucketItems/{itemId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() &&
+                       (resource.data.authorId == request.auth.uid ||
+                        hasPermission('buckets.edit_lower_roles'));
+      allow delete: if isAuthenticated() &&
+                       (resource.data.authorId == request.auth.uid ||
+                        hasPermission('buckets.delete_lower_roles'));
+    }
+
+    // Task Memos Collection
+    match /taskMemos/{memoId} {
+      allow read: if isAuthenticated() &&
+                     (resource.data.to == request.auth.uid ||
+                      resource.data.from == request.auth.uid);
+      allow create: if isAuthenticated() &&
+                       request.resource.data.from == request.auth.uid;
+      allow update: if isAuthenticated() &&
+                       resource.data.to == request.auth.uid; // Mark as read
+      allow delete: if isAuthenticated() &&
+                       (resource.data.to == request.auth.uid ||
+                        resource.data.from == request.auth.uid);
     }
 
     // === Gantt Chart Collections (Phase 10: Access Control) ===

@@ -39,6 +39,7 @@ export interface CalendarEvent {
   authorName?: string; // Display name of the creator (snapshot)
   createdAt?: string; // ISO Date string
   updatedAt?: string; // ISO Date string
+  version?: number; // Version number for optimistic concurrency control
   attendance?: Record<string, 'pending' | 'joined' | 'declined'>; // Key: UID, Value: Status
   // Recurrence fields
   recurrenceGroupId?: string;  // ID of the first event in recurrence group
@@ -460,4 +461,5 @@ export interface SystemConfig {
   eventLookbackYears?: number;
   categories?: string[];
   tabPermissions?: TabPermissionConfig;
+  masterEmails?: string[]; // List of master account emails
 }

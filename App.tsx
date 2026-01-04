@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, differenceInDays } from 'date-fns';
+import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, getDate, endOfMonth, differenceInDays } from 'date-fns';
 import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor, AppTab } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
@@ -241,8 +241,12 @@ const App: React.FC = () => {
           if (docSnapshot.exists()) {
             const userData = docSnapshot.data() as UserProfile;
 
-            // Critical Fix: Force Master Role for specific email if not set
-            if (user.email === 'st2000423@gmail.com' && userData.role !== 'master') {
+            // Get master emails from systemConfig (fallback to hardcoded for backward compatibility)
+            const masterEmails = systemConfig?.masterEmails || ['st2000423@gmail.com'];
+            const isMasterEmail = user.email && masterEmails.includes(user.email);
+
+            // Critical Fix: Force Master Role for master emails if not set
+            if (isMasterEmail && userData.role !== 'master') {
               const updatedProfile: UserProfile = {
                 ...userData,
                 role: 'master',
@@ -258,7 +262,11 @@ const App: React.FC = () => {
             }
           } else {
             // Document doesn't exist - Create it
-            if (user.email === 'st2000423@gmail.com') {
+            // Get master emails from systemConfig (fallback to hardcoded for backward compatibility)
+            const masterEmails = systemConfig?.masterEmails || ['st2000423@gmail.com'];
+            const isMasterEmail = user.email && masterEmails.includes(user.email);
+
+            if (isMasterEmail) {
               const newMasterProfile: UserProfile = {
                 uid: user.uid,
                 email: user.email!,
@@ -669,7 +677,10 @@ const App: React.FC = () => {
 
       // Handle Batch Creation for Recurrence
       if (recurrenceCount && recurrenceCount > 1 && event.recurrenceType) {
-        const batch = writeBatch(db);
+        const MAX_BATCH_SIZE = 499; // Firestore batch limit is 500
+        let currentBatch = writeBatch(db);
+        let operationCount = 0;
+
         const baseStart = parseISO(event.startDate);
         const baseEnd = parseISO(event.endDate);
         const duration = differenceInDays(baseEnd, baseStart);
@@ -701,7 +712,12 @@ const App: React.FC = () => {
                 currentDate = addWeeks(baseStart, i);
                 break;
               case 'monthly':
-                currentDate = addMonths(baseStart, i);
+                // Fix leap year issue: clamp to end of month if date doesn't exist
+                let nextDate = addMonths(baseStart, i);
+                if (getDate(baseStart) > 28 && getDate(nextDate) < getDate(baseStart)) {
+                  nextDate = endOfMonth(nextDate);
+                }
+                currentDate = nextDate;
                 break;
               case 'yearly':
                 currentDate = addYears(baseStart, i);
@@ -740,12 +756,25 @@ const App: React.FC = () => {
             };
 
             const ref = doc(db, "일정", finalId).withConverter(eventConverter);
-            batch.set(ref, recurringEvent);
+
+            // Check batch size limit and commit if necessary
+            if (operationCount >= MAX_BATCH_SIZE) {
+              await currentBatch.commit();
+              currentBatch = writeBatch(db);
+              operationCount = 0;
+            }
+
+            currentBatch.set(ref, recurringEvent);
+            operationCount++;
             createdCount++;
           }
         }
 
-        await batch.commit();
+        // Commit remaining operations
+        if (operationCount > 0) {
+          await currentBatch.commit();
+        }
+
         alert(`${createdCount}개의 반복 일정이 생성되었습니다.`);
 
       } else {
@@ -789,7 +818,8 @@ const App: React.FC = () => {
                 id: finalId,
                 departmentId: deptId,
                 departmentIds: targetDeptIds,
-                relatedGroupId: event.relatedGroupId
+                relatedGroupId: event.relatedGroupId,
+                version: (event.version || 0) + 1 // Increment version for concurrency control
               };
 
               batch.set(doc(db, "일정", finalId).withConverter(eventConverter), singleEvent);
@@ -827,7 +857,8 @@ const App: React.FC = () => {
                 id: finalId,
                 departmentId: deptId,
                 departmentIds: targetDeptIds,
-                relatedGroupId: relatedGroupId
+                relatedGroupId: relatedGroupId,
+                version: (event.version || 0) + 1 // Increment version for concurrency control
               };
 
               // Check if we need to DELETE an old ID if we renamed/switched primary? 
@@ -857,7 +888,8 @@ const App: React.FC = () => {
               id: finalId,
               departmentId: deptId,
               departmentIds: targetDeptIds,
-              relatedGroupId: relatedGroupId
+              relatedGroupId: relatedGroupId,
+              version: (event.version || 0) + 1 // Increment version for concurrency control
             };
 
             batch.set(doc(db, "일정", finalId).withConverter(eventConverter), singleEvent);

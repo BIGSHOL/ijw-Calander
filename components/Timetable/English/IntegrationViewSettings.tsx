@@ -39,14 +39,16 @@ interface IntegrationViewSettingsProps {
     teachersData?: Teacher[];
 }
 
-// Config from academy-app (injaewon-project-8ea38)
+// Legacy Firebase project configuration (academy-app - injaewon-project-8ea38)
+// Used for data migration/integration from old system
+// Credentials now loaded from environment variables (.env.local)
 const OLD_FIREBASE_CONFIG = {
-    apiKey: "AIzaSyAAdN14OfxYgkDv8svA8mPxp9W_zupRRkU",
-    authDomain: "injaewon-project-8ea38.firebaseapp.com",
-    projectId: "injaewon-project-8ea38",
-    storageBucket: "injaewon-project-8ea38.firebasestorage.app",
-    messagingSenderId: "519647947511",
-    appId: "1:519647947511:web:1e0ee3660bf0bc83d3c1f2"
+    apiKey: import.meta.env.VITE_OLD_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_OLD_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_OLD_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_OLD_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_OLD_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_OLD_FIREBASE_APP_ID
 };
 
 const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({

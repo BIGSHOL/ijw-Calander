@@ -1,7 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
 import { TuitionEntry } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
+// Validate Gemini API Key
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+if (!apiKey) {
+    console.error('VITE_GEMINI_API_KEY is not configured. Please check .env.local file.');
+}
+
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 export const generateReportInsight = async (entries: TuitionEntry[]) => {
     if (entries.length === 0) return "데이터가 없습니다.";
