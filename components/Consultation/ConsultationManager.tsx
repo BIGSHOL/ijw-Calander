@@ -77,19 +77,37 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
         setIsFormOpen(true);
     };
 
-    // Month navigation
-    const months = ['all', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-
+    // Month navigation - arrows only navigate months (skip 'all')
     const handlePrevMonth = () => {
-        const currentIndex = months.indexOf(selectedMonth);
-        const prevIndex = (currentIndex - 1 + months.length) % months.length;
-        setSelectedMonth(months[prevIndex]);
+        if (selectedMonth === 'all') {
+            // 전체에서 왼쪽: 현재 연도의 12월로
+            setSelectedMonth('12');
+        } else {
+            const currentMonth = parseInt(selectedMonth, 10);
+            if (currentMonth === 1) {
+                // 1월에서 왼쪽: 작년 12월
+                setSelectedYear(prev => prev - 1);
+                setSelectedMonth('12');
+            } else {
+                setSelectedMonth(String(currentMonth - 1));
+            }
+        }
     };
 
     const handleNextMonth = () => {
-        const currentIndex = months.indexOf(selectedMonth);
-        const nextIndex = (currentIndex + 1) % months.length;
-        setSelectedMonth(months[nextIndex]);
+        if (selectedMonth === 'all') {
+            // 전체에서 오른쪽: 현재 연도의 1월로
+            setSelectedMonth('1');
+        } else {
+            const currentMonth = parseInt(selectedMonth, 10);
+            if (currentMonth === 12) {
+                // 12월에서 오른쪽: 내년 1월
+                setSelectedYear(prev => prev + 1);
+                setSelectedMonth('1');
+            } else {
+                setSelectedMonth(String(currentMonth + 1));
+            }
+        }
     };
 
     const getMonthDisplay = (m: string) => {
