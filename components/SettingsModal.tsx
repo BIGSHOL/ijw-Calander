@@ -769,20 +769,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       🕐 시간표
                     </button>
                   )}
+                  {isMaster && (
+                    <button
+                      onClick={() => { setMainTab('gantt'); setActiveTab('gantt_departments'); }}
+                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'gantt' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
+                    >
+                      📊 간트 차트
+                    </button>
+                  )}
                   {(isMaster || isAdmin || canManageRolePermissions) && (
                     <button
                       onClick={() => { setMainTab('permissions'); setActiveTab('role_permissions'); }}
                       className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'permissions' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
                     >
                       ⚙️ 시스템 설정
-                    </button>
-                  )}
-                  {isMaster && (
-                    <button
-                      onClick={() => { setMainTab('gantt'); setActiveTab('gantt_departments'); }}
-                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'gantt' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
-                    >
-                      📊 간트 관리
                     </button>
                   )}
                 </div>
