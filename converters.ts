@@ -48,6 +48,7 @@ export const eventConverter = {
             작성자명: event.authorName || '',
             생성일시: event.createdAt || new Date().toISOString(),
             수정일시: new Date().toISOString(),
+            버전: event.version || 1, // Version for concurrency control
             참가현황: event.attendance || {},
             참조링크: event.referenceUrl || '',
             // Recurrence fields
@@ -88,6 +89,7 @@ export const eventConverter = {
             authorName: data.작성자명,
             createdAt: data.생성일시,
             updatedAt: data.수정일시,
+            version: data.버전 || 1, // Version for concurrency control
             attendance: data.참가현황,
             referenceUrl: data.참조링크,
             // Recurrence fields
