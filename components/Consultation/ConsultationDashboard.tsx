@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { ConsultationRecord, ConsultationStatus, CONSULTATION_CHART_COLORS } from '../../types';
 import { StatsCard } from './StatsCard';
-import { Users, UserCheck, Percent, Sparkles, CreditCard } from 'lucide-react';
+import { Users, UserCheck, Percent, CreditCard } from 'lucide-react';
 
 interface DashboardProps {
     data: ConsultationRecord[];
@@ -77,8 +77,8 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
                             onMouseEnter={() => setActiveIndex(index)}
                             onMouseLeave={() => setActiveIndex(null)}
                             className={`flex items-center justify-between text-sm p-2 sm:p-3 rounded-xl transition-all duration-300 cursor-pointer border ${activeIndex === index
-                                    ? 'bg-white border-indigo-200 shadow-md transform scale-[1.02] z-10'
-                                    : 'bg-transparent border-transparent hover:bg-slate-50'
+                                ? 'bg-white border-indigo-200 shadow-md transform scale-[1.02] z-10'
+                                : 'bg-transparent border-transparent hover:bg-slate-50'
                                 }`}
                         >
                             <div className="flex items-center">
@@ -91,8 +91,8 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
                                 </span>
                             </div>
                             <span className={`font-bold px-2 py-0.5 rounded-lg text-xs transition-colors ${activeIndex === index
-                                    ? 'bg-indigo-600 text-white shadow-sm'
-                                    : 'bg-slate-100 text-slate-600'
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'bg-slate-100 text-slate-600'
                                 }`}>
                                 {entry.value}
                             </span>
@@ -105,9 +105,6 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
 };
 
 export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, year = new Date().getFullYear() }) => {
-    const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-
     // Constants for grouping
     const registeredStatuses = useMemo(() => [
         ConsultationStatus.EngMathRegistered,
@@ -208,17 +205,6 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
             .map(key => ({ name: key, consultations: counts[key] }));
     }, [filteredData]);
 
-    // TODO: AI Analysis feature - requires API key setup
-    const handleAIAnalyze = async () => {
-        setIsAnalyzing(true);
-        setAiAnalysis(null);
-        // Placeholder - integrate with geminiConsultationService when API key is set
-        setTimeout(() => {
-            setAiAnalysis('AI 분석 기능은 API 키 설정 후 사용 가능합니다.');
-            setIsAnalyzing(false);
-        }, 1000);
-    };
-
     const monthDisplay = month === 'all' ? '전체 기간' : `${month}월`;
 
     return (
@@ -227,30 +213,7 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
                 <h2 className="text-xl font-bold text-slate-800 hidden md:block">
                     {monthDisplay} 운영 대시보드
                 </h2>
-                <button
-                    onClick={handleAIAnalyze}
-                    disabled={isAnalyzing}
-                    className="w-full sm:w-auto flex items-center justify-center px-4 py-3 sm:py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl sm:rounded-full text-sm font-medium shadow-md hover:shadow-lg transition-all hover:scale-105 disabled:opacity-70 disabled:scale-100"
-                >
-                    <Sparkles className={`w-4 h-4 mr-2 ${isAnalyzing ? 'animate-spin' : ''}`} />
-                    {isAnalyzing ? 'AI 분석 중...' : 'AI 운영 리포트 생성'}
-                </button>
             </div>
-
-            {/* AI Analysis Result */}
-            {aiAnalysis && (
-                <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-100 p-6 rounded-2xl shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-4 opacity-5">
-                        <Sparkles size={120} className="text-indigo-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-indigo-900 mb-2 flex items-center">
-                        <Sparkles className="w-5 h-5 mr-2 text-indigo-600" /> AI 분석 리포트
-                    </h3>
-                    <div className="text-slate-700 whitespace-pre-line leading-relaxed text-sm md:text-base">
-                        {aiAnalysis}
-                    </div>
-                </div>
-            )}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
