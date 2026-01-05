@@ -22,7 +22,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
 
     // Firestore hooks - pass year as number or undefined for 'all'
     const yearParam = selectedYear === 'all' ? undefined : parseInt(selectedYear, 10);
-    const queryMonth = view === 'yearly' ? 'all' : selectedMonth;
+    // 대시보드(통계 비교), 연간뷰(전체 흐름)에서는 전체 데이터를 불러와야 함
+    const queryMonth = (view === 'yearly' || view === 'dashboard') ? 'all' : selectedMonth;
     const { data: consultations = [], isLoading } = useConsultations({ month: queryMonth, year: yearParam });
     const createConsultation = useCreateConsultation();
     const updateConsultation = useUpdateConsultation();
