@@ -20,7 +20,7 @@ const COLORS = {
 // 컬럼 정의
 type ColumnKey =
     | 'studentName' | 'parentPhone' | 'grade' | 'schoolName'
-    | 'subject' | 'status' | 'counselor' | 'registrar'
+    | 'subject' | 'status' | 'counselor' | 'receiver' | 'registrar'
     | 'consultationDate' | 'consultationPath' | 'createdAt'
     | 'paymentAmount' | 'paymentDate' | 'followUpDate' | 'followUpContent'
     | 'notes' | 'nonRegistrationReason';
@@ -39,6 +39,7 @@ const COLUMNS: ColumnConfig[] = [
     { key: 'schoolName', label: '학교', defaultVisible: true, minWidth: '100px' },
     { key: 'subject', label: '상담 과목', defaultVisible: true, minWidth: '90px' },
     { key: 'counselor', label: '상담자', defaultVisible: true, minWidth: '80px' },
+    { key: 'receiver', label: '수신자', defaultVisible: true, minWidth: '80px' },
     { key: 'registrar', label: '등록자', defaultVisible: true, minWidth: '80px' },
     { key: 'consultationDate', label: '상담일', defaultVisible: true, minWidth: '110px' },
     { key: 'consultationPath', label: '상담 경로', defaultVisible: false, minWidth: '100px' },
@@ -130,6 +131,8 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                 return <span className="font-semibold" style={{ color: COLORS.gray }}>{record.subject}</span>;
             case 'counselor':
                 return <span className="text-slate-600">{record.counselor || '-'}</span>;
+            case 'receiver':
+                return <span className="text-slate-600">{record.receiver || '-'}</span>;
             case 'registrar':
                 return <span className="text-slate-600">{record.registrar || '-'}</span>;
             case 'consultationDate':
