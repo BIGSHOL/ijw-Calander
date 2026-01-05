@@ -31,7 +31,7 @@ interface UseConsultationsOptions {
  * 상담 기록 목록 조회
  */
 export const useConsultations = (options: UseConsultationsOptions = {}) => {
-    const { month, year = new Date().getFullYear() } = options;
+    const { month, year } = options;
 
     return useQuery<ConsultationRecord[]>({
         queryKey: ['consultations', month, year],
@@ -45,16 +45,25 @@ export const useConsultations = (options: UseConsultationsOptions = {}) => {
                 ...doc.data(),
             })) as ConsultationRecord[];
 
-            // Client-side filtering for month (Firestore doesn't support month extraction)
-            if (month && month !== 'all') {
-                const monthNum = parseInt(month, 10);
+            // 연도가 undefined면 전체 데이터 반환 (연도 전체 선택)
+            if (year === undefined) {
+                return records;
+            }
+
+            // 월이 'all'이면 해당 연도의 전체 데이터 반환
+            if (month === 'all') {
                 return records.filter(r => {
                     const date = new Date(r.consultationDate);
-                    return date.getMonth() + 1 === monthNum && date.getFullYear() === year;
+                    return date.getFullYear() === year;
                 });
             }
 
-            return records;
+            // 특정 월 필터링
+            const monthNum = parseInt(month || '1', 10);
+            return records.filter(r => {
+                const date = new Date(r.consultationDate);
+                return date.getMonth() + 1 === monthNum && date.getFullYear() === year;
+            });
         },
         staleTime: 1000 * 60 * 5, // 5 minutes
     });
