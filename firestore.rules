@@ -56,9 +56,9 @@ service cloud.firestore {
     // English Simulation Scenarios (for scenario management feature)
     match /english_simulation_scenarios/{scenarioId} {
       allow read: if hasRole(['master', 'admin', 'manager', 'english_lead']);
-      allow create: if hasRole(['master', 'admin', 'manager', 'english_lead']);
-      allow update: if hasRole(['master', 'admin', 'manager', 'english_lead']);
-      allow delete: if hasRole(['master']);
+      allow create: if hasRole(['master']) || hasPermission('timetable.english.simulation');
+      allow update: if hasRole(['master']) || hasPermission('timetable.english.simulation');
+      allow delete: if hasRole(['master']) || hasPermission('timetable.english.simulation');
     }
 
     // Class List (수업목록)
@@ -69,8 +69,10 @@ service cloud.firestore {
 
     // Class List Draft (수업목록_draft)
     match /{collection}/{classId} {
-      allow read: if collection == '\uC218\uC5C5\uBAA9\uB85D_draft' && hasRole(['master', 'admin', 'manager', 'english_lead']);
-      allow write: if collection == '\uC218\uC5C5\uBAA9\uB85D_draft' && hasRole(['master', 'manager', 'english_lead']);
+      allow read: if collection == '\uC218\uC5C5\uBAA9\uB85D_draft' && 
+                     (hasRole(['master']) || hasPermission('timetable.english.simulation'));
+      allow write: if collection == '\uC218\uC5C5\uBAA9\uB85D_draft' && 
+                     (hasRole(['master']) || hasPermission('timetable.english.simulation'));
     }
 
     // Teacher List (강사목록)
@@ -261,9 +263,16 @@ service cloud.firestore {
       // 수업목록 - Class list (Live)
       allow write: if collection in ['수업목록'] && hasRole(['master', 'admin']);
 
-      // 수업목록_draft - Class list (Draft/Simulation)
-      allow read: if collection == '수업목록_draft' && hasRole(['master', 'admin', 'manager']);
-      allow write: if collection == '수업목록_draft' && hasRole(['master']);
+      // 수업목록_draft - Class list (Draft/Simulation) - handled above
+      // allow read, write handled by specific match group above or general fallback
+
+      // Other collections
+    }
+
+    // === Class Keywords ===
+    match /classKeywords/{keywordId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole(['master']) || hasPermission('system.classes.edit');
     }
 
     // === Default: Allow authenticated read for other collections ===

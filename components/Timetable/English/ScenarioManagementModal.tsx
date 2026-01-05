@@ -38,6 +38,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
     const { hasPermission } = usePermissions(currentUser);
     const canEdit = hasPermission('timetable.english.edit') || currentUser?.role === 'master';
+    const canManageSimulation = hasPermission('timetable.english.simulation') || currentUser?.role === 'master';
     const isMaster = currentUser?.role === 'master';
 
     // Format date
@@ -277,8 +278,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         if (!scenario) return;
 
         // Permission check
-        if (!isMaster && scenario.createdByUid !== currentUser?.uid) {
-            alert('수정 권한이 없습니다. (생성자 또는 Master만 가능)');
+        if (!isMaster && !canManageSimulation && scenario.createdByUid !== currentUser?.uid) {
+            alert('수정 권한이 없습니다. (생성자, Simulation 권한 또는 Master만 가능)');
             return;
         }
 
@@ -301,8 +302,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
     // Delete scenario
     const handleDeleteScenario = async (scenario: ScenarioEntry) => {
-        if (!isMaster) {
-            alert('삭제 권한이 없습니다. (Master only)');
+        if (!canManageSimulation) {
+            alert('삭제 권한이 없습니다. (Simulation 권한 필요)');
             return;
         }
 
@@ -366,16 +367,16 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                             const validation = validateScenarioData(scenario);
                             const isLatest = index === 0;
                             const isOwner = scenario.createdByUid === currentUser?.uid;
-                            const canModify = isMaster || isOwner;
+                            const canModify = isMaster || isOwner || canManageSimulation;
 
                             return (
                                 <div
                                     key={scenario.id}
                                     className={`p-3 rounded-lg border transition-colors ${!validation.isValid
-                                            ? 'bg-red-50 border-red-200'
-                                            : isLatest
-                                                ? 'bg-blue-50 border-blue-200'
-                                                : 'bg-white border-gray-200 hover:border-gray-300'
+                                        ? 'bg-red-50 border-red-200'
+                                        : isLatest
+                                            ? 'bg-blue-50 border-blue-200'
+                                            : 'bg-white border-gray-200 hover:border-gray-300'
                                         }`}
                                 >
                                     {/* Name + Badges */}
@@ -472,7 +473,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                         <Pencil size={14} />
                                                     </button>
                                                 )}
-                                                {isMaster && (
+                                                {canManageSimulation && (
                                                     <button
                                                         onClick={() => handleDeleteScenario(scenario)}
                                                         className="p-1 text-gray-400 hover:text-red-500 transition-colors"
