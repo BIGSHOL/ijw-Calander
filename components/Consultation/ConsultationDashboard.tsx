@@ -135,7 +135,10 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
         const conversion = total > 0 ? (registered / total) * 100 : 0;
 
         const revenue = dataset.reduce((acc, r) => {
-            const amt = r.paymentAmount ? parseInt(r.paymentAmount.replace(/,/g, ''), 10) : 0;
+            if (!r.paymentAmount) return acc;
+            // Handle both string and number types
+            const amtStr = typeof r.paymentAmount === 'string' ? r.paymentAmount : String(r.paymentAmount);
+            const amt = parseInt(amtStr.replace(/,/g, ''), 10);
             return acc + (isNaN(amt) ? 0 : amt);
         }, 0);
 
