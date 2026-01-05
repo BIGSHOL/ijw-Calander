@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     collection,
     getDocs,
-    addDoc,
+    setDoc,
     updateDoc,
     deleteDoc,
     doc,
@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { ConsultationRecord } from '../types';
+import { format } from 'date-fns';
 
 /**
  * 상담 기록 Firestore Hook
@@ -72,6 +73,23 @@ export const useConsultations = (options: UseConsultationsOptions = {}) => {
 // ============ MUTATION HOOKS ============
 
 /**
+ * 문서 ID 생성: yy.mm.dd_학생명_학교학년
+ */
+const generateDocId = (record: Omit<ConsultationRecord, 'id'>): string => {
+    const date = new Date(record.consultationDate);
+    const dateStr = format(date, 'yyMMdd');
+    // 특수문자 제거하고 공백을 언더스코어로 변환
+    const studentName = record.studentName.replace(/[\/\\.\#\$\[\]]/g, '').trim();
+    const school = record.schoolName.replace(/[\/\\.\#\$\[\]]/g, '').trim();
+    const grade = record.grade.replace(/[\/\\.\#\$\[\]]/g, '').trim();
+
+    // 고유성을 위해 타임스탬프 추가
+    const timestamp = Date.now().toString(36);
+
+    return `${dateStr}_${studentName}_${school}${grade}_${timestamp}`;
+};
+
+/**
  * 상담 기록 생성
  */
 export const useCreateConsultation = () => {
@@ -79,13 +97,16 @@ export const useCreateConsultation = () => {
 
     return useMutation({
         mutationFn: async (record: Omit<ConsultationRecord, 'id'>) => {
-            const consultationsRef = collection(db, 'consultations');
-            const docRef = await addDoc(consultationsRef, {
+            const docId = generateDocId(record);
+            const docRef = doc(db, 'consultations', docId);
+
+            await setDoc(docRef, {
                 ...record,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             });
-            return { id: docRef.id, ...record };
+
+            return { id: docId, ...record };
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['consultations'] });
