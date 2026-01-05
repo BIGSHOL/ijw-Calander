@@ -5,6 +5,7 @@ export interface MergedClass {
     className: string;
     room: string;
     underline?: boolean;
+    lastMovedAt?: string; // ISO Date String
 }
 
 export interface InputData {

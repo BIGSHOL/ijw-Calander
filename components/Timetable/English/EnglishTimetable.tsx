@@ -39,7 +39,6 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
     const [teacherOrder, setTeacherOrder] = useState<string[]>([]);
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isSimulationMode, setIsSimulationMode] = useState(false);
-    const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
     const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
     const [currentScenarioName, setCurrentScenarioName] = useState<string | null>(null);
 
@@ -201,13 +200,13 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
         let backupId = '';
 
         try {
-            // Step 1: 백업 생성 (시간표 + 학생 데이터)
+            // Step 1: 백업 생성 (시간표 + 학생 데이터) -> 시나리오로 저장
             try {
                 const liveSnapshot = await getDocs(collection(db, EN_COLLECTION));
                 const classSnapshot = await getDocs(collection(db, CLASS_COLLECTION));
 
                 if (liveSnapshot.docs.length > 0 || classSnapshot.docs.length > 0) {
-                    backupId = `backup_${Date.now()}`;
+                    const scenarioId = `backup_${Date.now()}`;
                     const timetableBackupData: Record<string, any> = {};
                     const studentBackupData: Record<string, any> = {};
 
@@ -219,16 +218,25 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                         studentBackupData[docSnap.id] = docSnap.data();
                     });
 
-                    await setDoc(doc(db, 'english_backups', backupId), {
+                    // 통계 계산 (ScenarioManagementModal 참고)
+                    const stats = {
+                        totalClasses: Object.keys(timetableBackupData).length, // 대략적인 수치
+                        totalStudents: Object.values(studentBackupData).reduce((acc: number, curr: any) => acc + (curr.studentList?.length || 0), 0)
+                    };
+
+                    await setDoc(doc(db, 'english_scenarios', scenarioId), {
+                        id: scenarioId,
+                        name: backupName ? `백업_${backupName}` : `백업_${new Date().toLocaleString()}`,
+                        description: `[자동백업] 실제 반영 전 자동 생성된 백업입니다.\n반영 메시지: ${backupName || '없음'}`,
+                        data: timetableBackupData,
+                        studentData: studentBackupData,
                         createdAt: new Date().toISOString(),
                         createdBy: currentUser?.displayName || currentUser?.email || 'Unknown',
                         createdByUid: currentUser?.uid || '',
-                        name: backupName?.trim() || null,  // 백업 이름 추가
-                        data: timetableBackupData,
-                        studentData: studentBackupData  // 학생 데이터 추가
+                        stats
                     });
 
-                    console.log(`✅ Backup created: ${backupId} (timetable: ${liveSnapshot.docs.length}, students: ${classSnapshot.docs.length})`);
+                    console.log(`✅ Backup created as Scenario: ${scenarioId}`);
                 } else {
                     console.log('No live data to backup (empty collections)');
                 }
@@ -269,29 +277,8 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                 console.log('⚠️ No draft student data to publish (empty collection)');
             }
 
-            // Step 4: 백업 정리 (최대 50개 유지)
-            try {
-                const MAX_BACKUP_COUNT = 50;
-                const allBackupsQuery = query(
-                    collection(db, 'english_backups'),
-                    orderBy('createdAt', 'asc')
-                );
-                const allBackups = await getDocs(allBackupsQuery);
-
-                if (allBackups.docs.length > MAX_BACKUP_COUNT) {
-                    const excessCount = allBackups.docs.length - MAX_BACKUP_COUNT;
-                    const cleanupBatch = writeBatch(db);
-
-                    allBackups.docs.slice(0, excessCount).forEach(docSnap => {
-                        cleanupBatch.delete(docSnap.ref);
-                    });
-
-                    await cleanupBatch.commit();
-                    console.log(`🗑️ ${excessCount}개의 오래된 백업이 자동 삭제되었습니다.`);
-                }
-            } catch (cleanupError) {
-                console.warn('백업 정리 중 오류 발생 (무시됨):', cleanupError);
-            }
+            // Step 4: 백업 정리 (시나리오는 자동 정리하지 않음, 혹은 필요시 추가)
+            // 기존 50개 제한 로직은 시나리오 관리에서 처리하거나 일단 보류.
 
             alert(`성공적으로 반영되었습니다.\n${backupId ? `(기존 데이터는 자동 백업되었습니다: ${backupId})` : '(백업 데이터 없음)'}`);
             setIsSimulationMode(false);
@@ -349,16 +336,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                     실제 반영
                                 </button>
                             )}
-                            {canViewBackup && (
-                                <button
-                                    onClick={() => setIsBackupModalOpen(true)}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-100 border border-blue-300 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-200 shadow-sm transition-colors"
-                                    title="백업 기록 보기"
-                                >
-                                    <History size={12} />
-                                    백업 기록
-                                </button>
-                            )}
+
                             <button
                                 onClick={() => setIsScenarioModalOpen(true)}
                                 className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
@@ -426,12 +404,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                 )}
             </div>
 
-            {/* Backup History Modal */}
-            <BackupHistoryModal
-                isOpen={isBackupModalOpen}
-                onClose={() => setIsBackupModalOpen(false)}
-                currentUser={currentUser}
-            />
+
 
             {/* Scenario Management Modal */}
             <ScenarioManagementModal

@@ -6,7 +6,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { doc, setDoc, deleteField, collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { Edit3, Move, Eye, Settings } from 'lucide-react';
-import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks } from './englishUtils';
+import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks, isExcludedStudent } from './englishUtils'; // Added isExcludedStudent
 import { usePermissions } from '../../../hooks/usePermissions';
 import { Teacher, ClassKeywordColor, PermissionId } from '../../../types';
 import BatchInputBar, { InputData, MergedClass } from './BatchInputBar';
@@ -21,6 +21,7 @@ export interface ScheduleCell {
     note?: string;
     merged?: MergedClass[];
     underline?: boolean;
+    lastMovedAt?: string; // ISO Date String
 }
 
 type ScheduleData = Record<string, ScheduleCell>;
@@ -295,97 +296,220 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         const sTeacher = filteredTeachers[source.tIdx];
         const tTeacher = filteredTeachers[target.tIdx];
 
-        if (moveIndices !== null && sData) {
-            // Partial Move (Merged Classes) logic
-            let moveMain = null; // To hold moved Main class
-            let moveMerged: MergedClass[] = []; // To hold moved Merged classes
+        if (!sData) return;
 
-            let keepMain = sData.className ? { className: sData.className, room: sData.room } : null;
-            let keepMerged = sData.merged ? [...sData.merged] : [];
+        const nowInfo = new Date().toISOString();
 
-            // -1 represents Main Class
-            if (moveIndices.includes(-1)) {
-                moveMain = keepMain;
-                keepMain = null;
-            }
+        if (moveIndices) {
+            // --- Selective Move (from Modal) ---
 
-            // Other indices represent Merged Classes (index in array)
-            // Sort descending to splice correctly
-            moveIndices.filter(i => i >= 0).sort((a, b) => b - a).forEach(i => {
-                moveMerged.unshift(keepMerged[i]);
-                keepMerged.splice(i, 1);
+            // Prepare source items
+            let sMain = sData.className ? { className: sData.className, room: sData.room, underline: sData.underline, lastMovedAt: sData.lastMovedAt } : null;
+            let sMerged = sData.merged ? [...sData.merged] : [];
+
+            // Items to move
+            let moveMain = null;
+            let moveMerged: MergedClass[] = [];
+
+            // Items to keep (initially all, will remove moved)
+            let keepMain = sMain;
+            let keepMerged = [...sMerged];
+
+            // 1. Identify items to move based on indices
+            // Check exclusion for each selected item
+            const indicesToMove = moveIndices.sort((a, b) => b - a); // Descending order
+
+            indicesToMove.forEach(idx => {
+                if (idx === -1) {
+                    // Check Main Class exclusion
+                    if (sMain && !isExcludedStudent(sMain.className)) {
+                        moveMain = { ...sMain, lastMovedAt: nowInfo };
+                        keepMain = null;
+                    }
+                } else {
+                    // Check Merged Class exclusion
+                    const mItem = keepMerged[idx];
+                    if (mItem && !isExcludedStudent(mItem.className)) {
+                        moveMerged.unshift({ ...mItem, lastMovedAt: nowInfo });
+                        keepMerged.splice(idx, 1);
+                    }
+                }
             });
 
-            // Re-construct Source
+            // 2. Update Source in newData
             if (keepMain || keepMerged.length > 0) {
                 newData[sKey] = {
                     ...(newData[sKey] || {}),
                     className: keepMain?.className,
                     room: keepMain?.room,
+                    underline: keepMain?.underline,
+                    lastMovedAt: keepMain?.lastMovedAt,
                     merged: keepMerged,
                     teacher: sTeacher
                 };
-                // Clean up undefined main props if keepMain is null
                 if (!keepMain) {
                     delete newData[sKey].className;
                     delete newData[sKey].room;
+                    delete newData[sKey].underline;
+                    delete newData[sKey].lastMovedAt;
                 }
             } else {
                 delete newData[sKey];
             }
 
-            // Construct Target
-            let targetMain = tData?.className ? { className: tData.className, room: tData.room } : null;
-            let targetMerged = tData?.merged ? [...tData.merged] : [];
 
-            // Simplified logic: The Moved items LAND on the target. Overwrite if necessary or standard behavior?
-            // "Move" usually implies placing ON TOP.
-            // We'll treat moved items as the new content.
+            // 3. Update Target in newData
+            let tMain = tData?.className ? { className: tData.className, room: tData.room, underline: tData.underline, lastMovedAt: tData.lastMovedAt } : null;
+            let tMerged = tData?.merged ? [...tData.merged] : [];
 
-            let finalMain = moveMain;
-            let finalMerged = moveMerged;
+            // Add moved merged items
+            tMerged = [...tMerged, ...moveMerged];
 
-            // If main exists in target, effectively it's lost/overwritten by this simple logic
-            // OR we should try to preserve?
-            // Let's assume overwrite for now as per previous logic.
-
-            // Logic to ensure valid main class if only merged moved
-            if (!finalMain && finalMerged.length > 0) {
-                const first = finalMerged.shift();
-                if (first) finalMain = { className: first.className, room: first.room };
+            if (moveMain) {
+                if (tMain) {
+                    // Push existing target main to merged
+                    tMerged.unshift({
+                        className: tMain.className,
+                        room: tMain.room || '',
+                        underline: tMain.underline,
+                        lastMovedAt: tMain.lastMovedAt
+                    });
+                }
+                tMain = moveMain;
             }
 
-            if (finalMain || finalMerged.length > 0) {
+            // Ensure valid structure (if only merged exist, promote first to main)
+            if (!tMain && tMerged.length > 0) {
+                const first = tMerged.shift();
+                if (first) {
+                    tMain = {
+                        className: first.className,
+                        room: first.room,
+                        underline: first.underline,
+                        lastMovedAt: first.lastMovedAt
+                    };
+                }
+            }
+
+            if (tMain || tMerged.length > 0) {
                 newData[tKey] = {
-                    className: finalMain?.className,
-                    room: finalMain?.room,
-                    merged: finalMerged,
+                    className: tMain?.className,
+                    room: tMain?.room,
+                    underline: tMain?.underline,
+                    lastMovedAt: tMain?.lastMovedAt,
+                    merged: tMerged,
                     teacher: tTeacher
                 };
-            } else {
-                // Should not happen if we moved something
             }
 
         } else {
-            // Full Cell Swap/Move
-            const sourceVal = newData[sKey] ? { ...newData[sKey], teacher: tTeacher } : undefined;
-            const targetVal = newData[tKey] ? { ...newData[tKey], teacher: sTeacher } : undefined;
+            // --- Full Cell Drag (No Indices) ---
+            // Logic:
+            // 1. Identify excluded vs moving in Source
+            // 2. Keep excluded in Source
+            // 3. Move moving to Target (handle collision)
 
-            if (targetVal) {
-                newData[sKey] = targetVal;
+            let sMain = sData.className ? { className: sData.className, room: sData.room, underline: sData.underline, lastMovedAt: sData.lastMovedAt } : null;
+            let sMerged = sData.merged ? [...sData.merged] : [];
+
+            let moveMain = null;
+            let moveMerged: MergedClass[] = [];
+
+            let keepMain = null;
+            let keepMerged: MergedClass[] = [];
+
+            // Filter Main
+            if (sMain) {
+                if (isExcludedStudent(sMain.className)) {
+                    keepMain = sMain;
+                } else {
+                    moveMain = { ...sMain, lastMovedAt: nowInfo };
+                }
+            }
+
+            // Filter Merged
+            sMerged.forEach(m => {
+                if (isExcludedStudent(m.className)) {
+                    keepMerged.push(m);
+                } else {
+                    moveMerged.push({ ...m, lastMovedAt: nowInfo });
+                }
+            });
+
+            // Nothing to move?
+            if (!moveMain && moveMerged.length === 0) {
+                return; // or alert("이동할 학생이 없습니다 (모두 제외 대상)");
+            }
+
+            // Update Source
+            if (keepMain || keepMerged.length > 0) {
+                newData[sKey] = {
+                    ...(newData[sKey] || {}),
+                    className: keepMain?.className,
+                    room: keepMain?.room,
+                    underline: keepMain?.underline,
+                    lastMovedAt: keepMain?.lastMovedAt,
+                    merged: keepMerged,
+                    teacher: sTeacher
+                };
+                if (!keepMain) {
+                    delete newData[sKey].className;
+                    delete newData[sKey].room;
+                    delete newData[sKey].underline;
+                    delete newData[sKey].lastMovedAt;
+                }
             } else {
                 delete newData[sKey];
             }
 
-            if (sourceVal) {
-                newData[tKey] = sourceVal;
-            } else {
-                if (tKey in newData) delete newData[tKey];
+            // Update Target
+            let tMain = tData?.className ? { className: tData.className, room: tData.room, underline: tData.underline, lastMovedAt: tData.lastMovedAt } : null;
+            let tMerged = tData?.merged ? [...tData.merged] : [];
+
+            // Add moved merged
+            tMerged = [...tMerged, ...moveMerged];
+
+            // Handle Move Main
+            if (moveMain) {
+                if (tMain) {
+                    // Existing target main becomes merged
+                    tMerged.unshift({
+                        className: tMain.className,
+                        room: tMain.room || '',
+                        underline: tMain.underline,
+                        lastMovedAt: tMain.lastMovedAt
+                    });
+                }
+                tMain = moveMain;
+            }
+
+            // Promote if needed
+            if (!tMain && tMerged.length > 0) {
+                const first = tMerged.shift();
+                if (first) {
+                    tMain = {
+                        className: first.className,
+                        room: first.room,
+                        underline: first.underline,
+                        lastMovedAt: first.lastMovedAt
+                    };
+                }
+            }
+
+            if (tMain || tMerged.length > 0) {
+                newData[tKey] = {
+                    className: tMain?.className,
+                    room: tMain?.room,
+                    underline: tMain?.underline,
+                    lastMovedAt: tMain?.lastMovedAt,
+                    merged: tMerged,
+                    teacher: tTeacher
+                };
             }
         }
 
-        onUpdateLocal(newData); // Fixed: Use onUpdateLocal directly
-        setHasChanges(true); // Flag to show confirm bar
+        onUpdateLocal(newData);
+        setHasChanges(true);
         setPendingMove(null);
     };
 
@@ -404,7 +528,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
 
     const cancelMoveChanges = () => {
         if (window.confirm("변경사항을 취소하시겠습니까?")) {
-            onUpdateLocal(JSON.parse(JSON.stringify(originalData))); // Fixed: Use onUpdateLocal to revert
+            onUpdateLocal(JSON.parse(JSON.stringify(originalData)));
             setHasChanges(false);
         }
     };
@@ -823,6 +947,13 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                             (() => {
                                                                 const matchedKw = classKeywords.find(kw => cellData.className?.includes(kw.keyword));
                                                                 const classNameParts = formatClassNameWithBreaks(cellData.className);
+
+                                                                // Check for recent move (within 14 days)
+                                                                const isMoved = cellData.lastMovedAt && (() => {
+                                                                    const diff = new Date().getTime() - new Date(cellData.lastMovedAt).getTime();
+                                                                    return diff / (1000 * 60 * 60 * 24) <= 14;
+                                                                })();
+
                                                                 return (
                                                                     <div
                                                                         className={`leading-tight px-0.5 text-center break-words w-full
@@ -833,7 +964,11 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                                                     : 'text-[8px] leading-[1.1]'
                                                                             }
                                                                         `}
-                                                                        style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor, borderRadius: '4px', padding: '2px 4px' } : {}}
+                                                                        style={
+                                                                            matchedKw
+                                                                                ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor, borderRadius: '4px', padding: '2px 4px' }
+                                                                                : (isMoved ? { backgroundColor: '#dcfce7', borderRadius: '4px', padding: '2px 4px' } : {}) // bg-green-100 hex
+                                                                        }
                                                                     >
                                                                         {classNameParts.map((part, idx) => (
                                                                             <React.Fragment key={idx}>
@@ -872,12 +1007,19 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                                             <span className="text-[9px] bg-slate-700 px-1 rounded ml-1 text-slate-400">총 {cellData.merged.length}개</span>
                                                                         </div>
                                                                         <div className="flex flex-col gap-1.5">
-                                                                            {cellData.merged.map((m, idx) => (
-                                                                                <div key={idx} className="flex justify-between items-center">
-                                                                                    <div className="text-[10px] font-bold text-slate-200">{m.className}</div>
-                                                                                    {m.room && <div className="text-[9px] bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{m.room}</div>}
-                                                                                </div>
-                                                                            ))}
+                                                                            {cellData.merged.map((m, idx) => {
+                                                                                // Check for recent move
+                                                                                const isMoved = m.lastMovedAt && (() => {
+                                                                                    const diff = new Date().getTime() - new Date(m.lastMovedAt).getTime();
+                                                                                    return diff / (1000 * 60 * 60 * 24) <= 14;
+                                                                                })();
+                                                                                return (
+                                                                                    <div key={idx} className="flex justify-between items-center" style={isMoved ? { backgroundColor: '#dcfce7', padding: '2px', borderRadius: '4px' } : {}}>
+                                                                                        <div className={`text-[10px] font-bold ${isMoved ? 'text-green-800' : 'text-slate-200'}`}>{m.className}</div>
+                                                                                        {m.room && <div className="text-[9px] bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{m.room}</div>}
+                                                                                    </div>
+                                                                                );
+                                                                            })}
                                                                         </div>
                                                                         {/* Arrow */}
                                                                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45 transform"></div>

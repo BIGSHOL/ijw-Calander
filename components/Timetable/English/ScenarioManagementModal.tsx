@@ -15,7 +15,7 @@ interface ScenarioManagementModalProps {
     onLoadScenario?: (name: string) => void;
 }
 
-const BACKUP_COLLECTION = 'english_backups';
+
 
 const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
     isOpen,
@@ -176,7 +176,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
         try {
             // Step 1: Backup current draft state
-            const preLoadBackupId = `pre_load_${Date.now()}`;
+            const preLoadBackupId = `backup_preload_${Date.now()}`;
             try {
                 const [currentSchedule, currentClass] = await Promise.all([
                     getDocs(collection(db, EN_DRAFT_COLLECTION)),
@@ -194,17 +194,24 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                     currentStudentData[docSnap.id] = docSnap.data();
                 });
 
-                await setDoc(doc(db, BACKUP_COLLECTION, preLoadBackupId), {
-                    createdAt: new Date().toISOString(),
-                    createdBy: `시나리오 불러오기 전 자동백업 (${currentUser?.displayName || 'Unknown'})`,
-                    createdByUid: currentUser?.uid || '',
+                // 통계 계산
+                const stats = calculateScenarioStats(currentScheduleData, currentStudentData);
+
+                await setDoc(doc(db, SCENARIO_COLLECTION, preLoadBackupId), {
+                    id: preLoadBackupId,
+                    name: `백업(자동)_${new Date().toLocaleString()}`,
+                    description: `[자동백업] 시나리오 "${scenario.name}" 불러오기 전 자동 생성됨.`,
                     data: currentScheduleData,
                     studentData: currentStudentData,
+                    createdAt: new Date().toISOString(),
+                    createdBy: `${currentUser?.displayName || 'Unknown'} (자동)`,
+                    createdByUid: currentUser?.uid || '',
+                    stats,
                     isPreRestoreBackup: true,
                     restoringTo: scenario.id
                 });
 
-                console.log(`✅ Pre-load backup created: ${preLoadBackupId}`);
+                console.log(`✅ Pre-load backup created as Scenario: ${preLoadBackupId}`);
             } catch (backupError) {
                 console.warn('불러오기 전 백업 생성 실패 (계속 진행):', backupError);
             }
@@ -368,6 +375,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                             const isLatest = index === 0;
                             const isOwner = scenario.createdByUid === currentUser?.uid;
                             const canModify = isMaster || isOwner || canManageSimulation;
+                            const isBackup = scenario.id.startsWith('backup_');
 
                             return (
                                 <div
@@ -393,6 +401,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                             <span className="font-bold text-gray-800">{scenario.name}</span>
                                         )}
                                         {isLatest && <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold">최신</span>}
+                                        {isBackup && <span className="text-[10px] bg-gray-500 text-white px-1.5 py-0.5 rounded font-bold">자동 백업</span>}
                                         {!validation.isValid && <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold">손상됨</span>}
                                     </div>
 

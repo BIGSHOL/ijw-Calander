@@ -380,6 +380,7 @@ export interface TimetableStudent {
   enrollmentDate?: string; // 신입생 등록일 (YYYY-MM-DD)
   withdrawalDate?: string; // 퇴원일 (YYYY-MM-DD)
   onHold?: boolean; // 대기생 여부
+  isMoved?: boolean; // 반이동 학생 여부
   personalSchedule?: { day: string; period: string }[];
 }
 

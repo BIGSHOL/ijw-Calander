@@ -252,8 +252,6 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                                 </tr>
                                 {deptPermissions.map(renderPermissionRow)}
 
-                                {userPermissions.map(renderPermissionRow)}
-
                                 {/* 강사 관리 섹션 */}
                                 <tr className="bg-emerald-50/50">
                                     <td colSpan={7} className="px-4 py-2 font-bold text-emerald-700 text-xs uppercase tracking-wider">⚙️ 시스템 (System) - 강사 관리</td>
@@ -277,6 +275,12 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                                     <td colSpan={7} className="px-4 py-2 font-bold text-orange-700 text-xs uppercase tracking-wider">⚙️ 시스템 설정</td>
                                 </tr>
                                 {settingsPermissions.map(renderPermissionRow)}
+
+                                {/* 사용자 관리 섹션 */}
+                                <tr className="bg-purple-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-purple-700 text-xs uppercase tracking-wider">👥 사용자 관리</td>
+                                </tr>
+                                {userPermissions.map(renderPermissionRow)}
                             </tbody>
                         </table>
                     </div>

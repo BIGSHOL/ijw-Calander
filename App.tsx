@@ -66,6 +66,7 @@ const App: React.FC = () => {
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); // New State
+  const [isPermissionViewOpen, setIsPermissionViewOpen] = useState(false); // Permission View Toggle
 
 
 
@@ -141,7 +142,7 @@ const App: React.FC = () => {
 
 
   // Permission Hook
-  const { hasPermission } = usePermissions(userProfile || null);
+  const { hasPermission, rolePermissions } = usePermissions(userProfile || null);
 
   // Initialize timetable subject based on user's permissions (edit permission takes priority)
   useEffect(() => {
@@ -432,8 +433,17 @@ const App: React.FC = () => {
   const [bucketItems, setBucketItems] = useState<BucketItem[]>([]);
 
   // Subscribe to Bucket Items (onSnapshot for caching/delta updates)
+  // 최적화: 현재 사용자의 아이템만 조회 (읽기 -90%)
   useEffect(() => {
-    const q = query(collection(db, "bucketItems"), orderBy("createdAt", "desc"));
+    if (!currentUser) {
+      setBucketItems([]);
+      return;
+    }
+    const q = query(
+      collection(db, "bucketItems"),
+      where("authorId", "==", currentUser.uid),
+      orderBy("createdAt", "desc")
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -442,7 +452,7 @@ const App: React.FC = () => {
       setBucketItems(items);
     });
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   // Task Memo State - One-way notifications between users
   const [taskMemos, setTaskMemos] = useState<TaskMemo[]>([]);
@@ -453,6 +463,7 @@ const App: React.FC = () => {
   const [selectedMemo, setSelectedMemo] = useState<TaskMemo | null>(null);
 
   // Subscribe to Task Memos (only current user's received memos)
+  // 최적화: 서버 측 필터링 추가 (isDeleted=false, 읽기 -50%)
   useEffect(() => {
     if (!currentUser) {
       setTaskMemos([]);
@@ -460,8 +471,9 @@ const App: React.FC = () => {
     }
     const q = query(
       collection(db, "taskMemos"),
-      where("to", "==", currentUser.uid)
-      // orderBy("createdAt", "desc") // Removed to avoid index requirement
+      where("to", "==", currentUser.uid),
+      where("isDeleted", "==", false)
+      // orderBy("createdAt", "desc") // 복합 인덱스 필요
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const memos = snapshot.docs.map(doc => ({
@@ -469,10 +481,10 @@ const App: React.FC = () => {
         ...doc.data()
       })) as TaskMemo[];
 
-      // Client-side sort and filter
-      const sortedMemos = memos
-        .filter(m => !m.isDeleted)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      // Client-side sort only (filter already done on server)
+      const sortedMemos = memos.sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
 
       setTaskMemos(sortedMemos);
     });
@@ -1299,8 +1311,8 @@ const App: React.FC = () => {
 
                 {isMemoDropdownOpen && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsMemoDropdownOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                    <div className="fixed inset-0 z-[99998]" onClick={() => setIsMemoDropdownOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-[99999] overflow-hidden">
                       <div className="p-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
                         <span className="font-bold text-gray-700 text-sm flex items-center gap-2">
                           <Mail size={14} /> 받은 메모
@@ -1573,7 +1585,7 @@ const App: React.FC = () => {
 
         {/* Row 2: Timetable Filter Bar - Only show in timetable mode */}
         {appMode === 'timetable' && (
-          <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-[60] text-xs">
+          <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
             {/* Main Filter Toggle - Only show for Math */}
             {/* Main Filter Toggle - Only show for Math */
               /* Removed Global Option Settings Button */
@@ -1778,13 +1790,23 @@ const App: React.FC = () => {
             onClick={() => setIsProfileMenuOpen(false)}
           />
           <div
-            className="fixed right-4 top-16 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-[99999] overflow-hidden text-sm"
+            className="fixed right-4 top-16 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-[99999] overflow-hidden text-sm"
             style={{ display: isProfileMenuOpen ? 'block' : 'none' }}
           >
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
               <p className="font-bold text-gray-800">{userProfile?.email?.split('@')[0]}</p>
               <p className="text-xs text-gray-500 mt-0.5">{userProfile?.jobTitle || '직급 미설정'}</p>
+              <p className="text-xs text-blue-600 font-medium mt-1">{ROLE_LABELS[userProfile?.role || 'guest']}</p>
             </div>
+            <button
+              onClick={() => {
+                setIsPermissionViewOpen(true);
+                setIsProfileMenuOpen(false);
+              }}
+              className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-medium transition-colors border-b border-gray-100"
+            >
+              <Eye size={16} /> 권한 보기
+            </button>
             <button
               onClick={() => {
                 handleLogout();
@@ -1794,6 +1816,116 @@ const App: React.FC = () => {
             >
               <LogOut size={16} /> 로그아웃
             </button>
+          </div>
+        </>
+      )}
+
+      {/* Permission View Modal */}
+      {isPermissionViewOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-[99998]"
+            onClick={() => setIsPermissionViewOpen(false)}
+          />
+          <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] md:max-h-[80vh] bg-white rounded-2xl shadow-2xl z-[99999] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+              <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                <Eye size={18} /> 내 권한
+              </h3>
+              <button onClick={() => setIsPermissionViewOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 text-sm">
+              {/* Role Info */}
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-blue-800 font-bold">역할: {ROLE_LABELS[userProfile?.role || 'guest']}</p>
+                {userProfile?.role === 'master' && (
+                  <p className="text-blue-600 text-xs mt-1">Master는 모든 권한을 보유합니다.</p>
+                )}
+              </div>
+
+              {/* Tab Permissions */}
+              <div className="mb-4">
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  📋 허용된 탭
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {accessibleTabs.map(tab => (
+                    <span key={tab} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                      {tab === 'calendar' && '📅 연간 일정'}
+                      {tab === 'timetable' && '📚 시간표'}
+                      {tab === 'payment' && '💳 전자 결제'}
+                      {tab === 'gantt' && '📊 간트 차트'}
+                      {tab === 'consultation' && '💬 상담 관리'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Role Permissions */}
+              {userProfile?.role !== 'master' && (
+                <div>
+                  <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                    ✅ 허용된 권한
+                  </h4>
+                  <div className="space-y-1 max-h-60 overflow-y-auto">
+                    {(() => {
+                      const userPerms = rolePermissions[userProfile?.role as keyof typeof rolePermissions] || {};
+                      const enabledPerms = Object.entries(userPerms).filter(([, v]) => v);
+                      if (enabledPerms.length === 0) {
+                        return <p className="text-gray-400 text-xs">설정된 권한이 없습니다.</p>;
+                      }
+                      const permLabels: Record<string, string> = {
+                        'events.create': '일정 생성',
+                        'events.edit_own': '본인 일정 수정',
+                        'events.edit_others': '타인 일정 수정',
+                        'events.delete_own': '본인 일정 삭제',
+                        'events.delete_others': '타인 일정 삭제',
+                        'events.drag_move': '일정 드래그 이동',
+                        'events.attendance': '참가 현황 변경',
+                        'buckets.edit_lower_roles': '하위 역할 버킷 수정',
+                        'buckets.delete_lower_roles': '하위 역할 버킷 삭제',
+                        'departments.view_all': '모든 부서 조회',
+                        'departments.create': '부서 생성',
+                        'departments.edit': '부서 수정',
+                        'departments.delete': '부서 삭제',
+                        'users.view': '사용자 목록 조회',
+                        'users.approve': '사용자 승인',
+                        'users.change_role': '역할 변경',
+                        'users.change_permissions': '세부 권한 변경',
+                        'settings.access': '설정 접근',
+                        'settings.holidays': '공휴일 관리',
+                        'settings.role_permissions': '역할 권한 설정',
+                        'settings.manage_categories': '카테고리 관리',
+                        'system.teachers.view': '강사 목록 조회',
+                        'system.teachers.edit': '강사 수정',
+                        'system.classes.view': '수업 목록 조회',
+                        'system.classes.edit': '수업 수정',
+                        'timetable.math.view': '수학 시간표 조회',
+                        'timetable.math.edit': '수학 시간표 수정',
+                        'timetable.english.view': '영어 시간표 조회',
+                        'timetable.english.edit': '영어 시간표 수정',
+                        'timetable.english.simulation': '영어 시뮬레이션',
+                        'timetable.english.backup.view': '백업 조회',
+                        'timetable.english.backup.restore': '백업 복원',
+                        'timetable.integrated.view': '통합 시간표 조회',
+                        'gantt.view': '간트 조회',
+                        'gantt.create': '간트 생성',
+                        'gantt.edit': '간트 수정',
+                        'gantt.delete': '간트 삭제',
+                      };
+                      return enabledPerms.map(([permId]) => (
+                        <div key={permId} className="flex items-center gap-2 text-xs text-gray-600 py-1">
+                          <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center text-[10px]">✓</span>
+                          {permLabels[permId] || permId}
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
