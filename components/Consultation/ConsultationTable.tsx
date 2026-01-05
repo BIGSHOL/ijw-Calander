@@ -124,7 +124,9 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
             case 'studentName':
                 return <span className="font-semibold" style={{ color: COLORS.navy }}>{record.studentName}</span>;
             case 'schoolGrade':
-                return <span className="text-slate-700">{record.schoolName}{record.grade}</span>;
+                // grade에서 "초", "중", "고"를 제거하고 숫자만 추출
+                const gradeNum = record.grade.replace(/^[초중고]/, '');
+                return <span className="text-slate-700">{record.schoolName}{gradeNum}</span>;
             case 'parentPhone':
                 return <span className="text-slate-600">{record.parentPhone}</span>;
             case 'consultationDate':
