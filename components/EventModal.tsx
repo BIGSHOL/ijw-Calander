@@ -77,6 +77,7 @@ const EventModal: React.FC<EventModalProps> = ({
   const [recurrenceType, setRecurrenceType] = useState<'none' | 'daily' | 'weekdays' | 'weekends' | 'weekly' | 'monthly' | 'yearly'>('none');
   const [recurrenceCount, setRecurrenceCount] = useState(1);
   const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
+  const [isParticipantsDropdownOpen, setIsParticipantsDropdownOpen] = useState(false);
 
 
   // Permission Logic
@@ -323,7 +324,7 @@ const EventModal: React.FC<EventModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-0 relative max-h-[90vh] overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-0 relative max-h-[90vh] overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
         <div className="bg-[#081429] p-4 flex justify-between items-center text-white">
           <h2 className="text-lg font-bold flex items-center gap-2">
             {existingEvent ? (isViewMode ? <Eye size={20} className="text-[#fdb813]" /> : <Edit3 size={20} className="text-[#fdb813]" />) : <Plus size={20} className="text-[#fdb813]" />}
@@ -581,127 +582,144 @@ const EventModal: React.FC<EventModalProps> = ({
               value={description}
               disabled={isViewMode || !canEditCurrent}
               onChange={(e) => setDescription(e.target.value)}
-              className={`w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none min-h-[100px] resize-y font-medium text-sm ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+              className={`w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none min-h-[200px] resize-y font-medium text-sm ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               placeholder="일정의 자세한 내용을 입력하세요"
             />
           </div>
 
-          {/* Participants - Multi Select Checkbox List (Moved Down) */}
+          {/* Participants - Dropdown (Dropdown with Checkboxes) */}
           <div>
             <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2 flex items-center gap-1">
               <Users size={14} className="text-[#fdb813]" /> 참가자
             </label>
-            <div className="border border-gray-300 rounded-xl p-3 max-h-40 overflow-y-auto bg-gray-50/50">
-              {/* Current User (Always first), then Selected, then Unselected */}
-              {users
-                .filter(u => u.status === 'approved')
-                .sort((a, b) => {
-                  // Helper: Get display name for selection check
-                  const getDisplayName = (user: typeof a) => {
-                    const name = user.displayName || user.email.split('@')[0];
-                    return user.jobTitle ? `${name} (${user.jobTitle})` : name;
-                  };
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsParticipantsDropdownOpen(!isParticipantsDropdownOpen)}
+                className="w-full text-left px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] focus:border-[#fdb813] bg-white flex justify-between items-center outline-none transition-all"
+              >
+                <span className={`text-sm font-medium ${participants.length === 0 ? 'text-gray-400' : 'text-gray-800'}`}>
+                  {participants.length === 0
+                    ? '참가자를 선택하세요'
+                    : `${participants[0]} 외 ${participants.length - 1}명`}
+                </span>
+                {isParticipantsDropdownOpen ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
+              </button>
 
-                  const aSelected = participants.includes(getDisplayName(a));
-                  const bSelected = participants.includes(getDisplayName(b));
+              {isParticipantsDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                  {users
+                    .filter(u => u.status === 'approved')
+                    .sort((a, b) => {
+                      const getDisplayName = (user: typeof a) => {
+                        const name = user.displayName || user.email.split('@')[0];
+                        return user.jobTitle ? `${name} (${user.jobTitle})` : name;
+                      };
+                      const aSelected = participants.includes(getDisplayName(a));
+                      const bSelected = participants.includes(getDisplayName(b));
+                      if (currentUser && a.uid === currentUser.uid) return -1;
+                      if (currentUser && b.uid === currentUser.uid) return 1;
+                      if (aSelected && !bSelected) return -1;
+                      if (!aSelected && bSelected) return 1;
+                      const nameA = `${a.email.split('@')[0]} ${a.jobTitle || ''}`;
+                      const nameB = `${b.email.split('@')[0]} ${b.jobTitle || ''}`;
+                      return nameA.localeCompare(nameB);
+                    })
+                    .map(u => {
+                      const name = u.displayName || u.email.split('@')[0];
+                      const displayName = u.jobTitle ? `${name} (${u.jobTitle})` : name;
+                      const isSelected = participants.includes(displayName);
+                      const currentStatus = attendance[u.uid] || 'pending';
+                      const canEditStatus = currentUser?.uid === u.uid || isMaster || isAdmin;
+                      const cycleStatus = () => {
+                        const next: Record<string, 'pending' | 'joined' | 'declined'> = {
+                          'pending': 'joined',
+                          'joined': 'declined',
+                          'declined': 'pending'
+                        };
+                        const newStatus = next[currentStatus];
+                        if (existingEvent?.recurrenceGroupId && onBatchUpdateAttendance) {
+                          const applyToAll = window.confirm(
+                            `참가 상태를 "${newStatus === 'joined' ? '참석' : newStatus === 'declined' ? '불참' : '미정'}"(으)로 변경합니다.\n\n모든 반복 일정에도 적용하시겠습니까?`
+                          );
+                          if (applyToAll) {
+                            onBatchUpdateAttendance(existingEvent.recurrenceGroupId, u.uid, newStatus);
+                          }
+                        }
+                        setAttendance(prev => ({ ...prev, [u.uid]: newStatus }));
+                      };
 
-                  // 1. Current User comes first
-                  if (currentUser && a.uid === currentUser.uid) return -1;
-                  if (currentUser && b.uid === currentUser.uid) return 1;
+                      return (
+                        <div key={u.uid} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors group">
+                          <label className="flex items-center gap-3 cursor-pointer flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              disabled={isViewMode || !canEditCurrent}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setParticipants([...participants, displayName]);
+                                  setAttendance(prev => ({ ...prev, [u.uid]: 'pending' }));
+                                } else {
+                                  setParticipants(participants.filter(p => p !== displayName));
+                                  const newAtt = { ...attendance };
+                                  delete newAtt[u.uid];
+                                  setAttendance(newAtt);
+                                }
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
+                            />
+                            <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-700'}`}>{displayName}</span>
+                          </label>
 
-                  // 2. Selected participants come before unselected
-                  if (aSelected && !bSelected) return -1;
-                  if (!aSelected && bSelected) return 1;
-
-                  // 3. Within same group, alphabetical order
-                  const nameA = `${a.email.split('@')[0]} ${a.jobTitle || ''}`;
-                  const nameB = `${b.email.split('@')[0]} ${b.jobTitle || ''}`;
-                  return nameA.localeCompare(nameB);
-                })
-                .map(u => {
-                  const name = u.displayName || u.email.split('@')[0];
-                  const displayName = u.jobTitle ? `${name} (${u.jobTitle})` : name;
-                  const isSelected = participants.includes(displayName);
-                  const currentStatus = attendance[u.uid] || 'pending';
-
-                  // Permission Check
-                  const canEditStatus = currentUser?.uid === u.uid || isMaster || isAdmin;
-
-                  const cycleStatus = () => {
-                    const next: Record<string, 'pending' | 'joined' | 'declined'> = {
-                      'pending': 'joined',
-                      'joined': 'declined',
-                      'declined': 'pending'
-                    };
-                    const newStatus = next[currentStatus];
-
-                    // Check if this is a recurring event and offer batch update
-                    if (existingEvent?.recurrenceGroupId && onBatchUpdateAttendance) {
-                      const applyToAll = window.confirm(
-                        `참가 상태를 "${newStatus === 'joined' ? '참석' : newStatus === 'declined' ? '불참' : '미정'}"(으)로 변경합니다.\n\n모든 반복 일정에도 적용하시겠습니까?`
+                          {isSelected && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (canEditStatus) cycleStatus();
+                              }}
+                              disabled={!canEditStatus}
+                              className={`
+                                    text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1 transition-all
+                                    ${currentStatus === 'joined' ? 'bg-green-100 text-green-700 border-green-200' : ''}
+                                    ${currentStatus === 'declined' ? 'bg-red-100 text-red-700 border-red-200' : ''}
+                                    ${currentStatus === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : ''}
+                                    ${canEditStatus ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-80'}
+                                `}
+                            >
+                              {currentStatus === 'joined' && '참석'}
+                              {currentStatus === 'declined' && '불참'}
+                              {currentStatus === 'pending' && '미정'}
+                            </button>
+                          )}
+                        </div>
                       );
-
-                      if (applyToAll) {
-                        onBatchUpdateAttendance(existingEvent.recurrenceGroupId, u.uid, newStatus);
-                      }
-                    }
-
-                    // Always update current event's local state
-                    setAttendance(prev => ({
-                      ...prev,
-                      [u.uid]: newStatus
-                    }));
-                  };
-
-                  return (
-                    <div key={u.uid} className="flex items-center justify-between p-2 hover:bg-white rounded-lg transition-colors group">
-                      <label className="flex items-center gap-3 cursor-pointer flex-1">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          disabled={isViewMode || !canEditCurrent}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setParticipants([...participants, displayName]);
-                              setAttendance(prev => ({ ...prev, [u.uid]: 'pending' })); // Default to pending
-                            } else {
-                              setParticipants(participants.filter(p => p !== displayName));
-                              const newAtt = { ...attendance };
-                              delete newAtt[u.uid];
-                              setAttendance(newAtt);
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
-                        />
-                        <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-600'}`}>{displayName}</span>
-                      </label>
-
-                      {/* Attendance Status Toggle */}
-                      {isSelected && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (canEditStatus) cycleStatus();
-                          }}
-                          disabled={!canEditStatus}
-                          className={`
-                                text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1 transition-all
-                                ${currentStatus === 'joined' ? 'bg-green-100 text-green-700 border-green-200' : ''}
-                                ${currentStatus === 'declined' ? 'bg-red-100 text-red-700 border-red-200' : ''}
-                                ${currentStatus === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : ''}
-                                ${canEditStatus ? 'cursor-pointer hover:brightness-95' : 'cursor-default opacity-80'}
-                            `}
-                        >
-                          {currentStatus === 'joined' && '참석'}
-                          {currentStatus === 'declined' && '불참'}
-                          {currentStatus === 'pending' && '미정'}
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                    })}
+                </div>
+              )}
             </div>
+            {participants.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {participants.map(p => (
+                  <span key={p} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                    {p}
+                    {!isViewMode && canEditCurrent && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setParticipants(participants.filter(part => part !== p));
+                          // Note: Removing here doesn't clean up attendance state immediately, but it's fine.
+                        }}
+                        className="ml-1 text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Reference URL */}
@@ -731,52 +749,91 @@ const EventModal: React.FC<EventModalProps> = ({
             )}
           </div>
 
-          {/* Color Pickers */}
+          {/* Color Style (Chips) */}
           <div>
             <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2">
               색상 스타일
             </label>
-            <div className="flex gap-6 items-center">
+            <div className="flex gap-6 items-start">
               {/* Background Color */}
-              <div className="flex flex-col items-center gap-1">
-                <div className={`relative w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm transition-transform ${isViewMode || !canEditCurrent ? 'opacity-80 cursor-default' : 'hover:scale-105 active:scale-95 cursor-pointer'}`}>
-                  <input
-                    type="color"
-                    value={selectedColor}
-                    disabled={isViewMode || !canEditCurrent}
-                    onChange={(e) => setSelectedColor(e.target.value)}
-                    className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0 disabled:cursor-not-allowed"
-                  />
-                </div>
+              <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold text-gray-500">배경색</span>
+                <div className="flex flex-wrap gap-1.5 max-w-[240px]">
+                  {[...EVENT_COLORS.map(c => c.value), '#ffffff', '#000000'].slice(0, 10).map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setSelectedColor(color)}
+                      disabled={isViewMode || !canEditCurrent}
+                      className={`w-6 h-6 rounded-md border border-gray-200 shadow-sm transition-all ${selectedColor === color ? 'ring-2 ring-offset-1 ring-[#fdb813] scale-110' : 'hover:scale-105'}`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <div className="relative w-6 h-6 rounded-md border border-gray-200 overflow-hidden shadow-sm cursor-pointer hover:scale-105 transition-transform">
+                    <input
+                      type="color"
+                      value={selectedColor}
+                      disabled={isViewMode || !canEditCurrent}
+                      onChange={(e) => setSelectedColor(e.target.value)}
+                      className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
+                      title="사용자 지정 색상"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Text Color */}
-              <div className="flex flex-col items-center gap-1">
-                <div className={`relative w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm transition-transform ${isViewMode || !canEditCurrent ? 'opacity-80 cursor-default' : 'hover:scale-105 active:scale-95 cursor-pointer'}`}>
-                  <input
-                    type="color"
-                    value={selectedTextColor}
-                    disabled={isViewMode || !canEditCurrent}
-                    onChange={(e) => setSelectedTextColor(e.target.value)}
-                    className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0 disabled:cursor-not-allowed"
-                  />
-                </div>
+              <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold text-gray-500">글자색</span>
+                <div className="flex gap-1.5">
+                  {['#ffffff', '#000000', '#111827', '#4b5563'].map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setSelectedTextColor(color)}
+                      disabled={isViewMode || !canEditCurrent}
+                      className={`w-6 h-6 rounded-md border border-gray-200 shadow-sm transition-all ${selectedTextColor === color ? 'ring-2 ring-offset-1 ring-[#fdb813] scale-110' : 'hover:scale-105'}`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <div className="relative w-6 h-6 rounded-md border border-gray-200 overflow-hidden shadow-sm cursor-pointer hover:scale-105 transition-transform">
+                    <input
+                      type="color"
+                      value={selectedTextColor}
+                      disabled={isViewMode || !canEditCurrent}
+                      onChange={(e) => setSelectedTextColor(e.target.value)}
+                      className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
+                      title="사용자 지정 색상"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Border Color */}
-              <div className="flex flex-col items-center gap-1">
-                <div className={`relative w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm transition-transform ${isViewMode || !canEditCurrent ? 'opacity-80 cursor-default' : 'hover:scale-105 active:scale-95 cursor-pointer'}`}>
-                  <input
-                    type="color"
-                    value={selectedBorderColor}
-                    disabled={isViewMode || !canEditCurrent}
-                    onChange={(e) => setSelectedBorderColor(e.target.value)}
-                    className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0 disabled:cursor-not-allowed"
-                  />
-                </div>
+              <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold text-gray-500">테두리색</span>
+                <div className="flex flex-wrap gap-1.5 max-w-[200px]">
+                  {[...EVENT_COLORS.map(c => c.value), '#ffffff', '#000000'].slice(0, 5).map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setSelectedBorderColor(color)}
+                      disabled={isViewMode || !canEditCurrent}
+                      className={`w-6 h-6 rounded-md border border-gray-200 shadow-sm transition-all ${selectedBorderColor === color ? 'ring-2 ring-offset-1 ring-[#fdb813] scale-110' : 'hover:scale-105'}`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <div className="relative w-6 h-6 rounded-md border border-gray-200 overflow-hidden shadow-sm cursor-pointer hover:scale-105 transition-transform">
+                    <input
+                      type="color"
+                      value={selectedBorderColor}
+                      disabled={isViewMode || !canEditCurrent}
+                      onChange={(e) => setSelectedBorderColor(e.target.value)}
+                      className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
+                      title="사용자 지정 색상"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
