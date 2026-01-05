@@ -19,11 +19,10 @@ const COLORS = {
 
 // 컬럼 정의
 type ColumnKey =
-    | 'studentName' | 'parentPhone' | 'grade' | 'schoolName'
-    | 'subject' | 'status' | 'counselor' | 'receiver' | 'registrar'
-    | 'consultationDate' | 'consultationPath' | 'createdAt'
-    | 'paymentAmount' | 'paymentDate' | 'followUpDate' | 'followUpContent'
-    | 'notes' | 'nonRegistrationReason';
+    | 'createdAt' | 'receiver' | 'studentName' | 'schoolGrade' | 'parentPhone'
+    | 'consultationDate' | 'subject' | 'counselor' | 'status' | 'registrar'
+    | 'paymentAmount' | 'paymentDate' | 'notes' | 'nonRegistrationReason'
+    | 'followUpDate' | 'followUpContent' | 'consultationPath';
 
 interface ColumnConfig {
     key: ColumnKey;
@@ -33,24 +32,23 @@ interface ColumnConfig {
 }
 
 const COLUMNS: ColumnConfig[] = [
-    { key: 'studentName', label: '학생명', defaultVisible: true, minWidth: '100px' },
-    { key: 'parentPhone', label: '학부모 연락처', defaultVisible: true, minWidth: '130px' },
-    { key: 'grade', label: '학년', defaultVisible: true, minWidth: '80px' },
-    { key: 'schoolName', label: '학교', defaultVisible: true, minWidth: '100px' },
-    { key: 'subject', label: '상담 과목', defaultVisible: true, minWidth: '90px' },
-    { key: 'counselor', label: '상담자', defaultVisible: true, minWidth: '80px' },
-    { key: 'receiver', label: '수신자', defaultVisible: true, minWidth: '80px' },
-    { key: 'registrar', label: '등록자', defaultVisible: true, minWidth: '80px' },
-    { key: 'consultationDate', label: '상담일', defaultVisible: true, minWidth: '110px' },
-    { key: 'consultationPath', label: '상담 경로', defaultVisible: false, minWidth: '100px' },
     { key: 'createdAt', label: '접수일', defaultVisible: true, minWidth: '90px' },
-    { key: 'status', label: '상태', defaultVisible: true, minWidth: '90px' },
-    { key: 'paymentAmount', label: '결제 금액', defaultVisible: true, minWidth: '100px' },
-    { key: 'paymentDate', label: '결제일', defaultVisible: false, minWidth: '90px' },
-    { key: 'followUpDate', label: '후속 조치일', defaultVisible: false, minWidth: '100px' },
-    { key: 'followUpContent', label: '후속 내용', defaultVisible: false, minWidth: '150px' },
-    { key: 'notes', label: '메모', defaultVisible: false, minWidth: '150px' },
-    { key: 'nonRegistrationReason', label: '미등록 사유', defaultVisible: true, minWidth: '120px' },
+    { key: 'receiver', label: '수신자', defaultVisible: true, minWidth: '80px' },
+    { key: 'studentName', label: '이름', defaultVisible: true, minWidth: '80px' },
+    { key: 'schoolGrade', label: '학교학년', defaultVisible: true, minWidth: '100px' },
+    { key: 'parentPhone', label: '주소', defaultVisible: true, minWidth: '120px' },
+    { key: 'consultationDate', label: '상담일', defaultVisible: true, minWidth: '110px' },
+    { key: 'subject', label: '상담과목', defaultVisible: true, minWidth: '80px' },
+    { key: 'counselor', label: '상담자', defaultVisible: true, minWidth: '80px' },
+    { key: 'status', label: '등록여부', defaultVisible: true, minWidth: '90px' },
+    { key: 'registrar', label: '등록자', defaultVisible: true, minWidth: '80px' },
+    { key: 'paymentAmount', label: '결제금액', defaultVisible: true, minWidth: '100px' },
+    { key: 'paymentDate', label: '결제일', defaultVisible: true, minWidth: '90px' },
+    { key: 'notes', label: '내용', defaultVisible: true, minWidth: '150px' },
+    { key: 'nonRegistrationReason', label: '미등록사유', defaultVisible: true, minWidth: '120px' },
+    { key: 'followUpDate', label: '후속조치일', defaultVisible: true, minWidth: '100px' },
+    { key: 'followUpContent', label: '후속조치 내용', defaultVisible: true, minWidth: '150px' },
+    { key: 'consultationPath', label: '상담경로', defaultVisible: true, minWidth: '100px' },
 ];
 
 export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEdit, onDelete }) => {
@@ -119,34 +117,30 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
 
     const getCellValue = (record: ConsultationRecord, key: ColumnKey): React.ReactNode => {
         switch (key) {
+            case 'createdAt':
+                return <span className="text-slate-500">{formatDate(record.createdAt)}</span>;
+            case 'receiver':
+                return <span className="text-slate-600">{record.receiver || '-'}</span>;
             case 'studentName':
                 return <span className="font-semibold" style={{ color: COLORS.navy }}>{record.studentName}</span>;
+            case 'schoolGrade':
+                return <span className="text-slate-700">{record.schoolName}{record.grade}</span>;
             case 'parentPhone':
                 return <span className="text-slate-600">{record.parentPhone}</span>;
-            case 'grade':
-                return <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.navy }}>{record.grade}</span>;
-            case 'schoolName':
-                return <span className="text-slate-600">{record.schoolName}</span>;
+            case 'consultationDate':
+                return <span style={{ color: COLORS.navy }}>{formatDateWithDay(record.consultationDate)}</span>;
             case 'subject':
                 return <span className="font-semibold" style={{ color: COLORS.gray }}>{record.subject}</span>;
             case 'counselor':
                 return <span className="text-slate-600">{record.counselor || '-'}</span>;
-            case 'receiver':
-                return <span className="text-slate-600">{record.receiver || '-'}</span>;
-            case 'registrar':
-                return <span className="text-slate-600">{record.registrar || '-'}</span>;
-            case 'consultationDate':
-                return <span style={{ color: COLORS.navy }}>{formatDateWithDay(record.consultationDate)}</span>;
-            case 'consultationPath':
-                return <span className="text-slate-500 text-xs">{record.consultationPath || '-'}</span>;
-            case 'createdAt':
-                return <span className="text-slate-500">{formatDate(record.createdAt)}</span>;
             case 'status':
                 return (
                     <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${CONSULTATION_STATUS_COLORS[record.status]}`}>
                         {record.status}
                     </span>
                 );
+            case 'registrar':
+                return <span className="text-slate-600">{record.registrar || '-'}</span>;
             case 'paymentAmount':
                 return record.paymentAmount ? (
                     <span className="font-medium flex items-center gap-1" style={{ color: '#059669' }}>
@@ -155,18 +149,20 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                 ) : <span className="text-slate-400">-</span>;
             case 'paymentDate':
                 return <span className="text-slate-500">{formatDate(record.paymentDate)}</span>;
-            case 'followUpDate':
-                return record.followUpDate ? (
-                    <span className="font-medium" style={{ color: COLORS.yellow }}>{formatDate(record.followUpDate)}</span>
-                ) : <span className="text-slate-400">-</span>;
-            case 'followUpContent':
-                return <span className="text-slate-500 text-xs truncate max-w-[140px] block">{record.followUpContent || '-'}</span>;
             case 'notes':
                 return <span className="text-slate-500 text-xs truncate max-w-[140px] block">{record.notes || '-'}</span>;
             case 'nonRegistrationReason':
                 return record.nonRegistrationReason ? (
                     <span className="text-red-500 text-xs">{record.nonRegistrationReason}</span>
                 ) : <span className="text-slate-400">-</span>;
+            case 'followUpDate':
+                return record.followUpDate ? (
+                    <span className="font-medium" style={{ color: COLORS.yellow }}>{formatDate(record.followUpDate)}</span>
+                ) : <span className="text-slate-400">-</span>;
+            case 'followUpContent':
+                return <span className="text-slate-500 text-xs truncate max-w-[140px] block">{record.followUpContent || '-'}</span>;
+            case 'consultationPath':
+                return <span className="text-slate-500 text-xs">{record.consultationPath || '-'}</span>;
             default:
                 return '-';
         }
