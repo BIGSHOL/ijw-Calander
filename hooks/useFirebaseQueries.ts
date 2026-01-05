@@ -6,7 +6,7 @@ import { Department, Teacher, Holiday, ClassKeywordColor, SystemConfig } from '.
 import { departmentConverter } from '../converters';
 
 // 부서목록 - 30분 캐시 (거의 변경 안됨)
-export const useDepartments = () => {
+export const useDepartments = (enabled: boolean = true) => {
     return useQuery({
         queryKey: ['departments'],
         queryFn: async () => {
@@ -19,11 +19,12 @@ export const useDepartments = () => {
         },
         staleTime: 1000 * 60 * 30, // 30분
         gcTime: 1000 * 60 * 60, // 1시간
+        enabled,
     });
 };
 
 // 강사목록 - 30분 캐시 (거의 변경 안됨)
-export const useTeachers = () => {
+export const useTeachers = (enabled: boolean = true) => {
     return useQuery({
         queryKey: ['teachers'],
         queryFn: async () => {
@@ -34,11 +35,12 @@ export const useTeachers = () => {
         },
         staleTime: 1000 * 60 * 30, // 30분
         gcTime: 1000 * 60 * 60, // 1시간
+        enabled,
     });
 };
 
 // 휴일 목록 - 1시간 캐시 (거의 변경 안됨)
-export const useHolidays = () => {
+export const useHolidays = (enabled: boolean = true) => {
     return useQuery({
         queryKey: ['holidays'],
         queryFn: async () => {
@@ -47,11 +49,12 @@ export const useHolidays = () => {
         },
         staleTime: 1000 * 60 * 60, // 1시간
         gcTime: 1000 * 60 * 120, // 2시간
+        enabled,
     });
 };
 
 // 수업 키워드 색상 - 30분 캐시 (거의 변경 안됨)
-export const useClassKeywords = () => {
+export const useClassKeywords = (enabled: boolean = true) => {
     return useQuery({
         queryKey: ['classKeywords'],
         queryFn: async () => {
@@ -62,11 +65,12 @@ export const useClassKeywords = () => {
         },
         staleTime: 1000 * 60 * 30, // 30분
         gcTime: 1000 * 60 * 60, // 1시간
+        enabled,
     });
 };
 
 // 시스템 설정 (lookback years, categories) - 1시간 캐시
-export const useSystemConfig = () => {
+export const useSystemConfig = (enabled: boolean = true) => {
     return useQuery({
         queryKey: ['systemConfig'],
         queryFn: async () => {
@@ -83,5 +87,6 @@ export const useSystemConfig = () => {
         },
         staleTime: 1000 * 60 * 60, // 1시간
         gcTime: 1000 * 60 * 120, // 2시간
+        enabled,
     });
 };

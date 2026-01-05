@@ -78,6 +78,33 @@ export interface TaskMemo {
   isDeleted?: boolean;
 }
 
+// ============ ENGLISH TIMETABLE SCENARIO ============
+
+export interface ScenarioEntry {
+  id: string;                        // 문서 ID
+  name: string;                      // 시나리오 이름
+  description: string;               // 상세 설명
+
+  // 스냅샷 데이터
+  data: Record<string, any>;         // english_schedules_draft
+  studentData: Record<string, any>;  // 수업목록_draft
+
+  // 메타데이터
+  createdAt: string;
+  createdBy: string;
+  createdByUid: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  updatedByUid?: string;
+
+  // 통계 (UI 표시용)
+  stats?: {
+    timetableDocCount: number;
+    classCount: number;
+    studentCount: number;
+  };
+}
+
 // ============ GANTT CHART TYPES ============
 
 export interface GanttSubTask {
@@ -428,7 +455,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'system';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation';
 
 export const APP_TABS: { id: AppTab; label: string }[] = [
   { id: 'calendar', label: '연간 일정' },
@@ -436,7 +463,6 @@ export const APP_TABS: { id: AppTab; label: string }[] = [
   { id: 'payment', label: '전자 결제' },
   { id: 'gantt', label: '간트 차트' },
   { id: 'consultation', label: '상담 관리' },
-  { id: 'system', label: '시스템 설정' },
 ];
 
 // Configuration for Tab Access (Stored in system/config -> tabPermissions)
@@ -447,7 +473,7 @@ export type TabPermissionConfig = {
 
 // Default Tab Permissions (Fallback)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['calendar', 'timetable', 'payment', 'gantt', 'consultation', 'system'],
+  master: ['calendar', 'timetable', 'payment', 'gantt', 'consultation'],
   admin: ['calendar', 'timetable'], // consultation removed - testing phase
   manager: ['calendar'],
   editor: ['calendar'],

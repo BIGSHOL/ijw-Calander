@@ -94,8 +94,6 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster }) => {
         }
     };
 
-    if (!isMaster) return null;
-
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-20">
             {/* 수업 키워드 색상 관리 */}

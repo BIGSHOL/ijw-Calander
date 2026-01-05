@@ -44,20 +44,39 @@ service cloud.firestore {
     // English Schedules (Live)
     match /english_schedules/{scheduleId} {
       allow read: if isAuthenticated();
-      allow write: if hasRole(['master', 'admin']);
+      allow write: if hasRole(['master', 'admin', 'manager', 'english_lead']);
     }
 
     // English Schedules (Draft - Simulation Mode)
     match /english_schedules_draft/{scheduleId} {
-      allow read: if hasRole(['master', 'admin', 'manager']);
-      allow write: if hasRole(['master']);
+      allow read: if hasRole(['master', 'admin', 'manager', 'english_lead']);
+      allow write: if hasRole(['master', 'english_lead']);
     }
 
-    // English Backups
-    match /english_backups/{backupId} {
-      allow read: if hasRole(['master', 'admin', 'manager']);
-      allow write: if hasRole(['master', 'admin']);
+    // English Simulation Scenarios (for scenario management feature)
+    match /english_simulation_scenarios/{scenarioId} {
+      allow read: if hasRole(['master', 'admin', 'manager', 'english_lead']);
+      allow create: if hasRole(['master', 'admin', 'manager', 'english_lead']);
+      allow update: if hasRole(['master', 'admin', 'manager', 'english_lead']);
       allow delete: if hasRole(['master']);
+    }
+
+    // Class List (수업목록)
+    match /{collection}/{classId} {
+      allow read: if collection == '\uC218\uC5C5\uBAA9\uB85D' && isAuthenticated();
+      allow write: if collection == '\uC218\uC5C5\uBAA9\uB85D' && hasRole(['master', 'admin', 'manager', 'math_lead', 'english_lead']);
+    }
+
+    // Class List Draft (수업목록_draft)
+    match /{collection}/{classId} {
+      allow read: if collection == '\uC218\uC5C5\uBAA9\uB85D_draft' && hasRole(['master', 'admin', 'manager', 'english_lead']);
+      allow write: if collection == '\uC218\uC5C5\uBAA9\uB85D_draft' && hasRole(['master', 'manager', 'english_lead']);
+    }
+
+    // Teacher List (강사목록)
+    match /{collection}/{teacherId} {
+      allow read: if collection == '\uAC15\uC0AC\uBAA9\uB85D' && isAuthenticated();
+      allow write: if collection == '\uAC15\uC0AC\uBAA9\uB85D' && hasRole(['master', 'admin', 'manager', 'math_lead', 'english_lead']);
     }
 
     // === Calendar Events (일정) ===
