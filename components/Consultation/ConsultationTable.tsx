@@ -10,6 +10,13 @@ interface ConsultationTableProps {
     onDelete: (id: string) => void;
 }
 
+// 색상 테마
+const COLORS = {
+    navy: '#081429',
+    yellow: '#fdb813',
+    gray: '#373d41',
+};
+
 // 컬럼 정의
 type ColumnKey =
     | 'studentName' | 'parentPhone' | 'grade' | 'schoolName'
@@ -22,27 +29,27 @@ interface ColumnConfig {
     key: ColumnKey;
     label: string;
     defaultVisible: boolean;
-    width?: string;
+    minWidth?: string;
 }
 
 const COLUMNS: ColumnConfig[] = [
-    { key: 'studentName', label: '학생명', defaultVisible: true },
-    { key: 'parentPhone', label: '학부모 연락처', defaultVisible: true },
-    { key: 'grade', label: '학년', defaultVisible: true },
-    { key: 'schoolName', label: '학교', defaultVisible: true },
-    { key: 'subject', label: '상담 과목', defaultVisible: true },
-    { key: 'counselor', label: '상담자', defaultVisible: true },
-    { key: 'registrar', label: '등록자', defaultVisible: true },
-    { key: 'consultationDate', label: '상담일', defaultVisible: true },
-    { key: 'consultationPath', label: '상담 경로', defaultVisible: false },
-    { key: 'createdAt', label: '접수일', defaultVisible: true },
-    { key: 'status', label: '상태', defaultVisible: true },
-    { key: 'paymentAmount', label: '결제 금액', defaultVisible: true },
-    { key: 'paymentDate', label: '결제일', defaultVisible: false },
-    { key: 'followUpDate', label: '후속 조치일', defaultVisible: false },
-    { key: 'followUpContent', label: '후속 내용', defaultVisible: false },
-    { key: 'notes', label: '메모', defaultVisible: false },
-    { key: 'nonRegistrationReason', label: '미등록 사유', defaultVisible: true },
+    { key: 'studentName', label: '학생명', defaultVisible: true, minWidth: '100px' },
+    { key: 'parentPhone', label: '학부모 연락처', defaultVisible: true, minWidth: '130px' },
+    { key: 'grade', label: '학년', defaultVisible: true, minWidth: '80px' },
+    { key: 'schoolName', label: '학교', defaultVisible: true, minWidth: '100px' },
+    { key: 'subject', label: '상담 과목', defaultVisible: true, minWidth: '90px' },
+    { key: 'counselor', label: '상담자', defaultVisible: true, minWidth: '80px' },
+    { key: 'registrar', label: '등록자', defaultVisible: true, minWidth: '80px' },
+    { key: 'consultationDate', label: '상담일', defaultVisible: true, minWidth: '110px' },
+    { key: 'consultationPath', label: '상담 경로', defaultVisible: false, minWidth: '100px' },
+    { key: 'createdAt', label: '접수일', defaultVisible: true, minWidth: '90px' },
+    { key: 'status', label: '상태', defaultVisible: true, minWidth: '90px' },
+    { key: 'paymentAmount', label: '결제 금액', defaultVisible: true, minWidth: '100px' },
+    { key: 'paymentDate', label: '결제일', defaultVisible: false, minWidth: '90px' },
+    { key: 'followUpDate', label: '후속 조치일', defaultVisible: false, minWidth: '100px' },
+    { key: 'followUpContent', label: '후속 내용', defaultVisible: false, minWidth: '150px' },
+    { key: 'notes', label: '메모', defaultVisible: false, minWidth: '150px' },
+    { key: 'nonRegistrationReason', label: '미등록 사유', defaultVisible: true, minWidth: '120px' },
 ];
 
 export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEdit, onDelete }) => {
@@ -112,21 +119,21 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
     const getCellValue = (record: ConsultationRecord, key: ColumnKey): React.ReactNode => {
         switch (key) {
             case 'studentName':
-                return <span className="font-medium text-slate-900">{record.studentName}</span>;
+                return <span className="font-semibold" style={{ color: COLORS.navy }}>{record.studentName}</span>;
             case 'parentPhone':
                 return <span className="text-slate-600">{record.parentPhone}</span>;
             case 'grade':
-                return <span className="text-xs bg-slate-100 px-2 py-0.5 rounded">{record.grade}</span>;
+                return <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.navy }}>{record.grade}</span>;
             case 'schoolName':
                 return <span className="text-slate-600">{record.schoolName}</span>;
             case 'subject':
-                return <span className="font-semibold text-slate-700">{record.subject}</span>;
+                return <span className="font-semibold" style={{ color: COLORS.gray }}>{record.subject}</span>;
             case 'counselor':
                 return <span className="text-slate-600">{record.counselor || '-'}</span>;
             case 'registrar':
                 return <span className="text-slate-600">{record.registrar || '-'}</span>;
             case 'consultationDate':
-                return <span className="text-slate-700">{formatDateWithDay(record.consultationDate)}</span>;
+                return <span style={{ color: COLORS.navy }}>{formatDateWithDay(record.consultationDate)}</span>;
             case 'consultationPath':
                 return <span className="text-slate-500 text-xs">{record.consultationPath || '-'}</span>;
             case 'createdAt':
@@ -139,7 +146,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                 );
             case 'paymentAmount':
                 return record.paymentAmount ? (
-                    <span className="text-emerald-600 font-medium flex items-center gap-1">
+                    <span className="font-medium flex items-center gap-1" style={{ color: '#059669' }}>
                         <Banknote size={12} />₩{record.paymentAmount}
                     </span>
                 ) : <span className="text-slate-400">-</span>;
@@ -147,15 +154,15 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                 return <span className="text-slate-500">{formatDate(record.paymentDate)}</span>;
             case 'followUpDate':
                 return record.followUpDate ? (
-                    <span className="text-amber-600 font-medium">{formatDate(record.followUpDate)}</span>
+                    <span className="font-medium" style={{ color: COLORS.yellow }}>{formatDate(record.followUpDate)}</span>
                 ) : <span className="text-slate-400">-</span>;
             case 'followUpContent':
-                return <span className="text-slate-500 text-xs truncate max-w-[120px] block">{record.followUpContent || '-'}</span>;
+                return <span className="text-slate-500 text-xs truncate max-w-[140px] block">{record.followUpContent || '-'}</span>;
             case 'notes':
-                return <span className="text-slate-500 text-xs truncate max-w-[150px] block">{record.notes || '-'}</span>;
+                return <span className="text-slate-500 text-xs truncate max-w-[140px] block">{record.notes || '-'}</span>;
             case 'nonRegistrationReason':
                 return record.nonRegistrationReason ? (
-                    <span className="text-red-500 text-xs truncate max-w-[100px] block">{record.nonRegistrationReason}</span>
+                    <span className="text-red-500 text-xs">{record.nonRegistrationReason}</span>
                 ) : <span className="text-slate-400">-</span>;
             default:
                 return '-';
@@ -167,21 +174,26 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
     return (
         <div className="flex flex-col h-full gap-4">
             {/* Header with Search and Settings */}
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <h3 className="hidden sm:flex text-lg font-bold text-slate-800 items-center">
-                    <span className="w-2 h-6 bg-indigo-500 rounded-sm mr-2"></span>
+            <div className="rounded-xl shadow-sm border p-4 flex flex-col sm:flex-row justify-between items-center gap-4" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
+                <h3 className="hidden sm:flex text-lg font-bold items-center" style={{ color: COLORS.navy }}>
+                    <span className="w-2 h-6 rounded-sm mr-2" style={{ backgroundColor: COLORS.yellow }}></span>
                     상담 기록 목록
-                    <span className="ml-2 text-xs font-normal text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full">{filteredData.length}</span>
+                    <span className="ml-2 text-xs font-normal px-2 py-0.5 rounded-full" style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.gray }}>{filteredData.length}</span>
                 </h3>
 
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                     <div className="relative flex-1 sm:w-72">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-slate-400" />
+                            <Search className="h-4 w-4" style={{ color: COLORS.gray }} />
                         </div>
                         <input
                             type="text"
-                            className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:placeholder-slate-300 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
+                            className="block w-full pl-10 pr-3 py-2.5 rounded-xl leading-5 placeholder-slate-400 focus:outline-none focus:ring-2 sm:text-sm transition-all"
+                            style={{
+                                backgroundColor: `${COLORS.navy}05`,
+                                border: `1px solid ${COLORS.navy}20`,
+                                color: COLORS.navy
+                            }}
                             placeholder="학생명, 번호, 담당자 검색..."
                             value={searchTerm}
                             onChange={(e) => {
@@ -194,7 +206,12 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                     {/* Settings Button */}
                     <button
                         onClick={() => setShowSettings(!showSettings)}
-                        className={`p-2.5 rounded-xl border transition-all ${showSettings ? 'bg-indigo-100 border-indigo-300 text-indigo-600' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+                        className="p-2.5 rounded-xl border transition-all"
+                        style={{
+                            backgroundColor: showSettings ? `${COLORS.yellow}20` : `${COLORS.navy}05`,
+                            borderColor: showSettings ? COLORS.yellow : `${COLORS.navy}20`,
+                            color: showSettings ? COLORS.yellow : COLORS.gray
+                        }}
                         title="보기 설정"
                     >
                         <Settings2 size={18} />
@@ -204,13 +221,25 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
 
             {/* Column Settings Panel */}
             {showSettings && (
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <div className="p-4 rounded-xl shadow-sm border" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
                     <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-bold text-slate-700">📋 보기 설정</h4>
+                        <h4 className="text-sm font-bold" style={{ color: COLORS.navy }}>📋 보기 설정</h4>
                         <div className="flex gap-2">
-                            <button onClick={selectAllColumns} className="text-xs px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors">전체 선택</button>
-                            <button onClick={resetColumns} className="text-xs px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors">기본값</button>
-                            <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600">
+                            <button
+                                onClick={selectAllColumns}
+                                className="text-xs px-2 py-1 rounded-md transition-colors"
+                                style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.navy }}
+                            >
+                                전체 선택
+                            </button>
+                            <button
+                                onClick={resetColumns}
+                                className="text-xs px-2 py-1 rounded-md transition-colors"
+                                style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.navy }}
+                            >
+                                기본값
+                            </button>
+                            <button onClick={() => setShowSettings(false)} style={{ color: COLORS.gray }}>
                                 <X size={16} />
                             </button>
                         </div>
@@ -219,10 +248,12 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                         {COLUMNS.map(col => (
                             <label
                                 key={col.key}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all text-sm ${visibleColumns.has(col.key)
-                                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
-                                        : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'
-                                    }`}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all text-sm border"
+                                style={{
+                                    backgroundColor: visibleColumns.has(col.key) ? `${COLORS.yellow}20` : `${COLORS.navy}05`,
+                                    borderColor: visibleColumns.has(col.key) ? COLORS.yellow : `${COLORS.navy}15`,
+                                    color: visibleColumns.has(col.key) ? COLORS.navy : COLORS.gray
+                                }}
                             >
                                 <input
                                     type="checkbox"
@@ -237,34 +268,50 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                 </div>
             )}
 
-            {/* Desktop Table View - Full Width */}
-            <div className="hidden md:block bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex-1">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
+            {/* Desktop Table View - Full Width with Horizontal Scroll */}
+            <div className="hidden md:block rounded-xl shadow-sm border overflow-hidden flex-1" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
+                <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)]">
+                    <table className="w-full" style={{ minWidth: visibleColumnsList.length * 100 + 80 }}>
+                        <thead className="sticky top-0 z-10" style={{ backgroundColor: COLORS.navy }}>
                             <tr>
                                 {visibleColumnsList.map(col => (
-                                    <th key={col.key} scope="col" className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                                    <th
+                                        key={col.key}
+                                        scope="col"
+                                        className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap"
+                                        style={{ color: 'white', minWidth: col.minWidth }}
+                                    >
                                         {col.label}
                                     </th>
                                 ))}
-                                <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">관리</th>
+                                <th
+                                    scope="col"
+                                    className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider sticky right-0"
+                                    style={{ color: 'white', backgroundColor: COLORS.navy, minWidth: '70px' }}
+                                >
+                                    관리
+                                </th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
+                        <tbody className="divide-y" style={{ borderColor: `${COLORS.navy}10` }}>
                             {currentData.length > 0 ? (
-                                currentData.map((record) => (
-                                    <tr key={record.id} className="hover:bg-slate-50 transition-colors">
+                                currentData.map((record, idx) => (
+                                    <tr
+                                        key={record.id}
+                                        className="hover:bg-slate-50 transition-colors"
+                                        style={{ backgroundColor: idx % 2 === 0 ? 'white' : `${COLORS.navy}02` }}
+                                    >
                                         {visibleColumnsList.map(col => (
-                                            <td key={col.key} className="px-3 py-3 whitespace-nowrap text-sm">
+                                            <td key={col.key} className="px-3 py-3 whitespace-nowrap text-sm" style={{ minWidth: col.minWidth }}>
                                                 {getCellValue(record, col.key)}
                                             </td>
                                         ))}
-                                        <td className="px-3 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                        <td className="px-3 py-3 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-inherit" style={{ minWidth: '70px' }}>
                                             <div className="flex justify-end space-x-1">
                                                 <button
                                                     onClick={() => onEdit(record)}
-                                                    className="text-indigo-600 hover:text-indigo-900 p-1.5 hover:bg-indigo-50 rounded-md transition-colors"
+                                                    className="p-1.5 rounded-md transition-colors"
+                                                    style={{ color: COLORS.navy }}
                                                 >
                                                     <Edit2 size={14} />
                                                 </button>
@@ -272,7 +319,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                                     onClick={() => {
                                                         if (window.confirm('정말로 삭제하시겠습니까?')) onDelete(record.id);
                                                     }}
-                                                    className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded-md transition-colors"
+                                                    className="text-red-500 p-1.5 hover:bg-red-50 rounded-md transition-colors"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
@@ -282,7 +329,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={visibleColumnsList.length + 1} className="px-6 py-12 text-center text-slate-400">
+                                    <td colSpan={visibleColumnsList.length + 1} className="px-6 py-12 text-center" style={{ color: COLORS.gray }}>
                                         검색 결과가 없습니다.
                                     </td>
                                 </tr>
@@ -296,46 +343,46 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
             <div className="md:hidden space-y-3">
                 {currentData.length > 0 ? (
                     currentData.map((record) => (
-                        <div key={record.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col gap-3">
+                        <div key={record.id} className="p-4 rounded-xl shadow-sm border flex flex-col gap-3" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
                             <div className="flex justify-between items-start">
                                 <div className="flex flex-col">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-lg font-bold text-slate-900">{record.studentName}</span>
-                                        <span className="text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{record.grade}</span>
+                                        <span className="text-lg font-bold" style={{ color: COLORS.navy }}>{record.studentName}</span>
+                                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.navy }}>{record.grade}</span>
                                     </div>
-                                    <span className="text-sm text-slate-500">{record.schoolName}</span>
+                                    <span className="text-sm" style={{ color: COLORS.gray }}>{record.schoolName}</span>
                                 </div>
                                 <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${CONSULTATION_STATUS_COLORS[record.status]}`}>
                                     {record.status}
                                 </span>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2 text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">
+                            <div className="grid grid-cols-2 gap-2 text-sm p-3 rounded-lg" style={{ backgroundColor: `${COLORS.navy}05` }}>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-400">과목</span>
-                                    <span className="font-medium">{record.subject}</span>
+                                    <span className="text-xs" style={{ color: COLORS.gray }}>과목</span>
+                                    <span className="font-medium" style={{ color: COLORS.navy }}>{record.subject}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-400">상담일</span>
-                                    <span className="font-medium">{formatDate(record.consultationDate)}</span>
+                                    <span className="text-xs" style={{ color: COLORS.gray }}>상담일</span>
+                                    <span className="font-medium" style={{ color: COLORS.navy }}>{formatDate(record.consultationDate)}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-400">접수일</span>
-                                    <span className="font-medium">{formatDate(record.createdAt)}</span>
+                                    <span className="text-xs" style={{ color: COLORS.gray }}>접수일</span>
+                                    <span className="font-medium" style={{ color: COLORS.navy }}>{formatDate(record.createdAt)}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-400">연락처</span>
-                                    <span className="font-medium">{record.parentPhone}</span>
+                                    <span className="text-xs" style={{ color: COLORS.gray }}>연락처</span>
+                                    <span className="font-medium" style={{ color: COLORS.navy }}>{record.parentPhone}</span>
                                 </div>
                             </div>
 
-                            <div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-1">
+                            <div className="flex justify-between items-center pt-2 border-t mt-1" style={{ borderColor: `${COLORS.navy}10` }}>
                                 <div className="flex items-center gap-2 text-xs">
-                                    <div className="flex items-center text-slate-500">
+                                    <div className="flex items-center" style={{ color: COLORS.gray }}>
                                         <User size={12} className="mr-1" /> {record.counselor}
                                     </div>
                                     {record.paymentAmount && (
-                                        <div className="flex items-center text-emerald-600 font-medium">
+                                        <div className="flex items-center font-medium" style={{ color: '#059669' }}>
                                             <Banknote size={12} className="mr-1" /> ₩{record.paymentAmount}
                                         </div>
                                     )}
@@ -343,7 +390,8 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => onEdit(record)}
-                                        className="p-2 text-indigo-600 bg-indigo-50 rounded-lg"
+                                        className="p-2 rounded-lg"
+                                        style={{ backgroundColor: `${COLORS.yellow}20`, color: COLORS.navy }}
                                     >
                                         <Edit2 size={16} />
                                     </button>
@@ -360,33 +408,45 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                         </div>
                     ))
                 ) : (
-                    <div className="bg-white p-8 rounded-xl text-center text-slate-400">
+                    <div className="p-8 rounded-xl text-center" style={{ backgroundColor: 'white', color: COLORS.gray }}>
                         검색 결과가 없습니다.
                     </div>
                 )}
             </div>
 
             {/* Pagination */}
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <p className="text-sm text-slate-700 hidden sm:block">
-                    총 <span className="font-medium">{filteredData.length}</span>개 중 <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> - <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredData.length)}</span>
+            <div className="p-4 rounded-xl shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
+                <p className="text-sm hidden sm:block" style={{ color: COLORS.gray }}>
+                    총 <span className="font-medium" style={{ color: COLORS.navy }}>{filteredData.length}</span>개 중{' '}
+                    <span className="font-medium" style={{ color: COLORS.navy }}>{(currentPage - 1) * itemsPerPage + 1}</span> -{' '}
+                    <span className="font-medium" style={{ color: COLORS.navy }}>{Math.min(currentPage * itemsPerPage, filteredData.length)}</span>
                 </p>
 
                 <nav className="flex justify-between w-full sm:w-auto gap-2" aria-label="Pagination">
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className="flex-1 sm:flex-none relative inline-flex justify-center items-center px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex-1 sm:flex-none relative inline-flex justify-center items-center px-4 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                            borderColor: `${COLORS.navy}20`,
+                            color: COLORS.navy,
+                            backgroundColor: 'white'
+                        }}
                     >
                         <ChevronLeft className="h-4 w-4 mr-1" /> 이전
                     </button>
-                    <span className="sm:hidden flex items-center text-sm font-medium text-slate-700">
+                    <span className="sm:hidden flex items-center text-sm font-medium" style={{ color: COLORS.navy }}>
                         {currentPage} / {totalPages || 1}
                     </span>
                     <button
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages || totalPages === 0}
-                        className="flex-1 sm:flex-none relative inline-flex justify-center items-center px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex-1 sm:flex-none relative inline-flex justify-center items-center px-4 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                            borderColor: `${COLORS.navy}20`,
+                            color: COLORS.navy,
+                            backgroundColor: 'white'
+                        }}
                     >
                         다음 <ChevronRight className="h-4 w-4 ml-1" />
                     </button>

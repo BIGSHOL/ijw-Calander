@@ -279,8 +279,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-y-auto bg-slate-50">
-                <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+            <div className="flex-1 overflow-y-auto bg-[#081429]/5">
+                <div className="px-4 md:px-8 py-4 md:py-6 pb-24 md:pb-8">
                     {view === 'dashboard' ? (
                         <ConsultationDashboard data={consultations} month={selectedMonth} year={yearParam} />
                     ) : (
