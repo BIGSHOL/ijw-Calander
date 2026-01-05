@@ -13,14 +13,15 @@ interface ConsultationManagerProps {
 const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }) => {
     const [view, setView] = useState<'dashboard' | 'table'>('dashboard');
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
-    const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+    const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
 
     // Modal State
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingRecord, setEditingRecord] = useState<ConsultationRecord | null>(null);
 
-    // Firestore hooks
-    const { data: consultations = [], isLoading } = useConsultations({ month: selectedMonth, year: selectedYear });
+    // Firestore hooks - pass year as number or undefined for 'all'
+    const yearParam = selectedYear === 'all' ? undefined : parseInt(selectedYear, 10);
+    const { data: consultations = [], isLoading } = useConsultations({ month: selectedMonth, year: yearParam });
     const createConsultation = useCreateConsultation();
     const updateConsultation = useUpdateConsultation();
     const deleteConsultation = useDeleteConsultation();
@@ -79,6 +80,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
 
     // Month navigation - arrows only navigate months (skip 'all')
     const handlePrevMonth = () => {
+        if (selectedYear === 'all') return; // 연도 전체일 때는 화살표 비활성화
+
         if (selectedMonth === 'all') {
             // 전체에서 왼쪽: 현재 연도의 12월로
             setSelectedMonth('12');
@@ -86,7 +89,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
             const currentMonth = parseInt(selectedMonth, 10);
             if (currentMonth === 1) {
                 // 1월에서 왼쪽: 작년 12월
-                setSelectedYear(prev => prev - 1);
+                const currentYear = parseInt(selectedYear, 10);
+                setSelectedYear(String(currentYear - 1));
                 setSelectedMonth('12');
             } else {
                 setSelectedMonth(String(currentMonth - 1));
@@ -95,6 +99,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
     };
 
     const handleNextMonth = () => {
+        if (selectedYear === 'all') return; // 연도 전체일 때는 화살표 비활성화
+
         if (selectedMonth === 'all') {
             // 전체에서 오른쪽: 현재 연도의 1월로
             setSelectedMonth('1');
@@ -102,7 +108,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
             const currentMonth = parseInt(selectedMonth, 10);
             if (currentMonth === 12) {
                 // 12월에서 오른쪽: 내년 1월
-                setSelectedYear(prev => prev + 1);
+                const currentYear = parseInt(selectedYear, 10);
+                setSelectedYear(String(currentYear + 1));
                 setSelectedMonth('1');
             } else {
                 setSelectedMonth(String(currentMonth + 1));
@@ -166,12 +173,20 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                         <div className="flex items-center gap-2 px-2">
                             <select
                                 value={selectedYear}
-                                onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSelectedYear(val);
+                                    // 연도 전체 선택 시 월도 전체로 자동 설정
+                                    if (val === 'all') {
+                                        setSelectedMonth('all');
+                                    }
+                                }}
                                 className="appearance-none bg-transparent text-slate-800 font-bold text-sm cursor-pointer hover:text-indigo-600 transition-colors outline-none pr-4"
                                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
                             >
+                                <option value="all">전체</option>
                                 {[2024, 2025, 2026, 2027, 2028].map(y => (
-                                    <option key={y} value={y}>{y}년</option>
+                                    <option key={y} value={String(y)}>{y}년</option>
                                 ))}
                             </select>
 
@@ -180,7 +195,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                             <select
                                 value={selectedMonth}
                                 onChange={(e) => setSelectedMonth(e.target.value)}
-                                className="appearance-none bg-transparent text-slate-800 font-bold text-sm cursor-pointer hover:text-indigo-600 transition-colors outline-none pr-4"
+                                disabled={selectedYear === 'all'}
+                                className={`appearance-none bg-transparent text-slate-800 font-bold text-sm cursor-pointer hover:text-indigo-600 transition-colors outline-none pr-4 ${selectedYear === 'all' ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
                             >
                                 <option value="all">전체</option>
@@ -221,12 +237,19 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     <div className="flex items-center gap-3">
                         <select
                             value={selectedYear}
-                            onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setSelectedYear(val);
+                                if (val === 'all') {
+                                    setSelectedMonth('all');
+                                }
+                            }}
                             className="appearance-none bg-transparent text-slate-800 font-bold text-base cursor-pointer outline-none pr-4"
                             style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
                         >
+                            <option value="all">전체</option>
                             {[2024, 2025, 2026, 2027, 2028].map(y => (
-                                <option key={y} value={y}>{y}년</option>
+                                <option key={y} value={String(y)}>{y}년</option>
                             ))}
                         </select>
 
@@ -235,7 +258,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                         <select
                             value={selectedMonth}
                             onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="appearance-none bg-transparent text-slate-800 font-bold text-base cursor-pointer outline-none pr-4"
+                            disabled={selectedYear === 'all'}
+                            className={`appearance-none bg-transparent text-slate-800 font-bold text-base cursor-pointer outline-none pr-4 ${selectedYear === 'all' ? 'opacity-50' : ''}`}
                             style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
                         >
                             <option value="all">전체</option>
@@ -258,7 +282,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
             <div className="flex-1 overflow-y-auto bg-slate-50">
                 <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
                     {view === 'dashboard' ? (
-                        <ConsultationDashboard data={consultations} month={selectedMonth} year={selectedYear} />
+                        <ConsultationDashboard data={consultations} month={selectedMonth} year={yearParam} />
                     ) : (
                         <ConsultationTable
                             data={consultations}
