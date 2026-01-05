@@ -22,7 +22,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
 
     // Firestore hooks - pass year as number or undefined for 'all'
     const yearParam = selectedYear === 'all' ? undefined : parseInt(selectedYear, 10);
-    const { data: consultations = [], isLoading } = useConsultations({ month: selectedMonth, year: yearParam });
+    const queryMonth = view === 'yearly' ? 'all' : selectedMonth;
+    const { data: consultations = [], isLoading } = useConsultations({ month: queryMonth, year: yearParam });
     const createConsultation = useCreateConsultation();
     const updateConsultation = useUpdateConsultation();
     const deleteConsultation = useDeleteConsultation();
