@@ -13,6 +13,7 @@ interface ConsultationManagerProps {
 
 const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }) => {
     const [view, setView] = useState<'dashboard' | 'table' | 'yearly'>('dashboard');
+    const [viewColumns, setViewColumns] = useState<1 | 2>(1); // 1단/2단 보기 상태
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
 
@@ -21,9 +22,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
     const [editingRecord, setEditingRecord] = useState<ConsultationRecord | null>(null);
 
     // Firestore hooks - pass year as number or undefined for 'all'
-    // 대시보드에서는 전월(설령 작년 12월이라도) 데이터 비교가 필요하므로 연도 필터를 해제하여 전체 데이터를 가져옴
-    const yearParam = (selectedYear === 'all' || view === 'dashboard') ? undefined : parseInt(selectedYear, 10);
     // 대시보드(통계 비교), 연간뷰(전체 흐름)에서는 전체 데이터를 불러와야 함
+    const yearParam = (selectedYear === 'all' || view === 'dashboard' || view === 'yearly') ? undefined : parseInt(selectedYear, 10);
     const queryMonth = (view === 'yearly' || view === 'dashboard') ? 'all' : selectedMonth;
     const { data: consultations = [], isLoading } = useConsultations({ month: queryMonth, year: yearParam });
     const createConsultation = useCreateConsultation();
@@ -144,106 +144,131 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
 
     return (
         <div className="flex flex-col h-full bg-slate-50 font-sans text-slate-900">
-            {/* Desktop Header */}
-            <header className="hidden md:flex bg-white border-b border-slate-200 px-8 py-4 justify-between items-center z-10">
-                <div className="flex items-center space-x-4">
-                    <h2 className="text-2xl font-bold text-slate-800">
-                        {view === 'dashboard' ? '운영 현황' : '상담 관리'}
+            {/* Desktop Header - Dark Theme to match Main Calendar */}
+            <header className="hidden md:flex bg-[#1e293b] border-b border-gray-700 px-6 py-4 justify-between items-center z-10 shadow-lg">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold text-white tracking-wide">
+                        상담 관리
                     </h2>
-                    <div className="h-8 w-px bg-slate-200 mx-4"></div>
-                    {/* View Toggle */}
-                    <div className="flex bg-slate-100 p-1 rounded-lg">
+                    <div className="h-4 w-px bg-gray-600"></div>
+
+                    {/* View Switcher Tabs */}
+                    <div className="flex bg-black/20 p-1 rounded-lg border border-white/5">
                         <button
                             onClick={() => setView('dashboard')}
-                            className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${view === 'dashboard' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${view === 'dashboard'
+                                ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
                         >
-                            <LayoutDashboard size={16} />
+                            <LayoutDashboard size={14} />
                             대시보드
                         </button>
                         <button
                             onClick={() => setView('table')}
-                            className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${view === 'table' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${view === 'table'
+                                ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
                         >
-                            <List size={16} />
+                            <List size={14} />
                             상담목록
                         </button>
                         <button
                             onClick={() => setView('yearly')}
-                            className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${view === 'yearly' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${view === 'yearly'
+                                ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
                         >
-                            <Calendar size={16} />
+                            <Calendar size={14} />
                             연간뷰
                         </button>
                     </div>
-                    {view !== 'yearly' && (
+
+                    {/* Year/Month Filter - Show based on view */}
+                    {(view === 'table' || view === 'dashboard') && (
                         <>
-                            <div className="h-8 w-px bg-slate-200 mx-4"></div>
-                            {/* Date Filter - Calendar Style */}
-                            <div className="flex items-center bg-white border border-slate-200 rounded-2xl px-2 py-1.5 shadow-sm">
-                                <button
-                                    onClick={handlePrevMonth}
-                                    className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                            <div className="h-4 w-px bg-gray-600"></div>
+                            <div className="flex items-center gap-2">
+                                {/* Year Select */}
+                                <select
+                                    value={selectedYear}
+                                    onChange={(e) => setSelectedYear(e.target.value)}
+                                    className="px-3 py-1.5 rounded-lg bg-[#081429] border border-gray-600 text-white text-xs font-bold focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
                                 >
-                                    <ChevronLeft size={18} />
-                                </button>
+                                    <option value="all">전체 연도</option>
+                                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                                        <option key={year} value={year}>{year}년</option>
+                                    ))}
+                                </select>
 
-                                <div className="flex items-center gap-2 px-2">
-                                    <select
-                                        value={selectedYear}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            setSelectedYear(val);
-                                            // 연도 전체 선택 시 월도 전체로 자동 설정
-                                            if (val === 'all') {
-                                                setSelectedMonth('all');
-                                            }
-                                        }}
-                                        className="appearance-none bg-transparent text-slate-800 font-bold text-sm cursor-pointer hover:text-indigo-600 transition-colors outline-none pr-4"
-                                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
+                                {/* Month Select & Navigation */}
+                                <div className="flex items-center bg-[#081429] rounded-lg border border-gray-600 p-0.5">
+                                    <button
+                                        onClick={handlePrevMonth}
+                                        disabled={selectedYear === 'all'}
+                                        className="p-1 text-gray-400 hover:text-[#fdb813] disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
                                     >
-                                        <option value="all">전체</option>
-                                        {[2024, 2025, 2026, 2027, 2028].map(y => (
-                                            <option key={y} value={String(y)}>{y}년</option>
-                                        ))}
-                                    </select>
-
-                                    <div className="w-px h-4 bg-slate-200"></div>
-
+                                        <ChevronLeft size={14} />
+                                    </button>
                                     <select
                                         value={selectedMonth}
                                         onChange={(e) => setSelectedMonth(e.target.value)}
                                         disabled={selectedYear === 'all'}
-                                        className={`appearance-none bg-transparent text-slate-800 font-bold text-sm cursor-pointer hover:text-indigo-600 transition-colors outline-none pr-4 ${selectedYear === 'all' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
+                                        className="bg-transparent text-white text-xs font-bold px-2 py-1 outline-none text-center min-w-[60px] cursor-pointer disabled:opacity-50"
                                     >
                                         <option value="all">전체</option>
-                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                                             <option key={m} value={String(m)}>{m}월</option>
                                         ))}
                                     </select>
+                                    <button
+                                        onClick={handleNextMonth}
+                                        disabled={selectedYear === 'all'}
+                                        className="p-1 text-gray-400 hover:text-[#fdb813] disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                                    >
+                                        <ChevronRight size={14} />
+                                    </button>
                                 </div>
-
-                                <button
-                                    onClick={handleNextMonth}
-                                    className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
-                                >
-                                    <ChevronRight size={18} />
-                                </button>
                             </div>
                         </>
                     )}
                 </div>
 
-                <button
-                    onClick={openAddModal}
-                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-md shadow-indigo-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
-                >
-                    <Plus size={20} />
-                    <span>상담 등록</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    {/* View Column Toggle - Only for Yearly View */}
+                    {view === 'yearly' && (
+                        <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+                            {([1, 2] as const).map((cols) => (
+                                <button
+                                    key={cols}
+                                    onClick={() => setViewColumns(cols)}
+                                    className={`
+                                    px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
+                                    ${viewColumns === cols
+                                            ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                        }
+                                `}
+                                >
+                                    {cols}단
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <button
+                        onClick={openAddModal}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all text-xs font-bold"
+                    >
+                        <Plus size={16} />
+                        상담 등록
+                    </button>
+                </div>
             </header>
 
-            {/* Mobile Month Filter */}
+            {/* Mobile Header */}
             <div className="md:hidden sticky top-0 z-20 bg-slate-50 pt-2 pb-2 px-4">
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between px-2 py-3">
                     <button
@@ -298,25 +323,50 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-y-auto bg-[#081429]/5">
-                <div className="px-4 md:px-8 py-4 md:py-6 pb-24 md:pb-8">
-                    {view === 'dashboard' ? (
-                        <ConsultationDashboard data={consultations} month={selectedMonth} year={yearParam} />
-                    ) : view === 'table' ? (
+            <main className="flex-1 overflow-hidden relative">
+                <div className="absolute inset-0 overflow-auto p-4 md:p-6" style={{ backgroundColor: '#f8fafc' }}>
+                    {view === 'dashboard' && (
+                        <ConsultationDashboard
+                            data={consultations}
+                            month={selectedMonth}
+                            year={selectedYear === 'all' ? new Date().getFullYear() : parseInt(selectedYear, 10)}
+                            openAddModal={openAddModal}
+                        />
+                    )}
+
+                    {view === 'table' && (
                         <ConsultationTable
                             data={consultations}
                             onEdit={openEditModal}
                             onDelete={handleDeleteRecord}
                         />
-                    ) : (
-                        <ConsultationYearView
-                            data={consultations}
-                            currentYear={yearParam || new Date().getFullYear()}
-                            onYearChange={(year) => setSelectedYear(String(year))}
-                        />
+                    )}
+
+                    {view === 'yearly' && (
+                        <div className="flex flex-col md:flex-row gap-4 h-full">
+                            {/* Current Year View */}
+                            <div className="flex-1 flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                <ConsultationYearView
+                                    data={consultations}
+                                    currentYear={selectedYear === 'all' ? new Date().getFullYear() : parseInt(selectedYear, 10)}
+                                    onYearChange={(y) => setSelectedYear(String(y))}
+                                />
+                            </div>
+
+                            {/* Previous Year Comparison View (2 Columns) */}
+                            {viewColumns === 2 && (
+                                <div className="flex-1 flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-in slide-in-from-right duration-300">
+                                    <ConsultationYearView
+                                        data={consultations}
+                                        currentYear={(selectedYear === 'all' ? new Date().getFullYear() : parseInt(selectedYear, 10)) - 1} // 1년 전
+                                        onYearChange={(y) => {/* Comparison view logic if needed */ }}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
-            </div>
+            </main>
 
             {/* Mobile Floating Action Button */}
             <button
