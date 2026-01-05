@@ -44,7 +44,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
         parentPhone: '',
         schoolName: '',
         grade: SchoolGrade.Middle1,
-        consultationDate: getLocalDateTime(),
+        consultationDate: getLocalDate(),
 
         subject: ConsultationSubject.English,
         status: ConsultationStatus.PendingThisMonth,
@@ -70,7 +70,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
         if (initialData) {
             setFormData({
                 ...initialData,
-                consultationDate: initialData.consultationDate.slice(0, 16),
+                consultationDate: initialData.consultationDate.slice(0, 10),
                 paymentDate: initialData.paymentDate ? initialData.paymentDate.slice(0, 10) : '',
                 followUpDate: initialData.followUpDate ? initialData.followUpDate.slice(0, 10) : '',
                 createdAt: initialData.createdAt ? initialData.createdAt.slice(0, 10) : getLocalDate()
@@ -82,7 +82,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                 parentPhone: '',
                 schoolName: '',
                 grade: SchoolGrade.Middle1,
-                consultationDate: getLocalDateTime(),
+                consultationDate: getLocalDate(),
                 subject: ConsultationSubject.English,
                 status: ConsultationStatus.PendingThisMonth,
                 counselor: '',
@@ -246,7 +246,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                 <div>
                                     <Label label="상담 일시" />
                                     <input
-                                        type="datetime-local"
+                                        type="date"
                                         value={formData.consultationDate}
                                         onChange={e => setFormData({ ...formData, consultationDate: e.target.value })}
                                         className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500"
