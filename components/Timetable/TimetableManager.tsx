@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { TimetableClass, Teacher, TimetableStudent, ClassKeywordColor } from '../../types';
 import { Plus, Trash2, Users, Clock, BookOpen, X, UserPlus, GripVertical, ChevronLeft, ChevronRight, Search, Settings, Filter, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
@@ -7,6 +7,8 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, getWeek, getMonth, getYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import EnglishTimetable from './English/EnglishTimetable';
+import TeacherOrderModal from './English/TeacherOrderModal';
+import WeekdayOrderModal from './WeekdayOrderModal';
 
 // Constants
 const ALL_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
@@ -80,6 +82,81 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
     const teachers = React.useMemo(() =>
         propsTeachers.filter(t => !t.subjects || t.subjects.includes('math')),
         [propsTeachers]);
+
+    // Math Config (Teacher Order, Weekday Order)
+    const [mathConfig, setMathConfig] = useState<{ teacherOrder: string[]; weekdayOrder: string[] }>({
+        teacherOrder: [],
+        weekdayOrder: []
+    });
+    const [isTeacherOrderModalOpen, setIsTeacherOrderModalOpen] = useState(false);
+    const [isWeekdayOrderModalOpen, setIsWeekdayOrderModalOpen] = useState(false);
+
+    // Load Math Config from Firestore
+    useEffect(() => {
+        const loadConfig = async () => {
+            try {
+                const docSnap = await getDoc(doc(db, 'settings', 'math_config'));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    setMathConfig({
+                        teacherOrder: data.teacherOrder || [],
+                        weekdayOrder: data.weekdayOrder || []
+                    });
+                }
+            } catch (error) {
+                console.error('Math config 로딩 실패:', error);
+            }
+        };
+        loadConfig();
+    }, []);
+
+    // Sorted Teachers based on saved order
+    const sortedTeachers = useMemo(() => {
+        const visibleTeachers = teachers.filter(t => !t.isHidden).map(t => t.name);
+        if (mathConfig.teacherOrder.length === 0) {
+            return visibleTeachers.sort((a, b) => a.localeCompare(b, 'ko'));
+        }
+        return [...visibleTeachers].sort((a, b) => {
+            const indexA = mathConfig.teacherOrder.indexOf(a);
+            const indexB = mathConfig.teacherOrder.indexOf(b);
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            if (indexA !== -1) return -1;
+            if (indexB !== -1) return 1;
+            return a.localeCompare(b, 'ko');
+        });
+    }, [teachers, mathConfig.teacherOrder]);
+
+    // Sorted Weekdays based on saved order
+    const sortedWeekdays = useMemo(() => {
+        if (mathConfig.weekdayOrder.length === 0) return ALL_WEEKDAYS;
+        // Only return days that are in both order list and ALL_WEEKDAYS
+        const orderedDays = mathConfig.weekdayOrder.filter(d => ALL_WEEKDAYS.includes(d));
+        // Add any missing weekdays at the end
+        const missingDays = ALL_WEEKDAYS.filter(d => !orderedDays.includes(d));
+        return [...orderedDays, ...missingDays];
+    }, [mathConfig.weekdayOrder]);
+
+    // Save Math Config
+    const handleSaveTeacherOrder = async (newOrder: string[]) => {
+        try {
+            await setDoc(doc(db, 'settings', 'math_config'), { teacherOrder: newOrder }, { merge: true });
+            setMathConfig(prev => ({ ...prev, teacherOrder: newOrder }));
+        } catch (error) {
+            console.error('강사 순서 저장 실패:', error);
+            alert('강사 순서 저장에 실패했습니다.');
+        }
+    };
+
+    const handleSaveWeekdayOrder = async (newOrder: string[]) => {
+        try {
+            await setDoc(doc(db, 'settings', 'math_config'), { weekdayOrder: newOrder }, { merge: true });
+            setMathConfig(prev => ({ ...prev, weekdayOrder: newOrder }));
+        } catch (error) {
+            console.error('요일 순서 저장 실패:', error);
+            alert('요일 순서 저장에 실패했습니다.');
+        }
+    };
+
     const [loading, setLoading] = useState(true);
 
     // Week State (for date display)
@@ -264,17 +341,19 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
     // Compute resources (all teachers from state, filtered by hidden)
     const allResources = useMemo(() => {
         if (viewType === 'teacher') {
-            // Show all visible teachers regardless of whether they have classes
-            return teachers.filter(t => !t.isHidden).map(t => t.name).sort();
+            // Show all visible teachers in saved order
+            return sortedTeachers;
         }
         return [...new Set(filteredClasses.map(c => c.room).filter(Boolean))].sort();
-    }, [viewType, filteredClasses, teachers]);
+    }, [viewType, filteredClasses, sortedTeachers]);
 
     // Get classes for cell
     const getClassesForCell = (day: string, period: string, resource: string) => {
         return filteredClasses.filter(cls => {
             const resourceMatch = viewType === 'teacher' ? cls.teacher === resource : cls.room === resource;
-            const scheduleMatch = cls.schedule?.some(s => s.includes(day) && s.includes(period));
+            // Use exact match: "월 2-1" format
+            const targetSlot = `${day} ${period}`;
+            const scheduleMatch = cls.schedule?.some(s => s === targetSlot);
             return resourceMatch && scheduleMatch;
         });
     };
@@ -285,8 +364,16 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
         let span = 1;
         for (let i = startPeriodIndex + 1; i < periods.length; i++) {
             const nextPeriod = periods[i];
-            const hasNextSlot = cls.schedule?.some(s => s.includes(day) && s.includes(nextPeriod));
-            if (hasNextSlot) {
+            const targetSlot = `${day} ${nextPeriod}`;
+            const hasNextSlot = cls.schedule?.some(s => s === targetSlot);
+
+            // Check if next slot is "pure" (only contains this class)
+            // If next slot has other classes, we must break the span to allow displaying them
+            const resource = viewType === 'teacher' ? cls.teacher : cls.room;
+            const classesInNextSlot = getClassesForCell(day, nextPeriod, resource);
+            const isNextSlotDirty = classesInNextSlot.some(c => c.id !== cls.id);
+
+            if (hasNextSlot && !isNextSlotDirty) {
                 span++;
             } else {
                 break;
@@ -296,14 +383,29 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
     };
 
     // Check if this cell should be skipped (already covered by a rowspan from above)
-    const shouldSkipCell = (cls: TimetableClass, day: string, periodIndex: number): boolean => {
+    const shouldSkipCell = (cls: TimetableClass, day: string, periodIndex: number, currentCellClasses: TimetableClass[]): boolean => {
+        // If current cell has multiple classes (conflict), NEVER skip. Show all.
+        if (currentCellClasses.length > 1) return false;
+
         const periods = currentPeriods;
         // Look backwards to see if any previous consecutive period started a rowspan that covers this cell
         for (let i = periodIndex - 1; i >= 0; i--) {
             const prevPeriod = periods[i];
-            const hasPrevSlot = cls.schedule?.some(s => s.includes(day) && s.includes(prevPeriod));
+            const targetSlot = `${day} ${prevPeriod}`;
+            const hasPrevSlot = cls.schedule?.some(s => s === targetSlot);
+
             if (hasPrevSlot) {
-                // Previous period has this class, so this cell is already merged
+                // Check if the PREVIOUS cell was "dirty". If it was dirty, it couldn't have spanned to here.
+                const resource = viewType === 'teacher' ? cls.teacher : cls.room;
+                const classesInPrevSlot = getClassesForCell(day, prevPeriod, resource);
+                const isPrevSlotDirty = classesInPrevSlot.some(c => c.id !== cls.id);
+
+                if (isPrevSlotDirty) {
+                    // Previous slot had conflict, so it didn't span. We are the start of new segment.
+                    return false;
+                }
+
+                // Previous period has this class and was pure, so this cell is covered
                 return true;
             } else {
                 // Break in the chain, so this is a new start
@@ -717,6 +819,26 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                         )}
                     </div>
 
+                    {/* Order Settings (Math Tab Only) */}
+                    {viewType === 'teacher' && (hasPermission('timetable.math.edit') || isMaster) && (
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setIsTeacherOrderModalOpen(true)}
+                                className="px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                                title="강사 순서 설정"
+                            >
+                                ↕️ 강사 순서
+                            </button>
+                            <button
+                                onClick={() => setIsWeekdayOrderModalOpen(true)}
+                                className="px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                                title="요일 순서 설정"
+                            >
+                                📅 요일 순서
+                            </button>
+                        </div>
+                    )}
+
                     {/* View Settings */}
                     <button
                         onClick={() => setIsViewSettingsOpen(true)}
@@ -869,7 +991,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                                                 const periodIndex = currentPeriods.indexOf(period);
 
                                                 // Check if ANY class in this cell is part of a merged span from above
-                                                const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) => shouldSkipCell(cls, day, periodIndex));
+                                                const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) => shouldSkipCell(cls, day, periodIndex, cellClasses));
 
                                                 if (shouldSkipThisCell) {
                                                     // 이 셀은 위 교시에서 병합된 영역이므로 <td> 자체를 렌더링하지 않음
@@ -1370,6 +1492,24 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                     </div>
                 )
             }
+
+            {/* Teacher Order Modal (Math) */}
+            <TeacherOrderModal
+                isOpen={isTeacherOrderModalOpen}
+                onClose={() => setIsTeacherOrderModalOpen(false)}
+                currentOrder={mathConfig.teacherOrder}
+                allTeachers={sortedTeachers}
+                onSave={handleSaveTeacherOrder}
+            />
+
+            {/* Weekday Order Modal */}
+            <WeekdayOrderModal
+                isOpen={isWeekdayOrderModalOpen}
+                onClose={() => setIsWeekdayOrderModalOpen(false)}
+                currentOrder={mathConfig.weekdayOrder}
+                allWeekdays={ALL_WEEKDAYS}
+                onSave={handleSaveWeekdayOrder}
+            />
         </div >
     );
 };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { collection, onSnapshot, getDocs, doc, setDoc, writeBatch, query, orderBy } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { Clock, RefreshCw, AlertTriangle, Copy, Upload, ArrowRightLeft, History } from 'lucide-react';
+import { Clock, RefreshCw, AlertTriangle, Copy, Upload, ArrowRightLeft, History, Save } from 'lucide-react';
 import { EN_COLLECTION, EN_DRAFT_COLLECTION, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -10,6 +10,7 @@ import EnglishClassTab from './EnglishClassTab';
 import EnglishRoomTab from './EnglishRoomTab';
 import TeacherOrderModal from './TeacherOrderModal';
 import BackupHistoryModal from './BackupHistoryModal';
+import ScenarioManagementModal from './ScenarioManagementModal';
 
 interface EnglishTimetableProps {
     onClose?: () => void;
@@ -39,6 +40,8 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isSimulationMode, setIsSimulationMode] = useState(false);
     const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+    const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
+    const [currentScenarioName, setCurrentScenarioName] = useState<string | null>(null);
 
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -336,7 +339,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                 <Copy size={12} />
                                 현재 상태 가져오기
                             </button>
-                            {isMaster && (
+                            {(isMaster || hasPermission('timetable.english.simulation')) && (
                                 <button
                                     onClick={handlePublishDraftToLive}
                                     className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
@@ -356,6 +359,14 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                     백업 기록
                                 </button>
                             )}
+                            <button
+                                onClick={() => setIsScenarioModalOpen(true)}
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
+                                title="시나리오 저장/불러오기"
+                            >
+                                <Save size={12} />
+                                시나리오 관리
+                            </button>
                         </>
                     )}
                 </div>
@@ -420,6 +431,15 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                 isOpen={isBackupModalOpen}
                 onClose={() => setIsBackupModalOpen(false)}
                 currentUser={currentUser}
+            />
+
+            {/* Scenario Management Modal */}
+            <ScenarioManagementModal
+                isOpen={isScenarioModalOpen}
+                onClose={() => setIsScenarioModalOpen(false)}
+                currentUser={currentUser}
+                isSimulationMode={isSimulationMode}
+                onLoadScenario={(name) => setCurrentScenarioName(name)}
             />
         </div>
     );

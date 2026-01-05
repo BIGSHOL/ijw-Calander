@@ -755,13 +755,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex flex-col gap-2">
                 {/* Main Tab Selector */}
                 <div className="flex bg-white/10 rounded-lg p-1 gap-1">
-                  <button
-                    onClick={() => { setMainTab('calendar'); setActiveTab('departments'); }}
-                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'calendar' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
-                  >
-                    📅 연간 일정
-                  </button>
-                  {isMaster && (
+                  {canManageMenus && (
+                    <button
+                      onClick={() => { setMainTab('calendar'); setActiveTab('departments'); }}
+                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'calendar' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
+                    >
+                      📅 연간 일정
+                    </button>
+                  )}
+                  {(isMaster || canViewTeachers || canViewClasses) && (
                     <button
                       onClick={() => { setMainTab('timetable'); setActiveTab('teachers'); }}
                       className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'timetable' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
@@ -769,7 +771,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       🕐 시간표
                     </button>
                   )}
-                  {isMaster && (
+                  {(isMaster || hasPermission('gantt.view')) && (
                     <button
                       onClick={() => { setMainTab('gantt'); setActiveTab('gantt_departments'); }}
                       className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'gantt' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
@@ -777,9 +779,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       📊 간트 차트
                     </button>
                   )}
-                  {(isMaster || isAdmin || canManageRolePermissions) && (
+                  {(isMaster || isAdmin || canManageRolePermissions || hasPermission('settings.access')) && (
                     <button
-                      onClick={() => { setMainTab('permissions'); setActiveTab('role_permissions'); }}
+                      onClick={() => { setMainTab('permissions'); setActiveTab(hasPermission('settings.access') ? 'system' : 'role_permissions'); }}
                       className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'permissions' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
                     >
                       ⚙️ 시스템 설정
@@ -839,12 +841,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                   {mainTab === 'gantt' && (
                     <>
-                      <button onClick={() => setActiveTab('gantt_departments')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'gantt_departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                        부서 관리
-                      </button>
-                      <button onClick={() => setActiveTab('gantt_categories')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'gantt_categories' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                        카테고리 관리
-                      </button>
+                      {(isMaster || hasPermission('gantt.view')) && (
+                        <button onClick={() => setActiveTab('gantt_departments')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'gantt_departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          부서 관리
+                        </button>
+                      )}
+                      {(isMaster || hasPermission('settings.manage_categories')) && (
+                        <button onClick={() => setActiveTab('gantt_categories')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'gantt_categories' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          카테고리 관리
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -1205,12 +1211,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
 
             {/* TEACHERS TAB */}
-            {activeTab === 'teachers' && isMaster && (
+            {activeTab === 'teachers' && (isMaster || canViewTeachers) && (
               <TeachersTab teachers={teachers} isMaster={isMaster} />
             )}
 
             {/* CLASSES MANAGEMENT TAB - 수업 키워드 색상 관리 */}
-            {activeTab === 'classes' && isMaster && (
+            {activeTab === 'classes' && (isMaster || canViewClasses) && (
               <ClassesTab isMaster={isMaster} />
             )}
 
@@ -1225,35 +1231,39 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {activeTab === 'system' && (isMaster || isAdmin || currentUserProfile?.role === 'manager') && (
+            {activeTab === 'system' && (isMaster || isAdmin || currentUserProfile?.role === 'manager' || hasPermission('settings.access')) && (
               <div className="max-w-2xl mx-auto space-y-8 pb-20">
                 {/* Holidays Tab Component */}
-                <HolidaysTab holidays={localHolidays} isMaster={isMaster} />
+                {(isMaster || hasPermission('settings.holidays')) && (
+                  <HolidaysTab holidays={localHolidays} isMaster={isMaster} />
+                )}
 
-                {/* 1.5 Calendar Display Settings */}
+                {/* 1.5 Display Settings */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <h3 className="font-bold mb-4 flex gap-2"><CalendarClock size={18} /> 캘린더 표시 설정</h3>
+                  <h3 className="font-bold mb-4 flex gap-2"><CalendarClock size={18} /> 화면 설정</h3>
 
-                  {/* Default View Mode */}
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">기본 뷰 모드</span>
-                      <p className="text-xs text-gray-400">앱 시작 시 기본으로 표시할 뷰</p>
+                  {/* Default View Mode - Only if Calendar is accessible */}
+                  {canManageMenus && (
+                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">기본 뷰 모드</span>
+                        <p className="text-xs text-gray-400">앱 시작 시 기본으로 표시할 뷰</p>
+                      </div>
+                      <select
+                        value={localStorage.getItem('default_view_mode') || 'monthly'}
+                        onChange={(e) => {
+                          localStorage.setItem('default_view_mode', e.target.value);
+                          setHasChanges(true); // Hint update
+                        }}
+                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none"
+                      >
+                        <option value="daily">일간</option>
+                        <option value="weekly">주간</option>
+                        <option value="monthly">월간</option>
+                        <option value="yearly">연간</option>
+                      </select>
                     </div>
-                    <select
-                      value={localStorage.getItem('default_view_mode') || 'monthly'}
-                      onChange={(e) => {
-                        localStorage.setItem('default_view_mode', e.target.value);
-                        setHasChanges(true);
-                      }}
-                      className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none"
-                    >
-                      <option value="daily">일간</option>
-                      <option value="weekly">주간</option>
-                      <option value="monthly">월간</option>
-                      <option value="yearly">연간</option>
-                    </select>
-                  </div>
+                  )}
 
                   {/* Dark Mode Toggle */}
                   <div className="flex items-center justify-between py-3">

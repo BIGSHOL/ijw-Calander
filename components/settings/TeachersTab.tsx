@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Teacher } from '../../types';
 import { db } from '../../firebaseConfig';
-import { setDoc, doc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
+import { setDoc, doc, deleteDoc, writeBatch, getDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import {
     Search, Plus, Check, X, Eye, EyeOff, Edit, Trash2
@@ -62,15 +62,38 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
 
     const handleUpdateTeacher = async (id: string) => {
         if (!editTeacherName.trim()) return alert("강사 이름을 입력해주세요.");
+
+        const oldTeacher = teachers.find(t => t.id === id);
+        const oldName = oldTeacher?.name || id;
+        const newName = editTeacherName.trim();
+
         try {
+            // 1. Update teacher record
             await setDoc(doc(db, '강사목록', id), {
-                name: editTeacherName.trim(),
+                name: newName,
                 subjects: editTeacherSubjects,
                 bgColor: editTeacherBgColor,
                 textColor: editTeacherTextColor,
                 defaultRoom: editTeacherDefaultRoom || null,
                 isNative: editTeacherIsNative,
             }, { merge: true });
+
+            // 2. If name changed, sync all classes with this teacher
+            if (oldName !== newName) {
+                const classesSnapshot = await getDocs(
+                    query(collection(db, '수업목록'), where('teacher', '==', oldName))
+                );
+
+                if (classesSnapshot.docs.length > 0) {
+                    const batch = writeBatch(db);
+                    classesSnapshot.docs.forEach(docSnap => {
+                        batch.update(doc(db, '수업목록', docSnap.id), { teacher: newName });
+                    });
+                    await batch.commit();
+                    console.log(`✅ ${classesSnapshot.docs.length}개 수업의 강사명 변경: "${oldName}" → "${newName}"`);
+                }
+            }
+
             setEditingTeacherId(null);
             queryClient.invalidateQueries({ queryKey: ['teachers'] });
         } catch (e) {
@@ -146,8 +169,6 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
         }
         setDraggedTeacherId(null);
     };
-
-    if (!isMaster) return null;
 
     return (
         <div className="max-w-3xl mx-auto h-full flex flex-col pb-20">

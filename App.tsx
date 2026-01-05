@@ -43,12 +43,18 @@ const App: React.FC = () => {
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
   const thirdDate = subYears(baseDate, 2);  // 3단: 2년 전
 
+  // Auth State (Moved up for dependencies)
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+
   // Firestore Data State - React Query for static data (cached 30-60min)
-  const { data: departments = [] } = useDepartments();
-  const { data: teachers = [] } = useTeachers();
-  const { data: holidays = [] } = useHolidays();
-  const { data: classKeywords = [] } = useClassKeywords();
-  const { data: systemConfig } = useSystemConfig();
+  const { data: departments = [] } = useDepartments(!!currentUser);
+  const { data: teachers = [] } = useTeachers(!!currentUser);
+  const { data: holidays = [] } = useHolidays(!!currentUser);
+  const { data: classKeywords = [] } = useClassKeywords(!!currentUser);
+  const { data: systemConfig } = useSystemConfig(!!currentUser);
   const lookbackYears = systemConfig?.eventLookbackYears || 2;
   const sysCategories = systemConfig?.categories || [];
 
@@ -132,10 +138,7 @@ const App: React.FC = () => {
   const [pendingEventMoves, setPendingEventMoves] = useState<{ original: CalendarEvent, updated: CalendarEvent }[]>([]);
 
   // Auth State
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
+
 
   // Permission Hook
   const { hasPermission } = usePermissions(userProfile || null);
@@ -1270,7 +1273,7 @@ const App: React.FC = () => {
               <Plus size={14} /> <span className="hidden lg:inline">일정 추가</span>
             </button>
 
-            {canAccessTab('system') && (
+            {hasPermission('settings.access') && (
               <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
                 <Settings size={20} />
               </button>
