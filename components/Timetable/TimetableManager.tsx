@@ -291,6 +291,11 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
     const currentPeriods = subjectTab === 'math' ? MATH_PERIODS : ENGLISH_PERIODS;
     const currentSubjectFilter = subjectTab === 'math' ? '수학' : '영어';
 
+    // Selected days ordered by sortedWeekdays order
+    const orderedSelectedDays = useMemo(() => {
+        return sortedWeekdays.filter(day => selectedDays.includes(day));
+    }, [selectedDays, sortedWeekdays]);
+
     // Calculate dates for each weekday
     const weekDates = useMemo(() => {
         const dates: Record<string, { date: Date; formatted: string }> = {};
@@ -901,7 +906,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                                     <th className="p-1.5 text-[10px] font-bold text-gray-500 border-b border-r border-gray-200 bg-gray-100 sticky left-0 z-20" rowSpan={2} style={{ width: '60px', minWidth: '60px' }}>
                                         교시
                                     </th>
-                                    {selectedDays.map(day => {
+                                    {orderedSelectedDays.map(day => {
                                         const dateInfo = weekDates[day];
                                         const teachersForDay = allResources.filter(r =>
                                             filteredClasses.some(c =>
@@ -926,7 +931,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                                 </tr>
                                 {/* Teacher/Room Row */}
                                 <tr>
-                                    {selectedDays.map(day => {
+                                    {orderedSelectedDays.map(day => {
                                         const teachersForDay = allResources.filter(r =>
                                             filteredClasses.some(c =>
                                                 (viewType === 'teacher' ? c.teacher === r : c.room === r) &&
@@ -972,7 +977,7 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                                         <td className="p-1.5 text-[10px] font-bold text-gray-600 border-b border-r border-gray-200 text-center bg-gray-50 sticky left-0 z-10" style={{ width: '90px', minWidth: '90px' }}>
                                             {MATH_PERIOD_TIMES[period] || period}
                                         </td>
-                                        {selectedDays.map(day => {
+                                        {orderedSelectedDays.map(day => {
                                             const teachersForDay = allResources.filter(r =>
                                                 filteredClasses.some(c =>
                                                     (viewType === 'teacher' ? c.teacher === r : c.room === r) &&
