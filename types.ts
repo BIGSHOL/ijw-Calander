@@ -485,8 +485,14 @@ export enum ConsultationSubject {
 }
 
 export enum SchoolGrade {
-  ElementaryLow = '초등 저학년',
-  ElementaryHigh = '초등 고학년',
+  Elementary1 = '초1',
+  Elementary2 = '초2',
+  Elementary3 = '초3',
+  Elementary4 = '초4',
+  Elementary5 = '초5',
+  Elementary6 = '초6',
+  ElementaryLow = '초등 저학년', // Legacy support
+  ElementaryHigh = '초등 고학년', // Legacy support
   Middle1 = '중1',
   Middle2 = '중2',
   Middle3 = '중3',
