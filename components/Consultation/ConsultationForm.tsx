@@ -138,7 +138,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b pb-2">학생 정보</h3>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">학생 이름</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">학생 이름 <span className="text-red-500">*</span></label>
                                     <input
                                         required
                                         type="text"
@@ -148,7 +148,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">학부모 연락처</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">학부모 연락처 <span className="text-red-500">*</span></label>
                                     <input
                                         required
                                         type="text"
@@ -188,7 +188,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b pb-2">상담 정보</h3>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">상담 일시</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">상담 일시 <span className="text-red-500">*</span></label>
                                     <input
                                         required
                                         type="datetime-local"
