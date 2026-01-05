@@ -317,15 +317,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   }, [activeTab, isMaster]);
 
   // Class Keywords subscription
+  const canEditClassKeywords = hasPermission('system.classes.edit');
+  const canViewClassKeywords = hasPermission('system.classes.view') || canEditClassKeywords;
+
   useEffect(() => {
-    if (activeTab === 'classes' && isMaster) {
+    if (activeTab === 'classes' && canViewClassKeywords) {
       const unsubscribe = onSnapshot(collection(db, 'classKeywords'), (snapshot) => {
         const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ClassKeywordColor));
         setClassKeywords(data.sort((a, b) => (a.order || 0) - (b.order || 0)));
       });
       return () => unsubscribe();
     }
-  }, [activeTab, isMaster]);
+  }, [activeTab, canViewClassKeywords]);
 
   // Role Permissions loading (MASTER, ADMIN, MANAGER can view)
   const canViewRolePermissions = isMaster || isAdmin || currentUserProfile?.role === 'manager';
@@ -763,7 +766,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       📅 연간 일정
                     </button>
                   )}
-                  {(isMaster || canViewTeachers || canViewClasses) && (
+                  {(isMaster || canViewTeachers || canViewClassKeywords) && (
                     <button
                       onClick={() => { setMainTab('timetable'); setActiveTab('teachers'); }}
                       className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'timetable' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
