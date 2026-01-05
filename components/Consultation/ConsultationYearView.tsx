@@ -83,50 +83,64 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
         setActiveFilters(newFilters);
     };
 
-    // 날짜 셀 스타일 계산
+    // 날짜 셀 스타일 계산 - 색상 일관성 보장
     const getDayStyle = (dateKey: string) => {
         const dayData = densityMap[dateKey];
-        if (!dayData) return { style: {}, totalCount: 0 };
+        if (!dayData) return { style: {}, totalCount: 0, colorCount: 0, activeColors: [] as string[] };
 
         let totalCount = 0;
-        const colors: string[] = [];
+        const activeColors: string[] = [];
 
+        // 색상 순서: 접수일(파랑), 상담일(노랑), 결제일(초록)
         if (activeFilters.has('createdAt') && dayData.createdAt > 0) {
             totalCount += dayData.createdAt;
-            colors.push('#3b82f6');
+            activeColors.push('#3b82f6');
         }
         if (activeFilters.has('consultationDate') && dayData.consultationDate > 0) {
             totalCount += dayData.consultationDate;
-            colors.push('#fdb813');
+            activeColors.push('#fdb813');
         }
         if (activeFilters.has('paymentDate') && dayData.paymentDate > 0) {
             totalCount += dayData.paymentDate;
-            colors.push('#10b981');
+            activeColors.push('#10b981');
         }
 
-        if (totalCount === 0) return { style: {}, totalCount: 0 };
+        if (totalCount === 0 || activeColors.length === 0) {
+            return { style: {}, totalCount: 0, colorCount: 0, activeColors: [] as string[] };
+        }
 
-        // 색상 혼합 또는 주요 색상 선택
-        let bgColor: string;
-        if (colors.length === 1) {
-            bgColor = colors[0];
-        } else if (colors.length === 2) {
-            // 그라디언트
-            bgColor = `linear-gradient(135deg, ${colors[0]} 50%, ${colors[1]} 50%)`;
+        // 색상 개수에 따른 스타일
+        if (activeColors.length === 1) {
+            // 단일 색상
             return {
-                style: { background: bgColor, color: 'white' },
-                totalCount
+                style: { backgroundColor: activeColors[0], color: 'white' },
+                totalCount,
+                colorCount: 1,
+                activeColors
+            };
+        } else if (activeColors.length === 2) {
+            // 2개 색상 - 대각선 그라디언트
+            return {
+                style: {
+                    background: `linear-gradient(135deg, ${activeColors[0]} 50%, ${activeColors[1]} 50%)`,
+                    color: 'white'
+                },
+                totalCount,
+                colorCount: 2,
+                activeColors
             };
         } else {
-            // 3개 이상 - 진한 색상
-            bgColor = COLORS.navy;
+            // 3개 색상 - conic-gradient로 120도씩 3등분
+            return {
+                style: {
+                    background: `conic-gradient(from 0deg, ${activeColors[0]} 0deg 120deg, ${activeColors[1]} 120deg 240deg, ${activeColors[2]} 240deg 360deg)`,
+                    color: 'white'
+                },
+                totalCount,
+                colorCount: 3,
+                activeColors
+            };
         }
-
-        const opacity = Math.min(totalCount * 0.2 + 0.3, 1);
-        return {
-            style: { backgroundColor: bgColor, opacity, color: 'white' },
-            totalCount
-        };
     };
 
     // 선택된 월의 상담 데이터
@@ -179,8 +193,8 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                             key={opt.key}
                             onClick={() => toggleFilter(opt.key)}
                             className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all border ${activeFilters.has(opt.key)
-                                    ? 'border-transparent shadow-sm'
-                                    : 'border-gray-200 bg-gray-50 text-gray-400'
+                                ? 'border-transparent shadow-sm'
+                                : 'border-gray-200 bg-gray-50 text-gray-400'
                                 }`}
                             style={activeFilters.has(opt.key) ? { backgroundColor: opt.color + '20', color: opt.color, borderColor: opt.color } : {}}
                         >
