@@ -1,6 +1,6 @@
 // StudentModal.tsx - 영어 통합 뷰 학생 관리 모달
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Trash2, Users, Check, Underline, Settings, Save, Minus, UserPlus } from 'lucide-react';
+import { X, Trash2, Users, Check, Underline, Settings, Save, Minus, UserPlus, ArrowRightCircle } from 'lucide-react';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -549,7 +549,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                                         {activeList.map((student, idx) => (
                                             <div
                                                 key={student.id}
-                                                className={`flex items-center justify-between py-2 px-3 rounded-lg transition-colors group ${editingStudentId === student.id ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 hover:bg-gray-100'}`}
+                                                className={`flex items-center justify-between py-2 px-3 rounded-lg transition-colors group ${editingStudentId === student.id ? 'bg-indigo-50 border border-indigo-200' : (student.isMoved ? 'bg-green-50 hover:bg-green-100' : 'bg-gray-50 hover:bg-gray-100')}`}
                                             >
                                                 {editingStudentId === student.id ? (
                                                     // Editing Mode
@@ -604,9 +604,9 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                                                             <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-[10px] font-bold flex items-center justify-center shrink-0">
                                                                 {idx + 1}
                                                             </span>
-                                                            <span className={`font-bold text-sm ${student.underline ? 'underline text-blue-600' : 'text-[#373d41]'}`}>
+                                                            <span className={`font-bold text-sm ${student.underline ? 'underline text-blue-600' : 'text-[#373d41]'} ${student.isMoved ? 'text-blue-600' : ''}`}>
                                                                 {student.name}
-                                                                {student.englishName && <span className={`font-normal ${student.underline ? 'text-blue-400' : 'text-gray-500'}`}>({student.englishName})</span>}
+                                                                {student.englishName && <span className={`font-normal ${student.underline || student.isMoved ? 'text-blue-400' : 'text-gray-500'}`}>({student.englishName})</span>}
                                                             </span>
                                                             {(student.school || student.grade) && (
                                                                 <span className="text-xs text-gray-400">
@@ -634,7 +634,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                                                                                     nextDate = undefined;
                                                                                 }
                                                                             }
-                                                                            handleUpdateStudent(student.id, { enrollmentDate: nextDate, onHold: false, withdrawalDate: undefined });
+                                                                            handleUpdateStudent(student.id, { enrollmentDate: nextDate, onHold: false, withdrawalDate: undefined, isMoved: false });
                                                                         }}
                                                                         className={`px-2 py-0.5 text-[10px] flex items-center justify-center rounded border transition-colors ${student.enrollmentDate
                                                                             ? (() => {
@@ -660,12 +660,30 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
 
                                                                     <button
                                                                         onClick={() => {
+                                                                            if (student.isMoved) {
+                                                                                handleUpdateStudent(student.id, { isMoved: false });
+                                                                            } else {
+                                                                                // 신입, 퇴원 해제
+                                                                                handleUpdateStudent(student.id, { isMoved: true, enrollmentDate: undefined, withdrawalDate: undefined });
+                                                                            }
+                                                                        }}
+                                                                        className={`px-2 py-0.5 text-[10px] flex items-center justify-center gap-1 rounded border transition-colors ${student.isMoved
+                                                                            ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
+                                                                            : 'bg-white text-gray-400 border-gray-200 hover:bg-green-50 hover:text-green-600'
+                                                                            }`}
+                                                                        title="반이동"
+                                                                    >
+                                                                        <span className="font-bold">반이동</span>
+                                                                    </button>
+
+                                                                    <button
+                                                                        onClick={() => {
                                                                             if (student.underline) {
                                                                                 alert('밑줄이 표시된 학생은 퇴원 처리할 수 없습니다.\n먼저 밑줄을 해제해주세요.');
                                                                                 return;
                                                                             }
                                                                             if (window.confirm("퇴원 처리 하시겠습니까?")) {
-                                                                                handleUpdateStudent(student.id, { withdrawalDate: new Date().toISOString().split('T')[0], onHold: false, enrollmentDate: undefined });
+                                                                                handleUpdateStudent(student.id, { withdrawalDate: new Date().toISOString().split('T')[0], onHold: false, enrollmentDate: undefined, isMoved: false });
                                                                             }
                                                                         }}
                                                                         className="px-2 py-0.5 text-[10px] rounded border border-gray-200 text-gray-400 hover:bg-gray-800 hover:text-white hover:border-gray-800 transition-colors"

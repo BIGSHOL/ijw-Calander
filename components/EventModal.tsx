@@ -391,17 +391,26 @@ const EventModal: React.FC<EventModalProps> = ({
                           checked={isSelected}
                           disabled={isViewMode || !hasEditAccess}
                           onChange={(e) => {
+                            let newIds: string[];
                             if (e.target.checked) {
-                              const newIds = [...departmentIds, dept.id];
-                              setDepartmentIds(newIds);
-                              if (newIds.length === 1) {
-                                setSelectedColor(dept.defaultColor || '#fee2e2');
-                                setSelectedTextColor(dept.defaultTextColor || '#ffffff');
-                                setSelectedBorderColor(dept.defaultBorderColor || dept.defaultColor || '#fee2e2');
-                              }
+                              newIds = [...departmentIds, dept.id];
+                              // 체크 시 해당 부서 색상으로 즉시 변경 (강제 연동)
+                              setSelectedColor(dept.defaultColor || '#fee2e2');
+                              setSelectedTextColor(dept.defaultTextColor || '#ffffff');
+                              setSelectedBorderColor(dept.defaultBorderColor || dept.defaultColor || '#fee2e2');
                             } else {
-                              setDepartmentIds(departmentIds.filter(id => id !== dept.id));
+                              newIds = departmentIds.filter(id => id !== dept.id);
+                              // 체크 해제 시 남은 부서가 있다면 그 중 첫 번째 부서 색상으로 변경
+                              if (newIds.length > 0) {
+                                const firstDept = departments.find(d => d.id === newIds[0]);
+                                if (firstDept) {
+                                  setSelectedColor(firstDept.defaultColor || '#fee2e2');
+                                  setSelectedTextColor(firstDept.defaultTextColor || '#ffffff');
+                                  setSelectedBorderColor(firstDept.defaultBorderColor || firstDept.defaultColor || '#fee2e2');
+                                }
+                              }
                             }
+                            setDepartmentIds(newIds);
                           }}
                           className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
                         />
@@ -484,94 +493,66 @@ const EventModal: React.FC<EventModalProps> = ({
             </label>
             <div className="flex flex-col md:flex-row gap-2 items-center">
               {/* Start */}
-              <div className="flex-1 flex gap-2 w-full">
-                <input
-                  type="date"
-                  required
-                  value={startDate}
-                  disabled={isViewMode || !canEditCurrent}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
-                />
-                {!isAllDay && (
+              <div className="flex gap-2 w-full md:w-auto items-center">
+                <div className="relative w-36">
+                  <input
+                    type="date"
+                    required
+                    value={startDate}
+                    disabled={isViewMode || !canEditCurrent}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      setStartDate(newDate);
+                      if (newDate > endDate) {
+                        setEndDate(newDate);
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none font-medium text-sm ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                  />
+                </div>
+                <div className="relative w-36">
                   <input
                     type="time"
+                    required={!isAllDay}
                     value={startTime}
-                    disabled={isViewMode || !canEditCurrent}
+                    disabled={isViewMode || !canEditCurrent || isAllDay}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="w-28 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none font-medium text-sm ${(!canEditCurrent || isAllDay) ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                   />
-                )}
+                </div>
               </div>
 
               <span className="text-gray-400 font-bold hidden md:block">~</span>
               <span className="text-gray-400 font-bold block md:hidden rotate-90">~</span>
 
               {/* End */}
-              <div className="flex-1 flex gap-2 w-full">
-                <input
-                  type="date"
-                  required
-                  value={endDate}
-                  disabled={isViewMode || !canEditCurrent}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
-                />
-                {!isAllDay && (
+              <div className="flex gap-2 w-full md:w-auto items-center">
+                <div className="relative w-36">
+                  <input
+                    type="date"
+                    required
+                    value={endDate}
+                    disabled={isViewMode || !canEditCurrent}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none font-medium text-sm ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                  />
+                </div>
+                <div className="relative w-36">
                   <input
                     type="time"
+                    required={!isAllDay}
                     value={endTime}
-                    disabled={isViewMode || !canEditCurrent}
+                    disabled={isViewMode || !canEditCurrent || isAllDay}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="w-28 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none font-medium text-sm ${(!canEditCurrent || isAllDay) ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                   />
-                )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Recurrence Options (New Events Only) */}
-          {!existingEvent && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-              <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2 flex items-center gap-1">
-                🔄 반복 설정
-              </label>
-              <div className="flex gap-3 flex-wrap">
-                <select
-                  value={recurrenceType}
-                  onChange={(e) => setRecurrenceType(e.target.value as any)}
-                  className="flex-1 min-w-[140px] px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold bg-white"
-                >
-                  <option value="none">반복 없음</option>
-                  <option value="daily">매일</option>
-                  <option value="weekdays">평일 (월-금)</option>
-                  <option value="weekends">주말 (토-일)</option>
-                  <option value="weekly">매주</option>
-                  <option value="monthly">매월</option>
-                  <option value="yearly">매년</option>
-                </select>
-                {recurrenceType !== 'none' && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-500">반복 횟수:</span>
-                    <select
-                      value={recurrenceCount}
-                      onChange={(e) => setRecurrenceCount(Number(e.target.value))}
-                      className="w-20 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold bg-white"
-                    >
-                      {Array.from({ length: 30 }, (_, i) => i + 1).map(n => (
-                        <option key={n} value={n}>{n}회</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-              {recurrenceType !== 'none' && (
-                <p className="text-xs text-gray-500 mt-2">
-                  총 {recurrenceCount}개의 일정이 생성됩니다.
-                </p>
-              )}
-            </div>
-          )}
+          {/* Recurrence moved to Color Style row */}
 
           {/* Description (Moved Up) */}
           <div>
@@ -749,93 +730,94 @@ const EventModal: React.FC<EventModalProps> = ({
             )}
           </div>
 
-          {/* Color Style (Chips) */}
-          <div>
-            <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2">
-              색상 스타일
-            </label>
-            <div className="flex gap-6 items-start">
-              {/* Background Color */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-gray-500">배경색</span>
-                <div className="flex flex-wrap gap-1.5 max-w-[240px]">
-                  {[...EVENT_COLORS.map(c => c.value), '#ffffff', '#000000'].slice(0, 10).map(color => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setSelectedColor(color)}
-                      disabled={isViewMode || !canEditCurrent}
-                      className={`w-6 h-6 rounded-md border border-gray-200 shadow-sm transition-all ${selectedColor === color ? 'ring-2 ring-offset-1 ring-[#fdb813] scale-110' : 'hover:scale-105'}`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                  <div className="relative w-6 h-6 rounded-md border border-gray-200 overflow-hidden shadow-sm cursor-pointer hover:scale-105 transition-transform">
-                    <input
-                      type="color"
-                      value={selectedColor}
-                      disabled={isViewMode || !canEditCurrent}
-                      onChange={(e) => setSelectedColor(e.target.value)}
-                      className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
-                      title="사용자 지정 색상"
-                    />
-                  </div>
+          {/* Color Style + Recurrence (Same Row) */}
+          <div className="flex gap-6 items-start flex-wrap">
+            {/* Color Pickers */}
+            <div>
+              <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2">
+                색상 스타일
+              </label>
+              <div className="flex gap-4 items-center">
+                {/* Background Color */}
+                <div className="flex flex-col gap-1 items-center">
+                  <span className="text-[10px] font-bold text-gray-500">배경</span>
+                  <input
+                    type="color"
+                    value={selectedColor}
+                    disabled={isViewMode || !canEditCurrent}
+                    onChange={(e) => setSelectedColor(e.target.value)}
+                    className={`w-9 h-9 rounded-lg cursor-pointer border-2 border-gray-200 ${(!canEditCurrent) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title="배경색 선택"
+                  />
                 </div>
-              </div>
 
-              {/* Text Color */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-gray-500">글자색</span>
-                <div className="flex gap-1.5">
-                  {['#ffffff', '#000000', '#111827', '#4b5563'].map(color => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setSelectedTextColor(color)}
-                      disabled={isViewMode || !canEditCurrent}
-                      className={`w-6 h-6 rounded-md border border-gray-200 shadow-sm transition-all ${selectedTextColor === color ? 'ring-2 ring-offset-1 ring-[#fdb813] scale-110' : 'hover:scale-105'}`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                  <div className="relative w-6 h-6 rounded-md border border-gray-200 overflow-hidden shadow-sm cursor-pointer hover:scale-105 transition-transform">
-                    <input
-                      type="color"
-                      value={selectedTextColor}
-                      disabled={isViewMode || !canEditCurrent}
-                      onChange={(e) => setSelectedTextColor(e.target.value)}
-                      className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
-                      title="사용자 지정 색상"
-                    />
-                  </div>
+                {/* Text Color */}
+                <div className="flex flex-col gap-1 items-center">
+                  <span className="text-[10px] font-bold text-gray-500">글자</span>
+                  <input
+                    type="color"
+                    value={selectedTextColor}
+                    disabled={isViewMode || !canEditCurrent}
+                    onChange={(e) => setSelectedTextColor(e.target.value)}
+                    className={`w-9 h-9 rounded-lg cursor-pointer border-2 border-gray-200 ${(!canEditCurrent) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title="글자색 선택"
+                  />
                 </div>
-              </div>
 
-              {/* Border Color */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-gray-500">테두리색</span>
-                <div className="flex flex-wrap gap-1.5 max-w-[200px]">
-                  {[...EVENT_COLORS.map(c => c.value), '#ffffff', '#000000'].slice(0, 5).map(color => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setSelectedBorderColor(color)}
-                      disabled={isViewMode || !canEditCurrent}
-                      className={`w-6 h-6 rounded-md border border-gray-200 shadow-sm transition-all ${selectedBorderColor === color ? 'ring-2 ring-offset-1 ring-[#fdb813] scale-110' : 'hover:scale-105'}`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                  <div className="relative w-6 h-6 rounded-md border border-gray-200 overflow-hidden shadow-sm cursor-pointer hover:scale-105 transition-transform">
-                    <input
-                      type="color"
-                      value={selectedBorderColor}
-                      disabled={isViewMode || !canEditCurrent}
-                      onChange={(e) => setSelectedBorderColor(e.target.value)}
-                      className="absolute -top-[50%] -left-[50%] w-[200%] h-[200%] cursor-pointer p-0 border-0"
-                      title="사용자 지정 색상"
-                    />
-                  </div>
+                {/* Border Color */}
+                <div className="flex flex-col gap-1 items-center">
+                  <span className="text-[10px] font-bold text-gray-500">테두리</span>
+                  <input
+                    type="color"
+                    value={selectedBorderColor}
+                    disabled={isViewMode || !canEditCurrent}
+                    onChange={(e) => setSelectedBorderColor(e.target.value)}
+                    className={`w-9 h-9 rounded-lg cursor-pointer border-2 border-gray-200 ${(!canEditCurrent) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title="테두리색 선택"
+                  />
                 </div>
               </div>
             </div>
+
+            {/* Recurrence Options (New Events Only) */}
+            {!existingEvent && (
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2">
+                  🔄 반복 설정
+                </label>
+                <div className="flex gap-2 items-center">
+                  <select
+                    value={recurrenceType}
+                    onChange={(e) => setRecurrenceType(e.target.value as any)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold bg-white"
+                  >
+                    <option value="none">반복 없음</option>
+                    <option value="daily">매일</option>
+                    <option value="weekdays">평일 (월-금)</option>
+                    <option value="weekends">주말 (토-일)</option>
+                    <option value="weekly">매주</option>
+                    <option value="monthly">매월</option>
+                    <option value="yearly">매년</option>
+                  </select>
+                  {recurrenceType !== 'none' && (
+                    <select
+                      value={recurrenceCount}
+                      onChange={(e) => setRecurrenceCount(Number(e.target.value))}
+                      className="w-20 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold bg-white"
+                    >
+                      {Array.from({ length: 30 }, (_, i) => i + 1).map(n => (
+                        <option key={n} value={n}>{n}회</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                {recurrenceType !== 'none' && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    총 {recurrenceCount}개의 일정이 생성됩니다.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Divider */}

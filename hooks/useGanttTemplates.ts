@@ -131,7 +131,7 @@ export const useGanttTemplates = (options: UseGanttTemplatesOptions | string) =>
         .sort((a, b) => b.createdAt - a.createdAt);
     },
     enabled: !!userId,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 10, // 10분 캐싱 (비용 최적화)
     gcTime: 1000 * 60 * 30, // 30 minutes
     refetchOnWindowFocus: false, // Critical Issue #2 Fix: 비용 90% 절감 (2026-01-04)
     refetchOnReconnect: true,

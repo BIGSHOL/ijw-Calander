@@ -68,18 +68,31 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
         const newName = editTeacherName.trim();
 
         try {
-            // 1. Update teacher record
-            await setDoc(doc(db, '강사목록', id), {
-                name: newName,
-                subjects: editTeacherSubjects,
-                bgColor: editTeacherBgColor,
-                textColor: editTeacherTextColor,
-                defaultRoom: editTeacherDefaultRoom || null,
-                isNative: editTeacherIsNative,
-            }, { merge: true });
+            // If name changed and id equals old name (document ID is the name), we need to create new doc and delete old
+            if (oldName !== newName && id === oldName) {
+                // Check if new name already exists
+                const newDocRef = doc(db, '강사목록', newName);
+                const newDocSnap = await getDoc(newDocRef);
+                if (newDocSnap.exists()) {
+                    return alert("이미 존재하는 강사 이름입니다.");
+                }
 
-            // 2. If name changed, sync all classes with this teacher
-            if (oldName !== newName) {
+                // Create new document with new name as ID
+                await setDoc(newDocRef, {
+                    name: newName,
+                    subjects: editTeacherSubjects,
+                    bgColor: editTeacherBgColor,
+                    textColor: editTeacherTextColor,
+                    defaultRoom: editTeacherDefaultRoom || null,
+                    isNative: editTeacherIsNative,
+                    order: oldTeacher?.order || 0,
+                    isHidden: oldTeacher?.isHidden || false,
+                });
+
+                // Delete old document
+                await deleteDoc(doc(db, '강사목록', id));
+
+                // Sync all classes with this teacher
                 const classesSnapshot = await getDocs(
                     query(collection(db, '수업목록'), where('teacher', '==', oldName))
                 );
@@ -92,12 +105,38 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
                     await batch.commit();
                     console.log(`✅ ${classesSnapshot.docs.length}개 수업의 강사명 변경: "${oldName}" → "${newName}"`);
                 }
+            } else {
+                // Just update the existing document
+                await setDoc(doc(db, '강사목록', id), {
+                    name: newName,
+                    subjects: editTeacherSubjects,
+                    bgColor: editTeacherBgColor,
+                    textColor: editTeacherTextColor,
+                    defaultRoom: editTeacherDefaultRoom || null,
+                    isNative: editTeacherIsNative,
+                }, { merge: true });
+
+                // If name changed but id != oldName, still sync classes
+                if (oldName !== newName) {
+                    const classesSnapshot = await getDocs(
+                        query(collection(db, '수업목록'), where('teacher', '==', oldName))
+                    );
+
+                    if (classesSnapshot.docs.length > 0) {
+                        const batch = writeBatch(db);
+                        classesSnapshot.docs.forEach(docSnap => {
+                            batch.update(doc(db, '수업목록', docSnap.id), { teacher: newName });
+                        });
+                        await batch.commit();
+                        console.log(`✅ ${classesSnapshot.docs.length}개 수업의 강사명 변경: "${oldName}" → "${newName}"`);
+                    }
+                }
             }
 
             setEditingTeacherId(null);
             queryClient.invalidateQueries({ queryKey: ['teachers'] });
         } catch (e) {
-            console.error(e);
+            console.error('강사 수정 오류:', e);
             alert("수정 실패");
         }
     };

@@ -37,6 +37,12 @@ export const isInjaeClass = (className: string): boolean => {
     return className?.includes('E_') || false;
 };
 
+// 드래그 이동 제외 대상 확인 (퇴원생, 신입생 등)
+export const isExcludedStudent = (className: string): boolean => {
+    if (!className) return false;
+    return className.includes('퇴원') || className.includes('신입');
+};
+
 export const EN_COLLECTION = 'english_schedules';
 export const EN_DRAFT_COLLECTION = 'english_schedules_draft';
 export const CLASS_COLLECTION = '수업목록';
