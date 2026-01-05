@@ -70,7 +70,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">학생 정보</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">상담 과목/학교</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">등록/상담자</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">상담일/경로</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">상담일/접수일</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">상태</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">결제/후속</th>
                                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">관리</th>
@@ -102,11 +102,15 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-slate-900">
-                                                {format(new Date(record.consultationDate), 'yy.MM.dd(eee)', { locale: ko })}
-                                            </div>
-                                            <div className="text-xs text-slate-500">
-                                                {record.consultationPath || '-'}
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center text-xs text-slate-600">
+                                                    <span className="w-12 text-slate-400">상담일:</span>
+                                                    <span className="font-medium">{format(new Date(record.consultationDate), 'yy.MM.dd(eee)', { locale: ko })}</span>
+                                                </div>
+                                                <div className="flex items-center text-xs text-slate-600">
+                                                    <span className="w-12 text-slate-400">접수일:</span>
+                                                    <span>{record.createdAt ? format(new Date(record.createdAt), 'yy.MM.dd', { locale: ko }) : '-'}</span>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -188,10 +192,14 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                     <span className="font-medium">{record.subject}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-400">날짜</span>
+                                    <span className="text-xs text-slate-400">상담일</span>
                                     <span className="font-medium">{format(new Date(record.consultationDate), 'yy.MM.dd', { locale: ko })}</span>
                                 </div>
-                                <div className="flex items-center gap-2 col-span-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-400">접수일</span>
+                                    <span className="font-medium">{record.createdAt ? format(new Date(record.createdAt), 'yy.MM.dd', { locale: ko }) : '-'}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
                                     <span className="text-xs text-slate-400">연락처</span>
                                     <span className="font-medium">{record.parentPhone}</span>
                                 </div>
