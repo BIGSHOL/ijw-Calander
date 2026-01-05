@@ -83,7 +83,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
         if (selectedYear === 'all') return; // 연도 전체일 때는 화살표 비활성화
 
         if (selectedMonth === 'all') {
-            // 전체에서 왼쪽: 현재 연도의 12월로
+            // 전체에서 왼쪽: 작년 12월로
+            const currentYear = parseInt(selectedYear, 10);
+            setSelectedYear(String(currentYear - 1));
             setSelectedMonth('12');
         } else {
             const currentMonth = parseInt(selectedMonth, 10);
@@ -102,7 +104,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
         if (selectedYear === 'all') return; // 연도 전체일 때는 화살표 비활성화
 
         if (selectedMonth === 'all') {
-            // 전체에서 오른쪽: 현재 연도의 1월로
+            // 전체에서 오른쪽: 내년 1월로
+            const currentYear = parseInt(selectedYear, 10);
+            setSelectedYear(String(currentYear + 1));
             setSelectedMonth('1');
         } else {
             const currentMonth = parseInt(selectedMonth, 10);
