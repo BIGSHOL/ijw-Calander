@@ -83,50 +83,62 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
         setActiveFilters(newFilters);
     };
 
-    // 날짜 셀 스타일 계산 - 건수에 따른 진하기 적용
+    // 건수에 따른 alpha 값 계산 (1건: 0.4, 2건: 0.55, 3건: 0.7, 4건: 0.85, 5건+: 1.0)
+    const getAlpha = (count: number) => Math.min(0.4 + (count - 1) * 0.15, 1.0);
+
+    // hex 색상을 rgba로 변환
+    const hexToRgba = (hex: string, alpha: number) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    // 날짜 셀 스타일 계산 - 각 색상별 개별 진하기 적용
     const getDayStyle = (dateKey: string) => {
         const dayData = densityMap[dateKey];
         if (!dayData) return { style: {}, totalCount: 0, colorCount: 0, activeColors: [] as string[] };
 
         let totalCount = 0;
-        const activeColors: string[] = [];
+        const colorData: { hex: string; count: number }[] = [];
 
         // 색상 순서: 접수일(파랑), 상담일(노랑), 결제일(초록)
         if (activeFilters.has('createdAt') && dayData.createdAt > 0) {
             totalCount += dayData.createdAt;
-            activeColors.push('#3b82f6');
+            colorData.push({ hex: '#3b82f6', count: dayData.createdAt });
         }
         if (activeFilters.has('consultationDate') && dayData.consultationDate > 0) {
             totalCount += dayData.consultationDate;
-            activeColors.push('#fdb813');
+            colorData.push({ hex: '#fdb813', count: dayData.consultationDate });
         }
         if (activeFilters.has('paymentDate') && dayData.paymentDate > 0) {
             totalCount += dayData.paymentDate;
-            activeColors.push('#10b981');
+            colorData.push({ hex: '#10b981', count: dayData.paymentDate });
         }
 
-        if (totalCount === 0 || activeColors.length === 0) {
+        if (totalCount === 0 || colorData.length === 0) {
             return { style: {}, totalCount: 0, colorCount: 0, activeColors: [] as string[] };
         }
 
-        // 건수에 따른 투명도 계산 (1건: 0.4, 2건: 0.55, 3건: 0.7, 4건: 0.85, 5건+: 1.0)
-        const opacity = Math.min(0.4 + (totalCount - 1) * 0.15, 1.0);
+        const activeColors = colorData.map(c => c.hex);
 
-        // 색상 개수에 따른 스타일
-        if (activeColors.length === 1) {
-            // 단일 색상 - 투명도 적용
+        // 색상 개수에 따른 스타일 - 각 색상별 개별 alpha 적용
+        if (colorData.length === 1) {
+            // 단일 색상 - 해당 항목 건수에 따른 alpha
+            const rgba = hexToRgba(colorData[0].hex, getAlpha(colorData[0].count));
             return {
-                style: { backgroundColor: activeColors[0], opacity, color: 'white' },
+                style: { backgroundColor: rgba, color: 'white' },
                 totalCount,
                 colorCount: 1,
                 activeColors
             };
-        } else if (activeColors.length === 2) {
-            // 2개 색상 - 대각선 그라디언트 + 투명도 적용
+        } else if (colorData.length === 2) {
+            // 2개 색상 - 각각 개별 alpha 적용
+            const rgba1 = hexToRgba(colorData[0].hex, getAlpha(colorData[0].count));
+            const rgba2 = hexToRgba(colorData[1].hex, getAlpha(colorData[1].count));
             return {
                 style: {
-                    background: `linear-gradient(135deg, ${activeColors[0]} 50%, ${activeColors[1]} 50%)`,
-                    opacity,
+                    background: `linear-gradient(135deg, ${rgba1} 50%, ${rgba2} 50%)`,
                     color: 'white'
                 },
                 totalCount,
@@ -134,11 +146,13 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                 activeColors
             };
         } else {
-            // 3개 색상 - conic-gradient로 120도씩 3등분 + 투명도 적용
+            // 3개 색상 - 각각 개별 alpha 적용
+            const rgba1 = hexToRgba(colorData[0].hex, getAlpha(colorData[0].count));
+            const rgba2 = hexToRgba(colorData[1].hex, getAlpha(colorData[1].count));
+            const rgba3 = hexToRgba(colorData[2].hex, getAlpha(colorData[2].count));
             return {
                 style: {
-                    background: `conic-gradient(from 0deg, ${activeColors[0]} 0deg 120deg, ${activeColors[1]} 120deg 240deg, ${activeColors[2]} 240deg 360deg)`,
-                    opacity,
+                    background: `conic-gradient(from 0deg, ${rgba1} 0deg 120deg, ${rgba2} 120deg 240deg, ${rgba3} 240deg 360deg)`,
                     color: 'white'
                 },
                 totalCount,
