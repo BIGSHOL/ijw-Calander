@@ -3,15 +3,16 @@ import { ConsultationRecord, UserProfile } from '../../types';
 import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation } from '../../hooks/useConsultations';
 import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
+import { ConsultationYearView } from './ConsultationYearView';
 import { ConsultationForm } from './ConsultationForm';
-import { LayoutDashboard, List, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ConsultationManagerProps {
     userProfile: UserProfile | null;
 }
 
 const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }) => {
-    const [view, setView] = useState<'dashboard' | 'table'>('dashboard');
+    const [view, setView] = useState<'dashboard' | 'table' | 'yearly'>('dashboard');
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
 
@@ -163,6 +164,13 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                             <List size={16} />
                             상담목록
                         </button>
+                        <button
+                            onClick={() => setView('yearly')}
+                            className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${view === 'yearly' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <Calendar size={16} />
+                            연간뷰
+                        </button>
                     </div>
                     <div className="h-8 w-px bg-slate-200 mx-4"></div>
                     {/* Date Filter - Calendar Style */}
@@ -287,11 +295,17 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                 <div className="px-4 md:px-8 py-4 md:py-6 pb-24 md:pb-8">
                     {view === 'dashboard' ? (
                         <ConsultationDashboard data={consultations} month={selectedMonth} year={yearParam} />
-                    ) : (
+                    ) : view === 'table' ? (
                         <ConsultationTable
                             data={consultations}
                             onEdit={openEditModal}
                             onDelete={handleDeleteRecord}
+                        />
+                    ) : (
+                        <ConsultationYearView
+                            data={consultations}
+                            currentYear={yearParam || new Date().getFullYear()}
+                            onYearChange={(year) => setSelectedYear(String(year))}
                         />
                     )}
                 </div>
