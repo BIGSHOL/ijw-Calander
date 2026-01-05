@@ -172,59 +172,63 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                             연간뷰
                         </button>
                     </div>
-                    <div className="h-8 w-px bg-slate-200 mx-4"></div>
-                    {/* Date Filter - Calendar Style */}
-                    <div className="flex items-center bg-white border border-slate-200 rounded-2xl px-2 py-1.5 shadow-sm">
-                        <button
-                            onClick={handlePrevMonth}
-                            className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
+                    {view !== 'yearly' && (
+                        <>
+                            <div className="h-8 w-px bg-slate-200 mx-4"></div>
+                            {/* Date Filter - Calendar Style */}
+                            <div className="flex items-center bg-white border border-slate-200 rounded-2xl px-2 py-1.5 shadow-sm">
+                                <button
+                                    onClick={handlePrevMonth}
+                                    className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
 
-                        <div className="flex items-center gap-2 px-2">
-                            <select
-                                value={selectedYear}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setSelectedYear(val);
-                                    // 연도 전체 선택 시 월도 전체로 자동 설정
-                                    if (val === 'all') {
-                                        setSelectedMonth('all');
-                                    }
-                                }}
-                                className="appearance-none bg-transparent text-slate-800 font-bold text-sm cursor-pointer hover:text-indigo-600 transition-colors outline-none pr-4"
-                                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
-                            >
-                                <option value="all">전체</option>
-                                {[2024, 2025, 2026, 2027, 2028].map(y => (
-                                    <option key={y} value={String(y)}>{y}년</option>
-                                ))}
-                            </select>
+                                <div className="flex items-center gap-2 px-2">
+                                    <select
+                                        value={selectedYear}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setSelectedYear(val);
+                                            // 연도 전체 선택 시 월도 전체로 자동 설정
+                                            if (val === 'all') {
+                                                setSelectedMonth('all');
+                                            }
+                                        }}
+                                        className="appearance-none bg-transparent text-slate-800 font-bold text-sm cursor-pointer hover:text-indigo-600 transition-colors outline-none pr-4"
+                                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
+                                    >
+                                        <option value="all">전체</option>
+                                        {[2024, 2025, 2026, 2027, 2028].map(y => (
+                                            <option key={y} value={String(y)}>{y}년</option>
+                                        ))}
+                                    </select>
 
-                            <div className="w-px h-4 bg-slate-200"></div>
+                                    <div className="w-px h-4 bg-slate-200"></div>
 
-                            <select
-                                value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(e.target.value)}
-                                disabled={selectedYear === 'all'}
-                                className={`appearance-none bg-transparent text-slate-800 font-bold text-sm cursor-pointer hover:text-indigo-600 transition-colors outline-none pr-4 ${selectedYear === 'all' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
-                            >
-                                <option value="all">전체</option>
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-                                    <option key={m} value={String(m)}>{m}월</option>
-                                ))}
-                            </select>
-                        </div>
+                                    <select
+                                        value={selectedMonth}
+                                        onChange={(e) => setSelectedMonth(e.target.value)}
+                                        disabled={selectedYear === 'all'}
+                                        className={`appearance-none bg-transparent text-slate-800 font-bold text-sm cursor-pointer hover:text-indigo-600 transition-colors outline-none pr-4 ${selectedYear === 'all' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right center' }}
+                                    >
+                                        <option value="all">전체</option>
+                                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
+                                            <option key={m} value={String(m)}>{m}월</option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                        <button
-                            onClick={handleNextMonth}
-                            className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
-                        >
-                            <ChevronRight size={18} />
-                        </button>
-                    </div>
+                                <button
+                                    onClick={handleNextMonth}
+                                    className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                                >
+                                    <ChevronRight size={18} />
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <button

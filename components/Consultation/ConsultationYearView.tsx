@@ -83,7 +83,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
         setActiveFilters(newFilters);
     };
 
-    // 날짜 셀 스타일 계산 - 색상 일관성 보장
+    // 날짜 셀 스타일 계산 - 건수에 따른 진하기 적용
     const getDayStyle = (dateKey: string) => {
         const dayData = densityMap[dateKey];
         if (!dayData) return { style: {}, totalCount: 0, colorCount: 0, activeColors: [] as string[] };
@@ -109,20 +109,24 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
             return { style: {}, totalCount: 0, colorCount: 0, activeColors: [] as string[] };
         }
 
+        // 건수에 따른 투명도 계산 (1건: 0.4, 2건: 0.55, 3건: 0.7, 4건: 0.85, 5건+: 1.0)
+        const opacity = Math.min(0.4 + (totalCount - 1) * 0.15, 1.0);
+
         // 색상 개수에 따른 스타일
         if (activeColors.length === 1) {
-            // 단일 색상
+            // 단일 색상 - 투명도 적용
             return {
-                style: { backgroundColor: activeColors[0], color: 'white' },
+                style: { backgroundColor: activeColors[0], opacity, color: 'white' },
                 totalCount,
                 colorCount: 1,
                 activeColors
             };
         } else if (activeColors.length === 2) {
-            // 2개 색상 - 대각선 그라디언트
+            // 2개 색상 - 대각선 그라디언트 + 투명도 적용
             return {
                 style: {
                     background: `linear-gradient(135deg, ${activeColors[0]} 50%, ${activeColors[1]} 50%)`,
+                    opacity,
                     color: 'white'
                 },
                 totalCount,
@@ -130,10 +134,11 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                 activeColors
             };
         } else {
-            // 3개 색상 - conic-gradient로 120도씩 3등분
+            // 3개 색상 - conic-gradient로 120도씩 3등분 + 투명도 적용
             return {
                 style: {
                     background: `conic-gradient(from 0deg, ${activeColors[0]} 0deg 120deg, ${activeColors[1]} 120deg 240deg, ${activeColors[2]} 240deg 360deg)`,
+                    opacity,
                     color: 'white'
                 },
                 totalCount,
