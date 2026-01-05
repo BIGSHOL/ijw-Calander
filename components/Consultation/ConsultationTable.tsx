@@ -103,7 +103,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-slate-900">
-                                                {format(new Date(record.consultationDate), 'MM.dd(eee)', { locale: ko })}
+                                                {format(new Date(record.consultationDate), 'yy.MM.dd(eee)', { locale: ko })}
                                             </div>
                                             <div className="text-xs text-slate-500">
                                                 {record.consultationPath || '-'}
@@ -125,7 +125,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                                 </div>
                                             ) : record.followUpDate ? (
                                                 <div className="flex flex-col">
-                                                    <span className="text-xs font-medium text-amber-600">후속: {format(new Date(record.followUpDate), 'MM.dd', { locale: ko })}</span>
+                                                    <span className="text-xs font-medium text-amber-600">후속: {format(new Date(record.followUpDate), 'yy.MM.dd', { locale: ko })}</span>
                                                     <span className="text-[10px] text-slate-400 truncate max-w-[80px]">{record.followUpContent}</span>
                                                 </div>
                                             ) : (
@@ -189,7 +189,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs text-slate-400">날짜</span>
-                                    <span className="font-medium">{format(new Date(record.consultationDate), 'MM.dd', { locale: ko })}</span>
+                                    <span className="font-medium">{format(new Date(record.consultationDate), 'yy.MM.dd', { locale: ko })}</span>
                                 </div>
                                 <div className="flex items-center gap-2 col-span-2">
                                     <span className="text-xs text-slate-400">연락처</span>

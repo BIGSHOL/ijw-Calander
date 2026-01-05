@@ -111,7 +111,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
     };
 
     const getMonthDisplay = (m: string) => {
-        if (m === 'all') return '전체 기간';
+        if (m === 'all') return '전체';
         return `${m}월`;
     };
 

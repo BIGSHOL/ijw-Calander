@@ -208,7 +208,7 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
             .map(key => ({ name: key, consultations: counts[key] }));
     }, [filteredData]);
 
-    const monthDisplay = month === 'all' ? '전체 기간' : `${month}월`;
+    const monthDisplay = month === 'all' ? '전체' : `${month}월`;
 
     return (
         <div className="space-y-6 animate-fade-in pb-8">
