@@ -165,7 +165,15 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
 
     // Calculate Trends
     const trends = useMemo(() => {
-        if (!prevMonthStats) return { total: undefined, registered: undefined, conversion: undefined, revenue: undefined };
+        if (!prevMonthStats) return {
+            total: undefined,
+            registered: undefined,
+            conversion: undefined,
+            revenue: undefined,
+            totalValue: undefined,
+            registeredValue: undefined,
+            revenueValue: undefined
+        };
 
         const calcTrend = (curr: number, prev: number) => prev === 0 ? 0 : ((curr - prev) / prev) * 100;
 
@@ -173,7 +181,11 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
             total: calcTrend(currentStats.total, prevMonthStats.total),
             registered: calcTrend(currentStats.registered, prevMonthStats.registered),
             conversion: calcTrend(currentStats.conversion, prevMonthStats.conversion),
-            revenue: calcTrend(currentStats.revenue, prevMonthStats.revenue)
+            revenue: calcTrend(currentStats.revenue, prevMonthStats.revenue),
+            // 건수 변화값
+            totalValue: currentStats.total - prevMonthStats.total,
+            registeredValue: currentStats.registered - prevMonthStats.registered,
+            revenueValue: currentStats.revenue - prevMonthStats.revenue
         };
     }, [currentStats, prevMonthStats]);
 
@@ -224,7 +236,8 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
                     title="총 상담"
                     value={`${currentStats.total}`}
                     trend={trends.total}
-                    trendLabel="전월"
+                    trendValue={trends.totalValue}
+                    trendLabel="전월대비"
                     icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />}
                     colorClass="bg-indigo-500"
                 />
@@ -232,7 +245,8 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
                     title="등록 완료"
                     value={`${currentStats.registered}`}
                     trend={trends.registered}
-                    trendLabel="전월"
+                    trendValue={trends.registeredValue}
+                    trendLabel="전월대비"
                     icon={<UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />}
                     colorClass="bg-emerald-500"
                 />
@@ -240,7 +254,7 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
                     title="등록 전환율"
                     value={`${currentStats.conversion.toFixed(1)}%`}
                     trend={trends.conversion}
-                    trendLabel="전월"
+                    trendLabel="전월대비"
                     icon={<Percent className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />}
                     colorClass="bg-amber-500"
                 />
@@ -248,7 +262,7 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
                     title="예상 매출"
                     value={`₩${(currentStats.revenue / 10000).toLocaleString()}만`}
                     trend={trends.revenue}
-                    trendLabel="전월"
+                    trendLabel="전월대비"
                     icon={<CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />}
                     colorClass="bg-blue-500"
                 />
