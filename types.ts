@@ -508,6 +508,7 @@ export interface ConsultationRecord {
   status: ConsultationStatus;
 
   counselor: string;
+  receiver: string; // 수신자 (전화받고 입력한 사람)
   registrar: string;
 
   paymentAmount: string;

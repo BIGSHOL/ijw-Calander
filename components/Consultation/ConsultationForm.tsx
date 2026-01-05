@@ -39,6 +39,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
         status: ConsultationStatus.PendingThisMonth,
 
         counselor: '',
+        receiver: '',
         registrar: '',
 
         paymentAmount: '',
@@ -66,6 +67,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                 status: initialData.status,
 
                 counselor: initialData.counselor,
+                receiver: initialData.receiver || '',
                 registrar: initialData.registrar,
 
                 paymentAmount: initialData.paymentAmount || '',
@@ -90,6 +92,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                 subject: ConsultationSubject.English,
                 status: ConsultationStatus.PendingThisMonth,
                 counselor: '',
+                receiver: '',
                 registrar: '',
                 paymentAmount: '',
                 paymentDate: getLocalDate(),
@@ -219,15 +222,25 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">상담 경로</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">수신자</label>
                                     <input
                                         type="text"
-                                        value={formData.consultationPath}
-                                        onChange={e => setFormData({ ...formData, consultationPath: e.target.value })}
+                                        value={formData.receiver}
+                                        onChange={e => setFormData({ ...formData, receiver: e.target.value })}
                                         className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500"
-                                        placeholder="예: 지인소개"
+                                        placeholder="전화 받은 사람"
                                     />
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">상담 경로</label>
+                                <input
+                                    type="text"
+                                    value={formData.consultationPath}
+                                    onChange={e => setFormData({ ...formData, consultationPath: e.target.value })}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500"
+                                    placeholder="예: 지인소개"
+                                />
                             </div>
                         </div>
 
