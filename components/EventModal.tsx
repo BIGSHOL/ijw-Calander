@@ -4,7 +4,7 @@ import { CalendarEvent, Department, UserProfile } from '../types';
 import { usePermissions } from '../hooks/usePermissions';
 import { EVENT_COLORS } from '../constants';
 // Added Edit3 and Plus to the imports to fix "Cannot find name" errors on line 95
-import { X, Trash2, Clock, Users, AlignLeft, Type, Edit3, Plus, Link as LinkIcon, Eye, Copy } from 'lucide-react';
+import { X, Trash2, Clock, Users, AlignLeft, Type, Edit3, Plus, Link as LinkIcon, Eye, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface EventModalProps {
@@ -76,6 +76,7 @@ const EventModal: React.FC<EventModalProps> = ({
   // Recurrence State (only for new events)
   const [recurrenceType, setRecurrenceType] = useState<'none' | 'daily' | 'weekdays' | 'weekends' | 'weekly' | 'monthly' | 'yearly'>('none');
   const [recurrenceCount, setRecurrenceCount] = useState(1);
+  const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
 
 
   // Permission Logic
@@ -353,57 +354,70 @@ const EventModal: React.FC<EventModalProps> = ({
             />
           </div>
 
-          {/* Department (Multi-Select) */}
+          {/* Department (Dropdown with Checkboxes) */}
           <div>
             <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-1.5">
               부서 (다중 선택 가능)
             </label>
-            <div className="border border-gray-300 rounded-xl p-3 max-h-40 overflow-y-auto bg-gray-50/50">
-              {departments.map((dept) => {
-                const isSelected = departmentIds.includes(dept.id);
-                const hasEditAccess = isMaster || isAdmin || currentUser?.departmentPermissions?.[dept.id] === 'edit';
-                const hasViewAccess = currentUser?.departmentPermissions?.[dept.id] === 'view';
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsDeptDropdownOpen(!isDeptDropdownOpen)}
+                className="w-full text-left px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] focus:border-[#fdb813] bg-white flex justify-between items-center outline-none transition-all"
+              >
+                <span className={`text-sm font-medium ${departmentIds.length === 0 ? 'text-gray-400' : 'text-gray-800'}`}>
+                  {departmentIds.length === 0
+                    ? '부서를 선택하세요'
+                    : `${departments.find(d => d.id === departmentIds[0])?.name || departmentIds[0]} 외 ${departmentIds.length - 1}개`}
+                </span>
+                {isDeptDropdownOpen ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
+              </button>
 
-                return (
-                  <label
-                    key={dept.id}
-                    className={`flex items-center gap-3 p-2 hover:bg-white rounded-lg transition-colors cursor-pointer ${isSelected ? 'bg-white' : ''} ${isViewMode ? 'cursor-default opacity-80' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      disabled={isViewMode || !hasEditAccess}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          const newIds = [...departmentIds, dept.id];
-                          setDepartmentIds(newIds);
-                          // Apply first selected department's default colors
-                          if (newIds.length === 1) {
-                            setSelectedColor(dept.defaultColor || '#fee2e2');
-                            setSelectedTextColor(dept.defaultTextColor || '#ffffff');
-                            setSelectedBorderColor(dept.defaultBorderColor || dept.defaultColor || '#fee2e2');
-                          }
-                        } else {
-                          setDepartmentIds(departmentIds.filter(id => id !== dept.id));
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
-                    />
-                    <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-600'}`}>
-                      {dept.name}
-                    </span>
-                    {!hasEditAccess && hasViewAccess && (
-                      <span className="text-[10px] text-gray-400 ml-auto">(조회전용)</span>
-                    )}
-                  </label>
-                );
-              })}
+              {isDeptDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                  {departments.map((dept) => {
+                    const isSelected = departmentIds.includes(dept.id);
+                    const hasEditAccess = isMaster || isAdmin || currentUser?.departmentPermissions?.[dept.id] === 'edit';
+                    const hasViewAccess = currentUser?.departmentPermissions?.[dept.id] === 'view';
+
+                    return (
+                      <label
+                        key={dept.id}
+                        className={`flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer ${isSelected ? 'bg-blue-50' : ''} ${isViewMode ? 'cursor-default opacity-80' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={isViewMode || !hasEditAccess}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const newIds = [...departmentIds, dept.id];
+                              setDepartmentIds(newIds);
+                              if (newIds.length === 1) {
+                                setSelectedColor(dept.defaultColor || '#fee2e2');
+                                setSelectedTextColor(dept.defaultTextColor || '#ffffff');
+                                setSelectedBorderColor(dept.defaultBorderColor || dept.defaultColor || '#fee2e2');
+                              }
+                            } else {
+                              setDepartmentIds(departmentIds.filter(id => id !== dept.id));
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
+                        />
+                        <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-700'}`}>
+                          {dept.name}
+                        </span>
+                        {!hasEditAccess && hasViewAccess && (
+                          <span className="text-[10px] text-gray-400 ml-auto">(조회전용)</span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             {departmentIds.length === 0 && (
               <p className="text-xs text-red-500 mt-1">최소 한 개의 부서를 선택해주세요.</p>
-            )}
-            {departmentIds.length > 1 && (
-              <p className="text-xs text-blue-500 mt-1">선택된 부서: {departmentIds.length}개</p>
             )}
           </div>
 
@@ -447,26 +461,29 @@ const EventModal: React.FC<EventModalProps> = ({
           })()}
 
           {/* Date & Time Range */}
-          <div className="grid grid-cols-1 gap-4">
-            {/* Start */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider flex items-center gap-1">
-                <Clock size={14} className="text-[#fdb813]" /> 시작
-                <div className="ml-auto flex items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    id="allDay"
-                    checked={isAllDay}
-                    disabled={isViewMode || !canEditCurrent}
-                    onChange={(e) => setIsAllDay(e.target.checked)}
-                    className="w-4 h-4 rounded text-[#fdb813] focus:ring-[#fdb813] border-gray-300"
-                  />
-                  <label htmlFor="allDay" className="text-xs font-bold text-gray-500 cursor-pointer select-none">
-                    하루종일
-                  </label>
-                </div>
-              </label>
-              <div className="flex gap-2">
+          {/* Date & Time Range (Unified) */}
+          <div>
+            <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Clock size={14} className="text-[#fdb813]" /> 일시
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="checkbox"
+                  id="allDay"
+                  checked={isAllDay}
+                  disabled={isViewMode || !canEditCurrent}
+                  onChange={(e) => setIsAllDay(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#fdb813] focus:ring-[#fdb813] border-gray-300"
+                />
+                <label htmlFor="allDay" className="text-xs font-bold text-gray-500 cursor-pointer select-none">
+                  하루종일
+                </label>
+              </div>
+            </label>
+            <div className="flex flex-col md:flex-row gap-2 items-center">
+              {/* Start */}
+              <div className="flex-1 flex gap-2 w-full">
                 <input
                   type="date"
                   required
@@ -481,18 +498,16 @@ const EventModal: React.FC<EventModalProps> = ({
                     value={startTime}
                     disabled={isViewMode || !canEditCurrent}
                     onChange={(e) => setStartTime(e.target.value)}
-                    className="w-36 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
+                    className="w-28 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
                   />
                 )}
               </div>
-            </div>
 
-            {/* End */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider flex items-center gap-1">
-                <Clock size={14} className="text-[#fdb813]" /> 종료
-              </label>
-              <div className="flex gap-2">
+              <span className="text-gray-400 font-bold hidden md:block">~</span>
+              <span className="text-gray-400 font-bold block md:hidden rotate-90">~</span>
+
+              {/* End */}
+              <div className="flex-1 flex gap-2 w-full">
                 <input
                   type="date"
                   required
@@ -507,7 +522,7 @@ const EventModal: React.FC<EventModalProps> = ({
                     value={endTime}
                     disabled={isViewMode || !canEditCurrent}
                     onChange={(e) => setEndTime(e.target.value)}
-                    className="w-36 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
+                    className="w-28 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none text-sm font-bold"
                   />
                 )}
               </div>
@@ -557,7 +572,21 @@ const EventModal: React.FC<EventModalProps> = ({
             </div>
           )}
 
-          {/* Participants - Multi Select Checkbox List */}
+          {/* Description (Moved Up) */}
+          <div>
+            <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+              <AlignLeft size={14} className="text-[#fdb813]" /> 상세 내용
+            </label>
+            <textarea
+              value={description}
+              disabled={isViewMode || !canEditCurrent}
+              onChange={(e) => setDescription(e.target.value)}
+              className={`w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none min-h-[100px] resize-y font-medium text-sm ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+              placeholder="일정의 자세한 내용을 입력하세요"
+            />
+          </div>
+
+          {/* Participants - Multi Select Checkbox List (Moved Down) */}
           <div>
             <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2 flex items-center gap-1">
               <Users size={14} className="text-[#fdb813]" /> 참가자
@@ -673,20 +702,6 @@ const EventModal: React.FC<EventModalProps> = ({
                   );
                 })}
             </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-1.5 flex items-center gap-1">
-              <AlignLeft size={14} className="text-[#fdb813]" /> 상세 내용
-            </label>
-            <textarea
-              value={description}
-              disabled={isViewMode || !canEditCurrent}
-              onChange={(e) => setDescription(e.target.value)}
-              className={`w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] outline-none min-h-[100px] resize-y font-medium text-sm ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
-              placeholder="일정의 자세한 내용을 입력하세요"
-            />
           </div>
 
           {/* Reference URL */}

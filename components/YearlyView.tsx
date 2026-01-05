@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, startOfYear, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { CalendarEvent, BucketItem } from '../types';
+import { CalendarEvent, BucketItem, Department } from '../types';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil, ArrowRightCircle } from 'lucide-react';
 import BucketModal from './BucketModal';
 
@@ -10,7 +10,7 @@ interface YearlyViewProps {
     events: CalendarEvent[];
     onDateChange: (date: Date) => void;
     onViewChange: (mode: 'daily' | 'weekly' | 'monthly' | 'yearly') => void;
-    departments: { id: string; name: string; color: string; category?: string }[];
+    departments: Department[];
     showSidePanel?: boolean;
     onQuickAdd?: (date: Date) => void; // Quick Add: Click date to add event
     // Bucket List Props

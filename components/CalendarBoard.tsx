@@ -441,7 +441,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
       ) : (
         <>
           {/* Unified Header */}
-          <div className="mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="mb-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-30 bg-white py-2 -mx-4 md:-mx-8 px-4 md:px-8 border-b border-gray-100">
 
             {/* Navigation Group (Left) */}
             <div className="flex items-center gap-1 w-full md:w-auto p-1.5 bg-[#f8fafc] rounded-2xl border border-gray-200 shadow-sm flex-none">
