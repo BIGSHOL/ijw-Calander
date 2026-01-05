@@ -46,6 +46,14 @@ export const useConsultations = (options: UseConsultationsOptions = {}) => {
                 ...doc.data(),
             })) as ConsultationRecord[];
 
+            // Helper to get valid date object
+            const getDate = (r: ConsultationRecord) => {
+                const dStr = r.consultationDate || r.createdAt || '';
+                if (!dStr) return null;
+                const d = new Date(dStr);
+                return isNaN(d.getTime()) ? null : d;
+            };
+
             // 연도가 undefined면 전체 데이터 반환 (연도 전체 선택)
             if (year === undefined) {
                 return records;
@@ -54,7 +62,8 @@ export const useConsultations = (options: UseConsultationsOptions = {}) => {
             // 월이 'all'이면 해당 연도의 전체 데이터 반환
             if (month === 'all') {
                 return records.filter(r => {
-                    const date = new Date(r.consultationDate);
+                    const date = getDate(r);
+                    if (!date) return false;
                     return date.getFullYear() === year;
                 });
             }
@@ -62,7 +71,8 @@ export const useConsultations = (options: UseConsultationsOptions = {}) => {
             // 특정 월 필터링
             const monthNum = parseInt(month || '1', 10);
             return records.filter(r => {
-                const date = new Date(r.consultationDate);
+                const date = getDate(r);
+                if (!date) return false;
                 return date.getMonth() + 1 === monthNum && date.getFullYear() === year;
             });
         },

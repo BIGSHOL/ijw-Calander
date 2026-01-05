@@ -119,10 +119,24 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
 
     // Filter data based on selected month
     const filteredData = useMemo(() => {
-        if (month === 'all') return data;
+        const getDate = (r: ConsultationRecord) => {
+            const dStr = r.consultationDate || r.createdAt || '';
+            if (!dStr) return null;
+            const d = new Date(dStr);
+            return isNaN(d.getTime()) ? null : d;
+        };
+
+        if (month === 'all') {
+            return data.filter(r => {
+                const date = getDate(r);
+                return date ? date.getFullYear() === year : false;
+            });
+        }
+
         const monthNum = parseInt(month, 10);
         return data.filter(r => {
-            const date = new Date(r.consultationDate);
+            const date = getDate(r);
+            if (!date) return false;
             return date.getMonth() + 1 === monthNum && date.getFullYear() === year;
         });
     }, [data, month, year]);
@@ -154,8 +168,16 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
         const prevMonthNum = monthNum === 1 ? 12 : monthNum - 1;
         const prevYear = monthNum === 1 ? year - 1 : year;
 
+        const getDate = (r: ConsultationRecord) => {
+            const dStr = r.consultationDate || r.createdAt || '';
+            if (!dStr) return null;
+            const d = new Date(dStr);
+            return isNaN(d.getTime()) ? null : d;
+        };
+
         const prevData = data.filter(r => {
-            const date = new Date(r.consultationDate);
+            const date = getDate(r);
+            if (!date) return false;
             return date.getMonth() + 1 === prevMonthNum && date.getFullYear() === prevYear;
         });
 
