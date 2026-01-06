@@ -3,12 +3,12 @@ import { doc, writeBatch } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass, TimetableStudent } from '../../../../types';
 
-interface DraggingStudent {
+export interface DraggingStudent {
     studentId: string;
     fromClassId: string;
 }
 
-interface PendingMove {
+export interface PendingMove {
     studentId: string;
     fromClassId: string;
     toClassId: string;
