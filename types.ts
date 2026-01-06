@@ -10,6 +10,35 @@ export interface Department {
   defaultBorderColor?: string;
 }
 
+// Phase 1: Unified Student DB
+export interface UnifiedStudent {
+  // 기본 정보
+  id: string;                    // UUID
+  name: string;                  // 이름
+  englishName?: string;          // 영어 이름
+  school?: string;               // 학교
+  grade?: string;                // 학년
+
+  // 과목 및 담당
+  subject: 'math' | 'english';   // 과목
+  teacherIds: string[];          // 담당 강사 ID 배열
+
+  // 상태 관리
+  status: 'active' | 'on_hold' | 'withdrawn';
+  startDate: string;             // 등록일 (YYYY-MM-DD)
+  endDate?: string;              // 퇴원일
+
+  // 출석부 연동
+  salarySettingId?: string;      // 급여 설정
+  days?: string[];               // 수업 요일
+  group?: string;                // 반 이름
+
+  // 메타데이터
+  createdAt: string;
+  updatedAt: string;
+}
+
+
 // Phase 6: Gantt Departments
 export interface GanttDepartment {
   id: string;
@@ -443,7 +472,8 @@ export interface TimetableClass {
   room?: string;        // 교실
   subject: string;      // 과목 (수학/영어/기타)
   schedule: string[];   // ["월 1교시", "수 3교시"]
-  studentList: TimetableStudent[];
+  studentList?: TimetableStudent[]; // @deprecated Use studentIds with UnifiedStudent
+  studentIds?: string[];            // Link to students collection
   color?: string;
   order?: number;
 }

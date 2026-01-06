@@ -164,6 +164,21 @@ service cloud.firestore {
                         resource.data.from == request.auth.uid);
     }
 
+    // Unified Student DB (Phase 1)
+    match /students/{studentId} {
+      // Read: Authenticated users (subject to component filtering)
+      allow read: if isAuthenticated();
+      
+      // Write: Master, Admin, Manager, and Leads (for their respective subjects)
+      allow create, update, delete: if isAuthenticated() && (
+        hasRole(['master']) ||
+        hasPermission('timetable.math.edit') || 
+        hasPermission('timetable.english.edit') ||
+        hasPermission('attendance.manage_math') ||
+        hasPermission('attendance.manage_english')
+      );
+    }
+
     // === Gantt Chart Collections (Phase 10: Access Control) ===
 
     // Phase 10 Helper Functions for Gantt Access Control
