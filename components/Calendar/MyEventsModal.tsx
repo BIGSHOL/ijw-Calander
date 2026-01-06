@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CalendarEvent, UserProfile } from '../types';
+import { CalendarEvent, UserProfile } from '../../types';
 import { format, parseISO, isAfter, isBefore } from 'date-fns';
 import { X, Calendar, Clock, MapPin } from 'lucide-react';
 

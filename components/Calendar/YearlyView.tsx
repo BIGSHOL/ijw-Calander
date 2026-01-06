@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, startOfYear, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { CalendarEvent, BucketItem, Department } from '../types';
+import { CalendarEvent, BucketItem, Department } from '../../types';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil, ArrowRightCircle } from 'lucide-react';
 import BucketModal from './BucketModal';
 

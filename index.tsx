@@ -4,7 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { queryClient } from './queryClient';
 
-import ErrorBoundary from './components/ErrorBoundary';
+import ErrorBoundary from './components/Common/ErrorBoundary';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

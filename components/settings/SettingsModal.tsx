@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Department, UserProfile, CalendarEvent, UserRole, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS, Teacher, ClassKeywordColor } from '../types';
-import { usePermissions, canAssignRole, getAssignableRoles } from '../hooks/usePermissions';
+import { Department, UserProfile, CalendarEvent, UserRole, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS, Teacher, ClassKeywordColor } from '../../types';
+import { usePermissions, canAssignRole, getAssignableRoles } from '../../hooks/usePermissions';
 import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar, Lock, List, LayoutGrid, Eye, EyeOff } from 'lucide-react';
-import { STANDARD_HOLIDAYS } from '../constants_holidays';
-import { db, auth } from '../firebaseConfig';
+import { STANDARD_HOLIDAYS } from '../../constants_holidays';
+import { db, auth } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
 
-import { Holiday } from '../types';
-import MyEventsModal from './MyEventsModal';
-import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab, DepartmentsTab, GanttCategoriesTab } from './settings';
-import { useTabPermissions } from '../hooks/useTabPermissions';
+import { Holiday } from '../../types';
+import MyEventsModal from '../Calendar/MyEventsModal';
+import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab, DepartmentsTab, GanttCategoriesTab } from './';
+import { useTabPermissions } from '../../hooks/useTabPermissions';
 // import MigrationPanel from './settings/MigrationPanel';
 
 interface SettingsModalProps {

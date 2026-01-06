@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Department, CalendarEvent, DAYS_OF_WEEK, Holiday } from '../types';
+import { Department, CalendarEvent, DAYS_OF_WEEK, Holiday } from '../../types';
 import { format, isSameDay, parseISO, isToday, isWeekend, isWithinInterval, startOfDay, differenceInDays, addDays } from 'date-fns';
-import { getEventPositionInWeek } from '../utils/dateUtils';
-import { EVENT_COLORS } from '../constants';
+import { getEventPositionInWeek } from '../../utils/dateUtils';
+import { EVENT_COLORS } from '../../constants';
 import { Clock, AlignLeft, Users } from 'lucide-react';
 
 interface WeekBlockProps {
