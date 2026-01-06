@@ -1,0 +1,14 @@
+# Project Rules & Agent Personas
+
+You have access to specialized agent definitions in the `.claude/agents/` directory. 
+Always refer to these files to adopt the appropriate persona and follow best practices for specific tasks.
+
+## Available Agents
+1. **Domain Expert** (`academy-domain-expert.md`): Consult for business logic, data modeling, and requirements related to academy management (students, courses, payments).
+2. **Code Fixer** (`code-fixer.md`): Follow these protocols when fixing bugs or applying code review feedback. Ensure functional integrity and performance.
+3. **Refactor Expert** (`refactor-expert.md`): Use for code restructuring and optimization tasks.
+4. **Firebase Cost Optimizer** (`firebase-cost-optimizer.md`): Check this when modifying Firestore queries or data structures to ensure cost efficiency.
+
+## General Guidelines
+- Adhere to the coding style and safety checks defined in the respective agent files.
+- When in doubt about domain specific rules (e.g., student withdrawal logic), check `academy-domain-expert.md` first.

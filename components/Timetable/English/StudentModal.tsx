@@ -542,7 +542,14 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                         <div className="space-y-1.5">
                             {(() => {
                                 const activeList = sortedStudents.filter(s => !s.withdrawalDate);
-                                const withdrawnList = sortedStudents.filter(s => s.withdrawalDate);
+                                const withdrawnList = sortedStudents.filter(s => {
+                                    if (!s.withdrawalDate) return false;
+                                    // 30일 지난 학생은 숨김 처리
+                                    const withdrawnDate = new Date(s.withdrawalDate);
+                                    const now = new Date();
+                                    const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
+                                    return daysSinceWithdrawal <= 30;
+                                });
 
                                 return (
                                     <>

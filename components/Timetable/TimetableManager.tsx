@@ -9,6 +9,7 @@ import { ko } from 'date-fns/locale';
 import EnglishTimetable from './English/EnglishTimetable';
 import TeacherOrderModal from './English/TeacherOrderModal';
 import WeekdayOrderModal from './WeekdayOrderModal';
+import MathStudentModal from './Math/MathStudentModal';
 
 // Constants
 const ALL_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
@@ -56,7 +57,7 @@ interface TimetableManagerProps {
     currentUser: any; // Using any for now to avoid circular dependency or import issues if common
 }
 
-const TimetableManager: React.FC<TimetableManagerProps> = ({
+const TimetableManager = ({
     subjectTab: externalSubjectTab,
     onSubjectChange,
     viewType: externalViewType,
@@ -68,9 +69,10 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
     teachers: propsTeachers = [],
     classKeywords = [],
     currentUser,
-}) => {
+}: TimetableManagerProps) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
+    const canEditMath = isMaster || hasPermission('timetable.math.edit');
     // Subject Tab (use external if provided)
     const [internalSubjectTab, setInternalSubjectTab] = useState<'math' | 'english'>('math');
     const subjectTab = externalSubjectTab ?? internalSubjectTab;
@@ -542,7 +544,44 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
         }
     };
 
-    // Remove student
+    // 학생 퇴원
+    const handleWithdrawal = async (studentId: string) => {
+        if (!selectedClass || !window.confirm("퇴원 처리 하시겠습니까?")) return;
+
+        const updatedList = (selectedClass.studentList || []).map(s => {
+            if (s.id === studentId) {
+                return {
+                    ...s,
+                    withdrawalDate: new Date().toISOString().split('T')[0],
+                    enrollmentDate: undefined
+                };
+            }
+            return s;
+        });
+
+        await updateDoc(doc(db, '수업목록', selectedClass.id), { studentList: updatedList });
+        setSelectedClass({ ...selectedClass, studentList: updatedList });
+    };
+
+    // 학생 퇴원 취소 (복구)
+    const handleRestoreStudent = async (studentId: string) => {
+        if (!selectedClass) return;
+
+        const updatedList = (selectedClass.studentList || []).map(s => {
+            if (s.id === studentId) {
+                return {
+                    ...s,
+                    withdrawalDate: undefined
+                };
+            }
+            return s;
+        });
+
+        await updateDoc(doc(db, '수업목록', selectedClass.id), { studentList: updatedList });
+        setSelectedClass({ ...selectedClass, studentList: updatedList });
+    };
+
+    // 학생 삭제 (완전 삭제)
     const handleRemoveStudent = async (studentId: string) => {
         if (!selectedClass) return;
         if (!confirm('이 학생을 수업에서 제거하시겠습니까?')) return;
@@ -1024,11 +1063,11 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                                                             return (
                                                                 <div
                                                                     key={cls.id}
-                                                                    onClick={() => setSelectedClass(cls)}
+                                                                    onClick={() => canEditMath && setSelectedClass(cls)}
                                                                     onDragOver={(e) => handleDragOver(e, cls.id)}
                                                                     onDragLeave={handleDragLeave}
                                                                     onDrop={(e) => handleDrop(e, cls.id)}
-                                                                    className={`flex flex-col rounded-lg border ${theme.border} ${theme.bg} overflow-hidden shadow-sm transition-all mb-1 ${dragOverClassId === cls.id ? 'ring-2 ring-indigo-400 scale-[1.02]' : 'hover:shadow-md'} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
+                                                                    className={`flex flex-col rounded-lg border ${theme.border} ${theme.bg} overflow-hidden shadow-sm transition-all mb-1 ${dragOverClassId === cls.id ? 'ring-2 ring-indigo-400 scale-[1.02]' : (canEditMath ? 'hover:shadow-md cursor-pointer' : '')} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
                                                                     style={{
                                                                         minHeight: span > 1 ? `${span * 80}px` : undefined
                                                                     }}
@@ -1055,9 +1094,10 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                                                                                     return (
                                                                                         <li
                                                                                             key={s.id}
-                                                                                            draggable
-                                                                                            onDragStart={(e) => handleDragStart(e, s.id, cls.id)}
-                                                                                            className={`py-0.5 px-1 rounded text-center cursor-grab text-[10px] transition-colors truncate flex items-center justify-between group
+                                                                                            draggable={canEditMath}
+                                                                                            onDragStart={(e) => canEditMath && handleDragStart(e, s.id, cls.id)}
+                                                                                            className={`py-0.5 px-1 rounded text-center text-[10px] transition-colors truncate flex items-center justify-between group
+                                                                                            ${canEditMath ? 'cursor-grab' : ''}
                                                                                             ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : `hover:bg-white/80 ${theme.text}`}`}
                                                                                         >
                                                                                             <span className="truncate flex-1">{displayText}</span>
@@ -1096,8 +1136,8 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                         return (
                             <div
                                 key={cls.id}
-                                onClick={() => setSelectedClass(cls)}
-                                className={`flex items-center gap-1 px-2 py-1 ${theme.bg} ${theme.border} border rounded text-[10px] font-bold cursor-pointer hover:brightness-95`}
+                                onClick={() => canEditMath && setSelectedClass(cls)}
+                                className={`flex items-center gap-1 px-2 py-1 ${theme.bg} ${theme.border} border rounded text-[10px] font-bold ${canEditMath ? 'cursor-pointer hover:brightness-95' : ''}`}
                             >
                                 <span className={theme.text}>{cls.className}</span>
                                 <span className="text-gray-400">({cls.studentList?.length || 0})</span>
@@ -1305,69 +1345,167 @@ const TimetableManager: React.FC<TimetableManagerProps> = ({
                                     </div>
                                 </div>
                             ) : (
-                                // Normal View (Students)
+                                // Normal View (Students) - 영어 스타일 UI 적용
                                 <>
-                                    {/* Sub Header */}
-                                    <div className="px-4 py-2 bg-gray-50 border-b text-xs font-bold text-[#373d41]">
-                                        {selectedClass.teacher}
-                                        {selectedClass.room && <span className="text-gray-400 ml-2">| {selectedClass.room}</span>}
+                                    {/* Sub Header with Student Count */}
+                                    <div className="px-4 py-2 bg-gray-50 border-b flex items-center gap-2 text-sm">
+                                        <span className="text-gray-500">담당강사</span>
+                                        <span className="text-[#373d41] font-bold">{selectedClass.teacher || '-'}</span>
+                                        {selectedClass.room && <span className="text-gray-400">| {selectedClass.room}</span>}
+                                        <span className="text-gray-300">|</span>
+                                        <span className="bg-[#fdb813] text-[#081429] px-2 py-0.5 rounded font-bold text-xs">
+                                            {selectedClass.studentList?.length || 0}명
+                                        </span>
                                     </div>
 
-                                    {/* Add Student Form */}
-                                    <div className="p-4 border-b">
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={newStudentName}
-                                                onChange={(e) => setNewStudentName(e.target.value)}
-                                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
-                                                placeholder="학생 이름"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={newStudentSchool}
-                                                onChange={(e) => setNewStudentSchool(e.target.value)}
-                                                className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
-                                                placeholder="학교"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={newStudentGrade}
-                                                onChange={(e) => setNewStudentGrade(e.target.value)}
-                                                className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
-                                                placeholder="학년"
-                                            />
-                                            <button onClick={handleAddStudent} className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg text-sm font-bold hover:bg-yellow-400 whitespace-nowrap">
+                                    {/* Add Student Form - 영어 스타일 그리드 레이아웃 */}
+                                    <div className="p-4 border-b border-gray-100 bg-gray-50">
+                                        <div className="flex items-end gap-2">
+                                            <div className="flex-1 grid grid-cols-3 gap-2">
+                                                <div className="col-span-1">
+                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">이름</label>
+                                                    <input
+                                                        type="text"
+                                                        value={newStudentName}
+                                                        onChange={(e) => setNewStudentName(e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                                        placeholder="이름"
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleAddStudent()}
+                                                    />
+                                                </div>
+                                                <div className="col-span-1">
+                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">학교</label>
+                                                    <input
+                                                        type="text"
+                                                        value={newStudentSchool}
+                                                        onChange={(e) => setNewStudentSchool(e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                                        placeholder="학교"
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleAddStudent()}
+                                                    />
+                                                </div>
+                                                <div className="col-span-1">
+                                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">학년</label>
+                                                    <input
+                                                        type="text"
+                                                        value={newStudentGrade}
+                                                        onChange={(e) => setNewStudentGrade(e.target.value)}
+                                                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                                        placeholder="학년"
+                                                        onKeyDown={(e) => e.key === 'Enter' && handleAddStudent()}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={handleAddStudent}
+                                                disabled={!newStudentName.trim()}
+                                                className="px-4 py-1.5 bg-[#fdb813] text-[#081429] rounded font-bold text-sm hover:bg-[#e5a712] disabled:opacity-50 h-[34px]"
+                                            >
                                                 추가
                                             </button>
                                         </div>
                                     </div>
 
-                                    {/* Student List */}
-                                    <div className="flex-1 overflow-y-auto max-h-[250px]">
+                                    {/* Student List - 영어 스타일 번호와 배경 */}
+                                    <div className="flex-1 overflow-y-auto max-h-[300px] px-4 py-3">
                                         {selectedClass.studentList && selectedClass.studentList.length > 0 ? (
-                                            <div className="divide-y divide-gray-100">
-                                                {selectedClass.studentList.map(student => (
-                                                    <div
-                                                        key={student.id}
-                                                        draggable
-                                                        onDragStart={(e) => handleDragStart(e, student.id, selectedClass.id)}
-                                                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-grab group"
-                                                    >
-                                                        <span className="text-gray-300 text-sm">⋮⋮</span>
-                                                        <span className="font-medium text-sm text-[#081429] flex-1">
-                                                            {student.name}
-                                                            {student.school && <span className="text-gray-400 ml-1 text-xs">{student.school}</span>}
-                                                            {student.grade && <span className="text-gray-400 text-xs">{student.grade}</span>}
-                                                        </span>
-                                                        <button
-                                                            onClick={() => handleRemoveStudent(student.id)}
-                                                            className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        >
-                                                            <X size={14} />
-                                                        </button>
-                                                    </div>
-                                                ))}
+                                            <div className="space-y-1.5">
+                                                {(() => {
+                                                    const activeList = selectedClass.studentList.filter(s => !s.withdrawalDate);
+                                                    const withdrawnList = selectedClass.studentList.filter(s => {
+                                                        if (!s.withdrawalDate) return false;
+                                                        const withdrawnDate = new Date(s.withdrawalDate);
+                                                        const now = new Date();
+                                                        const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
+                                                        return daysSinceWithdrawal <= 30;
+                                                    });
+
+                                                    return (
+                                                        <>
+                                                            {/* 재원생 목록 */}
+                                                            {activeList.map((student, idx) => (
+                                                                <div
+                                                                    key={student.id}
+                                                                    draggable
+                                                                    onDragStart={(e) => handleDragStart(e, student.id, selectedClass.id)}
+                                                                    className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-grab group transition-colors"
+                                                                >
+                                                                    <div className="flex items-center gap-3 flex-1">
+                                                                        <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-[10px] font-bold flex items-center justify-center shrink-0">
+                                                                            {idx + 1}
+                                                                        </span>
+                                                                        <span className="font-bold text-sm text-[#373d41]">
+                                                                            {student.name}
+                                                                        </span>
+                                                                        {(student.school || student.grade) && (
+                                                                            <span className="text-xs text-gray-400">
+                                                                                {student.school}{student.grade}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <button
+                                                                            onClick={() => handleWithdrawal(student.id)}
+                                                                            className="px-2 py-0.5 text-[10px] rounded border border-gray-200 text-gray-400 hover:bg-gray-800 hover:text-white hover:border-gray-800 transition-colors"
+                                                                        >
+                                                                            퇴원
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleRemoveStudent(student.id)}
+                                                                            className="px-2 py-0.5 text-[10px] rounded border bg-white text-red-400 border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
+                                                                        >
+                                                                            삭제
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+
+                                                            {/* 퇴원생 목록 (30일 이내) */}
+                                                            {withdrawnList.length > 0 && (
+                                                                <div className="mt-6 border-t border-gray-100 pt-4">
+                                                                    <div className="flex items-center gap-2 mb-3 px-1">
+                                                                        <div className="h-px bg-gray-200 flex-1"></div>
+                                                                        <span className="text-xs font-bold text-gray-400">퇴원한 학생 ({withdrawnList.length})</span>
+                                                                        <div className="h-px bg-gray-200 flex-1"></div>
+                                                                    </div>
+                                                                    <div className="opacity-70 grayscale space-y-1">
+                                                                        {withdrawnList.map((student) => (
+                                                                            <div
+                                                                                key={student.id}
+                                                                                className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50"
+                                                                            >
+                                                                                <div className="flex items-center gap-3 flex-1">
+                                                                                    <span className="font-bold text-sm text-gray-400 line-through">
+                                                                                        {student.name}
+                                                                                    </span>
+                                                                                    {(student.school || student.grade) && (
+                                                                                        <span className="text-xs text-gray-400">
+                                                                                            {student.school}{student.grade}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="flex gap-1">
+                                                                                    <button
+                                                                                        onClick={() => handleRestoreStudent(student.id)}
+                                                                                        className="px-2 py-0.5 text-[10px] rounded border transition-colors bg-black text-white border-black hover:bg-gray-800"
+                                                                                    >
+                                                                                        복구
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => handleRemoveStudent(student.id)}
+                                                                                        className="px-2 py-0.5 text-[10px] rounded border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                                                                                    >
+                                                                                        삭제
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         ) : (
                                             <div className="text-center text-gray-400 py-8 text-sm">등록된 학생이 없습니다.</div>
