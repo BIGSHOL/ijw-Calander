@@ -23,10 +23,21 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 
 const app = initializeApp(firebaseConfig);
 // Initialize Firestore with multi-tab persistent local cache
-export const db = initializeFirestore(app, {
-    localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-    })
-});
+// Handle case where Firestore is already initialized (e.g. in browser console re-runs)
+import { getFirestore } from "firebase/firestore";
+
+let dbInstance;
+try {
+    dbInstance = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager()
+        })
+    });
+} catch (e) {
+    console.warn('Firestore already initialized, using existing instance');
+    dbInstance = getFirestore(app);
+}
+
+export const db = dbInstance;
 
 export const auth = getAuth(app);
