@@ -326,7 +326,10 @@ export async function migrateStudentsFromTimetable(dryRun = true): Promise<Migra
 
                     status: student.withdrawalDate ? 'withdrawn' :
                         student.onHold ? 'on_hold' : 'active',
-                    startDate: student.enrollmentDate || now.split('T')[0],
+                    // 퇴원 학생만 기존 enrollmentDate 사용, 나머지는 2026-01-01
+                    startDate: student.withdrawalDate
+                        ? (student.enrollmentDate || '2026-01-01')
+                        : '2026-01-01',
                     endDate: student.withdrawalDate || null,
 
                     days: Array.from(days),
