@@ -128,7 +128,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     const studentWithDefaults: Student = {
       ...student,
       teacherIds: student.teacherIds || (currentTeacherId ? [currentTeacherId] : []),
-      subject: student.subject || selectedSubject,
+      subjects: student.subjects || [selectedSubject],
       ownerId: student.ownerId || userProfile?.uid,
     };
     addStudentMutation.mutate(studentWithDefaults);

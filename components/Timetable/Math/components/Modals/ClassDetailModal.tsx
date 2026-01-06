@@ -27,6 +27,7 @@ interface ClassDetailModalProps {
     handleWithdrawal: (studentId: string) => void;
     handleRestoreStudent: (studentId: string) => void;
     handleDragStart: (e: React.DragEvent, studentId: string, classId: string) => void;
+    studentMap: Record<string, any>;
 }
 
 const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
@@ -50,7 +51,8 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
     handleRemoveStudent,
     handleWithdrawal,
     handleRestoreStudent,
-    handleDragStart
+    handleDragStart,
+    studentMap
 }) => {
     if (!selectedClass) return null;
 

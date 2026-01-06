@@ -14,6 +14,8 @@ import { useMathConfig } from './Math/hooks/useMathConfig';
 import { useTimetableClasses } from './Math/hooks/useTimetableClasses';
 import { useClassOperations } from './Math/hooks/useClassOperations';
 import { useStudentDragDrop } from './Math/hooks/useStudentDragDrop';
+import { useStudents } from '../../hooks/useStudents'; // Unified Student Hook
+import { UnifiedStudent } from '../../types';
 import TimetableHeader from './Math/components/TimetableHeader';
 import AddClassModal from './Math/components/Modals/AddClassModal';
 import ClassDetailModal from './Math/components/Modals/ClassDetailModal';
@@ -63,6 +65,18 @@ const TimetableManager = ({
 
     // Hook Integration: Classes Data
     const { classes, loading: classesLoading } = useTimetableClasses();
+
+    // Hook Integration: Unified Students
+    const { students: globalStudents } = useStudents();
+
+    // Create Student Lookup Map
+    const studentMap = useMemo(() => {
+        const map: Record<string, UnifiedStudent> = {};
+        globalStudents.forEach(s => {
+            map[s.id] = s;
+        });
+        return map;
+    }, [globalStudents]);
 
     // teachers는 propsTeachers에서 받아서 수학 과목 필터링하여 사용
     const teachers = React.useMemo(() =>
@@ -335,7 +349,8 @@ const TimetableManager = ({
     const handleAddStudent = async () => {
         if (!selectedClass) return;
         try {
-            const updatedList = await addStudent(selectedClass.id, selectedClass.studentList || [], {
+            // Note: addStudent returns updated IDs
+            const updatedIds = await addStudent(selectedClass.id, selectedClass.studentIds || [], {
                 name: newStudentName,
                 grade: newStudentGrade,
                 school: newStudentSchool
@@ -343,7 +358,7 @@ const TimetableManager = ({
             setNewStudentName('');
             setNewStudentGrade('');
             setNewStudentSchool('');
-            setSelectedClass({ ...selectedClass, studentList: updatedList });
+            setSelectedClass({ ...selectedClass, studentIds: updatedIds });
         } catch (e: any) {
             console.error(e);
             alert(e.message || '학생 추가 실패');
@@ -354,8 +369,10 @@ const TimetableManager = ({
     const handleWithdrawal = async (studentId: string) => {
         if (!selectedClass || !window.confirm("퇴원 처리 하시겠습니까?")) return;
         try {
-            const updatedList = await withdrawStudent(selectedClass.id, selectedClass.studentList, studentId);
-            setSelectedClass({ ...selectedClass, studentList: updatedList });
+            // Returns current IDs (no change in list, but student status updated)
+            await withdrawStudent(selectedClass.id, selectedClass.studentIds, studentId);
+            // Trigger UI update if needed (listener might handle this, but force update logic ok)
+            // Ideally useTimetableClasses updates classes, and globalStudents updates status
         } catch (e) {
             console.error(e);
             alert('퇴원 처리 실패');
@@ -366,8 +383,7 @@ const TimetableManager = ({
     const handleRestoreStudent = async (studentId: string) => {
         if (!selectedClass) return;
         try {
-            const updatedList = await restoreStudent(selectedClass.id, selectedClass.studentList, studentId);
-            setSelectedClass({ ...selectedClass, studentList: updatedList });
+            await restoreStudent(selectedClass.id, selectedClass.studentIds, studentId);
         } catch (e) {
             console.error(e);
             alert('복구 실패');
@@ -379,8 +395,8 @@ const TimetableManager = ({
         if (!selectedClass) return;
         if (!confirm('이 학생을 수업에서 제거하시겠습니까?')) return;
         try {
-            const updatedList = await removeStudent(selectedClass.id, selectedClass.studentList, studentId);
-            setSelectedClass({ ...selectedClass, studentList: updatedList });
+            const updatedIds = await removeStudent(selectedClass.id, selectedClass.studentIds, studentId);
+            setSelectedClass({ ...selectedClass, studentIds: updatedIds as string[] });
         } catch (e) {
             console.error(e);
             alert('학생 제거 실패');
@@ -408,7 +424,6 @@ const TimetableManager = ({
         );
     }
 
-    // 영어 탭이면 EnglishTimetable 컴포넌트 렌더링
     if (subjectTab === 'english') {
         return <EnglishTimetable
             onSwitchToMath={() => setSubjectTab('math')}
@@ -416,6 +431,7 @@ const TimetableManager = ({
             teachers={propsTeachers}
             classKeywords={classKeywords}
             currentUser={currentUser}
+            studentMap={studentMap} // Pass global student map
         />;
     }
 
@@ -476,6 +492,7 @@ const TimetableManager = ({
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     currentSubjectFilter={currentSubjectFilter}
+                    studentMap={studentMap} // Pass map to grid
                 />
             </div>
 
@@ -490,8 +507,9 @@ const TimetableManager = ({
                                 onClick={() => canEditMath && setSelectedClass(cls)}
                                 className={`flex items-center gap-1 px-2 py-1 ${theme.bg} ${theme.border} border rounded text-[10px] font-bold ${canEditMath ? 'cursor-pointer hover:brightness-95' : ''}`}
                             >
+
                                 <span className={theme.text}>{cls.className}</span>
-                                <span className="text-gray-400">({cls.studentList?.length || 0})</span>
+                                <span className="text-gray-400">({(cls.studentIds || []).length})</span>
                             </div>
                         );
                     })}
@@ -542,6 +560,7 @@ const TimetableManager = ({
                 handleWithdrawal={handleWithdrawal}
                 handleRestoreStudent={handleRestoreStudent}
                 handleDragStart={handleDragStart}
+                studentMap={studentMap}
             />
 
             {/* View Settings Modal */}

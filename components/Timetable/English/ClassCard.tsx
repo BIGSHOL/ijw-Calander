@@ -28,6 +28,7 @@ interface ClassCardProps {
     isSimulationMode?: boolean;
     moveChanges?: Map<string, MoveChange>;
     onMoveStudent?: (student: TimetableStudent, fromClass: string, toClass: string) => void;
+    studentMap: Record<string, any>;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -45,7 +46,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     englishLevels,
     isSimulationMode = false,
     moveChanges,
-    onMoveStudent
+    onMoveStudent,
+    studentMap
 }) => {
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [studentCount, setStudentCount] = useState<number>(0);
@@ -95,9 +97,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
             let list: TimetableStudent[] = [];
             if (!snapshot.empty) {
                 const data = snapshot.docs[0].data();
-                list = (data.studentList || []) as TimetableStudent[];
-                // DB level students
-                setStudents(list);
+                if (data.studentIds && data.studentIds.length > 0) {
+                    const resolvedStudents = data.studentIds.map((id: string) => studentMap[id]).filter(Boolean);
+                    setStudents(resolvedStudents);
+                } else {
+                    list = (data.studentList || []) as TimetableStudent[];
+                    setStudents(list);
+                }
             } else {
                 setStudents([]);
             }

@@ -77,28 +77,25 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
 
             moveChanges.forEach(({ student, fromClass, toClass }) => {
                 if (classDocMap[fromClass]) {
-                    const list = (classDocMap[fromClass].data.studentList || []) as TimetableStudent[];
-                    const newList = list.filter(s => s.id !== student.id);
-                    classDocMap[fromClass].data.studentList = newList;
+                    const list = (classDocMap[fromClass].data.studentIds || []) as string[];
+                    const newList = list.filter(id => id !== student.id);
+                    classDocMap[fromClass].data.studentIds = newList;
                 }
 
                 if (classDocMap[toClass]) {
-                    const list = (classDocMap[toClass].data.studentList || []) as TimetableStudent[];
-                    if (!list.find(s => s.id === student.id)) {
-                        const movedStudent = {
-                            ...student,
-                            isMoved: true,
-                            lastMovedAt: new Date().toISOString()
-                        };
-                        list.push(movedStudent);
-                        list.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-                        classDocMap[toClass].data.studentList = list;
+                    const list = (classDocMap[toClass].data.studentIds || []) as string[];
+                    if (!list.includes(student.id)) {
+                        list.push(student.id);
+                        // We cannot sort locally easily without student map, but sorting happens on read usually.
+                        // Ideally we should sort here if we want consistent DB order, but IDs are not name-sorted usually.
+                        // Validation/Sorting usually happens on client render.
+                        classDocMap[toClass].data.studentIds = list;
                     }
                 }
             });
 
             Object.values(classDocMap).forEach(({ ref, data }) => {
-                batch.update(ref, { studentList: data.studentList });
+                batch.update(ref, { studentIds: data.studentIds });
             });
 
             await batch.commit();
