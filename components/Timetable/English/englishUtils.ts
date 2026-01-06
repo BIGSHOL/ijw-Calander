@@ -49,7 +49,13 @@ export const CLASS_COLLECTION = '수업목록';
 export const CLASS_DRAFT_COLLECTION = '수업목록_draft';
 export const SCENARIO_COLLECTION = 'english_simulation_scenarios';
 
-export type EnglishPeriod = typeof EN_PERIODS[number];
+export interface Period {
+    id: string;
+    label: string;
+    time: string;
+}
+
+export type EnglishPeriod = Period;
 export type EnglishWeekday = typeof EN_WEEKDAYS[number];
 
 // 셀 키 생성 (강사-교시-요일)

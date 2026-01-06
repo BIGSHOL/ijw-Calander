@@ -52,7 +52,7 @@
 ```typescript
 // firebaseConfig.ts - ❌ PUBLIC REPOSITORY에 노출됨
 const firebaseConfig = {
-    apiKey: "***REMOVED_API_KEY_6***", // 🚨 노출
+    apiKey: "AIzaSyBnxK...", // 🚨 노출 (REDACTED)
     authDomain: "ijw-calander.firebaseapp.com",
     projectId: "ijw-calander",
     storageBucket: "ijw-calander.firebasestorage.app",
@@ -62,7 +62,7 @@ const firebaseConfig = {
 
 // IntegrationViewSettings.tsx - 구 프로젝트 credential도 노출
 const OLD_FIREBASE_CONFIG = {
-    apiKey: "***REMOVED_API_KEY_5***", // 🚨 노출
+    apiKey: "AIzaSyAAdN...", // 🚨 노출 (REDACTED)
     // ...
 };
 ```
@@ -79,7 +79,7 @@ const OLD_FIREBASE_CONFIG = {
 ```typescript
 // 1. 환경 변수로 즉시 이동 (필수)
 // .env.local 파일 생성
-VITE_FIREBASE_API_KEY=***REMOVED_API_KEY_6***
+VITE_FIREBASE_API_KEY=AIzaSyBnxK... (REDACTED)
 VITE_FIREBASE_AUTH_DOMAIN=ijw-calander.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=ijw-calander
 VITE_FIREBASE_STORAGE_BUCKET=ijw-calander.firebasestorage.app
