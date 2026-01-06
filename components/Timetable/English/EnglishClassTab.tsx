@@ -13,22 +13,14 @@ import StudentModal from './StudentModal';
 import { doc, onSnapshot, setDoc, collection, query, where, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 
-interface MoveChange {
-    student: TimetableStudent;
-    fromClass: string;
-    toClass: string;
-}
+// Hooks
+import { useEnglishSettings } from './hooks/useEnglishSettings';
+import { useEnglishStats } from './hooks/useEnglishStats';
+import { useEnglishChanges, MoveChange } from './hooks/useEnglishChanges';
+import { useEnglishClasses, ScheduleCell, ClassInfo } from './hooks/useEnglishClasses';
 
-interface ScheduleCell {
-    className?: string;
-    room?: string;
-    teacher?: string;
-    note?: string;
-    merged?: { className: string; room?: string, teacher?: string, underline?: boolean }[];
-    underline?: boolean;
-}
-
-type ScheduleData = Record<string, ScheduleCell>;
+// ScheduleCell, ScheduleData, ClassInfo definitions removed (imported from hooks)
+interface ScheduleData extends Record<string, ScheduleCell> { }
 
 interface EnglishClassTabProps {
     teachers: string[];
@@ -39,20 +31,7 @@ interface EnglishClassTabProps {
     isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
 }
 
-interface ClassInfo {
-    name: string;
-    mainTeacher: string;
-    mainRoom: string;
-    startPeriod: number;
-    // Map: PeriodID -> Day -> CellData
-    scheduleMap: Record<string, Record<string, ScheduleCell>>;
-
-    // Logic Port Fields
-    weekendShift: number;
-    visiblePeriods: (typeof EN_PERIODS)[number][];
-    finalDays: string[];
-    formattedRoomStr?: string;  // 요일별 강의실 포맷팅 문자열
-}
+// ClassInfo removed (imported from hooks)
 
 const KOR_DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
@@ -70,157 +49,36 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [mode, setMode] = useState<'view' | 'edit'>('view');
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
+
+    // UI States
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isLevelSettingsOpen, setIsLevelSettingsOpen] = useState(false);
-    const [settingsLoading, setSettingsLoading] = useState(true);
     const [openMenuClass, setOpenMenuClass] = useState<string | null>(null);
     const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
-    const [englishLevels, setEnglishLevels] = useState<EnglishLevel[]>(DEFAULT_ENGLISH_LEVELS);
-    const [settings, setSettings] = useState<IntegrationSettings>({
-        viewMode: 'CUSTOM_GROUP',  // Default to custom to minimize flicker
-        customGroups: [],
-        showOthersGroup: true,
-        othersGroupTitle: '기타 수업',
-        displayOptions: {
-            showStudents: true,
-            showRoom: true,
-            showTeacher: true
-        },
-        hiddenTeachers: [],
-        hiddenLegendTeachers: []
-    });
-
-    // Tooltip State for First Visit
     const [isTooltipVisible, setIsTooltipVisible] = useState(false);
 
-    // Student Statistics State
-    const [studentStats, setStudentStats] = useState({ active: 0, new1: 0, new2: 0, withdrawn: 0 });
+    // --- Hook Integration ---
+    // 1. Settings & Levels
+    const { settings, settingsLoading, englishLevels, updateSettings } = useEnglishSettings();
 
-    // Drag & Drop Move State (Map: StudentID -> Change Info)
-    const [moveChanges, setMoveChanges] = useState<Map<string, MoveChange>>(new Map());
-    const [isSaving, setIsSaving] = useState(false);
+    // 2. Student Statistics
+    const studentStats = useEnglishStats(scheduleData, isSimulationMode);
 
-    // Handlers for Move Changes
-    const handleMoveStudent = (student: TimetableStudent, fromClass: string, toClass: string) => {
-        if (fromClass === toClass) return;
+    // 3. Move Changes
+    const { moveChanges, isSaving, handleMoveStudent, handleCancelChanges, handleSaveChanges } = useEnglishChanges(isSimulationMode);
 
-        setMoveChanges(prev => {
-            const next = new Map(prev);
-            // Check if student was already moved from somewhere else
-            const existingMove = next.get(student.id);
+    // 4. Classes Data Transformation
+    const rawClasses = useEnglishClasses(scheduleData, settings, teachersData);
 
-            if (existingMove) {
-                // If moving back to original class, remove the change
-                if (existingMove.fromClass === toClass) {
-                    next.delete(student.id);
-                } else {
-                    // Update target class
-                    next.set(student.id, { ...existingMove, toClass });
-                }
-            } else {
-                // New move
-                next.set(student.id, { student, fromClass, toClass });
-            }
-            return next;
-        });
-    };
+    // Filter by search term (Original 'classes' variable name preserved for compatibility)
+    const classes = useMemo(() => {
+        return rawClasses
+            .filter(c => !searchTerm || c.name.includes(searchTerm))
+            .sort((a, b) => a.startPeriod - b.startPeriod || a.name.localeCompare(b.name, 'ko'));
+    }, [rawClasses, searchTerm]);
+    // --- End Hook Integration ---
 
-    const handleCancelChanges = () => {
-        if (moveChanges.size === 0) return;
-        if (confirm('저장하지 않은 변경사항이 모두 사라집니다.\n계속하시겠습니까?')) {
-            setMoveChanges(new Map());
-        }
-    };
 
-    const handleSaveChanges = async () => {
-        if (moveChanges.size === 0) return;
-        if (!confirm(`총 ${moveChanges.size}명의 학생 이동을 저장하시겠습니까?`)) return;
-
-        setIsSaving(true);
-        try {
-            const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
-
-            // Using WriteBatch with pre-fetch (Querying docs first)
-
-            // Using WriteBatch with pre-fetch (Querying docs first)
-            const batch = writeBatch(db);
-            const classesToUpdate = new Set<string>();
-            moveChanges.forEach(change => {
-                classesToUpdate.add(change.fromClass);
-                classesToUpdate.add(change.toClass);
-            });
-
-            // Fetch current docs for all involved classes
-            // Since we can't do "WHERE className IN (...)" for potentially many classes easily in one go if > 10,
-            // we'll fetch them individually or in batches. Given typical usage, likely < 10 classes involved.
-            const uniqueClasses = Array.from(classesToUpdate);
-            const classSnapshots = await Promise.all(
-                uniqueClasses.map(cName => {
-                    const q = query(collection(db, targetCollection), where('className', '==', cName));
-                    return getDocs(q);
-                })
-            );
-
-            // Map className -> DocumentReference & Data
-            const classDocMap: Record<string, { ref: any, data: any }> = {};
-
-            classSnapshots.forEach(snap => {
-                if (!snap.empty) {
-                    const docSnap = snap.docs[0];
-                    classDocMap[docSnap.data().className] = {
-                        ref: docSnap.ref,
-                        data: docSnap.data()
-                    };
-                }
-            });
-
-            // Apply moves in memory
-            moveChanges.forEach(({ student, fromClass, toClass }) => {
-                // Remove from Source
-                if (classDocMap[fromClass]) {
-                    const list = (classDocMap[fromClass].data.studentList || []) as TimetableStudent[];
-                    const newList = list.filter(s => s.id !== student.id);
-                    classDocMap[fromClass].data.studentList = newList;
-                }
-
-                // Add to Target
-                if (classDocMap[toClass]) {
-                    const list = (classDocMap[toClass].data.studentList || []) as TimetableStudent[];
-                    // Check duplicate
-                    if (!list.find(s => s.id === student.id)) {
-                        // Inherit underline? Maybe reset? Let's keep data as is.
-                        // Add moved timestamp for visual tracking (similar to Teacher Tab)
-                        const movedStudent = {
-                            ...student,
-                            isMoved: true, // Mark as moved
-                            lastMovedAt: new Date().toISOString()
-                        };
-                        list.push(movedStudent);
-                        // Sort by name
-                        list.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
-                        classDocMap[toClass].data.studentList = list;
-                    }
-                }
-            });
-
-            // Commit to Batch
-            Object.values(classDocMap).forEach(({ ref, data }) => {
-                batch.update(ref, { studentList: data.studentList });
-            });
-
-            await batch.commit();
-
-            // Clear changes
-            setMoveChanges(new Map());
-            alert('저장되었습니다.');
-
-        } catch (error) {
-            console.error('Batch save failed:', error);
-            alert('저장 중 오류가 발생했습니다.');
-        } finally {
-            setIsSaving(false);
-        }
-    };
 
     useEffect(() => {
         const hasSeenGuide = localStorage.getItem('english_timetable_guide_shown');
@@ -236,126 +94,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         localStorage.setItem('english_timetable_guide_shown', 'true');
     };
 
-    // Load Settings
-    useEffect(() => {
-        const unsub = onSnapshot(doc(db, 'settings', 'english_class_integration'), (doc) => {
-            if (doc.exists()) {
-                const data = doc.data() as IntegrationSettings;
-                setSettings({
-                    ...data,
-                    displayOptions: data.displayOptions || {
-                        showStudents: true,
-                        showRoom: true,
-                        showTeacher: true
-                    }
-                });
-            }
-            setSettingsLoading(false);
-        });
-        return () => unsub();
-    }, []);
 
-    // Load English Levels (once in parent to avoid duplicate subscriptions)
-    useEffect(() => {
-        const unsub = onSnapshot(doc(db, 'settings', 'english_levels'), (docSnap) => {
-            if (docSnap.exists()) {
-                const levels = docSnap.data()?.levels || DEFAULT_ENGLISH_LEVELS;
-                setEnglishLevels(levels);
-            }
-        });
-        return () => unsub();
-    }, []);
-
-    // Fetch Student Statistics from all classes in scheduleData
-    useEffect(() => {
-        // Get unique class names from scheduleData
-        const classNames = new Set<string>();
-        Object.values(scheduleData).forEach(cell => {
-            if (cell.className) classNames.add(cell.className);
-            if (cell.merged) {
-                cell.merged.forEach(m => {
-                    if (m.className) classNames.add(m.className);
-                });
-            }
-        });
-
-        if (classNames.size === 0) {
-            setStudentStats({ active: 0, new1: 0, new2: 0, withdrawn: 0 });
-            return;
-        }
-
-        // Convert Set to Array for WHERE IN query (Firestore limit: 10 items per batch)
-        const classNamesArray = Array.from(classNames);
-
-        // Split into batches of 10 for WHERE IN query
-        const batches: string[][] = [];
-        for (let i = 0; i < classNamesArray.length; i += 10) {
-            batches.push(classNamesArray.slice(i, i + 10));
-        }
-
-        // Subscribe to all batches
-        const unsubscribes: (() => void)[] = [];
-        const allStats = { active: 0, new1: 0, new2: 0, withdrawn: 0 };
-
-        // Dynamic collection selection based on simulation mode
-        const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
-
-        batches.forEach((batch) => {
-            const q = query(collection(db, targetCollection), where('className', 'in', batch));
-            const unsub = onSnapshot(q, (snapshot) => {
-                const now = new Date();
-                let active = 0, new1 = 0, new2 = 0, withdrawn = 0;
-
-                snapshot.docs.forEach(doc => {
-                    const students = (doc.data().studentList || []) as TimetableStudent[];
-                    students.forEach((student: TimetableStudent) => {
-                        // Withdrawn check
-                        if (student.withdrawalDate) {
-                            const withdrawnDate = new Date(student.withdrawalDate);
-                            const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
-                            if (daysSinceWithdrawal <= 30) {
-                                withdrawn++;
-                            }
-                            return; // Skip further counting for withdrawn students
-                        }
-
-                        // Skip onHold students from active count
-                        if (student.onHold) return;
-
-                        // Active student
-                        active++;
-
-                        // New student check
-                        if (student.enrollmentDate) {
-                            const enrollDate = new Date(student.enrollmentDate);
-                            const daysSinceEnroll = Math.floor((now.getTime() - enrollDate.getTime()) / (1000 * 60 * 60 * 24));
-                            if (daysSinceEnroll <= 30) {
-                                new1++;
-                            } else if (daysSinceEnroll <= 60) {
-                                new2++;
-                            }
-                        }
-                    });
-                });
-
-                // Merge stats from this batch
-                allStats.active += active;
-                allStats.new1 += new1;
-                allStats.new2 += new2;
-                allStats.withdrawn += withdrawn;
-
-                setStudentStats({ ...allStats });
-            });
-            unsubscribes.push(unsub);
-        });
-
-        return () => unsubscribes.forEach(unsub => unsub());
-    }, [scheduleData, isSimulationMode]);
-
-    const updateSettings = async (newSettings: IntegrationSettings) => {
-        setSettings(newSettings);
-        await setDoc(doc(db, 'settings', 'english_class_integration'), newSettings);
-    };
 
     // Close Display Options when clicking outside
     useEffect(() => {
@@ -369,299 +108,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             document.removeEventListener('click', handleClickOutside);
         };
     }, [isDisplayOptionsOpen]);
-
-    // 1. Transform ScheduleData into Class-centric structure with Logic
-    const classes = useMemo(() => {
-        const classMap = new Map<string, {
-            name: string;
-            mainTeacher: string;
-            mainRoom: string;
-            roomByDay: Record<string, string>; // 요일별 강의실 저장
-            teacherCounts: Record<string, number>; // 선생님별 수업 횟수
-            // Internal use for logic
-            minPeriod: number;
-            // Map
-            scheduleMap: Record<string, Record<string, ScheduleCell>>;
-            // For logic calculation
-            weekdayMin: number;
-            weekendMin: number;
-        }>();
-
-        // Helper: 요일별 강의실을 포맷팅 (예: "월수 301 / 목 304")
-        const formatRoomByDay = (roomByDay: Record<string, string>): string => {
-            if (!roomByDay || Object.keys(roomByDay).length === 0) return '';
-
-            // 강의실 -> 요일들 매핑
-            const roomToDays: Record<string, string[]> = {};
-            Object.entries(roomByDay).forEach(([day, room]) => {
-                if (!room) return;
-                if (!roomToDays[room]) roomToDays[room] = [];
-                roomToDays[room].push(day);
-            });
-
-            // 정렬된 결과 생성 (요일 순서대로)
-            const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
-            const parts = Object.entries(roomToDays)
-                .map(([room, days]) => {
-                    const sortedDays = days.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
-                    return `${sortedDays.join('')} ${room}`;
-                })
-                .sort((a, b) => {
-                    // 첫 번째 요일을 기준으로 정렬
-                    const aFirstDay = a.split(' ')[0][0];
-                    const bFirstDay = b.split(' ')[0][0];
-                    return dayOrder.indexOf(aFirstDay) - dayOrder.indexOf(bFirstDay);
-                });
-
-            return parts.join(' / ');
-        };
-
-        // Pass 1: Gather Raw Data
-        Object.entries(scheduleData).forEach(([key, cell]: [string, ScheduleCell]) => {
-            const clsName = cell.className;
-            if (!clsName) return;
-
-            const parts = key.split('-');
-            if (parts.length !== 3) return;
-            const [_, periodId, day] = parts;
-            const pNum = parseInt(periodId);
-            if (isNaN(pNum)) return;
-
-            // Helper to process a class entry
-            const processClassEntry = (cName: string, cRoom: string, cTeacher: string, currentDay: string, cUnderline?: boolean) => {
-                // 인재원 수업 시간표 압축 매핑 (그룹 설정 기반)
-                let mappedPeriodId = periodId;
-                const classGroup = settings.customGroups?.find(g => g.classes.includes(cName));
-                if (classGroup?.useInjaePeriod) {
-                    if (periodId === '5' || periodId === '6') {
-                        mappedPeriodId = '5'; // 6교시를 5교시로 병합
-                    }
-                }
-
-                if (!classMap.has(cName)) {
-                    classMap.set(cName, {
-                        name: cName,
-                        mainTeacher: '',
-                        mainRoom: cRoom || '',
-                        roomByDay: {},
-                        teacherCounts: {},
-                        minPeriod: 99,
-                        scheduleMap: {},
-                        weekdayMin: 99,
-                        weekendMin: 99,
-                    });
-                }
-                const info = classMap.get(cName)!;
-
-                // 요일별 강의실 추적
-                if (cRoom && !info.roomByDay[currentDay]) {
-                    info.roomByDay[currentDay] = cRoom;
-                }
-
-                // Populate Map with Mapped Period ID
-                if (!info.scheduleMap[mappedPeriodId]) {
-                    info.scheduleMap[mappedPeriodId] = {};
-                }
-
-                // For merged classes, we create a cell-like object effectively
-                // But wait, the cell in 'scheduleMap' is just one object. 
-                // If multiple classes (Main + Merged) map to the SAME Class View, 
-                // in the Class View for "MEC2", we show MEC2 data.
-                // In the Class View for "KW6", we show KW6 data.
-                // The cell data needs to be specific to the class being viewed?
-                // Or does it just reference the teacher?
-                // The Integration View displays "Teacher" in the cell.
-                // So for KW6, it should show the same teacher "Sarah".
-
-                info.scheduleMap[mappedPeriodId][day] = {
-                    ...cell,
-                    className: cName,
-                    room: cRoom,
-                    teacher: cTeacher,
-                    underline: cUnderline ?? cell.underline
-                };
-
-                // 선생님별 수업 횟수 카운트
-                if (cTeacher) {
-                    info.teacherCounts[cTeacher] = (info.teacherCounts[cTeacher] || 0) + 1;
-                }
-                if (cRoom) info.mainRoom = cRoom;
-
-                // Min/Max Calc
-                const mappedPNum = parseInt(mappedPeriodId);
-                const dayIdx = EN_WEEKDAYS.indexOf(day as any);
-                if (dayIdx !== -1) {
-                    if (dayIdx <= 4) { // Weekday (Mon-Fri)
-                        info.weekdayMin = Math.min(info.weekdayMin, mappedPNum);
-                    } else { // Weekend (Sat-Sun)
-                        info.weekendMin = Math.min(info.weekendMin, mappedPNum);
-                    }
-                }
-                info.minPeriod = Math.min(info.minPeriod, mappedPNum);
-            };
-
-            // Process Main Class
-            processClassEntry(clsName, cell.room || '', cell.teacher || '', day, cell.underline);
-
-            // Process Merged Classes
-            if (cell.merged && cell.merged.length > 0) {
-                cell.merged.forEach(m => {
-                    if (m.className) {
-                        processClassEntry(m.className, m.room || '', cell.teacher || '', day, m.underline);
-                    }
-                });
-            }
-        });
-
-        // Pass 2: Filter out empty classes (classes with no actual schedule data)
-        // This prevents duplicates after level-up when old class names linger in data
-        const validClasses = Array.from(classMap.values()).filter(c => {
-            // Count total cells in scheduleMap
-            const cellCount = Object.values(c.scheduleMap).reduce(
-                (sum, dayMap) => sum + Object.keys(dayMap).length,
-                0
-            );
-            return cellCount > 0; // Only include classes with actual schedule data
-        });
-
-        // Pass 3: Calculate Logic (Weekend Shift & Visible Periods)
-        return validClasses
-            .map(c => {
-                // 0. 담임 결정: 가장 많이 수업하는 선생님, 동점시 원어민 제외
-                let determinedMainTeacher = c.mainTeacher;
-                const teacherEntries = Object.entries(c.teacherCounts);
-                if (teacherEntries.length > 0) {
-                    const maxCount = Math.max(...teacherEntries.map(([, count]) => count));
-                    const topTeachers = teacherEntries.filter(([, count]) => count === maxCount);
-
-                    if (topTeachers.length === 1) {
-                        determinedMainTeacher = topTeachers[0][0];
-                    } else {
-                        // 동점: 원어민 제외
-                        const nonNativeTopTeachers = topTeachers.filter(([name]) => {
-                            const teacherData = teachersData.find(t => t.name === name);
-                            return !teacherData?.isNative;
-                        });
-
-                        if (nonNativeTopTeachers.length > 0) {
-                            determinedMainTeacher = nonNativeTopTeachers[0][0];
-                        } else {
-                            // 모두 원어민이면 첫 번째
-                            determinedMainTeacher = topTeachers[0][0];
-                        }
-                    }
-                }
-                c.mainTeacher = determinedMainTeacher;
-
-                // 1. Weekend Shift Logic
-                let weekendShift = 0;
-                if (c.weekdayMin !== 99 && c.weekendMin !== 99 && c.weekdayMin > c.weekendMin) {
-                    weekendShift = c.weekdayMin - c.weekendMin;
-                }
-
-                // 2. Start Period Determination (for grouping)
-                // "Effective" start period considers the shift
-                // Logic: Find the earliest "effective" period
-                let effectiveMin = 99;
-                let effectiveMax = -99;
-
-                // Re-scan to find effective range
-                Object.keys(c.scheduleMap).forEach(pId => {
-                    const pNum = parseInt(pId);
-                    const days = Object.keys(c.scheduleMap[pId]);
-                    days.forEach(day => {
-                        const dIdx = EN_WEEKDAYS.indexOf(day as any);
-                        let eff = pNum;
-                        if (dIdx >= 5 && weekendShift) {
-                            eff = pNum + weekendShift;
-                        }
-                        effectiveMin = Math.min(effectiveMin, eff);
-                        effectiveMax = Math.max(effectiveMax, eff);
-                    });
-                });
-                if (effectiveMin === 99) effectiveMin = 1;
-                if (effectiveMax === -99) effectiveMax = 1;
-
-
-                // 3. Visible Periods (5-Period Window)
-                // Logic from academy-app: Try to center but keep size 4 (actually 5 items: start to start+4)
-                // Fixed logic: always show 5 periods if possible
-                let start = effectiveMin;
-                let end = effectiveMax;
-
-                // Ensure minimal window of 5
-                if (end - start < 4) {
-                    end = start + 4;
-                }
-
-                // Clamp
-                start = Math.max(1, Math.min(start, 10));
-                end = Math.max(1, Math.min(end, 10));
-
-                // Adjust if still < 5 (e.g. at edges)
-                if (end - start < 4) {
-                    // Try to expand down or up
-                    if (start > 1) start = Math.max(1, end - 4);
-                    if (end < 10) end = Math.min(10, start + 4);
-                }
-
-                // 그룹 설정에 따른 시간대 선택
-                const classGroup = settings.customGroups?.find(g => g.classes.includes(c.name));
-                const useInjaePeriod = classGroup?.useInjaePeriod || false;
-                const periodsToUse = useInjaePeriod ? INJAE_PERIODS : EN_PERIODS;
-                const visiblePeriods = periodsToUse.filter(p => {
-                    const pid = parseInt(p.id);
-                    return pid >= start && pid <= end;
-                });
-
-                // 4. Final Days Logic (Weekend Replacement)
-                const finalDays = [...EN_WEEKDAYS.slice(0, 5)]; // Default Mon-Fri
-                const activeDays = new Set<string>();
-
-                // Scan all class entries to find active days
-                Object.values(c.scheduleMap).forEach(dayMap => {
-                    Object.keys(dayMap).forEach(day => activeDays.add(day));
-                });
-
-                const weekendDays = Array.from(activeDays).filter(d => d === '토' || d === '일');
-
-                // Replace empty weekdays with weekend days
-                weekendDays.forEach(weekend => {
-                    if (!finalDays.includes(weekend)) {
-                        // Find a weekday slot that has NO classes at all for this class
-                        // Logic check: Is it "No classes at all" or "No classes in this slot"? 
-                        // academy-app logic was: !daysWithClass.includes(d) where daysWithClass = ANY class in this group
-                        const emptyDayIndex = finalDays.findIndex(d => !activeDays.has(d));
-
-                        if (emptyDayIndex !== -1) {
-                            finalDays[emptyDayIndex] = weekend;
-                        } else {
-                            // If full, replace Friday? (academy-app fallback: finalDays[4] = weekend)
-                            finalDays[4] = weekend;
-                        }
-                    }
-                });
-
-                // Sort columns by EN_WEEKDAYS index to keep order sane (Mon..Sat..Sun) 
-                // BUT academy-app replaced in place... which might break order (e.g., Fri becomes Sun, so Mon Tue Wed Thu Sun). 
-                // That might be intentional to keep 5 columns. 
-                // Let's re-sort if we want "Mon Tue Wed Thu Sun" order or just left-to-right replacement.
-                // academy-app did: finalDays.sort(...) at the end.
-                finalDays.sort((a, b) => EN_WEEKDAYS.indexOf(a as any) - EN_WEEKDAYS.indexOf(b as any));
-
-
-                return {
-                    ...c,
-                    startPeriod: effectiveMin, // Use effective min for grouping
-                    weekendShift,
-                    visiblePeriods,
-                    finalDays,
-                    formattedRoomStr: formatRoomByDay(c.roomByDay) || c.mainRoom // 요일별 강의실 또는 기본 강의실
-                } as ClassInfo;
-            })
-            .filter(c => !searchTerm || c.name.includes(searchTerm))
-            .sort((a, b) => a.startPeriod - b.startPeriod || a.name.localeCompare(b.name, 'ko'));
-    }, [scheduleData, searchTerm, settings.customGroups]);
 
     // 2. Group classes by start period OR Custom Groups
     const groupedClasses = useMemo(() => {
