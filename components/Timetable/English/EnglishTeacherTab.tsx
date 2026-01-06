@@ -12,7 +12,7 @@ import { Teacher, ClassKeywordColor, PermissionId } from '../../../types';
 import BatchInputBar, { InputData, MergedClass } from './BatchInputBar';
 import MoveConfirmBar from './MoveConfirmBar';
 import MoveSelectionModal from './MoveSelectionModal';
-import PortalTooltip from '../../PortalTooltip';
+import PortalTooltip from '../../Common/PortalTooltip';
 
 export interface ScheduleCell {
     className?: string;

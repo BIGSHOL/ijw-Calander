@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { X, Lock as LockIcon, LogIn, UserPlus } from 'lucide-react';
-import { auth, db } from '../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { UserProfile } from '../types';
+import { UserProfile } from '../../types';
 
 interface LoginModalProps {
     isOpen: boolean;

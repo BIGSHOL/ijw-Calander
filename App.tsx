@@ -7,11 +7,12 @@ import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemCo
 import { useGanttProjects } from './hooks/useGanttProjects';
 import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
 import { useTabPermissions } from './hooks/useTabPermissions';
-import EventModal from './components/EventModal';
-import SettingsModal from './components/SettingsModal';
-import LoginModal from './components/LoginModal';
-import CalendarBoard from './components/CalendarBoard';
+import EventModal from './components/Calendar/EventModal';
+import SettingsModal from './components/Settings/SettingsModal';
+import LoginModal from './components/Auth/LoginModal';
+import CalendarBoard from './components/Calendar/CalendarBoard';
 import TimetableManager from './components/Timetable/TimetableManager';
+import AttendanceManager from './components/Attendance/AttendanceManager';
 import PaymentReport from './components/PaymentReport/PaymentReport';
 import GanttManager from './components/Gantt/GanttManager';
 import ConsultationManager from './components/Consultation/ConsultationManager';
@@ -37,7 +38,7 @@ const formatUserDisplay = (u: UserProfile) => {
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | null>(null);
 
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
@@ -198,7 +199,7 @@ const App: React.FC = () => {
     if (isTabPermissionLoading || !userProfile) return;
 
     // Priority order for tabs
-    const priority: ('calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation')[] = ['calendar', 'timetable', 'payment', 'gantt', 'consultation'];
+    const priority: ('calendar' | 'timetable' | 'attendance' | 'payment' | 'gantt' | 'consultation')[] = ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation'];
 
     // Initial setup: if appMode is null, set to first accessible tab (or user's preferred tab)
     if (appMode === null) {
@@ -207,7 +208,7 @@ const App: React.FC = () => {
 
       if (preferredTab && preferredTab !== 'auto' && canAccessTab(preferredTab as AppTab)) {
         console.log(`[Init] Setting appMode to user preferred tab: ${preferredTab}`);
-        setAppMode(preferredTab as 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation');
+        setAppMode(preferredTab as 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance');
       } else {
         // Fallback to first accessible tab
         const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
@@ -1208,6 +1209,18 @@ const App: React.FC = () => {
                   📋 시간표
                 </button>
               )}
+              {/* Attendance */}
+              {canAccessTab('attendance') && (
+                <button
+                  onClick={() => setAppMode('attendance')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'attendance'
+                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  📒 출석부
+                </button>
+              )}
               {/* Payment */}
               {canAccessTab('payment') && (
                 <button
@@ -1388,269 +1401,275 @@ const App: React.FC = () => {
         </div>
 
         {/* Row 2: Filter Bar (Slate) - Only show in calendar mode */}
-        {appMode === 'calendar' && (
-          <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
+        {
+          appMode === 'calendar' && (
+            <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
 
-            {/* Main Filter Toggle */}
-            <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`
+              {/* Main Filter Toggle */}
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`
               flex items-center gap-2 px-3 h-full border-r border-gray-700 hover:bg-white/5 transition-colors
               ${isFilterOpen ? 'text-[#fdb813] font-bold bg-white/5' : 'text-gray-300'}
             `}
-            >
-              <Filter size={14} />
-              <span>부서 필터</span>
-              {isFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
+              >
+                <Filter size={14} />
+                <span>부서 필터</span>
+                {isFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
 
-            {/* Active Filters Summary */}
-            <div className="flex items-center gap-2 px-4 overflow-hidden mask-linear-fade flex-1">
-              {hiddenDeptIds.length === 0 ? (
-                <span className="text-gray-400 flex items-center gap-1.5">
-                  <CheckCircle2 size={12} className="text-green-500" /> 모든 부서 표시중
-                </span>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-400">표시됨:</span>
-                  {visibleDepartments.slice(0, 5).map(d => (
-                    <span key={d.id} className="px-1.5 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300">
-                      {d.name}
-                    </span>
-                  ))}
+              {/* Active Filters Summary */}
+              <div className="flex items-center gap-2 px-4 overflow-hidden mask-linear-fade flex-1">
+                {hiddenDeptIds.length === 0 ? (
+                  <span className="text-gray-400 flex items-center gap-1.5">
+                    <CheckCircle2 size={12} className="text-green-500" /> 모든 부서 표시중
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400">표시됨:</span>
+                    {visibleDepartments.slice(0, 5).map(d => (
+                      <span key={d.id} className="px-1.5 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300">
+                        {d.name}
+                      </span>
+                    ))}
 
-                  {visibleDepartments.length > 5 && (
-                    <span className="text-gray-500">+{visibleDepartments.length - 5} 더보기</span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* View Toggles - Moved from Top Header */}
-            <div className="flex items-center gap-2 ml-auto pl-4 border-l border-gray-700 h-[24px] my-auto">
-              {/* Daily/Weekly/Monthly */}
-              <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setViewMode(m)}
-                    className={`
-                    px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
-                    ${viewMode === m
-                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      }
-                  `}
-                  >
-                    {m === 'daily' && '일간'}
-                    {m === 'weekly' && '주간'}
-                    {m === 'monthly' && '월간'}
-                    {m === 'yearly' && '연간'}
-                  </button>
-                ))}
+                    {visibleDepartments.length > 5 && (
+                      <span className="text-gray-500">+{visibleDepartments.length - 5} 더보기</span>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Column View Toggle (1단/2단/3단) */}
-              <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                {([1, 2, 3] as const)
-                  .filter(cols => viewMode !== 'yearly' || cols !== 3)
-                  .map((cols) => (
+              {/* View Toggles - Moved from Top Header */}
+              <div className="flex items-center gap-2 ml-auto pl-4 border-l border-gray-700 h-[24px] my-auto">
+                {/* Daily/Weekly/Monthly */}
+                <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+                  {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((m) => (
                     <button
-                      key={cols}
-                      onClick={() => setViewColumns(cols)}
+                      key={m}
+                      onClick={() => setViewMode(m)}
                       className={`
-                       px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
-                       ${viewColumns === cols
+                    px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
+                    ${viewMode === m
                           ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                           : 'text-gray-400 hover:text-white hover:bg-white/5'
                         }
-                     `}
+                  `}
                     >
-                      {cols}단
+                      {m === 'daily' && '일간'}
+                      {m === 'weekly' && '주간'}
+                      {m === 'monthly' && '월간'}
+                      {m === 'yearly' && '연간'}
                     </button>
                   ))}
-              </div>
+                </div>
 
+                {/* Column View Toggle (1단/2단/3단) */}
+                <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+                  {([1, 2, 3] as const)
+                    .filter(cols => viewMode !== 'yearly' || cols !== 3)
+                    .map((cols) => (
+                      <button
+                        key={cols}
+                        onClick={() => setViewColumns(cols)}
+                        className={`
+                       px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
+                       ${viewColumns === cols
+                            ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }
+                     `}
+                      >
+                        {cols}단
+                      </button>
+                    ))}
+                </div>
+
+              </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
         {/* Filter Popover Panel */}
-        {appMode === 'calendar' && isFilterOpen && (
-          <div className="absolute top-[104px] left-0 w-full bg-[#1e293b]/95 backdrop-blur-xl border-b border-gray-700 shadow-2xl p-6 z-10 animate-in slide-in-from-top-2 duration-200">
-            <div className="w-full h-full">
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex flex-col gap-2">
-                  <h3 className="text-white font-bold flex items-center gap-2">
-                    <Filter size={16} className="text-[#fdb813]" /> 부서 선택
-                  </h3>
+        {
+          appMode === 'calendar' && isFilterOpen && (
+            <div className="absolute top-[104px] left-0 w-full bg-[#1e293b]/95 backdrop-blur-xl border-b border-gray-700 shadow-2xl p-6 z-10 animate-in slide-in-from-top-2 duration-200">
+              <div className="w-full h-full">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex flex-col gap-2">
+                    <h3 className="text-white font-bold flex items-center gap-2">
+                      <Filter size={16} className="text-[#fdb813]" /> 부서 선택
+                    </h3>
 
-                  {/* Category Filter Chips */}
-                  {uniqueCategories.length > 0 && (
-                    <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
-                      <button
-                        onClick={() => setSelectedCategory(null)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === null
-                          ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                          : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
-                          }`}
-                      >
-                        전체
-                      </button>
-                      {uniqueCategories.map(cat => (
+                    {/* Category Filter Chips */}
+                    {uniqueCategories.length > 0 && (
+                      <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
                         <button
-                          key={cat}
-                          onClick={() => setSelectedCategory(prev => prev === cat ? null : cat)}
-                          className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat
+                          onClick={() => setSelectedCategory(null)}
+                          className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === null
                             ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                             : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
                             }`}
                         >
-                          {cat}
+                          전체
                         </button>
-                      ))}
-                    </div>
-                  )}
+                        {uniqueCategories.map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => setSelectedCategory(prev => prev === cat ? null : cat)}
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat
+                              ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                              : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
+                              }`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 items-center">
+                    {/* Favorites Only Toggle */}
+                    <button
+                      onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                      className={`px-3 py-1.5 rounded flex items-center gap-1.5 text-xs font-bold border transition-all ${showFavoritesOnly
+                        ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                        : 'bg-transparent text-gray-400 border-gray-700 hover:border-[#fdb813]/50'
+                        }`}
+                    >
+                      <Star size={12} className={showFavoritesOnly ? 'fill-current' : ''} />
+                      즐겨찾기만
+                    </button>
+                    <button onClick={() => setAllVisibility(true)} className="px-3 py-1.5 rounded bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20 hover:bg-green-500/20">
+                      모두 켜기
+                    </button>
+                    <button onClick={() => setAllVisibility(false)} className="px-3 py-1.5 rounded bg-red-500/10 text-red-500 text-xs font-bold border border-red-500/20 hover:bg-red-500/20">
+                      모두 끄기
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex gap-2 items-center">
-                  {/* Favorites Only Toggle */}
-                  <button
-                    onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                    className={`px-3 py-1.5 rounded flex items-center gap-1.5 text-xs font-bold border transition-all ${showFavoritesOnly
-                      ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                      : 'bg-transparent text-gray-400 border-gray-700 hover:border-[#fdb813]/50'
-                      }`}
-                  >
-                    <Star size={12} className={showFavoritesOnly ? 'fill-current' : ''} />
-                    즐겨찾기만
-                  </button>
-                  <button onClick={() => setAllVisibility(true)} className="px-3 py-1.5 rounded bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20 hover:bg-green-500/20">
-                    모두 켜기
-                  </button>
-                  <button onClick={() => setAllVisibility(false)} className="px-3 py-1.5 rounded bg-red-500/10 text-red-500 text-xs font-bold border border-red-500/20 hover:bg-red-500/20">
-                    모두 끄기
-                  </button>
-                </div>
-              </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+                  {departments
+                    .filter(d => !selectedCategory || d.category === selectedCategory)
+                    .map(dept => {
+                      const isHidden = hiddenDeptIds.includes(dept.id);
+                      const isAllowed = userProfile?.departmentPermissions?.[dept.id] || userProfile?.allowedDepartments?.includes(dept.id) || isMaster;
+                      const isFavorite = userProfile?.favoriteDepartments?.includes(dept.id);
 
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-                {departments
-                  .filter(d => !selectedCategory || d.category === selectedCategory)
-                  .map(dept => {
-                    const isHidden = hiddenDeptIds.includes(dept.id);
-                    const isAllowed = userProfile?.departmentPermissions?.[dept.id] || userProfile?.allowedDepartments?.includes(dept.id) || isMaster;
-                    const isFavorite = userProfile?.favoriteDepartments?.includes(dept.id);
+                      if (!isAllowed) return null;
 
-                    if (!isAllowed) return null;
-
-                    return (
-                      <div
-                        key={dept.id}
-                        className={`
+                      return (
+                        <div
+                          key={dept.id}
+                          className={`
                          flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-bold transition-all
                          ${isHidden
-                            ? 'bg-transparent border-gray-700 text-gray-500'
-                            : 'bg-[#081429] border-[#fdb813]/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
-                          }
+                              ? 'bg-transparent border-gray-700 text-gray-500'
+                              : 'bg-[#081429] border-[#fdb813]/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
+                            }
                        `}
-                      >
-                        {/* Favorite Star */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(dept.id);
-                          }}
-                          className="hover:scale-110 transition-transform"
                         >
-                          <Star
-                            size={14}
-                            className={isFavorite ? 'text-[#fdb813] fill-[#fdb813]' : 'text-gray-600 hover:text-[#fdb813]'}
-                          />
-                        </button>
+                          {/* Favorite Star */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(dept.id);
+                            }}
+                            className="hover:scale-110 transition-transform"
+                          >
+                            <Star
+                              size={14}
+                              className={isFavorite ? 'text-[#fdb813] fill-[#fdb813]' : 'text-gray-600 hover:text-[#fdb813]'}
+                            />
+                          </button>
 
-                        {/* Toggle Visibility */}
-                        <button
-                          onClick={() => toggleDeptVisibility(dept.id)}
-                          className="flex items-center gap-2 flex-1 text-left"
-                        >
-                          <span className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color?.startsWith('#') ? dept.color : 'white') : undefined }} />
-                          <span className="truncate flex-1">{dept.name}</span>
-                          {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
-                        </button>
-                      </div>
-                    )
-                  })}
+                          {/* Toggle Visibility */}
+                          <button
+                            onClick={() => toggleDeptVisibility(dept.id)}
+                            className="flex items-center gap-2 flex-1 text-left"
+                          >
+                            <span className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color?.startsWith('#') ? dept.color : 'white') : undefined }} />
+                            <span className="truncate flex-1">{dept.name}</span>
+                            {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
+                          </button>
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+
+              {/* Close Handle */}
+              <div
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full bg-[#1e293b] px-6 py-0.5 rounded-b-xl border-b border-x border-gray-700 cursor-pointer hover:bg-[#081429] transition-colors"
+                onClick={() => setIsFilterOpen(false)}
+              >
+                <ChevronUp size={16} className="text-gray-400" />
               </div>
             </div>
-
-            {/* Close Handle */}
-            <div
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full bg-[#1e293b] px-6 py-0.5 rounded-b-xl border-b border-x border-gray-700 cursor-pointer hover:bg-[#081429] transition-colors"
-              onClick={() => setIsFilterOpen(false)}
-            >
-              <ChevronUp size={16} className="text-gray-400" />
-            </div>
-          </div>
-        )}
+          )
+        }
 
         {/* Row 2: Timetable Filter Bar - Only show in timetable mode */}
-        {appMode === 'timetable' && (
-          <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
-            {/* Main Filter Toggle - Only show for Math */}
-            {/* Main Filter Toggle - Only show for Math */
-              /* Removed Global Option Settings Button */
-            }
+        {
+          appMode === 'timetable' && (
+            <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
+              {/* Main Filter Toggle - Only show for Math */}
+              {/* Main Filter Toggle - Only show for Math */
+                /* Removed Global Option Settings Button */
+              }
 
-            {/* Current Settings Summary - Clickable Toggles */}
-            <div className="flex items-center gap-2 px-4 overflow-hidden flex-1">
-              {/* Subject Toggle Button */}
-              {hasPermission('timetable.math.view') && hasPermission('timetable.english.view') ? (
+              {/* Current Settings Summary - Clickable Toggles */}
+              <div className="flex items-center gap-2 px-4 overflow-hidden flex-1">
+                {/* Subject Toggle Button */}
+                {hasPermission('timetable.math.view') && hasPermission('timetable.english.view') ? (
+                  <button
+                    onClick={() => setTimetableSubject(prev => prev === 'math' ? 'english' : 'math')}
+                    className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                    title="클릭하여 과목 전환"
+                  >
+                    {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
+                  </button>
+                ) : (
+                  <div className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 font-bold text-xs">
+                    {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
+                  </div>
+                )}
+
+                {/* View Type Toggle Button */}
                 <button
-                  onClick={() => setTimetableSubject(prev => prev === 'math' ? 'english' : 'math')}
-                  className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-                  title="클릭하여 과목 전환"
+                  onClick={() => {
+                    if (timetableSubject === 'math') {
+                      // 수학: 강사별 ↔ 교실별
+                      setTimetableViewType(prev => prev === 'teacher' ? 'room' : 'teacher');
+                    } else {
+                      // 영어: 통합 → 강사별 → 교실별 → 통합 (권한 없으면 통합 스킵)
+                      const canViewIntegrated = hasPermission('timetable.integrated.view');
+                      setTimetableViewType(prev => {
+                        if (prev === 'class') return 'teacher';
+                        if (prev === 'teacher') return 'room';
+                        // room -> integrated (if permitted) or teacher
+                        return canViewIntegrated ? 'class' : 'teacher';
+                      });
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+                  title="클릭하여 보기방식 전환"
                 >
-                  {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
+                  {timetableViewType === 'teacher' ? '👨‍🏫 강사별' : (timetableViewType === 'class' ? '📋 통합' : '🏫 교실별')}
                 </button>
-              ) : (
-                <div className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 font-bold text-xs">
-                  {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
-                </div>
-              )}
 
-              {/* View Type Toggle Button */}
-              <button
-                onClick={() => {
-                  if (timetableSubject === 'math') {
-                    // 수학: 강사별 ↔ 교실별
-                    setTimetableViewType(prev => prev === 'teacher' ? 'room' : 'teacher');
-                  } else {
-                    // 영어: 통합 → 강사별 → 교실별 → 통합 (권한 없으면 통합 스킵)
-                    const canViewIntegrated = hasPermission('timetable.integrated.view');
-                    setTimetableViewType(prev => {
-                      if (prev === 'class') return 'teacher';
-                      if (prev === 'teacher') return 'room';
-                      // room -> integrated (if permitted) or teacher
-                      return canViewIntegrated ? 'class' : 'teacher';
-                    });
-                  }
-                }}
-                className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
-                title="클릭하여 보기방식 전환"
-              >
-                {timetableViewType === 'teacher' ? '👨‍🏫 강사별' : (timetableViewType === 'class' ? '📋 통합' : '🏫 교실별')}
-              </button>
-
-              {/* Removed Summary Indicators */}
+                {/* Removed Summary Indicators */}
 
 
+              </div>
             </div>
-          </div>
-        )}
+          )
+        }
 
         {/* Timetable Filter Popover Panel Removed */}
-      </header>
+      </header >
 
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Render Gating: If permission fails, show nothing (Redirect will happen in useEffect) */}
@@ -1765,6 +1784,11 @@ const App: React.FC = () => {
           <div className="w-full flex-1 overflow-auto">
             <ConsultationManager userProfile={userProfile} />
           </div>
+        ) : appMode === 'attendance' ? (
+          /* Attendance Manager View */
+          <div className="w-full flex-1 overflow-auto">
+            <AttendanceManager userProfile={userProfile} teachers={teachers} />
+          </div>
         ) : null}
 
         {/* Floating Save Button for Pending Moves */}
@@ -1794,152 +1818,156 @@ const App: React.FC = () => {
       />
 
       {/* Profile Dropdown Menu (Moved to Root to avoid z-index trap) */}
-      {isProfileMenuOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-[99998]"
-            onClick={() => setIsProfileMenuOpen(false)}
-          />
-          <div
-            className="fixed right-4 top-16 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-[99999] overflow-hidden text-sm"
-            style={{ display: isProfileMenuOpen ? 'block' : 'none' }}
-          >
-            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-              <p className="font-bold text-gray-800">{userProfile?.email?.split('@')[0]}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{userProfile?.jobTitle || '직급 미설정'}</p>
-              <p className="text-xs text-blue-600 font-medium mt-1">{ROLE_LABELS[userProfile?.role || 'guest']}</p>
-            </div>
-            <button
-              onClick={() => {
-                setIsPermissionViewOpen(true);
-                setIsProfileMenuOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-medium transition-colors border-b border-gray-100"
+      {
+        isProfileMenuOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-[99998]"
+              onClick={() => setIsProfileMenuOpen(false)}
+            />
+            <div
+              className="fixed right-4 top-16 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-[99999] overflow-hidden text-sm"
+              style={{ display: isProfileMenuOpen ? 'block' : 'none' }}
             >
-              <Eye size={16} /> 권한 보기
-            </button>
-            <button
-              onClick={() => {
-                handleLogout();
-                setIsProfileMenuOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium transition-colors"
-            >
-              <LogOut size={16} /> 로그아웃
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* Permission View Modal */}
-      {isPermissionViewOpen && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/50 z-[99998]"
-            onClick={() => setIsPermissionViewOpen(false)}
-          />
-          <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] md:max-h-[80vh] bg-white rounded-2xl shadow-2xl z-[99999] overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <Eye size={18} /> 내 권한
-              </h3>
-              <button onClick={() => setIsPermissionViewOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                <p className="font-bold text-gray-800">{userProfile?.email?.split('@')[0]}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{userProfile?.jobTitle || '직급 미설정'}</p>
+                <p className="text-xs text-blue-600 font-medium mt-1">{ROLE_LABELS[userProfile?.role || 'guest']}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsPermissionViewOpen(true);
+                  setIsProfileMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-2 font-medium transition-colors border-b border-gray-100"
+              >
+                <Eye size={16} /> 권한 보기
+              </button>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsProfileMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 flex items-center gap-2 font-medium transition-colors"
+              >
+                <LogOut size={16} /> 로그아웃
               </button>
             </div>
-            <div className="p-4 overflow-y-auto flex-1 text-sm">
-              {/* Role Info */}
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-blue-800 font-bold">역할: {ROLE_LABELS[userProfile?.role || 'guest']}</p>
-                {userProfile?.role === 'master' && (
-                  <p className="text-blue-600 text-xs mt-1">Master는 모든 권한을 보유합니다.</p>
-                )}
-              </div>
+          </>
+        )
+      }
 
-              {/* Tab Permissions */}
-              <div className="mb-4">
-                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                  📋 허용된 탭
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {accessibleTabs.map(tab => (
-                    <span key={tab} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                      {tab === 'calendar' && '📅 연간 일정'}
-                      {tab === 'timetable' && '📚 시간표'}
-                      {tab === 'payment' && '💳 전자 결제'}
-                      {tab === 'gantt' && '📊 간트 차트'}
-                      {tab === 'consultation' && '💬 상담 관리'}
-                    </span>
-                  ))}
+      {/* Permission View Modal */}
+      {
+        isPermissionViewOpen && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/50 z-[99998]"
+              onClick={() => setIsPermissionViewOpen(false)}
+            />
+            <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] md:max-h-[80vh] bg-white rounded-2xl shadow-2xl z-[99999] overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                  <Eye size={18} /> 내 권한
+                </h3>
+                <button onClick={() => setIsPermissionViewOpen(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-4 overflow-y-auto flex-1 text-sm">
+                {/* Role Info */}
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-blue-800 font-bold">역할: {ROLE_LABELS[userProfile?.role || 'guest']}</p>
+                  {userProfile?.role === 'master' && (
+                    <p className="text-blue-600 text-xs mt-1">Master는 모든 권한을 보유합니다.</p>
+                  )}
                 </div>
-              </div>
 
-              {/* Role Permissions */}
-              {userProfile?.role !== 'master' && (
-                <div>
+                {/* Tab Permissions */}
+                <div className="mb-4">
                   <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    ✅ 허용된 권한
+                    📋 허용된 탭
                   </h4>
-                  <div className="space-y-1 max-h-60 overflow-y-auto">
-                    {(() => {
-                      const userPerms = rolePermissions[userProfile?.role as keyof typeof rolePermissions] || {};
-                      const enabledPerms = Object.entries(userPerms).filter(([, v]) => v);
-                      if (enabledPerms.length === 0) {
-                        return <p className="text-gray-400 text-xs">설정된 권한이 없습니다.</p>;
-                      }
-                      const permLabels: Record<string, string> = {
-                        'events.create': '일정 생성',
-                        'events.edit_own': '본인 일정 수정',
-                        'events.edit_others': '타인 일정 수정',
-                        'events.delete_own': '본인 일정 삭제',
-                        'events.delete_others': '타인 일정 삭제',
-                        'events.drag_move': '일정 드래그 이동',
-                        'events.attendance': '참가 현황 변경',
-                        'buckets.edit_lower_roles': '하위 역할 버킷 수정',
-                        'buckets.delete_lower_roles': '하위 역할 버킷 삭제',
-                        'departments.view_all': '모든 부서 조회',
-                        'departments.create': '부서 생성',
-                        'departments.edit': '부서 수정',
-                        'departments.delete': '부서 삭제',
-                        'users.view': '사용자 목록 조회',
-                        'users.approve': '사용자 승인',
-                        'users.change_role': '역할 변경',
-                        'users.change_permissions': '세부 권한 변경',
-                        'settings.access': '설정 접근',
-                        'settings.holidays': '공휴일 관리',
-                        'settings.role_permissions': '역할 권한 설정',
-                        'settings.manage_categories': '카테고리 관리',
-                        'system.teachers.view': '강사 목록 조회',
-                        'system.teachers.edit': '강사 수정',
-                        'system.classes.view': '수업 목록 조회',
-                        'system.classes.edit': '수업 수정',
-                        'timetable.math.view': '수학 시간표 조회',
-                        'timetable.math.edit': '수학 시간표 수정',
-                        'timetable.english.view': '영어 시간표 조회',
-                        'timetable.english.edit': '영어 시간표 수정',
-                        'timetable.english.simulation': '영어 시뮬레이션',
-                        'timetable.english.backup.view': '백업 조회',
-                        'timetable.english.backup.restore': '백업 복원',
-                        'timetable.integrated.view': '통합 시간표 조회',
-                        'gantt.view': '간트 조회',
-                        'gantt.create': '간트 생성',
-                        'gantt.edit': '간트 수정',
-                        'gantt.delete': '간트 삭제',
-                      };
-                      return enabledPerms.map(([permId]) => (
-                        <div key={permId} className="flex items-center gap-2 text-xs text-gray-600 py-1">
-                          <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center text-[10px]">✓</span>
-                          {permLabels[permId] || permId}
-                        </div>
-                      ));
-                    })()}
+                  <div className="flex flex-wrap gap-2">
+                    {accessibleTabs.map(tab => (
+                      <span key={tab} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                        {tab === 'calendar' && '📅 연간 일정'}
+                        {tab === 'timetable' && '📚 시간표'}
+                        {tab === 'payment' && '💳 전자 결제'}
+                        {tab === 'gantt' && '📊 간트 차트'}
+                        {tab === 'consultation' && '💬 상담 관리'}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              )}
+
+                {/* Role Permissions */}
+                {userProfile?.role !== 'master' && (
+                  <div>
+                    <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                      ✅ 허용된 권한
+                    </h4>
+                    <div className="space-y-1 max-h-60 overflow-y-auto">
+                      {(() => {
+                        const userPerms = rolePermissions[userProfile?.role as keyof typeof rolePermissions] || {};
+                        const enabledPerms = Object.entries(userPerms).filter(([, v]) => v);
+                        if (enabledPerms.length === 0) {
+                          return <p className="text-gray-400 text-xs">설정된 권한이 없습니다.</p>;
+                        }
+                        const permLabels: Record<string, string> = {
+                          'events.create': '일정 생성',
+                          'events.edit_own': '본인 일정 수정',
+                          'events.edit_others': '타인 일정 수정',
+                          'events.delete_own': '본인 일정 삭제',
+                          'events.delete_others': '타인 일정 삭제',
+                          'events.drag_move': '일정 드래그 이동',
+                          'events.attendance': '참가 현황 변경',
+                          'buckets.edit_lower_roles': '하위 역할 버킷 수정',
+                          'buckets.delete_lower_roles': '하위 역할 버킷 삭제',
+                          'departments.view_all': '모든 부서 조회',
+                          'departments.create': '부서 생성',
+                          'departments.edit': '부서 수정',
+                          'departments.delete': '부서 삭제',
+                          'users.view': '사용자 목록 조회',
+                          'users.approve': '사용자 승인',
+                          'users.change_role': '역할 변경',
+                          'users.change_permissions': '세부 권한 변경',
+                          'settings.access': '설정 접근',
+                          'settings.holidays': '공휴일 관리',
+                          'settings.role_permissions': '역할 권한 설정',
+                          'settings.manage_categories': '카테고리 관리',
+                          'system.teachers.view': '강사 목록 조회',
+                          'system.teachers.edit': '강사 수정',
+                          'system.classes.view': '수업 목록 조회',
+                          'system.classes.edit': '수업 수정',
+                          'timetable.math.view': '수학 시간표 조회',
+                          'timetable.math.edit': '수학 시간표 수정',
+                          'timetable.english.view': '영어 시간표 조회',
+                          'timetable.english.edit': '영어 시간표 수정',
+                          'timetable.english.simulation': '영어 시뮬레이션',
+                          'timetable.english.backup.view': '백업 조회',
+                          'timetable.english.backup.restore': '백업 복원',
+                          'timetable.integrated.view': '통합 시간표 조회',
+                          'gantt.view': '간트 조회',
+                          'gantt.create': '간트 생성',
+                          'gantt.edit': '간트 수정',
+                          'gantt.delete': '간트 삭제',
+                        };
+                        return enabledPerms.map(([permId]) => (
+                          <div key={permId} className="flex items-center gap-2 text-xs text-gray-600 py-1">
+                            <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center text-[10px]">✓</span>
+                            {permLabels[permId] || permId}
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )
+      }
 
       <EventModal
         isOpen={isEventModalOpen}
@@ -2009,143 +2037,147 @@ const App: React.FC = () => {
       }
 
       {/* Memo Send Modal */}
-      {isMemoModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
-          <div className="bg-white rounded-xl shadow-2xl w-[400px] max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b flex items-center justify-between bg-gray-50">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <Send size={16} /> 메모 보내기
-              </h3>
-              <button onClick={() => setIsMemoModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="text-xs font-bold text-gray-600 block mb-1">받는 사람</label>
-                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
-                  {users
-                    .filter(u => u.uid !== currentUser?.uid)
-                    .sort((a, b) => {
-                      const isASel = memoRecipients.includes(a.uid);
-                      const isBSel = memoRecipients.includes(b.uid);
-                      if (isASel && !isBSel) return -1;
-                      if (!isASel && isBSel) return 1;
-                      return formatUserDisplay(a).localeCompare(formatUserDisplay(b));
-                    })
-                    .map(u => {
-                      const isSelected = memoRecipients.includes(u.uid);
-                      return (
-                        <label key={u.uid} className={`flex items-center gap-3 p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 ${isSelected ? 'bg-blue-50' : ''}`}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setMemoRecipients(prev => [...prev, u.uid]);
-                              } else {
-                                setMemoRecipients(prev => prev.filter(id => id !== u.uid));
-                              }
-                            }}
-                            className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
-                          />
-                          <span className="text-sm text-gray-700">{formatUserDisplay(u)}</span>
-                        </label>
-                      );
-                    })}
-                </div>
+      {
+        isMemoModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+            <div className="bg-white rounded-xl shadow-2xl w-[400px] max-h-[90vh] overflow-hidden">
+              <div className="p-4 border-b flex items-center justify-between bg-gray-50">
+                <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                  <Send size={16} /> 메모 보내기
+                </h3>
+                <button onClick={() => setIsMemoModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={20} />
+                </button>
               </div>
-              <div>
-                <label className="text-xs font-bold text-gray-600 block mb-1">메모 내용</label>
-                <textarea
-                  value={memoMessage}
-                  onChange={(e) => setMemoMessage(e.target.value)}
-                  placeholder="예: 오늘 회의 일정 만들어주세요"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none resize-none h-24"
-                />
-              </div>
-            </div>
-            <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
-              <button
-                onClick={() => setIsMemoModalOpen(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-bold"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSendMemo}
-                disabled={memoRecipients.length === 0 || !memoMessage.trim()}
-                className="px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-125 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Send size={14} /> 보내기 ({memoRecipients.length}명)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Memo Detail Modal */}
-      {selectedMemo && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
-          <div className="bg-white rounded-xl shadow-2xl w-[400px] overflow-hidden">
-            <div className="p-4 border-b flex items-center justify-between bg-gray-50">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <Mail size={16} /> 받은 메모
-              </h3>
-              <button onClick={() => setSelectedMemo(null)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="mb-4">
-                <span className="text-xs font-bold text-gray-500 block mb-1">보낸 사람</span>
-                <div className="text-gray-800 font-bold flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                    <UserIcon size={16} />
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-600 block mb-1">받는 사람</label>
+                  <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
+                    {users
+                      .filter(u => u.uid !== currentUser?.uid)
+                      .sort((a, b) => {
+                        const isASel = memoRecipients.includes(a.uid);
+                        const isBSel = memoRecipients.includes(b.uid);
+                        if (isASel && !isBSel) return -1;
+                        if (!isASel && isBSel) return 1;
+                        return formatUserDisplay(a).localeCompare(formatUserDisplay(b));
+                      })
+                      .map(u => {
+                        const isSelected = memoRecipients.includes(u.uid);
+                        return (
+                          <label key={u.uid} className={`flex items-center gap-3 p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 ${isSelected ? 'bg-blue-50' : ''}`}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setMemoRecipients(prev => [...prev, u.uid]);
+                                } else {
+                                  setMemoRecipients(prev => prev.filter(id => id !== u.uid));
+                                }
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
+                            />
+                            <span className="text-sm text-gray-700">{formatUserDisplay(u)}</span>
+                          </label>
+                        );
+                      })}
                   </div>
-                  {selectedMemo.fromName}
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-600 block mb-1">메모 내용</label>
+                  <textarea
+                    value={memoMessage}
+                    onChange={(e) => setMemoMessage(e.target.value)}
+                    placeholder="예: 오늘 회의 일정 만들어주세요"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none resize-none h-24"
+                  />
                 </div>
               </div>
-              <div className="mb-6">
-                <span className="text-xs font-bold text-gray-500 block mb-1">내용</span>
-                <div className="bg-gray-50 p-4 rounded-lg text-gray-700 text-sm whitespace-pre-wrap leading-relaxed border border-gray-100">
-                  {selectedMemo.message}
-                </div>
-                <div className="text-right mt-2 text-xs text-gray-400">
-                  {new Date(selectedMemo.createdAt).toLocaleString('ko-KR')}
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end">
+              <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
                 <button
-                  onClick={() => handleDeleteMemo(selectedMemo.id)}
-                  className="mr-auto px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm font-bold flex items-center gap-2"
+                  onClick={() => setIsMemoModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-bold"
                 >
-                  <Trash2 size={14} /> 삭제
+                  취소
                 </button>
                 <button
-                  onClick={() => {
-                    handleMarkMemoRead(selectedMemo.id);
-                    setSelectedMemo(null);
-                  }}
-                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-50"
+                  onClick={handleSendMemo}
+                  disabled={memoRecipients.length === 0 || !memoMessage.trim()}
+                  className="px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-125 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  확인 (닫기)
-                </button>
-                <button
-                  onClick={() => {
-                    setMemoRecipients([selectedMemo.from]); // Set recipient to sender
-                    setIsMemoModalOpen(true); // Open send modal
-                    setSelectedMemo(null); // Close detail modal
-                    handleMarkMemoRead(selectedMemo.id); // Mark as read
-                  }}
-                  className="px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-125 flex items-center gap-2"
-                >
-                  <Send size={14} /> 답장하기
+                  <Send size={14} /> 보내기 ({memoRecipients.length}명)
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
+      {/* Memo Detail Modal */}
+      {
+        selectedMemo && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
+            <div className="bg-white rounded-xl shadow-2xl w-[400px] overflow-hidden">
+              <div className="p-4 border-b flex items-center justify-between bg-gray-50">
+                <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                  <Mail size={16} /> 받은 메모
+                </h3>
+                <button onClick={() => setSelectedMemo(null)} className="text-gray-400 hover:text-gray-600">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6">
+                <div className="mb-4">
+                  <span className="text-xs font-bold text-gray-500 block mb-1">보낸 사람</span>
+                  <div className="text-gray-800 font-bold flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                      <UserIcon size={16} />
+                    </div>
+                    {selectedMemo.fromName}
+                  </div>
+                </div>
+                <div className="mb-6">
+                  <span className="text-xs font-bold text-gray-500 block mb-1">내용</span>
+                  <div className="bg-gray-50 p-4 rounded-lg text-gray-700 text-sm whitespace-pre-wrap leading-relaxed border border-gray-100">
+                    {selectedMemo.message}
+                  </div>
+                  <div className="text-right mt-2 text-xs text-gray-400">
+                    {new Date(selectedMemo.createdAt).toLocaleString('ko-KR')}
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => handleDeleteMemo(selectedMemo.id)}
+                    className="mr-auto px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm font-bold flex items-center gap-2"
+                  >
+                    <Trash2 size={14} /> 삭제
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleMarkMemoRead(selectedMemo.id);
+                      setSelectedMemo(null);
+                    }}
+                    className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-50"
+                  >
+                    확인 (닫기)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMemoRecipients([selectedMemo.from]); // Set recipient to sender
+                      setIsMemoModalOpen(true); // Open send modal
+                      setSelectedMemo(null); // Close detail modal
+                      handleMarkMemoRead(selectedMemo.id); // Mark as read
+                    }}
+                    className="px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-125 flex items-center gap-2"
+                  >
+                    <Send size={14} /> 답장하기
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
     </div >
   );
 };

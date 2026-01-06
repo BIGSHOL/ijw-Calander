@@ -2,13 +2,13 @@ import React, { useMemo } from 'react';
 import { format, setMonth, setYear, isToday, isPast, isFuture, parseISO, startOfDay, endOfDay, isSameDay, addDays, subDays, differenceInMinutes, setHours, setMinutes, getHours, getMinutes, getDaysInMonth, getDate, setDate, addWeeks, subWeeks, addMonths, subMonths, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { Department, CalendarEvent, UserProfile, DEFAULT_ROLE_PERMISSIONS } from '../types';
-import { getMonthWeeks } from '../utils/dateUtils';
+import { Department, CalendarEvent, UserProfile, DEFAULT_ROLE_PERMISSIONS } from '../../types';
+import { getMonthWeeks } from '../../utils/dateUtils';
 import WeekBlock from './WeekBlock';
 import MyEventsModal from './MyEventsModal'; // Import
 import CustomSelect from './CustomSelect'; // Import CustomSelect
 import { Clock, Users, Edit3, ChevronLeft, ChevronRight, Calendar as CalendarIcon, List, Search, Filter, X, Check } from 'lucide-react';
-import { EVENT_COLORS } from '../constants';
+import { EVENT_COLORS } from '../../constants';
 import YearlyView from './YearlyView'; // Import YearlyView
 
 interface CalendarBoardProps {

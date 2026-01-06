@@ -45,7 +45,7 @@ const TabAccessTab: React.FC<TabAccessTabProps> = ({
                     for (const role of ROLE_HIERARCHY.filter(r => r !== 'master') as UserRole[]) {
                         merged[role] = fetchedPerms[role] || [];
                     }
-                    merged.master = ['calendar', 'timetable', 'payment', 'gantt', 'consultation']; // Master always full access
+                    merged.master = ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation']; // Master always full access
                     setTabPermissions(merged);
                 } else {
                     setTabPermissions(DEFAULT_TAB_PERMISSIONS);

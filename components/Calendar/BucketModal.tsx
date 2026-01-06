@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Flag, Trash2 } from 'lucide-react';
-import { BucketItem } from '../types';
+import { BucketItem } from '../../types';
 
 interface BucketModalProps {
     isOpen: boolean;

@@ -238,7 +238,11 @@ export type PermissionId =
   | 'timetable.english.simulation'
   | 'timetable.english.backup.view' | 'timetable.english.backup.restore'
   | 'timetable.integrated.view'
-  | 'gantt.view' | 'gantt.create' | 'gantt.edit' | 'gantt.delete';
+  | 'gantt.view' | 'gantt.create' | 'gantt.edit' | 'gantt.delete'
+  // Attendance Permissions (NEW)
+  | 'attendance.view_own' | 'attendance.view_all'
+  | 'attendance.edit_own' | 'attendance.edit_all'
+  | 'attendance.manage_math' | 'attendance.manage_english';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -263,6 +267,10 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'timetable.english.backup.view': true, 'timetable.english.backup.restore': true,
     'timetable.integrated.view': true,
     'gantt.view': true, 'gantt.create': true, 'gantt.edit': true, 'gantt.delete': true,
+    // Attendance (Admin: full access)
+    'attendance.view_own': true, 'attendance.view_all': true,
+    'attendance.edit_own': true, 'attendance.edit_all': true,
+    'attendance.manage_math': true, 'attendance.manage_english': true,
   },
   manager: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': true,
@@ -275,6 +283,10 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'timetable.english.simulation': true,
     'timetable.english.backup.view': true, 'timetable.english.backup.restore': false,
     'gantt.view': true, 'gantt.create': true, 'gantt.edit': true, 'gantt.delete': false,
+    // Attendance (Manager: full access)
+    'attendance.view_own': true, 'attendance.view_all': true,
+    'attendance.edit_own': true, 'attendance.edit_all': true,
+    'attendance.manage_math': true, 'attendance.manage_english': true,
   },
   editor: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
@@ -296,6 +308,10 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'timetable.math.view': true, 'timetable.math.edit': true,
     'timetable.english.view': true, 'timetable.english.edit': false,
     'system.classes.view': true, 'system.classes.edit': true,
+    // Attendance (Math Lead: manage math, view/edit all math students)
+    'attendance.view_own': true, 'attendance.view_all': true,
+    'attendance.edit_own': true, 'attendance.edit_all': true,
+    'attendance.manage_math': true, 'attendance.manage_english': false,
   },
   english_lead: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
@@ -308,6 +324,10 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'timetable.math.view': true, 'timetable.math.edit': false,
     'timetable.english.view': true, 'timetable.english.edit': true,
     'system.classes.view': true, 'system.classes.edit': true,
+    // Attendance (English Lead: manage english, view/edit all english students)
+    'attendance.view_own': true, 'attendance.view_all': true,
+    'attendance.edit_own': true, 'attendance.edit_all': true,
+    'attendance.manage_math': false, 'attendance.manage_english': true,
   },
   math_teacher: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
@@ -319,6 +339,10 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
     'timetable.math.view': true, 'timetable.math.edit': false,
     'timetable.english.view': false, 'timetable.english.edit': false,
+    // Attendance (Math Teacher: view/edit own students only)
+    'attendance.view_own': true, 'attendance.view_all': false,
+    'attendance.edit_own': true, 'attendance.edit_all': false,
+    'attendance.manage_math': false, 'attendance.manage_english': false,
   },
   english_teacher: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
@@ -330,6 +354,10 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
     'timetable.math.view': false, 'timetable.math.edit': false,
     'timetable.english.view': true, 'timetable.english.edit': false,
+    // Attendance (English Teacher: view/edit own students only)
+    'attendance.view_own': true, 'attendance.view_all': false,
+    'attendance.edit_own': true, 'attendance.edit_all': false,
+    'attendance.manage_math': false, 'attendance.manage_english': false,
   },
   user: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
@@ -480,11 +508,12 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance';
 
 export const APP_TABS: { id: AppTab; label: string }[] = [
   { id: 'calendar', label: '연간 일정' },
   { id: 'timetable', label: '시간표' },
+  { id: 'attendance', label: '출석부' },
   { id: 'payment', label: '전자 결제' },
   { id: 'gantt', label: '간트 차트' },
   { id: 'consultation', label: '상담 관리' },
@@ -498,13 +527,13 @@ export type TabPermissionConfig = {
 
 // Default Tab Permissions (Fallback)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['calendar', 'timetable', 'payment', 'gantt', 'consultation'],
-  admin: ['calendar', 'timetable'], // consultation removed - testing phase
-  manager: ['calendar'],
+  master: ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation'],
+  admin: ['calendar', 'timetable', 'attendance', 'payment'], // Admin: calendar, timetable, payment, attendance
+  manager: ['calendar', 'attendance'],
   editor: ['calendar'],
-  math_lead: ['timetable'],
-  english_lead: ['timetable'],
-  user: ['calendar'],
+  math_lead: ['timetable', 'attendance'],
+  english_lead: ['timetable', 'attendance'],
+  user: ['calendar', 'attendance'],
   viewer: ['calendar'],
   guest: ['calendar'],
 };

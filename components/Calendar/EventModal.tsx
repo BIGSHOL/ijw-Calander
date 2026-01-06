@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { CalendarEvent, Department, UserProfile } from '../types';
-import { usePermissions } from '../hooks/usePermissions';
-import { EVENT_COLORS } from '../constants';
+import { CalendarEvent, Department, UserProfile } from '../../types';
+import { usePermissions } from '../../hooks/usePermissions';
+import { EVENT_COLORS } from '../../constants';
 // Added Edit3 and Plus to the imports to fix "Cannot find name" errors on line 95
 import { X, Trash2, Clock, Users, AlignLeft, Type, Edit3, Plus, Link as LinkIcon, Eye, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
