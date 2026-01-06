@@ -10,9 +10,12 @@ import {
 interface TeachersTabProps {
     teachers: Teacher[];
     isMaster: boolean;
+    canEdit?: boolean; // Optional for backwards compatibility
+    canViewMath?: boolean;
+    canViewEnglish?: boolean;
 }
 
-const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
+const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit = isMaster, canViewMath = true, canViewEnglish = true }) => {
     // React Query client for cache invalidation
     const queryClient = useQueryClient();
 
@@ -223,82 +226,100 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
                         className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
                     />
                 </div>
-                <div className="flex flex-col gap-2 items-end">
-                    <div className="flex items-center gap-3 bg-gray-50 px-3 py-1 rounded-md border border-gray-200">
-                        <span className="text-xs font-bold text-gray-500">표시할 시간표:</span>
-                        <label className="flex items-center gap-1.5 cursor-pointer">
+                {canEdit && (
+                    <div className="flex flex-col gap-2 items-end">
+                        <div className="flex items-center gap-3 bg-gray-50 px-3 py-1 rounded-md border border-gray-200">
+                            <span className="text-xs font-bold text-gray-500">표시할 시간표:</span>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={newTeacherSubjects.includes('math')}
+                                    onChange={(e) => {
+                                        if (e.target.checked) setNewTeacherSubjects([...newTeacherSubjects, 'math']);
+                                        else setNewTeacherSubjects(newTeacherSubjects.filter(s => s !== 'math'));
+                                    }}
+                                    className="w-3.5 h-3.5 accent-[#081429]"
+                                />
+                                <span className="text-xs text-gray-700">수학</span>
+                            </label>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={newTeacherSubjects.includes('english')}
+                                    onChange={(e) => {
+                                        if (e.target.checked) setNewTeacherSubjects([...newTeacherSubjects, 'english']);
+                                        else setNewTeacherSubjects(newTeacherSubjects.filter(s => s !== 'english'));
+                                    }}
+                                    className="w-3.5 h-3.5 accent-[#081429]"
+                                />
+                                <span className="text-xs text-gray-700">영어</span>
+                            </label>
+                        </div>
+                        <div className="flex gap-2">
                             <input
-                                type="checkbox"
-                                checked={newTeacherSubjects.includes('math')}
-                                onChange={(e) => {
-                                    if (e.target.checked) setNewTeacherSubjects([...newTeacherSubjects, 'math']);
-                                    else setNewTeacherSubjects(newTeacherSubjects.filter(s => s !== 'math'));
-                                }}
-                                className="w-3.5 h-3.5 accent-[#081429]"
+                                value={newTeacherName}
+                                onChange={(e) => setNewTeacherName(e.target.value)}
+                                placeholder="새 강사 이름"
+                                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none w-48"
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddTeacher()}
                             />
-                            <span className="text-xs text-gray-700">수학</span>
-                        </label>
-                        <label className="flex items-center gap-1.5 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={newTeacherSubjects.includes('english')}
-                                onChange={(e) => {
-                                    if (e.target.checked) setNewTeacherSubjects([...newTeacherSubjects, 'english']);
-                                    else setNewTeacherSubjects(newTeacherSubjects.filter(s => s !== 'english'));
-                                }}
-                                className="w-3.5 h-3.5 accent-[#081429]"
-                            />
-                            <span className="text-xs text-gray-700">영어</span>
-                        </label>
+                            <button
+                                onClick={handleAddTeacher}
+                                className="bg-[#081429] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#1e293b] flex items-center gap-1"
+                            >
+                                <Plus size={16} /> 추가
+                            </button>
+                        </div>
                     </div>
-                    <div className="flex gap-2">
-                        <input
-                            value={newTeacherName}
-                            onChange={(e) => setNewTeacherName(e.target.value)}
-                            placeholder="새 강사 이름"
-                            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none w-48"
-                            onKeyDown={(e) => e.key === 'Enter' && handleAddTeacher()}
-                        />
-                        <button
-                            onClick={handleAddTeacher}
-                            className="bg-[#081429] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#1e293b] flex items-center gap-1"
-                        >
-                            <Plus size={16} /> 추가
-                        </button>
-                    </div>
-                </div>
+                )}
             </div>
 
-            {/* Subject Filter Tabs */}
-            <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs font-bold text-gray-500">과목별 보기:</span>
-                <div className="flex bg-gray-100 rounded-lg p-0.5">
-                    <button
-                        onClick={() => setTeacherSubjectFilter('all')}
-                        className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'all' ? 'bg-white text-gray-700 shadow-sm' : 'text-gray-500'}`}
-                    >
-                        전체
-                    </button>
-                    <button
-                        onClick={() => setTeacherSubjectFilter('math')}
-                        className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'math' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-500'}`}
-                    >
-                        수학
-                    </button>
-                    <button
-                        onClick={() => setTeacherSubjectFilter('english')}
-                        className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'english' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-500'}`}
-                    >
-                        영어
-                    </button>
+            {/* Subject Filter Tabs - only show if multiple subjects accessible */}
+            {(canViewMath || canViewEnglish) && (
+                <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xs font-bold text-gray-500">과목별 보기:</span>
+                    <div className="flex bg-gray-100 rounded-lg p-0.5">
+                        {canViewMath && canViewEnglish && (
+                            <button
+                                onClick={() => setTeacherSubjectFilter('all')}
+                                className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'all' ? 'bg-white text-gray-700 shadow-sm' : 'text-gray-500'}`}
+                            >
+                                전체
+                            </button>
+                        )}
+                        {canViewMath && (
+                            <button
+                                onClick={() => setTeacherSubjectFilter('math')}
+                                className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'math' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-500'}`}
+                            >
+                                수학
+                            </button>
+                        )}
+                        {canViewEnglish && (
+                            <button
+                                onClick={() => setTeacherSubjectFilter('english')}
+                                className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'english' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-500'}`}
+                            >
+                                영어
+                            </button>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Teacher List */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 overflow-y-auto">
                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     {teachers
                         .filter(t => t.name.toLowerCase().includes(teacherSearchTerm.toLowerCase()))
+                        .filter(t => {
+                            // Subject permission filter
+                            const hasMath = t.subjects?.includes('math') || (!t.subjects);
+                            const hasEnglish = t.subjects?.includes('english');
+                            if (!canViewMath && hasMath && !hasEnglish) return false;
+                            if (!canViewEnglish && hasEnglish && !hasMath) return false;
+                            return canViewMath || canViewEnglish;
+                        })
                         .filter(t => {
                             if (teacherSubjectFilter === 'all') return true;
                             return t.subjects?.includes(teacherSubjectFilter) || (!t.subjects && teacherSubjectFilter === 'math');
@@ -307,13 +328,13 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
                         .map(teacher => (
                             <div
                                 key={teacher.id}
-                                className={`p-3 border border-gray-100 rounded-lg flex justify-between items-start hover:bg-gray-50 group transition-all cursor-move ${draggedTeacherId === teacher.id ? 'opacity-50 bg-blue-50 border-blue-300' : ''
+                                className={`p-3 border border-gray-100 rounded-lg flex justify-between items-start hover:bg-gray-50 group transition-all ${canEdit ? 'cursor-move' : ''} ${draggedTeacherId === teacher.id ? 'opacity-50 bg-blue-50 border-blue-300' : ''
                                     }`}
-                                draggable
-                                onDragStart={(e) => handleTeacherDragStart(e, teacher.id)}
-                                onDragOver={handleTeacherDragOver}
-                                onDrop={(e) => handleTeacherDrop(e, teacher.id)}
-                                onDragEnd={() => setDraggedTeacherId(null)}
+                                draggable={canEdit}
+                                onDragStart={canEdit ? (e) => handleTeacherDragStart(e, teacher.id) : undefined}
+                                onDragOver={canEdit ? handleTeacherDragOver : undefined}
+                                onDrop={canEdit ? (e) => handleTeacherDrop(e, teacher.id) : undefined}
+                                onDragEnd={canEdit ? () => setDraggedTeacherId(null) : undefined}
                             >
                                 {editingTeacherId === teacher.id ? (
                                     <div className="flex flex-col gap-2 w-full">
@@ -435,33 +456,37 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster }) => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => handleToggleVisibility(teacher.id, !!teacher.isHidden)}
-                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                                title={teacher.isHidden ? "시간표에 표시하기" : "시간표에서 숨기기"}
-                                            >
-                                                {teacher.isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setEditingTeacherId(teacher.id);
-                                                    setEditTeacherName(teacher.name);
-                                                    setEditTeacherSubjects(teacher.subjects || ['math', 'english']);
-                                                    setEditTeacherBgColor(teacher.bgColor || '#3b82f6');
-                                                    setEditTeacherTextColor(teacher.textColor || '#ffffff');
-                                                    setEditTeacherDefaultRoom(teacher.defaultRoom || '');
-                                                    setEditTeacherIsNative(teacher.isNative || false);
-                                                }}
-                                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                            >
-                                                <Edit size={14} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteTeacher(teacher.id, teacher.name)}
-                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
+                                            {canEdit && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleToggleVisibility(teacher.id, !!teacher.isHidden)}
+                                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                                        title={teacher.isHidden ? "시간표에 표시하기" : "시간표에서 숨기기"}
+                                                    >
+                                                        {teacher.isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingTeacherId(teacher.id);
+                                                            setEditTeacherName(teacher.name);
+                                                            setEditTeacherSubjects(teacher.subjects || ['math', 'english']);
+                                                            setEditTeacherBgColor(teacher.bgColor || '#3b82f6');
+                                                            setEditTeacherTextColor(teacher.textColor || '#ffffff');
+                                                            setEditTeacherDefaultRoom(teacher.defaultRoom || '');
+                                                            setEditTeacherIsNative(teacher.isNative || false);
+                                                        }}
+                                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                                    >
+                                                        <Edit size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteTeacher(teacher.id, teacher.name)}
+                                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </>
                                 )}

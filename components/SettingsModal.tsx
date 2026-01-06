@@ -9,6 +9,7 @@ import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, 
 import { Holiday } from '../types';
 import MyEventsModal from './MyEventsModal';
 import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab, DepartmentsTab, GanttCategoriesTab } from './settings';
+import { useTabPermissions } from '../hooks/useTabPermissions';
 // import MigrationPanel from './settings/MigrationPanel';
 
 interface SettingsModalProps {
@@ -59,6 +60,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const canViewTeachers = hasPermission('system.teachers.view');
   const canViewClasses = hasPermission('system.classes.view');
   const canManageRolePermissions = hasPermission('settings.role_permissions');
+
+  // Get accessible tabs for current user
+  const { accessibleTabs } = useTabPermissions(currentUserProfile || null);
 
   const [mainTab, setMainTab] = useState<MainTabMode>('calendar');
   const [activeTab, setActiveTab] = useState<TabMode>('departments');
@@ -1158,9 +1162,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             user.role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
                               user.role === 'manager' ? 'bg-purple-100 text-purple-700' :
                                 user.role === 'editor' ? 'bg-blue-100 text-blue-700' :
-                                  user.role === 'user' ? 'bg-gray-100 text-gray-600' :
-                                    user.role === 'viewer' ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-gray-50 text-gray-400'
+                                  user.role === 'math_lead' ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-300' :
+                                    user.role === 'english_lead' ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 border border-orange-300' :
+                                      user.role === 'math_teacher' ? 'bg-green-50 text-green-600 border border-green-200' :
+                                        user.role === 'english_teacher' ? 'bg-orange-50 text-orange-600 border border-orange-200' :
+                                          user.role === 'user' ? 'bg-gray-100 text-gray-600' :
+                                            user.role === 'viewer' ? 'bg-yellow-100 text-yellow-700' :
+                                              'bg-gray-50 text-gray-400'
                             }`}>
                             {ROLE_LABELS[user.role] || user.role.toUpperCase()}
                           </span>
@@ -1215,12 +1223,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* TEACHERS TAB */}
             {activeTab === 'teachers' && (isMaster || canViewTeachers) && (
-              <TeachersTab teachers={teachers} isMaster={isMaster} />
+              <TeachersTab
+                teachers={teachers}
+                isMaster={isMaster}
+                canEdit={isMaster || hasPermission('system.teachers.edit')}
+                canViewMath={isMaster || hasPermission('timetable.math.view')}
+                canViewEnglish={isMaster || hasPermission('timetable.english.view')}
+              />
             )}
 
             {/* CLASSES MANAGEMENT TAB - 수업 키워드 색상 관리 */}
             {activeTab === 'classes' && (isMaster || canViewClasses) && (
-              <ClassesTab isMaster={isMaster} />
+              <ClassesTab isMaster={isMaster} canEdit={isMaster || hasPermission('system.classes.edit')} />
             )}
 
             {/* SYSTEM TAB */}
@@ -1269,7 +1283,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
 
                   {/* Dark Mode Toggle */}
-                  <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <div>
                       <span className="text-sm font-medium text-gray-700">다크 모드</span>
                       <p className="text-xs text-gray-400">어두운 테마 사용</p>
@@ -1293,6 +1307,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       />
                     </button>
                   </div>
+
+                  {/* Default Main Tab - Only show if user has access to 2+ tabs */}
+                  {accessibleTabs.length >= 2 && (
+                    <div className="flex items-center justify-between py-3">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">기본 메인 탭</span>
+                        <p className="text-xs text-gray-400">로그인 시 먼저 표시될 탭</p>
+                      </div>
+                      <select
+                        value={localStorage.getItem('default_main_tab') || 'auto'}
+                        onChange={(e) => {
+                          localStorage.setItem('default_main_tab', e.target.value);
+                          setHasChanges(true);
+                        }}
+                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none"
+                      >
+                        <option value="auto">자동 (첫 번째 탭)</option>
+                        {accessibleTabs.includes('calendar') && <option value="calendar">📅 연간 일정</option>}
+                        {accessibleTabs.includes('timetable') && <option value="timetable">📊 시간표</option>}
+                        {accessibleTabs.includes('payment') && <option value="payment">💰 전자 결제</option>}
+                        {accessibleTabs.includes('gantt') && <option value="gantt">📈 간트 차트</option>}
+                        {accessibleTabs.includes('consultation') && <option value="consultation">💬 상담 관리</option>}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. System Config (Data Retention) */}

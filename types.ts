@@ -203,10 +203,10 @@ export interface GanttProject {
 
 export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
-// 9-tier role system (ordered from highest to lowest)
-export type UserRole = 'master' | 'admin' | 'manager' | 'editor' | 'math_lead' | 'english_lead' | 'user' | 'viewer' | 'guest';
+// 11-tier role system (ordered from highest to lowest)
+export type UserRole = 'master' | 'admin' | 'manager' | 'editor' | 'math_lead' | 'english_lead' | 'math_teacher' | 'english_teacher' | 'user' | 'viewer' | 'guest';
 
-export const ROLE_HIERARCHY: UserRole[] = ['master', 'admin', 'manager', 'editor', 'math_lead', 'english_lead', 'user', 'viewer', 'guest'];
+export const ROLE_HIERARCHY: UserRole[] = ['master', 'admin', 'manager', 'editor', 'math_lead', 'english_lead', 'math_teacher', 'english_teacher', 'user', 'viewer', 'guest'];
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   master: 'MASTER',
@@ -215,6 +215,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   editor: 'EDITOR',
   math_lead: '수학팀장',
   english_lead: '영어팀장',
+  math_teacher: '수학선생님',
+  english_teacher: '영어선생님',
   user: 'USER',
   viewer: 'VIEWER',
   guest: 'GUEST'
@@ -306,6 +308,28 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'timetable.math.view': true, 'timetable.math.edit': false,
     'timetable.english.view': true, 'timetable.english.edit': true,
     'system.classes.view': true, 'system.classes.edit': true,
+  },
+  math_teacher: {
+    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
+    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
+    'events.attendance': true,
+    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
+    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    'timetable.math.view': true, 'timetable.math.edit': false,
+    'timetable.english.view': false, 'timetable.english.edit': false,
+  },
+  english_teacher: {
+    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
+    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
+    'events.attendance': true,
+    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
+    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    'timetable.math.view': false, 'timetable.math.edit': false,
+    'timetable.english.view': true, 'timetable.english.edit': false,
   },
   user: {
     'events.create': true, 'events.edit_own': true, 'events.edit_others': false,

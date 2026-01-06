@@ -200,16 +200,25 @@ const App: React.FC = () => {
     // Priority order for tabs
     const priority: ('calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation')[] = ['calendar', 'timetable', 'payment', 'gantt', 'consultation'];
 
-    // Initial setup: if appMode is null, set to first accessible tab
+    // Initial setup: if appMode is null, set to first accessible tab (or user's preferred tab)
     if (appMode === null) {
-      const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
-      if (firstAccessibleTab) {
-        console.log(`[Init] Setting initial appMode to: ${firstAccessibleTab}`);
-        setAppMode(firstAccessibleTab);
+      // Check for user's preferred default tab
+      const preferredTab = localStorage.getItem('default_main_tab');
+
+      if (preferredTab && preferredTab !== 'auto' && canAccessTab(preferredTab as AppTab)) {
+        console.log(`[Init] Setting appMode to user preferred tab: ${preferredTab}`);
+        setAppMode(preferredTab as 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation');
       } else {
-        // Fallback: no accessible tab, show calendar (will display error)
-        console.warn('[Init] No accessible tab found, falling back to calendar');
-        setAppMode('calendar');
+        // Fallback to first accessible tab
+        const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
+        if (firstAccessibleTab) {
+          console.log(`[Init] Setting initial appMode to: ${firstAccessibleTab}`);
+          setAppMode(firstAccessibleTab);
+        } else {
+          // Fallback: no accessible tab, show calendar (will display error)
+          console.warn('[Init] No accessible tab found, falling back to calendar');
+          setAppMode('calendar');
+        }
       }
       return;
     }
@@ -1248,8 +1257,10 @@ const App: React.FC = () => {
                         userProfile.role === 'editor' ? 'bg-blue-600' :
                           userProfile.role === 'math_lead' ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
                             userProfile.role === 'english_lead' ? 'bg-gradient-to-r from-orange-500 to-red-500' :
-                              userProfile.role === 'user' ? 'bg-gray-500' :
-                                userProfile.role === 'viewer' ? 'bg-yellow-600' : 'bg-gray-400'
+                              userProfile.role === 'math_teacher' ? 'bg-green-500' :
+                                userProfile.role === 'english_teacher' ? 'bg-orange-500' :
+                                  userProfile.role === 'user' ? 'bg-gray-500' :
+                                    userProfile.role === 'viewer' ? 'bg-yellow-600' : 'bg-gray-400'
                     }`}>
                     {ROLE_LABELS[userProfile.role] || userProfile.role.toUpperCase()}
                   </span>

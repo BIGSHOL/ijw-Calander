@@ -6,9 +6,10 @@ import { X, Edit2, Check } from 'lucide-react';
 
 interface ClassesTabProps {
     isMaster: boolean;
+    canEdit?: boolean; // Optional for backwards compatibility
 }
 
-const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster }) => {
+const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster }) => {
     // --- Local State ---
     const [classKeywords, setClassKeywords] = useState<ClassKeywordColor[]>([]);
     const [newKeyword, setNewKeyword] = useState('');
@@ -108,49 +109,51 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster }) => {
                 </p>
 
                 {/* 입력 폼 - 더 컴팩트하게 */}
-                <div className="flex items-end gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                    <div className="flex-1">
-                        <label className="text-xs font-semibold text-gray-600 block mb-1">키워드</label>
-                        <input
-                            type="text"
-                            placeholder="예: Phonics"
-                            value={newKeyword}
-                            onChange={(e) => setNewKeyword(e.target.value)}
-                            className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:border-[#fdb813] outline-none"
-                            onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
-                        />
-                    </div>
-                    <div>
-                        <label className="text-xs font-semibold text-gray-600 block mb-1">배경색</label>
-                        <div className="flex items-center gap-1.5">
+                {canEdit && (
+                    <div className="flex items-end gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex-1">
+                            <label className="text-xs font-semibold text-gray-600 block mb-1">키워드</label>
                             <input
-                                type="color"
-                                value={newKeywordBgColor}
-                                onChange={(e) => setNewKeywordBgColor(e.target.value)}
-                                className="w-7 h-7 rounded cursor-pointer"
+                                type="text"
+                                placeholder="예: Phonics"
+                                value={newKeyword}
+                                onChange={(e) => setNewKeyword(e.target.value)}
+                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:border-[#fdb813] outline-none"
+                                onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
                             />
-                            <span className="text-[10px] text-gray-500 font-mono w-16">{newKeywordBgColor}</span>
                         </div>
-                    </div>
-                    <div>
-                        <label className="text-xs font-semibold text-gray-600 block mb-1">글자색</label>
-                        <div className="flex items-center gap-1.5">
-                            <input
-                                type="color"
-                                value={newKeywordTextColor}
-                                onChange={(e) => setNewKeywordTextColor(e.target.value)}
-                                className="w-7 h-7 rounded cursor-pointer"
-                            />
-                            <span className="text-[10px] text-gray-500 font-mono w-16">{newKeywordTextColor}</span>
+                        <div>
+                            <label className="text-xs font-semibold text-gray-600 block mb-1">배경색</label>
+                            <div className="flex items-center gap-1.5">
+                                <input
+                                    type="color"
+                                    value={newKeywordBgColor}
+                                    onChange={(e) => setNewKeywordBgColor(e.target.value)}
+                                    className="w-7 h-7 rounded cursor-pointer"
+                                />
+                                <span className="text-[10px] text-gray-500 font-mono w-16">{newKeywordBgColor}</span>
+                            </div>
                         </div>
+                        <div>
+                            <label className="text-xs font-semibold text-gray-600 block mb-1">글자색</label>
+                            <div className="flex items-center gap-1.5">
+                                <input
+                                    type="color"
+                                    value={newKeywordTextColor}
+                                    onChange={(e) => setNewKeywordTextColor(e.target.value)}
+                                    className="w-7 h-7 rounded cursor-pointer"
+                                />
+                                <span className="text-[10px] text-gray-500 font-mono w-16">{newKeywordTextColor}</span>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleAddKeyword}
+                            className="px-4 py-1.5 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-110 whitespace-nowrap"
+                        >
+                            추가
+                        </button>
                     </div>
-                    <button
-                        onClick={handleAddKeyword}
-                        className="px-4 py-1.5 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-110 whitespace-nowrap"
-                    >
-                        추가
-                    </button>
-                </div>
+                )}
 
                 {/* 키워드 목록 - 더 컴팩트하게 */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
@@ -203,20 +206,24 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster }) => {
                                 >
                                     <span className="text-sm block truncate">{kw.keyword}</span>
                                     <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-0.5">
-                                        <button
-                                            onClick={() => handleStartEdit(kw)}
-                                            className="p-1 rounded bg-white/90 hover:bg-white shadow-sm transition-all"
-                                            title="수정"
-                                        >
-                                            <Edit2 size={12} className="text-blue-600" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteKeyword(kw.id, kw.keyword)}
-                                            className="p-1 rounded bg-white/90 hover:bg-white shadow-sm transition-all"
-                                            title="삭제"
-                                        >
-                                            <X size={12} className="text-red-600" />
-                                        </button>
+                                        {canEdit && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleStartEdit(kw)}
+                                                    className="p-1 rounded bg-white/90 hover:bg-white shadow-sm transition-all"
+                                                    title="수정"
+                                                >
+                                                    <Edit2 size={12} className="text-blue-600" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteKeyword(kw.id, kw.keyword)}
+                                                    className="p-1 rounded bg-white/90 hover:bg-white shadow-sm transition-all"
+                                                    title="삭제"
+                                                >
+                                                    <X size={12} className="text-red-600" />
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             )}
