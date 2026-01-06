@@ -31,7 +31,9 @@ interface TimetableGridProps {
     onDragOver: (e: React.DragEvent, classId: string) => void;
     onDragLeave: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent, toClassId: string) => void;
+
     currentSubjectFilter: string;
+    studentMap: Record<string, any>; // Using any temporarily or import UnifiedStudent
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -58,7 +60,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     onDragOver,
     onDragLeave,
     onDrop,
-    currentSubjectFilter
+
+    currentSubjectFilter,
+    studentMap
 }) => {
     // Helper to get column width style
     const getColumnWidthStyle = (colspan: number) => {
@@ -212,6 +216,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 onDragOver={onDragOver}
                                                 onDragLeave={onDragLeave}
                                                 onDrop={onDrop}
+                                                studentMap={studentMap}
                                             />
                                         ))}
                                     </td>

@@ -31,6 +31,7 @@ interface EnglishClassTabProps {
     classKeywords?: ClassKeywordColor[];  // For keyword color coding
     currentUser: any;
     isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
+    studentMap: Record<string, any>;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -42,8 +43,10 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     scheduleData,
     teachersData = [],
     classKeywords = [],
+
     currentUser,
-    isSimulationMode = false
+    isSimulationMode = false,
+    studentMap
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -477,6 +480,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 // Drag & Drop Props
                                                 moveChanges={moveChanges}
                                                 onMoveStudent={handleMoveStudent}
+                                                studentMap={studentMap}
                                             />
                                         ))}
                                     </div>

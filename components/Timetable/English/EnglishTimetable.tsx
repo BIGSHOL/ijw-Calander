@@ -16,9 +16,10 @@ interface EnglishTimetableProps {
     onClose?: () => void;
     onSwitchToMath?: () => void;
     viewType: 'teacher' | 'class' | 'room';
-    teachers?: Teacher[];  // Centralized from App.tsx via TimetableManager
-    classKeywords?: ClassKeywordColor[];  // For keyword color coding
-    currentUser: any; // Using any to avoid circular dependency
+    teachers?: Teacher[];
+    classKeywords?: ClassKeywordColor[];
+    currentUser: any;
+    studentMap: Record<string, any>;
 }
 
 interface ScheduleCell {
@@ -30,7 +31,7 @@ interface ScheduleCell {
 
 type ScheduleData = Record<string, ScheduleCell>;
 
-const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser }) => {
+const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap }) => {
     // Removed local activeTab state, using viewType prop
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
@@ -389,6 +390,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                 classKeywords={classKeywords}
                                 currentUser={currentUser}
                                 isSimulationMode={isSimulationMode}
+                                studentMap={studentMap}
                             />
                         )}
                         {viewType === 'room' && (

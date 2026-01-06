@@ -32,25 +32,36 @@ export interface MonthlySettlement {
 export type AttendanceSubject = 'math' | 'english';
 
 export interface Student {
+  // UnifiedStudent fields
   id: string;
   name: string;
-  school: string;
-  grade: string;
-  group: string; // New: Class Group Name (e.g., "Piano A", "Math B")
-  salarySettingId: string; // Links to SalarySettingItem.id
-  days: string[];
+  englishName?: string;
+  school?: string; // Unified: string | undefined
+  grade?: string;  // Unified: string | undefined
+  group?: string;  // Unified: string | undefined
+
+  // Custom for Attendance (merged locally)
+  salarySettingId?: string; // Unified: string | undefined
+  days?: string[];          // Unified: string[] | undefined
+
   attendance: Record<string, number>;
-  memos?: Record<string, string>; // New: DateKey -> Note text (e.g., "Sick leave", "Late")
-  isHomeroom?: boolean; // New: Indicates if the student is managed by a homeroom teacher
+  memos?: Record<string, string>;
 
-  // Effective Period
-  startDate: string; // "YYYY-MM-DD" format. Mandatory.
-  endDate: string | null; // "YYYY-MM-DD" format. If null, active indefinitely.
+  // Legacy/Optional Compatibility
+  isHomeroom?: boolean;
 
-  // Teacher Integration (NEW)
-  teacherIds: string[];        // 담당 강사 ID 배열 (다대다 관계, 부담임 지원)
-  subject: AttendanceSubject;  // 과목 구분 (수학/영어)
-  ownerId?: string;            // Firebase 문서 소유자 (작성자 UID)
+  // Effective Period (Unified has these)
+  startDate: string;
+  endDate?: string;  // Unified uses optional string
+
+  // Teacher Integration
+  teacherIds: string[];
+  subjects: AttendanceSubject[];  // Array support
+  ownerId?: string;
+
+  // Metadata
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AppState {

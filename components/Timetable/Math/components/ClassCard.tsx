@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TimetableClass } from '../../../../types';
 import { getSubjectTheme } from '../utils/gridUtils';
 
@@ -16,6 +16,7 @@ interface ClassCardProps {
     onDragOver: (e: React.DragEvent, classId: string) => void;
     onDragLeave: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent, toClassId: string) => void;
+    studentMap: Record<string, any>;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -31,11 +32,20 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onDragStart,
     onDragOver,
     onDragLeave,
-    onDrop
+
+    onDrop,
+    studentMap
 }) => {
     const theme = getSubjectTheme(cls.subject);
     const hasSearchMatch = searchQuery && cls.studentList?.some(s => s.name.includes(searchQuery));
-    const sortedStudents = [...(cls.studentList || [])].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    const sortedStudents = useMemo(() => {
+        if (!cls.studentIds) return cls.studentList && cls.studentList.length > 0 ? [...cls.studentList].sort((a, b) => a.name.localeCompare(b.name, 'ko')) : [];
+
+        return cls.studentIds
+            .map(id => studentMap[id])
+            .filter(Boolean)
+            .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    }, [cls.studentIds, cls.studentList, studentMap]);
 
     return (
         <div

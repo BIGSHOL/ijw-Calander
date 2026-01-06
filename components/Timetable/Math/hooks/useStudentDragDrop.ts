@@ -54,26 +54,32 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             return;
         }
 
+        // Logic check: make sure class exists
         const fromClass = localClasses.find(c => c.id === fromClassId);
         const toClass = localClasses.find(c => c.id === toClassId);
         if (!fromClass || !toClass) return;
 
-        const student = fromClass.studentList?.find(s => s.id === studentId);
-        if (!student) return;
+        // Verify student exists in fromClass (using IDs)
+        if (!fromClass.studentIds?.includes(studentId)) return;
 
-        // Update local state only (no Firebase write yet)
+        // Update local state
         setLocalClasses(prev => prev.map(cls => {
             if (cls.id === fromClassId) {
-                return { ...cls, studentList: cls.studentList.filter(s => s.id !== studentId) };
+                const newIds = (cls.studentIds || []).filter(id => id !== studentId);
+                return { ...cls, studentIds: newIds };
             }
             if (cls.id === toClassId) {
-                return { ...cls, studentList: [...(cls.studentList || []), student] };
+                const newIds = [...(cls.studentIds || [])];
+                if (!newIds.includes(studentId)) {
+                    newIds.push(studentId);
+                }
+                return { ...cls, studentIds: newIds };
             }
             return cls;
         }));
 
         // Add to pending moves
-        setPendingMoves(prev => [...prev, { studentId, fromClassId, toClassId, student }]);
+        setPendingMoves(prev => [...prev, { studentId, fromClassId, toClassId, student: { id: studentId } as TimetableStudent }]); // Partial student obj is enough for tracking
         setDraggingStudent(null);
     };
 
@@ -94,7 +100,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             affectedClassIds.forEach(classId => {
                 const cls = localClasses.find(c => c.id === classId);
                 if (cls) {
-                    batch.update(doc(db, '수업목록', classId), { studentList: cls.studentList || [] });
+                    batch.update(doc(db, '수업목록', classId), { studentIds: cls.studentIds || [] });
                 }
             });
 

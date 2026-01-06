@@ -10,18 +10,27 @@ export interface Department {
   defaultBorderColor?: string;
 }
 
+// Detailed Enrollment Information
+export interface Enrollment {
+  subject: 'math' | 'english';
+  classId: string;    // Document ID of the class
+  className: string;  // Name of the class
+  teacherId: string;  // Teacher Name/ID
+}
+
 // Phase 1: Unified Student DB
 export interface UnifiedStudent {
   // 기본 정보
   id: string;                    // UUID
   name: string;                  // 이름
-  englishName?: string;          // 영어 이름
+  englishName?: string | null;   // 영어 이름
   school?: string;               // 학교
   grade?: string;                // 학년
 
-  // 과목 및 담당
-  subject: 'math' | 'english';   // 과목
-  teacherIds: string[];          // 담당 강사 ID 배열
+  // 수강 정보 (v5: 계층형 구조)
+  enrollments: Enrollment[];     // 상세 수강 정보 (Subject -> Class -> Teacher mapping)
+
+
 
   // 상태 관리
   status: 'active' | 'on_hold' | 'withdrawn';

@@ -1,4 +1,4 @@
-import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, collection } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass, TimetableStudent } from '../../../../types';
 
@@ -94,7 +94,7 @@ export const useClassOperations = () => {
 
     const addStudent = async (
         classId: string,
-        currentStudentList: TimetableStudent[],
+        currentStudentIds: string[] | undefined,
         studentData: {
             name: string;
             grade: string;
@@ -105,54 +105,66 @@ export const useClassOperations = () => {
             throw new Error('학생 이름을 입력해주세요.');
         }
 
-        const studentId = `student_${Date.now()}`;
-        const newStudent: TimetableStudent = {
-            id: studentId,
+        // 1. Create Unified Student Document
+        const studentRef = doc(collection(db, 'students'));
+        const newStudentId = studentRef.id;
+        const now = new Date().toISOString();
+
+        const newStudent = {
+            id: newStudentId,
             name: studentData.name.trim(),
             grade: studentData.grade.trim(),
             school: studentData.school.trim(),
+            status: 'active',
+            subject: 'math', // Default for this context
+            teacherIds: [], // Could populate if we knew the teacher ID from class
+            createdAt: now,
+            updatedAt: now
         };
 
-        const updatedList = [...(currentStudentList || []), newStudent];
-        await updateDoc(doc(db, '수업목록', classId), { studentList: updatedList });
-        return updatedList;
-    };
+        await setDoc(studentRef, newStudent);
 
-    const removeStudent = async (classId: string, currentStudentList: TimetableStudent[], studentId: string) => {
-        const updatedList = currentStudentList.filter(s => s.id !== studentId);
-        await updateDoc(doc(db, '수업목록', classId), { studentList: updatedList });
-        return updatedList;
-    };
-
-    const withdrawStudent = async (classId: string, currentStudentList: TimetableStudent[], studentId: string) => {
-        const updatedList = (currentStudentList || []).map(s => {
-            if (s.id === studentId) {
-                return {
-                    ...s,
-                    withdrawalDate: new Date().toISOString().split('T')[0],
-                    enrollmentDate: undefined
-                };
-            }
-            return s;
+        // 2. Link to Class
+        const updatedIds = [...(currentStudentIds || []), newStudentId];
+        await updateDoc(doc(db, '수업목록', classId), {
+            studentIds: updatedIds,
+            // Deprecated: maintain for compatibility if needed, else remove
+            // studentList: ... 
         });
 
-        await updateDoc(doc(db, '수업목록', classId), { studentList: updatedList });
-        return updatedList;
+        return updatedIds; // Return IDs instead of list
     };
 
-    const restoreStudent = async (classId: string, currentStudentList: TimetableStudent[], studentId: string) => {
-        const updatedList = (currentStudentList || []).map(s => {
-            if (s.id === studentId) {
-                return {
-                    ...s,
-                    withdrawalDate: undefined
-                };
-            }
-            return s;
-        });
+    const removeStudent = async (classId: string, currentStudentIds: string[] | undefined, studentId: string) => {
+        const updatedIds = (currentStudentIds || []).filter(id => id !== studentId);
+        await updateDoc(doc(db, '수업목록', classId), { studentIds: updatedIds });
+        return updatedIds;
+    };
 
-        await updateDoc(doc(db, '수업목록', classId), { studentList: updatedList });
-        return updatedList;
+    const withdrawStudent = async (classId: string, currentStudentIds: string[] | undefined, studentId: string) => {
+        // Update Student Status
+        const studentRef = doc(db, 'students', studentId);
+        const now = new Date().toISOString();
+        await updateDoc(studentRef, {
+            status: 'withdrawn',
+            endDate: now.split('T')[0],
+            updatedAt: now
+        });
+        // We don't remove from class if we want to keep showing them as withdrawn
+        return currentStudentIds || [];
+    };
+
+    const restoreStudent = async (classId: string, currentStudentIds: string[] | undefined, studentId: string) => {
+        // Update Student Status
+        const studentRef = doc(db, 'students', studentId);
+        const now = new Date().toISOString();
+        await updateDoc(studentRef, {
+            status: 'active',
+            endDate: null, // Clear end date
+            withdrawalDate: null, // Clear if any
+            updatedAt: now
+        });
+        return currentStudentIds || [];
     };
 
     return {

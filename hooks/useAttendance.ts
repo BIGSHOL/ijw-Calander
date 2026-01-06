@@ -6,7 +6,7 @@ import { Student, SalaryConfig, MonthlySettlement, AttendanceSubject } from '../
 import { useEffect, useState } from 'react';
 
 // Collection names
-const STUDENTS_COLLECTION = 'attendance_students';
+const STUDENTS_COLLECTION = 'students'; // Unified DB
 const RECORDS_COLLECTION = 'attendance_records';
 const CONFIG_COLLECTION = 'attendance_config';
 
@@ -49,15 +49,22 @@ export const useAttendanceStudents = (options?: {
                     id: d.id,
                     ...d.data(),
                     attendance: {}, // Initialize empty, will be filled below
-                    memos: {}
+                    memos: {},
+                    // Ensure compatibility fields if missing in DB
+                    teacherIds: d.data().teacherIds || [],
                 } as Student));
+
+                // Filter out withdrawn students if needed, or keeping them for historical attendance?
+                // Usually we only show active students in the main list.
+                // Unified DB uses 'status' field.
+                // data = data.filter(s => (s as any).status !== 'withdrawn');
 
                 // Client-side filtering (can be moved to Firestore query with proper indexes)
                 if (options?.teacherId) {
                     data = data.filter(s => s.teacherIds?.includes(options.teacherId!));
                 }
                 if (options?.subject) {
-                    data = data.filter(s => s.subject === options.subject);
+                    data = data.filter(s => s.subjects?.includes(options.subject!));
                 }
 
                 // Load attendance records for the specified month
@@ -185,7 +192,15 @@ export const useAddStudent = () => {
 
     return useMutation({
         mutationFn: async (student: Student) => {
-            await setDoc(doc(db, STUDENTS_COLLECTION, student.id), student);
+            // Ensure extended fields for UnifiedStudent
+            const unifiedData = {
+                ...student,
+                updatedAt: new Date().toISOString(),
+                // If new, set createdAt
+                ...(student.createdAt ? {} : { createdAt: new Date().toISOString() }),
+                status: student.endDate ? 'withdrawn' : 'active'
+            };
+            await setDoc(doc(db, STUDENTS_COLLECTION, student.id), unifiedData, { merge: true });
             return student;
         },
         onSuccess: () => {
