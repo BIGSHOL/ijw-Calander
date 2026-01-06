@@ -10,6 +10,10 @@ import EnglishTimetable from './English/EnglishTimetable';
 import TeacherOrderModal from './English/TeacherOrderModal';
 import WeekdayOrderModal from './WeekdayOrderModal';
 import MathStudentModal from './Math/MathStudentModal';
+import { useMathConfig } from './Math/hooks/useMathConfig';
+import { useTimetableClasses } from './Math/hooks/useTimetableClasses';
+import { useClassOperations } from './Math/hooks/useClassOperations';
+import { useStudentDragDrop } from './Math/hooks/useStudentDragDrop';
 
 // Constants
 const ALL_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
@@ -78,39 +82,36 @@ const TimetableManager = ({
     const subjectTab = externalSubjectTab ?? internalSubjectTab;
     const setSubjectTab = onSubjectChange ?? setInternalSubjectTab;
 
-    // Data State
-    const [classes, setClasses] = useState<TimetableClass[]>([]);
+    // Hook Integration: Classes Data
+    const { classes, loading: classesLoading } = useTimetableClasses();
+
     // teachers는 propsTeachers에서 받아서 수학 과목 필터링하여 사용
     const teachers = React.useMemo(() =>
         propsTeachers.filter(t => !t.subjects || t.subjects.includes('math')),
         [propsTeachers]);
 
-    // Math Config (Teacher Order, Weekday Order)
-    const [mathConfig, setMathConfig] = useState<{ teacherOrder: string[]; weekdayOrder: string[] }>({
-        teacherOrder: [],
-        weekdayOrder: []
-    });
-    const [isTeacherOrderModalOpen, setIsTeacherOrderModalOpen] = useState(false);
-    const [isWeekdayOrderModalOpen, setIsWeekdayOrderModalOpen] = useState(false);
+    // Hook Integration: Math Config
+    const {
+        mathConfig,
+        isTeacherOrderModalOpen,
+        setIsTeacherOrderModalOpen,
+        isWeekdayOrderModalOpen,
+        setIsWeekdayOrderModalOpen,
+        handleSaveTeacherOrder,
+        handleSaveWeekdayOrder
+    } = useMathConfig();
 
-    // Load Math Config from Firestore
-    useEffect(() => {
-        const loadConfig = async () => {
-            try {
-                const docSnap = await getDoc(doc(db, 'settings', 'math_config'));
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    setMathConfig({
-                        teacherOrder: data.teacherOrder || [],
-                        weekdayOrder: data.weekdayOrder || []
-                    });
-                }
-            } catch (error) {
-                console.error('Math config 로딩 실패:', error);
-            }
-        };
-        loadConfig();
-    }, []);
+    // Hook Integration: Class Operations
+    const {
+        checkConsecutiveSchedule,
+        addClass,
+        updateClass,
+        deleteClass,
+        addStudent,
+        removeStudent,
+        withdrawStudent,
+        restoreStudent
+    } = useClassOperations();
 
     // Sorted Teachers based on saved order
     const sortedTeachers = useMemo(() => {
@@ -139,27 +140,8 @@ const TimetableManager = ({
     }, [mathConfig.weekdayOrder]);
 
     // Save Math Config
-    const handleSaveTeacherOrder = async (newOrder: string[]) => {
-        try {
-            await setDoc(doc(db, 'settings', 'math_config'), { teacherOrder: newOrder }, { merge: true });
-            setMathConfig(prev => ({ ...prev, teacherOrder: newOrder }));
-        } catch (error) {
-            console.error('강사 순서 저장 실패:', error);
-            alert('강사 순서 저장에 실패했습니다.');
-        }
-    };
-
-    const handleSaveWeekdayOrder = async (newOrder: string[]) => {
-        try {
-            await setDoc(doc(db, 'settings', 'math_config'), { weekdayOrder: newOrder }, { merge: true });
-            setMathConfig(prev => ({ ...prev, weekdayOrder: newOrder }));
-        } catch (error) {
-            console.error('요일 순서 저장 실패:', error);
-            alert('요일 순서 저장에 실패했습니다.');
-        }
-    };
-
-    const [loading, setLoading] = useState(true);
+    // Loading State
+    const loading = classesLoading;
 
     // Week State (for date display)
     const [currentMonday, setCurrentMonday] = useState(() => {
@@ -218,22 +200,11 @@ const TimetableManager = ({
     const handleUpdateClass = async () => {
         if (!selectedClass) return;
 
-        if (editSchedule.length === 0) {
-            alert('최소 1개 이상의 시간대를 선택해주세요.');
-            return;
-        }
-
-        // Validate consecutive schedule
-        if (!checkConsecutiveSchedule(editSchedule, currentPeriods)) {
-            alert('같은 요일의 수업 시간은 연속되어야 합니다.\n\n예: 1-1, 1-2 (O) / 1-1, 2-1 (X - 중간에 1-2번이 비어있음)');
-            return;
-        }
-
         try {
-            await updateDoc(doc(db, '수업목록', selectedClass.id), {
+            await updateClass(selectedClass.id, {
                 room: editRoom,
                 schedule: editSchedule
-            });
+            }, currentPeriods);
 
             // Update local state immediately for better UX
             setSelectedClass({
@@ -242,9 +213,9 @@ const TimetableManager = ({
                 schedule: editSchedule
             });
             setIsEditingClass(false);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error updating class:', error);
-            alert('수업 수정 중 오류가 발생했습니다.');
+            alert(error.message || '수업 수정 중 오류가 발생했습니다.');
         }
     };
 
@@ -263,21 +234,20 @@ const TimetableManager = ({
     const [rowHeight, setRowHeight] = useState<'short' | 'normal' | 'tall' | 'very-tall'>('normal');
     const [fontSize, setFontSize] = useState<'small' | 'normal' | 'large' | 'very-large'>('normal');
 
-    // Drag State
-    const [draggingStudent, setDraggingStudent] = useState<{ studentId: string; fromClassId: string } | null>(null);
-    const [dragOverClassId, setDragOverClassId] = useState<string | null>(null);
-
-    // Pending Moves State (for batch save)
-    const [pendingMoves, setPendingMoves] = useState<{ studentId: string; fromClassId: string; toClassId: string; student: TimetableStudent }[]>([]);
-    const [localClasses, setLocalClasses] = useState<TimetableClass[]>([]);
-    const [isSaving, setIsSaving] = useState(false);
-
-    // Sync local classes with Firebase classes
-    useEffect(() => {
-        if (pendingMoves.length === 0) {
-            setLocalClasses(classes);
-        }
-    }, [classes, pendingMoves.length]);
+    // Hook Integration: Drag & Drop
+    const {
+        localClasses,
+        pendingMoves,
+        isSaving,
+        draggingStudent,
+        dragOverClassId,
+        handleDragStart,
+        handleDragOver,
+        handleDragLeave,
+        handleDrop,
+        handleSavePendingMoves,
+        handleCancelPendingMoves
+    } = useStudentDragDrop(classes);
 
     // Search State
     const [searchQuery, setSearchQuery] = useState('');
@@ -325,18 +295,7 @@ const TimetableManager = ({
     }, [currentMonday]);
 
     // Subscribe to Classes
-    useEffect(() => {
-        const q = query(collection(db, '수업목록'), orderBy('className'));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const loadedClasses = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as TimetableClass));
-            setClasses(loadedClasses);
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
+    // Classes subscription handled by useTimetableClasses hook
 
     // NOTE: Teachers list is now passed as props from App.tsx (centralized subscription)
 
@@ -422,84 +381,28 @@ const TimetableManager = ({
         return false;
     };
 
-    // Check for consecutive periods
-    const checkConsecutiveSchedule = (schedule: string[], periods: string[]): boolean => {
-        // Group by day
-        const dayMap: Record<string, string[]> = {};
-        schedule.forEach(slot => {
-            const [day, period] = slot.split(' ');
-            if (!dayMap[day]) dayMap[day] = [];
-            dayMap[day].push(period);
-        });
-
-        // Check each day
-        for (const day in dayMap) {
-            const dayPeriods = dayMap[day];
-            if (dayPeriods.length <= 1) continue;
-
-            // Sort periods by their index in the master period list
-            const sortedIndices = dayPeriods.map(p => periods.indexOf(p)).sort((a, b) => a - b);
-
-            // Check for gaps
-            for (let i = 0; i < sortedIndices.length - 1; i++) {
-                // If the difference between adjacent period indices is not 1, they are not consecutive
-                if (sortedIndices[i + 1] - sortedIndices[i] !== 1) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    };
+    // checkConsecutiveSchedule moved to useClassOperations hook
 
     // Add new class
     const handleAddClass = async () => {
-        if (!newClassName.trim() || !newTeacher.trim()) {
-            alert('수업명과 담당 강사를 입력해주세요.');
-            return;
-        }
-        if (newSchedule.length === 0) {
-            alert('최소 1개 이상의 시간대를 선택해주세요.');
-            return;
-        }
-
-        // Document ID: 과목_강사_수업명 (읽기 쉬운 형태)
-        const classId = `${newSubject}_${newTeacher.trim().replace(/\s/g, '')}_${newClassName.trim().replace(/\s/g, '_')}`;
-
-        // Check for duplicate
-        const existingClass = classes.find(c => c.id === classId);
-        if (existingClass) {
-            alert(`이미 동일한 수업이 존재합니다.\n\n수업명: ${existingClass.className}\n강사: ${existingClass.teacher}\n\n기존 수업을 수정하려면 시간표에서 해당 수업을 클릭해주세요.`);
-            return;
-        }
-
-        // Validate consecutive schedule
-        if (!checkConsecutiveSchedule(newSchedule, currentPeriods)) {
-            alert('같은 요일의 수업 시간은 연속되어야 합니다.\n\n예: 1-1, 1-2 (O) / 1-1, 2-1 (X - 중간에 1-2번이 비어있음)');
-            return;
-        }
-
-        const newClass: TimetableClass = {
-            id: classId,
-            className: newClassName.trim(),
-            teacher: newTeacher.trim(),
-            room: newRoom.trim(),
-            subject: newSubject,
-            schedule: newSchedule,
-            studentList: [],
-            order: classes.length + 1
-        };
-
         try {
-            await setDoc(doc(db, '수업목록', classId), newClass);
+            await addClass(classes, {
+                className: newClassName,
+                teacher: newTeacher,
+                room: newRoom,
+                subject: newSubject,
+                schedule: newSchedule
+            }, currentPeriods);
+
             setNewClassName('');
             setNewTeacher('');
             setNewRoom('');
             setNewSubject(currentSubjectFilter);
             setNewSchedule([]);
             setIsAddClassOpen(false);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert('수업 추가 실패');
+            alert(e.message || '수업 추가 실패');
         }
     };
 
@@ -507,7 +410,7 @@ const TimetableManager = ({
     const handleDeleteClass = async (classId: string) => {
         if (!confirm('이 수업을 삭제하시겠습니까?')) return;
         try {
-            await deleteDoc(doc(db, '수업목록', classId));
+            await deleteClass(classId);
             setSelectedClass(null);
         } catch (e) {
             console.error(e);
@@ -517,78 +420,53 @@ const TimetableManager = ({
 
     // Add student to class
     const handleAddStudent = async () => {
-        if (!selectedClass || !newStudentName.trim()) {
-            alert('학생 이름을 입력해주세요.');
-            return;
-        }
-
-        const studentId = `student_${Date.now()}`;
-        const newStudent: TimetableStudent = {
-            id: studentId,
-            name: newStudentName.trim(),
-            grade: newStudentGrade.trim(),
-            school: newStudentSchool.trim(),
-        };
-
-        const updatedList = [...(selectedClass.studentList || []), newStudent];
-
+        if (!selectedClass) return;
         try {
-            await updateDoc(doc(db, '수업목록', selectedClass.id), { studentList: updatedList });
+            const updatedList = await addStudent(selectedClass.id, selectedClass.studentList || [], {
+                name: newStudentName,
+                grade: newStudentGrade,
+                school: newStudentSchool
+            });
             setNewStudentName('');
             setNewStudentGrade('');
             setNewStudentSchool('');
             setSelectedClass({ ...selectedClass, studentList: updatedList });
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            alert('학생 추가 실패');
+            alert(e.message || '학생 추가 실패');
         }
     };
 
     // 학생 퇴원
     const handleWithdrawal = async (studentId: string) => {
         if (!selectedClass || !window.confirm("퇴원 처리 하시겠습니까?")) return;
-
-        const updatedList = (selectedClass.studentList || []).map(s => {
-            if (s.id === studentId) {
-                return {
-                    ...s,
-                    withdrawalDate: new Date().toISOString().split('T')[0],
-                    enrollmentDate: undefined
-                };
-            }
-            return s;
-        });
-
-        await updateDoc(doc(db, '수업목록', selectedClass.id), { studentList: updatedList });
-        setSelectedClass({ ...selectedClass, studentList: updatedList });
+        try {
+            const updatedList = await withdrawStudent(selectedClass.id, selectedClass.studentList, studentId);
+            setSelectedClass({ ...selectedClass, studentList: updatedList });
+        } catch (e) {
+            console.error(e);
+            alert('퇴원 처리 실패');
+        }
     };
 
     // 학생 퇴원 취소 (복구)
     const handleRestoreStudent = async (studentId: string) => {
         if (!selectedClass) return;
-
-        const updatedList = (selectedClass.studentList || []).map(s => {
-            if (s.id === studentId) {
-                return {
-                    ...s,
-                    withdrawalDate: undefined
-                };
-            }
-            return s;
-        });
-
-        await updateDoc(doc(db, '수업목록', selectedClass.id), { studentList: updatedList });
-        setSelectedClass({ ...selectedClass, studentList: updatedList });
+        try {
+            const updatedList = await restoreStudent(selectedClass.id, selectedClass.studentList, studentId);
+            setSelectedClass({ ...selectedClass, studentList: updatedList });
+        } catch (e) {
+            console.error(e);
+            alert('복구 실패');
+        }
     };
 
     // 학생 삭제 (완전 삭제)
     const handleRemoveStudent = async (studentId: string) => {
         if (!selectedClass) return;
         if (!confirm('이 학생을 수업에서 제거하시겠습니까?')) return;
-
-        const updatedList = selectedClass.studentList.filter(s => s.id !== studentId);
         try {
-            await updateDoc(doc(db, '수업목록', selectedClass.id), { studentList: updatedList });
+            const updatedList = await removeStudent(selectedClass.id, selectedClass.studentList, studentId);
             setSelectedClass({ ...selectedClass, studentList: updatedList });
         } catch (e) {
             console.error(e);
@@ -596,87 +474,7 @@ const TimetableManager = ({
         }
     };
 
-    // Drag handlers
-    const handleDragStart = (e: React.DragEvent, studentId: string, fromClassId: string) => {
-        setDraggingStudent({ studentId, fromClassId });
-        e.dataTransfer.effectAllowed = 'move';
-    };
-
-    const handleDragOver = (e: React.DragEvent, classId: string) => {
-        e.preventDefault();
-        setDragOverClassId(classId);
-    };
-
-    const handleDragLeave = () => setDragOverClassId(null);
-
-    const handleDrop = async (e: React.DragEvent, toClassId: string) => {
-        e.preventDefault();
-        setDragOverClassId(null);
-        if (!draggingStudent) return;
-
-        const { studentId, fromClassId } = draggingStudent;
-        if (fromClassId === toClassId) { setDraggingStudent(null); return; }
-
-        const fromClass = localClasses.find(c => c.id === fromClassId);
-        const toClass = localClasses.find(c => c.id === toClassId);
-        if (!fromClass || !toClass) return;
-
-        const student = fromClass.studentList?.find(s => s.id === studentId);
-        if (!student) return;
-
-        // Update local state only (no Firebase write yet)
-        setLocalClasses(prev => prev.map(cls => {
-            if (cls.id === fromClassId) {
-                return { ...cls, studentList: cls.studentList.filter(s => s.id !== studentId) };
-            }
-            if (cls.id === toClassId) {
-                return { ...cls, studentList: [...(cls.studentList || []), student] };
-            }
-            return cls;
-        }));
-
-        // Add to pending moves
-        setPendingMoves(prev => [...prev, { studentId, fromClassId, toClassId, student }]);
-        setDraggingStudent(null);
-    };
-
-    // Save all pending moves to Firebase
-    const handleSavePendingMoves = async () => {
-        if (pendingMoves.length === 0) return;
-        setIsSaving(true);
-
-        try {
-            const batch = writeBatch(db);
-
-            // Build final state for each affected class
-            const affectedClassIds = new Set<string>();
-            pendingMoves.forEach(m => {
-                affectedClassIds.add(m.fromClassId);
-                affectedClassIds.add(m.toClassId);
-            });
-
-            affectedClassIds.forEach(classId => {
-                const cls = localClasses.find(c => c.id === classId);
-                if (cls) {
-                    batch.update(doc(db, '수업목록', classId), { studentList: cls.studentList || [] });
-                }
-            });
-
-            await batch.commit();
-            setPendingMoves([]);
-        } catch (e) {
-            console.error(e);
-            alert('저장 실패');
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    // Cancel pending moves
-    const handleCancelPendingMoves = () => {
-        setPendingMoves([]);
-        setLocalClasses(classes); // Reset to Firebase state
-    };
+    // Drag handlers moved to useStudentDragDrop hook
 
     const toggleScheduleSlot = (day: string, period: string) => {
         const slot = `${day} ${period}`;
