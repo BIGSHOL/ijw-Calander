@@ -33,12 +33,12 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
     } else {
       // Default to the first available salary setting
       const defaultSalaryId = salaryConfig.items.length > 0 ? salaryConfig.items[0].id : '';
-      
+
       // Default start date is the 1st of currently viewed month
       const year = currentViewDate.getFullYear();
       const month = (currentViewDate.getMonth() + 1).toString().padStart(2, '0');
       const today = new Date().toISOString().split('T')[0]; // fallback
-      
+
       setFormData({
         id: crypto.randomUUID(),
         name: '',
@@ -67,7 +67,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
 
   const handleDelete = () => {
     if (initialData && initialData.id) {
-        onDelete(initialData.id);
+      onDelete(initialData.id);
     }
   }
 
@@ -108,37 +108,34 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
               />
             </div>
             <div className="col-span-2 sm:col-span-1 flex items-end pb-2">
-                <label className="flex items-center gap-2 cursor-pointer select-none text-gray-700 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 w-full hover:bg-gray-100 transition-colors">
-                    <input 
-                        type="checkbox"
-                        checked={formData.isHomeroom || false}
-                        onChange={(e) => setFormData({...formData, isHomeroom: e.target.checked})}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    <div className="flex items-center gap-1.5">
-                        <UserCheck size={16} className={formData.isHomeroom ? "text-indigo-600" : "text-gray-400"}/>
-                        <span className={`text-sm font-medium ${formData.isHomeroom ? "text-indigo-700" : "text-gray-500"}`}>담임 관리 학생</span>
-                    </div>
-                </label>
+              <label className="flex items-center gap-2 cursor-pointer select-none text-gray-700 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 w-full hover:bg-gray-100 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.isHomeroom || false}
+                  onChange={(e) => setFormData({ ...formData, isHomeroom: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <div className="flex items-center gap-1.5">
+                  <UserCheck size={16} className={formData.isHomeroom ? "text-indigo-600" : "text-gray-400"} />
+                  <span className={`text-sm font-medium ${formData.isHomeroom ? "text-indigo-700" : "text-gray-500"}`}>담임 관리 학생</span>
+                </div>
+              </label>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-             <div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">그룹 (반 이름)</label>
               <input
+                disabled
                 type="text"
-                list="group-options"
-                placeholder="예: 피아노 A반"
                 value={formData.group || ''}
-                onChange={e => setFormData({ ...formData, group: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                title="시간표에서 자동으로 설정됩니다."
               />
-              <datalist id="group-options">
-                {existingGroups.map(g => <option key={g} value={g} />)}
-              </datalist>
+              <p className="text-[10px] text-gray-400 mt-1">* 시간표 연동으로 자동 설정됩니다.</p>
             </div>
-             <div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">학교</label>
               <input
                 type="text"
@@ -162,53 +159,53 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
               />
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">수업 과정 (급여 기준) <span className="text-red-500">*</span></label>
-                <select
+              <label className="block text-sm font-medium text-gray-700 mb-1">수업 과정 (급여 기준) <span className="text-red-500">*</span></label>
+              <select
                 required
                 value={formData.salarySettingId}
                 onChange={e => setFormData({ ...formData, salarySettingId: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
+              >
                 <option value="" disabled>선택하세요</option>
                 {salaryConfig.items.map(item => (
-                    <option key={item.id} value={item.id}>
+                  <option key={item.id} value={item.id}>
                     {item.name} ({item.type === 'fixed' ? '고정급' : '비율제'})
-                    </option>
+                  </option>
                 ))}
-                </select>
+              </select>
             </div>
           </div>
 
           <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-             <div className="flex items-center gap-2 mb-3 text-slate-700 font-bold text-sm">
-                <CalendarDays size={16} />
-                수강 기간 설정 (일 단위)
-             </div>
-             <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">수강 시작일 <span className="text-red-500">*</span></label>
-                  <input
-                    required
-                    type="date"
-                    value={formData.startDate}
-                    onChange={e => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">수강 종료일 (선택)</label>
-                  <input
-                    type="date"
-                    value={formData.endDate || ''}
-                    onChange={e => setFormData({ ...formData, endDate: e.target.value || null })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                    placeholder="계속 수강중"
-                  />
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    * 이 날짜 이후에는 출석부에서 제외되거나 비활성화됩니다.
-                  </p>
-                </div>
-             </div>
+            <div className="flex items-center gap-2 mb-3 text-slate-700 font-bold text-sm">
+              <CalendarDays size={16} />
+              수강 기간 설정 (일 단위)
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">수강 시작일 <span className="text-red-500">*</span></label>
+                <input
+                  required
+                  type="date"
+                  value={formData.startDate}
+                  onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">수강 종료일 (선택)</label>
+                <input
+                  type="date"
+                  value={formData.endDate || ''}
+                  onChange={e => setFormData({ ...formData, endDate: e.target.value || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="계속 수강중"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  * 이 날짜 이후에는 출석부에서 제외되거나 비활성화됩니다.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div>
@@ -216,33 +213,23 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
             <div className="flex flex-wrap gap-2">
               {weekDays.map(day => (
                 <button
+                  disabled
                   key={day}
                   type="button"
-                  onClick={() => toggleDay(day)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    formData.days?.includes(day)
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors cursor-not-allowed ${formData.days?.includes(day)
                       ? 'bg-blue-100 text-blue-700 border-blue-200 border'
-                      : 'bg-gray-100 text-gray-600 border border-transparent hover:bg-gray-200'
-                  }`}
+                      : 'bg-gray-50 text-gray-400 border border-transparent'
+                    }`}
                 >
                   {day}
                 </button>
               ))}
             </div>
+            <p className="text-[10px] text-gray-400 mt-1">* 수업 요일은 시간표 연동으로 자동 설정됩니다.</p>
           </div>
 
           <div className="pt-4 flex gap-3 border-t border-gray-100 mt-2">
-            {initialData && (
-                 <button
-                 type="button"
-                 onClick={handleDelete}
-                 className="px-4 py-2.5 bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors flex items-center gap-2"
-                 title="학생 삭제"
-               >
-                 <Trash2 size={18} />
-                 삭제
-               </button>
-            )}
+
             <button
               type="submit"
               disabled={salaryConfig.items.length === 0}

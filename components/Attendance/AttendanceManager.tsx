@@ -239,6 +239,67 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     );
   }
 
+  // Selection prompt for admins when no teacher selected
+  if ((canViewAll || isMasterOrAdmin) && !selectedTeacherId) {
+    return (
+      <div className="flex flex-col h-full bg-[#f8f9fa] text-[#373d41]">
+        {/* Toolbar */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
+              <CalendarIcon size={18} strokeWidth={2.5} />
+            </div>
+            <h2 className="font-bold text-[15px] text-gray-800">출석부 & 급여 관리</h2>
+          </div>
+
+          {/* Subject Toggle */}
+          <div className="flex bg-gray-100 rounded-lg p-1 border border-gray-200">
+            {canManageMath && (
+              <button
+                onClick={() => setSelectedSubject('math')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${selectedSubject === 'math' ? 'bg-yellow-400 text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                🔢 수학
+              </button>
+            )}
+            {canManageEnglish && (
+              <button
+                onClick={() => setSelectedSubject('english')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${selectedSubject === 'english' ? 'bg-blue-400 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                🔤 영어
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Selection Prompt */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Users size={40} className="text-blue-500" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-3">담당 강사를 선택해주세요</h3>
+            <p className="text-gray-500 mb-6">
+              {selectedSubject === 'math' ? '수학' : '영어'} 출석부를 확인할 강사를 선택하세요.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {availableTeachers.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setSelectedTeacherId(t.name)}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-[#f8f9fa] text-[#373d41]">
       {/* Toolbar */}
@@ -285,9 +346,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
                 onChange={(e) => setSelectedTeacherId(e.target.value || undefined)}
                 className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-xs font-bold text-gray-700 cursor-pointer hover:border-gray-300"
               >
-                <option value="">전체 강사</option>
                 {availableTeachers.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
+                  <option key={t.id} value={t.name}>{t.name}</option>
                 ))}
               </select>
               <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -315,12 +375,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
             <p className="text-lg font-bold text-gray-800 font-mono group-hover:scale-105 transition-transform">{formatCurrency(finalSalary)}</p>
           </div>
 
-          <button
-            onClick={() => { setEditingStudent(null); setStudentModalOpen(true); }}
-            className="flex items-center gap-2 px-3 py-2 bg-[#081429] text-white rounded-lg hover:bg-[#1a2b4d] transition-colors text-xs font-bold shadow-sm"
-          >
-            <Plus size={16} strokeWidth={2.5} /> 학생 추가
-          </button>
+
           <button
             onClick={() => setSalaryModalOpen(true)}
             className="p-2 border border-gray-200 text-gray-400 rounded-lg hover:bg-gray-50 hover:text-gray-600 transition-colors"

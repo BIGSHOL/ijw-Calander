@@ -59,12 +59,34 @@ export const useAttendanceStudents = (options?: {
                 // Unified DB uses 'status' field.
                 // data = data.filter(s => (s as any).status !== 'withdrawn');
 
-                // Client-side filtering (can be moved to Firestore query with proper indexes)
+                // Client-side filtering using enrollments (v5 schema)
                 if (options?.teacherId) {
-                    data = data.filter(s => s.teacherIds?.includes(options.teacherId!));
+                    data = data.filter(s => {
+                        const enrollments = (s as any).enrollments || [];
+                        return enrollments.some((e: any) => e.teacherId === options.teacherId);
+                    });
+                    // Override group and days with only the selected teacher's data
+                    data = data.map(s => {
+                        const enrollments = (s as any).enrollments || [];
+                        const teacherEnrollments = enrollments.filter((e: any) => e.teacherId === options.teacherId);
+                        const teacherClasses = teacherEnrollments.map((e: any) => e.className);
+                        // Collect all days from this teacher's enrollments
+                        const teacherDays: string[] = [];
+                        teacherEnrollments.forEach((e: any) => {
+                            if (e.days && Array.isArray(e.days)) {
+                                e.days.forEach((d: string) => {
+                                    if (!teacherDays.includes(d)) teacherDays.push(d);
+                                });
+                            }
+                        });
+                        return { ...s, group: teacherClasses.join(', '), days: teacherDays };
+                    });
                 }
                 if (options?.subject) {
-                    data = data.filter(s => s.subjects?.includes(options.subject!));
+                    data = data.filter(s => {
+                        const enrollments = (s as any).enrollments || [];
+                        return enrollments.some((e: any) => e.subject === options.subject);
+                    });
                 }
 
                 // Load attendance records for the specified month

@@ -25,6 +25,7 @@ type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 // Import Firestore Converters from separate file
 import { departmentConverter, eventConverter } from './converters';
+import './scripts/migrateStudents'; // Temporary: for v6 migration
 
 // Import Style Utilities
 import { INJAEWON_LOGO, getJobTitleStyle } from './utils/styleUtils';

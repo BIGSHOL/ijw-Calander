@@ -78,20 +78,30 @@ function extractTeacherFromClassId(classId: string): string | undefined {
 interface StudentAccumulatedData {
     student: TimetableStudent;
     enrollments: Enrollment[];
-    days: Set<string>;
     groups: Set<string>;
     firstClassData: TimetableClass;
 }
 
 /**
- * Fetch English Class -> Homeroom Teacher mapping
- * Uses teacher count logic: Most frequent teacher (non-native preferred when tied)
+ * Fetch English Class -> Teacher -> Days mapping
+ * For each class, collects all teachers and their respective teaching days
+ * Also determines homeroom teacher for reference
  * 
  * Structure: Document ID = Teacher Name, Fields = {key: {className, room, ...}, ...}
  * where key format is "Teacher-Period-Day"
+ * 
+ * Returns:
+ * - teacherDaysMap: className -> teacherName -> days[] (for all teachers)
+ * - homeroomMap: className -> homeroom teacher name
  */
-async function fetchEnglishHomeroomMap(teachersData: Teacher[]): Promise<Record<string, string>> {
-    console.log('Fetching English schedules to build Class->Homeroom map...');
+async function fetchEnglishClassMeta(teachersData: Teacher[]): Promise<{
+    teacherDaysMap: Record<string, Record<string, string[]>>;
+    homeroomMap: Record<string, string>;
+}> {
+    console.log('Fetching English schedules to build Class->Teacher->Days map...');
+
+    // className -> teacherName -> Set<day>
+    const classTeacherDays: Record<string, Record<string, Set<string>>> = {};
     const classTeacherCounts: Record<string, Record<string, number>> = {};
 
     try {
@@ -108,9 +118,30 @@ async function fetchEnglishHomeroomMap(teachersData: Teacher[]): Promise<Record<
                 const className = cellData.className;
                 if (!className) return;
 
-                // Use document ID (teacher name) as the teacher
-                const teacher = teacherName;
+                // Skip LAB classes
+                if (className.toUpperCase() === 'LAB' || className.toUpperCase().includes('LAB')) return;
 
+                // Extract day from field key (last part after splitting by '-')
+                const keyParts = fieldKey.split('-');
+                const day = keyParts[keyParts.length - 1]; // e.g., "월", "화", "수"
+
+                // Normalize teacher name
+                const teacher = normalizeTeacherName(teacherName) || teacherName;
+
+                // Initialize structures
+                if (!classTeacherDays[className]) {
+                    classTeacherDays[className] = {};
+                }
+                if (!classTeacherDays[className][teacher]) {
+                    classTeacherDays[className][teacher] = new Set();
+                }
+
+                // Add day to this teacher's set for this class
+                if (day && ['월', '화', '수', '목', '금', '토', '일'].includes(day)) {
+                    classTeacherDays[className][teacher].add(day);
+                }
+
+                // Count for homeroom determination
                 if (!classTeacherCounts[className]) {
                     classTeacherCounts[className] = {};
                 }
@@ -119,7 +150,17 @@ async function fetchEnglishHomeroomMap(teachersData: Teacher[]): Promise<Record<
                 // Also handle merged classes if present
                 if (cellData.merged && Array.isArray(cellData.merged)) {
                     cellData.merged.forEach((m: any) => {
-                        if (m.className) {
+                        if (m.className && !m.className.toUpperCase().includes('LAB')) {
+                            if (!classTeacherDays[m.className]) {
+                                classTeacherDays[m.className] = {};
+                            }
+                            if (!classTeacherDays[m.className][teacher]) {
+                                classTeacherDays[m.className][teacher] = new Set();
+                            }
+                            if (day && ['월', '화', '수', '목', '금', '토', '일'].includes(day)) {
+                                classTeacherDays[m.className][teacher].add(day);
+                            }
+
                             if (!classTeacherCounts[m.className]) {
                                 classTeacherCounts[m.className] = {};
                             }
@@ -130,12 +171,12 @@ async function fetchEnglishHomeroomMap(teachersData: Teacher[]): Promise<Record<
             });
         });
 
-        console.log(`Found schedules for ${Object.keys(classTeacherCounts).length} english classes.`);
+        console.log(`Found schedules for ${Object.keys(classTeacherDays).length} english classes (excluding LAB).`);
     } catch (e) {
         console.error("Failed to fetch english schedules:", e);
     }
 
-    // Determine homeroom for each class
+    // Determine homeroom for each class (most frequent, prefer non-native when tied)
     const homeroomMap: Record<string, string> = {};
 
     for (const [className, counts] of Object.entries(classTeacherCounts)) {
@@ -157,11 +198,27 @@ async function fetchEnglishHomeroomMap(teachersData: Teacher[]): Promise<Record<
             homeroom = nonNative.length > 0 ? nonNative[0][0] : topTeachers[0][0];
         }
 
-        homeroomMap[className] = normalizeTeacherName(homeroom) || homeroom;
+        homeroomMap[className] = homeroom;
     }
 
     console.log(`Built homeroom map for ${Object.keys(homeroomMap).length} english classes.`);
-    return homeroomMap;
+
+    // Convert Set to Array for teacherDaysMap
+    const teacherDaysMap: Record<string, Record<string, string[]>> = {};
+    for (const [className, teacherDays] of Object.entries(classTeacherDays)) {
+        teacherDaysMap[className] = {};
+        for (const [teacher, daysSet] of Object.entries(teacherDays)) {
+            teacherDaysMap[className][teacher] = Array.from(daysSet);
+        }
+    }
+
+    // Log sample
+    const sampleClasses = Object.keys(teacherDaysMap).slice(0, 3);
+    sampleClasses.forEach(cls => {
+        console.log(`  ${cls}: ${Object.keys(teacherDaysMap[cls]).join(', ')}`);
+    });
+
+    return { teacherDaysMap, homeroomMap };
 }
 
 /**
@@ -192,11 +249,11 @@ export async function migrateStudentsFromTimetable(dryRun = true): Promise<Migra
     const seenStudents = new Map<string, StudentAccumulatedData>();
 
     try {
-        console.log(`\n=== Student Migration (v5 Homeroom Logic) ${dryRun ? '(DRY RUN)' : '(LIVE)'} ===\n`);
+        console.log(`\n=== Student Migration (v7 Multi-Teacher Enrollments) ${dryRun ? '(DRY RUN)' : '(LIVE)'} ===\n`);
 
-        // 0. Pre-fetch Teachers and English Homeroom Map
+        // 0. Pre-fetch Teachers and English Teacher/Days Map
         const teachersData = await fetchTeachersData();
-        const englishHomeroomMap = await fetchEnglishHomeroomMap(teachersData);
+        const { teacherDaysMap: englishTeacherDaysMap, homeroomMap: englishHomeroomMap } = await fetchEnglishClassMeta(teachersData);
 
         // 1. Cleanup existing students if LIVE run
         if (!dryRun) {
@@ -230,24 +287,9 @@ export async function migrateStudentsFromTimetable(dryRun = true): Promise<Migra
             const studentList = classData.studentList || [];
             const subject = inferSubject(classData);
 
-            // Determine teacher for this class
-            let classTeacher = classData.teacher;
-
-            if (!classTeacher) {
-                // For Math: Extract from ID (e.g., 수학_김민주_...)
-                if (subject === 'math') {
-                    classTeacher = extractTeacherFromClassId(docSnap.id);
-                }
-                // For English: Use homeroom map
-                else if (subject === 'english' && englishHomeroomMap[classData.className]) {
-                    classTeacher = englishHomeroomMap[classData.className];
-                }
-            }
-            classTeacher = normalizeTeacherName(classTeacher) || '';
-
-            const isTargetDebug = classData.className?.includes('강민준');
+            const isTargetDebug = classData.className?.includes('LT1b');
             if (isTargetDebug) {
-                console.log(`[DEBUG] Class: ${docSnap.id}, Teacher: ${classTeacher}`);
+                console.log(`[DEBUG] Processing class: ${classData.className}`);
             }
 
             studentList.forEach((student) => {
@@ -255,42 +297,87 @@ export async function migrateStudentsFromTimetable(dryRun = true): Promise<Migra
                 const key = getStudentKey(student);
                 const isStudentDebug = student.name?.includes('강민준');
 
-                const enrollment: Enrollment = {
-                    subject,
-                    classId: docSnap.id,
-                    className: classData.className || docSnap.id,
-                    teacherId: classTeacher,
-                };
+                // Build enrollments based on subject
+                const enrollmentsToAdd: Enrollment[] = [];
+
+                if (subject === 'math') {
+                    // For Math: Single enrollment with teacher from classData or extracted from ID
+                    let classTeacher = classData.teacher;
+                    if (!classTeacher) {
+                        classTeacher = extractTeacherFromClassId(docSnap.id);
+                    }
+                    classTeacher = normalizeTeacherName(classTeacher) || '';
+
+                    const classDays: string[] = [];
+                    if (classData.schedule) {
+                        classData.schedule.forEach((s: string) => {
+                            const day = s.split(' ')[0];
+                            if (day && !classDays.includes(day)) classDays.push(day);
+                        });
+                    }
+
+                    enrollmentsToAdd.push({
+                        subject: 'math',
+                        classId: docSnap.id,
+                        className: classData.className || docSnap.id,
+                        teacherId: classTeacher,
+                        days: classDays,
+                    });
+                } else if (subject === 'english') {
+                    // For English: Create enrollment for EACH teacher with their days
+                    const classTeacherData = englishTeacherDaysMap[classData.className];
+
+                    if (classTeacherData) {
+                        // Create separate enrollment for each teacher
+                        for (const [teacher, days] of Object.entries(classTeacherData)) {
+                            enrollmentsToAdd.push({
+                                subject: 'english',
+                                classId: `영어_${classData.className}_${teacher}_${Date.now()}`,
+                                className: classData.className,
+                                teacherId: teacher,
+                                days: days,
+                            });
+
+                            if (isTargetDebug) {
+                                console.log(`  -> Adding enrollment: ${classData.className} / ${teacher} / [${days.join(',')}]`);
+                            }
+                        }
+                    } else {
+                        // Fallback: use homeroom teacher with no specific days
+                        const homeroom = englishHomeroomMap[classData.className] || '';
+                        enrollmentsToAdd.push({
+                            subject: 'english',
+                            classId: docSnap.id,
+                            className: classData.className || docSnap.id,
+                            teacherId: normalizeTeacherName(homeroom) || homeroom,
+                            days: [],
+                        });
+                    }
+                }
 
                 if (seenStudents.has(key)) {
                     const existing = seenStudents.get(key)!;
-                    existing.enrollments.push(enrollment);
-                    if (classData.schedule) {
-                        classData.schedule.forEach(s => existing.days.add(s.split(' ')[0]));
-                    }
+                    // Add all enrollments (multiple for English)
+                    enrollmentsToAdd.forEach(enrollment => {
+                        existing.enrollments.push(enrollment);
+                    });
                     existing.groups.add(classData.className);
 
                     if (isStudentDebug) {
-                        console.log(`[DEBUG: 강민준] Merged: ${enrollment.className} (${enrollment.teacherId})`);
+                        console.log(`[DEBUG: 강민준] Merged ${enrollmentsToAdd.length} enrollments for ${classData.className}`);
                     }
 
                     result.duplicatesSkipped++;
                 } else {
-                    const days = new Set<string>();
-                    if (classData.schedule) {
-                        classData.schedule.forEach(s => days.add(s.split(' ')[0]));
-                    }
-
                     seenStudents.set(key, {
                         student,
-                        enrollments: [enrollment],
-                        days,
+                        enrollments: [...enrollmentsToAdd],
                         groups: new Set([classData.className]),
                         firstClassData: classData,
                     });
 
                     if (isStudentDebug) {
-                        console.log(`[DEBUG: 강민준] New: ${enrollment.className} (${enrollment.teacherId})`);
+                        console.log(`[DEBUG: 강민준] New: ${enrollmentsToAdd.length} enrollments for ${classData.className}`);
                     }
                 }
             });
@@ -307,7 +394,7 @@ export async function migrateStudentsFromTimetable(dryRun = true): Promise<Migra
             const MAX_BATCH_SIZE = 500;
 
             for (const [key, accData] of seenStudents) {
-                const { student, enrollments, days, groups, firstClassData } = accData;
+                const { student, enrollments, groups, firstClassData } = accData;
                 const now = new Date().toISOString();
 
                 const safeName = student.name.trim();
@@ -315,7 +402,7 @@ export async function migrateStudentsFromTimetable(dryRun = true): Promise<Migra
                 const safeGrade = (student.grade || 'Unspecified').trim();
                 const customId = `${safeName}_${safeSchool}_${safeGrade}`;
 
-                // v5: Removed subjects and teacherIds (use enrollments instead)
+                // v6: days moved into enrollments
                 const studentDoc: Omit<UnifiedStudent, 'id'> = {
                     name: student.name || '',
                     englishName: student.englishName || null,
@@ -332,7 +419,6 @@ export async function migrateStudentsFromTimetable(dryRun = true): Promise<Migra
                         : '2026-01-01',
                     endDate: student.withdrawalDate || null,
 
-                    days: Array.from(days),
                     group: Array.from(groups).join(', '),
 
                     createdAt: now,
