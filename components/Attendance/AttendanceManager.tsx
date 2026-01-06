@@ -1,0 +1,463 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { Settings, Plus, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Users, UserPlus, UserMinus, Calculator, ChevronDown } from 'lucide-react';
+import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject } from './types';
+import { formatCurrency, calculateStats } from './utils';
+import Table from './components/Table';
+import SalarySettings from './components/SalarySettings';
+import StudentModal from './components/StudentModal';
+import SettlementModal from './components/SettlementModal';
+import StudentListModal from './components/StudentListModal';
+
+import {
+  useAttendanceStudents,
+  useAttendanceConfig,
+  useAddStudent,
+  useDeleteStudent,
+  useUpdateAttendance,
+  useUpdateMemo,
+  useSaveAttendanceConfig,
+  useMonthlySettlements,
+  useSaveMonthlySettlement
+} from '../../hooks/useAttendance';
+import { UserProfile, Teacher } from '../../types';
+import { usePermissions } from '../../hooks/usePermissions';
+
+// Default salary config for new setups
+const INITIAL_SALARY_CONFIG: SalaryConfig = {
+  academyFee: 8.9,
+  items: [
+    { id: 'default-elem', name: '초등', color: '#FACC15', type: 'fixed', fixedRate: 25000, baseTuition: 0, ratio: 45 },
+    { id: 'default-mid', name: '중등', color: '#C084FC', type: 'fixed', fixedRate: 35000, baseTuition: 0, ratio: 45 },
+    { id: 'default-high', name: '고등', color: '#3B82F6', type: 'fixed', fixedRate: 45000, baseTuition: 0, ratio: 45 },
+  ],
+  incentives: {
+    blogAmount: 50000,
+    retentionAmount: 100000,
+    retentionTargetRate: 0,
+  }
+};
+
+interface AttendanceManagerProps {
+  userProfile: UserProfile | null;
+  teachers?: Teacher[];
+}
+
+const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teachers = [] }) => {
+  const { hasPermission } = usePermissions(userProfile);
+
+  // Permission checks
+  const canViewAll = hasPermission('attendance.view_all');
+  const canEditAll = hasPermission('attendance.edit_all');
+  const canManageMath = hasPermission('attendance.manage_math');
+  const canManageEnglish = hasPermission('attendance.manage_english');
+  const isMasterOrAdmin = userProfile?.role === 'master' || userProfile?.role === 'admin';
+
+  // Determine user's teacherId for filtering (if they are a teacher)
+  const currentTeacherId = useMemo(() => {
+    if (!userProfile) return undefined;
+    // Find matching teacher by email or displayName
+    const matchedTeacher = teachers.find(t =>
+      t.name === userProfile.displayName ||
+      t.name === userProfile.jobTitle
+    );
+    return matchedTeacher?.id;
+  }, [userProfile, teachers]);
+
+  // State
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [selectedSubject, setSelectedSubject] = useState<AttendanceSubject>('math');
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string | undefined>(undefined);
+
+
+  // Determine which teacherId to filter by
+  const filterTeacherId = useMemo(() => {
+    if (canViewAll || isMasterOrAdmin) {
+      // Can view all - use selected filter or show all
+      return selectedTeacherId;
+    }
+    // Regular teacher - only show their own students
+    return currentTeacherId;
+  }, [canViewAll, isMasterOrAdmin, selectedTeacherId, currentTeacherId]);
+
+  // Firebase Hooks - Pass yearMonth to load attendance records for current month
+  const currentYearMonth = useMemo(() => {
+    return currentDate.toISOString().slice(0, 7); // "YYYY-MM"
+  }, [currentDate]);
+
+  const { students: allStudents, isLoading: isLoadingStudents } = useAttendanceStudents({
+    teacherId: filterTeacherId,
+    subject: selectedSubject,
+    yearMonth: currentYearMonth,
+    enabled: !!userProfile,
+  });
+
+  const { data: firebaseConfig, isLoading: isLoadingConfig } = useAttendanceConfig(!!userProfile);
+  const salaryConfig = firebaseConfig || INITIAL_SALARY_CONFIG;
+
+  // Mutations
+  const addStudentMutation = useAddStudent();
+  const deleteStudentMutation = useDeleteStudent();
+  const updateAttendanceMutation = useUpdateAttendance();
+  const updateMemoMutation = useUpdateMemo();
+  const saveConfigMutation = useSaveAttendanceConfig();
+
+  // Local state for modals
+  const [isSalaryModalOpen, setSalaryModalOpen] = useState(false);
+  const [isStudentModalOpen, setStudentModalOpen] = useState(false);
+  const [isSettlementModalOpen, setSettlementModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
+
+  // Monthly Settlements from Firebase
+  const { data: monthlySettlements = {}, isLoading: isLoadingSettlements } = useMonthlySettlements(!!userProfile);
+  const saveSettlementMutation = useSaveMonthlySettlement();
+
+  // Handlers
+  const handleAttendanceChange = (studentId: string, dateKey: string, value: number | null) => {
+    const yearMonth = dateKey.substring(0, 7);
+    updateAttendanceMutation.mutate({ studentId, yearMonth, dateKey, value });
+  };
+
+  const handleMemoChange = (studentId: string, dateKey: string, memo: string) => {
+    const yearMonth = dateKey.substring(0, 7);
+    updateMemoMutation.mutate({ studentId, yearMonth, dateKey, memo });
+  };
+
+  const handleSaveStudent = (student: Student) => {
+    // Ensure new fields are set
+    const studentWithDefaults: Student = {
+      ...student,
+      teacherIds: student.teacherIds || (currentTeacherId ? [currentTeacherId] : []),
+      subject: student.subject || selectedSubject,
+      ownerId: student.ownerId || userProfile?.uid,
+    };
+    addStudentMutation.mutate(studentWithDefaults);
+    setEditingStudent(null);
+    setStudentModalOpen(false);
+  };
+
+  const handleDeleteStudent = (id: string) => {
+    if (window.confirm('해당 학생을 영구 삭제하시겠습니까?\n이전 데이터도 모두 삭제됩니다.\n\n단순히 이번 달부터 보이지 않게 하려면 수정 메뉴에서 "수강 종료일"을 설정하세요.')) {
+      deleteStudentMutation.mutate(id);
+      setStudentModalOpen(false);
+      setEditingStudent(null);
+    }
+  };
+
+  const handleEditStudent = (student: Student) => {
+    setEditingStudent(student);
+    setStudentModalOpen(true);
+  };
+
+  const changeMonth = (offset: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() + offset);
+    setCurrentDate(newDate);
+  };
+
+  const handleSaveConfig = (config: SalaryConfig) => {
+    saveConfigMutation.mutate(config);
+  };
+
+  // Helper for settlement
+  const currentMonthKey = currentDate.toISOString().slice(0, 7);
+  const currentSettlement = monthlySettlements[currentMonthKey] || {
+    hasBlog: false,
+    hasRetention: false,
+    otherAmount: 0,
+    note: ''
+  };
+
+  const handleSettlementUpdate = (data: MonthlySettlement) => {
+    saveSettlementMutation.mutate({ monthKey: currentMonthKey, data });
+  };
+
+  // Filter visible students for current month
+  const visibleStudents = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const monthStartStr = new Date(year, month, 1).toISOString().slice(0, 10);
+    const monthEndStr = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+
+    const filtered = allStudents.filter(s => {
+      if (s.startDate > monthEndStr) return false;
+      if (s.endDate && s.endDate < monthStartStr) return false;
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      if (!a.group && b.group) return 1;
+      if (a.group && !b.group) return -1;
+      const groupCompare = (a.group || '').localeCompare(b.group || '');
+      if (groupCompare !== 0) return groupCompare;
+      return a.name.localeCompare(b.name);
+    });
+  }, [allStudents, currentDate]);
+
+  // Statistics
+  const stats = useMemo(() =>
+    calculateStats(allStudents, visibleStudents, salaryConfig, currentDate),
+    [allStudents, visibleStudents, salaryConfig, currentDate]
+  );
+
+  const finalSalary = useMemo(() => {
+    let total = stats.totalSalary;
+    if (currentSettlement.hasBlog) total += salaryConfig.incentives.blogAmount;
+    if (currentSettlement.hasRetention) total += salaryConfig.incentives.retentionAmount;
+    total += (currentSettlement.otherAmount || 0);
+    return total;
+  }, [stats.totalSalary, currentSettlement, salaryConfig.incentives]);
+
+  const existingGroups = useMemo(() => {
+    const groups = new Set<string>();
+    allStudents.forEach(s => {
+      if (s.group) groups.add(s.group);
+    });
+    return Array.from(groups).sort();
+  }, [allStudents]);
+
+  // Available teachers for filter dropdown
+  const availableTeachers = useMemo(() => {
+    if (!canViewAll && !isMasterOrAdmin) return [];
+    // Filter by subject if needed
+    return teachers.filter(t => {
+      if (selectedSubject === 'math') return t.subjects?.includes('math');
+      if (selectedSubject === 'english') return t.subjects?.includes('english');
+      return true;
+    });
+  }, [teachers, selectedSubject, canViewAll, isMasterOrAdmin]);
+
+  // Loading state
+  if (isLoadingStudents || isLoadingConfig) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">출석부를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full bg-[#f8f9fa] text-[#373d41]">
+      {/* Toolbar */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
+              <CalendarIcon size={18} strokeWidth={2.5} />
+            </div>
+            <h1 className="text-lg font-bold text-gray-800 tracking-tight">출석부 & 급여 관리</h1>
+          </div>
+
+          {/* Subject Tabs */}
+          <div className="flex bg-gray-100 rounded-lg p-1 border border-gray-200">
+            {(canManageMath || isMasterOrAdmin) && (
+              <button
+                onClick={() => setSelectedSubject('math')}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedSubject === 'math'
+                  ? 'bg-green-500 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                🔢 수학
+              </button>
+            )}
+            {(canManageEnglish || isMasterOrAdmin) && (
+              <button
+                onClick={() => setSelectedSubject('english')}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedSubject === 'english'
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+                  }`}
+              >
+                🔤 영어
+              </button>
+            )}
+          </div>
+
+          {/* Teacher Filter (for managers) */}
+          {(canViewAll || isMasterOrAdmin) && availableTeachers.length > 0 && (
+            <div className="relative">
+              <select
+                value={selectedTeacherId || ''}
+                onChange={(e) => setSelectedTeacherId(e.target.value || undefined)}
+                className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-xs font-bold text-gray-700 cursor-pointer hover:border-gray-300"
+              >
+                <option value="">전체 강사</option>
+                {availableTeachers.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+          )}
+
+          <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
+            <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-white rounded-md transition-all text-gray-400 hover:text-gray-700 hover:shadow-sm">
+              <ChevronLeft size={18} />
+            </button>
+            <span className="px-4 font-bold text-gray-700 w-32 text-center text-sm">
+              {currentDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
+            </span>
+            <button onClick={() => changeMonth(1)} className="p-1 hover:bg-white rounded-md transition-all text-gray-400 hover:text-gray-700 hover:shadow-sm">
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-right mr-4 hidden md:block group cursor-pointer" onClick={() => setSettlementModalOpen(true)}>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center justify-end gap-1 group-hover:text-blue-600 transition-colors">
+              예상 급여 <Calculator size={10} />
+            </p>
+            <p className="text-lg font-bold text-gray-800 font-mono group-hover:scale-105 transition-transform">{formatCurrency(finalSalary)}</p>
+          </div>
+
+          <button
+            onClick={() => { setEditingStudent(null); setStudentModalOpen(true); }}
+            className="flex items-center gap-2 px-3 py-2 bg-[#081429] text-white rounded-lg hover:bg-[#1a2b4d] transition-colors text-xs font-bold shadow-sm"
+          >
+            <Plus size={16} strokeWidth={2.5} /> 학생 추가
+          </button>
+          <button
+            onClick={() => setSalaryModalOpen(true)}
+            className="p-2 border border-gray-200 text-gray-400 rounded-lg hover:bg-gray-50 hover:text-gray-600 transition-colors"
+            title="급여 설정"
+          >
+            <Settings size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-5 gap-4 shrink-0">
+        <div
+          onClick={() => setSettlementModalOpen(true)}
+          className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-300 transition-colors"
+        >
+          <div className="w-12 h-12 bg-blue-50 text-[#081429] rounded-lg flex items-center justify-center">
+            <span className="text-2xl font-bold leading-none">₩</span>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 font-medium">이번 달 급여</p>
+            <p className="text-xl font-bold text-[#373d41]">{formatCurrency(finalSalary)}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-gray-50 text-[#081429] rounded-lg">
+            <Users size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 font-medium">전체 학생</p>
+            <p className="text-xl font-bold text-[#373d41]">{visibleStudents.length}명</p>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setListModal({ isOpen: true, type: 'new' })}
+          className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 relative overflow-hidden cursor-pointer hover:border-yellow-300 transition-colors"
+        >
+          <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-50 rounded-bl-full -mr-8 -mt-8"></div>
+          <div className="p-3 bg-yellow-100 text-[#081429] rounded-lg z-10">
+            <UserPlus size={24} />
+          </div>
+          <div className="z-10">
+            <p className="text-sm text-gray-500 font-medium">신입생 유입</p>
+            <div className="flex items-baseline gap-1">
+              <p className="text-xl font-bold text-[#fdb813]">+{stats.newStudentsCount}명</p>
+              {stats.newStudentsCount > 0 && (
+                <span className="text-xs font-semibold text-[#fdb813]/80">(+{stats.newStudentRate}%)</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div
+          onClick={() => setListModal({ isOpen: true, type: 'dropped' })}
+          className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 cursor-pointer hover:border-red-300 transition-colors"
+        >
+          <div className="p-3 bg-red-50 text-red-600 rounded-lg">
+            <UserMinus size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 font-medium">지난달 퇴원</p>
+            <div className="flex items-baseline gap-1">
+              <p className="text-xl font-bold text-red-500">-{stats.droppedStudentsCount}명</p>
+              {stats.droppedStudentsCount > 0 && (
+                <span className="text-xs font-semibold text-red-400">({stats.droppedStudentRate}%)</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-500 font-medium">출석률</p>
+            <div className="flex items-end gap-2">
+              <p className="text-xl font-bold text-[#373d41]">
+                {stats.totalPresent + stats.totalAbsent === 0 ? '0' : Math.round((stats.totalPresent / (stats.totalPresent + stats.totalAbsent)) * 100)}%
+              </p>
+            </div>
+          </div>
+          <div className="h-10 w-10 rounded-full border-4 border-[#f1f5f9] border-t-[#081429] flex items-center justify-center transform -rotate-45">
+          </div>
+        </div>
+      </div>
+
+      {/* Main Table Area */}
+      <main className="flex-1 px-6 pb-6 min-h-0 flex flex-col">
+        <Table
+          currentDate={currentDate}
+          students={visibleStudents}
+          salaryConfig={salaryConfig}
+          onAttendanceChange={handleAttendanceChange}
+          onEditStudent={handleEditStudent}
+          onMemoChange={handleMemoChange}
+        />
+      </main>
+
+      {/* Modals */}
+      <SalarySettings
+        isOpen={isSalaryModalOpen}
+        onClose={() => setSalaryModalOpen(false)}
+        config={salaryConfig}
+        onSave={handleSaveConfig}
+      />
+
+      <StudentModal
+        isOpen={isStudentModalOpen}
+        onClose={() => { setStudentModalOpen(false); setEditingStudent(null); }}
+        onSave={handleSaveStudent}
+        onDelete={handleDeleteStudent}
+        initialData={editingStudent}
+        salaryConfig={salaryConfig}
+        currentViewDate={currentDate}
+        existingGroups={existingGroups}
+      />
+
+      <SettlementModal
+        isOpen={isSettlementModalOpen}
+        onClose={() => setSettlementModalOpen(false)}
+        monthStr={currentDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
+        baseSalary={stats.totalSalary}
+        droppedStudentRate={stats.droppedStudentRate}
+        incentiveConfig={salaryConfig.incentives}
+        data={currentSettlement}
+        onUpdate={handleSettlementUpdate}
+      />
+
+      <StudentListModal
+        isOpen={listModal.isOpen}
+        onClose={() => setListModal(prev => ({ ...prev, isOpen: false }))}
+        title={listModal.type === 'new' ? '이번 달 신입생' : '지난 달 퇴원생'}
+        type={listModal.type}
+        students={listModal.type === 'new' ? stats.newStudents : stats.droppedStudents}
+      />
+    </div>
+  );
+}
+
+export default AttendanceManager;
