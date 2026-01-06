@@ -16,6 +16,7 @@ export interface Enrollment {
   classId: string;    // Document ID of the class
   className: string;  // Name of the class
   teacherId: string;  // Teacher Name/ID
+  days: string[];     // Class schedule days (e.g., ['월', '수'])
 }
 
 // Phase 1: Unified Student DB
@@ -39,8 +40,7 @@ export interface UnifiedStudent {
 
   // 출석부 연동
   salarySettingId?: string;      // 급여 설정
-  days?: string[];               // 수업 요일
-  group?: string;                // 반 이름
+  group?: string;                // 반 이름 (UI 표시용, 동적으로 계산됨)
 
   // 메타데이터
   createdAt: string;
