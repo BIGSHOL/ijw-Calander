@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Department, UserProfile, CalendarEvent, UserRole, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS, Teacher, ClassKeywordColor } from '../../types';
 import { usePermissions, canAssignRole, getAssignableRoles } from '../../hooks/usePermissions';
-import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar, Lock, List, LayoutGrid, Eye, EyeOff } from 'lucide-react';
+import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar, Lock, List, LayoutGrid, Eye, EyeOff, Archive } from 'lucide-react';
 import { STANDARD_HOLIDAYS } from '../../constants_holidays';
 import { db, auth } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
@@ -22,6 +22,8 @@ interface SettingsModalProps {
   events: CalendarEvent[];
   sysCategories: string[];
   teachers: Teacher[];  // Centralized from App.tsx
+  showArchived?: boolean;
+  onToggleArchived?: () => void;
 }
 
 type MainTabMode = 'calendar' | 'timetable' | 'permissions' | 'gantt';
@@ -37,6 +39,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   events,
   sysCategories = [],
   teachers = [],
+  showArchived,
+  onToggleArchived,
 }) => {
   const { hasPermission } = usePermissions(currentUserProfile || null);
 
@@ -1337,12 +1341,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 {/* 2. System Config (Data Retention) */}
                 {isMaster && (
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <h3 className="font-bold mb-4 flex gap-2"><Database size={18} /> 데이터 보존 기간 설정</h3>
-                    <div className="flex gap-2 items-center">
-                      <span className="text-sm text-gray-600">지난 데이터 보존:</span>
-                      <input type="number" value={lookbackYears} onChange={(e) => setLookbackYears(Number(e.target.value))} className="border p-2 rounded w-20 text-center" />
-                      <span className="text-sm text-gray-600">년</span>
-                      <button onClick={() => handleUpdateLookback(lookbackYears)} className="ml-auto bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-200">저장</button>
+                    <h3 className="font-bold mb-4 flex gap-2"><Database size={18} /> 데이터 보존 및 아카이브</h3>
+                    <div className="space-y-4">
+                      {/* Lookback Years Config */}
+                      <div className="flex gap-2 items-center justify-between border-b border-gray-100 pb-4">
+                        <span className="text-sm text-gray-600">지난 데이터 보존:</span>
+                        <div className="flex items-center gap-2">
+                          <input type="number" value={lookbackYears} onChange={(e) => setLookbackYears(Number(e.target.value))} className="border p-2 rounded w-20 text-center" />
+                          <span className="text-sm text-gray-600">년</span>
+                          <button onClick={() => handleUpdateLookback(lookbackYears)} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-200">저장</button>
+                        </div>
+                      </div>
+
+                      {/* Archive Toggle (Moved here from Calendar Header) */}
+                      <div className="flex items-center justify-between py-2">
+                        <div>
+                          <span className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                            <Archive size={16} /> 아카이브된 일정 보기
+                          </span>
+                          <p className="text-xs text-gray-400 mt-0.5">보존 기간이 지난 오래된 데이터를 캘린더에 표시합니다.</p>
+                        </div>
+                        <button
+                          onClick={onToggleArchived}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showArchived ? 'bg-[#fdb813]' : 'bg-gray-200'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showArchived ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

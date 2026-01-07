@@ -10,6 +10,8 @@ interface Props {
   onAttendanceChange: (studentId: string, dateKey: string, value: number | null) => void;
   onEditStudent: (student: Student) => void;
   onMemoChange: (studentId: string, dateKey: string, memo: string) => void;
+  pendingUpdatesByStudent?: Record<string, Record<string, number | null>>;
+  pendingMemosByStudent?: Record<string, Record<string, string>>;
 }
 
 interface ContextMenuState {
@@ -21,7 +23,16 @@ interface ContextMenuState {
   memoText: string;
 }
 
-const Table: React.FC<Props> = ({ currentDate, students, salaryConfig, onAttendanceChange, onEditStudent, onMemoChange }) => {
+const Table: React.FC<Props> = ({
+  currentDate,
+  students,
+  salaryConfig,
+  onAttendanceChange,
+  onEditStudent,
+  onMemoChange,
+  pendingUpdatesByStudent,
+  pendingMemosByStudent
+}) => {
   const days = useMemo(() => getDaysInMonth(currentDate), [currentDate]);
   const memoInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -291,7 +302,19 @@ const Table: React.FC<Props> = ({ currentDate, students, salaryConfig, onAttenda
             </tr>
           </thead>
           <tbody>
-            {students.length > 0 ? renderRows() : (
+            {students.length > 0 ? (
+              <StudentTableBody
+                students={students}
+                days={days}
+                currentDate={currentDate}
+                salaryConfig={salaryConfig}
+                onEditStudent={onEditStudent}
+                onCellClick={handleCellClick}
+                onContextMenu={handleContextMenu}
+                pendingUpdatesByStudent={pendingUpdatesByStudent}
+                pendingMemosByStudent={pendingMemosByStudent}
+              />
+            ) : (
               <tr>
                 <td colSpan={days.length + 5} className="p-12 text-center text-gray-400">
                   등록된 학생이 없습니다. 상단의 '학생 추가' 버튼을 눌러 시작하세요.
@@ -381,4 +404,220 @@ const Table: React.FC<Props> = ({ currentDate, students, salaryConfig, onAttenda
   );
 };
 
+// Extracted & Memoized Components
+
+const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdatesByStudent, pendingMemosByStudent }: {
+  students: Student[],
+  days: Date[],
+  currentDate: Date,
+  salaryConfig: SalaryConfig,
+  onEditStudent: (student: Student) => void,
+  onCellClick: (studentId: string, dateKey: string, currentValue: number | undefined, isValid: boolean) => void,
+  onContextMenu: (e: React.MouseEvent, student: Student, dateKey: string, isValid: boolean) => void;
+  pendingUpdatesByStudent?: Record<string, Record<string, number | null>>;
+  pendingMemosByStudent?: Record<string, Record<string, string>>;
+}) => {
+  const rows: React.ReactNode[] = [];
+  let currentGroup: string | null = null;
+  let rankIndex = 0;
+
+  students.forEach((student) => {
+    rankIndex++;
+
+    // 1. Group Header Logic
+    const studentGroup = student.group || '그룹 없음';
+    if (student.group && studentGroup !== currentGroup) {
+      currentGroup = studentGroup;
+      rows.push(
+        <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">
+          <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <div className="flex items-center gap-2">
+              <FolderOpen size={14} className="text-slate-400" />
+              {currentGroup}
+            </div>
+          </td>
+        </tr>
+      );
+    } else if (!student.group && currentGroup !== '그룹 없음' && currentGroup !== null) {
+      currentGroup = '그룹 없음';
+      rows.push(
+        <tr key="group-none" className="bg-slate-100 border-y border-slate-200">
+          <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div className="flex items-center gap-2">
+              <Folder size={14} className="text-slate-400" />
+              그룹 없음
+            </div>
+          </td>
+        </tr>
+      );
+    }
+
+    const updates = pendingUpdatesByStudent?.[student.id];
+    const memos = pendingMemosByStudent?.[student.id];
+
+    rows.push(
+      <StudentRow
+        key={student.id}
+        student={student}
+        idx={rankIndex}
+        days={days}
+        currentDate={currentDate}
+        salaryConfig={salaryConfig}
+        onEditStudent={onEditStudent}
+        onCellClick={onCellClick}
+        onContextMenu={onContextMenu}
+        pendingUpdates={updates}
+        pendingMemos={memos}
+      />
+    );
+  });
+
+  return <>{rows}</>;
+});
+
+const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdates, pendingMemos }: {
+  student: Student,
+  idx: number,
+  days: Date[],
+  currentDate: Date,
+  salaryConfig: SalaryConfig,
+  onEditStudent: (student: Student) => void,
+  onCellClick: (studentId: string, dateKey: string, currentValue: number | undefined, isValid: boolean) => void,
+  onContextMenu: (e: React.MouseEvent, student: Student, dateKey: string, isValid: boolean) => void;
+  pendingUpdates?: Record<string, number | null>;
+  pendingMemos?: Record<string, string>;
+}) => {
+  const currentMonthStr = currentDate.toISOString().slice(0, 7);
+
+  // Merge attendance with pending updates for stats calculation within the row
+  // Note: This only affects the "Attended Units" count displayed in the row.
+  const attendanceDisplay = { ...student.attendance, ...pendingUpdates };
+
+  const attendedUnits = Object.entries(attendanceDisplay)
+    .filter(([k, v]) => k.startsWith(currentMonthStr) && (v as number) > 0)
+    .reduce((acc, [_, v]) => acc + (v as number), 0);
+
+  const salarySetting = salaryConfig.items.find(item => item.id === student.salarySettingId);
+  const levelName = salarySetting ? salarySetting.name : '미설정';
+  const badgeStyle = salarySetting ? getBadgeStyle(salarySetting.color) : undefined;
+  const badgeClass = salarySetting ? 'border' : 'bg-gray-100 text-gray-500 border-gray-200';
+  const { isNew, isLeaving } = getStudentStatus(student, currentDate);
+
+  return (
+    <tr className="group hover:bg-gray-50 transition-colors">
+      {/* Fixed Columns */}
+      <td className="p-3 sticky left-0 z-10 bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-[#373d41]/50 font-mono text-xs align-middle">
+        {idx}
+      </td>
+      <td className="p-3 sticky left-12 z-10 bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
+        <button
+          onClick={() => onEditStudent(student)}
+          className="text-left w-full hover:text-[#081429] font-bold text-[#373d41] truncate flex items-center gap-1.5"
+        >
+          {student.name}
+          {student.isHomeroom && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
+              담임
+            </span>
+          )}
+          {isNew && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#fdb813] text-[#081429] text-[9px] font-extrabold shadow-sm animate-pulse">
+              <Sparkles size={8} fill="#081429" /> NEW
+            </span>
+          )}
+          {isLeaving && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 text-[9px] font-bold">
+              <LogOut size={8} /> END
+            </span>
+          )}
+        </button>
+      </td>
+      <td className="p-3 sticky left-[148px] z-10 bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
+        <div className="flex flex-col gap-1.5 justify-center">
+          <div className="text-xs text-[#373d41] font-medium flex items-center gap-1">
+            <span className="truncate max-w-[80px]" title={student.school}>{student.school}</span>
+            <span className="text-gray-300">|</span>
+            <span>{student.grade}</span>
+          </div>
+          <span
+            className={`text-[10px] px-2 py-0.5 rounded-full w-fit font-bold ${badgeClass}`}
+            style={badgeStyle}
+          >
+            {levelName}
+          </span>
+        </div>
+      </td>
+
+      {/* Stat Cells */}
+      <td className="p-3 border-r border-b border-gray-200 text-center text-gray-500 bg-[#f8f9fa] font-mono align-middle">
+        <div className="flex flex-wrap justify-center gap-0.5 max-w-[60px] mx-auto">
+          {(student.days || []).map(d => (
+            <span key={d} className="text-[9px] bg-white border border-gray-200 px-1 rounded">{d[0]}</span>
+          ))}
+        </div>
+      </td>
+      <td className="p-3 border-r border-b border-gray-200 text-center font-bold text-[#081429] bg-[#f0f4f8] align-middle">
+        {attendedUnits}
+      </td>
+
+      {/* Attendance Grid */}
+      {days.map((day) => {
+        const dateKey = formatDateKey(day);
+        const { day: dayName } = formatDateDisplay(day);
+        const status = pendingUpdates && dateKey in pendingUpdates ? pendingUpdates[dateKey]! : student.attendance[dateKey];
+        const memo = pendingMemos && dateKey in pendingMemos ? pendingMemos[dateKey]! : student.memos?.[dateKey];
+        const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+        const isScheduled = (student.days || []).includes(dayName);
+
+        // Validity Check
+        const isValid = isDateValidForStudent(dateKey, student);
+
+        let cellClass = "";
+        let content: React.ReactNode = null;
+
+        if (!isValid) {
+          // Invalid Date
+          cellClass = "bg-slate-200 bg-[linear-gradient(45deg,#cbd5e1_25%,transparent_25%,transparent_50%,#cbd5e1_50%,#cbd5e1_75%,transparent_75%,transparent)] bg-[length:8px_8px] cursor-not-allowed shadow-inner border-slate-200";
+        } else {
+          // Valid Date Logic
+          if (status > 0) {
+            if (status === 1) {
+              cellClass = "bg-blue-100 hover:bg-blue-200 text-[#081429] cursor-pointer";
+              content = "1";
+            } else {
+              cellClass = "bg-[#fff7d1] hover:bg-[#ffeeba] text-[#b45309] cursor-pointer font-bold";
+              content = status;
+            }
+          } else if (status === 0) {
+            cellClass = "bg-red-50 hover:bg-red-100 text-red-500 cursor-pointer";
+            content = "0";
+          } else if (isScheduled) {
+            cellClass = "bg-blue-50 hover:bg-blue-100 cursor-pointer";
+            content = <div className="w-1.5 h-1.5 rounded-full bg-blue-300 mx-auto" />;
+          } else if (isWeekend) {
+            cellClass = "bg-[#f8f9fa] text-gray-200 cursor-pointer hover:bg-gray-100";
+          } else {
+            cellClass = "cursor-pointer hover:bg-gray-100 transition-colors";
+          }
+        }
+
+        return (
+          <td
+            key={dateKey}
+            onClick={() => onCellClick(student.id, dateKey, status, isValid)}
+            onContextMenu={(e) => onContextMenu(e, student, dateKey, isValid)}
+            className={`p-1 border-r border-b border-gray-200 text-center text-sm font-medium relative ${cellClass} align-middle`}
+            title={memo ? `메모: ${memo}` : undefined}
+          >
+            {content}
+            {/* Memo Indicator: Red Triangle in top-right */}
+            {memo && (
+              <div className="absolute top-0 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-t-[6px] border-t-red-500/80" />
+            )}
+          </td>
+        );
+      })}
+    </tr>
+  );
+});
 export default Table;

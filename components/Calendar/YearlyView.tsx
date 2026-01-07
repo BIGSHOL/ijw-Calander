@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, startOfYear, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { CalendarEvent, BucketItem, Department } from '../../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil, ArrowRightCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil, ArrowRightCircle, Archive } from 'lucide-react';
 import BucketModal from './BucketModal';
 
 interface YearlyViewProps {
@@ -185,6 +185,11 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                         >
                             <ChevronRight size={16} strokeWidth={3} />
                         </button>
+                    </div>
+
+                    {/* Left Group: Controls */}
+                    <div className="flex items-center gap-2">
+
                     </div>
 
                     {/* Category Legend */}

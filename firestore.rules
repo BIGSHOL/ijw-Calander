@@ -138,6 +138,16 @@ service cloud.firestore {
                        );
     }
 
+    // Phase 9: Archived Events Collection
+    match /archived_events/{eventId} {
+      allow read: if isAuthenticated();
+      // Allow delete for restoration (moving back to active)
+      allow delete: if isAuthenticated() && (
+          hasPermission('events.edit_own') || hasPermission('events.edit_others')
+      );
+      // Create/Update handled by Cloud Function only
+    }
+
     // Bucket Items Collection
     match /bucketItems/{itemId} {
       allow read: if isAuthenticated();

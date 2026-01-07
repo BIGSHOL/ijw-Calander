@@ -42,6 +42,27 @@ interface AttendanceManagerProps {
   teachers?: Teacher[];
 }
 
+// Helper to group updates by student ID
+const groupUpdates = <T,>(updates: Record<string, T>): Record<string, Record<string, T>> => {
+  const grouped: Record<string, Record<string, T>> = {};
+  Object.entries(updates).forEach(([key, value]) => {
+    const parts = key.split('_');
+    if (parts.length >= 2) {
+      // studentId might contain underscores? No, usually generated ids.
+      // But to be safe, dateKey is YYYY-MM-DD (fixed length 10 or 3 parts).
+      // safely split: dateKey is last part (if format is ID_YYYY-MM-DD)
+      // Actually standard format is `${studentId}_${dateKey}`.
+      // dateKey examples: 2024-01-01.
+      const dateKey = parts.pop()!;
+      const studentId = parts.join('_');
+
+      if (!grouped[studentId]) grouped[studentId] = {};
+      grouped[studentId][dateKey] = value;
+    }
+  });
+  return grouped;
+};
+
 const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teachers = [] }) => {
   const { hasPermission } = usePermissions(userProfile);
 
@@ -69,22 +90,39 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | undefined>(undefined);
 
 
+  // Available teachers for filter dropdown
+  const availableTeachers = useMemo(() => {
+    if (!canViewAll && !isMasterOrAdmin) return [];
+    // Filter by subject if needed
+    return teachers.filter(t => {
+      if (selectedSubject === 'math') return t.subjects?.includes('math');
+      if (selectedSubject === 'english') return t.subjects?.includes('english');
+      return true;
+    });
+  }, [teachers, selectedSubject, canViewAll, isMasterOrAdmin]);
+
   // Determine which teacherId to filter by
   const filterTeacherId = useMemo(() => {
     if (canViewAll || isMasterOrAdmin) {
-      // Can view all - use selected filter or show all
-      return selectedTeacherId;
+      // Validate selectedTeacherId against availableTeachers
+      const isValid = availableTeachers.some(t => t.name === selectedTeacherId);
+      if (isValid && selectedTeacherId) return selectedTeacherId;
+
+      // Fallback to first available teacher if selection is invalid/empty (e.g. after subject switch)
+      if (availableTeachers.length > 0) return availableTeachers[0].name;
+
+      return undefined;
     }
     // Regular teacher - only show their own students
     return currentTeacherId;
-  }, [canViewAll, isMasterOrAdmin, selectedTeacherId, currentTeacherId]);
+  }, [canViewAll, isMasterOrAdmin, selectedTeacherId, currentTeacherId, availableTeachers]);
 
   // Firebase Hooks - Pass yearMonth to load attendance records for current month
   const currentYearMonth = useMemo(() => {
     return currentDate.toISOString().slice(0, 7); // "YYYY-MM"
   }, [currentDate]);
 
-  const { students: allStudents, isLoading: isLoadingStudents } = useAttendanceStudents({
+  const { students: allStudents, isLoading: isLoadingStudents, refetch } = useAttendanceStudents({
     teacherId: filterTeacherId,
     subject: selectedSubject,
     yearMonth: currentYearMonth,
@@ -108,19 +146,72 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
 
+  // Optimistic UI State: { [studentId_dateKey]: value }
+  const [pendingUpdates, setPendingUpdates] = useState<Record<string, number | null>>({});
+  const [pendingMemos, setPendingMemos] = useState<Record<string, string>>({});
+
   // Monthly Settlements from Firebase
   const { data: monthlySettlements = {}, isLoading: isLoadingSettlements } = useMonthlySettlements(!!userProfile);
   const saveSettlementMutation = useSaveMonthlySettlement();
 
   // Handlers
   const handleAttendanceChange = (studentId: string, dateKey: string, value: number | null) => {
+    const key = `${studentId}_${dateKey}`;
+    // 1. Optimistic Update (Immediate Feedback)
+    setPendingUpdates(prev => ({ ...prev, [key]: value }));
+
     const yearMonth = dateKey.substring(0, 7);
-    updateAttendanceMutation.mutate({ studentId, yearMonth, dateKey, value });
+    updateAttendanceMutation.mutate({ studentId, yearMonth, dateKey, value }, {
+      onSuccess: async () => {
+        // 2. Refetch to get server truth (eventually)
+        await refetch();
+        // 3. Clear optimistic state (optional, but good for cleanup)
+        // We could leave it until refetch completes, but refetch is async.
+        // Actually, best to clear it in onSettled, but here we simply rely on the fact that
+        // once refetch comes back, the data source will match our optimistic value.
+        // To be safe, we clear it after a short delay or just let refetch overwrite key?
+        // Let's clear it to allow fresh data to take over.
+        setPendingUpdates(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      },
+      onError: () => {
+        // Rollback on error
+        setPendingUpdates(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        alert('저장에 실패했습니다.');
+      }
+    });
   };
 
   const handleMemoChange = (studentId: string, dateKey: string, memo: string) => {
+    const key = `${studentId}_${dateKey}`;
+    setPendingMemos(prev => ({ ...prev, [key]: memo }));
+
     const yearMonth = dateKey.substring(0, 7);
-    updateMemoMutation.mutate({ studentId, yearMonth, dateKey, memo });
+    updateMemoMutation.mutate({ studentId, yearMonth, dateKey, memo }, {
+      onSuccess: async () => {
+        await refetch();
+        setPendingMemos(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      },
+      onError: () => {
+        setPendingMemos(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        alert('메모 저장에 실패했습니다.');
+      }
+    });
   };
 
   const handleSaveStudent = (student: Student) => {
@@ -194,6 +285,10 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     });
   }, [allStudents, currentDate]);
 
+  // Group Optimistic Updates for Component Efficiency
+  const pendingUpdatesByStudent = useMemo(() => groupUpdates(pendingUpdates), [pendingUpdates]);
+  const pendingMemosByStudent = useMemo(() => groupUpdates(pendingMemos), [pendingMemos]);
+
   // Statistics
   const stats = useMemo(() =>
     calculateStats(allStudents, visibleStudents, salaryConfig, currentDate),
@@ -215,17 +310,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     });
     return Array.from(groups).sort();
   }, [allStudents]);
-
-  // Available teachers for filter dropdown
-  const availableTeachers = useMemo(() => {
-    if (!canViewAll && !isMasterOrAdmin) return [];
-    // Filter by subject if needed
-    return teachers.filter(t => {
-      if (selectedSubject === 'math') return t.subjects?.includes('math');
-      if (selectedSubject === 'english') return t.subjects?.includes('english');
-      return true;
-    });
-  }, [teachers, selectedSubject, canViewAll, isMasterOrAdmin]);
 
   // Loading state
   if (isLoadingStudents || isLoadingConfig) {
@@ -342,7 +426,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
           {(canViewAll || isMasterOrAdmin) && availableTeachers.length > 0 && (
             <div className="relative">
               <select
-                value={selectedTeacherId || ''}
+                value={filterTeacherId || ''}
                 onChange={(e) => setSelectedTeacherId(e.target.value || undefined)}
                 className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-xs font-bold text-gray-700 cursor-pointer hover:border-gray-300"
               >
@@ -471,6 +555,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
           onAttendanceChange={handleAttendanceChange}
           onEditStudent={handleEditStudent}
           onMemoChange={handleMemoChange}
+          pendingUpdatesByStudent={pendingUpdatesByStudent}
+          pendingMemosByStudent={pendingMemosByStudent}
         />
       </main>
 

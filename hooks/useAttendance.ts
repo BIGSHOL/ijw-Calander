@@ -1,6 +1,6 @@
 // hooks/useAttendance.ts - Firebase hooks for Attendance data
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, deleteField } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Student, SalaryConfig, MonthlySettlement, AttendanceSubject } from '../components/Attendance/types';
 import { useEffect, useState } from 'react';
@@ -28,10 +28,13 @@ export const useAttendanceStudents = (options?: {
     yearMonth?: string; // NEW: YYYY-MM format, e.g. "2026-01"
     enabled?: boolean;
 }) => {
-    const [students, setStudents] = useState<Student[]>([]);
+    const [basicStudents, setBasicStudents] = useState<Student[]>([]); // Students from Snapshot (No Records)
+    const [mergedStudents, setMergedStudents] = useState<Student[]>([]); // Final Students (With Records)
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
+    const [refreshKey, setRefreshKey] = useState(0); // Trigger for re-fetching records
 
+    // 1. Snapshot Listener for Student List (Real-time)
     useEffect(() => {
         if (options?.enabled === false) {
             setIsLoading(false);
@@ -40,42 +43,29 @@ export const useAttendanceStudents = (options?: {
 
         setIsLoading(true);
 
-        // Build query based on filters
-        let q = query(collection(db, STUDENTS_COLLECTION), orderBy('name'));
-
-        // Note: Firestore requires composite index for array-contains + other conditions
-        // For now, we fetch all and filter client-side for flexibility
-        // TODO: Add Firestore composite index for production optimization
+        const q = query(collection(db, STUDENTS_COLLECTION), orderBy('name'));
 
         const unsubscribe = onSnapshot(
             q,
-            async (snapshot) => {
+            (snapshot) => {
                 let data = snapshot.docs.map(d => ({
                     id: d.id,
                     ...d.data(),
-                    attendance: {}, // Initialize empty, will be filled below
+                    attendance: {},
                     memos: {},
-                    // Ensure compatibility fields if missing in DB
                     teacherIds: d.data().teacherIds || [],
                 } as Student));
 
-                // Filter out withdrawn students if needed, or keeping them for historical attendance?
-                // Usually we only show active students in the main list.
-                // Unified DB uses 'status' field.
-                // data = data.filter(s => (s as any).status !== 'withdrawn');
-
-                // Client-side filtering using enrollments (v5 schema)
+                // Client-side filtering
                 if (options?.teacherId) {
                     data = data.filter(s => {
                         const enrollments = (s as any).enrollments || [];
                         return enrollments.some((e: any) => e.teacherId === options.teacherId);
                     });
-                    // Override group and days with only the selected teacher's data
                     data = data.map(s => {
                         const enrollments = (s as any).enrollments || [];
                         const teacherEnrollments = enrollments.filter((e: any) => e.teacherId === options.teacherId);
                         const teacherClasses = teacherEnrollments.map((e: any) => e.className);
-                        // Collect all days from this teacher's enrollments
                         const teacherDays: string[] = [];
                         teacherEnrollments.forEach((e: any) => {
                             if (e.days && Array.isArray(e.days)) {
@@ -94,72 +84,8 @@ export const useAttendanceStudents = (options?: {
                     });
                 }
 
-                // Load attendance records for the specified month
-                // Cost Optimization: Single batch query instead of N individual getDoc calls
-                if (options?.yearMonth && data.length > 0) {
-                    try {
-                        // Create list of expected document IDs
-                        const expectedDocIds = data.map(s => `${s.id}_${options.yearMonth}`);
-
-                        // Firestore 'in' queries support max 30 values, so chunk if needed
-                        const CHUNK_SIZE = 30;
-                        const chunks: string[][] = [];
-                        for (let i = 0; i < expectedDocIds.length; i += CHUNK_SIZE) {
-                            chunks.push(expectedDocIds.slice(i, i + CHUNK_SIZE));
-                        }
-
-                        // Fetch all records in batches
-                        const recordsMap = new Map<string, { attendance: Record<string, number>; memos: Record<string, string> }>();
-
-                        for (const chunk of chunks) {
-                            // Fetch each document individually in parallel (Firestore 'in' with documentId is limited)
-                            // Using getDoc for each is actually efficient since we're already chunking
-                            const chunkPromises = chunk.map(async (docId) => {
-                                const docSnap = await getDoc(doc(db, RECORDS_COLLECTION, docId));
-                                if (docSnap.exists()) {
-                                    // Extract studentId from docId format: {studentId}_{YYYY-MM}
-                                    const idParts = docId.split('_');
-                                    idParts.pop(); // Remove YYYY-MM part
-                                    const extractedStudentId = idParts.join('_');
-
-                                    return {
-                                        studentId: extractedStudentId,
-                                        attendance: docSnap.data().attendance || {},
-                                        memos: docSnap.data().memos || {}
-                                    };
-                                }
-                                return null;
-                            });
-
-                            const results = await Promise.all(chunkPromises);
-                            results.forEach(r => {
-                                if (r) {
-                                    recordsMap.set(r.studentId, {
-                                        attendance: r.attendance,
-                                        memos: r.memos
-                                    });
-                                }
-                            });
-                        }
-
-                        // Merge records into student objects
-                        data = data.map(student => {
-                            const record = recordsMap.get(student.id);
-                            return {
-                                ...student,
-                                attendance: record?.attendance || {},
-                                memos: record?.memos || {}
-                            };
-                        });
-                    } catch (recordError) {
-                        console.error('Error loading attendance records:', recordError);
-                        // Continue with empty attendance data
-                    }
-                }
-
-                setStudents(data);
-                setIsLoading(false);
-                setError(null);
+                setBasicStudents(data);
+                // Note: We don't turn off loading here, we wait for records
             },
             (err) => {
                 console.error('Error fetching attendance students:', err);
@@ -169,9 +95,100 @@ export const useAttendanceStudents = (options?: {
         );
 
         return () => unsubscribe();
-    }, [options?.teacherId, options?.subject, options?.yearMonth, options?.enabled]);
+    }, [options?.teacherId, options?.subject, options?.enabled]);
 
-    return { students, isLoading, error };
+    // 2. Fetch Records Logic (Memoized)
+    const fetchRecords = async () => {
+        if (options?.enabled === false) return;
+        if (basicStudents.length === 0) {
+            setMergedStudents([]);
+            setIsLoading(false);
+            return;
+        }
+
+        // If no yearMonth, just return basic students without records
+        if (!options?.yearMonth) {
+            setMergedStudents(basicStudents);
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            // Batch Fetching Logic ...
+            const expectedDocIds = basicStudents.map(s => `${s.id}_${options.yearMonth}`);
+
+            // Chunking
+            const CHUNK_SIZE = 30;
+            const chunks: string[][] = [];
+            for (let i = 0; i < expectedDocIds.length; i += CHUNK_SIZE) {
+                chunks.push(expectedDocIds.slice(i, i + CHUNK_SIZE));
+            }
+
+            const recordsMap = new Map<string, { attendance: Record<string, number>; memos: Record<string, string> }>();
+
+            for (const chunk of chunks) {
+                const chunkPromises = chunk.map(async (docId) => {
+                    try {
+                        const docSnap = await getDoc(doc(db, RECORDS_COLLECTION, docId));
+                        if (docSnap.exists()) {
+                            const idParts = docId.split('_');
+                            idParts.pop();
+                            const extractedStudentId = idParts.join('_');
+                            return {
+                                studentId: extractedStudentId,
+                                attendance: docSnap.data().attendance || {},
+                                memos: docSnap.data().memos || {}
+                            };
+                        }
+                    } catch (e) {
+                        console.warn(`Failed to fetch record ${docId}`, e);
+                    }
+                    return null;
+                });
+
+                const results = await Promise.all(chunkPromises);
+                results.forEach(r => {
+                    if (r) {
+                        recordsMap.set(r.studentId, {
+                            attendance: r.attendance,
+                            memos: r.memos
+                        });
+                    }
+                });
+            }
+
+            // Merge
+            const merged = basicStudents.map(student => {
+                const record = recordsMap.get(student.id);
+                return {
+                    ...student,
+                    attendance: record?.attendance || {},
+                    memos: record?.memos || {}
+                };
+            });
+
+            setMergedStudents(merged);
+        } catch (err) {
+            console.error('Error loading attendance records:', err);
+            // Fallback to basic students
+            setMergedStudents(basicStudents);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Trigger fetch on dependencies
+    useEffect(() => {
+        fetchRecords();
+    }, [basicStudents, options?.yearMonth, options?.enabled, refreshKey]);
+
+    // Async refetch function
+    const refetch = async () => {
+        setRefreshKey(prev => prev + 1);
+        await fetchRecords();
+    };
+
+    return { students: mergedStudents, isLoading, error, refetch };
 };
 
 /**
@@ -267,6 +284,10 @@ export const useAddStudent = () => {
  * Mutation to update attendance record (optimized for cost)
  * Only updates the specific month's record
  */
+/**
+ * Mutation to update attendance record (optimized for cost)
+ * Only updates the specific month's record
+ */
 export const useUpdateAttendance = () => {
     const queryClient = useQueryClient();
 
@@ -284,22 +305,37 @@ export const useUpdateAttendance = () => {
         }) => {
             const docId = `${studentId}_${yearMonth}`;
             const docRef = doc(db, RECORDS_COLLECTION, docId);
-            const docSnap = await getDoc(docRef);
 
-            const currentData = docSnap.exists() ? docSnap.data() : { attendance: {}, memos: {} };
-            const newAttendance = { ...currentData.attendance };
+            // Use deleteField() to properly remove keys during a merge
+            // This also avoids the need to read the document first (Write Optimization)
+            const payload = {
+                attendance: {
+                    [dateKey]: value === null ? deleteField() : value
+                }
+            };
 
-            if (value === null) {
-                delete newAttendance[dateKey];
-            } else {
-                newAttendance[dateKey] = value;
-            }
-
-            await setDoc(docRef, { ...currentData, attendance: newAttendance }, { merge: true });
+            await setDoc(docRef, payload, { merge: true });
             return { studentId, yearMonth, dateKey, value };
         },
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ['attendanceRecords', data.studentId, data.yearMonth] });
+        onMutate: async ({ studentId, yearMonth, dateKey, value }) => {
+            await queryClient.cancelQueries({ queryKey: ['attendanceRecords', studentId, yearMonth] });
+            const previousRecord = queryClient.getQueryData(['attendanceRecords', studentId, yearMonth]);
+
+            queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
+                if (!old) return { attendance: { [dateKey]: value }, memos: {} };
+                const newAttendance = { ...old.attendance };
+                if (value === null) delete newAttendance[dateKey];
+                else newAttendance[dateKey] = value;
+                return { ...old, attendance: newAttendance };
+            });
+
+            return { previousRecord };
+        },
+        onError: (err, newTodo, context: any) => {
+            queryClient.setQueryData(['attendanceRecords', newTodo.studentId, newTodo.yearMonth], context.previousRecord);
+        },
+        onSettled: (data, error, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['attendanceRecords', variables.studentId, variables.yearMonth] });
         },
     });
 };
@@ -324,22 +360,35 @@ export const useUpdateMemo = () => {
         }) => {
             const docId = `${studentId}_${yearMonth}`;
             const docRef = doc(db, RECORDS_COLLECTION, docId);
-            const docSnap = await getDoc(docRef);
 
-            const currentData = docSnap.exists() ? docSnap.data() : { attendance: {}, memos: {} };
-            const newMemos = { ...currentData.memos };
+            const payload = {
+                memos: {
+                    [dateKey]: !memo.trim() ? deleteField() : memo.trim()
+                }
+            };
 
-            if (!memo.trim()) {
-                delete newMemos[dateKey];
-            } else {
-                newMemos[dateKey] = memo.trim();
-            }
-
-            await setDoc(docRef, { ...currentData, memos: newMemos }, { merge: true });
+            await setDoc(docRef, payload, { merge: true });
             return { studentId, yearMonth, dateKey, memo };
         },
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ['attendanceRecords', data.studentId, data.yearMonth] });
+        onMutate: async ({ studentId, yearMonth, dateKey, memo }) => {
+            await queryClient.cancelQueries({ queryKey: ['attendanceRecords', studentId, yearMonth] });
+            const previousRecord = queryClient.getQueryData(['attendanceRecords', studentId, yearMonth]);
+
+            queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
+                if (!old) return { attendance: {}, memos: { [dateKey]: memo } };
+                const newMemos = { ...old.memos };
+                if (!memo) delete newMemos[dateKey];
+                else newMemos[dateKey] = memo;
+                return { ...old, memos: newMemos };
+            });
+
+            return { previousRecord };
+        },
+        onError: (err, newTodo, context: any) => {
+            queryClient.setQueryData(['attendanceRecords', newTodo.studentId, newTodo.yearMonth], context.previousRecord);
+        },
+        onSettled: (data, error, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['attendanceRecords', variables.studentId, variables.yearMonth] });
         },
     });
 };
