@@ -1376,7 +1376,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <option value="auto">자동 (첫 번째 탭)</option>
                         {accessibleTabs.includes('calendar') && <option value="calendar">📅 연간 일정</option>}
                         {accessibleTabs.includes('timetable') && <option value="timetable">📊 시간표</option>}
-                        {accessibleTabs.includes('payment') && <option value="payment">💰 전자 결제</option>}
+                        {accessibleTabs.includes('payment') && <option value="payment">💰 전자 결재</option>}
                         {accessibleTabs.includes('gantt') && <option value="gantt">📈 간트 차트</option>}
                         {accessibleTabs.includes('consultation') && <option value="consultation">💬 상담 관리</option>}
                       </select>

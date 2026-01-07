@@ -145,15 +145,14 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
     return (
         <div className="flex flex-col h-full bg-slate-50 font-sans text-slate-900">
             {/* Desktop Header - Dark Theme to match Main Calendar */}
-            <header className="hidden md:flex bg-[#1e293b] border-b border-gray-700 px-6 py-4 justify-between items-center z-10 shadow-lg">
+            <header className="hidden md:flex bg-[#081429] border-b border-white/10 px-6 h-10 justify-between items-center z-10 shadow-lg relative">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold text-white tracking-wide">
-                        상담 관리
-                    </h2>
-                    <div className="h-4 w-px bg-gray-600"></div>
+                    {/* Consistent Title Style (Optional, or remove) */}
+                    {/* <h2 className="text-sm font-bold text-white tracking-wide">상담 관리</h2>
+                    <div className="h-4 w-px bg-white/10"></div> */}
 
-                    {/* View Switcher Tabs */}
-                    <div className="flex bg-black/20 p-1 rounded-lg border border-white/5">
+                    {/* View Switcher Tabs - Adjusted sizing */}
+                    <div className="flex bg-white/10 p-0.5 rounded-lg border border-white/10">
                         <button
                             onClick={() => setView('dashboard')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${view === 'dashboard'
@@ -161,27 +160,27 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
-                            <LayoutDashboard size={14} />
+                            <LayoutDashboard size={12} />
                             대시보드
                         </button>
                         <button
                             onClick={() => setView('table')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${view === 'table'
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all ${view === 'table'
                                 ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
-                            <List size={14} />
+                            <List size={12} />
                             상담목록
                         </button>
                         <button
                             onClick={() => setView('yearly')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${view === 'yearly'
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all ${view === 'yearly'
                                 ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                                 : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
-                            <Calendar size={14} />
+                            <Calendar size={12} />
                             연간뷰
                         </button>
                     </div>
@@ -189,26 +188,26 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     {/* Year/Month Filter - Show based on view */}
                     {(view === 'table' || view === 'dashboard') && (
                         <>
-                            <div className="h-4 w-px bg-gray-600"></div>
+                            <div className="h-4 w-px bg-white/20"></div>
                             <div className="flex items-center gap-2">
                                 {/* Year Select */}
                                 <select
                                     value={selectedYear}
                                     onChange={(e) => setSelectedYear(e.target.value)}
-                                    className="px-3 py-1.5 rounded-lg bg-[#081429] border border-gray-600 text-white text-xs font-bold focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                    className="px-2 py-0.5 rounded bg-[#1e293b] border border-gray-600 text-white text-xs font-bold focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
                                 >
-                                    <option value="all">전체 연도</option>
+                                    <option value="all" className="text-black">전체 연도</option>
                                     {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                                        <option key={year} value={year}>{year}년</option>
+                                        <option key={year} value={year} className="text-black">{year}년</option>
                                     ))}
                                 </select>
 
                                 {/* Month Select & Navigation */}
-                                <div className="flex items-center bg-[#081429] rounded-lg border border-gray-600 p-0.5">
+                                <div className="flex items-center bg-[#1e293b] rounded border border-gray-600 p-0">
                                     <button
                                         onClick={handlePrevMonth}
                                         disabled={selectedYear === 'all'}
-                                        className="p-1 text-gray-400 hover:text-[#fdb813] disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                                        className="p-0.5 text-gray-400 hover:text-[#fdb813] disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
                                     >
                                         <ChevronLeft size={14} />
                                     </button>
@@ -218,9 +217,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                                         disabled={selectedYear === 'all'}
                                         className="bg-transparent text-white text-xs font-bold px-2 py-1 outline-none text-center min-w-[60px] cursor-pointer disabled:opacity-50"
                                     >
-                                        <option value="all">전체</option>
+                                        <option value="all" className="text-black">전체</option>
                                         {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                                            <option key={m} value={String(m)}>{m}월</option>
+                                            <option key={m} value={String(m)} className="text-black">{m}월</option>
                                         ))}
                                     </select>
                                     <button
@@ -330,7 +329,6 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                             data={consultations}
                             month={selectedMonth}
                             year={selectedYear === 'all' ? new Date().getFullYear() : parseInt(selectedYear, 10)}
-                            openAddModal={openAddModal}
                         />
                     )}
 

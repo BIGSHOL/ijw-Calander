@@ -235,7 +235,27 @@ export const useAttendanceConfig = (configId: string = 'salary', enabled: boolea
 };
 
 /**
- * Hook to fetch monthly settlements
+ * Hook to fetch a single month's settlement (cost-optimized)
+ * Only loads the specific month's data instead of all months
+ */
+export const useMonthlySettlement = (yearMonth: string, enabled: boolean = true) => {
+    return useQuery({
+        queryKey: ['monthlySettlement', yearMonth],
+        queryFn: async () => {
+            const docSnap = await getDoc(doc(db, CONFIG_COLLECTION, 'settlements', 'months', yearMonth));
+            if (docSnap.exists()) {
+                return docSnap.data() as MonthlySettlement;
+            }
+            return null;
+        },
+        staleTime: 1000 * 60 * 10, // 10 minutes
+        enabled,
+    });
+};
+
+/**
+ * @deprecated Use useMonthlySettlement instead for cost optimization
+ * Hook to fetch all monthly settlements (loads all months - expensive)
  */
 export const useMonthlySettlements = (enabled: boolean = true) => {
     return useQuery({

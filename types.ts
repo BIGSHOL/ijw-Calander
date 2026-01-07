@@ -611,6 +611,7 @@ export interface ConsultationRecord {
   parentPhone: string;
   schoolName: string;
   grade: SchoolGrade;
+  address?: string; // 주소 추가
   consultationDate: string; // ISO Date string (YYYY-MM-DD)
 
   subject: ConsultationSubject;

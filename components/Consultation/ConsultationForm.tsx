@@ -44,6 +44,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
         parentPhone: '',
         schoolName: '',
         grade: SchoolGrade.Middle1,
+        address: '',
         consultationDate: getLocalDate(),
 
         subject: ConsultationSubject.English,
@@ -73,7 +74,8 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                 consultationDate: initialData.consultationDate.slice(0, 10),
                 paymentDate: initialData.paymentDate ? initialData.paymentDate.slice(0, 10) : '',
                 followUpDate: initialData.followUpDate ? initialData.followUpDate.slice(0, 10) : '',
-                createdAt: initialData.createdAt ? initialData.createdAt.slice(0, 10) : getLocalDate()
+                createdAt: initialData.createdAt ? initialData.createdAt.slice(0, 10) : getLocalDate(),
+                address: initialData.address || ''
             });
         } else {
             // Reset
@@ -82,6 +84,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                 parentPhone: '',
                 schoolName: '',
                 grade: SchoolGrade.Middle1,
+                address: '',
                 consultationDate: getLocalDate(),
                 subject: ConsultationSubject.English,
                 status: ConsultationStatus.PendingThisMonth,
@@ -236,6 +239,16 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                         ))}
                                     </select>
                                 </div>
+                            </div>
+                            <div className="mt-3">
+                                <Label label="주소" />
+                                <input
+                                    type="text"
+                                    value={formData.address}
+                                    onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:border-indigo-500"
+                                    placeholder="상세 주소를 입력하세요"
+                                />
                             </div>
                         </div>
 
