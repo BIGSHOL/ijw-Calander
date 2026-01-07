@@ -263,24 +263,30 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 // Permission IDs for granular control
 export type PermissionId =
-  | 'events.create' | 'events.edit_own' | 'events.edit_others'
-  | 'events.delete_own' | 'events.delete_others' | 'events.drag_move'
-  | 'events.attendance'
-  | 'buckets.edit_lower_roles' | 'buckets.delete_lower_roles'
-  | 'departments.view_all' | 'departments.create' | 'departments.edit' | 'departments.delete'
+  // Calendar Events (consolidated)
+  | 'events.create' | 'events.manage_own' | 'events.manage_others'
+  | 'events.drag_move' | 'events.attendance'
+  | 'events.bucket'  // Bucket list management (was buckets.edit/delete_lower_roles)
+  // Departments (consolidated)
+  | 'departments.view_all' | 'departments.manage'  // Was create/edit/delete
+  // Users
   | 'users.view' | 'users.approve' | 'users.change_role' | 'users.change_permissions'
+  // Settings
   | 'settings.access' | 'settings.holidays' | 'settings.role_permissions' | 'settings.manage_categories'
+  // System - Teachers & Classes
   | 'system.teachers.view' | 'system.teachers.edit'
   | 'system.classes.view' | 'system.classes.edit'
+  // Timetable
   | 'timetable.math.view' | 'timetable.math.edit'
   | 'timetable.english.view' | 'timetable.english.edit'
   | 'timetable.english.simulation'
   | 'timetable.english.backup.view' | 'timetable.english.backup.restore'
   | 'timetable.integrated.view'
+  // Gantt
   | 'gantt.view' | 'gantt.create' | 'gantt.edit' | 'gantt.delete'
-  // Attendance Permissions (NEW)
-  | 'attendance.view_own' | 'attendance.view_all'
-  | 'attendance.edit_own' | 'attendance.edit_all'
+  // Attendance (consolidated)
+  | 'attendance.manage_own'  // Was view_own + edit_own
+  | 'attendance.edit_all'
   | 'attendance.manage_math' | 'attendance.manage_english';
 
 // Role-based permission configuration (stored in Firestore)
@@ -291,11 +297,9 @@ export type RolePermissions = {
 // Default permissions for each role (MASTER has all, these are for others)
 export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
   admin: {
-    'events.create': true, 'events.edit_own': true, 'events.edit_others': true,
-    'events.delete_own': true, 'events.delete_others': true, 'events.drag_move': true,
-    'events.attendance': true,
-    'buckets.edit_lower_roles': true, 'buckets.delete_lower_roles': true,
-    'departments.view_all': true, 'departments.create': true, 'departments.edit': true, 'departments.delete': false,
+    'events.create': true, 'events.manage_own': true, 'events.manage_others': true,
+    'events.drag_move': true, 'events.attendance': true, 'events.bucket': true,
+    'departments.view_all': true, 'departments.manage': true,
     'users.view': true, 'users.approve': true, 'users.change_role': false, 'users.change_permissions': true,
     'settings.access': true, 'settings.holidays': true, 'settings.role_permissions': false, 'settings.manage_categories': true,
     'system.teachers.view': true, 'system.teachers.edit': true,
@@ -307,121 +311,97 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'timetable.integrated.view': true,
     'gantt.view': true, 'gantt.create': true, 'gantt.edit': true, 'gantt.delete': true,
     // Attendance (Admin: full access)
-    'attendance.view_own': true, 'attendance.view_all': true,
-    'attendance.edit_own': true, 'attendance.edit_all': true,
+    'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': true,
   },
   manager: {
-    'events.create': true, 'events.edit_own': true, 'events.edit_others': true,
-    'events.delete_own': true, 'events.delete_others': true, 'events.drag_move': true,
-    'events.attendance': true,
-    'buckets.edit_lower_roles': true, 'buckets.delete_lower_roles': true,
-    'departments.view_all': true, 'departments.create': false, 'departments.edit': true, 'departments.delete': false,
+    'events.create': true, 'events.manage_own': true, 'events.manage_others': true,
+    'events.drag_move': true, 'events.attendance': true, 'events.bucket': true,
+    'departments.view_all': true, 'departments.manage': false,
     'users.view': true, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
     'timetable.english.simulation': true,
     'timetable.english.backup.view': true, 'timetable.english.backup.restore': false,
     'gantt.view': true, 'gantt.create': true, 'gantt.edit': true, 'gantt.delete': false,
     // Attendance (Manager: full access)
-    'attendance.view_own': true, 'attendance.view_all': true,
-    'attendance.edit_own': true, 'attendance.edit_all': true,
+    'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': true,
   },
   editor: {
-    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
-    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
-    'events.attendance': true,
-    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
-    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
+    'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
   },
   math_lead: {
-    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
-    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
-    'events.attendance': true,
-    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
-    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
+    'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
     'timetable.math.view': true, 'timetable.math.edit': true,
     'timetable.english.view': true, 'timetable.english.edit': false,
     'system.classes.view': true, 'system.classes.edit': true,
     // Attendance (Math Lead: manage math, view/edit all math students)
-    'attendance.view_own': true, 'attendance.view_all': true,
-    'attendance.edit_own': true, 'attendance.edit_all': true,
+    'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': false,
   },
   english_lead: {
-    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
-    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
-    'events.attendance': true,
-    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
-    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
+    'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
     'timetable.math.view': true, 'timetable.math.edit': false,
     'timetable.english.view': true, 'timetable.english.edit': true,
     'system.classes.view': true, 'system.classes.edit': true,
     // Attendance (English Lead: manage english, view/edit all english students)
-    'attendance.view_own': true, 'attendance.view_all': true,
-    'attendance.edit_own': true, 'attendance.edit_all': true,
+    'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': false, 'attendance.manage_english': true,
   },
   math_teacher: {
-    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
-    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
-    'events.attendance': true,
-    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
-    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
+    'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
     'timetable.math.view': true, 'timetable.math.edit': false,
     'timetable.english.view': false, 'timetable.english.edit': false,
     // Attendance (Math Teacher: view/edit own students only)
-    'attendance.view_own': true, 'attendance.view_all': false,
-    'attendance.edit_own': true, 'attendance.edit_all': false,
+    'attendance.manage_own': true, 'attendance.edit_all': false,
     'attendance.manage_math': false, 'attendance.manage_english': false,
   },
   english_teacher: {
-    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
-    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
-    'events.attendance': true,
-    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
-    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
+    'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
     'timetable.math.view': false, 'timetable.math.edit': false,
     'timetable.english.view': true, 'timetable.english.edit': false,
     // Attendance (English Teacher: view/edit own students only)
-    'attendance.view_own': true, 'attendance.view_all': false,
-    'attendance.edit_own': true, 'attendance.edit_all': false,
+    'attendance.manage_own': true, 'attendance.edit_all': false,
     'attendance.manage_math': false, 'attendance.manage_english': false,
   },
   user: {
-    'events.create': true, 'events.edit_own': true, 'events.edit_others': false,
-    'events.delete_own': true, 'events.delete_others': false, 'events.drag_move': true,
-    'events.attendance': true,
-    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
-    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
+    'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
   },
   viewer: {
-    'events.create': false, 'events.edit_own': false, 'events.edit_others': false,
-    'events.delete_own': false, 'events.delete_others': false, 'events.drag_move': false,
-    'events.attendance': false,
-    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
-    'departments.view_all': true, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'events.create': false, 'events.manage_own': false, 'events.manage_others': false,
+    'events.drag_move': false, 'events.attendance': false, 'events.bucket': false,
+    'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
   },
   guest: {
-    'events.create': false, 'events.edit_own': false, 'events.edit_others': false,
-    'events.delete_own': false, 'events.delete_others': false, 'events.drag_move': false,
-    'events.attendance': false,
-    'buckets.edit_lower_roles': false, 'buckets.delete_lower_roles': false,
-    'departments.view_all': false, 'departments.create': false, 'departments.edit': false, 'departments.delete': false,
+    'events.create': false, 'events.manage_own': false, 'events.manage_others': false,
+    'events.drag_move': false, 'events.attendance': false, 'events.bucket': false,
+    'departments.view_all': false, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
   },
@@ -450,6 +430,9 @@ export interface UserProfile {
   canManageEventAuthors?: boolean;
   displayName?: string; // 이름 (표시명)
   jobTitle?: string; // 호칭
+
+  // Attendance: Link to Teacher Profile (for view_own filtering)
+  teacherId?: string; // ID from 강사목록 collection (allows any role to be linked to a teacher)
 }
 
 export interface Holiday {

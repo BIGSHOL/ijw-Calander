@@ -636,9 +636,8 @@ const App: React.FC = () => {
     if (userProfile.role === 'master') return true;
     // Author can always modify own bucket
     if (bucket.authorId === userProfile.uid) return true;
-    // Check permission for lower roles
-    const permId = action === 'edit' ? 'buckets.edit_lower_roles' : 'buckets.delete_lower_roles';
-    if (hasPermission(permId) && isHigherRole(bucket.authorId)) return true;
+    // Check permission for lower roles (consolidated to events.bucket)
+    if (hasPermission('events.bucket') && isHigherRole(bucket.authorId)) return true;
     return false;
   };
 
@@ -1101,7 +1100,7 @@ const App: React.FC = () => {
     // Permission Check
     const isAuthor = original.authorId === userProfile?.uid;
     const canDrag = hasPermission('events.drag_move');
-    const canEdit = hasPermission(isAuthor ? 'events.edit_own' : 'events.edit_others');
+    const canEdit = hasPermission(isAuthor ? 'events.manage_own' : 'events.manage_others');
     const hasDeptAccess = canEditDepartment(original.departmentId);
 
     if (!canDrag || !canEdit || !hasDeptAccess) {
@@ -1929,18 +1928,13 @@ const App: React.FC = () => {
                         }
                         const permLabels: Record<string, string> = {
                           'events.create': '일정 생성',
-                          'events.edit_own': '본인 일정 수정',
-                          'events.edit_others': '타인 일정 수정',
-                          'events.delete_own': '본인 일정 삭제',
-                          'events.delete_others': '타인 일정 삭제',
+                          'events.manage_own': '본인 일정 관리',
+                          'events.manage_others': '타인 일정 관리',
                           'events.drag_move': '일정 드래그 이동',
                           'events.attendance': '참가 현황 변경',
-                          'buckets.edit_lower_roles': '하위 역할 버킷 수정',
-                          'buckets.delete_lower_roles': '하위 역할 버킷 삭제',
+                          'events.bucket': '버킷리스트',
                           'departments.view_all': '모든 부서 조회',
-                          'departments.create': '부서 생성',
-                          'departments.edit': '부서 수정',
-                          'departments.delete': '부서 삭제',
+                          'departments.manage': '부서 관리',
                           'users.view': '사용자 목록 조회',
                           'users.approve': '사용자 승인',
                           'users.change_role': '역할 변경',
@@ -1965,6 +1959,10 @@ const App: React.FC = () => {
                           'gantt.create': '간트 생성',
                           'gantt.edit': '간트 수정',
                           'gantt.delete': '간트 삭제',
+                          'attendance.manage_own': '본인 출석부 관리',
+                          'attendance.edit_all': '전체 출석 수정',
+                          'attendance.manage_math': '수학 출석부 관리',
+                          'attendance.manage_english': '영어 출석부 관리',
                         };
                         return enabledPerms.map(([permId]) => (
                           <div key={permId} className="flex items-center gap-2 text-xs text-gray-600 py-1">

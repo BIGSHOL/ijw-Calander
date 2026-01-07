@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Student, SalaryConfig } from '../types';
 import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent } from '../utils';
-import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save } from 'lucide-react';
+import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 
 interface Props {
   currentDate: Date;
@@ -12,6 +12,9 @@ interface Props {
   onMemoChange: (studentId: string, dateKey: string, memo: string) => void;
   pendingUpdatesByStudent?: Record<string, Record<string, number | null>>;
   pendingMemosByStudent?: Record<string, Record<string, string>>;
+  // Group ordering props
+  groupOrder?: string[];
+  onGroupOrderChange?: (newOrder: string[]) => void;
 }
 
 interface ContextMenuState {
@@ -31,7 +34,9 @@ const Table: React.FC<Props> = ({
   onEditStudent,
   onMemoChange,
   pendingUpdatesByStudent,
-  pendingMemosByStudent
+  pendingMemosByStudent,
+  groupOrder = [],
+  onGroupOrderChange
 }) => {
   const days = useMemo(() => getDaysInMonth(currentDate), [currentDate]);
   const memoInputRef = useRef<HTMLTextAreaElement>(null);
@@ -313,6 +318,8 @@ const Table: React.FC<Props> = ({
                 onContextMenu={handleContextMenu}
                 pendingUpdatesByStudent={pendingUpdatesByStudent}
                 pendingMemosByStudent={pendingMemosByStudent}
+                groupOrder={groupOrder}
+                onGroupOrderChange={onGroupOrderChange}
               />
             ) : (
               <tr>
@@ -354,6 +361,12 @@ const Table: React.FC<Props> = ({
               </button>
               <button onClick={() => handleMenuSelect(2.0)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex justify-between">
                 <span>4시간</span> <span className="font-mono text-gray-400">2.0</span>
+              </button>
+              <button onClick={() => handleMenuSelect(2.5)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex justify-between">
+                <span>5시간</span> <span className="font-mono text-gray-400">2.5</span>
+              </button>
+              <button onClick={() => handleMenuSelect(3.0)} className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex justify-between">
+                <span>6시간</span> <span className="font-mono text-gray-400">3.0</span>
               </button>
               <div className="h-px bg-gray-100 my-1"></div>
               <button onClick={() => handleMenuSelect(0)} className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-red-600">
@@ -406,7 +419,7 @@ const Table: React.FC<Props> = ({
 
 // Extracted & Memoized Components
 
-const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdatesByStudent, pendingMemosByStudent }: {
+const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange }: {
   students: Student[],
   days: Date[],
   currentDate: Date,
@@ -416,7 +429,38 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
   onContextMenu: (e: React.MouseEvent, student: Student, dateKey: string, isValid: boolean) => void;
   pendingUpdatesByStudent?: Record<string, Record<string, number | null>>;
   pendingMemosByStudent?: Record<string, Record<string, string>>;
+  groupOrder?: string[];
+  onGroupOrderChange?: (newOrder: string[]) => void;
 }) => {
+  // Extract unique groups from students
+  const uniqueGroups = useMemo(() => {
+    const groups = new Set<string>();
+    students.forEach(s => { if (s.group) groups.add(s.group); });
+    return Array.from(groups);
+  }, [students]);
+
+  // Helper to move group up/down in order
+  const moveGroup = (groupName: string, direction: 'up' | 'down') => {
+    if (!onGroupOrderChange) return;
+
+    // Build current effective order (existing order + any new groups at end)
+    const currentOrder = [...groupOrder];
+    uniqueGroups.forEach(g => {
+      if (!currentOrder.includes(g)) currentOrder.push(g);
+    });
+
+    const idx = currentOrder.indexOf(groupName);
+    if (idx === -1) return;
+
+    if (direction === 'up' && idx > 0) {
+      [currentOrder[idx - 1], currentOrder[idx]] = [currentOrder[idx], currentOrder[idx - 1]];
+    } else if (direction === 'down' && idx < currentOrder.length - 1) {
+      [currentOrder[idx + 1], currentOrder[idx]] = [currentOrder[idx], currentOrder[idx + 1]];
+    }
+
+    onGroupOrderChange(currentOrder);
+  };
+
   const rows: React.ReactNode[] = [];
   let currentGroup: string | null = null;
   let rankIndex = 0;
@@ -428,12 +472,36 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
     const studentGroup = student.group || '그룹 없음';
     if (student.group && studentGroup !== currentGroup) {
       currentGroup = studentGroup;
+      const groupIdx = groupOrder.indexOf(currentGroup);
+      const isFirst = groupIdx <= 0;
+      const isLast = groupIdx >= groupOrder.length - 1 || groupIdx === -1;
+
       rows.push(
         <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">
           <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
             <div className="flex items-center gap-2">
               <FolderOpen size={14} className="text-slate-400" />
               {currentGroup}
+              {onGroupOrderChange && (
+                <div className="flex items-center gap-0.5 ml-2">
+                  <button
+                    onClick={() => moveGroup(currentGroup!, 'up')}
+                    disabled={isFirst}
+                    className={`p-0.5 rounded hover:bg-slate-200 transition-colors ${isFirst ? 'opacity-30 cursor-not-allowed' : ''}`}
+                    title="위로 이동"
+                  >
+                    <ChevronUp size={12} />
+                  </button>
+                  <button
+                    onClick={() => moveGroup(currentGroup!, 'down')}
+                    disabled={isLast}
+                    className={`p-0.5 rounded hover:bg-slate-200 transition-colors ${isLast ? 'opacity-30 cursor-not-allowed' : ''}`}
+                    title="아래로 이동"
+                  >
+                    <ChevronDown size={12} />
+                  </button>
+                </div>
+              )}
             </div>
           </td>
         </tr>
@@ -552,7 +620,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
       <td className="p-3 border-r border-b border-gray-200 text-center text-gray-500 bg-[#f8f9fa] font-mono align-middle">
         <div className="flex flex-wrap justify-center gap-0.5 max-w-[60px] mx-auto">
           {(student.days || []).map(d => (
-            <span key={d} className="text-[9px] bg-white border border-gray-200 px-1 rounded">{d[0]}</span>
+            <span key={d} className="text-[11px] bg-white border border-gray-200 px-1.5 py-0.5 rounded font-medium">{d[0]}</span>
           ))}
         </div>
       </td>

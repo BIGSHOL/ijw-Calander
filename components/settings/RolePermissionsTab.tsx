@@ -105,24 +105,16 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
     // --- Permission Sections ---
     const eventPermissions = [
         { id: 'events.create' as PermissionId, label: '일정 생성', desc: '새 일정 추가 (버튼, 드래그)' },
-        { id: 'events.edit_own' as PermissionId, label: '본인 일정 수정', desc: '본인이 만든 일정 수정' },
-        { id: 'events.edit_others' as PermissionId, label: '타인 일정 수정', desc: '다른 사용자 일정 수정' },
-        { id: 'events.delete_own' as PermissionId, label: '본인 일정 삭제', desc: '본인이 만든 일정 삭제' },
-        { id: 'events.delete_others' as PermissionId, label: '타인 일정 삭제', desc: '다른 사용자 일정 삭제' },
+        { id: 'events.manage_own' as PermissionId, label: '본인 일정 관리', desc: '본인이 만든 일정 수정/삭제' },
+        { id: 'events.manage_others' as PermissionId, label: '타인 일정 관리', desc: '다른 사용자 일정 수정/삭제' },
         { id: 'events.drag_move' as PermissionId, label: '일정 드래그 이동', desc: '드래그로 날짜/시간 변경' },
         { id: 'events.attendance' as PermissionId, label: '참가 현황 변경', desc: '참석/불참 표시 관리' },
-    ];
-
-    const bucketPermissions = [
-        { id: 'buckets.edit_lower_roles' as PermissionId, label: '하위 역할 버킷 수정', desc: '하위 역할의 버킷아이템 수정' },
-        { id: 'buckets.delete_lower_roles' as PermissionId, label: '하위 역할 버킷 삭제', desc: '하위 역할의 버킷아이템 삭제' },
+        { id: 'events.bucket' as PermissionId, label: '버킷리스트', desc: '하위 역할의 버킷아이템 수정/삭제' },
     ];
 
     const deptPermissions = [
         { id: 'departments.view_all' as PermissionId, label: '모든 부서 조회', desc: '숨겨진 부서 포함 조회' },
-        { id: 'departments.create' as PermissionId, label: '부서 생성', desc: '새 부서 추가' },
-        { id: 'departments.edit' as PermissionId, label: '부서 정보 수정', desc: '부서 이름/색상 수정' },
-        { id: 'departments.delete' as PermissionId, label: '부서 삭제', desc: '부서 삭제' },
+        { id: 'departments.manage' as PermissionId, label: '부서 관리', desc: '부서 생성/수정/삭제' },
     ];
 
     const userPermissions = [
@@ -157,6 +149,14 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
         { id: 'settings.access' as PermissionId, label: '설정 메뉴 접근', desc: '설정 화면 열기 및 접근' },
         { id: 'settings.holidays' as PermissionId, label: '공휴일 관리', desc: '공휴일 추가/수정/삭제' },
         { id: 'settings.role_permissions' as PermissionId, label: '역할별 권한 설정', desc: '역할 기반 권한 체계 설정', disabled: true },
+    ];
+
+    // Attendance Permissions (Consolidated)
+    const attendancePermissions = [
+        { id: 'attendance.manage_own' as PermissionId, label: '본인 출석부 관리', desc: '본인 수업의 학생/출석 조회 및 수정' },
+        { id: 'attendance.edit_all' as PermissionId, label: '전체 출석 수정', desc: '모든 수업의 출석 기록 수정' },
+        { id: 'attendance.manage_math' as PermissionId, label: '수학 출석부 관리', desc: '수학 전체 조회 + 강사 선택 가능' },
+        { id: 'attendance.manage_english' as PermissionId, label: '영어 출석부 관리', desc: '영어 전체 조회 + 강사 선택 가능' },
     ];
 
     // --- Render Permission Row ---
@@ -238,49 +238,49 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                             <tbody>
                                 {/* 일정 관리 섹션 */}
                                 <tr className="bg-blue-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-blue-700 text-xs uppercase tracking-wider">📅 연간 일정 (Calendar) - 일정</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-blue-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-blue-50">📅 연간 일정 (Calendar) - 일정</td>
                                 </tr>
                                 {eventPermissions.map(renderPermissionRow)}
 
-                                {/* 버킷리스트 관리 섹션 */}
-                                <tr className="bg-amber-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-amber-700 text-xs uppercase tracking-wider">📅 연간 일정 (Calendar) - 버킷리스트</td>
-                                </tr>
-                                {bucketPermissions.map(renderPermissionRow)}
-
                                 {/* 부서 관리 섹션 */}
                                 <tr className="bg-green-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-green-700 text-xs uppercase tracking-wider">⚙️ 시스템 (System) - 부서 관리</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-green-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-green-50">⚙️ 시스템 (System) - 부서 관리</td>
                                 </tr>
                                 {deptPermissions.map(renderPermissionRow)}
 
                                 {/* 강사 관리 섹션 */}
                                 <tr className="bg-emerald-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-emerald-700 text-xs uppercase tracking-wider">⚙️ 시스템 (System) - 강사 관리</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-emerald-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-emerald-50">⚙️ 시스템 (System) - 강사 관리</td>
                                 </tr>
                                 {teacherPermissions.map(renderPermissionRow)}
 
                                 {/* 수업 관리 섹션 */}
                                 <tr className="bg-rose-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-rose-700 text-xs uppercase tracking-wider">⚙️ 시스템 (System) - 수업 관리</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-rose-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-rose-50">⚙️ 시스템 (System) - 수업 관리</td>
                                 </tr>
                                 {classPermissions.map(renderPermissionRow)}
 
                                 {/* 시간표 관리 섹션 */}
                                 <tr className="bg-indigo-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-indigo-700 text-xs uppercase tracking-wider">📋 시간표 (Timetable)</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-indigo-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-indigo-50">📋 시간표 (Timetable)</td>
                                 </tr>
                                 {timetablePermissions.map(renderPermissionRow)}
 
+                                {/* 출석부 섹션 (NEW) */}
+                                <tr className="bg-teal-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-teal-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-teal-50">📝 출석부 (Attendance)</td>
+                                </tr>
+                                {attendancePermissions.map(renderPermissionRow)}
+
                                 {/* 시스템 설정 섹션 */}
                                 <tr className="bg-orange-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-orange-700 text-xs uppercase tracking-wider">⚙️ 시스템 설정</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-orange-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-orange-50">⚙️ 시스템 설정</td>
                                 </tr>
                                 {settingsPermissions.map(renderPermissionRow)}
 
                                 {/* 사용자 관리 섹션 */}
                                 <tr className="bg-purple-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-purple-700 text-xs uppercase tracking-wider">👥 사용자 관리</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-purple-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-purple-50">👥 사용자 관리</td>
                                 </tr>
                                 {userPermissions.map(renderPermissionRow)}
                             </tbody>

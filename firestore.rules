@@ -125,16 +125,16 @@ service cloud.firestore {
 
       allow update: if collection == '\uC77C\uC815' &&
                        isAuthenticated() && (
-                         (hasPermission('events.edit_own') &&
+                         (hasPermission('events.manage_own') &&
                           resource.data['\uC791\uC131\uC790ID'] == request.auth.uid) ||
-                         hasPermission('events.edit_others')
+                         hasPermission('events.manage_others')
                        );
 
       allow delete: if collection == '\uC77C\uC815' &&
                        isAuthenticated() && (
-                         (hasPermission('events.delete_own') &&
+                         (hasPermission('events.manage_own') &&
                           resource.data['\uC791\uC131\uC790ID'] == request.auth.uid) ||
-                         hasPermission('events.delete_others')
+                         hasPermission('events.manage_others')
                        );
     }
 
@@ -143,7 +143,7 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // Allow delete for restoration (moving back to active)
       allow delete: if isAuthenticated() && (
-          hasPermission('events.edit_own') || hasPermission('events.edit_others')
+          hasPermission('events.manage_own') || hasPermission('events.manage_others')
       );
       // Create/Update handled by Cloud Function only
     }
@@ -154,10 +154,10 @@ service cloud.firestore {
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() &&
                        (resource.data.authorId == request.auth.uid ||
-                        hasPermission('buckets.edit_lower_roles'));
+                        hasPermission('events.bucket'));
       allow delete: if isAuthenticated() &&
                        (resource.data.authorId == request.auth.uid ||
-                        hasPermission('buckets.delete_lower_roles'));
+                        hasPermission('events.bucket'));
     }
 
     // Task Memos Collection

@@ -218,11 +218,11 @@ export const useAttendanceRecords = (studentId: string, yearMonth: string, enabl
 /**
  * Hook to fetch salary configuration
  */
-export const useAttendanceConfig = (enabled: boolean = true) => {
+export const useAttendanceConfig = (configId: string = 'salary', enabled: boolean = true) => {
     return useQuery({
-        queryKey: ['attendanceConfig'],
+        queryKey: ['attendanceConfig', configId],
         queryFn: async () => {
-            const docSnap = await getDoc(doc(db, CONFIG_COLLECTION, 'salary'));
+            const docSnap = await getDoc(doc(db, CONFIG_COLLECTION, configId));
 
             if (docSnap.exists()) {
                 return docSnap.data() as SalaryConfig;
@@ -412,19 +412,34 @@ export const useDeleteStudent = () => {
     });
 };
 
-/**
- * Mutation to save salary configuration
- */
 export const useSaveAttendanceConfig = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (config: SalaryConfig) => {
-            await setDoc(doc(db, CONFIG_COLLECTION, 'salary'), config);
-            return config;
+        mutationFn: async ({ config, configId = 'salary' }: { config: SalaryConfig, configId?: string }) => {
+            await setDoc(doc(db, CONFIG_COLLECTION, configId), config);
+            return { config, configId };
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['attendanceConfig'] });
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['attendanceConfig', data.configId] });
+        },
+    });
+};
+
+/**
+ * Mutation to delete salary configuration (reset to global)
+ */
+export const useDeleteAttendanceConfig = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (configId: string) => {
+            if (configId === 'salary') return; // Protect global config
+            await deleteDoc(doc(db, CONFIG_COLLECTION, configId));
+            return configId;
+        },
+        onSuccess: (configId) => {
+            queryClient.invalidateQueries({ queryKey: ['attendanceConfig', configId] });
         },
     });
 };

@@ -53,6 +53,7 @@ export interface Student {
   // Effective Period (Unified has these)
   startDate: string;
   endDate?: string;  // Unified uses optional string
+  status?: 'active' | 'withdrawn';  // Student status for filtering
 
   // Teacher Integration
   teacherIds: string[];

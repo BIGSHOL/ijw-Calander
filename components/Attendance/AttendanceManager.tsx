@@ -63,47 +63,66 @@ const groupUpdates = <T,>(updates: Record<string, T>): Record<string, Record<str
   return grouped;
 };
 
+
 const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teachers = [] }) => {
   const { hasPermission } = usePermissions(userProfile);
 
-  // Permission checks
-  const canViewAll = hasPermission('attendance.view_all');
+  // Permission checks (consolidated)
+  const canManageOwn = hasPermission('attendance.manage_own');
   const canEditAll = hasPermission('attendance.edit_all');
   const canManageMath = hasPermission('attendance.manage_math');
   const canManageEnglish = hasPermission('attendance.manage_english');
   const isMasterOrAdmin = userProfile?.role === 'master' || userProfile?.role === 'admin';
 
   // Determine user's teacherId for filtering (if they are a teacher)
+  // Uses explicit User-Teacher linking from user profile (set in System Settings -> Users)
   const currentTeacherId = useMemo(() => {
     if (!userProfile) return undefined;
-    // Find matching teacher by email or displayName
-    const matchedTeacher = teachers.find(t =>
-      t.name === userProfile.displayName ||
-      t.name === userProfile.jobTitle
-    );
-    return matchedTeacher?.id;
+    // NEW: Use explicit teacherId from UserProfile (set via User Management UI)
+    if (userProfile.teacherId) {
+      const linkedTeacher = teachers.find(t => t.id === userProfile.teacherId);
+      return linkedTeacher?.name || undefined;  // Return teacher NAME for filtering (matches hook logic)
+    }
+    return undefined;
   }, [userProfile, teachers]);
 
   // State
   const [currentDate, setCurrentDate] = useState(() => new Date());
-  const [selectedSubject, setSelectedSubject] = useState<AttendanceSubject>('math');
+
+  // Smart default subject based on permissions
+  const defaultSubject = useMemo((): AttendanceSubject => {
+    if (isMasterOrAdmin) return 'math';
+    if (canManageMath && !canManageEnglish) return 'math';
+    if (canManageEnglish && !canManageMath) return 'english';
+    return 'math'; // Default fallback
+  }, [isMasterOrAdmin, canManageMath, canManageEnglish]);
+
+  const [selectedSubject, setSelectedSubject] = useState<AttendanceSubject>(defaultSubject);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | undefined>(undefined);
 
+  // Determine if user can manage the current subject (for teacher dropdown access)
+  const canManageCurrentSubject = useMemo(() => {
+    if (isMasterOrAdmin) return true;
+    if (selectedSubject === 'math' && canManageMath) return true;
+    if (selectedSubject === 'english' && canManageEnglish) return true;
+    return false;
+  }, [selectedSubject, canManageMath, canManageEnglish, isMasterOrAdmin]);
 
-  // Available teachers for filter dropdown
+
+  // Available teachers for filter dropdown (based on manage permission for current subject)
   const availableTeachers = useMemo(() => {
-    if (!canViewAll && !isMasterOrAdmin) return [];
-    // Filter by subject if needed
+    if (!canManageCurrentSubject) return [];
+    // Filter by subject
     return teachers.filter(t => {
       if (selectedSubject === 'math') return t.subjects?.includes('math');
       if (selectedSubject === 'english') return t.subjects?.includes('english');
       return true;
     });
-  }, [teachers, selectedSubject, canViewAll, isMasterOrAdmin]);
+  }, [teachers, selectedSubject, canManageCurrentSubject]);
 
   // Determine which teacherId to filter by
   const filterTeacherId = useMemo(() => {
-    if (canViewAll || isMasterOrAdmin) {
+    if (canManageCurrentSubject) {
       // Validate selectedTeacherId against availableTeachers
       const isValid = availableTeachers.some(t => t.name === selectedTeacherId);
       if (isValid && selectedTeacherId) return selectedTeacherId;
@@ -115,7 +134,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     }
     // Regular teacher - only show their own students
     return currentTeacherId;
-  }, [canViewAll, isMasterOrAdmin, selectedTeacherId, currentTeacherId, availableTeachers]);
+  }, [canManageCurrentSubject, selectedTeacherId, currentTeacherId, availableTeachers]);
 
   // Firebase Hooks - Pass yearMonth to load attendance records for current month
   const currentYearMonth = useMemo(() => {
@@ -129,7 +148,15 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     enabled: !!userProfile,
   });
 
-  const { data: firebaseConfig, isLoading: isLoadingConfig } = useAttendanceConfig(!!userProfile);
+  // Resolve Teacher ID for Config
+  const targetTeacher = useMemo(() => {
+    if (!filterTeacherId) return undefined;
+    return teachers.find(t => t.name === filterTeacherId);
+  }, [filterTeacherId, teachers]);
+
+  const configId = targetTeacher ? `salary_${targetTeacher.id}` : 'salary';
+
+  const { data: firebaseConfig, isLoading: isLoadingConfig } = useAttendanceConfig(configId, !!userProfile);
   const salaryConfig = firebaseConfig || INITIAL_SALARY_CONFIG;
 
   // Mutations
@@ -145,6 +172,23 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
   const [isSettlementModalOpen, setSettlementModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
+
+  // Group order state (per teacher, stored in localStorage)
+  const groupOrderKey = `attendance_groupOrder_${filterTeacherId || 'all'}_${selectedSubject}`;
+  const [groupOrder, setGroupOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(groupOrderKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  // Persist group order changes
+  const handleGroupOrderChange = (newOrder: string[]) => {
+    setGroupOrder(newOrder);
+    localStorage.setItem(groupOrderKey, JSON.stringify(newOrder));
+  };
+
+
 
   // Optimistic UI State: { [studentId_dateKey]: value }
   const [pendingUpdates, setPendingUpdates] = useState<Record<string, number | null>>({});
@@ -247,7 +291,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
   };
 
   const handleSaveConfig = (config: SalaryConfig) => {
-    saveConfigMutation.mutate(config);
+    saveConfigMutation.mutate({ config, configId });
   };
 
   // Helper for settlement
@@ -264,26 +308,57 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
   };
 
   // Filter visible students for current month
+  // A student is visible if:
+  // - Their startDate is on or before the last day of the month (they started before/during this month)
+  // - Their endDate is missing OR on/after the first day of the month (they haven't ended before this month)
   const visibleStudents = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const monthStartStr = new Date(year, month, 1).toISOString().slice(0, 10);
-    const monthEndStr = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+    const monthFirstDay = new Date(year, month, 1).toISOString().slice(0, 10);   // YYYY-MM-01
+    const monthLastDay = new Date(year, month + 1, 0).toISOString().slice(0, 10); // YYYY-MM-28/29/30/31
 
     const filtered = allStudents.filter(s => {
-      if (s.startDate > monthEndStr) return false;
-      if (s.endDate && s.endDate < monthStartStr) return false;
+      // IMPORTANT: Always exclude students with status 'withdrawn' from attendance table
+      // They should only appear in the "지난달 퇴원" dropped students list
+      if (s.status === 'withdrawn') return false;
+
+      // Exclude if startDate is in the future (after this month)
+      if (s.startDate > monthLastDay) return false;
+
+      // Exclude if endDate exists AND is before the first day of current month (already withdrawn)
+      // This means: if endDate < monthFirstDay, the student left before this month started
+      if (s.endDate && s.endDate < monthFirstDay) return false;
+
       return true;
     });
 
+    // Custom sort: use groupOrder if available, otherwise alphabetical
     return filtered.sort((a, b) => {
+      // Students without groups go last
       if (!a.group && b.group) return 1;
       if (a.group && !b.group) return -1;
-      const groupCompare = (a.group || '').localeCompare(b.group || '');
-      if (groupCompare !== 0) return groupCompare;
+
+      // Group ordering
+      const aGroupIdx = groupOrder.indexOf(a.group || '');
+      const bGroupIdx = groupOrder.indexOf(b.group || '');
+
+      // If both in order list, use order
+      if (aGroupIdx !== -1 && bGroupIdx !== -1) {
+        if (aGroupIdx !== bGroupIdx) return aGroupIdx - bGroupIdx;
+      } else if (aGroupIdx !== -1 && bGroupIdx === -1) {
+        return -1; // Ordered groups come first
+      } else if (aGroupIdx === -1 && bGroupIdx !== -1) {
+        return 1;
+      } else {
+        // Neither in order list - alphabetical fallback
+        const groupCompare = (a.group || '').localeCompare(b.group || '');
+        if (groupCompare !== 0) return groupCompare;
+      }
+
+      // Same group - sort by name
       return a.name.localeCompare(b.name);
     });
-  }, [allStudents, currentDate]);
+  }, [allStudents, currentDate, groupOrder]);
 
   // Group Optimistic Updates for Component Efficiency
   const pendingUpdatesByStudent = useMemo(() => groupUpdates(pendingUpdates), [pendingUpdates]);
@@ -323,8 +398,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     );
   }
 
-  // Selection prompt for admins when no teacher selected
-  if ((canViewAll || isMasterOrAdmin) && !selectedTeacherId) {
+  // Selection prompt for managers when no teacher selected
+  if (canManageCurrentSubject && !selectedTeacherId) {
     return (
       <div className="flex flex-col h-full bg-[#f8f9fa] text-[#373d41]">
         {/* Toolbar */}
@@ -422,8 +497,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
             )}
           </div>
 
-          {/* Teacher Filter (for managers) */}
-          {(canViewAll || isMasterOrAdmin) && availableTeachers.length > 0 && (
+          {/* Teacher Filter (for managers of current subject) */}
+          {canManageCurrentSubject && availableTeachers.length > 0 && (
             <div className="relative">
               <select
                 value={filterTeacherId || ''}
@@ -557,6 +632,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
           onMemoChange={handleMemoChange}
           pendingUpdatesByStudent={pendingUpdatesByStudent}
           pendingMemosByStudent={pendingMemosByStudent}
+          groupOrder={groupOrder}
+          onGroupOrderChange={handleGroupOrderChange}
         />
       </main>
 
@@ -566,6 +643,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
         onClose={() => setSalaryModalOpen(false)}
         config={salaryConfig}
         onSave={handleSaveConfig}
+        readOnly={true} // AttendanceManager allows only viewing settings
       />
 
       <StudentModal
