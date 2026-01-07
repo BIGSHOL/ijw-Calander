@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Department, UserProfile, CalendarEvent, UserRole, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS, Teacher, ClassKeywordColor } from '../../types';
 import { usePermissions, canAssignRole, getAssignableRoles } from '../../hooks/usePermissions';
-import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar, Lock, List, LayoutGrid, Eye, EyeOff, Archive } from 'lucide-react';
+import { X, Plus, Trash2, GripVertical, FolderKanban, Users, Check, XCircle, Shield, ShieldAlert, ShieldCheck, Database, CheckCircle2, Search, Save, Edit, ChevronRight, UserCog, RotateCcw, UserPlus, CalendarClock, Calendar, Lock, List, LayoutGrid, Eye, EyeOff, Archive, BookUser } from 'lucide-react';
 import { STANDARD_HOLIDAYS } from '../../constants_holidays';
 import { db, auth } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
@@ -10,6 +10,8 @@ import { Holiday } from '../../types';
 import MyEventsModal from '../Calendar/MyEventsModal';
 import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab, DepartmentsTab, GanttCategoriesTab } from './';
 import { useTabPermissions } from '../../hooks/useTabPermissions';
+import SalarySettingsTab from '../Attendance/components/SalarySettingsTab';
+import { useAttendanceConfig, useSaveAttendanceConfig } from '../../hooks/useAttendance';
 // import MigrationPanel from './settings/MigrationPanel';
 
 interface SettingsModalProps {
@@ -26,8 +28,8 @@ interface SettingsModalProps {
   onToggleArchived?: () => void;
 }
 
-type MainTabMode = 'calendar' | 'timetable' | 'permissions' | 'gantt';
-type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions' | 'tab_access' | 'migration' | 'gantt_departments' | 'gantt_categories';
+type MainTabMode = 'calendar' | 'timetable' | 'permissions' | 'gantt' | 'attendance';
+type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions' | 'tab_access' | 'migration' | 'gantt_departments' | 'gantt_categories' | 'salary_settings';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -47,10 +49,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const canViewDepartments = hasPermission('departments.view_all');
   const canViewUsers = hasPermission('users.view');
 
-  const canCreateDept = hasPermission('departments.create');
-  const canEditDept = hasPermission('departments.edit');
+  // Consolidated: departments.manage covers create/edit/delete
+  const canManageDept = hasPermission('departments.manage');
+  const canCreateDept = canManageDept;
+  const canEditDept = canManageDept;
+  const canDeleteDept = canManageDept;
   const canManageCategories = hasPermission('settings.manage_categories');
-  const canDeleteDept = hasPermission('departments.delete');
 
   const canApproveUser = hasPermission('users.approve');
   const canChangeRole = hasPermission('users.change_role');
@@ -68,8 +72,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // Get accessible tabs for current user
   const { accessibleTabs } = useTabPermissions(currentUserProfile || null);
 
-  const [mainTab, setMainTab] = useState<MainTabMode>('calendar');
-  const [activeTab, setActiveTab] = useState<TabMode>('departments');
+  const [mainTab, setMainTab] = useState<MainTabMode>('permissions');
+  const [activeTab, setActiveTab] = useState<TabMode>('system');
   const [newDeptName, setNewDeptName] = useState('');
   // Default Colors for New Department
   const [newDeptCategory, setNewDeptCategory] = useState(''); // New Category State
@@ -417,6 +421,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         user.status !== original?.status ||
         user.jobTitle !== original?.jobTitle ||
         user.role !== original?.role ||
+        user.teacherId !== original?.teacherId ||  // NEW: Teacher Linking
         user.canManageMenus !== original?.canManageMenus ||
         user.canManageEventAuthors !== original?.canManageEventAuthors ||
         JSON.stringify(user.departmentPermissions) !== JSON.stringify(original?.departmentPermissions);
@@ -432,6 +437,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           status: user.status,
           jobTitle: user.jobTitle || '',
           role: user.role, // Admin role update
+          teacherId: user.teacherId || null, // NEW: Teacher Linking
           canManageMenus: user.canManageMenus || false,
           canManageEventAuthors: user.canManageEventAuthors || false,
           departmentPermissions: user.departmentPermissions,
@@ -640,6 +646,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Body: Dept Permissions */}
           <div className="flex-1 overflow-y-auto p-6 bg-white">
+            {/* Teacher Profile Linking Section (NEW) */}
+            <div className="mb-6 p-4 bg-teal-50/50 border border-teal-100 rounded-xl">
+              <h4 className="text-sm font-bold text-teal-700 mb-3 flex items-center gap-2">
+                <BookUser size={14} /> 강사 프로필 연동 (출석부용)
+              </h4>
+              <p className="text-xs text-gray-500 mb-3">
+                이 사용자가 실제 수업을 진행한다면, 강사 프로필을 연동해주세요. 출석부에서 '본인 수업'만 조회하는 기능에 사용됩니다.
+              </p>
+              <select
+                value={user.teacherId || ''}
+                onChange={(e) => handleUserUpdate(user.uid, { teacherId: e.target.value || undefined })}
+                className="w-full px-3 py-2 border border-teal-200 rounded-lg text-sm focus:border-teal-400 focus:ring-1 focus:ring-teal-300 outline-none bg-white"
+              >
+                <option value="">연동 안함 (수업 미진행)</option>
+                {teachers.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} {t.subjects?.join(', ') ? `(${t.subjects?.join(', ')})` : ''}
+                  </option>
+                ))}
+              </select>
+              {user.teacherId && (
+                <div className="mt-2 text-xs text-teal-600 font-medium">
+                  ✓ 연동됨: {teachers.find(t => t.id === user.teacherId)?.name || user.teacherId}
+                </div>
+              )}
+            </div>
+
             <h4 className="text-sm font-bold text-gray-500 mb-4 uppercase tracking-wider flex items-center justify-between">
               부서별 접근 권한
               {canChangePermissions && (
@@ -790,14 +823,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       📊 간트 차트
                     </button>
                   )}
-                  {(isMaster || isAdmin || canManageRolePermissions || hasPermission('settings.access')) && (
+                  {(isMaster || isAdmin) && (
                     <button
-                      onClick={() => { setMainTab('permissions'); setActiveTab(hasPermission('settings.access') ? 'system' : 'role_permissions'); }}
-                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'permissions' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
+                      onClick={() => { setMainTab('attendance'); setActiveTab('salary_settings'); }}
+                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'attendance' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
                     >
-                      ⚙️ 시스템 설정
+                      📝 출석부
                     </button>
                   )}
+                  {/* 시스템 설정 is always visible for all users */}
+                  <button
+                    onClick={() => { setMainTab('permissions'); setActiveTab('system'); }}
+                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'permissions' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
+                  >
+                    ⚙️ 시스템 설정
+                  </button>
                 </div>
                 {/* Sub Tab Selector */}
                 <div className="flex gap-1 pl-2">
@@ -843,11 +883,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           사용자 관리
                         </button>
                       )}
-                      {(isMaster || hasPermission('settings.access')) && (
-                        <button onClick={() => setActiveTab('system')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'system' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          기타 설정
-                        </button>
-                      )}
+                      {/* 기타 설정 is always visible */}
+                      <button onClick={() => setActiveTab('system')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'system' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        기타 설정
+                      </button>
                     </>
                   )}
                   {mainTab === 'gantt' && (
@@ -862,6 +901,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           카테고리 관리
                         </button>
                       )}
+                    </>
+                  )}
+                  {mainTab === 'attendance' && (
+                    <>
+                      <button onClick={() => setActiveTab('salary_settings')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'salary_settings' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        급여 설정
+                      </button>
                     </>
                   )}
                 </div>
@@ -1392,6 +1438,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* GANTT CATEGORIES TAB */}
             {activeTab === 'gantt_categories' && isMaster && (
               <GanttCategoriesTab isMaster={isMaster} />
+            )}
+
+            {/* ATTENDANCE SALARY SETTINGS TAB */}
+            {activeTab === 'salary_settings' && (isMaster || isAdmin) && (
+              <SalarySettingsTab teachers={teachers} />
             )}
 
             {/* MIGRATION TAB */}

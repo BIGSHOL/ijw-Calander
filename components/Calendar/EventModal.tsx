@@ -85,8 +85,8 @@ const EventModal: React.FC<EventModalProps> = ({
   const canCreate = hasPermission('events.create');
   // Authorship check for granular permissions
   const isAuthor = existingEvent?.authorId === currentUser?.uid;
-  const canEdit = hasPermission(isAuthor ? 'events.edit_own' : 'events.edit_others');
-  const canDelete = hasPermission(isAuthor ? 'events.delete_own' : 'events.delete_others');
+  const canEdit = hasPermission(isAuthor ? 'events.manage_own' : 'events.manage_others');
+  const canDelete = hasPermission(isAuthor ? 'events.manage_own' : 'events.manage_others');
 
   const isMaster = currentUser?.role === 'master';
   const isAdmin = currentUser?.role === 'admin';

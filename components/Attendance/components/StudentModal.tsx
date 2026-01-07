@@ -83,8 +83,11 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
   const weekDays = ['월', '화', '수', '목', '금', '토', '일'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto custom-scrollbar"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white z-10">
           <h2 className="text-xl font-bold text-gray-800">
             {initialData ? '학생 정보 수정' : '새 학생 추가'}
@@ -217,8 +220,8 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
                   key={day}
                   type="button"
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors cursor-not-allowed ${formData.days?.includes(day)
-                      ? 'bg-blue-100 text-blue-700 border-blue-200 border'
-                      : 'bg-gray-50 text-gray-400 border border-transparent'
+                    ? 'bg-blue-100 text-blue-700 border-blue-200 border'
+                    : 'bg-gray-50 text-gray-400 border border-transparent'
                     }`}
                 >
                   {day}
