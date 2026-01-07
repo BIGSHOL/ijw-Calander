@@ -18,6 +18,7 @@ import { useEnglishSettings } from './hooks/useEnglishSettings';
 import { useEnglishStats } from './hooks/useEnglishStats';
 import { useEnglishChanges, MoveChange } from './hooks/useEnglishChanges';
 import { useEnglishClasses, ScheduleCell, ClassInfo } from './hooks/useEnglishClasses';
+import { useClassStudents } from './hooks/useClassStudents';
 import ClassCard from './ClassCard';
 
 
@@ -74,6 +75,10 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
     // 4. Classes Data Transformation
     const rawClasses = useEnglishClasses(scheduleData, settings, teachersData);
+
+    // 5. Centralized Student Data Fetch (Cost Optimization)
+    const classNames = useMemo(() => rawClasses.map(c => c.name), [rawClasses]);
+    const { classDataMap } = useClassStudents(classNames, isSimulationMode, studentMap);
 
     // Filter by search term (Original 'classes' variable name preserved for compatibility)
     const classes = useMemo(() => {
@@ -481,6 +486,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 moveChanges={moveChanges}
                                                 onMoveStudent={handleMoveStudent}
                                                 studentMap={studentMap}
+                                                // Cost Optimization: Centralized student data
+                                                classStudentData={classDataMap[cls.name]}
                                             />
                                         ))}
                                     </div>

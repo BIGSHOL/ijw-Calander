@@ -16,6 +16,11 @@ const CONFIG_COLLECTION = 'attendance_config';
  * Hook to fetch students with real-time updates
  * Supports filtering by teacherId and subject
  * Now also loads attendance records for the specified month and merges into student objects
+ * 
+ * Cost Optimization Notes:
+ * - Uses single onSnapshot for student list (necessary for real-time attendance marking)
+ * - Attendance records loaded via batch getDocs query (not N+1 individual fetches)
+ * - Consider converting to React Query if real-time updates not required
  */
 export const useAttendanceStudents = (options?: {
     teacherId?: string;
@@ -90,27 +95,46 @@ export const useAttendanceStudents = (options?: {
                 }
 
                 // Load attendance records for the specified month
+                // Cost Optimization: Single batch query instead of N individual getDoc calls
                 if (options?.yearMonth && data.length > 0) {
                     try {
-                        // Batch fetch all student records for this month
-                        const recordPromises = data.map(async (student) => {
-                            const docId = `${student.id}_${options.yearMonth}`;
-                            const docSnap = await getDoc(doc(db, RECORDS_COLLECTION, docId));
+                        // Create list of expected document IDs
+                        const expectedDocIds = data.map(s => `${s.id}_${options.yearMonth}`);
 
-                            if (docSnap.exists()) {
-                                return {
-                                    studentId: student.id,
+                        // Firestore 'in' queries support max 30 values, so chunk if needed
+                        const CHUNK_SIZE = 30;
+                        const chunks: string[][] = [];
+                        for (let i = 0; i < expectedDocIds.length; i += CHUNK_SIZE) {
+                            chunks.push(expectedDocIds.slice(i, i + CHUNK_SIZE));
+                        }
+
+                        // Fetch all records in batches
+                        const recordsMap = new Map<string, { attendance: Record<string, number>; memos: Record<string, string> }>();
+
+                        for (const chunk of chunks) {
+                            // Use __name__ field for document ID filtering
+                            const q = query(
+                                collection(db, RECORDS_COLLECTION),
+                                where('__name__', 'in', chunk)
+                            );
+                            const snapshot = await getDocs(q);
+
+                            snapshot.docs.forEach(docSnap => {
+                                const studentId = docSnap.id.split('_')[0] + '_' + docSnap.id.split('_').slice(1, -2).join('_');
+                                // Extract studentId from docId format: {studentId}_{YYYY-MM}
+                                const idParts = docSnap.id.split('_');
+                                const yearMonth = idParts.pop(); // Remove YYYY-MM
+                                // Remaining parts form the studentId (could have underscores)
+                                const extractedStudentId = idParts.join('_');
+
+                                recordsMap.set(extractedStudentId, {
                                     attendance: docSnap.data().attendance || {},
                                     memos: docSnap.data().memos || {}
-                                };
-                            }
-                            return { studentId: student.id, attendance: {}, memos: {} };
-                        });
-
-                        const records = await Promise.all(recordPromises);
+                                });
+                            });
+                        }
 
                         // Merge records into student objects
-                        const recordsMap = new Map(records.map(r => [r.studentId, r]));
                         data = data.map(student => {
                             const record = recordsMap.get(student.id);
                             return {
