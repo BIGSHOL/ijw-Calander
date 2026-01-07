@@ -213,3 +213,174 @@ exports.syncStudentsOnClassChange = functions
 exports.testSync = functions.region("asia-northeast3").https.onRequest((req, res) => {
     res.send("Cloud Functions (Gen 1) for syncStudents is deployed!");
 });
+
+/**
+ * =========================================================
+ * Cloud Function: Teacher Cascade Delete
+ * =========================================================
+ * Triggered when a teacher document is deleted from '강사목록'.
+ * Cleans up related data:
+ * 1. Updates all classes that reference this teacher
+ * 2. Updates student enrollments to remove this teacher's classes
+ */
+exports.onTeacherDeleted = functions
+    .region("asia-northeast3")
+    .firestore
+    .document("강사목록/{teacherId}")
+    .onDelete(async (snap, context) => {
+        const teacherId = context.params.teacherId;
+        const deletedTeacher = snap.data();
+        const teacherName = deletedTeacher?.name || teacherId;
+
+        logger.info(`[onTeacherDeleted] Teacher deleted: ${teacherName}`);
+
+        const batch = db.batch();
+        const now = new Date().toISOString();
+        let classesUpdated = 0;
+        let studentsUpdated = 0;
+
+        // 1. Find all classes with this teacher
+        const classesSnapshot = await db.collection("수업목록")
+            .where("teacher", "==", teacherName)
+            .get();
+
+        logger.info(`[onTeacherDeleted] Found ${classesSnapshot.size} classes with teacher: ${teacherName}`);
+
+        // Collect class IDs to remove from student enrollments
+        const classIdsToRemove = [];
+
+        classesSnapshot.forEach(doc => {
+            classIdsToRemove.push(doc.id);
+            // Option A: Delete the class
+            // batch.delete(doc.ref);
+
+            // Option B: Mark as orphaned (safer - keeps data)
+            batch.update(doc.ref, {
+                teacher: null,
+                teacherDeleted: true,
+                deletedTeacherName: teacherName,
+                updatedAt: now
+            });
+            classesUpdated++;
+        });
+
+        // 2. Find all students with enrollments for these classes
+        if (classIdsToRemove.length > 0) {
+            const studentsSnapshot = await db.collection("students").get();
+
+            studentsSnapshot.forEach(doc => {
+                const studentData = doc.data();
+                const enrollments = studentData.enrollments || [];
+
+                // Filter out enrollments for deleted teacher's classes
+                const filteredEnrollments = enrollments.filter(
+                    e => !classIdsToRemove.includes(e.classId)
+                );
+
+                // Only update if something changed
+                if (filteredEnrollments.length !== enrollments.length) {
+                    if (filteredEnrollments.length === 0) {
+                        batch.update(doc.ref, {
+                            enrollments: [],
+                            status: "withdrawn",
+                            endDate: now.split("T")[0],
+                            updatedAt: now
+                        });
+                    } else {
+                        batch.update(doc.ref, {
+                            enrollments: filteredEnrollments,
+                            updatedAt: now
+                        });
+                    }
+                    studentsUpdated++;
+                }
+            });
+        }
+
+        await batch.commit();
+        logger.info(`[onTeacherDeleted] Cleanup completed: ${classesUpdated} classes, ${studentsUpdated} students updated.`);
+        return null;
+    });
+
+/**
+ * =========================================================
+ * Cloud Function: Consultation Auto-Registration Trigger
+ * =========================================================
+ * Triggered when a consultation record is created or updated.
+ * If status changes to a "registered" status, automatically creates
+ * a student record in the unified students collection.
+ */
+exports.onConsultationWrite = functions
+    .region("asia-northeast3")
+    .firestore
+    .document("consultations/{consultationId}")
+    .onWrite(async (change, context) => {
+        const consultationId = context.params.consultationId;
+        const afterData = change.after.exists ? change.after.data() : null;
+        const beforeData = change.before.exists ? change.before.data() : null;
+
+        // Only proceed if document exists (not deleted)
+        if (!afterData) {
+            logger.info(`[onConsultationWrite] Consultation deleted: ${consultationId}`);
+            return null;
+        }
+
+        const registeredStatuses = ["영수등록", "수학등록", "영어등록"];
+        const isNowRegistered = registeredStatuses.includes(afterData.status);
+        const wasRegistered = beforeData ? registeredStatuses.includes(beforeData.status) : false;
+
+        // Only trigger on NEW registration (status changed to registered)
+        if (!isNowRegistered || wasRegistered) {
+            return null;
+        }
+
+        logger.info(`[onConsultationWrite] New registration detected: ${consultationId}`);
+
+        const studentName = afterData.studentName || "";
+        const schoolName = afterData.schoolName || "";
+        const grade = afterData.grade || "";
+        const status = afterData.status;
+
+        if (!studentName) {
+            logger.warn("[onConsultationWrite] No student name provided, skipping.");
+            return null;
+        }
+
+        // Determine subject from status
+        let subject = "math";
+        if (status === "영어등록") subject = "english";
+        if (status === "영수등록") subject = "both";
+
+        const studentKey = `${studentName.trim()}_${schoolName.trim() || "Unspecified"}_${grade.trim() || "Unspecified"}`;
+        const studentRef = db.collection("students").doc(studentKey);
+        const studentDoc = await studentRef.get();
+
+        const now = new Date().toISOString();
+
+        if (studentDoc.exists) {
+            // Student exists - just log (actual enrollment will happen via timetable sync)
+            logger.info(`[onConsultationWrite] Student already exists: ${studentKey}. Enrollment will be handled when added to class.`);
+        } else {
+            // Create new student record (pre-registration)
+            const newStudent = {
+                name: studentName.trim(),
+                englishName: afterData.englishName || null,
+                school: schoolName.trim(),
+                grade: grade.trim(),
+                enrollments: [], // Empty - will be populated when added to actual class
+                status: "pending", // Pre-registered, awaiting class assignment
+                startDate: null,
+                endDate: null,
+                group: null,
+                consultationId: consultationId,
+                registrationSubject: subject,
+                createdAt: now,
+                updatedAt: now,
+            };
+            await studentRef.set(newStudent);
+            logger.info(`[onConsultationWrite] Created pre-registered student: ${studentKey} (${subject})`);
+        }
+
+        return null;
+    });
+
