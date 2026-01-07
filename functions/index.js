@@ -384,3 +384,80 @@ exports.onConsultationWrite = functions
         return null;
     });
 
+/**
+ * =========================================================
+ * Cloud Function: Auto-Archive Old Events
+ * =========================================================
+ * Triggered daily. Moves events older than 'lookbackYears'
+ * from '일정' to 'archived_events'.
+ */
+exports.archiveOldEvents = functions
+    .region("asia-northeast3")
+    .pubsub.schedule("0 0 * * *") // Every day at midnight
+    .timeZone("Asia/Seoul")
+    .onRun(async (context) => {
+        const logger = functions.logger;
+        logger.info("[archiveOldEvents] Started.");
+
+        try {
+            // 1. Get Retention Config
+            const configSnap = await db.collection("system_config").limit(1).get();
+            let lookbackYears = 2; // Default
+            if (!configSnap.empty) {
+                const config = configSnap.docs[0].data();
+                if (config.eventLookbackYears) {
+                    lookbackYears = Number(config.eventLookbackYears);
+                }
+            }
+
+            // 2. Calculate Cutoff Date (YYYY-MM-DD)
+            const now = new Date();
+            // Subtract years
+            const cutoffDateObj = new Date(now.setFullYear(now.getFullYear() - lookbackYears));
+            const cutoffDate = cutoffDateObj.toISOString().split("T")[0]; // YYYY-MM-DD
+
+            logger.info(`[archiveOldEvents] Cutoff Date: ${cutoffDate} (Lookback: ${lookbackYears} years)`);
+
+            // 3. Query Old Events
+            // Limit to 450 to fill one batch comfortably (limit is 500)
+            const snapshot = await db.collection("일정")
+                .where("종료일", "<", cutoffDate)
+                .limit(450)
+                .get();
+
+            if (snapshot.empty) {
+                logger.info("[archiveOldEvents] No events to archive.");
+                return null;
+            }
+
+            logger.info(`[archiveOldEvents] Found ${snapshot.size} events to archive.`);
+
+            const batch = db.batch();
+            let count = 0;
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const archiveRef = db.collection("archived_events").doc(doc.id);
+                const originalRef = db.collection("일정").doc(doc.id);
+
+                // Copy to Archive with metadata
+                batch.set(archiveRef, {
+                    ...data,
+                    archivedAt: new Date().toISOString(),
+                    originalCollection: "일정"
+                });
+
+                // Delete from Original
+                batch.delete(originalRef);
+                count++;
+            });
+
+            await batch.commit();
+            logger.info(`[archiveOldEvents] Successfully archived ${count} events.`);
+        } catch (error) {
+            logger.error("[archiveOldEvents] Error:", error);
+        }
+        return null;
+    });
+
+

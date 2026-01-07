@@ -84,6 +84,7 @@ export interface CalendarEvent {
   recurrenceIndex?: number;    // 1-based index in the recurrence group
   recurrenceType?: 'daily' | 'weekdays' | 'weekends' | 'weekly' | 'monthly' | 'yearly';
   relatedGroupId?: string;     // Group ID for multi-department linked events
+  isArchived?: boolean;        // True if event is from archived_events collection
 }
 
 export interface DragSelection {

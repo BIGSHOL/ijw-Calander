@@ -96,6 +96,7 @@ const App: React.FC = () => {
 
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false); // Phase 9: Global Archive State
 
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedEndDate, setSelectedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -690,6 +691,14 @@ const App: React.FC = () => {
 
   const handleSaveEvent = async (event: CalendarEvent) => {
     try {
+      // 0. Auto-Restore from Archive Logic
+      if (event.isArchived) {
+        // Remove from archive collection first
+        await deleteDoc(doc(db, 'archived_events', event.id));
+        // Remove the flag so it saves as a normal active event
+        delete event.isArchived;
+      }
+
       // Check for recurrence
       const recurrenceCount = (event as any)._recurrenceCount;
       delete (event as any)._recurrenceCount; // Clean up temp property
@@ -1707,6 +1716,7 @@ const App: React.FC = () => {
                 onEditBucket={handleEditBucketItem}
                 onDeleteBucket={handleDeleteBucketItem}
                 onConvertBucket={handleConvertBucketToEvent}
+                showArchived={showArchived} // Phase 9
               />
             </div>
 
@@ -1730,6 +1740,7 @@ const App: React.FC = () => {
                 onViewChange={setViewMode}
                 showSidePanel={false} // Always hide side panel for comparison views
                 currentUser={userProfile}
+                showArchived={showArchived} // Phase 9
               />
             </div>
 
@@ -1753,6 +1764,7 @@ const App: React.FC = () => {
                 onViewChange={setViewMode}
                 showSidePanel={false}
                 currentUser={userProfile}
+                showArchived={showArchived} // Phase 9
               />
             </div>
           </div>
@@ -2012,6 +2024,8 @@ const App: React.FC = () => {
         events={events}
         sysCategories={sysCategories}
         teachers={teachers}
+        showArchived={showArchived}
+        onToggleArchived={() => setShowArchived(!showArchived)}
       />
 
       {/* Access Denied / Pending Approval Overlay */}

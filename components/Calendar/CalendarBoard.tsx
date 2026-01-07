@@ -7,9 +7,10 @@ import { getMonthWeeks } from '../../utils/dateUtils';
 import WeekBlock from './WeekBlock';
 import MyEventsModal from './MyEventsModal'; // Import
 import CustomSelect from './CustomSelect'; // Import CustomSelect
-import { Clock, Users, Edit3, ChevronLeft, ChevronRight, Calendar as CalendarIcon, List, Search, Filter, X, Check } from 'lucide-react';
+import { Archive, Clock, Users, Edit3, ChevronLeft, ChevronRight, Calendar as CalendarIcon, List, Search, Filter, X, Check } from 'lucide-react';
 import { EVENT_COLORS } from '../../constants';
 import YearlyView from './YearlyView'; // Import YearlyView
+import { useArchivedEvents } from '../../hooks/useArchivedEvents'; // Phase 9: Archiving Hook
 
 interface CalendarBoardProps {
   currentDate: Date;
@@ -38,6 +39,8 @@ interface CalendarBoardProps {
   onEditBucket?: (id: string, title: string, priority: 'high' | 'medium' | 'low') => void;
   onDeleteBucket?: (id: string) => void;
   onConvertBucket?: (bucket: { id: string; title: string; targetMonth: string; priority: 'high' | 'medium' | 'low' }) => void;
+  // Phase 9: Archiving Prop
+  showArchived?: boolean;
 }
 
 
@@ -233,6 +236,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   onEditBucket,
   onDeleteBucket,
   onConvertBucket,
+  showArchived = false, // Default to false if not provided
 }) => {
   const [isMyEventsOpen, setIsMyEventsOpen] = React.useState(false);
   const weeks = getMonthWeeks(currentDate); // Restore weeks definition
@@ -240,6 +244,15 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   // Header Logic
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
+
+  // Phase 9: Archiving Integration - Now using Prop
+  // const [showArchived, setShowArchived] = React.useState(false); // Removed local state
+  const { events: archivedEvents } = useArchivedEvents(showArchived, currentYear);
+
+  // Merge active and archived events
+  const allEvents = useMemo(() => {
+    return showArchived ? [...events, ...archivedEvents] : events;
+  }, [events, archivedEvents, showArchived]);
 
   // --- Search & Filter Logic Start ---
   // A. Input State (Pending)
@@ -351,7 +364,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
       }
     }
 
-    return events.filter(e => {
+    return allEvents.filter(e => {
       // 1. Text Search
       const queryText = q.toLowerCase();
       const matchesText = !q ||
@@ -372,7 +385,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
 
       return matchesText && matchesDept && matchesDate;
     }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-  }, [events, activeSearch]);
+  }, [allEvents, activeSearch]);
   // --- Search & Filter Logic End ---
 
 
@@ -427,7 +440,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
       {viewMode === 'yearly' ? (
         <YearlyView
           currentDate={currentDate}
-          events={events}
+          events={allEvents}
           onDateChange={onDateChange}
           onViewChange={onViewChange || (() => { })}
           departments={departments}
@@ -753,7 +766,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           <MyEventsModal
             isOpen={isMyEventsOpen}
             onClose={() => setIsMyEventsOpen(false)}
-            events={events}
+            events={allEvents}
             currentUser={currentUser}
             onEventClick={onEventClick}
           />
@@ -762,7 +775,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           {viewMode === 'daily' ? (
             <DailyView
               date={currentDate}
-              events={events}
+              events={allEvents}
               departments={departments}
               onEventClick={onEventClick}
               onTimeSlotClick={onTimeSlotClick}
@@ -774,7 +787,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                   <WeekBlock
                     weekDays={weeks.find(w => w.some(d => isSameDay(d, currentDate))) || weeks[0]}
                     departments={departments}
-                    events={events}
+                    events={allEvents}
                     onCellClick={onCellClick}
                     onRangeSelect={onRangeSelect}
                     onEventClick={onEventClick}
@@ -791,7 +804,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                       key={`${format(currentDate, 'yyyy-MM')} -${idx} `}
                       weekDays={week}
                       departments={departments}
-                      events={events}
+                      events={allEvents}
                       onCellClick={onCellClick}
                       onRangeSelect={onRangeSelect}
                       onEventClick={onEventClick}
