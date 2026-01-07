@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, MoreVertical, TrendingUp, ArrowUpCircle, UserPlus } from 'lucide-react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { db } from '../../../firebaseConfig';
 
 import { TimetableStudent, Teacher, ClassKeywordColor, EnglishLevel } from '../../../types';
 import { ClassInfo } from './hooks/useEnglishClasses';
+import { ClassStudentData } from './hooks/useClassStudents';
 import { MoveChange } from './hooks/useEnglishChanges';
 import { DisplayOptions } from './IntegrationViewSettings';
 import MiniGridRow from './MiniGridRow';
-import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
+import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel } from './englishUtils';
 import StudentModal from './StudentModal';
 import LevelUpConfirmModal from './LevelUpConfirmModal';
 
@@ -29,6 +28,7 @@ interface ClassCardProps {
     moveChanges?: Map<string, MoveChange>;
     onMoveStudent?: (student: TimetableStudent, fromClass: string, toClass: string) => void;
     studentMap: Record<string, any>;
+    classStudentData?: ClassStudentData; // Cost Optimization: Centralized fetch
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -47,7 +47,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     isSimulationMode = false,
     moveChanges,
     onMoveStudent,
-    studentMap
+    studentMap,
+    classStudentData // Cost Optimization: Centralized fetch
 }) => {
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [studentCount, setStudentCount] = useState<number>(0);
@@ -89,27 +90,15 @@ const ClassCard: React.FC<ClassCardProps> = ({
         }));
     };
 
-    // Realtime student list subscription & Local Changes Merge
+    // Cost Optimization: Use centralized data from parent instead of individual onSnapshot
+    // Fallback to empty if prop not provided (backward compatibility)
     useEffect(() => {
-        const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
-        const q = query(collection(db, targetCollection), where('className', '==', classInfo.name));
-        const unsub = onSnapshot(q, (snapshot) => {
-            let list: TimetableStudent[] = [];
-            if (!snapshot.empty) {
-                const data = snapshot.docs[0].data();
-                if (data.studentIds && data.studentIds.length > 0) {
-                    const resolvedStudents = data.studentIds.map((id: string) => studentMap[id]).filter(Boolean);
-                    setStudents(resolvedStudents);
-                } else {
-                    list = (data.studentList || []) as TimetableStudent[];
-                    setStudents(list);
-                }
-            } else {
-                setStudents([]);
-            }
-        });
-        return () => unsub();
-    }, [classInfo.name, isSimulationMode]);
+        if (classStudentData) {
+            setStudents(classStudentData.studentList || []);
+        } else {
+            setStudents([]);
+        }
+    }, [classStudentData]);
 
     // Compute Display List (DB + Local Changes)
     useEffect(() => {
