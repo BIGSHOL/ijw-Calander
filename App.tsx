@@ -1137,7 +1137,8 @@ const App: React.FC = () => {
 
   const canEditDepartment = (deptId: string): boolean => {
     if (!userProfile) return false;
-    if (userProfile.role === 'master') return true;
+    if (userProfile.role === 'master' || userProfile.role === 'admin') return true;
+    if (hasPermission('departments.manage')) return true;
     const permission = userProfile.departmentPermissions?.[deptId];
     return permission === 'edit';
   };
@@ -1239,7 +1240,7 @@ const App: React.FC = () => {
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                 >
-                  💳 전자 결제
+                  💳 전자 결재
                 </button>
               )}
               {/* Gantt */}

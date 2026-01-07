@@ -16,7 +16,7 @@ import {
   useUpdateAttendance,
   useUpdateMemo,
   useSaveAttendanceConfig,
-  useMonthlySettlements,
+  useMonthlySettlement,
   useSaveMonthlySettlement
 } from '../../hooks/useAttendance';
 import { UserProfile, Teacher } from '../../types';
@@ -194,8 +194,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
   const [pendingUpdates, setPendingUpdates] = useState<Record<string, number | null>>({});
   const [pendingMemos, setPendingMemos] = useState<Record<string, string>>({});
 
-  // Monthly Settlements from Firebase
-  const { data: monthlySettlements = {}, isLoading: isLoadingSettlements } = useMonthlySettlements(!!userProfile);
+  // Monthly Settlement from Firebase (cost-optimized: only current month)
+  const { data: currentMonthSettlement, isLoading: isLoadingSettlement } = useMonthlySettlement(currentYearMonth, !!userProfile);
   const saveSettlementMutation = useSaveMonthlySettlement();
 
   // Handlers
@@ -295,8 +295,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
   };
 
   // Helper for settlement
-  const currentMonthKey = currentDate.toISOString().slice(0, 7);
-  const currentSettlement = monthlySettlements[currentMonthKey] || {
+  const currentMonthKey = currentYearMonth;
+  const currentSettlement = currentMonthSettlement || {
     hasBlog: false,
     hasRetention: false,
     otherAmount: 0,
@@ -401,22 +401,15 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
   // Selection prompt for managers when no teacher selected
   if (canManageCurrentSubject && !selectedTeacherId) {
     return (
-      <div className="flex flex-col h-full bg-[#f8f9fa] text-[#373d41]">
-        {/* Toolbar */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
-              <CalendarIcon size={18} strokeWidth={2.5} />
-            </div>
-            <h2 className="font-bold text-[15px] text-gray-800">출석부 & 급여 관리</h2>
-          </div>
-
+      <div className="flex flex-col h-full bg-white text-[#373d41]">
+        {/* Header - Unified Style */}
+        <div className="bg-[#081429] py-3 flex items-center px-4 gap-3 border-b border-white/10 flex-shrink-0 text-xs shadow-md z-30">
           {/* Subject Toggle */}
-          <div className="flex bg-gray-100 rounded-lg p-1 border border-gray-200">
+          <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
             {canManageMath && (
               <button
                 onClick={() => setSelectedSubject('math')}
-                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${selectedSubject === 'math' ? 'bg-yellow-400 text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${selectedSubject === 'math' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
               >
                 🔢 수학
               </button>
@@ -424,12 +417,18 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
             {canManageEnglish && (
               <button
                 onClick={() => setSelectedSubject('english')}
-                className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${selectedSubject === 'english' ? 'bg-blue-400 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${selectedSubject === 'english' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
               >
                 🔤 영어
               </button>
             )}
           </div>
+
+          {/* Separator */}
+          <div className="w-px h-4 bg-white/20"></div>
+
+          {/* Prompt Text */}
+          <span className="text-gray-300 font-medium">담당 강사를 선택하세요</span>
         </div>
 
         {/* Selection Prompt */}
@@ -460,87 +459,78 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#f8f9fa] text-[#373d41]">
-      {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
-              <CalendarIcon size={18} strokeWidth={2.5} />
-            </div>
-            <h1 className="text-lg font-bold text-gray-800 tracking-tight">출석부 & 급여 관리</h1>
-          </div>
-
-          {/* Subject Tabs */}
-          <div className="flex bg-gray-100 rounded-lg p-1 border border-gray-200">
+    <div className="flex flex-col h-full bg-white text-[#373d41]">
+      {/* Header - Unified with Timetable/Calendar */}
+      <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 flex-shrink-0 text-xs shadow-md z-30">
+        <div className="flex items-center gap-3">
+          {/* Subject Toggle */}
+          <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
             {(canManageMath || isMasterOrAdmin) && (
               <button
                 onClick={() => setSelectedSubject('math')}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedSubject === 'math'
-                  ? 'bg-green-500 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${selectedSubject === 'math'
+                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
               >
-                🔢 수학
+                📐 수학
               </button>
             )}
             {(canManageEnglish || isMasterOrAdmin) && (
               <button
                 onClick={() => setSelectedSubject('english')}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${selectedSubject === 'english'
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${selectedSubject === 'english'
+                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
               >
-                🔤 영어
+                📕 영어
               </button>
             )}
           </div>
 
-          {/* Teacher Filter (for managers of current subject) */}
+          {/* Teacher Filter */}
           {canManageCurrentSubject && availableTeachers.length > 0 && (
             <div className="relative">
               <select
                 value={filterTeacherId || ''}
                 onChange={(e) => setSelectedTeacherId(e.target.value || undefined)}
-                className="appearance-none bg-white border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-xs font-bold text-gray-700 cursor-pointer hover:border-gray-300"
+                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
               >
                 {availableTeachers.map(t => (
                   <option key={t.id} value={t.name}>{t.name}</option>
                 ))}
               </select>
-              <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
           )}
 
-          <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
-            <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-white rounded-md transition-all text-gray-400 hover:text-gray-700 hover:shadow-sm">
-              <ChevronLeft size={18} />
+          {/* Separator */}
+          <div className="w-px h-4 bg-white/20 mx-1"></div>
+
+          {/* Month Navigation */}
+          <div className="flex items-center gap-1">
+            <button onClick={() => changeMonth(-1)} className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+              <ChevronLeft size={14} />
             </button>
-            <span className="px-4 font-bold text-gray-700 w-32 text-center text-sm">
+            <span className="px-2 font-bold text-white text-xs min-w-[100px] text-center">
               {currentDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
             </span>
-            <button onClick={() => changeMonth(1)} className="p-1 hover:bg-white rounded-md transition-all text-gray-400 hover:text-gray-700 hover:shadow-sm">
-              <ChevronRight size={18} />
+            <button onClick={() => changeMonth(1)} className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="text-right mr-4 hidden md:block group cursor-pointer" onClick={() => setSettlementModalOpen(true)}>
-            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center justify-end gap-1 group-hover:text-blue-600 transition-colors">
-              예상 급여 <Calculator size={10} />
-            </p>
-            <p className="text-lg font-bold text-gray-800 font-mono group-hover:scale-105 transition-transform">{formatCurrency(finalSalary)}</p>
-          </div>
-
-
+        {/* Right Section */}
+        <div className="flex items-center gap-2">
+          {/* Settings */}
           <button
             onClick={() => setSalaryModalOpen(true)}
-            className="p-2 border border-gray-200 text-gray-400 rounded-lg hover:bg-gray-50 hover:text-gray-600 transition-colors"
+            className="p-1.5 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
             title="급여 설정"
           >
-            <Settings size={18} />
+            <Settings size={14} />
           </button>
         </div>
       </div>
