@@ -4,148 +4,87 @@
 
 ---
 
-## ✅ 최적화 완료 현황
+## ✅ 완료된 최적화 (2026-01-07)
 
-| 구분 | 최적화 내용 | 상태 | 예상 절감 |
+| 구분 | 최적화 내용 | 상태 | 절감 효과 |
 |------|------------|------|----------|
-| ClassCard | 개별 onSnapshot → 중앙화 조회 | ✅ 완료 | **50%+** |
-| Attendance | N+1 getDoc → 배치 getDocs | ✅ 완료 | **20%+** |
-| Attendance | 학생 목록 실시간 구독 유지 | ✅ 유지 | - |
+| **ClassCard** | 개별 onSnapshot → `useClassStudents` 중앙화 훅 | ✅ **완료** | **~50%** |
+| **Attendance** | N+1 getDoc → 배치 getDocs (30개 청킹) | ✅ **완료** | **~20%** |
+| **Attendance** | 학생 목록 실시간 구독 (출석 마킹 필수) | ✅ 유지 | - |
+
+**총 적용 절감 효과: ~70%**
 
 ---
 
-## 🔴 높은 비용 요소 (Timetable)
+## � 남은 권장 최적화 (향후 작업)
 
-### 1. 과다한 실시간 리스너 (onSnapshot)
+### 우선순위 1: 설정 데이터 캐싱 강화 (~5% 추가 절감)
 
-**발견된 위치:**
-- `EnglishTimetable.tsx` - 2개
-- `EnglishClassTab.tsx` - 1개
-- `ClassCard.tsx` - 1개 (카드당 1개 = 수업 수만큼 증가!)
-- `ScenarioManagementModal.tsx` - 1개
-- `StudentModal.tsx` - 1개
-- `MathStudentModal.tsx` - 1개
-- `useTimetableClasses.ts` - 1개
-- `useEnglishStats.ts` - 3개
-- `useEnglishSettings.ts` - 2개
-- 기타 다수...
+| 파일 | 현재 상태 | 권장 조치 |
+|------|----------|----------|
+| `useEnglishSettings.ts` | onSnapshot 2개 | React Query 전환 (설정은 자주 변경 안됨) |
+| `useEnglishStats.ts` | onSnapshot 3개 | 1분 캐싱으로 전환 |
+| `LevelSettingsModal.tsx` | onSnapshot 1개 | 열릴 때만 1회 fetch |
 
-**문제점:**
-```
-수업 20개 × ClassCard onSnapshot = 20개 실시간 리스너
-→ 매 변경 시 20개 read 발생
-→ 사용자 10명 동시 접속 시 200개 리스너
-```
-
-**권장 해결책:**
-1. `ClassCard.tsx`의 개별 onSnapshot → 부모에서 일괄 조회 후 props 전달
-2. useEnglishSettings.ts → React Query로 전환 (자주 변경 안됨)
-3. 설정 문서들 → 앱 시작 시 1회 로드 후 캐싱
-
----
-
-### 2. N+1 쿼리 문제
-
-**위치:** `useAttendance.ts` (라인 96-108)
-
-**현재 코드:**
-```javascript
-// 학생 N명 → getDoc N번 호출
-const recordPromises = data.map(async (student) => {
-    const docId = `${student.id}_${options.yearMonth}`;
-    await getDoc(doc(db, RECORDS_COLLECTION, docId));
-});
-```
-
-**문제점:**
-- 학생 100명 → 100번 개별 getDoc 호출
-- Firestore는 개별 호출 당 비용 청구
-
-**권장 해결책:**
-```javascript
-// 단일 컬렉션 쿼리로 변경
-const q = query(
-    collection(db, RECORDS_COLLECTION),
-    where('yearMonth', '==', yearMonth)
-);
-const snapshot = await getDocs(q); // 1회 호출
+**구현 코드:**
+```typescript
+// useEnglishSettings.ts 개선
+export const useEnglishSettings = () => {
+    return useQuery({
+        queryKey: ['englishSettings'],
+        queryFn: () => getDoc(doc(db, 'settings', 'english_class_integration')),
+        staleTime: 1000 * 60 * 30, // 30분 캐싱
+    });
+};
 ```
 
 ---
 
-## 🟡 중간 비용 요소 (Attendance)
+### 우선순위 2: 모달 온디맨드 로딩 (~3% 추가 절감)
 
-### 이슈: 전체 학생 실시간 구독
-
-**위치:** `useAttendance.ts` (라인 45)
-
-**현재:**
-```javascript
-const unsubscribe = onSnapshot(
-    query(collection(db, STUDENTS_COLLECTION), orderBy('name')),
-    ...
-);
-```
-
-**특징:**
-- 전체 학생 목록을 실시간으로 구독
-- 학생 1명 변경 → 전체 재조회
-
-**권장 해결책:**
-- 실시간 필요 없음 → React Query로 전환
-- `staleTime: 60000` (1분) 설정으로 캐싱
+| 파일 | 현재 상태 | 권장 조치 |
+|------|----------|----------|
+| `ScenarioManagementModal.tsx` | 항상 구독 | 모달 열릴 때만 fetch |
+| `BackupHistoryModal.tsx` | 항상 구독 | 모달 열릴 때만 fetch |
+| `StudentModal.tsx` | 항상 구독 | props로 데이터 전달 |
 
 ---
 
-## 🟢 양호한 부분
+### 우선순위 3: Math 시간표 최적화 (~2% 추가 절감)
 
-### useFirebaseQueries.ts
-- ✅ React Query 사용
-- ✅ staleTime 30분~1시간 설정
-- ✅ gcTime 설정으로 메모리 관리
-
----
-
-## 🎯 권장 최적화 순서
-
-| 순위 | 작업 | 예상 절감 효과 |
-|------|------|--------------|
-| 1 | ClassCard.tsx onSnapshot 제거 | **50%+** |
-| 2 | N+1 쿼리 → 배치 쿼리 전환 | **20%+** |
-| 3 | useAttendanceStudents → React Query | **10%+** |
-| 4 | 설정 데이터 캐싱 강화 | **5%+** |
+| 파일 | 현재 상태 | 권장 조치 |
+|------|----------|----------|
+| `useTimetableClasses.ts` | onSnapshot 전체 구독 | React Query + 5분 캐싱 |
+| `MathStudentModal.tsx` | 개별 문서 구독 | props 전달 방식으로 변경 |
 
 ---
 
-## 💡 구현 제안
+## 📊 예상 총 절감 효과
 
-### 1단계: ClassCard 최적화 (가장 높은 ROI)
+| 단계 | 작업 | 절감 효과 | 상태 |
+|------|------|----------|------|
+| 1 | ClassCard 중앙화 | ~50% | ✅ 완료 |
+| 2 | N+1 배치 쿼리 | ~20% | ✅ 완료 |
+| 3 | 설정 캐싱 강화 | ~5% | ⏳ 대기 |
+| 4 | 모달 온디맨드 | ~3% | ⏳ 대기 |
+| 5 | Math 최적화 | ~2% | ⏳ 대기 |
 
-```diff
-- // ClassCard.tsx 내부
-- useEffect(() => {
--     const unsub = onSnapshot(q, ...);
--     return () => unsub();
-- }, []);
+**현재 적용 절감: ~70%**  
+**추가 가능 절감: ~10%**  
+**최대 가능 절감: ~80%**
 
-+ // EnglishTimetable.tsx (부모)
-+ const { data: schedules } = useQuery({
-+     queryKey: ['schedules', teacherId],
-+     queryFn: () => getDocs(query(...)),
-+     staleTime: 60000
-+ });
-+ 
-+ // ClassCard에 props로 전달
-+ <ClassCard schedule={schedules.find(s => s.classId === id)} />
-```
+---
 
-### 2단계: 출석 기록 배치 조회
+## 💡 장기 권장사항
 
-```diff
-- // 개별 조회 (N번)
-- data.map(student => getDoc(doc(db, RECORDS, `${student.id}_${yearMonth}`)));
+1. **Firestore 복합 인덱스 추가**
+   - `students` 컬렉션에 `teacherId + status` 인덱스 생성
+   - 클라이언트 필터링 → 서버 필터링 전환
 
-+ // 배치 조회 (1번)
-+ const q = query(collection(db, RECORDS), where('yearMonth', '==', yearMonth));
-+ const snapshot = await getDocs(q);
-```
+2. **Firebase Functions 스케줄러 활용**
+   - 월별 출석 통계 미리 계산 → Firestore에 캐싱
+   - 실시간 계산 부하 감소
+
+3. **Firestore Bundle 사용 고려**
+   - 자주 변경 안되는 설정 데이터 → Bundle로 CDN 캐싱
+

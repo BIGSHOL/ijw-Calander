@@ -61,13 +61,32 @@ export const useClassStudents = (
 
                     let studentList: TimetableStudent[] = [];
 
-                    // Prefer studentIds (unified DB) over studentList (legacy)
+                    // Get the original studentList from the class document (contains underline, enrollmentDate, etc.)
+                    const originalStudentList = (data.studentList || []) as TimetableStudent[];
+
+                    // If using studentIds (unified DB), merge with original properties
                     if (data.studentIds && Array.isArray(data.studentIds) && data.studentIds.length > 0) {
-                        studentList = data.studentIds
-                            .map((id: string) => studentMap[id])
-                            .filter(Boolean);
-                    } else if (data.studentList && Array.isArray(data.studentList)) {
-                        studentList = data.studentList as TimetableStudent[];
+                        studentList = data.studentIds.map((id: string, index: number) => {
+                            const baseStudent = studentMap[id];
+                            // Find matching student in original list by id or index
+                            const originalStudent = originalStudentList.find(s => s.id === id)
+                                || originalStudentList[index];
+
+                            if (baseStudent) {
+                                // Merge: base from unified DB + original properties (underline, enrollmentDate, withdrawalDate, onHold)
+                                return {
+                                    ...baseStudent,
+                                    underline: originalStudent?.underline ?? baseStudent.underline,
+                                    enrollmentDate: originalStudent?.enrollmentDate ?? baseStudent.enrollmentDate,
+                                    withdrawalDate: originalStudent?.withdrawalDate ?? baseStudent.withdrawalDate,
+                                    onHold: originalStudent?.onHold ?? baseStudent.onHold,
+                                };
+                            }
+                            return originalStudent || null;
+                        }).filter(Boolean);
+                    } else {
+                        // Legacy: use studentList directly (already has all properties)
+                        studentList = originalStudentList;
                     }
 
                     tempDataMap[className] = {

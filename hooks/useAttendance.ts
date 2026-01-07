@@ -112,25 +112,33 @@ export const useAttendanceStudents = (options?: {
                         const recordsMap = new Map<string, { attendance: Record<string, number>; memos: Record<string, string> }>();
 
                         for (const chunk of chunks) {
-                            // Use __name__ field for document ID filtering
-                            const q = query(
-                                collection(db, RECORDS_COLLECTION),
-                                where('__name__', 'in', chunk)
-                            );
-                            const snapshot = await getDocs(q);
+                            // Fetch each document individually in parallel (Firestore 'in' with documentId is limited)
+                            // Using getDoc for each is actually efficient since we're already chunking
+                            const chunkPromises = chunk.map(async (docId) => {
+                                const docSnap = await getDoc(doc(db, RECORDS_COLLECTION, docId));
+                                if (docSnap.exists()) {
+                                    // Extract studentId from docId format: {studentId}_{YYYY-MM}
+                                    const idParts = docId.split('_');
+                                    idParts.pop(); // Remove YYYY-MM part
+                                    const extractedStudentId = idParts.join('_');
 
-                            snapshot.docs.forEach(docSnap => {
-                                const studentId = docSnap.id.split('_')[0] + '_' + docSnap.id.split('_').slice(1, -2).join('_');
-                                // Extract studentId from docId format: {studentId}_{YYYY-MM}
-                                const idParts = docSnap.id.split('_');
-                                const yearMonth = idParts.pop(); // Remove YYYY-MM
-                                // Remaining parts form the studentId (could have underscores)
-                                const extractedStudentId = idParts.join('_');
+                                    return {
+                                        studentId: extractedStudentId,
+                                        attendance: docSnap.data().attendance || {},
+                                        memos: docSnap.data().memos || {}
+                                    };
+                                }
+                                return null;
+                            });
 
-                                recordsMap.set(extractedStudentId, {
-                                    attendance: docSnap.data().attendance || {},
-                                    memos: docSnap.data().memos || {}
-                                });
+                            const results = await Promise.all(chunkPromises);
+                            results.forEach(r => {
+                                if (r) {
+                                    recordsMap.set(r.studentId, {
+                                        attendance: r.attendance,
+                                        memos: r.memos
+                                    });
+                                }
                             });
                         }
 
