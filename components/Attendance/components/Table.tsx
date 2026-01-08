@@ -200,9 +200,18 @@ const Table: React.FC<Props> = ({
           {/* Stat Cells */}
           <td className="p-3 border-r border-b border-gray-200 text-center text-gray-500 bg-[#f8f9fa] font-mono align-middle">
             <div className="flex flex-wrap justify-center gap-0.5 max-w-[60px] mx-auto">
-              {(student.days || []).map(d => (
-                <span key={d} className="text-[9px] bg-white border border-gray-200 px-1 rounded">{d[0]}</span>
-              ))}
+              {[...(student.days || [])].sort((a, b) => {
+                const order = ['월', '화', '수', '목', '금', '토', '일'];
+                return order.indexOf(a[0]) - order.indexOf(b[0]);
+              }).map(d => {
+                const dayChar = d[0];
+                let colorClass = "bg-white border-gray-200 text-gray-600";
+                if (dayChar === '토') colorClass = "bg-blue-50 border-blue-200 text-blue-600";
+                if (dayChar === '일') colorClass = "bg-red-50 border-red-200 text-red-600";
+                return (
+                  <span key={d} className={`text-[9px] border px-1 rounded ${colorClass}`}>{dayChar}</span>
+                );
+              })}
             </div>
           </td>
           <td className="p-3 border-r border-b border-gray-200 text-center font-bold text-[#081429] bg-[#f0f4f8] align-middle">
@@ -619,9 +628,18 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
       {/* Stat Cells */}
       <td className="p-3 border-r border-b border-gray-200 text-center text-gray-500 bg-[#f8f9fa] font-mono align-middle">
         <div className="flex flex-wrap justify-center gap-0.5 max-w-[60px] mx-auto">
-          {(student.days || []).map(d => (
-            <span key={d} className="text-[11px] bg-white border border-gray-200 px-1.5 py-0.5 rounded font-medium">{d[0]}</span>
-          ))}
+          {[...(student.days || [])].sort((a, b) => {
+            const order = ['월', '화', '수', '목', '금', '토', '일'];
+            return order.indexOf(a[0]) - order.indexOf(b[0]);
+          }).map(d => {
+            const dayChar = d[0];
+            let colorClass = "bg-white border-gray-200 text-gray-600";
+            if (dayChar === '토') colorClass = "bg-blue-50 border-blue-200 text-blue-600";
+            if (dayChar === '일') colorClass = "bg-red-50 border-red-200 text-red-600";
+            return (
+              <span key={d} className={`text-[11px] border px-1.5 py-0.5 rounded font-medium ${colorClass}`}>{dayChar}</span>
+            );
+          })}
         </div>
       </td>
       <td className="p-3 border-r border-b border-gray-200 text-center font-bold text-[#081429] bg-[#f0f4f8] align-middle">
