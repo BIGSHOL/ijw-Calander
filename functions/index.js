@@ -57,7 +57,7 @@ function getStudentKey(student) {
 exports.syncStudentsOnClassChange = functions
     .region("asia-northeast3")
     .firestore
-    .document("수업목록/{classId}")
+    .document("%EC%88%98%EC%97%85%EB%AA%A9%EB%A1%9D/{classId}")
     .onWrite(async (change, context) => {
         const classId = context.params.classId;
         const beforeData = change.before.data();
@@ -226,7 +226,7 @@ exports.testSync = functions.region("asia-northeast3").https.onRequest((req, res
 exports.onTeacherDeleted = functions
     .region("asia-northeast3")
     .firestore
-    .document("강사목록/{teacherId}")
+    .document("%EA%B0%95%EC%82%AC%EB%AA%A9%EB%A1%9D/{teacherId}")
     .onDelete(async (snap, context) => {
         const teacherId = context.params.teacherId;
         const deletedTeacher = snap.data();
