@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Student, SalaryConfig } from '../types';
-import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent } from '../utils';
+import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting } from '../utils';
 import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 
 interface Props {
@@ -146,7 +146,10 @@ const Table: React.FC<Props> = ({
         .filter(([k, v]) => k.startsWith(currentMonthStr) && v > 0)
         .reduce((acc, [_, v]) => acc + v, 0);
 
-      const salarySetting = salaryConfig.items.find(item => item.id === student.salarySettingId);
+      // Auto-match salary setting: First try explicit ID, then match from school name
+      const salarySetting = student.salarySettingId
+        ? salaryConfig.items.find(item => item.id === student.salarySettingId)
+        : getSchoolLevelSalarySetting(student.school, salaryConfig.items);
       const levelName = salarySetting ? salarySetting.name : '미설정';
       const badgeStyle = salarySetting ? getBadgeStyle(salarySetting.color) : undefined;
       const badgeClass = salarySetting ? 'border' : 'bg-gray-100 text-gray-500 border-gray-200';
@@ -574,7 +577,10 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
     .filter(([k, v]) => k.startsWith(currentMonthStr) && (v as number) > 0)
     .reduce((acc, [_, v]) => acc + (v as number), 0);
 
-  const salarySetting = salaryConfig.items.find(item => item.id === student.salarySettingId);
+  // Auto-match salary setting: First try explicit ID, then match from school name
+  const salarySetting = student.salarySettingId
+    ? salaryConfig.items.find(item => item.id === student.salarySettingId)
+    : getSchoolLevelSalarySetting(student.school, salaryConfig.items);
   const levelName = salarySetting ? salarySetting.name : '미설정';
   const badgeStyle = salarySetting ? getBadgeStyle(salarySetting.color) : undefined;
   const badgeClass = salarySetting ? 'border' : 'bg-gray-100 text-gray-500 border-gray-200';

@@ -142,12 +142,15 @@ exports.syncStudentsOnClassChange = functions
             const studentRef = db.collection("students").doc(studentKey);
             const studentDoc = await studentRef.get();
 
+            // Build enrollment with date range
             const enrollment = {
                 subject,
                 classId,
                 className,
                 teacherId: teacher,
                 days,
+                startDate: student.enrollmentDate || now.split("T")[0],
+                endDate: student.withdrawalDate || null,
             };
 
             if (studentDoc.exists) {

@@ -74,7 +74,39 @@ export const useAttendanceStudents = (options?: {
                                 });
                             }
                         });
-                        return { ...s, group: teacherClasses.join(', '), days: teacherDays };
+
+                        // Extract date range from enrollments for this teacher
+                        // Get the earliest startDate and latest endDate from all enrollments for this teacher
+                        let enrollmentStartDate = (s as any).startDate || '1970-01-01';
+                        let enrollmentEndDate = (s as any).endDate || null;
+
+                        if (teacherEnrollments.length > 0) {
+                            const startDates = teacherEnrollments
+                                .map((e: any) => e.startDate)
+                                .filter((d: string) => d);
+                            const endDates = teacherEnrollments
+                                .map((e: any) => e.endDate)
+                                .filter((d: string | null) => d !== null && d !== undefined) as string[];
+
+                            if (startDates.length > 0) {
+                                enrollmentStartDate = startDates.sort()[0]; // Earliest start
+                            }
+                            if (endDates.length > 0) {
+                                enrollmentEndDate = endDates.sort().reverse()[0]; // Latest end
+                            }
+                            // If any enrollment has no endDate (still active), set to null
+                            if (teacherEnrollments.some((e: any) => !e.endDate)) {
+                                enrollmentEndDate = null;
+                            }
+                        }
+
+                        return {
+                            ...s,
+                            group: teacherClasses.join(', '),
+                            days: teacherDays,
+                            startDate: enrollmentStartDate,
+                            endDate: enrollmentEndDate,
+                        };
                     });
                 }
                 if (options?.subject) {
