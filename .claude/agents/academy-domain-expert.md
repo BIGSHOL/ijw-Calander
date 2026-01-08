@@ -3,6 +3,8 @@ name: academy-domain-expert
 description: 학원 관리 시스템의 도메인 로직, 비즈니스 요구사항, 교육 업계 특화 기능을 설계하고 구현합니다. 학원 관리 관련 기능 설계, 데이터 모델링, 비즈니스 로직 구현이 필요할 때 사용하세요.
 tools: Read, Write, Grep, Glob
 model: sonnet
+trigger_on_phrases: ["학원", "원생", "출석", "수강", "강좌", "학생 관리", "수업", "성적", "학부모"]
+trigger_on_domain_features: true
 ---
 
 # 학원 관리 시스템 도메인 전문가

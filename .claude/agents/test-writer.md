@@ -3,6 +3,9 @@ name: test-writer
 description: 단위 테스트, 통합 테스트, E2E 테스트 코드를 작성합니다. 테스트가 필요한 코드가 있을 때, 테스트 커버리지를 높이고 싶을 때 사용하세요.
 tools: Read, Write, Bash
 model: sonnet
+trigger_on_phrases: ["테스트 작성", "테스트 추가", "test", "커버리지", "단위 테스트", "통합 테스트"]
+trigger_after_refactoring: true
+trigger_after_bug_fix: true
 ---
 
 # 테스트 작성 전문가 에이전트

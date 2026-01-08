@@ -29,6 +29,8 @@ interface ClassCardProps {
     onMoveStudent?: (student: TimetableStudent, fromClass: string, toClass: string) => void;
     studentMap: Record<string, any>;
     classStudentData?: ClassStudentData; // Cost Optimization: Centralized fetch
+    isTimeColumnOnly?: boolean;
+    hideTime?: boolean;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -48,8 +50,16 @@ const ClassCard: React.FC<ClassCardProps> = ({
     moveChanges,
     onMoveStudent,
     studentMap,
-    classStudentData // Cost Optimization: Centralized fetch
+    classStudentData, // Cost Optimization: Centralized fetch
+    isTimeColumnOnly = false,
+    hideTime = false
 }) => {
+    // Width Logic:
+    // Normal: 190px (includes 48px time + 142px days) -> Update logic if needed, but for now only changing hideTime width
+    // HideTime: 160px (User requested increase from 142px)
+    // TimeColumnOnly: 49px (48px time + 1px border)
+    const cardWidthClass = isTimeColumnOnly ? 'w-[49px]' : (hideTime ? 'w-[160px]' : 'w-[190px]');
+
     const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [studentCount, setStudentCount] = useState<number>(0);
     const [students, setStudents] = useState<TimetableStudent[]>([]);
@@ -137,13 +147,23 @@ const ClassCard: React.FC<ClassCardProps> = ({
     return (
         <>
             <div
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                className={`w-[280px] flex flex-col border-r border-gray-300 shrink-0 bg-white transition-opacity ${isHidden && mode === 'edit' ? 'opacity-50' : ''} ${mode === 'edit' ? 'hover:bg-gray-50' : ''}`}
+                onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
+                onDrop={isTimeColumnOnly ? undefined : handleDrop}
+                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white transition-opacity ${isHidden && mode === 'edit' ? 'opacity-50' : ''} ${mode === 'edit' && !isTimeColumnOnly ? 'hover:bg-gray-50' : ''}`}
             >
                 {/* Header - 키워드 색상 적용 */}
                 {(() => {
                     const matchedKw = classKeywords.find(kw => classInfo.name?.includes(kw.keyword));
+
+                    // If TimeColumnOnly, render generic empty style but keep height
+                    if (isTimeColumnOnly) {
+                        return (
+                            <div className="p-2 text-center font-bold text-sm border-b border-orange-300 flex items-center justify-center h-[50px] bg-orange-200 text-orange-900 select-none">
+                                수업
+                            </div>
+                        );
+                    }
+
                     return (
                         <div
                             className="p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group"
@@ -226,23 +246,25 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 {(displayOptions?.showTeacher || displayOptions?.showRoom) && (
                     <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
                         {displayOptions?.showTeacher && (
-                            <div className="flex border-b border-orange-200">
-                                <div className="w-[70px] bg-orange-100 p-1 text-center font-bold border-r border-orange-200 flex items-center justify-center text-orange-800">
-                                    담임
-                                </div>
-                                <div className="flex-1 p-1 text-center font-bold text-gray-900 flex items-center justify-center">
-                                    {classInfo.mainTeacher}
-                                </div>
+                            <div className={`flex border-b border-orange-200 h-[26px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
+                                {isTimeColumnOnly ? (
+                                    <span className="font-bold text-orange-800">담임</span>
+                                ) : (
+                                    <div className="flex-1 p-0.5 text-center font-bold text-gray-900 flex items-center justify-center h-full">
+                                        {classInfo.mainTeacher}
+                                    </div>
+                                )}
                             </div>
                         )}
                         {displayOptions?.showRoom && (
-                            <div className="flex">
-                                <div className="w-[70px] bg-orange-100 p-1 text-center font-bold border-r border-orange-200 flex items-center justify-center text-orange-800">
-                                    강의실
-                                </div>
-                                <div className="flex-1 p-1 text-center font-bold text-navy flex items-center justify-center break-words px-1 leading-tight py-1.5 min-h-[40px]">
-                                    {classInfo.formattedRoomStr || classInfo.mainRoom}
-                                </div>
+                            <div className={`flex h-[32px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
+                                {isTimeColumnOnly ? (
+                                    <span className="font-bold text-orange-800">강의실</span>
+                                ) : (
+                                    <div className="flex-1 p-0.5 text-center font-bold text-navy flex items-center justify-center break-all h-full leading-tight text-[11px]">
+                                        {classInfo.formattedRoomStr || classInfo.mainRoom || '-'}
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -250,9 +272,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
                 <div className="border-b border-gray-300 flex-none">
                     {/* Grid Header */}
-                    <div className="flex bg-gray-200 text-[10px] font-bold border-b border-gray-400 h-[30px]">
-                        <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
-                        {classInfo.finalDays.map((d) => (
+                    <div className="flex bg-gray-200 text-[10px] font-bold border-b border-gray-400 h-[24px]">
+                        {!hideTime && (
+                            <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
+                        )}
+                        {/* If TimeOnly, don't show days header or keep it blank? TimeOnly usually implies just the time labels on the left. */}
+                        {!isTimeColumnOnly && classInfo.finalDays.map((d) => (
                             <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
                                 {d}
                             </div>
@@ -270,151 +295,187 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 teachersData={teachersData}
                                 displayDays={classInfo.finalDays}
                                 hiddenTeachers={hiddenTeacherList}
+                                hideTime={hideTime}
+                                onlyTime={isTimeColumnOnly}
                             />
                         ))}
                     </div>
                 </div>
 
-                {/* Dynamic Content Section: Student List */}
+                {/* Dynamic Content Section: Student List - 3 Sections */}
                 {displayOptions?.showStudents ? (
-                    <div className="flex-1 flex flex-col bg-white min-h-[100px]">
-                        <button
-                            className={`p-1.5 text-center text-[13px] font-bold border-b border-gray-300 shadow-sm bg-gray-100 text-gray-600 flex items-center justify-center gap-2 transition-colors w-full ${mode === 'edit' ? 'cursor-pointer hover:bg-gray-200' : 'cursor-default'}`}
-                            onClick={() => mode === 'edit' && setIsStudentModalOpen(true)}
-                            aria-label={`${classInfo.name} 학생 명단 열기. 현재 ${studentCount}명`}
-                        >
-                            <span>학생 명단</span>
-                            <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded text-[12px]">
-                                {studentCount}명
-                            </span>
-                            {mode === 'edit' && <UserPlus size={12} className="text-gray-400" />}
-                        </button>
-                        {/* Student Name Preview - 3 Section Layout */}
-                        <div className="flex-1 overflow-y-auto px-2 py-1.5 text-[10px] flex flex-col">
-                            {displayStudents.length === 0 ? (
-                                <div
-                                    className={`flex flex-col items-center justify-center h-full text-gray-300 ${mode === 'edit' ? 'cursor-pointer hover:text-gray-400' : 'cursor-default'}`}
-                                    onClick={() => mode === 'edit' && setIsStudentModalOpen(true)}
-                                >
-                                    <span>학생이 없습니다</span>
-                                    {mode === 'edit' && <span className="text-indigo-400 mt-0.5 hover:underline">+ 추가</span>}
+                    isTimeColumnOnly ? (
+                        // Sticky Column: 3 Labels (재원생, 대기, 퇴원생)
+                        <div className="flex flex-col border-r border-gray-300">
+                            {/* 재원생 Label - Fixed Height */}
+                            <div className="h-[290px] flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none border-b border-indigo-100">
+                                <span>재</span>
+                                <span>원</span>
+                                <span>생</span>
+                            </div>
+                            {/* 대기 Label */}
+                            <div className="flex items-center justify-center bg-violet-100 text-violet-700 font-bold text-xs h-[40px] border-b border-violet-200 select-none">
+                                대기
+                            </div>
+                            {/* 퇴원생 Label */}
+                            <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs h-[80px] select-none">
+                                퇴원
+                            </div>
+                        </div>
+                    ) : (
+                        // Data Column: 3 Sections with Content
+                        <div className="flex flex-col bg-white border-r border-gray-300">
+                            {/* 재원생 Section - Fixed Height */}
+                            <div className="h-[290px] flex flex-col border-b border-indigo-100">
+                                <div className="border-b border-gray-300 flex items-center justify-center h-[30px] shrink-0 bg-white">
+                                    <button
+                                        className={`w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2 transition-colors ${mode === 'edit' ? 'cursor-pointer hover:bg-indigo-100' : 'cursor-default'}`}
+                                        onClick={(e) => {
+                                            if (mode === 'edit') {
+                                                e.stopPropagation();
+                                                setIsStudentModalOpen(true);
+                                            }
+                                        }}
+                                    >
+                                        {mode === 'edit' && <UserPlus size={14} />}
+                                        <span>{studentCount}명</span>
+                                    </button>
                                 </div>
-                            ) : (() => {
-                                // Split students into 3 groups
-                                const activeStudents = displayStudents.filter(s => !s.withdrawalDate && !s.onHold);
-                                const holdStudents = displayStudents.filter(s => s.onHold && !s.withdrawalDate);
-                                const withdrawnStudents = displayStudents.filter(s => s.withdrawalDate);
 
-                                // Sort active students: Underline(0) → Normal(1) → Pink(2) → Red(3)
-                                const sortedActive = [...activeStudents].sort((a, b) => {
-                                    const getWeight = (s: TimetableStudent) => {
-                                        if (s.underline) return 0; // 1순위: 밑줄
-                                        if (s.enrollmentDate) {
-                                            const days = Math.ceil((Date.now() - new Date(s.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
-                                            if (days <= 30) return 3; // 4순위: 1개월차 (Red)
-                                            if (days <= 60) return 2; // 3순위: 2개월차 (Pink)
-                                        }
-                                        return 1; // 2순위: 일반 학생
-                                    };
-                                    const wA = getWeight(a), wB = getWeight(b);
-                                    return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
-                                });
+                                <div className="flex-1 overflow-y-auto px-2 py-1.5 text-[10px] flex flex-col custom-scrollbar">
+                                    {(() => {
+                                        const activeStudents = displayStudents.filter(s => !s.withdrawalDate && !s.onHold);
 
-                                // Helper to get row style based on enrollment date
-                                const getRowStyle = (student: TimetableStudent & { isTempMoved?: boolean }) => {
-                                    if (student.isTempMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
-
-                                    // 반이동 + 밑줄 (우선순위 높음)
-                                    if (student.isMoved && student.underline) return { className: 'bg-green-50 ring-1 ring-green-300', textClass: 'underline decoration-blue-600 text-green-800 font-bold underline-offset-2', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
-
-                                    // 반이동 (단독)
-                                    if (student.isMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
-
-                                    if (student.underline) return { className: 'bg-blue-50', textClass: 'underline decoration-blue-600 text-blue-600 underline-offset-2', subTextClass: 'text-blue-500', englishTextClass: 'text-blue-600' };
-                                    if (student.enrollmentDate) {
-                                        const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
-                                        if (days <= 30) return { className: 'bg-red-500', textClass: 'text-white font-bold', subTextClass: 'text-white', englishTextClass: 'text-white/80' }; // Red: 붉은 배경, 흰색 글씨
-                                        if (days <= 60) return { className: 'bg-pink-100', textClass: 'text-black font-bold', subTextClass: 'text-black', englishTextClass: 'text-gray-600' }; // Pink: 연분홍 배경, 검은 글씨
-                                    }
-                                    return { className: '', textClass: 'text-gray-800', subTextClass: 'text-gray-500', englishTextClass: 'text-gray-500' };
-                                };
-
-                                return (
-                                    <>
-                                        {/* Active Students Section */}
-                                        <div className="flex-1">
-                                            {sortedActive.slice(0, 12).map((student: TimetableStudent & { isTempMoved?: boolean }) => {
-                                                const style = getRowStyle(student);
-                                                return (
-                                                    <div
-                                                        key={student.id}
-                                                        draggable={mode === 'edit' && !student.isTempMoved} // Prevent dragging temp moved items again immediately (optional, but safer)
-                                                        onDragStart={(e) => handleDragStart(e, student)}
-                                                        className={`flex items-center justify-between text-[13px] py-0.5 px-1 rounded ${style.className} ${mode === 'edit' ? 'cursor-grab active:cursor-grabbing hover:brightness-95' : ''}`}
-                                                        title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}` : undefined}
-                                                    >
-                                                        <span className={`font-medium ${style.textClass}`}>
-                                                            {student.name}
-                                                            {student.englishName && <span className={`font-normal ${style.englishTextClass || 'text-gray-500'}`}>({student.englishName})</span>}
-                                                        </span>
-                                                        {(student.school || student.grade) && (
-                                                            <span className={`text-[12px] ml-1 ${style.subTextClass || 'text-gray-500'} text-right`}>{student.school}{student.grade}</span>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                            {sortedActive.length > 12 && (
+                                        if (activeStudents.length === 0) {
+                                            return (
                                                 <div
-                                                    className={`text-indigo-500 font-bold mt-0.5 text-xs ${mode === 'edit' ? 'cursor-pointer hover:underline' : 'cursor-default'}`}
+                                                    className={`flex flex-col items-center justify-center h-full text-gray-300 ${mode === 'edit' ? 'cursor-pointer hover:text-gray-400' : 'cursor-default'}`}
                                                     onClick={() => mode === 'edit' && setIsStudentModalOpen(true)}
                                                 >
-                                                    +{sortedActive.length - 12}명 더보기...
+                                                    <span>학생이 없습니다</span>
+                                                    {mode === 'edit' && <span className="text-indigo-400 mt-0.5 hover:underline">+ 추가</span>}
                                                 </div>
-                                            )}
-                                        </div>
+                                            );
+                                        }
 
-                                        {/* Hold Students Section */}
-                                        {holdStudents.length > 0 && (
-                                            <div className="mt-2 pt-1 border-t border-yellow-200">
-                                                <div className="text-[9px] font-bold text-yellow-700 mb-0.5">대기 ({holdStudents.length})</div>
-                                                {holdStudents.slice(0, 3).map((student) => (
-                                                    <div key={student.id} className="flex items-center text-xs py-0.5 px-1 bg-yellow-50 rounded text-yellow-800">
-                                                        <span className="font-medium">{student.name}</span>
-                                                    </div>
-                                                ))}
-                                                {holdStudents.length > 3 && (
-                                                    <span className="text-[9px] text-yellow-600">+{holdStudents.length - 3}명</span>
-                                                )}
-                                            </div>
-                                        )}
+                                        // Sort active students
+                                        const sortedActive = [...activeStudents].sort((a, b) => {
+                                            const getWeight = (s: TimetableStudent) => {
+                                                if (s.underline) return 0;
+                                                if (s.enrollmentDate) {
+                                                    const days = Math.ceil((Date.now() - new Date(s.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                                                    if (days <= 30) return 3;
+                                                    if (days <= 60) return 2;
+                                                }
+                                                return 1;
+                                            };
+                                            const wA = getWeight(a), wB = getWeight(b);
+                                            return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
+                                        });
 
-                                        {/* Withdrawn Students Section */}
-                                        {withdrawnStudents.length > 0 && (
-                                            <div className="mt-2 pt-1 border-t border-gray-200">
-                                                <div className="text-[9px] font-bold text-gray-400 mb-0.5">퇴원 ({withdrawnStudents.length})</div>
-                                                {withdrawnStudents.slice(0, 3).map((student) => (
+                                        const getRowStyle = (student: TimetableStudent & { isTempMoved?: boolean }) => {
+                                            if (student.isTempMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
+                                            if (student.isMoved && student.underline) return { className: 'bg-green-50 ring-1 ring-green-300', textClass: 'underline decoration-blue-600 text-green-800 font-bold underline-offset-2', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
+                                            if (student.isMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
+                                            if (student.underline) return { className: 'bg-blue-50', textClass: 'underline decoration-blue-600 text-blue-600 underline-offset-2', subTextClass: 'text-blue-500', englishTextClass: 'text-blue-600' };
+                                            if (student.enrollmentDate) {
+                                                const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                                                if (days <= 30) return { className: 'bg-red-500', textClass: 'text-white font-bold', subTextClass: 'text-white', englishTextClass: 'text-white/80' };
+                                                if (days <= 60) return { className: 'bg-pink-100', textClass: 'text-black font-bold', subTextClass: 'text-black', englishTextClass: 'text-gray-600' };
+                                            }
+                                            return { className: '', textClass: 'text-gray-800', subTextClass: 'text-gray-500', englishTextClass: 'text-gray-500' };
+                                        };
+
+                                        return (
+                                            <>
+                                                {sortedActive.slice(0, 12).map((student: TimetableStudent & { isTempMoved?: boolean }) => {
+                                                    const style = getRowStyle(student);
+                                                    return (
+                                                        <div
+                                                            key={student.id}
+                                                            draggable={mode === 'edit' && !student.isTempMoved}
+                                                            onDragStart={(e) => handleDragStart(e, student)}
+                                                            className={`flex items-center justify-between text-[12px] py-0.5 px-1 rounded ${style.className} ${mode === 'edit' ? 'cursor-grab active:cursor-grabbing hover:brightness-95' : ''}`}
+                                                            title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}` : undefined}
+                                                        >
+                                                            <span className={`font-medium truncate ${style.textClass} max-w-[90px]`}>
+                                                                {student.name}
+                                                                {student.englishName && <span className={`font-normal ml-0.5 ${style.englishTextClass || 'text-gray-500'}`}>({student.englishName})</span>}
+                                                            </span>
+                                                            <span className={`text-[9px] ml-1 shrink-0 ${style.subTextClass || 'text-gray-500'} text-right leading-none`}>
+                                                                {student.school?.replace(/초등학교|중학교/g, '') || ''}{student.grade}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                                {sortedActive.length > 12 && (
                                                     <div
-                                                        key={student.id}
-                                                        className="flex items-center text-[13px] py-0.5 px-1 bg-black rounded text-white"
-                                                        title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
+                                                        className={`text-indigo-500 font-bold mt-0.5 text-xs ${mode === 'edit' ? 'cursor-pointer hover:underline' : 'cursor-default'}`}
+                                                        onClick={() => mode === 'edit' && setIsStudentModalOpen(true)}
                                                     >
-                                                        <span>{student.name}</span>
+                                                        +{sortedActive.length - 12}명 더보기...
+                                                    </div>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+
+                            {/* 대기 Section - Fixed Height */}
+                            <div className="h-[40px] flex items-center bg-violet-50 border-b border-violet-200 px-2 overflow-hidden">
+                                {(() => {
+                                    const holdStudents = displayStudents.filter(s => s.onHold && !s.withdrawalDate);
+                                    if (holdStudents.length === 0) {
+                                        return <span className="text-[10px] text-violet-300">-</span>;
+                                    }
+                                    return (
+                                        <div className="flex flex-wrap gap-1 text-[10px]">
+                                            {holdStudents.slice(0, 3).map(s => (
+                                                <span key={s.id} className="bg-violet-100 text-violet-800 px-1 rounded">{s.name}</span>
+                                            ))}
+                                            {holdStudents.length > 3 && <span className="text-violet-600">+{holdStudents.length - 3}</span>}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* 퇴원생 Section - Fixed Height with Original Display */}
+                            <div className="h-[80px] flex flex-col bg-gray-100 px-2 py-1 overflow-y-auto custom-scrollbar">
+                                {(() => {
+                                    const withdrawnStudents = displayStudents.filter(s => s.withdrawalDate);
+                                    if (withdrawnStudents.length === 0) {
+                                        return <span className="text-[10px] text-gray-500 flex items-center justify-center h-full">-</span>;
+                                    }
+                                    return (
+                                        <>
+                                            {withdrawnStudents.slice(0, 3).map((student) => (
+                                                <div
+                                                    key={student.id}
+                                                    className="flex items-center justify-between text-[12px] py-0.5 px-1 bg-black rounded text-white mb-0.5"
+                                                    title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
+                                                >
+                                                    <div className="flex items-center truncate max-w-[90px]">
+                                                        <span className="font-medium">{student.name}</span>
                                                         {student.englishName && <span className="ml-1 text-gray-400">({student.englishName})</span>}
                                                     </div>
-                                                ))}
-                                                {withdrawnStudents.length > 3 && (
-                                                    <span className="text-[9px] text-gray-400">+{withdrawnStudents.length - 3}명</span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </>
-                                );
-                            })()}
+                                                    <span className="text-[10px] ml-1 shrink-0 text-gray-300 text-right leading-none">
+                                                        {student.school?.replace(/초등학교|중학교/g, '') || ''}{student.grade}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {withdrawnStudents.length > 3 && (
+                                                <span className="text-[9px] text-gray-400">+{withdrawnStudents.length - 3}명</span>
+                                            )}
+                                        </>
+                                    );
+                                })()}
+                            </div>
                         </div>
-                    </div>
+                    )
                 ) : (
                     // When Students are hidden, fill space or show placeholder
-                    !displayOptions?.showTeacher && !displayOptions?.showRoom && (
+                    !isTimeColumnOnly && !displayOptions?.showTeacher && !displayOptions?.showRoom && (
                         <div className="flex-1 flex flex-col items-center justify-center min-h-[100px] text-gray-300 gap-1 bg-white">
                             <EyeOff size={20} />
                             <span className="text-[10px]">정보 숨김</span>
