@@ -310,11 +310,13 @@ service cloud.firestore {
       allow write: if hasRole(['master']) || hasPermission('system.classes.edit');
     }
 
-    // === Default: Allow authenticated read for other collections ===
+    // === Default: Authenticated Users Only ===
+    // Only Firebase Authentication users can read data
+    // Write access requires master or admin role
 
     match /{document=**} {
-      allow read: if isAuthenticated();
-      allow write: if hasRole(['master', 'admin']);
+      allow read: if isAuthenticated();  // 인증된 사용자만 읽기 가능
+      allow write: if isAuthenticated() && hasRole(['master', 'admin']);
     }
   }
 }

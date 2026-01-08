@@ -16,7 +16,9 @@ import AttendanceManager from './components/Attendance/AttendanceManager';
 import PaymentReport from './components/PaymentReport/PaymentReport';
 import GanttManager from './components/Gantt/GanttManager';
 import ConsultationManager from './components/Consultation/ConsultationManager';
-import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, User as UserIcon, Star, Bell, Mail, Send, Trash2, X } from 'lucide-react';
+import StudentManagementTab from './components/StudentManagement/StudentManagementTab';
+import NavigationBar from './components/Navigation/NavigationBar';
+import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
@@ -39,7 +41,7 @@ const formatUserDisplay = (u: UserProfile) => {
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | null>(null);
 
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
@@ -134,6 +136,11 @@ const App: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
+  // Attendance Navigation State (for App-level attendance bar)
+  const [attendanceSubject, setAttendanceSubject] = useState<'math' | 'english'>('math');
+  const [attendanceTeacherId, setAttendanceTeacherId] = useState<string | undefined>(undefined);
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date());
+
   // Timetable Filter State (for App-level filter bar)
   const [timetableSubject, setTimetableSubject] = useState<'math' | 'english'>('math');
   const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room' | 'class'>('teacher');
@@ -190,6 +197,27 @@ const App: React.FC = () => {
     }
   }, [timetableSubject, hasPermission, userProfile]);
 
+  // Initialize attendance subject based on user's permissions
+  useEffect(() => {
+    if (!userProfile) return;
+
+    const isMasterOrAdmin = userProfile.role === 'master' || userProfile.role === 'admin';
+    const canManageMath = hasPermission('attendance.manage_math');
+    const canManageEnglish = hasPermission('attendance.manage_english');
+
+    let initialSubject: 'math' | 'english' = 'math';
+
+    if (isMasterOrAdmin) {
+      initialSubject = 'math';
+    } else if (canManageMath && !canManageEnglish) {
+      initialSubject = 'math';
+    } else if (canManageEnglish && !canManageMath) {
+      initialSubject = 'english';
+    }
+
+    setAttendanceSubject(initialSubject);
+  }, [userProfile, hasPermission]);
+
   // Tab Permissions
   /* ----------------------------------------------------
      Tab Access Redirection Logic
@@ -201,7 +229,7 @@ const App: React.FC = () => {
     if (isTabPermissionLoading || !userProfile) return;
 
     // Priority order for tabs
-    const priority: ('calendar' | 'timetable' | 'attendance' | 'payment' | 'gantt' | 'consultation')[] = ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation'];
+    const priority: ('calendar' | 'timetable' | 'attendance' | 'payment' | 'gantt' | 'consultation' | 'students')[] = ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students'];
 
     // Initial setup: if appMode is null, set to first accessible tab (or user's preferred tab)
     if (appMode === null) {
@@ -210,7 +238,7 @@ const App: React.FC = () => {
 
       if (preferredTab && preferredTab !== 'auto' && canAccessTab(preferredTab as AppTab)) {
         console.log(`[Init] Setting appMode to user preferred tab: ${preferredTab}`);
-        setAppMode(preferredTab as 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance');
+        setAppMode(preferredTab as 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students');
       } else {
         // Fallback to first accessible tab
         const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
@@ -1194,79 +1222,13 @@ const App: React.FC = () => {
               인재원 <span className="text-[#fdb813]">학원</span>
             </h1>
 
-            {/* Top-level App Mode Tabs */}
-            <div className="hidden md:flex bg-black/20 p-0.5 rounded-lg border border-white/5 ml-4">
-              {canAccessTab('calendar') && (
-                <button
-                  onClick={() => setAppMode('calendar')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'calendar'
-                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  📅 연간 일정
-                </button>
-              )}
-              {/* Timetable */}
-              {canAccessTab('timetable') && (
-                <button
-                  onClick={() => setAppMode('timetable')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'timetable'
-                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  📋 시간표
-                </button>
-              )}
-              {/* Attendance */}
-              {canAccessTab('attendance') && (
-                <button
-                  onClick={() => setAppMode('attendance')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'attendance'
-                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  📒 출석부
-                </button>
-              )}
-              {/* Payment */}
-              {canAccessTab('payment') && (
-                <button
-                  onClick={() => setAppMode('payment')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'payment'
-                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  💳 전자 결재
-                </button>
-              )}
-              {/* Gantt */}
-              {canAccessTab('gantt') && (
-                <button
-                  onClick={() => setAppMode('gantt')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'gantt'
-                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  📊 간트 차트
-                </button>
-              )}
-              {/* Consultation */}
-              {canAccessTab('consultation') && (
-                <button
-                  onClick={() => setAppMode('consultation')}
-                  className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${appMode === 'consultation'
-                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  📝 상담 관리
-                </button>
-              )}
+            {/* Top-level App Mode Tabs - Grouped Navigation */}
+            <div className="hidden md:flex ml-4">
+              <NavigationBar
+                currentTab={appMode}
+                accessibleTabs={accessibleTabs}
+                onTabSelect={(tab) => setAppMode(tab as typeof appMode)}
+              />
             </div>
 
             {/* User Info Display (Moved to Left) */}
@@ -1499,6 +1461,117 @@ const App: React.FC = () => {
             </div>
           )
         }
+
+        {/* Row 3: Attendance Navigation Bar - Only show in attendance mode */}
+        {appMode === 'attendance' && (() => {
+          const isMasterOrAdmin = userProfile?.role === 'master' || userProfile?.role === 'admin';
+          const canManageMath = hasPermission('attendance.manage_math');
+          const canManageEnglish = hasPermission('attendance.manage_english');
+          const canManageCurrentSubject = isMasterOrAdmin ||
+            (attendanceSubject === 'math' && canManageMath) ||
+            (attendanceSubject === 'english' && canManageEnglish);
+
+          // Available teachers for filter dropdown
+          const availableTeachers = canManageCurrentSubject
+            ? teachers.filter(t => {
+                if (attendanceSubject === 'math') return t.subjects?.includes('math');
+                if (attendanceSubject === 'english') return t.subjects?.includes('english');
+                return true;
+              })
+            : [];
+
+          // Determine user's teacherId for filtering
+          const currentTeacherId = userProfile?.teacherId
+            ? teachers.find(t => t.id === userProfile.teacherId)?.name
+            : undefined;
+
+          // Determine which teacherId to filter by
+          const filterTeacherId = canManageCurrentSubject
+            ? (availableTeachers.some(t => t.name === attendanceTeacherId) && attendanceTeacherId) ||
+              (availableTeachers.length > 0 ? availableTeachers[0].name : undefined)
+            : currentTeacherId;
+
+          // Month navigation functions
+          const changeMonth = (delta: number) => {
+            setAttendanceDate(prev => {
+              const newDate = new Date(prev);
+              newDate.setMonth(newDate.getMonth() + delta);
+              return newDate;
+            });
+          };
+
+          return (
+            <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
+              <div className="flex items-center gap-3">
+                {/* Subject Toggle */}
+                <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                  {(canManageMath || isMasterOrAdmin) && (
+                    <button
+                      onClick={() => setAttendanceSubject('math')}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                        attendanceSubject === 'math'
+                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      📐 수학
+                    </button>
+                  )}
+                  {(canManageEnglish || isMasterOrAdmin) && (
+                    <button
+                      onClick={() => setAttendanceSubject('english')}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                        attendanceSubject === 'english'
+                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      📕 영어
+                    </button>
+                  )}
+                </div>
+
+                {/* Teacher Filter */}
+                {canManageCurrentSubject && availableTeachers.length > 0 && (
+                  <div className="relative">
+                    <select
+                      value={filterTeacherId || ''}
+                      onChange={(e) => setAttendanceTeacherId(e.target.value || undefined)}
+                      className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                    >
+                      {availableTeachers.map(t => (
+                        <option key={t.id} value={t.name}>{t.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                )}
+
+                {/* Separator */}
+                <div className="w-px h-4 bg-white/20 mx-1"></div>
+
+                {/* Month Navigation */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => changeMonth(-1)}
+                    className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <span className="px-2 font-bold text-white text-xs min-w-[100px] text-center">
+                    {attendanceDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
+                  </span>
+                  <button
+                    onClick={() => changeMonth(1)}
+                    className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Filter Popover Panel */}
         {
@@ -1799,8 +1872,19 @@ const App: React.FC = () => {
           </div>
         ) : appMode === 'attendance' ? (
           /* Attendance Manager View */
+          <div className="w-full flex-1 flex flex-col">
+            <AttendanceManager
+              userProfile={userProfile}
+              teachers={teachers}
+              selectedSubject={attendanceSubject}
+              selectedTeacherId={attendanceTeacherId}
+              currentDate={attendanceDate}
+            />
+          </div>
+        ) : appMode === 'students' ? (
+          /* Student Management View */
           <div className="w-full flex-1 overflow-auto">
-            <AttendanceManager userProfile={userProfile} teachers={teachers} />
+            <StudentManagementTab />
           </div>
         ) : null}
 

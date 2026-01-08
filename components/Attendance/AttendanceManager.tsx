@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Settings, Plus, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Users, UserPlus, UserMinus, Calculator, ChevronDown } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Users, UserMinus, UserPlus } from 'lucide-react';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject } from './types';
 import { formatCurrency, calculateStats } from './utils';
 import Table from './components/Table';
@@ -7,6 +7,7 @@ import SalarySettings from './components/SalarySettings';
 import StudentModal from './components/StudentModal';
 import SettlementModal from './components/SettlementModal';
 import StudentListModal from './components/StudentListModal';
+import AddStudentToAttendanceModal from './components/AddStudentToAttendanceModal';
 
 import {
   useAttendanceStudents,
@@ -40,6 +41,9 @@ const INITIAL_SALARY_CONFIG: SalaryConfig = {
 interface AttendanceManagerProps {
   userProfile: UserProfile | null;
   teachers?: Teacher[];
+  selectedSubject: AttendanceSubject;
+  selectedTeacherId?: string;
+  currentDate: Date;
 }
 
 // Helper to group updates by student ID
@@ -64,7 +68,13 @@ const groupUpdates = <T,>(updates: Record<string, T>): Record<string, Record<str
 };
 
 
-const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teachers = [] }) => {
+const AttendanceManager: React.FC<AttendanceManagerProps> = ({
+  userProfile,
+  teachers = [],
+  selectedSubject,
+  selectedTeacherId,
+  currentDate
+}) => {
   const { hasPermission } = usePermissions(userProfile);
 
   // Permission checks (consolidated)
@@ -86,20 +96,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     return undefined;
   }, [userProfile, teachers]);
 
-  // State
-  const [currentDate, setCurrentDate] = useState(() => new Date());
-
-  // Smart default subject based on permissions
-  const defaultSubject = useMemo((): AttendanceSubject => {
-    if (isMasterOrAdmin) return 'math';
-    if (canManageMath && !canManageEnglish) return 'math';
-    if (canManageEnglish && !canManageMath) return 'english';
-    return 'math'; // Default fallback
-  }, [isMasterOrAdmin, canManageMath, canManageEnglish]);
-
-  const [selectedSubject, setSelectedSubject] = useState<AttendanceSubject>(defaultSubject);
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string | undefined>(undefined);
-
   // Determine if user can manage the current subject (for teacher dropdown access)
   const canManageCurrentSubject = useMemo(() => {
     if (isMasterOrAdmin) return true;
@@ -107,7 +103,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     if (selectedSubject === 'english' && canManageEnglish) return true;
     return false;
   }, [selectedSubject, canManageMath, canManageEnglish, isMasterOrAdmin]);
-
 
   // Available teachers for filter dropdown (based on manage permission for current subject)
   const availableTeachers = useMemo(() => {
@@ -172,6 +167,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
   const [isSettlementModalOpen, setSettlementModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
 
   // Group order state (per teacher, stored in localStorage)
   const groupOrderKey = `attendance_groupOrder_${filterTeacherId || 'all'}_${selectedSubject}`;
@@ -284,11 +280,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     setStudentModalOpen(true);
   };
 
-  const changeMonth = (offset: number) => {
-    const newDate = new Date(currentDate);
-    newDate.setMonth(newDate.getMonth() + offset);
-    setCurrentDate(newDate);
-  };
+  // Month navigation is now handled in App.tsx header
 
   const handleSaveConfig = (config: SalaryConfig) => {
     saveConfigMutation.mutate({ config, configId });
@@ -398,145 +390,14 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
     );
   }
 
-  // Selection prompt for managers when no teacher selected
-  if (canManageCurrentSubject && !selectedTeacherId) {
-    return (
-      <div className="flex flex-col h-full bg-white text-[#373d41]">
-        {/* Header - Unified Style */}
-        <div className="bg-[#081429] py-3 flex items-center px-4 gap-3 border-b border-white/10 flex-shrink-0 text-xs shadow-md z-30">
-          {/* Subject Toggle */}
-          <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
-            {canManageMath && (
-              <button
-                onClick={() => setSelectedSubject('math')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${selectedSubject === 'math' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-              >
-                🔢 수학
-              </button>
-            )}
-            {canManageEnglish && (
-              <button
-                onClick={() => setSelectedSubject('english')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${selectedSubject === 'english' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-              >
-                🔤 영어
-              </button>
-            )}
-          </div>
-
-          {/* Separator */}
-          <div className="w-px h-4 bg-white/20"></div>
-
-          {/* Prompt Text */}
-          <span className="text-gray-300 font-medium">담당 강사를 선택하세요</span>
-        </div>
-
-        {/* Selection Prompt */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md">
-            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Users size={40} className="text-blue-500" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-3">담당 강사를 선택해주세요</h3>
-            <p className="text-gray-500 mb-6">
-              {selectedSubject === 'math' ? '수학' : '영어'} 출석부를 확인할 강사를 선택하세요.
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {availableTeachers.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setSelectedTeacherId(t.name)}
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm"
-                >
-                  {t.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Teacher selection is now handled in App.tsx header - no need for selection prompt
 
   return (
     <div className="flex flex-col h-full bg-white text-[#373d41]">
-      {/* Header - Unified with Timetable/Calendar */}
-      <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 flex-shrink-0 text-xs shadow-md z-30">
-        <div className="flex items-center gap-3">
-          {/* Subject Toggle */}
-          <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
-            {(canManageMath || isMasterOrAdmin) && (
-              <button
-                onClick={() => setSelectedSubject('math')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${selectedSubject === 'math'
-                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                📐 수학
-              </button>
-            )}
-            {(canManageEnglish || isMasterOrAdmin) && (
-              <button
-                onClick={() => setSelectedSubject('english')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${selectedSubject === 'english'
-                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                📕 영어
-              </button>
-            )}
-          </div>
+      {/* Navigation is now handled in App.tsx header */}
 
-          {/* Teacher Filter */}
-          {canManageCurrentSubject && availableTeachers.length > 0 && (
-            <div className="relative">
-              <select
-                value={filterTeacherId || ''}
-                onChange={(e) => setSelectedTeacherId(e.target.value || undefined)}
-                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
-              >
-                {availableTeachers.map(t => (
-                  <option key={t.id} value={t.name}>{t.name}</option>
-                ))}
-              </select>
-              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
-          )}
-
-          {/* Separator */}
-          <div className="w-px h-4 bg-white/20 mx-1"></div>
-
-          {/* Month Navigation */}
-          <div className="flex items-center gap-1">
-            <button onClick={() => changeMonth(-1)} className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-              <ChevronLeft size={14} />
-            </button>
-            <span className="px-2 font-bold text-white text-xs min-w-[100px] text-center">
-              {currentDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
-            </span>
-            <button onClick={() => changeMonth(1)} className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* Right Section */}
-        <div className="flex items-center gap-2">
-          {/* Settings */}
-          <button
-            onClick={() => setSalaryModalOpen(true)}
-            className="p-1.5 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-            title="급여 설정"
-          >
-            <Settings size={14} />
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-5 gap-4 shrink-0">
+      {/* Stats Cards - sticky below app header (64px) + attendance nav (40px) = 104px */}
+      <div className="sticky top-[104px] z-10 bg-white px-6 py-5 grid grid-cols-1 md:grid-cols-5 gap-4 flex-shrink-0 border-b border-gray-100 shadow-sm">
         <div
           onClick={() => setSettlementModalOpen(true)}
           className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-300 transition-colors"
@@ -611,8 +472,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
         </div>
       </div>
 
-      {/* Main Table Area */}
-      <main className="flex-1 px-6 pb-6 min-h-0 flex flex-col">
+      {/* Main Table Area - Scrollable */}
+      <main className="flex-1 min-h-0 px-6 pb-6 overflow-auto">
         <Table
           currentDate={currentDate}
           students={visibleStudents}
@@ -664,6 +525,16 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({ userProfile, teac
         title={listModal.type === 'new' ? '이번 달 신입생' : '지난 달 퇴원생'}
         type={listModal.type}
         students={listModal.type === 'new' ? stats.newStudents : stats.droppedStudents}
+      />
+
+      <AddStudentToAttendanceModal
+        isOpen={isAddStudentModalOpen}
+        onClose={() => setIsAddStudentModalOpen(false)}
+        allStudents={allStudents as any[]}
+        currentTeacherId={filterTeacherId || ''}
+        currentTeacherName={filterTeacherId || ''}
+        existingStudentIds={visibleStudents.map(s => s.id)}
+        onStudentAdded={() => refetch()}
       />
     </div>
   );

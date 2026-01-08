@@ -531,16 +531,71 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students';
 
-export const APP_TABS: { id: AppTab; label: string }[] = [
-  { id: 'calendar', label: '연간 일정' },
-  { id: 'timetable', label: '시간표' },
-  { id: 'attendance', label: '출석부' },
-  { id: 'payment', label: '전자 결제' },
-  { id: 'gantt', label: '간트 차트' },
-  { id: 'consultation', label: '상담 관리' },
+// Tab Metadata - 각 탭의 메타정보 (확장 가능)
+export interface TabMetadata {
+  id: AppTab;
+  label: string;
+  icon: string;
+}
+
+export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
+  calendar: { label: '연간 일정', icon: '📅' },
+  timetable: { label: '시간표', icon: '📋' },
+  attendance: { label: '출석부', icon: '📝' },
+  payment: { label: '전자 결제', icon: '💳' },
+  gantt: { label: '간트 차트', icon: '📊' },
+  consultation: { label: '상담 관리', icon: '💬' },
+  students: { label: '학생 관리', icon: '👥' },
+};
+
+// Tab Group 구조 - 무한 확장 가능
+export interface TabGroup {
+  id: string;
+  label: string;
+  icon: string;
+  tabs: AppTab[];
+  order: number; // 표시 순서
+}
+
+// Tab Groups 정의 - 추후 Firebase에서 로드 가능하도록 설계
+export const TAB_GROUPS: TabGroup[] = [
+  {
+    id: 'schedule',
+    label: '일정',
+    icon: '📅',
+    tabs: ['calendar', 'gantt'],
+    order: 1,
+  },
+  {
+    id: 'class',
+    label: '수업',
+    icon: '📚',
+    tabs: ['timetable', 'attendance'],
+    order: 2,
+  },
+  {
+    id: 'student',
+    label: '학생',
+    icon: '👥',
+    tabs: ['students', 'consultation'],
+    order: 3,
+  },
+  {
+    id: 'admin',
+    label: '관리',
+    icon: '⚙️',
+    tabs: ['payment'],
+    order: 4,
+  },
 ];
+
+// Legacy support - 기존 코드 호환성
+export const APP_TABS: { id: AppTab; label: string }[] = Object.entries(TAB_META).map(([id, meta]) => ({
+  id: id as AppTab,
+  label: meta.label,
+}));
 
 // Configuration for Tab Access (Stored in system/config -> tabPermissions)
 // Key: UserRole, Value: Array of allowed AppTab IDs
@@ -550,12 +605,12 @@ export type TabPermissionConfig = {
 
 // Default Tab Permissions (Fallback)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation'],
-  admin: ['calendar', 'timetable', 'attendance', 'payment'], // Admin: calendar, timetable, payment, attendance
-  manager: ['calendar', 'attendance'],
+  master: ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students'],
+  admin: ['calendar', 'timetable', 'attendance', 'payment', 'students'],
+  manager: ['calendar', 'attendance', 'students'],
   editor: ['calendar'],
-  math_lead: ['timetable', 'attendance'],
-  english_lead: ['timetable', 'attendance'],
+  math_lead: ['timetable', 'attendance', 'students'],
+  english_lead: ['timetable', 'attendance', 'students'],
   user: ['calendar', 'attendance'],
   viewer: ['calendar'],
   guest: ['calendar'],
@@ -655,4 +710,3 @@ export const CONSULTATION_STATUS_COLORS: Record<ConsultationStatus, string> = {
 };
 
 export const CONSULTATION_CHART_COLORS = ['#059669', '#0d9488', '#0891b2', '#f59e0b', '#fbbf24', '#94a3b8'];
-
