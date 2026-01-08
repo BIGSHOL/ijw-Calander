@@ -43,7 +43,7 @@ export const formatDateDisplay = (date: Date): { date: string; day: string; isWe
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const day = date.getDate().toString().padStart(2, '0');
   const dayOfWeek = date.getDay();
-  
+
   return {
     date: `${month}/${day}`,
     day: dayNames[dayOfWeek],
@@ -76,11 +76,11 @@ export const getStudentStatus = (student: Student, currentMonth: Date) => {
   const currentMonthStr = currentMonth.toISOString().slice(0, 7); // "YYYY-MM"
   const startMonthStr = student.startDate.slice(0, 7);
   const endMonthStr = student.endDate ? student.endDate.slice(0, 7) : null;
-  
+
   // Logic: Joined THIS month
   const isNew = startMonthStr === currentMonthStr;
   // Logic: Leaving THIS month
-  const isLeaving = endMonthStr === currentMonthStr; 
+  const isLeaving = endMonthStr === currentMonthStr;
 
   return { isNew, isLeaving };
 };
@@ -88,50 +88,115 @@ export const getStudentStatus = (student: Student, currentMonth: Date) => {
 export const calculateStats = (
   allStudents: Student[], // Need ALL students to calculate dropped count correctly
   visibleStudents: Student[], // Only visible students for salary/attendance
-  salaryConfig: SalaryConfig, 
+  salaryConfig: SalaryConfig,
   currentMonth: Date
 ) => {
   let totalSalary = 0;
   let totalPresent = 0;
   let totalAbsent = 0;
-  
+
   const newStudents: Student[] = [];
-  
+
   const monthStr = currentMonth.toISOString().slice(0, 7); // "YYYY-MM"
-  
+
   // Previous Month for Dropped Calculation
   const prevMonthDate = new Date(currentMonth);
   prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
   const prevMonthStr = prevMonthDate.toISOString().slice(0, 7);
 
   // 1. Calculate Statistics for VISIBLE (Active) Students
+  const daysInMonth = getDaysInMonth(currentMonth);
+  const todayKey = formatDateKey(new Date());
+
   visibleStudents.forEach(student => {
-    // Attendance Stats
-    const monthlyAttendance = Object.entries(student.attendance).filter(([dateKey]) => 
+    // Salary Stats (Existing Logic)
+    // We still need to iterate attendance records for salary calculation (based on units)
+    const monthlyAttendance = Object.entries(student.attendance).filter(([dateKey]) =>
       dateKey.startsWith(monthStr) && isDateValidForStudent(dateKey, student)
     );
 
     let studentClassUnits = 0;
-
+    // Calculate Salary & Actual Present Count
     monthlyAttendance.forEach(([_, value]) => {
       if (value > 0) {
         studentClassUnits += value;
-        totalPresent++; 
-      } else if (value === 0) {
-        totalAbsent++;
+        totalPresent++;
       }
+      // Note: We don't count explicit '0' as absent for the *Rate* anymore, 
+      // because we are comparing against the *Schedule*.
     });
 
-    // Salary Stats
     const settingItem = salaryConfig.items.find(item => item.id === student.salarySettingId);
     const rate = calculateClassRate(settingItem, salaryConfig.academyFee);
     totalSalary += studentClassUnits * rate;
 
-    // New Student Count (Check Month part)
-    if (student.startDate.startsWith(monthStr)) {
-        newStudents.push(student);
-    }
+    // Attendance Rate Stats (New Logic: Based on Scheduled Days UP TO TODAY)
+    // Count how many "Blue Dots" (Scheduled Days) this student has in this valid month range
+    // BUT only count days that have already passed or are today.
+    let studentScheduledCount = 0;
+
+    daysInMonth.forEach(day => {
+      const dateKey = formatDateKey(day);
+
+      // 0. Exclude future dates (Tomorrow onwards)
+      if (dateKey > todayKey) return;
+
+      // 1. Must be valid date for student
+      if (!isDateValidForStudent(dateKey, student)) return;
+
+      // 2. Must be a scheduled day of week
+      const { day: dayName } = formatDateDisplay(day);
+      if (student.days && student.days.includes(dayName)) {
+        studentScheduledCount++;
+      }
+    });
+
+    // Add to total "Absent" bucket effectively to make the denominator correct
+    // Denominator (Present + Absent) should equal Total Scheduled.
+    // So, Current Absent = Total Scheduled - Total Present.
+    // If a student attended more than scheduled (makeup classes), Absent contribution is 0 (or negative? No, let's clamp at 0).
+    // Actually, if we want Rate = Present / Scheduled, and UI computes Present / (Present + Absent),
+    // Then Absent must be (Scheduled - Present).
+    // What if Present > Scheduled? Rate > 100%. 
+    // Then Absent = Scheduled - Present would be negative. 
+    // If UI sums them: Present + (Sched - Present) = Sched. Correct.
+    // So simply add to a running total of Scheduled.
+    // Wait, the UI uses `totalPresent + totalAbsent`.
+    // Let's repurpose `totalAbsent` to be `totalScheduled - totalPresent`.
+    // But since `totalPresent` is global sum, we should sum `studentScheduledCount` first.
+
+    // Let's add a new property to stats? No, to avoid breaking UI changes in `AttendanceManager`,
+    // I will adjust `totalAbsent` so that `totalPresent + totalAbsent` equals `totalScheduled`.
+    // Exception: If `totalPresent` > `totalScheduled` globally, `totalAbsent` would be negative?
+    // Let's just track `totalScheduled` and return it as `totalAbsent` is a bit hacking.
+
+    // Better Approach: Calculate `totalScheduled`.
+    // Then set `totalAbsent = Math.max(0, totalScheduled - totalPresent)`.
+    // This caps Rate at 100% implicitly if used as P/(P+A) = P/S (if P<S).
+    // If P > S, then A=0, Rate = P/P = 100%. (Loss of >100% info).
+    // User wants "Rate against Scheduled".
+
+    // To support >100% or true rate, I should change the UI computation in `AttendanceManager` too?
+    // User asked "Change logic". 
+    // Let's assume `totalAbsent` acts as "Remaining Scheduled" or "Missed".
+    // I will accumulate `totalScheduled` and then derive `totalAbsent`.
+
+    totalAbsent += studentScheduledCount;
   });
+
+  // Correction: AttendanceManager calc is: totalPresent / (totalPresent + totalAbsent)
+  // We want: totalPresent / totalScheduled
+  // So we need (totalPresent + totalAbsent) == totalScheduled
+  // => totalAbsent = totalScheduled - totalPresent
+  // Let's apply this transformation.
+  // Note: totalAbsent currently holds 'totalScheduled' from the loop above.
+  const totalScheduled = totalAbsent; // Rename for clarity
+  totalAbsent = Math.max(0, totalScheduled - totalPresent);
+
+  // Now:
+  // Denom = P + A = P + (S - P) = S. (If P <= S)
+  // If P > S, A = 0. Denom = P. Rate = 100%.
+  // This seems safe for a quick fix without changing UI component types.
 
   // 2. Calculate Dropped Students
   // Definition: endDate month was LAST MONTH.
@@ -140,31 +205,31 @@ export const calculateStats = (
   // 3. Calculate Rates
   const newStudentsCount = newStudents.length;
   const droppedStudentsCount = droppedStudents.length;
-  
+
   // Estimated Total Last Month = Current Total - New + Dropped
   const currentTotal = visibleStudents.length;
   const estimatedPrevTotal = currentTotal - newStudentsCount + droppedStudentsCount;
-  
+
   let newStudentRate = 0;
   let droppedStudentRate = 0;
 
   if (estimatedPrevTotal > 0) {
-      newStudentRate = Math.round((newStudentsCount / estimatedPrevTotal) * 100);
-      droppedStudentRate = Math.round((droppedStudentsCount / estimatedPrevTotal) * 100);
+    newStudentRate = Math.round((newStudentsCount / estimatedPrevTotal) * 100);
+    droppedStudentRate = Math.round((droppedStudentsCount / estimatedPrevTotal) * 100);
   } else if (newStudentsCount > 0) {
-      newStudentRate = 100; // If starting from 0
+    newStudentRate = 100; // If starting from 0
   }
 
-  return { 
-      totalSalary, 
-      totalPresent, 
-      totalAbsent, 
-      newStudentsCount, 
-      droppedStudentsCount,
-      newStudentRate,
-      droppedStudentRate,
-      newStudents, // Returned Array
-      droppedStudents // Returned Array
+  return {
+    totalSalary,
+    totalPresent,
+    totalAbsent,
+    newStudentsCount,
+    droppedStudentsCount,
+    newStudentRate,
+    droppedStudentRate,
+    newStudents, // Returned Array
+    droppedStudents // Returned Array
   };
 };
 
@@ -188,7 +253,7 @@ export const getBadgeStyle = (color: string) => {
   const hex = resolveColor(color);
   let bg = hex;
   let border = hex;
-  
+
   if (hex.startsWith('#') && hex.length === 7) {
     bg = `${hex}1A`; // 10%
     border = `${hex}4D`; // 30%
