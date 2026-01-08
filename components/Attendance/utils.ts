@@ -16,6 +16,27 @@ export const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+// Extract school level (초등/중등/고등) from school name and find matching salary setting
+export const getSchoolLevelSalarySetting = (
+  school: string | undefined,
+  salaryItems: SalarySettingItem[]
+): SalarySettingItem | undefined => {
+  if (!school) return undefined;
+
+  // Check if school name contains 초, 중, 고 (elementary, middle, high)
+  if (school.includes('초등') || school.includes('초')) {
+    return salaryItems.find(item => item.name === '초등' || item.name.includes('초등'));
+  }
+  if (school.includes('중학') || school.includes('중')) {
+    return salaryItems.find(item => item.name === '중등' || item.name.includes('중등'));
+  }
+  if (school.includes('고등') || school.includes('고')) {
+    return salaryItems.find(item => item.name === '고등' || item.name.includes('고등'));
+  }
+
+  return undefined;
+};
+
 // Get all days in a specific month
 export const getDaysInMonth = (date: Date): Date[] => {
   const year = date.getFullYear();
@@ -126,7 +147,10 @@ export const calculateStats = (
       // because we are comparing against the *Schedule*.
     });
 
-    const settingItem = salaryConfig.items.find(item => item.id === student.salarySettingId);
+    // Auto-match salary setting: First try explicit ID, then match from school name
+    const settingItem = student.salarySettingId
+      ? salaryConfig.items.find(item => item.id === student.salarySettingId)
+      : getSchoolLevelSalarySetting(student.school, salaryConfig.items);
     const rate = calculateClassRate(settingItem, salaryConfig.academyFee);
     totalSalary += studentClassUnits * rate;
 
