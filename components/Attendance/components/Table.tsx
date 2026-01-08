@@ -184,7 +184,7 @@ const Table: React.FC<Props> = ({
               )}
             </button>
           </td>
-          <td className="p-3 sticky left-[148px] z-10 bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
+          <td className="p-3 sticky left-[148px] z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
             <div className="flex flex-col gap-1.5 justify-center">
               <div className="text-xs text-[#373d41] font-medium flex items-center gap-1">
                 <span className="truncate max-w-[60px]" title={student.school}>{student.school}</span>
@@ -286,63 +286,61 @@ const Table: React.FC<Props> = ({
   };
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-white border border-gray-200 rounded-lg shadow-sm relative">
-      <div className="overflow-auto custom-scrollbar relative h-full">
-        <table className="border-collapse w-full min-w-max text-sm text-left">
-          <thead className="bg-[#081429] text-white font-medium sticky top-0 z-20 shadow-md">
+    <>
+      <table className="border-collapse w-full min-w-max text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm">
+        <thead className="bg-[#081429] text-white font-medium sticky top-0 z-20 shadow-md">
+          <tr>
+            {/* Sticky Left Columns - Added align-middle for vertical centering */}
+            <th className="p-3 sticky left-0 top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 w-12 text-center text-gray-400 align-middle">#</th>
+            <th className="p-3 sticky left-12 top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[100px] align-middle">이름</th>
+            <th className="p-3 sticky left-[148px] top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[100px] align-middle">학교/학년</th>
+
+            {/* Stat Columns - Added align-middle */}
+            <th className="p-3 sticky top-0 border-r border-b border-[#ffffff]/10 min-w-[125px] text-center bg-[#081429] align-middle">요일</th>
+            <th className="p-3 sticky top-0 border-r border-b border-[#ffffff]/10 min-w-[60px] text-center bg-[#081429] align-middle">출석</th>
+
+            {/* Dynamic Date Columns */}
+            {days.map((day) => {
+              const { date, day: dayName, isWeekend } = formatDateDisplay(day);
+              return (
+                <th
+                  key={day.toISOString()}
+                  className={`p-2 sticky top-0 bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[50px] text-center align-middle ${isWeekend ? 'text-red-300' : 'text-gray-300'
+                    }`}
+                >
+                  <div className="flex flex-col items-center justify-center leading-tight">
+                    <span className="text-xs">{date}</span>
+                    <span className="text-[10px] uppercase opacity-75">{dayName}</span>
+                  </div>
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {students.length > 0 ? (
+            <StudentTableBody
+              students={students}
+              days={days}
+              currentDate={currentDate}
+              salaryConfig={salaryConfig}
+              onEditStudent={onEditStudent}
+              onCellClick={handleCellClick}
+              onContextMenu={handleContextMenu}
+              pendingUpdatesByStudent={pendingUpdatesByStudent}
+              pendingMemosByStudent={pendingMemosByStudent}
+              groupOrder={groupOrder}
+              onGroupOrderChange={onGroupOrderChange}
+            />
+          ) : (
             <tr>
-              {/* Sticky Left Columns - Added align-middle for vertical centering */}
-              <th className="p-3 sticky left-0 z-30 bg-[#081429] border-r border-b border-[#ffffff]/10 w-12 text-center text-gray-400 align-middle">#</th>
-              <th className="p-3 sticky left-12 z-30 bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[100px] align-middle">이름</th>
-              <th className="p-3 sticky left-[148px] z-30 bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[100px] align-middle">학교/학년</th>
-
-              {/* Stat Columns - Added align-middle */}
-              <th className="p-3 border-r border-b border-[#ffffff]/10 min-w-[125px] text-center bg-[#ffffff]/5 align-middle">요일</th>
-              <th className="p-3 border-r border-b border-[#ffffff]/10 min-w-[60px] text-center bg-[#ffffff]/5 align-middle">출석</th>
-
-              {/* Dynamic Date Columns */}
-              {days.map((day) => {
-                const { date, day: dayName, isWeekend } = formatDateDisplay(day);
-                return (
-                  <th
-                    key={day.toISOString()}
-                    className={`p-2 border-r border-b border-[#ffffff]/10 min-w-[50px] text-center align-middle ${isWeekend ? 'text-red-300' : 'text-gray-300'
-                      }`}
-                  >
-                    <div className="flex flex-col items-center justify-center leading-tight">
-                      <span className="text-xs">{date}</span>
-                      <span className="text-[10px] uppercase opacity-75">{dayName}</span>
-                    </div>
-                  </th>
-                );
-              })}
+              <td colSpan={days.length + 5} className="p-12 text-center text-gray-400">
+                등록된 학생이 없습니다. 상단의 '학생 추가' 버튼을 눌러 시작하세요.
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {students.length > 0 ? (
-              <StudentTableBody
-                students={students}
-                days={days}
-                currentDate={currentDate}
-                salaryConfig={salaryConfig}
-                onEditStudent={onEditStudent}
-                onCellClick={handleCellClick}
-                onContextMenu={handleContextMenu}
-                pendingUpdatesByStudent={pendingUpdatesByStudent}
-                pendingMemosByStudent={pendingMemosByStudent}
-                groupOrder={groupOrder}
-                onGroupOrderChange={onGroupOrderChange}
-              />
-            ) : (
-              <tr>
-                <td colSpan={days.length + 5} className="p-12 text-center text-gray-400">
-                  등록된 학생이 없습니다. 상단의 '학생 추가' 버튼을 눌러 시작하세요.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          )}
+        </tbody>
+      </table>
 
       {contextMenu && (
         <div
@@ -425,7 +423,7 @@ const Table: React.FC<Props> = ({
           )}
         </div>
       )}
-    </div>
+    </>
   );
 };
 
@@ -473,11 +471,39 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
     onGroupOrderChange(currentOrder);
   };
 
+  // Sort students by group order
+  const sortedStudents = useMemo(() => {
+    // Build effective group order
+    const effectiveOrder = [...groupOrder];
+    uniqueGroups.forEach(g => {
+      if (!effectiveOrder.includes(g)) effectiveOrder.push(g);
+    });
+
+    return [...students].sort((a, b) => {
+      const groupA = a.group || '그룹 없음';
+      const groupB = b.group || '그룹 없음';
+
+      // Sort by group order first
+      const orderA = effectiveOrder.indexOf(groupA);
+      const orderB = effectiveOrder.indexOf(groupB);
+
+      if (orderA !== orderB) {
+        // Handle -1 (not in order) by putting at end
+        if (orderA === -1) return 1;
+        if (orderB === -1) return -1;
+        return orderA - orderB;
+      }
+
+      // Within same group, maintain original order or sort by name
+      return a.name.localeCompare(b.name);
+    });
+  }, [students, groupOrder, uniqueGroups]);
+
   const rows: React.ReactNode[] = [];
   let currentGroup: string | null = null;
   let rankIndex = 0;
 
-  students.forEach((student) => {
+  sortedStudents.forEach((student) => {
     rankIndex++;
 
     // 1. Group Header Logic
@@ -589,10 +615,10 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
   return (
     <tr className="group hover:bg-gray-50 transition-colors">
       {/* Fixed Columns */}
-      <td className="p-3 sticky left-0 z-10 bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-[#373d41]/50 font-mono text-xs align-middle">
+      <td className="p-3 sticky left-0 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-[#373d41]/50 font-mono text-xs align-middle">
         {idx}
       </td>
-      <td className="p-3 sticky left-12 z-10 bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
+      <td className="p-3 sticky left-12 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
         <button
           onClick={() => onEditStudent(student)}
           className="text-left w-full hover:text-[#081429] font-bold text-[#373d41] truncate flex items-center gap-1.5"
@@ -615,7 +641,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
           )}
         </button>
       </td>
-      <td className="p-3 sticky left-[148px] z-10 bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
+      <td className="p-3 sticky left-[148px] z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
         <div className="flex flex-col gap-1.5 justify-center">
           <div className="text-xs text-[#373d41] font-medium flex items-center gap-1">
             <span className="truncate max-w-[80px]" title={student.school}>{student.school}</span>

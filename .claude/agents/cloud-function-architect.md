@@ -1,4 +1,3 @@
-Markdown
 
 ---
 name: cloud-function-architect
