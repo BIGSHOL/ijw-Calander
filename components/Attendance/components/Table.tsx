@@ -184,7 +184,7 @@ const Table: React.FC<Props> = ({
           <td className="p-3 sticky left-[148px] z-10 bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
             <div className="flex flex-col gap-1.5 justify-center">
               <div className="text-xs text-[#373d41] font-medium flex items-center gap-1">
-                <span className="truncate max-w-[80px]" title={student.school}>{student.school}</span>
+                <span className="truncate max-w-[60px]" title={student.school}>{student.school}</span>
                 <span className="text-gray-300">|</span>
                 <span>{student.grade}</span>
               </div>
@@ -199,7 +199,7 @@ const Table: React.FC<Props> = ({
 
           {/* Stat Cells */}
           <td className="p-3 border-r border-b border-gray-200 text-center text-gray-500 bg-[#f8f9fa] font-mono align-middle">
-            <div className="flex flex-wrap justify-center gap-0.5 max-w-[60px] mx-auto">
+            <div className="flex flex-wrap justify-center gap-0.5 max-w-[125px] mx-auto">
               {[...(student.days || [])].sort((a, b) => {
                 const order = ['월', '화', '수', '목', '금', '토', '일'];
                 return order.indexOf(a[0]) - order.indexOf(b[0]);
@@ -291,10 +291,10 @@ const Table: React.FC<Props> = ({
               {/* Sticky Left Columns - Added align-middle for vertical centering */}
               <th className="p-3 sticky left-0 z-30 bg-[#081429] border-r border-b border-[#ffffff]/10 w-12 text-center text-gray-400 align-middle">#</th>
               <th className="p-3 sticky left-12 z-30 bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[100px] align-middle">이름</th>
-              <th className="p-3 sticky left-[148px] z-30 bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[150px] align-middle">학교/학년</th>
+              <th className="p-3 sticky left-[148px] z-30 bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[100px] align-middle">학교/학년</th>
 
               {/* Stat Columns - Added align-middle */}
-              <th className="p-3 border-r border-b border-[#ffffff]/10 min-w-[60px] text-center bg-[#ffffff]/5 align-middle">요일</th>
+              <th className="p-3 border-r border-b border-[#ffffff]/10 min-w-[125px] text-center bg-[#ffffff]/5 align-middle">요일</th>
               <th className="p-3 border-r border-b border-[#ffffff]/10 min-w-[60px] text-center bg-[#ffffff]/5 align-middle">출석</th>
 
               {/* Dynamic Date Columns */}
@@ -627,7 +627,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
 
       {/* Stat Cells */}
       <td className="p-3 border-r border-b border-gray-200 text-center text-gray-500 bg-[#f8f9fa] font-mono align-middle">
-        <div className="flex flex-wrap justify-center gap-0.5 max-w-[60px] mx-auto">
+        <div className="flex flex-wrap justify-center gap-0.5 max-w-[125px] mx-auto">
           {[...(student.days || [])].sort((a, b) => {
             const order = ['월', '화', '수', '목', '금', '토', '일'];
             return order.indexOf(a[0]) - order.indexOf(b[0]);

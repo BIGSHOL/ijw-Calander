@@ -465,7 +465,31 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
                                 {/* Classes Row (Horizontal Scroll) */}
                                 <div className="overflow-x-auto custom-scrollbar">
-                                    <div className="flex w-max border-b border-gray-200">
+                                    <div className="flex items-stretch w-max border-b border-gray-200">
+                                        {/* Sticky Time Column */}
+                                        {group.classes.length > 0 && (
+                                            <div className="sticky left-0 z-20 shadow-[4px_0_12px_-2px_rgba(0,0,0,0.1)] self-stretch">
+                                                <ClassCard
+                                                    classInfo={group.classes[0]}
+                                                    mode={'view'}
+                                                    isHidden={false}
+                                                    onToggleHidden={() => { }}
+                                                    teachersData={teachersData}
+                                                    classKeywords={[]}
+                                                    isMenuOpen={false}
+                                                    onMenuToggle={() => { }}
+                                                    displayOptions={settings.displayOptions}
+                                                    hiddenTeacherList={settings.hiddenTeachers}
+                                                    currentUser={currentUser}
+                                                    englishLevels={englishLevels}
+                                                    isSimulationMode={isSimulationMode}
+                                                    studentMap={studentMap}
+                                                    classStudentData={classDataMap[group.classes[0].name]}
+                                                    isTimeColumnOnly={true}
+                                                />
+                                            </div>
+                                        )}
+
                                         {group.classes.map(cls => (
                                             <ClassCard
                                                 key={cls.name}
@@ -488,6 +512,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 studentMap={studentMap}
                                                 // Cost Optimization: Centralized student data
                                                 classStudentData={classDataMap[cls.name]}
+                                                hideTime={true}
                                             />
                                         ))}
                                     </div>

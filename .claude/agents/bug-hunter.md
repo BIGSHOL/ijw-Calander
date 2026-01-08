@@ -3,6 +3,7 @@ name: bug-hunter
 description: 버그를 찾고 수정하는 전문 에이전트입니다. 에러 메시지 분석, 버그 원인 파악, 수정 방법 제시가 필요할 때 사용하세요.
 tools: Read, Write, Grep, Glob, Bash
 model: sonnet
+trigger_on_phrases: ["버그", "에러", "오류", "bug", "error", "문제 발생", "실패", "작동 안", "안 돼", "깨짐"]
 ---
 
 # 버그 헌터 에이전트

@@ -3,6 +3,8 @@ name: doc-writer
 description: 코드 문서화, README 작성, API 문서, 주석 작성을 담당합니다. 프로젝트 문서가 필요할 때, 코드에 주석이 필요할 때 사용하세요.
 tools: Read, Write, Grep, Glob
 model: sonnet
+trigger_on_phrases: ["문서 작성", "README", "API 문서", "가이드", "문서화", "주석", "설명서"]
+trigger_on_new_features: true
 ---
 
 # 문서화 전문가 에이전트

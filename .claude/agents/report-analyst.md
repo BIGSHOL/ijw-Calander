@@ -3,6 +3,8 @@ name: report-analyst
 description: 마크다운(.md) 보고서를 철저하게 분석하고 개선안을 제시합니다. 문서의 구조, 내용, 가독성, 완성도를 검토하고 구체적인 보완 방안을 제공합니다. .md 파일이 업로드되거나 보고서 검토가 필요할 때 사용하세요.
 tools: Read, Write, Grep, Glob
 model: sonnet
+trigger_on_file_extension: [".md"]
+trigger_on_phrases: ["보고서 검토", "문서 검토", "리포트 분석", "보고서 분석", "개선안"]
 ---
 
 # 보고서 분석 및 개선 전문가

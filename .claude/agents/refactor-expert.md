@@ -3,6 +3,8 @@ name: refactor-expert
 description: 코드 리팩토링과 최적화를 수행합니다. 코드를 더 깔끔하고 유지보수하기 쉽게 개선하고 싶을 때, 성능 최적화가 필요할 때 사용하세요.
 tools: Read, Write, Grep, Glob
 model: sonnet
+trigger_on_phrases: ["리팩토링", "리팩터링", "코드 개선", "최적화", "구조 개선", "정리", "클린 코드"]
+trigger_on_complexity_threshold: true
 ---
 
 # 리팩토링 전문가 에이전트

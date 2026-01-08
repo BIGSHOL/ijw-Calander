@@ -9,6 +9,8 @@ interface MiniGridRowProps {
     teachersData: Teacher[];
     displayDays: string[];
     hiddenTeachers?: string[];
+    hideTime?: boolean;
+    onlyTime?: boolean;
 }
 
 
@@ -18,21 +20,25 @@ const MiniGridRow: React.FC<MiniGridRowProps> = ({
     weekendShift,
     teachersData,
     displayDays,
-    hiddenTeachers
+    hiddenTeachers,
+    hideTime = false,
+    onlyTime = false
 }) => {
     // Parse time for display (e.g. 14:20~15:00 -> 14:20 \n ~15:00)
     const [start, end] = period.time.split('~');
 
     return (
-        <div className="flex border-b border-gray-100 h-[30px]">
+        <div className="flex border-b border-gray-100 h-[24px]">
             {/* Period Label - Time Only */}
-            <div className="w-[48px] border-r border-gray-100 flex flex-col items-center justify-center bg-gray-50 shrink-0 leading-tight py-0.5">
-                <span className="text-[9px] font-bold text-gray-700 tracking-tighter">{start}</span>
-                <span className="text-[9px] text-gray-500 tracking-tighter">~{end}</span>
-            </div>
+            {!hideTime && (
+                <div className="w-[48px] border-r border-gray-100 flex flex-col items-center justify-center bg-gray-50 shrink-0 leading-tight py-0.5">
+                    <span className="text-[9px] font-bold text-gray-700 tracking-tighter">{start}</span>
+                    <span className="text-[9px] text-gray-500 tracking-tighter">~{end}</span>
+                </div>
+            )}
 
             {/* Days */}
-            {displayDays.map(day => {
+            {!onlyTime && displayDays.map(day => {
                 const dayIndex = EN_WEEKDAYS.indexOf(day as any);
                 const isWeekend = dayIndex >= 5;
 
@@ -80,7 +86,7 @@ const MiniGridRow: React.FC<MiniGridRowProps> = ({
                     >
                         {cell && !isHidden ? (
                             <span className={`leading-tight line-clamp-2 break-all ${cell.underline ? 'underline italic' : ''}`}>
-                                {cell.teacher}
+                                {cell.teacher.slice(0, 4)}
                             </span>
                         ) : (
                             <span className="text-gray-200">-</span>
