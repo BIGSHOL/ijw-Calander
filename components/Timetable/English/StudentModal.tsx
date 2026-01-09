@@ -52,7 +52,14 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
 
     // Find class document by className, auto-create if not found
     useEffect(() => {
-        if (!isOpen || !className) return;
+        if (!isOpen || !className) {
+            // Reset state when closing
+            setClassDocId(null);
+            setStudents([]);
+            setClassTeacher('');
+            setIsDirty(false);
+            return;
+        }
 
         // Reset dirty state when opening
         setIsDirty(false);
@@ -68,9 +75,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                     // Class exists
                     const docRef = snapshot.docs[0];
                     setClassDocId(docRef.id);
-                    const data = docRef.data();
-                    setStudents(data.studentList || []);
-                    setClassTeacher(data.teacher || '');
+                    // Don't set students here - let onSnapshot handle it
                 } else {
                     // Auto-create class
                     if (isSimulationMode) {
@@ -89,8 +94,6 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                         };
                         await setDocFn(doc(db, targetCollection, newDocId), newClassData);
                         setClassDocId(newDocId);
-                        setStudents([]);
-                        setClassTeacher(teacher || '');
                         console.log(`[Simulation] Auto-created class: ${className}`);
                     } else {
                         // 실시간 모드: 사용자 확인 필요
@@ -117,8 +120,6 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                         };
                         await setDocFn(doc(db, targetCollection, newDocId), newClassData);
                         setClassDocId(newDocId);
-                        setStudents([]);
-                        setClassTeacher(teacher || '');
                         console.log(`[Live] User-confirmed class creation: ${className}`);
                     }
                 }
@@ -130,26 +131,38 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
         };
 
         findOrCreateClass();
-    }, [isOpen, className, isSimulationMode, teacher, onClose]);
+    }, [isOpen, className, isSimulationMode]);
 
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = (hasPermission('timetable.english.edit') || isMaster) && !readOnly;
 
-    // Ref for isDirty to access current value inside callback without re-subscribing.
+    // Ref to track isDirty without causing re-subscription
     const isDirtyRef = useRef(isDirty);
-    useEffect(() => { isDirtyRef.current = isDirty; }, [isDirty]);
+    useEffect(() => {
+        isDirtyRef.current = isDirty;
+    }, [isDirty]);
 
     // Real-time sync when classDocId is available - Optimized single listener
     useEffect(() => {
         if (!classDocId) return;
+
         const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
+
         const unsub = onSnapshot(doc(db, targetCollection, classDocId), (docSnap) => {
-            if (isDirtyRef.current) return; // Use Ref to check current dirty state
+            // Skip update if user has unsaved changes (using Ref to avoid re-subscription)
+            if (isDirtyRef.current) {
+                console.log('[StudentModal] Skipping update - isDirty is true');
+                return;
+            }
+
             if (docSnap.exists()) {
                 const data = docSnap.data();
+                console.log('[StudentModal] Received snapshot update:', data.studentList?.length, 'students');
                 setStudents(data.studentList || []);
                 setClassTeacher(data.teacher || '');
+            } else {
+                console.warn('[StudentModal] Document does not exist');
             }
         }, (error) => {
             console.error('Real-time listener error:', error);
@@ -159,6 +172,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                 alert('네트워크 연결을 확인해주세요.');
             }
         });
+
         return () => unsub();
     }, [classDocId, isSimulationMode]);
 
@@ -180,14 +194,23 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                 return cleanStudent;
             });
 
+            console.log('[StudentModal] Saving students:', sanitizedStudents);
+
+            // Set isDirty to false BEFORE saving so listener can receive updates
+            setIsDirty(false);
+
             const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
             await updateDoc(doc(db, targetCollection, classDocId), { studentList: sanitizedStudents });
-            setIsDirty(false);
+
+            console.log('[StudentModal] Save successful');
 
             const mode = isSimulationMode ? '[시뮬레이션]' : '';
             alert(`${mode} 저장되었습니다.`);
         } catch (error: any) {
             console.error('Save error:', error);
+            // Re-enable isDirty on error so user can retry
+            setIsDirty(true);
+
             let message = '저장 실패: ';
             if (error.code === 'permission-denied') message += '권한이 없습니다.';
             else if (error.code === 'unavailable') message += '네트워크를 확인해주세요.';

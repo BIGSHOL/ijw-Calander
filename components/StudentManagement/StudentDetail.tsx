@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { UnifiedStudent } from '../../types';
 import BasicInfoTab from './tabs/BasicInfoTab';
 import CoursesTab from './tabs/CoursesTab';
+import GradesTab from './tabs/GradesTab';
 import ConsultationsTab from './tabs/ConsultationsTab';
-import { User, BookOpen, Phone } from 'lucide-react';
+import { User, BookOpen, Phone, GraduationCap } from 'lucide-react';
 
 interface StudentDetailProps {
   student: UnifiedStudent;
 }
 
-type TabType = 'basic' | 'courses' | 'consultations';
+type TabType = 'basic' | 'courses' | 'grades' | 'consultations';
 
 const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
@@ -17,6 +18,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'basic', label: '기본정보', icon: <User className="w-4 h-4" /> },
     { id: 'courses', label: '수업', icon: <BookOpen className="w-4 h-4" /> },
+    { id: 'grades', label: '성적', icon: <GraduationCap className="w-4 h-4" /> },
     { id: 'consultations', label: '콜앤상담', icon: <Phone className="w-4 h-4" /> },
   ];
 
@@ -53,6 +55,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
       <div className="flex-1 overflow-y-auto p-6">
         {activeTab === 'basic' && <BasicInfoTab student={student} />}
         {activeTab === 'courses' && <CoursesTab student={student} />}
+        {activeTab === 'grades' && <GradesTab student={student} />}
         {activeTab === 'consultations' && <ConsultationsTab student={student} />}
       </div>
     </div>

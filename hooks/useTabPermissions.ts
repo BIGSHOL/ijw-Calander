@@ -43,7 +43,7 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
         };
 
         // Pre-calculate accessible tabs for easy mapping
-        const accessibleTabs: AppTab[] = (['calendar', 'timetable', 'payment', 'gantt', 'consultation', 'attendance', 'students'] as AppTab[]).filter((t) =>
+        const accessibleTabs: AppTab[] = (['calendar', 'timetable', 'payment', 'gantt', 'consultation', 'attendance', 'students', 'grades'] as AppTab[]).filter((t) =>
             canAccessTab(t)
         );
 

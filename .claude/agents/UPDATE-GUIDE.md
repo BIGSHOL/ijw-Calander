@@ -1,8 +1,9 @@
 # 🆕 에이전트 시스템 업데이트 가이드
 
-> **업데이트 날짜**: 2026-01-08  
-> **추가된 에이전트**: 3개  
-> **총 에이전트 수**: 10개 → 13개
+> **업데이트 날짜**: 2026-01-09  
+> **추가된 에이전트**: 4개  
+> **총 에이전트 수**: 10개 → 14개  
+> **상태**: ✅ 적용 완료
 
 ---
 
@@ -80,9 +81,41 @@
 
 ---
 
+### 4. 📋 report-summarizer (보고서 요약 전문가) 🆕
+
+| 항목 | 내용 |
+|------|------|
+| **역할** | 긴 리포트를 핵심만 빠르게 요약, 의사결정 지원 |
+| **중요도** | ⭐⭐⭐⭐⭐ (필수) |
+| **트리거 키워드** | "요약", "핵심만", "간단히", "브리핑", "정리해줘", "한줄로" |
+| **파일 위치** | `agents/report-summarizer.md` |
+
+**주요 기능**:
+- 코드 리뷰 결과 요약
+- 보안 검사 결과 요약
+- 데이터 분석 리포트 요약
+- Firebase 비용 분석 요약
+- 버그 분석 결과 요약
+
+**사용 예시**:
+```
+"코드 리뷰하고 요약해줘"
+"보안 검사 결과 핵심만"
+"이번 달 분석 한줄로"
+```
+
+**체인 실행 지원**:
+```
+사용자: "코드 리뷰하고 요약해줘"
+→ code-reviewer 실행 → report-summarizer 자동 연결
+→ "🟡 Critical 2건, Important 5건. 즉시 수정: StudentList.tsx"
+```
+
+---
+
 ## 🔄 업데이트된 워크플로우
 
-### 새로운 워크플로우 추가
+### 새로운 워크플로우 추가 (3개)
 
 #### 6️⃣ 보안 점검 워크플로우 (신규)
 
@@ -147,7 +180,7 @@ notification-designer (자동 발송 설정)
 
 ---
 
-## 📋 업데이트된 에이전트 목록 (총 13개)
+## 📋 업데이트된 에이전트 목록 (총 14개)
 
 ### 코드 품질 관리 (4개)
 
@@ -173,13 +206,14 @@ notification-designer (자동 발송 설정)
 | bug-hunter | 버그 추적 | 기존 |
 | refactor-expert | 리팩토링 | 기존 |
 
-### 문서화 및 분석 (3개)
+### 문서화 및 분석 (4개)
 
 | 에이전트 | 역할 | 상태 |
 |---------|------|------|
 | doc-writer | 문서 작성 | 기존 |
 | report-analyst | 문서 검토 | 기존 |
 | **analytics-expert** | **데이터 분석** | **🆕 신규** |
+| **report-summarizer** | **리포트 요약** | **🆕 신규** |
 
 ### 테스트 (1개)
 
@@ -189,7 +223,7 @@ notification-designer (자동 발송 설정)
 
 ---
 
-## 🗺️ 에이전트 협업 관계도 (업데이트)
+## 🗺️ 에이전트 협업 관계도 (업데이트 완료)
 
 ```
                     ┌─────────────────────┐
@@ -231,7 +265,7 @@ notification-designer (자동 발송 설정)
 
 ---
 
-## ⚡ 빠른 참조 카드 (업데이트)
+## ⚡ 빠른 참조 카드 (업데이트 완료)
 
 ### 상황별 에이전트 선택
 
@@ -244,49 +278,53 @@ notification-designer (자동 발송 설정)
 | **🆕 보안 걱정** | **"보안 검사해줘"** | **security-auditor** |
 | **🆕 알림 기능** | **"알림 설계해줘"** | **notification-designer** |
 | **🆕 데이터 분석** | **"통계 분석해줘"** | **analytics-expert** |
+| **🆕 리포트 요약** | **"요약해줘" / "핵심만"** | **report-summarizer** |
 
 ---
 
-## 📁 파일 구조
+## 📁 파일 구조 (최종)
 
 ```
 .claude/agents/
 ├── 기존 에이전트 (10개)
 │   ├── academy-domain-expert.md
-│   ├── bug-hunter.md
+│   ├── bug-hunter.md          ✅ 협업 섹션 추가됨
 │   ├── cloud-function-architect.md
 │   ├── code-fixer.md
-│   ├── code-reviewer.md
+│   ├── code-reviewer.md       ✅ 협업 섹션 업데이트됨
 │   ├── doc-writer.md
-│   ├── firebase-cost-optimizer.md
-│   ├── refactor-expert.md
+│   ├── firebase-cost-optimizer.md ✅ 협업 섹션 업데이트됨
+│   ├── refactor-expert.md     ✅ 협업 섹션 추가됨
 │   ├── report-analyst.md
 │   └── test-writer.md
 │
-├── 🆕 신규 에이전트 (3개)
-│   ├── security-auditor.md      ← 추가
-│   ├── notification-designer.md ← 추가
-│   └── analytics-expert.md      ← 추가
+├── 🆕 신규 에이전트 (4개)
+│   ├── security-auditor.md      ✅ 추가됨
+│   ├── notification-designer.md ✅ 추가됨
+│   ├── analytics-expert.md      ✅ 추가됨
+│   └── report-summarizer.md     ✅ 추가됨 (NEW!)
 │
-├── README.md                    ← 업데이트 필요
-├── WORKFLOW.md                  ← 업데이트 필요
-└── ROLE-CLARIFICATION.md        ← 업데이트 필요
+├── README.md                    ✅ 업데이트됨
+├── WORKFLOW.md                  ✅ 업데이트됨
+├── ROLE-CLARIFICATION.md        ✅ 업데이트됨
+└── UPDATE-GUIDE.md              ✅ 업데이트됨
 ```
 
 ---
 
-## ✅ 적용 체크리스트
+## ✅ 적용 체크리스트 (완료)
 
-### 즉시 적용
+### 즉시 적용 ✅
 
-- [ ] 3개 신규 에이전트 파일을 `.claude/agents/` 폴더에 복사
-- [ ] README.md에 신규 에이전트 추가
-- [ ] WORKFLOW.md에 신규 워크플로우 추가
+- [x] 3개 신규 에이전트 파일을 `.claude/agents/` 폴더에 복사
+- [x] README.md에 신규 에이전트 추가
+- [x] WORKFLOW.md에 신규 워크플로우 추가
+- [x] ROLE-CLARIFICATION.md 업데이트
 
-### 선택 적용
+### 선택 적용 (권장)
 
-- [ ] ROLE-CLARIFICATION.md 업데이트
 - [ ] 기존 에이전트들에 신규 에이전트 협업 섹션 추가
+- [ ] 팀원들에게 변경사항 공유
 
 ---
 
@@ -314,7 +352,24 @@ notification-designer (자동 발송 설정)
 
 ## 📝 변경 이력
 
-### v1.3 (2026-01-08) - 현재
+### v1.4 (2026-01-09) - 현재 ✅
+
+**추가됨**:
+- ✅ report-summarizer (리포트 요약)
+
+**업데이트됨**:
+- ✅ code-reviewer.md - report-summarizer 협업 연계 추가
+- ✅ security-auditor.md - report-summarizer 협업 연계 추가
+- ✅ analytics-expert.md - report-summarizer 협업 연계 추가
+- ✅ firebase-cost-optimizer.md - report-summarizer 협업 연계 추가
+- ✅ bug-hunter.md - 협업 프로토콜 섹션 추가
+- ✅ refactor-expert.md - 협업 프로토콜 섹션 추가
+- ✅ README.md - 14개 에이전트 반영
+- ✅ WORKFLOW.md - 요약 연계 설명 추가
+- ✅ ROLE-CLARIFICATION.md - report-summarizer 역할 추가
+- ✅ UPDATE-GUIDE.md - 14개 에이전트 반영
+
+### v1.3 (2026-01-09)
 
 **추가됨**:
 - ✅ security-auditor (보안 검사)
@@ -322,9 +377,10 @@ notification-designer (자동 발송 설정)
 - ✅ analytics-expert (데이터 분석)
 
 **업데이트됨**:
-- 📋 워크플로우 3개 추가
-- 📋 협업 관계도 업데이트
-- 📋 빠른 참조 카드 업데이트
+- ✅ README.md - 13개 에이전트 반영
+- ✅ WORKFLOW.md - 8가지 워크플로우 반영
+- ✅ ROLE-CLARIFICATION.md - 13개 에이전트 역할 정의
+- ✅ UPDATE-GUIDE.md - 적용 완료 상태
 
 ### v1.2 (2026-01-08)
 
@@ -341,5 +397,27 @@ notification-designer (자동 발송 설정)
 
 ---
 
+## 🚀 다음 단계 (권장)
+
+### 선택적 추가 에이전트
+
+향후 필요에 따라 추가 검토:
+
+| 에이전트 | 역할 | 우선순위 |
+|---------|------|----------|
+| deployment-manager | 배포 관리 | 중간 |
+| git-assistant | Git 작업 지원 | 낮음 |
+| accessibility-checker | 접근성 검사 | 낮음 |
+| api-designer | API 설계 | 낮음 |
+
+### 정기 점검
+
+- 월 1회: 에이전트 문서 최신화 확인
+- 분기 1회: 새로운 에이전트 필요성 검토
+- 연 1회: 전체 시스템 아키텍처 리뷰
+
+---
+
 **문서 작성**: Claude  
-**검토 완료**: 2026-01-08
+**검토 완료**: 2026-01-09  
+**상태**: ✅ 모든 업데이트 완료

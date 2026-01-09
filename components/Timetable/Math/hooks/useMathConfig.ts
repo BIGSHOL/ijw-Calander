@@ -12,6 +12,7 @@ export const useMathConfig = () => {
         teacherOrder: [],
         weekdayOrder: []
     });
+    const [isLoading, setIsLoading] = useState(true);
     const [isTeacherOrderModalOpen, setIsTeacherOrderModalOpen] = useState(false);
     const [isWeekdayOrderModalOpen, setIsWeekdayOrderModalOpen] = useState(false);
 
@@ -29,12 +30,19 @@ export const useMathConfig = () => {
                 }
             } catch (error) {
                 console.error('Math config 로딩 실패:', error);
+            } finally {
+                setIsLoading(false);
             }
         };
         loadConfig();
     }, []);
 
     const handleSaveTeacherOrder = async (newOrder: string[]) => {
+        if (isLoading) {
+            console.warn('Config not loaded yet');
+            return;
+        }
+
         try {
             await setDoc(doc(db, 'settings', 'math_config'), { teacherOrder: newOrder }, { merge: true });
             setMathConfig(prev => ({ ...prev, teacherOrder: newOrder }));
@@ -45,6 +53,11 @@ export const useMathConfig = () => {
     };
 
     const handleSaveWeekdayOrder = async (newOrder: string[]) => {
+        if (isLoading) {
+            console.warn('Config not loaded yet');
+            return;
+        }
+
         try {
             await setDoc(doc(db, 'settings', 'math_config'), { weekdayOrder: newOrder }, { merge: true });
             setMathConfig(prev => ({ ...prev, weekdayOrder: newOrder }));
@@ -56,6 +69,7 @@ export const useMathConfig = () => {
 
     return {
         mathConfig,
+        isLoading,
         isTeacherOrderModalOpen,
         setIsTeacherOrderModalOpen,
         isWeekdayOrderModalOpen,

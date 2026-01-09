@@ -526,6 +526,14 @@ const GroupCard = React.memo<GroupCardProps>(({
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
 
+    // Local state for title to prevent IME issues and re-renders
+    const [localTitle, setLocalTitle] = useState(group.title || "");
+
+    // Sync local state when prop changes
+    React.useEffect(() => {
+        setLocalTitle(group.title || "");
+    }, [group.title]);
+
     const filteredClasses = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
         if (!term) return allClasses;
@@ -540,8 +548,13 @@ const GroupCard = React.memo<GroupCardProps>(({
             <div className="flex items-center justify-between gap-2">
                 <input
                     type="text"
-                    value={group.title || ""}
-                    onChange={(e) => onTitleChange(e.target.value)}
+                    value={localTitle}
+                    onChange={(e) => setLocalTitle(e.target.value)}
+                    onBlur={() => {
+                        if (localTitle !== group.title) {
+                            onTitleChange(localTitle);
+                        }
+                    }}
                     className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
                     placeholder="그룹 제목"
                 />

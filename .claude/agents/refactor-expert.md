@@ -260,6 +260,34 @@ function Button({ variant = 'default', ...props }) {
 - 렌더링 성능 측정
 - 최적화 효과 검증
 
+## 협업 프로토콜
+
+### 다른 에이전트와의 협업
+
+```
+[리팩토링 필요]
+    ↓
+refactor-expert (리팩토링 계획) ← 현재 에이전트
+    ↓
+report-summarizer (계획 요약) ← 선택적
+    ↓
+code-fixer (리팩토링 실행)
+    ↓
+test-writer (회귀 테스트)
+    ↓
+code-reviewer (검증)
+    ↓
+[리팩토링 완료]
+```
+
+### report-summarizer 연계
+리팩토링 분석 리포트가 길 경우, 사용자가 "요약해줘"라고 하면 핵심만 브리핑:
+```
+사용자: "리팩토링 분석하고 핵심만 알려줘"
+→ refactor-expert 실행 → report-summarizer 자동 연결
+→ "🔄 3단계 리팩토링 필요. 우선순위: 컴포넌트 분리 → 훅 추출 → 타입 정리"
+```
+
 ## 주의사항
 - 리팩토링 전후 동작이 동일함을 보장
 - 성능 개선은 측정 후 진행

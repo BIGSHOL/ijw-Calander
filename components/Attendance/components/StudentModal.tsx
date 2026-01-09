@@ -11,9 +11,10 @@ interface Props {
   salaryConfig: SalaryConfig;
   currentViewDate: Date;
   existingGroups: string[];
+  canEdit?: boolean;
 }
 
-const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, initialData, salaryConfig, currentViewDate, existingGroups }) => {
+const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, initialData, salaryConfig, currentViewDate, existingGroups, canEdit = true }) => {
   const [formData, setFormData] = useState<Partial<Student>>({
     name: '',
     school: '',
@@ -90,7 +91,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
       >
         <div className="flex justify-between items-center p-6 border-b border-gray-100 sticky top-0 bg-white z-10">
           <h2 className="text-xl font-bold text-gray-800">
-            {initialData ? '학생 정보 수정' : '새 학생 추가'}
+            {initialData ? (canEdit ? '학생 정보 수정' : '학생 정보 조회') : '새 학생 추가'}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
             <X size={20} className="text-gray-500" />
@@ -106,6 +107,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
                 type="text"
                 placeholder="홍길동"
                 value={formData.name}
+                disabled={!canEdit}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
@@ -144,6 +146,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
                 type="text"
                 placeholder="OO초등학교"
                 value={formData.school}
+                disabled={!canEdit}
                 onChange={e => setFormData({ ...formData, school: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
@@ -157,6 +160,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
                 type="text"
                 placeholder="예: 3, 중1"
                 value={formData.grade}
+                disabled={!canEdit}
                 onChange={e => setFormData({ ...formData, grade: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               />
@@ -166,6 +170,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
               <select
                 required
                 value={formData.salarySettingId}
+                disabled={!canEdit}
                 onChange={e => setFormData({ ...formData, salarySettingId: e.target.value })}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
               >
@@ -191,6 +196,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
                   required
                   type="date"
                   value={formData.startDate}
+                  disabled={!canEdit}
                   onChange={e => setFormData({ ...formData, startDate: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                 />
@@ -200,6 +206,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
                 <input
                   type="date"
                   value={formData.endDate || ''}
+                  disabled={!canEdit}
                   onChange={e => setFormData({ ...formData, endDate: e.target.value || null })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder="계속 수강중"
@@ -233,17 +240,20 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
 
           <div className="pt-4 flex gap-3 border-t border-gray-100 mt-2">
 
-            <button
+            {initialData && canEdit && (<button type="button" onClick={handleDelete} className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={20} /></button>)}
+            {canEdit && <button
               type="submit"
               disabled={salaryConfig.items.length === 0}
               className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 active:bg-blue-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               {initialData ? '수정 완료' : '학생 추가'}
             </button>
+            }
+
           </div>
         </form>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

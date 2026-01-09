@@ -6,6 +6,7 @@ import { ko } from 'date-fns/locale';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { useQuery } from '@tanstack/react-query';
+import { GANTT_TASK_COLORS, DEFAULT_GANTT_CATEGORIES, GANTT_DEPENDENCY_CONFIG } from '../../config/ganttConfig';
 
 
 interface GanttChartProps {
@@ -15,15 +16,8 @@ interface GanttChartProps {
     onSaveAsTemplate?: () => void;
 }
 
-// Phase 2: Neon Gradient Palette with Glow + Arrow Color
-const COLORS = [
-    { bg: 'bg-gradient-to-r from-cyan-500 to-blue-500', shadow: 'shadow-cyan-500/50', glow: 'rgba(6, 182, 212, 0.4)', arrow: '#06b6d4' },
-    { bg: 'bg-gradient-to-r from-orange-500 to-amber-500', shadow: 'shadow-orange-500/50', glow: 'rgba(249, 115, 22, 0.4)', arrow: '#f97316' },
-    { bg: 'bg-gradient-to-r from-pink-500 to-rose-500', shadow: 'shadow-pink-500/50', glow: 'rgba(236, 72, 153, 0.4)', arrow: '#ec4899' },
-    { bg: 'bg-gradient-to-r from-emerald-500 to-green-500', shadow: 'shadow-emerald-500/50', glow: 'rgba(16, 185, 129, 0.4)', arrow: '#10b981' },
-    { bg: 'bg-gradient-to-r from-violet-500 to-purple-500', shadow: 'shadow-violet-500/50', glow: 'rgba(139, 92, 246, 0.4)', arrow: '#8b5cf6' },
-    { bg: 'bg-gradient-to-r from-blue-600 to-indigo-600', shadow: 'shadow-blue-600/50', glow: 'rgba(59, 130, 246, 0.4)', arrow: '#3b82f6' },
-];
+// P2 개선: 하드코딩된 색상을 config에서 import
+const COLORS = GANTT_TASK_COLORS;
 
 const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesign", startDate, onSaveAsTemplate }) => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -33,20 +27,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
 
 
 
-    // Dynamic Categories Loading (Phase 11)
+    // Dynamic Categories Loading (Phase 11) - P2 개선: 폴백을 config에서 가져옴
     const { data: categories = [] } = useQuery<{ id: string; label: string; backgroundColor: string; textColor: string }[]>({
         queryKey: ['ganttCategories'],
         queryFn: async () => {
             const q = query(collection(db, 'gantt_categories'), orderBy('order', 'asc'));
             const snapshot = await getDocs(q);
             if (snapshot.empty) {
-                // Fallback / Hardcoded defaults if empty (should correspond to seeded data)
-                return [
-                    { id: 'planning', label: '기획', backgroundColor: '#dbeafe', textColor: '#1d4ed8' }, // blue-100, blue-700
-                    { id: 'development', label: '개발', backgroundColor: '#f3e8ff', textColor: '#7e22ce' }, // purple-100, purple-700
-                    { id: 'testing', label: '테스트', backgroundColor: '#d1fae5', textColor: '#047857' }, // emerald-100, emerald-700
-                    { id: 'other', label: '기타', backgroundColor: '#f3f4f6', textColor: '#374151' } // gray-100, gray-700
-                ];
+                // P2: 폴백을 중앙 설정 파일에서 가져옴
+                return DEFAULT_GANTT_CATEGORIES;
             }
             return snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -163,9 +152,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
 
     // Generate dependency arrows: LEFT VERTICAL LANE pattern
     // All arrows route through a vertical lane on the left side
-    const LANE_BASE_X = 25; // Left margin for vertical lane
-    const LANE_SPACING = 6; // Spacing between multiple lanes
-    const Y_OFFSET_STEP = 4; // Subtle Y offset for arrows from same source
+    // P2 개선: 설정값을 config에서 가져옴
+    const { LANE_BASE_X, LANE_SPACING, Y_OFFSET_STEP } = GANTT_DEPENDENCY_CONFIG;
 
     const dependencyArrows = useMemo(() => {
         const arrows: Array<{ fromId: string; toId: string; path: string; startX: number; startY: number; endX: number; endY: number; color: string }> = [];
@@ -508,8 +496,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                             <div key={group.id} className="mt-8">
                                 {/* Group Header */}
                                 <div className="flex items-center gap-2 mb-4 sticky left-0 px-2">
-                                    <CheckCircle2 size={16} style={{ color: (group as any).style?.color || '#3b82f6' }} />
-                                    <span className="text-xs font-bold tracking-wider" style={{ color: (group as any).style?.color || '#374151' }}>{group.title}</span>
+                                    <CheckCircle2 size={16} style={{ color: group.style?.color || '#3b82f6' }} />
+                                    <span className="text-xs font-bold tracking-wider" style={{ color: group.style?.color || '#374151' }}>{group.title}</span>
                                 </div>
 
                                 {/* Tasks Grid */}

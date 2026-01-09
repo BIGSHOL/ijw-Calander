@@ -117,12 +117,26 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
     };
 
     const handleToggleTask = useCallback((taskId: string) => {
-        setActiveTasks(prevTasks =>
-            prevTasks.map(t =>
+        setActiveTasks(prevTasks => {
+            const newTasks = prevTasks.map(t =>
                 t.id === taskId ? { ...t, completed: !t.completed } : t
-            )
-        );
-    }, []);
+            );
+
+            // P1: 진행률을 Firestore에 저장
+            if (activeTemplateId) {
+                updateTemplate.mutate({
+                    id: activeTemplateId,
+                    updates: { tasks: newTasks }
+                }, {
+                    onError: (error) => {
+                        console.error("진행률 저장 실패:", error);
+                    }
+                });
+            }
+
+            return newTasks;
+        });
+    }, [activeTemplateId, updateTemplate]);
 
     const handleSaveAsTemplate = () => {
         if (!activeTemplateId) return;
@@ -132,8 +146,10 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
         const templateName = prompt("새 템플릿의 이름을 입력하세요:", `${currentTemplate.title} (템플릿)`);
         if (!templateName) return;
 
-        const newTemplate: GanttTemplate = {
-            ...currentTemplate,
+        // id를 제외한 새 템플릿 객체 생성 (Omit 패턴 사용)
+        const { id: _excludedId, ...templateWithoutId } = currentTemplate;
+        const newTemplate: Omit<GanttTemplate, 'id'> & { id?: string } = {
+            ...templateWithoutId,
             title: templateName,
             isTemplate: true,
             createdAt: Date.now(),
@@ -141,9 +157,6 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
             createdBy: userProfile?.uid,
             createdByEmail: userProfile?.email,
         };
-
-        // @ts-ignore
-        delete newTemplate.id;
 
         createTemplate.mutate(newTemplate, {
             onSuccess: () => {

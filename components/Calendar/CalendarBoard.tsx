@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { format, setMonth, setYear, isToday, isPast, isFuture, parseISO, startOfDay, endOfDay, isSameDay, addDays, subDays, differenceInMinutes, setHours, setMinutes, getHours, getMinutes, getDaysInMonth, getDate, setDate, addWeeks, subWeeks, addMonths, subMonths, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { Department, CalendarEvent, UserProfile, DEFAULT_ROLE_PERMISSIONS } from '../../types';
+import { Department, CalendarEvent, UserProfile, DEFAULT_ROLE_PERMISSIONS, DEFAULT_EVENT_TAGS } from '../../types';
 import { getMonthWeeks } from '../../utils/dateUtils';
 import WeekBlock from './WeekBlock';
 import MyEventsModal from './MyEventsModal'; // Import
@@ -365,12 +365,20 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
     }
 
     return allEvents.filter(e => {
-      // 1. Text Search
+      // 1. Text Search (including tags)
       const queryText = q.toLowerCase();
+      // Check if query matches any tag (supports both #tag and tag format)
+      const cleanQuery = queryText.startsWith('#') ? queryText.slice(1) : queryText;
+      const matchesTags = e.tags && e.tags.some(tagId => {
+        const tagDef = DEFAULT_EVENT_TAGS.find(t => t.id === tagId);
+        return tagId.toLowerCase().includes(cleanQuery) ||
+          (tagDef && tagDef.name.toLowerCase().includes(cleanQuery));
+      });
       const matchesText = !q ||
         e.title.toLowerCase().includes(queryText) ||
         (e.description && e.description.toLowerCase().includes(queryText)) ||
-        (e.participants && typeof e.participants === 'string' && e.participants.toLowerCase().includes(queryText));
+        (e.participants && typeof e.participants === 'string' && e.participants.toLowerCase().includes(queryText)) ||
+        matchesTags;
 
       // 2. Department Filter
       const matchesDept = depts.length === 0 ||
@@ -701,6 +709,29 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                                   <div className="text-[10px] text-gray-500 truncate">{event.description}</div>
                                 )}
                               </div>
+                              {/* Tags Display */}
+                              {event.tags && event.tags.length > 0 && (
+                                <div className="flex gap-1 flex-shrink-0">
+                                  {event.tags.slice(0, 2).map(tagId => {
+                                    const tagDef = DEFAULT_EVENT_TAGS.find(t => t.id === tagId);
+                                    return (
+                                      <span
+                                        key={tagId}
+                                        className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                                        style={{
+                                          backgroundColor: tagDef?.color ? `${tagDef.color}20` : '#E5E7EB',
+                                          color: tagDef?.color || '#6B7280',
+                                        }}
+                                      >
+                                        #{tagDef?.name || tagId}
+                                      </span>
+                                    );
+                                  })}
+                                  {event.tags.length > 2 && (
+                                    <span className="text-[9px] text-gray-400">+{event.tags.length - 2}</span>
+                                  )}
+                                </div>
+                              )}
                               {primaryDept && (
                                 <span className="text-[10px] px-2 py-1 rounded bg-gray-50 font-medium text-gray-500 whitespace-nowrap">
                                   {primaryDept.name}

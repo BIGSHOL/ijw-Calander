@@ -77,7 +77,7 @@ export function usePermissions(userProfile: UserProfile | null): UsePermissionsR
             throw new Error('Only MASTER can update role permissions');
         }
 
-        await setDoc(doc(db, 'settings', 'rolePermissions'), newPermissions);
+        await setDoc(doc(db, 'settings', 'rolePermissions'), newPermissions, { merge: true });
     }, [userProfile]);
 
     return {

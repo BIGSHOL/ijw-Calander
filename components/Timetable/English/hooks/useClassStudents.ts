@@ -9,7 +9,7 @@
  * // classDataMap[className] = { studentList: [...], studentIds: [...] }
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from '../englishUtils';
@@ -27,6 +27,12 @@ export const useClassStudents = (
 ) => {
     const [classDataMap, setClassDataMap] = useState<Record<string, ClassStudentData>>({});
     const [isLoading, setIsLoading] = useState(true);
+
+    // Use Ref to avoid re-subscription when studentMap reference changes
+    const studentMapRef = useRef(studentMap);
+    useEffect(() => {
+        studentMapRef.current = studentMap;
+    }, [studentMap]);
 
     useEffect(() => {
         if (classNames.length === 0) {
@@ -46,7 +52,6 @@ export const useClassStudents = (
         }
 
         const unsubscribes: (() => void)[] = [];
-        const tempDataMap: Record<string, ClassStudentData> = {};
 
         chunks.forEach((chunk, chunkIndex) => {
             const q = query(
@@ -55,51 +60,54 @@ export const useClassStudents = (
             );
 
             const unsub = onSnapshot(q, (snapshot) => {
-                snapshot.docs.forEach(doc => {
-                    const data = doc.data();
-                    const className = data.className as string;
+                // Update state immediately for this chunk
+                setClassDataMap(prevMap => {
+                    const updatedMap = { ...prevMap };
 
-                    let studentList: TimetableStudent[] = [];
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        const className = data.className as string;
 
-                    // Get the original studentList from the class document (contains underline, enrollmentDate, etc.)
-                    const originalStudentList = (data.studentList || []) as TimetableStudent[];
+                        let studentList: TimetableStudent[] = [];
 
-                    // If using studentIds (unified DB), merge with original properties
-                    if (data.studentIds && Array.isArray(data.studentIds) && data.studentIds.length > 0) {
-                        studentList = data.studentIds.map((id: string, index: number) => {
-                            const baseStudent = studentMap[id];
-                            // Find matching student in original list by id or index
-                            const originalStudent = originalStudentList.find(s => s.id === id)
-                                || originalStudentList[index];
+                        // Get the original studentList from the class document (contains underline, enrollmentDate, etc.)
+                        const originalStudentList = (data.studentList || []) as TimetableStudent[];
 
-                            if (baseStudent) {
-                                // Merge: base from unified DB + original properties (underline, enrollmentDate, withdrawalDate, onHold)
-                                return {
-                                    ...baseStudent,
-                                    underline: originalStudent?.underline ?? baseStudent.underline,
-                                    enrollmentDate: originalStudent?.enrollmentDate ?? baseStudent.enrollmentDate,
-                                    withdrawalDate: originalStudent?.withdrawalDate ?? baseStudent.withdrawalDate,
-                                    onHold: originalStudent?.onHold ?? baseStudent.onHold,
-                                };
-                            }
-                            return originalStudent || null;
-                        }).filter(Boolean);
-                    } else {
-                        // Legacy: use studentList directly (already has all properties)
-                        studentList = originalStudentList;
-                    }
+                        // If using studentIds (unified DB), merge with original properties
+                        if (data.studentIds && Array.isArray(data.studentIds) && data.studentIds.length > 0) {
+                            studentList = data.studentIds.map((id: string, index: number) => {
+                                const baseStudent = studentMapRef.current[id];
+                                // Find matching student in original list by id or index
+                                const originalStudent = originalStudentList.find(s => s.id === id)
+                                    || originalStudentList[index];
 
-                    tempDataMap[className] = {
-                        studentList,
-                        studentIds: data.studentIds || []
-                    };
+                                if (baseStudent) {
+                                    // Merge: base from unified DB + original properties (underline, enrollmentDate, withdrawalDate, onHold)
+                                    return {
+                                        ...baseStudent,
+                                        underline: originalStudent?.underline ?? baseStudent.underline,
+                                        enrollmentDate: originalStudent?.enrollmentDate ?? baseStudent.enrollmentDate,
+                                        withdrawalDate: originalStudent?.withdrawalDate ?? baseStudent.withdrawalDate,
+                                        onHold: originalStudent?.onHold ?? baseStudent.onHold,
+                                    };
+                                }
+                                return originalStudent || null;
+                            }).filter(Boolean);
+                        } else {
+                            // Legacy: use studentList directly (already has all properties)
+                            studentList = originalStudentList;
+                        }
+
+                        updatedMap[className] = {
+                            studentList,
+                            studentIds: data.studentIds || []
+                        };
+                    });
+
+                    return updatedMap;
                 });
 
-                // Only set state when ALL chunks have been processed (last one)
-                if (chunkIndex === chunks.length - 1) {
-                    setClassDataMap({ ...tempDataMap });
-                    setIsLoading(false);
-                }
+                setIsLoading(false);
             }, (error) => {
                 console.error('[useClassStudents] Error:', error);
                 setIsLoading(false);
@@ -111,7 +119,7 @@ export const useClassStudents = (
         return () => {
             unsubscribes.forEach(unsub => unsub());
         };
-    }, [classNames.join(','), isSimulationMode, studentMap]);
+    }, [classNames.join(','), isSimulationMode]);
 
     return { classDataMap, isLoading };
 };
