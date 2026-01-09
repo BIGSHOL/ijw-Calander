@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Student, SalaryConfig } from '../types';
 import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting } from '../utils';
-import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
+import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save, ChevronUp, ChevronDown, GripVertical, Check, X } from 'lucide-react';
+import { Exam, StudentScore, GRADE_COLORS } from '../../../types';
 
 interface Props {
   currentDate: Date;
@@ -10,8 +11,12 @@ interface Props {
   onAttendanceChange: (studentId: string, dateKey: string, value: number | null) => void;
   onEditStudent: (student: Student) => void;
   onMemoChange: (studentId: string, dateKey: string, memo: string) => void;
+  onHomeworkChange?: (studentId: string, dateKey: string, value: boolean) => void;  // 과제 토글
   pendingUpdatesByStudent?: Record<string, Record<string, number | null>>;
   pendingMemosByStudent?: Record<string, Record<string, string>>;
+  // Grade/Exam integration
+  examsByDate?: Map<string, Exam[]>;
+  scoresByStudent?: Map<string, Map<string, StudentScore>>;  // studentId -> examId -> score
   // Group ordering props
   groupOrder?: string[];
   onGroupOrderChange?: (newOrder: string[]) => void;
@@ -33,8 +38,11 @@ const Table: React.FC<Props> = ({
   onAttendanceChange,
   onEditStudent,
   onMemoChange,
+  onHomeworkChange,
   pendingUpdatesByStudent,
   pendingMemosByStudent,
+  examsByDate,
+  scoresByStudent,
   groupOrder = [],
   onGroupOrderChange
 }) => {
@@ -331,6 +339,9 @@ const Table: React.FC<Props> = ({
               pendingMemosByStudent={pendingMemosByStudent}
               groupOrder={groupOrder}
               onGroupOrderChange={onGroupOrderChange}
+              examsByDate={examsByDate}
+              scoresByStudent={scoresByStudent}
+              onHomeworkChange={onHomeworkChange}
             />
           ) : (
             <tr>
@@ -429,7 +440,7 @@ const Table: React.FC<Props> = ({
 
 // Extracted & Memoized Components
 
-const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange }: {
+const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange, examsByDate, scoresByStudent, onHomeworkChange }: {
   students: Student[],
   days: Date[],
   currentDate: Date,
@@ -441,6 +452,9 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
   pendingMemosByStudent?: Record<string, Record<string, string>>;
   groupOrder?: string[];
   onGroupOrderChange?: (newOrder: string[]) => void;
+  examsByDate?: Map<string, Exam[]>;
+  scoresByStudent?: Map<string, Map<string, StudentScore>>;
+  onHomeworkChange?: (studentId: string, dateKey: string, value: boolean) => void;
 }) => {
   // Extract unique groups from students
   const uniqueGroups = useMemo(() => {
@@ -583,6 +597,9 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
         onContextMenu={onContextMenu}
         pendingUpdates={updates}
         pendingMemos={memos}
+        examsByDate={examsByDate}
+        scoresByStudent={scoresByStudent}
+        onHomeworkChange={onHomeworkChange}
       />
     );
   });
@@ -590,7 +607,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
   return <>{rows}</>;
 });
 
-const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdates, pendingMemos }: {
+const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdates, pendingMemos, examsByDate, scoresByStudent, onHomeworkChange }: {
   student: Student,
   idx: number,
   days: Date[],
@@ -601,6 +618,9 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
   onContextMenu: (e: React.MouseEvent, student: Student, dateKey: string, isValid: boolean) => void;
   pendingUpdates?: Record<string, number | null>;
   pendingMemos?: Record<string, string>;
+  examsByDate?: Map<string, Exam[]>;
+  scoresByStudent?: Map<string, Map<string, StudentScore>>;
+  onHomeworkChange?: (studentId: string, dateKey: string, value: boolean) => void;
 }) => {
   const currentMonthStr = currentDate.toISOString().slice(0, 7);
 
@@ -692,10 +712,29 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
         // Validity Check
         const isValid = isDateValidForStudent(dateKey, student);
 
-        // TODO: 추후 연동 시 실제 데이터 체크
-        const hasGradeData = false; // 성적 데이터 존재 여부
-        const hasReservation = false; // 예약 데이터 존재 여부
-        const hasAttendanceMgmt = false; // 출결관리 데이터 존재 여부
+        // 과제 완료 여부 (Q2: 1시 방향)
+        const homeworkDone = student.homework?.[dateKey] ?? false;
+
+        // 해당 날짜의 시험 목록 조회
+        const examsOnDate = examsByDate?.get(dateKey) || [];
+
+        // 해당 학생의 시험 점수 조회
+        const studentScores = scoresByStudent?.get(student.id);
+
+        // 시험 점수 데이터 추출 (최대 2개: Q4=쪽지시험, Q3=기타시험)
+        let dailyExamScore: StudentScore | null = null;
+        let otherExamScore: StudentScore | null = null;
+
+        examsOnDate.forEach(exam => {
+          const score = studentScores?.get(exam.id);
+          if (score) {
+            if (exam.type === 'daily') {
+              dailyExamScore = score;
+            } else if (!otherExamScore) {
+              otherExamScore = score;
+            }
+          }
+        });
 
         // Cell base class for invalid/valid states
         let cellBaseClass = "";
@@ -750,17 +789,44 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
                 >
                   {q1Content}
                 </div>
-                {/* Q2: 출결 관리 (우상단) - 1시 방향 */}
-                <div className={`flex items-center justify-center border-b border-gray-300/50 ${otherQuadrantBg} text-[8px] text-gray-400`}>
-                  {hasAttendanceMgmt ? '출' : ''}
+                {/* Q2: 과제 (우상단) - 1시 방향 */}
+                <div
+                  onClick={() => onHomeworkChange?.(student.id, dateKey, !homeworkDone)}
+                  className={`flex items-center justify-center border-b border-gray-300/50 cursor-pointer transition-colors ${homeworkDone
+                    ? 'bg-emerald-100 hover:bg-emerald-200'
+                    : isScheduled ? 'bg-orange-100/50 hover:bg-orange-200/50' : 'bg-white hover:bg-gray-50'
+                    }`}
+                  title={homeworkDone ? '과제 완료' : '과제 미완료'}
+                >
+                  {homeworkDone && <Check className="w-2.5 h-2.5 text-emerald-600" />}
                 </div>
-                {/* Q4: 예약 (좌하단) - 7시 방향 */}
-                <div className={`flex items-center justify-center border-r border-gray-300/50 ${otherQuadrantBg} text-[8px] text-gray-400`}>
-                  {hasReservation ? '예' : ''}
+                {/* Q4: 쪽지시험 (좌하단) - 7시 방향 */}
+                <div
+                  className={`flex items-center justify-center border-r border-gray-300/50 ${dailyExamScore
+                    ? `${GRADE_COLORS[dailyExamScore.grade || 'F'].bg}`
+                    : isScheduled ? 'bg-orange-100/50' : 'bg-white'
+                    }`}
+                  title={dailyExamScore ? `쪽지시험: ${dailyExamScore.score}/${dailyExamScore.maxScore} (${dailyExamScore.grade})` : undefined}
+                >
+                  {dailyExamScore && (
+                    <span className={`text-[8px] font-bold ${GRADE_COLORS[dailyExamScore.grade || 'F'].text}`}>
+                      {dailyExamScore.grade || Math.round(dailyExamScore.percentage || 0)}
+                    </span>
+                  )}
                 </div>
-                {/* Q3: 성적 (우하단) - 5시 방향 */}
-                <div className={`flex items-center justify-center ${otherQuadrantBg} text-[8px] text-gray-400`}>
-                  {hasGradeData ? '성' : ''}
+                {/* Q3: 시험 (우하단) - 5시 방향 */}
+                <div
+                  className={`flex items-center justify-center ${otherExamScore
+                    ? `${GRADE_COLORS[otherExamScore.grade || 'F'].bg}`
+                    : isScheduled ? 'bg-orange-100/50' : 'bg-white'
+                    }`}
+                  title={otherExamScore ? `시험: ${otherExamScore.score}/${otherExamScore.maxScore} (${otherExamScore.grade})` : undefined}
+                >
+                  {otherExamScore && (
+                    <span className={`text-[8px] font-bold ${GRADE_COLORS[otherExamScore.grade || 'F'].text}`}>
+                      {otherExamScore.grade || Math.round(otherExamScore.percentage || 0)}
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (

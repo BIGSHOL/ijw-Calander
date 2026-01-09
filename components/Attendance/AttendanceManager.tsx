@@ -16,10 +16,12 @@ import {
   useDeleteStudent,
   useUpdateAttendance,
   useUpdateMemo,
+  useUpdateHomework,
   useSaveAttendanceConfig,
   useMonthlySettlement,
   useSaveMonthlySettlement
 } from '../../hooks/useAttendance';
+import { useExamsByDateMap, useScoresByExams } from '../../hooks/useExamsByDate';
 import { UserProfile, Teacher } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 
@@ -147,6 +149,28 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     enabled: !!userProfile,
   });
 
+  // Exam/Grades Integration - Calculate date range for current month
+  const examDateRange = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    return { startDate, endDate };
+  }, [currentDate]);
+
+  // Fetch exams for current month
+  const { examsByDate, exams = [] } = useExamsByDateMap(
+    examDateRange.startDate,
+    examDateRange.endDate,
+    selectedSubject
+  );
+
+  // Fetch scores for all students and exams in current month
+  const studentIds = useMemo(() => allStudents.map(s => s.id), [allStudents]);
+  const examIds = useMemo(() => exams.map(e => e.id), [exams]);
+  const { data: scoresByStudent } = useScoresByExams(studentIds, examIds);
+
   // Resolve Teacher ID for Config
   const targetTeacher = useMemo(() => {
     if (!filterTeacherId) return undefined;
@@ -163,6 +187,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const deleteStudentMutation = useDeleteStudent();
   const updateAttendanceMutation = useUpdateAttendance();
   const updateMemoMutation = useUpdateMemo();
+  const updateHomeworkMutation = useUpdateHomework();
   const saveConfigMutation = useSaveAttendanceConfig();
 
   // Local state for modals
@@ -257,6 +282,18 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           return next;
         });
         alert('메모 저장에 실패했습니다.');
+      }
+    });
+  };
+
+  const handleHomeworkChange = async (studentId: string, dateKey: string, completed: boolean) => {
+    const yearMonth = dateKey.substring(0, 7);
+    updateHomeworkMutation.mutate({ studentId, yearMonth, dateKey, completed }, {
+      onSuccess: async () => {
+        await refetch();
+      },
+      onError: () => {
+        alert('과제 상태 저장에 실패했습니다.');
       }
     });
   };
@@ -496,8 +533,11 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             onAttendanceChange={handleAttendanceChange}
             onEditStudent={handleEditStudent}
             onMemoChange={handleMemoChange}
+            onHomeworkChange={handleHomeworkChange}
             pendingUpdatesByStudent={pendingUpdatesByStudent}
             pendingMemosByStudent={pendingMemosByStudent}
+            examsByDate={examsByDate}
+            scoresByStudent={scoresByStudent}
             groupOrder={groupOrder}
             onGroupOrderChange={handleGroupOrderChange}
           />

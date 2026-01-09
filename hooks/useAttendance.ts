@@ -472,6 +472,59 @@ export const useUpdateMemo = () => {
 };
 
 /**
+ * Mutation to update homework completion status
+ */
+export const useUpdateHomework = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            studentId,
+            yearMonth,
+            dateKey,
+            completed
+        }: {
+            studentId: string;
+            yearMonth: string;
+            dateKey: string;
+            completed: boolean;
+        }) => {
+            const docId = `${studentId}_${yearMonth}`;
+            const docRef = doc(db, RECORDS_COLLECTION, docId);
+
+            const payload = {
+                homework: {
+                    [dateKey]: completed ? true : deleteField()
+                }
+            };
+
+            await setDoc(docRef, payload, { merge: true });
+            return { studentId, yearMonth, dateKey, completed };
+        },
+        onMutate: async ({ studentId, yearMonth, dateKey, completed }) => {
+            await queryClient.cancelQueries({ queryKey: ['attendanceRecords', studentId, yearMonth] });
+            const previousRecord = queryClient.getQueryData(['attendanceRecords', studentId, yearMonth]);
+
+            queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
+                if (!old) return { attendance: {}, memos: {}, homework: { [dateKey]: completed } };
+                const newHomework = { ...(old.homework || {}) };
+                if (!completed) delete newHomework[dateKey];
+                else newHomework[dateKey] = completed;
+                return { ...old, homework: newHomework };
+            });
+
+            return { previousRecord };
+        },
+        onError: (err, newTodo, context: any) => {
+            queryClient.setQueryData(['attendanceRecords', newTodo.studentId, newTodo.yearMonth], context.previousRecord);
+        },
+        onSettled: (data, error, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['attendanceRecords', variables.studentId, variables.yearMonth] });
+        },
+    });
+};
+
+/**
  * Mutation to delete a student
  */
 export const useDeleteStudent = () => {

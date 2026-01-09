@@ -65,6 +65,16 @@ export function useStudents(includeWithdrawn = false) {
                     ...withdrawnStudents
                 ];
 
+                // enrollments 서브컬렉션 로드 (각 학생마다)
+                await Promise.all(studentList.map(async (student) => {
+                    const enrollmentsRef = collection(db, `students/${student.id}/enrollments`);
+                    const enrollmentsSnap = await getDocs(enrollmentsRef);
+                    student.enrollments = enrollmentsSnap.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    })) as any[];
+                }));
+
                 // Client-side sort by name
                 studentList.sort((a, b) => a.name.localeCompare(b.name));
 
@@ -81,6 +91,16 @@ export function useStudents(includeWithdrawn = false) {
                     id: docSnap.id,
                     ...docSnap.data()
                 } as UnifiedStudent));
+
+                // enrollments 서브컬렉션 로드 (각 학생마다)
+                await Promise.all(studentList.map(async (student) => {
+                    const enrollmentsRef = collection(db, `students/${student.id}/enrollments`);
+                    const enrollmentsSnap = await getDocs(enrollmentsRef);
+                    student.enrollments = enrollmentsSnap.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    })) as any[];
+                }));
 
                 // Client-side sort by name
                 studentList.sort((a, b) => a.name.localeCompare(b.name));

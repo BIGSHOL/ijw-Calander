@@ -76,6 +76,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     };
 
     if (filteredClasses.length === 0 && allResources.length === 0) {
+        console.log('[TimetableGrid] No classes and no resources!');
         return (
             <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8">
                 <BookOpen size={48} className="mb-4" />
@@ -200,25 +201,32 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         style={getCellWidthStyle()}
                                         rowSpan={maxSpan > 1 ? maxSpan : undefined}
                                     >
-                                        {cellClasses.map((cls: TimetableClass) => (
-                                            <ClassCard
-                                                key={cls.id}
-                                                cls={cls}
-                                                span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
-                                                searchQuery={searchQuery}
-                                                showStudents={showStudents}
-                                                showSchool={showSchool}
-                                                showGrade={showGrade}
-                                                canEdit={canEdit}
-                                                dragOverClassId={dragOverClassId}
-                                                onClick={onClassClick}
-                                                onDragStart={onDragStart}
-                                                onDragOver={onDragOver}
-                                                onDragLeave={onDragLeave}
-                                                onDrop={onDrop}
-                                                studentMap={studentMap}
-                                            />
-                                        ))}
+                                        {cellClasses.length === 0 && showEmptyRooms ? (
+                                            <div className="text-[10px] text-gray-400 text-center py-1">
+                                                {viewType === 'room' ? resource : '빈 강의실'}
+                                            </div>
+                                        ) : (
+                                            cellClasses.map((cls: TimetableClass) => (
+                                                <ClassCard
+                                                    key={cls.id}
+                                                    cls={cls}
+                                                    span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
+                                                    searchQuery={searchQuery}
+                                                    showStudents={showStudents}
+                                                    showClassName={showClassName}
+                                                    showSchool={showSchool}
+                                                    showGrade={showGrade}
+                                                    canEdit={canEdit}
+                                                    dragOverClassId={dragOverClassId}
+                                                    onClick={onClassClick}
+                                                    onDragStart={onDragStart}
+                                                    onDragOver={onDragOver}
+                                                    onDragLeave={onDragLeave}
+                                                    onDrop={onDrop}
+                                                    studentMap={studentMap}
+                                                />
+                                            ))
+                                        )}
                                     </td>
                                 );
                             });

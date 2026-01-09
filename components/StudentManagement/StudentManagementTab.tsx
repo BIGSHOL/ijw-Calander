@@ -3,7 +3,8 @@ import { UnifiedStudent } from '../../types';
 import { useStudents, searchStudentsByQuery } from '../../hooks/useStudents';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
-import { Users, Loader2, RefreshCw } from 'lucide-react';
+import AddStudentModal from './AddStudentModal';
+import { Users, Loader2, RefreshCw, UserPlus } from 'lucide-react';
 
 export interface StudentFilters {
   searchQuery: string;
@@ -23,6 +24,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [oldWithdrawnStudents, setOldWithdrawnStudents] = useState<UnifiedStudent[]>([]);
   const [isSearchingOld, setIsSearchingOld] = useState(false);
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
 
   // 검색어가 있고 메모리 결과가 적으면 과거 퇴원생 자동 검색
   useEffect(() => {
@@ -150,6 +152,13 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsAddStudentModalOpen(true)}
+              className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+              title="학생 추가"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+            </button>
+            <button
               onClick={async () => {
                 setIsRefreshing(true);
                 await refreshStudents();
@@ -206,6 +215,16 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
           </div>
         )}
       </div>
+
+      {/* 학생 추가 모달 */}
+      <AddStudentModal
+        isOpen={isAddStudentModalOpen}
+        onClose={() => setIsAddStudentModalOpen(false)}
+        onSuccess={() => {
+          refreshStudents();
+          setIsAddStudentModalOpen(false);
+        }}
+      />
     </div>
   );
 };
