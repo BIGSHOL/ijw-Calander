@@ -17,8 +17,9 @@ import PaymentReport from './components/PaymentReport/PaymentReport';
 import GanttManager from './components/Gantt/GanttManager';
 import ConsultationManager from './components/Consultation/ConsultationManager';
 import StudentManagementTab from './components/StudentManagement/StudentManagementTab';
+import GradesManager from './components/Grades/GradesManager';
 import NavigationBar from './components/Navigation/NavigationBar';
-import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus } from 'lucide-react';
+import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
@@ -41,7 +42,7 @@ const formatUserDisplay = (u: UserProfile) => {
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | null>(null);
 
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
@@ -117,6 +118,15 @@ const App: React.FC = () => {
   }, [viewMode, viewColumns]);
 
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+
+  // Student Management Filters (for header integration)
+  const [studentFilters, setStudentFilters] = useState({
+    searchQuery: '',
+    grade: 'all',
+    status: 'all' as 'all' | 'active' | 'on_hold' | 'withdrawn',
+    subject: 'all',
+  });
+  const [studentSortBy, setStudentSortBy] = useState<'name' | 'grade' | 'startDate'>('name');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // New Category Filter State
 
   const [initialStartTime, setInitialStartTime] = useState('');
@@ -145,6 +155,10 @@ const App: React.FC = () => {
   const [timetableSubject, setTimetableSubject] = useState<'math' | 'english'>('math');
   const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room' | 'class'>('teacher');
 
+  // Grades Filter State (for App-level filter bar)
+  const [gradesSubjectFilter, setGradesSubjectFilter] = useState<'all' | 'math' | 'english'>('all');
+  const [gradesSearchQuery, setGradesSearchQuery] = useState('');
+
   // Pending Event Moves State (for drag-and-drop)
   const [pendingEventMoves, setPendingEventMoves] = useState<{ original: CalendarEvent, updated: CalendarEvent }[]>([]);
 
@@ -153,6 +167,9 @@ const App: React.FC = () => {
 
   // Permission Hook
   const { hasPermission, rolePermissions } = usePermissions(userProfile || null);
+
+  // Modal State for Attendance "Add Student" (lifted from AttendanceManager)
+  const [isAttendanceAddStudentModalOpen, setIsAttendanceAddStudentModalOpen] = useState(false);
 
   // Initialize timetable subject based on user's permissions (edit permission takes priority)
   useEffect(() => {
@@ -172,9 +189,11 @@ const App: React.FC = () => {
     }
     // else: default 'math'
 
-    console.log(`[Init] Setting initial timetableSubject to: ${initialSubject}`);
-    setTimetableSubject(initialSubject);
-  }, [userProfile, hasPermission]);
+    if (timetableSubject !== initialSubject) {
+      console.log(`[Init] Setting initial timetableSubject to: ${initialSubject}`);
+      setTimetableSubject(initialSubject);
+    }
+  }, [userProfile, hasPermission, timetableSubject]);
 
   // Guard: Strictly enforce permission access to subjects
   // If a user somehow lands on a subject they don't have permission for, switch them.
@@ -303,7 +322,11 @@ const App: React.FC = () => {
               // but for immediate feedback:
               setUserProfile(updatedProfile);
             } else {
-              setUserProfile(userData);
+              // Only update state if content actually changed (prevent infinite re-renders)
+              setUserProfile(prev => {
+                if (JSON.stringify(prev) === JSON.stringify(userData)) return prev;
+                return userData;
+              });
             }
           } else {
             // Document doesn't exist - Create it
@@ -1566,6 +1589,19 @@ const App: React.FC = () => {
                     <ChevronRight size={14} />
                   </button>
                 </div>
+
+                {/* Separator */}
+                <div className="w-px h-4 bg-white/20 mx-1"></div>
+
+                {/* Add Student Button (Special Attendance) */}
+                <button
+                  onClick={() => setIsAttendanceAddStudentModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm ml-2"
+                  title="특강/보강 학생 출석부 추가"
+                >
+                  <UserPlus size={14} />
+                  <span className="font-bold text-xs">학생 추가</span>
+                </button>
               </div>
             </div>
           );
@@ -1574,20 +1610,121 @@ const App: React.FC = () => {
         {/* Row 4: Students Navigation Bar - Only show in students mode */}
         {appMode === 'students' && (
           <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-1">
               {/* Subject Toggle */}
               <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
                 <button
-                  className="px-3 py-1 rounded-md text-xs font-bold transition-all bg-[#fdb813] text-[#081429] shadow-sm"
+                  onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'all' }))}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'all' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
                 >
                   📚 전체
                 </button>
+                <button
+                  onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'math' }))}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'math' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                >
+                  수학
+                </button>
+                <button
+                  onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'english' }))}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'english' ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                >
+                  영어
+                </button>
               </div>
 
-              {/* Search Info */}
-              <div className="text-gray-400 text-xs">
-                학생 검색 및 관리
+              {/* Status Toggle */}
+              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                <button
+                  onClick={() => setStudentFilters(prev => ({ ...prev, status: 'all' }))}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'all' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                >
+                  전체
+                </button>
+                <button
+                  onClick={() => setStudentFilters(prev => ({ ...prev, status: 'active' }))}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'active' ? 'bg-green-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                >
+                  재원
+                </button>
+                <button
+                  onClick={() => setStudentFilters(prev => ({ ...prev, status: 'on_hold' }))}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'on_hold' ? 'bg-yellow-500 text-black shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                >
+                  대기
+                </button>
+                <button
+                  onClick={() => setStudentFilters(prev => ({ ...prev, status: 'withdrawn' }))}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'withdrawn' ? 'bg-gray-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                >
+                  퇴원
+                </button>
               </div>
+
+              {/* Search Bar */}
+              <div className="relative flex-1 max-w-xs">
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="이름, 학교 검색..."
+                  value={studentFilters.searchQuery}
+                  onChange={(e) => setStudentFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+                  className="w-full pl-8 pr-3 py-1.5 bg-white/10 border border-white/10 rounded-lg text-white placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 focus:border-[#fdb813]/50"
+                />
+                {studentFilters.searchQuery && (
+                  <button
+                    onClick={() => setStudentFilters(prev => ({ ...prev, searchQuery: '' }))}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Grade Filter */}
+              <select
+                value={studentFilters.grade}
+                onChange={(e) => setStudentFilters(prev => ({ ...prev, grade: e.target.value }))}
+                className="px-2 py-1.5 bg-white/10 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 cursor-pointer"
+              >
+                <option value="all" className="bg-[#081429]">학년</option>
+                <option value="초1" className="bg-[#081429]">초1</option>
+                <option value="초2" className="bg-[#081429]">초2</option>
+                <option value="초3" className="bg-[#081429]">초3</option>
+                <option value="초4" className="bg-[#081429]">초4</option>
+                <option value="초5" className="bg-[#081429]">초5</option>
+                <option value="초6" className="bg-[#081429]">초6</option>
+                <option value="중1" className="bg-[#081429]">중1</option>
+                <option value="중2" className="bg-[#081429]">중2</option>
+                <option value="중3" className="bg-[#081429]">중3</option>
+                <option value="고1" className="bg-[#081429]">고1</option>
+                <option value="고2" className="bg-[#081429]">고2</option>
+                <option value="고3" className="bg-[#081429]">고3</option>
+              </select>
+
+              {/* Sort */}
+              <select
+                value={studentSortBy}
+                onChange={(e) => setStudentSortBy(e.target.value as typeof studentSortBy)}
+                className="px-2 py-1.5 bg-white/10 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 cursor-pointer"
+              >
+                <option value="name" className="bg-[#081429]">이름순</option>
+                <option value="grade" className="bg-[#081429]">학년순</option>
+                <option value="startDate" className="bg-[#081429]">등록일순</option>
+              </select>
+
+              {/* Reset Filters */}
+              {(studentFilters.searchQuery || studentFilters.grade !== 'all' || studentFilters.status !== 'all' || studentFilters.subject !== 'all') && (
+                <button
+                  onClick={() => {
+                    setStudentFilters({ searchQuery: '', grade: 'all', status: 'all', subject: 'all' });
+                    setStudentSortBy('name');
+                  }}
+                  className="px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                >
+                  초기화
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1771,6 +1908,29 @@ const App: React.FC = () => {
         }
 
         {/* Timetable Filter Popover Panel Removed */}
+
+        {/* Row 2: Grades Filter Bar - Only show in grades mode */}
+        {appMode === 'grades' && (
+          <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
+            <div className="flex items-center gap-4 flex-1">
+              {/* Subject Filter Toggle */}
+              <div className="flex items-center gap-1 bg-black/20 rounded-lg p-0.5">
+                {(['all', 'math', 'english'] as const).map(subject => (
+                  <button
+                    key={subject}
+                    onClick={() => setGradesSubjectFilter(subject)}
+                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${gradesSubjectFilter === subject
+                      ? 'bg-[#fdb813] text-[#081429]'
+                      : 'text-gray-400 hover:text-white'
+                      }`}
+                  >
+                    {subject === 'all' ? '전체' : subject === 'math' ? '수학' : '영어'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </header >
 
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
@@ -1898,12 +2058,26 @@ const App: React.FC = () => {
               selectedSubject={attendanceSubject}
               selectedTeacherId={attendanceTeacherId}
               currentDate={attendanceDate}
+              isAddStudentModalOpen={isAttendanceAddStudentModalOpen}
+              onCloseAddStudentModal={() => setIsAttendanceAddStudentModalOpen(false)}
             />
           </div>
         ) : appMode === 'students' ? (
           /* Student Management View */
           <div className="w-full flex-1 overflow-auto">
-            <StudentManagementTab />
+            <StudentManagementTab
+              filters={studentFilters}
+              sortBy={studentSortBy}
+            />
+          </div>
+        ) : appMode === 'grades' ? (
+          /* Grades Management View */
+          <div className="w-full flex-1 overflow-auto">
+            <GradesManager
+              subjectFilter={gradesSubjectFilter}
+              searchQuery={gradesSearchQuery}
+              onSearchChange={setGradesSearchQuery}
+            />
           </div>
         ) : null}
 

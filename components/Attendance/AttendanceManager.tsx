@@ -44,6 +44,8 @@ interface AttendanceManagerProps {
   selectedSubject: AttendanceSubject;
   selectedTeacherId?: string;
   currentDate: Date;
+  isAddStudentModalOpen?: boolean;
+  onCloseAddStudentModal?: () => void;
 }
 
 // Helper to group updates by student ID
@@ -73,7 +75,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   teachers = [],
   selectedSubject,
   selectedTeacherId,
-  currentDate
+  currentDate,
+  isAddStudentModalOpen,
+  onCloseAddStudentModal
 }) => {
   const { hasPermission } = usePermissions(userProfile);
 
@@ -136,7 +140,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     return currentDate.toISOString().slice(0, 7); // "YYYY-MM"
   }, [currentDate]);
 
-  const { students: allStudents, isLoading: isLoadingStudents, refetch } = useAttendanceStudents({
+  const { students: allStudents, allStudents: rawAllStudents, isLoading: isLoadingStudents, refetch } = useAttendanceStudents({
     teacherId: filterTeacherId,
     subject: selectedSubject,
     yearMonth: currentYearMonth,
@@ -162,12 +166,20 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const saveConfigMutation = useSaveAttendanceConfig();
 
   // Local state for modals
+  const [activeTab, setActiveTab] = useState<'attendance' | 'salary'>('attendance');
   const [isSalaryModalOpen, setSalaryModalOpen] = useState(false);
   const [isStudentModalOpen, setStudentModalOpen] = useState(false);
+
+  // Use props if provided, otherwise default to closed (or local state if we strictly needed it, but here strict prop control is fine as App controls it)
+  // Actually, we should allow local control if props aren't passed, but for now we assume App passes them.
+  // To be safe: use provided prop or false.
+  // Internal state is removed. IsAddStudentModalOpen is now controlled by App.
+  const isAddStudentOpen = isAddStudentModalOpen || false;
+  const closeAddStudent = onCloseAddStudentModal || (() => { });
+
   const [isSettlementModalOpen, setSettlementModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
-  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
 
   // Group order state (per teacher, stored in localStorage)
   const groupOrderKey = `attendance_groupOrder_${filterTeacherId || 'all'}_${selectedSubject}`;
@@ -195,7 +207,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const saveSettlementMutation = useSaveMonthlySettlement();
 
   // Handlers
-  const handleAttendanceChange = (studentId: string, dateKey: string, value: number | null) => {
+  const handleAttendanceChange = async (studentId: string, dateKey: string, value: number | null) => {
     const key = `${studentId}_${dateKey}`;
     // 1. Optimistic Update (Immediate Feedback)
     setPendingUpdates(prev => ({ ...prev, [key]: value }));
@@ -203,14 +215,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     const yearMonth = dateKey.substring(0, 7);
     updateAttendanceMutation.mutate({ studentId, yearMonth, dateKey, value }, {
       onSuccess: async () => {
-        // 2. Refetch to get server truth (eventually)
+        // 2. Refetch and wait for completion, THEN clear pending
         await refetch();
-        // 3. Clear optimistic state (optional, but good for cleanup)
-        // We could leave it until refetch completes, but refetch is async.
-        // Actually, best to clear it in onSettled, but here we simply rely on the fact that
-        // once refetch comes back, the data source will match our optimistic value.
-        // To be safe, we clear it after a short delay or just let refetch overwrite key?
-        // Let's clear it to allow fresh data to take over.
+        // 3. Clear AFTER refetch completes (no flicker)
         setPendingUpdates(prev => {
           const next = { ...prev };
           delete next[key];
@@ -218,7 +225,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         });
       },
       onError: () => {
-        // Rollback on error
+        // Rollback on error immediately
         setPendingUpdates(prev => {
           const next = { ...prev };
           delete next[key];
@@ -229,7 +236,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     });
   };
 
-  const handleMemoChange = (studentId: string, dateKey: string, memo: string) => {
+  const handleMemoChange = async (studentId: string, dateKey: string, memo: string) => {
     const key = `${studentId}_${dateKey}`;
     setPendingMemos(prev => ({ ...prev, [key]: memo }));
 
@@ -268,7 +275,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   };
 
   const handleDeleteStudent = (id: string) => {
-    if (window.confirm('해당 학생을 영구 삭제하시겠습니까?\n이전 데이터도 모두 삭제됩니다.\n\n단순히 이번 달부터 보이지 않게 하려면 수정 메뉴에서 "수강 종료일"을 설정하세요.')) {
+    if (window.confirm('정말 이 학생을 삭제하시겠습니까? (출석 기록을 포함한 모든 데이터가 삭제됩니다)')) {
       deleteStudentMutation.mutate(id);
       setStudentModalOpen(false);
       setEditingStudent(null);
@@ -472,9 +479,16 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         </div>
       </div>
 
-      {/* Main Table Area - Constrained height with internal scroll for sticky header */}
-      <div className="flex-1 pb-6 overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
-        <div className="mx-6">
+      {/* Main Table Area - Fixed height with sticky horizontal scrollbar at bottom */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        <div
+          className="flex-1 overflow-auto mx-4"
+          style={{
+            maxHeight: 'calc(100vh - 280px)',
+            // Sticky scrollbar at bottom using CSS
+            scrollbarGutter: 'stable'
+          }}
+        >
           <Table
             currentDate={currentDate}
             students={visibleStudents}
@@ -508,6 +522,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         salaryConfig={salaryConfig}
         currentViewDate={currentDate}
         existingGroups={existingGroups}
+        canEdit={hasPermission('attendance.edit_student_info')}
       />
 
       <SettlementModal
@@ -530,9 +545,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       />
 
       <AddStudentToAttendanceModal
-        isOpen={isAddStudentModalOpen}
-        onClose={() => setIsAddStudentModalOpen(false)}
-        allStudents={allStudents as any[]}
+        isOpen={isAddStudentOpen}
+        onClose={closeAddStudent}
+        allStudents={rawAllStudents as any[] || []}
         currentTeacherId={filterTeacherId || ''}
         currentTeacherName={filterTeacherId || ''}
         existingStudentIds={visibleStudents.map(s => s.id)}
