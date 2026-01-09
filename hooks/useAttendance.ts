@@ -116,6 +116,31 @@ export const useAttendanceStudents = (options?: {
                     const enrollments = (s as any).enrollments || [];
                     return enrollments.some((e: any) => e.subject === options.subject);
                 });
+                // 과목 필터 시 해당 과목의 enrollments에서 days 병합
+                data = data.map(s => {
+                    const enrollments = (s as any).enrollments || [];
+                    const subjectEnrollments = enrollments.filter((e: any) => e.subject === options.subject);
+
+                    // 해당 과목의 모든 수업 요일 병합
+                    const subjectDays: string[] = [];
+                    subjectEnrollments.forEach((e: any) => {
+                        if (e.days && Array.isArray(e.days)) {
+                            e.days.forEach((d: string) => {
+                                if (!subjectDays.includes(d)) subjectDays.push(d);
+                            });
+                        }
+                    });
+
+                    // 해당 과목의 수업명 그룹화
+                    const subjectClasses = subjectEnrollments.map((e: any) => e.className);
+
+                    return {
+                        ...s,
+                        // teacherId 필터로 이미 days가 설정된 경우 유지, 아니면 과목 기반으로 설정
+                        days: (s as any).days?.length ? (s as any).days : subjectDays,
+                        group: (s as any).group || subjectClasses.join(', '),
+                    };
+                });
             }
 
             return data;
