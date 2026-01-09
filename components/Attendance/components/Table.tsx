@@ -290,27 +290,27 @@ const Table: React.FC<Props> = ({
       <table className="border-separate border-spacing-0 w-full min-w-max text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm">
         <thead className="bg-[#081429] text-white font-medium sticky top-0 z-[100] shadow-md">
           <tr>
-            {/* Sticky Left Columns - Added align-middle for vertical centering */}
-            <th className="p-3 sticky left-0 top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 w-12 text-center text-gray-400 align-middle">#</th>
-            <th className="p-3 sticky left-12 top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[100px] align-middle">이름</th>
-            <th className="p-3 sticky left-[148px] top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[100px] align-middle">학교/학년</th>
+            {/* Sticky Left Columns - Compact width */}
+            <th className="p-2 sticky left-0 top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 w-8 text-center text-gray-400 align-middle text-xs">#</th>
+            <th className="p-2 sticky left-8 top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 w-[70px] align-middle text-xs">이름</th>
+            <th className="p-2 sticky left-[102px] top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 w-[80px] align-middle text-xs">학교</th>
 
-            {/* Stat Columns - Added align-middle */}
-            <th className="p-3 sticky top-0 border-r border-b border-[#ffffff]/10 min-w-[125px] text-center bg-[#081429] align-middle">요일</th>
-            <th className="p-3 sticky top-0 border-r border-b border-[#ffffff]/10 min-w-[60px] text-center bg-[#081429] align-middle">출석</th>
+            {/* Stat Columns - Compact */}
+            <th className="p-2 sticky left-[182px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[70px] text-center bg-[#081429] align-middle text-xs">요일</th>
+            <th className="p-2 sticky left-[252px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-[#081429] align-middle text-xs">출석</th>
 
-            {/* Dynamic Date Columns */}
+            {/* Dynamic Date Columns - Square for 4-quadrant layout */}
             {days.map((day) => {
               const { date, day: dayName, isWeekend } = formatDateDisplay(day);
               return (
                 <th
                   key={day.toISOString()}
-                  className={`p-2 sticky top-0 bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[50px] text-center align-middle ${isWeekend ? 'text-red-300' : 'text-gray-300'
+                  className={`p-1 sticky top-0 bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[36px] w-[36px] text-center align-middle ${isWeekend ? 'text-red-300' : 'text-gray-300'
                     }`}
                 >
                   <div className="flex flex-col items-center justify-center leading-tight">
-                    <span className="text-xs">{date}</span>
-                    <span className="text-[10px] uppercase opacity-75">{dayName}</span>
+                    <span className="text-[10px] font-bold">{date}</span>
+                    <span className="text-[9px] uppercase opacity-75">{dayName}</span>
                   </div>
                 </th>
               );
@@ -623,42 +623,35 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
 
   return (
     <tr className="group hover:bg-gray-50 transition-colors">
-      {/* Fixed Columns */}
-      <td className="p-3 sticky left-0 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-[#373d41]/50 font-mono text-xs align-middle">
+      {/* Fixed Columns - Compact */}
+      <td className="p-1 sticky left-0 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-[#373d41]/50 font-mono text-[10px] align-middle w-8">
         {idx}
       </td>
-      <td className="p-3 sticky left-12 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
+      <td className="p-1 sticky left-8 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[70px]">
         <button
           onClick={() => onEditStudent(student)}
-          className="text-left w-full hover:text-[#081429] font-bold text-[#373d41] truncate flex items-center gap-1.5"
+          className="text-left w-full hover:text-[#081429] font-bold text-[#373d41] truncate flex items-center gap-0.5 text-xs"
         >
-          {student.name}
-          {student.isHomeroom && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
-              담임
-            </span>
-          )}
+          <span className="truncate">{student.name}</span>
           {isNew && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#fdb813] text-[#081429] text-[9px] font-extrabold shadow-sm animate-pulse">
-              <Sparkles size={8} fill="#081429" /> NEW
+            <span className="inline-flex items-center px-1 py-0.5 rounded-full bg-[#fdb813] text-[#081429] text-[8px] font-extrabold">
+              N
             </span>
           )}
           {isLeaving && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 text-[9px] font-bold">
-              <LogOut size={8} /> END
+            <span className="inline-flex items-center px-1 py-0.5 rounded-full bg-red-100 text-red-600 text-[8px] font-bold">
+              E
             </span>
           )}
         </button>
       </td>
-      <td className="p-3 sticky left-[148px] z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle">
-        <div className="flex flex-col gap-1.5 justify-center">
-          <div className="text-xs text-[#373d41] font-medium flex items-center gap-1">
-            <span className="truncate max-w-[80px]" title={student.school}>{student.school}</span>
-            <span className="text-gray-300">|</span>
-            <span>{student.grade}</span>
+      <td className="p-1 sticky left-[102px] z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[80px]">
+        <div className="flex flex-col gap-0.5 justify-center">
+          <div className="text-[10px] text-[#373d41] font-medium truncate" title={`${student.school} ${student.grade}`}>
+            {student.school} {student.grade}
           </div>
           <span
-            className={`text-[10px] px-2 py-0.5 rounded-full w-fit font-bold ${badgeClass}`}
+            className={`text-[9px] px-1.5 py-0.5 rounded-full w-fit font-bold ${badgeClass}`}
             style={badgeStyle}
           >
             {levelName}
@@ -666,9 +659,9 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
         </div>
       </td>
 
-      {/* Stat Cells */}
-      <td className="p-3 border-r border-b border-gray-200 text-center text-gray-500 bg-[#f8f9fa] font-mono align-middle">
-        <div className="flex flex-wrap justify-center gap-0.5 max-w-[125px] mx-auto">
+      {/* Stat Cells - Compact & Sticky */}
+      <td className="p-1 sticky left-[182px] z-[90] border-r border-b border-gray-200 text-center text-gray-500 bg-[#f8f9fa] font-mono align-middle w-[70px]">
+        <div className="flex flex-wrap justify-center gap-0.5">
           {[...(student.days || [])].sort((a, b) => {
             const order = ['월', '화', '수', '목', '금', '토', '일'];
             return order.indexOf(a[0]) - order.indexOf(b[0]);
@@ -678,16 +671,16 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
             if (dayChar === '토') colorClass = "bg-blue-50 border-blue-200 text-blue-600";
             if (dayChar === '일') colorClass = "bg-red-50 border-red-200 text-red-600";
             return (
-              <span key={d} className={`text-[11px] border px-1.5 py-0.5 rounded font-medium ${colorClass}`}>{dayChar}</span>
+              <span key={d} className={`text-[9px] border px-1 rounded font-medium ${colorClass}`}>{dayChar}</span>
             );
           })}
         </div>
       </td>
-      <td className="p-3 border-r border-b border-gray-200 text-center font-bold text-[#081429] bg-[#f0f4f8] align-middle">
+      <td className="p-1 sticky left-[252px] z-[90] border-r border-b border-gray-200 text-center font-bold text-[#081429] bg-[#f0f4f8] align-middle w-[36px] text-xs">
         {attendedUnits}
       </td>
 
-      {/* Attendance Grid */}
+      {/* Attendance Cells - 4-Quadrant Design */}
       {days.map((day) => {
         const dateKey = formatDateKey(day);
         const { day: dayName } = formatDateDisplay(day);
@@ -699,47 +692,83 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
         // Validity Check
         const isValid = isDateValidForStudent(dateKey, student);
 
-        let cellClass = "";
-        let content: React.ReactNode = null;
+        // TODO: 추후 연동 시 실제 데이터 체크
+        const hasGradeData = false; // 성적 데이터 존재 여부
+        const hasReservation = false; // 예약 데이터 존재 여부
+        const hasAttendanceMgmt = false; // 출결관리 데이터 존재 여부
 
+        // Cell base class for invalid/valid states
+        let cellBaseClass = "";
         if (!isValid) {
-          // Invalid Date
-          cellClass = "bg-slate-200 bg-[linear-gradient(45deg,#cbd5e1_25%,transparent_25%,transparent_50%,#cbd5e1_50%,#cbd5e1_75%,transparent_75%,transparent)] bg-[length:8px_8px] cursor-not-allowed shadow-inner border-slate-200";
-        } else {
-          // Valid Date Logic
-          if (status > 0) {
-            if (status === 1) {
-              cellClass = "bg-blue-100 hover:bg-blue-200 text-[#081429] cursor-pointer";
-              content = "1";
+          cellBaseClass = "bg-slate-200 bg-[linear-gradient(45deg,#cbd5e1_25%,transparent_25%,transparent_50%,#cbd5e1_50%,#cbd5e1_75%,transparent_75%,transparent)] bg-[length:8px_8px] cursor-not-allowed shadow-inner border-slate-200";
+        }
+
+        // Q1 (출석) 스타일 - 등록 요일은 주황색 배경
+        let q1BgClass = "";
+        let q1Content: React.ReactNode = null;
+
+        if (isValid) {
+          if (status !== undefined && status !== null) {
+            // 출석 값이 있는 경우
+            if (status === 0) {
+              q1BgClass = "bg-red-100 hover:bg-red-200";
+              q1Content = <span className="text-red-600 font-bold text-xs">0</span>;
+            } else if (status === 1) {
+              q1BgClass = "bg-cyan-100 hover:bg-cyan-200";
+              q1Content = <span className="text-cyan-700 font-bold text-xs">1</span>;
             } else {
-              cellClass = "bg-[#fff7d1] hover:bg-[#ffeeba] text-[#b45309] cursor-pointer font-bold";
-              content = status;
+              q1BgClass = "bg-amber-100 hover:bg-amber-200";
+              q1Content = <span className="text-amber-700 font-bold text-xs">{status}</span>;
             }
-          } else if (status === 0) {
-            cellClass = "bg-red-50 hover:bg-red-100 text-red-500 cursor-pointer";
-            content = "0";
-          } else if (isScheduled) {
-            cellClass = "bg-blue-50 hover:bg-blue-100 cursor-pointer";
-            content = <div className="w-1.5 h-1.5 rounded-full bg-blue-300 mx-auto" />;
-          } else if (isWeekend) {
-            cellClass = "bg-[#f8f9fa] text-gray-200 cursor-pointer hover:bg-gray-100";
           } else {
-            cellClass = "cursor-pointer hover:bg-gray-100 transition-colors";
+            // 값 없음 - 등록 요일은 주황색, 비등록은 흰색 (주말 포함)
+            if (isScheduled) {
+              q1BgClass = "bg-orange-200 hover:bg-orange-300";
+            } else {
+              q1BgClass = "bg-white hover:bg-gray-50";
+            }
           }
         }
+
+        // Q2, Q3, Q4 배경 - 등록 요일이면 연한 주황색, 아니면 흰색
+        const otherQuadrantBg = isScheduled && isValid ? "bg-orange-100/50" : "bg-white";
 
         return (
           <td
             key={dateKey}
-            onClick={() => onCellClick(student.id, dateKey, status, isValid)}
             onContextMenu={(e) => onContextMenu(e, student, dateKey, isValid)}
-            className={`p-1 border-r border-b border-gray-200 text-center text-sm font-medium relative ${cellClass} align-middle`}
+            className={`p-0 border-r border-b border-gray-200 text-center text-[10px] font-medium relative ${cellBaseClass} align-middle`}
             title={memo ? `메모: ${memo}` : undefined}
           >
-            {content}
+            {isValid ? (
+              // 4등분 레이아웃
+              <div className="grid grid-cols-2 grid-rows-2 w-full h-full" style={{ minWidth: '36px', minHeight: '36px' }}>
+                {/* Q1: 출석 (좌상단) - 11시 방향 */}
+                <div
+                  onClick={() => onCellClick(student.id, dateKey, status, isValid)}
+                  className={`flex items-center justify-center border-r border-b border-gray-300/50 cursor-pointer transition-colors ${q1BgClass}`}
+                >
+                  {q1Content}
+                </div>
+                {/* Q2: 출결 관리 (우상단) - 1시 방향 */}
+                <div className={`flex items-center justify-center border-b border-gray-300/50 ${otherQuadrantBg} text-[8px] text-gray-400`}>
+                  {hasAttendanceMgmt ? '출' : ''}
+                </div>
+                {/* Q4: 예약 (좌하단) - 7시 방향 */}
+                <div className={`flex items-center justify-center border-r border-gray-300/50 ${otherQuadrantBg} text-[8px] text-gray-400`}>
+                  {hasReservation ? '예' : ''}
+                </div>
+                {/* Q3: 성적 (우하단) - 5시 방향 */}
+                <div className={`flex items-center justify-center ${otherQuadrantBg} text-[8px] text-gray-400`}>
+                  {hasGradeData ? '성' : ''}
+                </div>
+              </div>
+            ) : (
+              <div className="w-full h-full" style={{ minWidth: '36px', minHeight: '36px' }} />
+            )}
             {/* Memo Indicator: Red Triangle in top-right */}
             {memo && (
-              <div className="absolute top-0 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-t-[6px] border-t-red-500/80" />
+              <div className="absolute top-0 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-t-[6px] border-t-red-500/80 z-10" />
             )}
           </td>
         );

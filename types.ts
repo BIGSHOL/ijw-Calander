@@ -85,6 +85,20 @@ export interface CalendarEvent {
   recurrenceType?: 'daily' | 'weekdays' | 'weekends' | 'weekly' | 'monthly' | 'yearly';
   relatedGroupId?: string;     // Group ID for multi-department linked events
   isArchived?: boolean;        // True if event is from archived_events collection
+  // Phase 14: Hashtag & Event Type Support
+  tags?: string[];             // 해시태그 ID 배열 (예: ['meeting', 'deadline'])
+  eventType?: 'general' | 'seminar'; // 이벤트 유형
+  seminarData?: {              // 세미나 전용 데이터 (eventType === 'seminar'일 때)
+    speaker?: string;
+    speakerBio?: string;
+    manager?: string;
+    managerContact?: string;
+    maxAttendees?: number;
+    venue?: string;
+    materials?: string[];
+    registrationDeadline?: string;
+    isPublic?: boolean;
+  };
 }
 
 export interface DragSelection {
@@ -531,7 +545,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -548,6 +562,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   gantt: { label: '간트 차트', icon: '📊' },
   consultation: { label: '콜앤상담', icon: '📞' },
   students: { label: '학생 관리', icon: '👥' },
+  grades: { label: '성적 관리', icon: '📊' },
 };
 
 // Tab Group 구조 - 무한 확장 가능
@@ -579,7 +594,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'student',
     label: '학생',
     icon: '👥',
-    tabs: ['students', 'consultation'],
+    tabs: ['students', 'consultation', 'grades'],
     order: 3,
   },
   {
@@ -605,12 +620,12 @@ export type TabPermissionConfig = {
 
 // Default Tab Permissions (Fallback)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students'],
-  admin: ['calendar', 'timetable', 'attendance', 'payment', 'students'],
-  manager: ['calendar', 'attendance', 'students'],
+  master: ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students', 'grades'],
+  admin: ['calendar', 'timetable', 'attendance', 'payment', 'students', 'grades'],
+  manager: ['calendar', 'attendance', 'students', 'grades'],
   editor: ['calendar'],
-  math_lead: ['timetable', 'attendance', 'students'],
-  english_lead: ['timetable', 'attendance', 'students'],
+  math_lead: ['timetable', 'attendance', 'students', 'grades'],
+  english_lead: ['timetable', 'attendance', 'students', 'grades'],
   user: ['calendar', 'attendance'],
   viewer: ['calendar'],
   guest: ['calendar'],
@@ -710,3 +725,218 @@ export const CONSULTATION_STATUS_COLORS: Record<ConsultationStatus, string> = {
 };
 
 export const CONSULTATION_CHART_COLORS = ['#059669', '#0d9488', '#0891b2', '#f59e0b', '#fbbf24', '#94a3b8'];
+
+// ============ GRADE MANAGEMENT TYPES (GradeGuard Integration) ============
+
+/**
+ * 시험 범위 (누가 치는 시험인가?)
+ */
+export type ExamScope = 'class' | 'grade' | 'subject' | 'academy';
+
+/**
+ * 시험 범위 라벨
+ */
+export const EXAM_SCOPE_LABELS: Record<ExamScope, string> = {
+  class: '반별',
+  grade: '학년별',
+  subject: '과목별',
+  academy: '학원 전체',
+};
+
+/**
+ * 시험 유형
+ */
+export type ExamType =
+  | 'daily'        // 일일 테스트
+  | 'weekly'       // 주간 테스트
+  | 'monthly'      // 월말평가
+  | 'midterm'      // 중간고사
+  | 'final'        // 기말고사
+  | 'mock'         // 모의고사
+  | 'school'       // 학교 내신
+  | 'competition'  // 경시대회
+  | 'diagnostic'   // 진단 평가
+  | 'other';       // 기타
+
+/**
+ * 시험 정보
+ */
+export interface Exam {
+  id: string;
+  title: string;             // "1월 모의고사", "중간고사"
+  date: string;              // YYYY-MM-DD
+  type: ExamType;
+  subject: 'math' | 'english' | 'both';  // 수학/영어/통합
+  maxScore: number;          // 만점 (기본 100)
+  description?: string;      // 시험 설명
+
+  // 시험 범위 관련
+  scope: ExamScope;                      // 시험 범위
+  targetClassIds?: string[];             // scope='class'일 때 대상 반 IDs
+  targetGrades?: string[];               // scope='grade'일 때 대상 학년들 ['중1', '중2']
+
+  // 태그 및 시리즈
+  tags?: string[];                       // 태그 배열 ['#내신대비', '#재시험']
+  seriesId?: string;                     // 시험 시리즈 ID
+  seriesName?: string;                   // 시리즈 이름 (조회 편의)
+
+  // 메타데이터
+  createdBy: string;         // UID
+  createdByName?: string;    // 생성자 이름
+  createdAt: number;
+  updatedAt?: number;
+}
+
+/**
+ * 학생별 성적
+ */
+export interface StudentScore {
+  id: string;
+  studentId: string;         // UnifiedStudent.id와 연결
+  studentName?: string;      // 스냅샷 (조회 편의)
+  examId: string;            // Exam.id와 연결
+  examTitle?: string;        // 스냅샷 (조회 편의)
+  subject: 'math' | 'english';
+  score: number;             // 점수
+  maxScore: number;          // 만점 (Exam에서 복사)
+  percentage?: number;       // 백분율 (score/maxScore * 100)
+
+  // 선택적 통계
+  average?: number;          // 반/학원 평균
+  rank?: number;             // 석차
+  totalStudents?: number;    // 전체 학생수
+  grade?: 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D+' | 'D' | 'F';
+
+  // 메모
+  memo?: string;
+
+  // 메타데이터
+  createdAt: number;
+  updatedAt: number;
+  createdBy: string;
+  createdByName?: string;
+}
+
+/**
+ * 학생 성적 요약 (조회용)
+ */
+export interface StudentGradeSummary {
+  studentId: string;
+  studentName: string;
+  recentScores: StudentScore[];    // 최근 5개 성적
+  averageScore: number;            // 평균 점수
+  totalExams: number;              // 총 시험 수
+  trend: 'up' | 'down' | 'stable'; // 성적 추이
+}
+
+/**
+ * 성적 등급 계산 헬퍼
+ */
+export const calculateGrade = (percentage: number): StudentScore['grade'] => {
+  if (percentage >= 97) return 'A+';
+  if (percentage >= 93) return 'A';
+  if (percentage >= 90) return 'A-';
+  if (percentage >= 87) return 'B+';
+  if (percentage >= 83) return 'B';
+  if (percentage >= 80) return 'B-';
+  if (percentage >= 77) return 'C+';
+  if (percentage >= 73) return 'C';
+  if (percentage >= 70) return 'C-';
+  if (percentage >= 67) return 'D+';
+  if (percentage >= 60) return 'D';
+  return 'F';
+};
+
+/**
+ * 성적 등급별 색상
+ */
+export const GRADE_COLORS: Record<NonNullable<StudentScore['grade']>, { bg: string; text: string; border: string }> = {
+  'A+': { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-200' },
+  'A': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  'A-': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+  'B+': { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' },
+  'B': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+  'B-': { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
+  'C+': { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-200' },
+  'C': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
+  'C-': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+  'D+': { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200' },
+  'D': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+  'F': { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' },
+};
+
+/**
+ * 시험 유형 라벨
+ */
+export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
+  daily: '일일 테스트',
+  weekly: '주간 테스트',
+  monthly: '월말평가',
+  midterm: '중간고사',
+  final: '기말고사',
+  mock: '모의고사',
+  school: '학교 내신',
+  competition: '경시대회',
+  diagnostic: '진단 평가',
+  other: '기타',
+};
+
+// ============ CALENDAR HASHTAG & SEMINAR TYPES ============
+
+/**
+ * 이벤트 해시태그 (검색 및 분류용)
+ */
+export interface EventTag {
+  id: string;           // 고유 ID (자동 생성 또는 태그명 기반)
+  name: string;         // 태그명 (예: "회의", "세미나", "시험")
+  color?: string;       // 태그 색상 (선택)
+  usageCount?: number;  // 사용 횟수 (추천용)
+}
+
+/**
+ * 이벤트 유형
+ */
+export type CalendarEventType = 'general' | 'seminar';
+
+/**
+ * 세미나 참석자 정보
+ */
+export interface SeminarAttendee {
+  id: string;
+  name: string;
+  contact?: string;      // 연락처
+  organization?: string; // 소속
+  status: 'registered' | 'confirmed' | 'attended' | 'cancelled';
+  registeredAt: string;  // ISO Date string
+  memo?: string;
+}
+
+/**
+ * 세미나 이벤트 확장 필드
+ */
+export interface SeminarEventData {
+  speaker?: string;           // 발표자/강연자
+  speakerBio?: string;        // 발표자 소개
+  manager?: string;           // 담당자
+  managerContact?: string;    // 담당자 연락처
+  maxAttendees?: number;      // 최대 참석 인원
+  attendees?: SeminarAttendee[]; // 참석자 목록
+  venue?: string;             // 장소 상세
+  materials?: string[];       // 자료 링크들
+  registrationDeadline?: string; // 등록 마감일
+  isPublic?: boolean;         // 외부 공개 여부
+}
+
+/**
+ * 기본 해시태그 목록 (초기 제안용)
+ */
+export const DEFAULT_EVENT_TAGS: EventTag[] = [
+  { id: 'meeting', name: '회의', color: '#3B82F6' },
+  { id: 'seminar', name: '세미나', color: '#8B5CF6' },
+  { id: 'exam', name: '시험', color: '#EF4444' },
+  { id: 'holiday', name: '휴일', color: '#10B981' },
+  { id: 'deadline', name: '마감', color: '#F59E0B' },
+  { id: 'event', name: '행사', color: '#EC4899' },
+  { id: 'training', name: '연수', color: '#06B6D4' },
+  { id: 'parent-meeting', name: '학부모상담', color: '#84CC16' },
+];
