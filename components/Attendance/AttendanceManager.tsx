@@ -393,11 +393,11 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // Teacher selection is now handled in App.tsx header - no need for selection prompt
 
   return (
-    <div className="flex flex-col h-full bg-white text-[#373d41]">
+    <div className="flex flex-col h-full min-h-0 bg-white text-[#373d41]">
       {/* Navigation is now handled in App.tsx header */}
 
-      {/* Stats Cards - sticky below app header (64px) + attendance nav (40px) = 104px */}
-      <div className="sticky top-[104px] z-10 bg-white px-6 py-5 grid grid-cols-1 md:grid-cols-5 gap-4 flex-shrink-0 border-b border-gray-100 shadow-sm">
+      {/* Stats Cards - Regular flow (scrolls with content) */}
+      <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-5 gap-4 flex-shrink-0 border-b border-gray-100">
         <div
           onClick={() => setSettlementModalOpen(true)}
           className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-300 transition-colors"
@@ -472,21 +472,23 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         </div>
       </div>
 
-      {/* Main Table Area - Scrollable */}
-      <main className="flex-1 min-h-0 px-6 pb-6 overflow-auto">
-        <Table
-          currentDate={currentDate}
-          students={visibleStudents}
-          salaryConfig={salaryConfig}
-          onAttendanceChange={handleAttendanceChange}
-          onEditStudent={handleEditStudent}
-          onMemoChange={handleMemoChange}
-          pendingUpdatesByStudent={pendingUpdatesByStudent}
-          pendingMemosByStudent={pendingMemosByStudent}
-          groupOrder={groupOrder}
-          onGroupOrderChange={handleGroupOrderChange}
-        />
-      </main>
+      {/* Main Table Area - Constrained height with internal scroll for sticky header */}
+      <div className="flex-1 pb-6 overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+        <div className="mx-6">
+          <Table
+            currentDate={currentDate}
+            students={visibleStudents}
+            salaryConfig={salaryConfig}
+            onAttendanceChange={handleAttendanceChange}
+            onEditStudent={handleEditStudent}
+            onMemoChange={handleMemoChange}
+            pendingUpdatesByStudent={pendingUpdatesByStudent}
+            pendingMemosByStudent={pendingMemosByStudent}
+            groupOrder={groupOrder}
+            onGroupOrderChange={handleGroupOrderChange}
+          />
+        </div>
+      </div>
 
       {/* Modals */}
       <SalarySettings

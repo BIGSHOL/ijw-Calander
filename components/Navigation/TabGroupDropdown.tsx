@@ -73,13 +73,22 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
     );
   }
 
+  // 마우스 이벤트 핸들러
+  const handleMouseEnter = () => {
+    setIsOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsOpen(false);
+  };
+
   // 2개 이상이면 드롭다운
   return (
     <div
       className="relative"
       ref={dropdownRef}
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <button
         className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
@@ -97,7 +106,9 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
 
       {isOpen && (
         <div
-          className="absolute top-full left-0 mt-1 min-w-[140px] bg-[#1e293b] border border-white/10 rounded-lg shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute top-full left-0 min-w-[140px] bg-[#1e293b] border border-white/10 rounded-lg shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-2 duration-150"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           {visibleTabs.map(tab => {
             const meta = TAB_META[tab];

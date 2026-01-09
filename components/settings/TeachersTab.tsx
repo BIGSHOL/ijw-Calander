@@ -95,18 +95,74 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                 // Delete old document
                 await deleteDoc(doc(db, '강사목록', id));
 
-                // Sync all classes with this teacher
+                // Sync all classes with this teacher (수학 시간표용)
+                console.log(`🔍 수학 시간표: "${oldName}" → "${newName}" 수업 검색 중...`);
                 const classesSnapshot = await getDocs(
                     query(collection(db, '수업목록'), where('teacher', '==', oldName))
                 );
 
+                console.log(`📊 수학: 발견된 수업 ${classesSnapshot.docs.length}개`);
                 if (classesSnapshot.docs.length > 0) {
                     const batch = writeBatch(db);
                     classesSnapshot.docs.forEach(docSnap => {
                         batch.update(doc(db, '수업목록', docSnap.id), { teacher: newName });
                     });
                     await batch.commit();
-                    console.log(`✅ ${classesSnapshot.docs.length}개 수업의 강사명 변경: "${oldName}" → "${newName}"`);
+                    console.log(`✅ 수학: ${classesSnapshot.docs.length}개 수업의 강사명 변경 완료`);
+                }
+
+                // Sync English schedule (영어 시간표용 - 문서 ID가 강사명)
+                console.log(`🔍 영어 시간표: "${oldName}" → "${newName}" 스케줄 이전 중...`);
+                const oldEnglishDocRef = doc(db, 'english_schedules', oldName);
+                const oldEnglishDocSnap = await getDoc(oldEnglishDocRef);
+
+                if (oldEnglishDocSnap.exists()) {
+                    let data = oldEnglishDocSnap.data();
+                    console.log(`📋 기존 데이터 샘플:`, JSON.stringify(data).substring(0, 200));
+
+                    // 재귀적으로 모든 키와 값에서 강사명 변경
+                    const replaceTeacherNameInData = (obj: any): any => {
+                        if (obj === null || obj === undefined) return obj;
+
+                        // 문자열인 경우: 값 자체를 치환
+                        if (typeof obj === 'string') {
+                            return obj.replace(new RegExp(oldName, 'g'), newName);
+                        }
+
+                        // 배열인 경우: 각 요소 재귀 처리
+                        if (Array.isArray(obj)) {
+                            return obj.map(item => replaceTeacherNameInData(item));
+                        }
+
+                        // 객체인 경우: 키와 값 모두 치환
+                        if (typeof obj === 'object') {
+                            const newObj: any = {};
+                            for (const key in obj) {
+                                // 키에서 강사명 치환
+                                const newKey = key.replace(new RegExp(oldName, 'g'), newName);
+                                // 값도 재귀적으로 치환
+                                newObj[newKey] = replaceTeacherNameInData(obj[key]);
+                            }
+                            return newObj;
+                        }
+
+                        return obj;
+                    };
+
+                    data = replaceTeacherNameInData(data);
+                    console.log(`✏️ 변경된 데이터 샘플:`, JSON.stringify(data).substring(0, 200));
+
+                    // 새 문서로 복사 (모든 강사명이 업데이트된 데이터)
+                    const newEnglishDocRef = doc(db, 'english_schedules', newName);
+                    await setDoc(newEnglishDocRef, data);
+                    console.log(`💾 새 문서 저장 완료: ${newName}`);
+
+                    // 기존 문서 삭제
+                    await deleteDoc(oldEnglishDocRef);
+                    console.log(`🗑️ 기존 문서 삭제 완료: ${oldName}`);
+                    console.log(`✅ 영어: "${oldName}" 스케줄을 "${newName}"으로 이전 완료 (모든 키와 값의 강사명 포함)`);
+                } else {
+                    console.log(`ℹ️ 영어: "${oldName}" 스케줄 없음 (영어 수업 없는 강사)`);
                 }
             } else {
                 // Just update the existing document
@@ -121,17 +177,72 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
 
                 // If name changed but id != oldName, still sync classes
                 if (oldName !== newName) {
+                    // Sync math classes
+                    console.log(`🔍 수학 시간표: "${oldName}" → "${newName}" 수업 검색 중...`);
                     const classesSnapshot = await getDocs(
                         query(collection(db, '수업목록'), where('teacher', '==', oldName))
                     );
 
+                    console.log(`📊 수학: 발견된 수업 ${classesSnapshot.docs.length}개`);
                     if (classesSnapshot.docs.length > 0) {
                         const batch = writeBatch(db);
                         classesSnapshot.docs.forEach(docSnap => {
                             batch.update(doc(db, '수업목록', docSnap.id), { teacher: newName });
                         });
                         await batch.commit();
-                        console.log(`✅ ${classesSnapshot.docs.length}개 수업의 강사명 변경: "${oldName}" → "${newName}"`);
+                        console.log(`✅ 수학: ${classesSnapshot.docs.length}개 수업의 강사명 변경 완료`);
+                    }
+
+                    // Sync English schedule
+                    console.log(`🔍 영어 시간표: "${oldName}" → "${newName}" 스케줄 이전 중...`);
+                    const oldEnglishDocRef = doc(db, 'english_schedules', oldName);
+                    const oldEnglishDocSnap = await getDoc(oldEnglishDocRef);
+
+                    if (oldEnglishDocSnap.exists()) {
+                        let data = oldEnglishDocSnap.data();
+                        console.log(`📋 기존 데이터 샘플:`, JSON.stringify(data).substring(0, 200));
+
+                        // 재귀적으로 모든 키와 값에서 강사명 변경
+                        const replaceTeacherNameInData = (obj: any): any => {
+                            if (obj === null || obj === undefined) return obj;
+
+                            // 문자열인 경우: 값 자체를 치환
+                            if (typeof obj === 'string') {
+                                return obj.replace(new RegExp(oldName, 'g'), newName);
+                            }
+
+                            // 배열인 경우: 각 요소 재귀 처리
+                            if (Array.isArray(obj)) {
+                                return obj.map(item => replaceTeacherNameInData(item));
+                            }
+
+                            // 객체인 경우: 키와 값 모두 치환
+                            if (typeof obj === 'object') {
+                                const newObj: any = {};
+                                for (const key in obj) {
+                                    // 키에서 강사명 치환
+                                    const newKey = key.replace(new RegExp(oldName, 'g'), newName);
+                                    // 값도 재귀적으로 치환
+                                    newObj[newKey] = replaceTeacherNameInData(obj[key]);
+                                }
+                                return newObj;
+                            }
+
+                            return obj;
+                        };
+
+                        data = replaceTeacherNameInData(data);
+                        console.log(`✏️ 변경된 데이터 샘플:`, JSON.stringify(data).substring(0, 200));
+
+                        const newEnglishDocRef = doc(db, 'english_schedules', newName);
+                        await setDoc(newEnglishDocRef, data);
+                        console.log(`💾 새 문서 저장 완료: ${newName}`);
+
+                        await deleteDoc(oldEnglishDocRef);
+                        console.log(`🗑️ 기존 문서 삭제 완료: ${oldName}`);
+                        console.log(`✅ 영어: "${oldName}" 스케줄을 "${newName}"으로 이전 완료 (모든 키와 값의 강사명 포함)`);
+                    } else {
+                        console.log(`ℹ️ 영어: "${oldName}" 스케줄 없음 (영어 수업 없는 강사)`);
                     }
                 }
             }
