@@ -37,6 +37,8 @@ export interface UnifiedStudent {
   status: 'active' | 'on_hold' | 'withdrawn';
   startDate: string;             // 등록일 (YYYY-MM-DD)
   endDate?: string;              // 퇴원일
+  withdrawalDate?: string;       // 퇴원일 (YYYY-MM-DD) - 영어 시간표와 호환
+  isOldWithdrawn?: boolean;      // 90일 이상 경과한 퇴원생 표시 (검색용)
 
   // 출석부 연동
   salarySettingId?: string;      // 급여 설정
@@ -301,7 +303,8 @@ export type PermissionId =
   // Attendance (consolidated)
   | 'attendance.manage_own'  // Was view_own + edit_own
   | 'attendance.edit_all'
-  | 'attendance.manage_math' | 'attendance.manage_english';
+  | 'attendance.manage_math' | 'attendance.manage_english'
+  | 'attendance.edit_student_info';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -327,6 +330,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Attendance (Admin: full access)
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': true,
+    'attendance.edit_student_info': true,
   },
   manager: {
     'events.create': true, 'events.manage_own': true, 'events.manage_others': true,
@@ -340,6 +344,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Attendance (Manager: full access)
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': true,
+    'attendance.edit_student_info': true,
   },
   editor: {
     'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
@@ -360,6 +365,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Attendance (Math Lead: manage math, view/edit all math students)
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': false,
+    'attendance.edit_student_info': true,
   },
   english_lead: {
     'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
@@ -373,6 +379,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Attendance (English Lead: manage english, view/edit all english students)
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': false, 'attendance.manage_english': true,
+    'attendance.edit_student_info': true,
   },
   math_teacher: {
     'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
@@ -385,6 +392,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Attendance (Math Teacher: view/edit own students only)
     'attendance.manage_own': true, 'attendance.edit_all': false,
     'attendance.manage_math': false, 'attendance.manage_english': false,
+    'attendance.edit_student_info': false,
   },
   english_teacher: {
     'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
@@ -731,7 +739,7 @@ export const CONSULTATION_CHART_COLORS = ['#059669', '#0d9488', '#0891b2', '#f59
 /**
  * 시험 범위 (누가 치는 시험인가?)
  */
-export type ExamScope = 'class' | 'grade' | 'subject' | 'academy';
+export type ExamScope = 'class' | 'grade' | 'subject' | 'school' | 'academy';
 
 /**
  * 시험 범위 라벨
@@ -740,6 +748,7 @@ export const EXAM_SCOPE_LABELS: Record<ExamScope, string> = {
   class: '반별',
   grade: '학년별',
   subject: '과목별',
+  school: '학교별',
   academy: '학원 전체',
 };
 
@@ -774,6 +783,7 @@ export interface Exam {
   scope: ExamScope;                      // 시험 범위
   targetClassIds?: string[];             // scope='class'일 때 대상 반 IDs
   targetGrades?: string[];               // scope='grade'일 때 대상 학년들 ['중1', '중2']
+  targetSchools?: string[];              // scope='school'일 때 대상 학교들
 
   // 태그 및 시리즈
   tags?: string[];                       // 태그 배열 ['#내신대비', '#재시험']
@@ -785,6 +795,19 @@ export interface Exam {
   createdByName?: string;    // 생성자 이름
   createdAt: number;
   updatedAt?: number;
+
+  // 통계 (비정규화 - 읽기 비용 최적화)
+  stats?: ExamStats;
+}
+
+/**
+ * 시험 성적 통계 (Exam 문서에 비정규화되어 저장됨)
+ */
+export interface ExamStats {
+  count: number;     // 응시자 수
+  avg: number;       // 전체 평균
+  max: number;       // 최고점
+  min: number;       // 최저점
 }
 
 /**
@@ -899,30 +922,62 @@ export interface EventTag {
 export type CalendarEventType = 'general' | 'seminar';
 
 /**
- * 세미나 참석자 정보
+ * 세미나 참석자 정보 (확장)
  */
 export interface SeminarAttendee {
   id: string;
+
+  // 기본 정보
   name: string;
-  contact?: string;      // 연락처
-  organization?: string; // 소속
-  status: 'registered' | 'confirmed' | 'attended' | 'cancelled';
-  registeredAt: string;  // ISO Date string
-  memo?: string;
+  phone: string;              // 전화번호 (필수)
+  isCurrentStudent: boolean;  // 재원생 여부
+  studentId?: string;         // 재원생인 경우 학생 ID (기존 학생 데이터 연동)
+
+  // 비재원생 정보
+  gender?: 'male' | 'female';
+  ageGroup?: 'elementary' | 'middle' | 'high' | 'adult';  // 연령대
+  grade?: string;             // 학년 (초1, 중2, 고3 등)
+  address?: string;           // 주소 (간단히)
+
+  // 신청 정보
+  registrationSource?: string; // 신청경로 (지인소개, 온라인, 전단지 등)
+  parentAttending?: boolean;   // 부모 참석 여부
+  companions?: string[];       // 동석자 이름 목록
+
+  // 담당 및 상태
+  assignedTeacherId?: string;  // 담당 선생님 ID
+  assignedTeacherName?: string; // 담당 선생님 이름
+  status: 'registered' | 'confirmed' | 'attended' | 'cancelled' | 'no-show';
+
+  // 메타 정보
+  registeredAt: string;       // ISO Date string
+  memo?: string;              // 메모
+  createdBy?: string;         // 등록자 ID
+  updatedAt?: string;         // 수정일
 }
 
 /**
  * 세미나 이벤트 확장 필드
  */
 export interface SeminarEventData {
-  speaker?: string;           // 발표자/강연자
+  // 연사 정보
+  speaker?: string;           // 발표자/강연자 이름
   speakerBio?: string;        // 발표자 소개
+  speakerContact?: string;    // 연사 연락처
+
+  // 관리 정보
   manager?: string;           // 담당자
   managerContact?: string;    // 담당자 연락처
   maxAttendees?: number;      // 최대 참석 인원
+
+  // 참석자 목록
   attendees?: SeminarAttendee[]; // 참석자 목록
+
+  // 장소 및 자료
   venue?: string;             // 장소 상세
   materials?: string[];       // 자료 링크들
+
+  // 기타
   registrationDeadline?: string; // 등록 마감일
   isPublic?: boolean;         // 외부 공개 여부
 }

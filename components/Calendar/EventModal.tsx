@@ -1,11 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { CalendarEvent, Department, UserProfile } from '../../types';
+import { CalendarEvent, Department, UserProfile, EventTag, DEFAULT_EVENT_TAGS, SeminarEventData } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useStudents } from '../../hooks/useStudents';
 import { EVENT_COLORS } from '../../constants';
-// Added Edit3 and Plus to the imports to fix "Cannot find name" errors on line 95
-import { X, Trash2, Clock, Users, AlignLeft, Type, Edit3, Plus, Link as LinkIcon, Eye, Copy, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Trash2, Clock, Users, AlignLeft, Type, Edit3, Plus, Link as LinkIcon, Eye, Copy, ChevronDown, ChevronUp, Hash } from 'lucide-react';
 import { format } from 'date-fns';
+import { db } from '../../firebaseConfig';
+import { doc, onSnapshot } from 'firebase/firestore';
+import SeminarPanel from './SeminarPanel';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -79,6 +82,18 @@ const EventModal: React.FC<EventModalProps> = ({
   const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
   const [isParticipantsDropdownOpen, setIsParticipantsDropdownOpen] = useState(false);
 
+  // Hashtag State
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<EventTag[]>(DEFAULT_EVENT_TAGS);
+  const [seminarTags, setSeminarTags] = useState<string[]>(['seminar', 'workshop', 'meeting']);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [isHashtagDropdownOpen, setIsHashtagDropdownOpen] = useState(false);
+
+  // Seminar Data State
+  const [seminarData, setSeminarData] = useState<SeminarEventData>({});
+
+  // Load Students
+  const { students } = useStudents();
 
   // Permission Logic
   const { hasPermission } = usePermissions(currentUser || null);
@@ -147,8 +162,12 @@ const EventModal: React.FC<EventModalProps> = ({
           // Fix: Reset recurrence state for existing events to prevent state pollution
           setRecurrenceType(existingEvent.recurrenceType || 'none');
           setRecurrenceCount(1); // Default count for edit mode (usually not used unless new recurrence started)
-          setRecurrenceType(existingEvent.recurrenceType || 'none');
-          setRecurrenceCount(1); // Default count for edit mode (usually not used unless new recurrence started)
+
+          // Load tags
+          setSelectedTags(existingEvent.tags || []);
+
+          // Load attendance
+          setAttendance(existingEvent.attendance || {});
         } else if (templateEvent) {
           // --- COPY MODE (Template) ---
           setIsViewMode(false); // Edit Mode for new event
@@ -193,6 +212,10 @@ const EventModal: React.FC<EventModalProps> = ({
 
           setRecurrenceType('none'); // Do not copy recurrence rules by default to avoid complexity
           setRecurrenceCount(1);
+
+          // Copy tags from template
+          setSelectedTags(templateEvent.tags || []);
+          setAttendance(templateEvent.attendance || {});
         } else {
           setIsViewMode(false); // Default to Edit Mode for new events
           setTitle(initialTitle || '');
@@ -232,6 +255,9 @@ const EventModal: React.FC<EventModalProps> = ({
           setRecurrenceType('none');
           setRecurrenceCount(1);
 
+          // Reset tags and attendance for new events
+          setSelectedTags([]);
+          setAttendance({});
 
           // Apply Department Defaults
           // Resolution: If multi-selected, pick the FIRST one for default color.
@@ -251,6 +277,25 @@ const EventModal: React.FC<EventModalProps> = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, existingEvent, initialDate, initialEndDate, initialDepartmentId, initialStartTime, initialEndTime, departments]);
+
+  // Load hashtag configuration from Firebase
+  useEffect(() => {
+    const docRef = doc(db, 'settings', 'hashtag_config');
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setAvailableTags(data.tags || DEFAULT_EVENT_TAGS);
+        setSeminarTags(data.seminarTags || ['seminar', 'workshop', 'meeting']);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Auto-open panel when seminar tags are selected
+  useEffect(() => {
+    const showPanel = selectedTags.some(tagId => seminarTags.includes(tagId));
+    setIsPanelOpen(showPanel);
+  }, [selectedTags, seminarTags]);
 
   if (!isOpen) return null;
 
@@ -299,6 +344,8 @@ const EventModal: React.FC<EventModalProps> = ({
       recurrenceType: recurrenceType !== 'none' ? recurrenceType : undefined,
       // Fix: Pass relatedGroupId to persist Linked Group association
       relatedGroupId: existingEvent?.relatedGroupId,
+      // Hashtags
+      tags: selectedTags.length > 0 ? selectedTags : undefined,
     };
 
     console.log('DEBUG: selectedColor', selectedColor);
@@ -323,8 +370,9 @@ const EventModal: React.FC<EventModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-0 relative max-h-[90vh] overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 gap-4 p-4" onClick={onClose}>
+      {/* Main Event Modal */}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-0 relative h-[90vh] overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
         <div className="bg-[#081429] p-4 flex justify-between items-center text-white">
           <h2 className="text-lg font-bold flex items-center gap-2">
             {existingEvent ? (isViewMode ? <Eye size={20} className="text-[#fdb813]" /> : <Edit3 size={20} className="text-[#fdb813]" />) : <Plus size={20} className="text-[#fdb813]" />}
@@ -338,7 +386,7 @@ const EventModal: React.FC<EventModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-64px)]">
+        <form onSubmit={handleSubmit} className="p-6 space-y-3 overflow-y-auto h-[calc(90vh-64px)]">
           {/* Title */}
           <div>
             <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-1.5 flex items-center gap-1">
@@ -740,7 +788,6 @@ const EventModal: React.FC<EventModalProps> = ({
               <div className="flex gap-4 items-center">
                 {/* Background Color */}
                 <div className="flex flex-col gap-1 items-center">
-                  <span className="text-[10px] font-bold text-gray-500">배경</span>
                   <input
                     type="color"
                     value={selectedColor}
@@ -749,11 +796,11 @@ const EventModal: React.FC<EventModalProps> = ({
                     className={`w-9 h-9 rounded-lg cursor-pointer border-2 border-gray-200 ${(!canEditCurrent) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title="배경색 선택"
                   />
+                  <span className="text-[10px] font-bold text-gray-500">배경</span>
                 </div>
 
                 {/* Text Color */}
                 <div className="flex flex-col gap-1 items-center">
-                  <span className="text-[10px] font-bold text-gray-500">글자</span>
                   <input
                     type="color"
                     value={selectedTextColor}
@@ -762,11 +809,11 @@ const EventModal: React.FC<EventModalProps> = ({
                     className={`w-9 h-9 rounded-lg cursor-pointer border-2 border-gray-200 ${(!canEditCurrent) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title="글자색 선택"
                   />
+                  <span className="text-[10px] font-bold text-gray-500">글자</span>
                 </div>
 
                 {/* Border Color */}
                 <div className="flex flex-col gap-1 items-center">
-                  <span className="text-[10px] font-bold text-gray-500">테두리</span>
                   <input
                     type="color"
                     value={selectedBorderColor}
@@ -775,6 +822,7 @@ const EventModal: React.FC<EventModalProps> = ({
                     className={`w-9 h-9 rounded-lg cursor-pointer border-2 border-gray-200 ${(!canEditCurrent) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title="테두리색 선택"
                   />
+                  <span className="text-[10px] font-bold text-gray-500">테두리</span>
                 </div>
               </div>
             </div>
@@ -818,6 +866,68 @@ const EventModal: React.FC<EventModalProps> = ({
                 )}
               </div>
             )}
+
+            {/* Hashtags Dropdown with Checkboxes */}
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2 flex items-center gap-1">
+                <Hash size={14} className="text-[#fdb813]" /> 해시태그
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  disabled={isViewMode || !canEditCurrent}
+                  onClick={() => setIsHashtagDropdownOpen(!isHashtagDropdownOpen)}
+                  className={`w-full appearance-none bg-white border border-gray-300 text-gray-700 text-sm font-bold py-2.5 px-4 rounded-xl outline-none focus:border-[#fdb813] cursor-pointer focus:ring-2 focus:ring-[#fdb813] flex items-center justify-between ${
+                    isViewMode || !canEditCurrent ? 'bg-gray-100 cursor-not-allowed' : ''
+                  }`}
+                >
+                  <span className="truncate">
+                    {selectedTags.length > 0
+                      ? `${availableTags.find(t => t.id === selectedTags[0])?.name || ''}${selectedTags.length > 1 ? ` 외 ${selectedTags.length - 1}개` : ''}`
+                      : '해시태그 선택'
+                    }
+                  </span>
+                  <ChevronDown size={16} className={`transition-transform ${isHashtagDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isHashtagDropdownOpen && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                    {availableTags.map((tag) => {
+                      const isSelected = selectedTags.includes(tag.id);
+                      return (
+                        <label
+                          key={tag.id}
+                          className={`flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer ${
+                            isSelected ? 'bg-blue-50' : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedTags([...selectedTags, tag.id]);
+                              } else {
+                                setSelectedTags(selectedTags.filter(id => id !== tag.id));
+                              }
+                            }}
+                            className="w-4 h-4 text-[#fdb813] border-gray-300 rounded focus:ring-[#fdb813]"
+                          />
+                          <span className="text-sm font-medium text-gray-700">
+                            # {tag.name}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              {selectedTags.some(tagId => seminarTags.includes(tagId)) && (
+                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                  <Users size={10} />
+                  참가자 패널 표시
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Divider */}
@@ -992,6 +1102,19 @@ const EventModal: React.FC<EventModalProps> = ({
           </div>
         </form >
       </div >
+
+      {/* Seminar Management Side Panel */}
+      <div onClick={(e) => e.stopPropagation()}>
+        <SeminarPanel
+          isOpen={isPanelOpen}
+          eventTitle={title}
+          seminarData={seminarData}
+          students={students}
+          users={users}
+          onClose={() => setIsPanelOpen(false)}
+          onUpdateSeminarData={(data) => setSeminarData(data)}
+        />
+      </div>
     </div >
   );
 };

@@ -687,11 +687,19 @@ code-reviewer (품질 검토)
     ↓
 security-auditor (보안 검토) ← 현재 에이전트
     ↓
-firebase-cost-optimizer (비용 검토, 필요시)
+report-summarizer (결과 요약) ← 선택적
     ↓
 code-fixer (수정 적용)
     ↓
 [배포 준비 완료]
+```
+
+### report-summarizer 연계
+보안 검사 리포트가 길 경우, 사용자가 "요약해줘"라고 하면 핵심만 브리핑:
+```
+사용자: "보안 검사하고 요약해줘"
+→ security-auditor 실행 → report-summarizer 자동 연결
+→ "🔴 배포 불가. XSS 1건 즉시 수정 필요."
 ```
 
 ### 트리거 조건

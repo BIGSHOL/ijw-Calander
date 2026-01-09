@@ -27,3 +27,13 @@ dist-ssr
 .env
 .env.local
 .env.*
+
+# Firestore Backups (민감한 데이터 포함)
+backups/
+*.backup.json
+
+# System/Generated
+nul
+nul*
+__pycache__/
+*.pyc

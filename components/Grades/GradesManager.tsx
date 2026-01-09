@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedStudent, Exam, StudentScore, ExamType, ExamScope, EXAM_TYPE_LABELS, EXAM_SCOPE_LABELS, GRADE_COLORS, calculateGrade } from '../../types';
 import { useStudents } from '../../hooks/useStudents';
 import { useExams, useCreateExam, useUpdateExam, useDeleteExam } from '../../hooks/useExams';
@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import {
-  GraduationCap, Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronRight,
+  GraduationCap, Plus, Trash2, Edit, Save, X, ChevronDown, ChevronRight,
   Users, Calendar, BookOpen, BarChart3, Search, Filter, RefreshCw, Loader2,
   TrendingUp, TrendingDown, Minus, AlertCircle, Check, Tag, Building2
 } from 'lucide-react';
@@ -54,9 +54,10 @@ type ViewMode = 'exams' | 'students' | 'input';
 interface GradesManagerProps {
   subjectFilter: 'all' | 'math' | 'english';
   searchQuery: string;
+  onSearchChange: (query: string) => void;
 }
 
-const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuery }) => {
+const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuery, onSearchChange }) => {
   const user = auth.currentUser;
   const queryClient = useQueryClient();
 
@@ -69,11 +70,13 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   // Data
   const { students } = useStudents();
   const { data: exams = [], isLoading: loadingExams, refetch: refetchExams } = useExams();
-  const { data: allScores = [], isLoading: loadingScores } = useAllScores();
-  const { data: examScores = [] } = useExamScores(expandedExamId || '');
+  // useAllScores 더 이상 사용하지 않음 (비용 최적화)
+  // const { data: allScores = [], isLoading: loadingScores } = useAllScores();
+  const { data: examScores = [], isLoading: loadingScores } = useExamScores(selectedExam?.id || expandedExamId || '');
 
   // Mutations
   const createExam = useCreateExam();
+  const updateExam = useUpdateExam(); // 시험 정보 업데이트용 (통계 저장)
   const deleteExamMutation = useDeleteExam();
 
   // 성적 일괄 입력 mutation
@@ -98,9 +101,10 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
       await batch.commit();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all_scores'] });
+      queryClient.invalidateQueries({ queryKey: ['all_scores'] }); // This query key is no longer used, but kept for safety if other parts still reference it
       queryClient.invalidateQueries({ queryKey: ['exam_scores'] });
       queryClient.invalidateQueries({ queryKey: ['student_scores'] });
+      queryClient.invalidateQueries({ queryKey: ['exams'] }); // Invalidate exams to refetch updated stats
     },
   });
 
@@ -110,9 +114,10 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
       await deleteDoc(doc(db, 'student_scores', scoreId));
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all_scores'] });
+      queryClient.invalidateQueries({ queryKey: ['all_scores'] }); // This query key is no longer used, but kept for safety if other parts still reference it
       queryClient.invalidateQueries({ queryKey: ['exam_scores'] });
       queryClient.invalidateQueries({ queryKey: ['student_scores'] });
+      queryClient.invalidateQueries({ queryKey: ['exams'] }); // Invalidate exams to refetch updated stats
     },
   });
 
@@ -132,19 +137,19 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
     return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [exams, subjectFilter, searchQuery]);
 
-  // 시험별 통계
-  const getExamStats = (examId: string) => {
-    const scores = allScores.filter(s => s.examId === examId);
-    if (scores.length === 0) return { count: 0, avg: 0, max: 0, min: 0 };
+  // 시험별 통계 - REMOVED, now stored directly on exam object
+  // const getExamStats = (examId: string) => {
+  //   const scores = allScores.filter(s => s.examId === examId);
+  //   if (scores.length === 0) return { count: 0, avg: 0, max: 0, min: 0 };
 
-    const percentages = scores.map(s => s.percentage || 0);
-    return {
-      count: scores.length,
-      avg: Math.round(percentages.reduce((a, b) => a + b, 0) / scores.length),
-      max: Math.round(Math.max(...percentages)),
-      min: Math.round(Math.min(...percentages)),
-    };
-  };
+  //   const percentages = scores.map(s => s.percentage || 0);
+  //   return {
+  //     count: scores.length,
+  //     avg: Math.round(percentages.reduce((a, b) => a + b, 0) / scores.length),
+  //     max: Math.round(Math.max(...percentages)),
+  //     min: Math.round(Math.min(...percentages)),
+  //   };
+  // };
 
   // 새 시험 생성 핸들러
   const [newExam, setNewExam] = useState({
@@ -156,13 +161,107 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
     scope: 'academy' as ExamScope,
     targetClassIds: [] as string[],
     targetGrades: [] as string[],
+    targetSchools: [] as string[],
     tags: [] as string[],
   });
   const [tagInput, setTagInput] = useState('');
+  const [classSearchQuery, setClassSearchQuery] = useState(''); // 반 검색어
+  const [schoolSearchQuery, setSchoolSearchQuery] = useState(''); // 학교 검색어
+
+  // 성적 데이터 로딩 및 초기화 (Async)
+  useEffect(() => {
+    if (viewMode !== 'input' || !selectedExam) return;
+
+    // 이미 입력값이 있으면 덮어쓰기 방지 (단, 초기 로딩 시점 체크 필요)
+    // startScoreInput에서 scoreInputs를 초기화하므로, 여기서는 데이터가 로드되면 채워넣음.
+    // 하지만 examScores가 빈 배열일 수도 있음 (새 시험).
+    // 따라서 scoreInputs가 비어있을 때만 실행하는 조건은 유효함.
+    if (Object.keys(scoreInputs).length > 0 && examScores.length > 0) return;
+
+    const initialInputs: Record<string, { score: string; avg?: string; rank?: string }> = {};
+    const existingStudentIds: string[] = [];
+
+    // examScores가 아직 로딩 중이거나 비어있어도, 
+    // examScores가 업데이트되면 이 effect가 다시 실행됨.
+    examScores.forEach(s => {
+      initialInputs[s.studentId] = {
+        score: s.score.toString(),
+        avg: s.average?.toString(),
+        rank: s.rank?.toString(),
+      };
+      existingStudentIds.push(s.studentId);
+    });
+
+    // 자동 추가 로직
+    let autoAddIds: string[] = [];
+    const exam = selectedExam;
+
+    if (exam.scope === 'academy' || !exam.scope) {
+      autoAddIds = existingStudentIds;
+    } else if (exam.scope === 'grade' && exam.targetGrades && exam.targetGrades.length > 0) {
+      autoAddIds = students
+        .filter(s => s.status === 'active' && exam.targetGrades?.includes(s.grade || ''))
+        .map(s => s.id);
+    } else if (exam.scope === 'class' && exam.targetClassIds && exam.targetClassIds.length > 0) {
+      autoAddIds = students
+        .filter(s => {
+          if (s.status !== 'active') return false;
+          return s.enrollments?.some(e => exam.targetClassIds?.includes(e.classId));
+        })
+        .map(s => s.id);
+    } else if (exam.scope === 'school' && exam.targetSchools && exam.targetSchools.length > 0) {
+      autoAddIds = students
+        .filter(s => s.status === 'active' && exam.targetSchools?.includes(s.school || ''))
+        .map(s => s.id);
+    } else if (exam.scope === 'subject') {
+      const targetSubject = exam.subject === 'both' ? undefined : exam.subject;
+      if (targetSubject) {
+        autoAddIds = students
+          .filter(s => {
+            if (s.status !== 'active') return false;
+            return s.enrollments?.some(e => e.subject === targetSubject);
+          })
+          .map(s => s.id);
+      }
+    }
+
+    const mergedIds = [...new Set([...existingStudentIds, ...autoAddIds])];
+
+    // 상태 업데이트
+    setScoreInputs(prev => Object.keys(prev).length === 0 ? initialInputs : prev);
+    setAddedStudentIds(mergedIds);
+
+  }, [viewMode, selectedExam, examScores, students]);
 
   // 반/시리즈 데이터
   const { data: classes = [] } = useClasses(newExam.subject === 'both' ? undefined : newExam.subject);
   const { data: examSeries = [] } = useExamSeries();
+
+  // 학교 목록 추출 (학생 데이터에서)
+  const availableSchools = useMemo(() => {
+    const schools = new Set<string>();
+    students.filter(s => s.status === 'active').forEach(s => {
+      if (s.school) schools.add(s.school);
+    });
+    return Array.from(schools).sort();
+  }, [students]);
+
+  // 필터링된 반 목록
+  const filteredClasses = useMemo(() => {
+    if (!classSearchQuery.trim()) return classes;
+    const query = classSearchQuery.toLowerCase();
+    return classes.filter(cls =>
+      cls.className.toLowerCase().includes(query) ||
+      cls.teacher?.toLowerCase().includes(query)
+    );
+  }, [classes, classSearchQuery]);
+
+  // 필터링된 학교 목록
+  const filteredSchools = useMemo(() => {
+    if (!schoolSearchQuery.trim()) return availableSchools;
+    const query = schoolSearchQuery.toLowerCase();
+    return availableSchools.filter(school => school.toLowerCase().includes(query));
+  }, [availableSchools, schoolSearchQuery]);
 
   const handleCreateExam = async () => {
     if (!newExam.title || !user) return;
@@ -183,15 +282,28 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
       scope: 'academy',
       targetClassIds: [],
       targetGrades: [],
+      targetSchools: [],
       tags: [],
     });
     setTagInput('');
+    setClassSearchQuery('');
+    setSchoolSearchQuery('');
   };
 
   // 성적 입력 상태
   const [scoreInputs, setScoreInputs] = useState<Record<string, { score: string; avg?: string; rank?: string }>>({});
   const [addedStudentIds, setAddedStudentIds] = useState<string[]>([]); // 추가된 학생 ID 목록
+  const [editingStudentIds, setEditingStudentIds] = useState<string[]>([]); // 수정 중인 학생 목록
   const [studentSearchQuery, setStudentSearchQuery] = useState(''); // 학생 검색어
+
+  // 편집 모드 토글
+  const handleToggleEdit = (studentId: string) => {
+    if (editingStudentIds.includes(studentId)) {
+      setEditingStudentIds(prev => prev.filter(id => id !== studentId));
+    } else {
+      setEditingStudentIds(prev => [...prev, studentId]);
+    }
+  };
 
   const handleScoreInputChange = (studentId: string, field: 'score' | 'avg' | 'rank', value: string) => {
     setScoreInputs(prev => ({
@@ -251,35 +363,74 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   const handleBatchSaveScores = async () => {
     if (!selectedExam || !user) return;
 
-    const scoresToSave: Omit<StudentScore, 'id' | 'createdAt' | 'updatedAt'>[] = [];
+    const validEntries = Object.entries(scoreInputs)
+      .filter(([_, input]) => input.score && !isNaN(Number(input.score)))
+      .map(([studentId, input]) => ({
+        studentId,
+        score: Number(input.score)
+      }));
 
-    Object.entries(scoreInputs).forEach(([studentId, input]) => {
-      if (input.score && !isNaN(Number(input.score))) {
-        const student = students.find(s => s.id === studentId);
-        scoresToSave.push({
-          studentId,
-          studentName: student?.name,
-          examId: selectedExam.id,
-          examTitle: selectedExam.title,
-          subject: selectedExam.subject === 'both' ? 'math' : selectedExam.subject,
-          score: Number(input.score),
-          maxScore: selectedExam.maxScore,
-          average: input.avg ? Number(input.avg) : undefined,
-          rank: input.rank ? Number(input.rank) : undefined,
-          totalStudents: Object.keys(scoreInputs).filter(k => scoreInputs[k].score).length,
-          createdBy: user.uid,
-          createdByName: user.displayName || user.email || '',
-        });
+    if (validEntries.length === 0) return;
+
+    // 통계 계산
+    const totalScore = validEntries.reduce((sum, e) => sum + e.score, 0);
+    const avgScore = Number((totalScore / validEntries.length).toFixed(1));
+    const scoresArray = validEntries.map(e => e.score);
+    const maxScore = Math.max(...scoresArray);
+    const minScore = Math.min(...scoresArray);
+
+    // 석차 계산
+    validEntries.sort((a, b) => b.score - a.score);
+    const rankMap: Record<string, number> = {};
+    validEntries.forEach((entry, idx) => {
+      const prevEntry = validEntries[idx - 1];
+      if (prevEntry && prevEntry.score === entry.score) {
+        rankMap[entry.studentId] = rankMap[prevEntry.studentId];
+      } else {
+        rankMap[entry.studentId] = idx + 1;
       }
+    });
+
+    const scoresToSave = validEntries.map(entry => {
+      const student = students.find(s => s.id === entry.studentId);
+      return {
+        studentId: entry.studentId,
+        studentName: student?.name,
+        examId: selectedExam.id,
+        examTitle: selectedExam.title,
+        subject: selectedExam.subject === 'both' ? 'math' : selectedExam.subject,
+        score: entry.score,
+        maxScore: selectedExam.maxScore,
+        average: avgScore,
+        rank: rankMap[entry.studentId],
+        totalStudents: validEntries.length,
+        createdBy: user.uid,
+        createdByName: user.displayName || user.email || '',
+      };
     });
 
     if (scoresToSave.length > 0) {
       await batchAddScores.mutateAsync(scoresToSave);
+
+      // 시험 통계 정보 업데이트 (비정규화)
+      await updateExam.mutateAsync({
+        id: selectedExam.id,
+        updates: {
+          stats: {
+            count: validEntries.length,
+            avg: Math.round(avgScore), // 소수점 반올림 (UI 표시용)
+            max: maxScore,
+            min: minScore
+          }
+        }
+      });
+
       setScoreInputs({});
       setSelectedExam(null);
       setViewMode('exams');
     }
   };
+
 
   // 성적 입력 화면으로 전환
   const startScoreInput = (exam: Exam) => {
@@ -288,60 +439,52 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
     setScoreInputs({});
     setAddedStudentIds([]);
     setStudentSearchQuery('');
-
-    // 기존 성적 로드
-    const existingScores = allScores.filter(s => s.examId === exam.id);
-    const initialInputs: Record<string, { score: string; avg?: string; rank?: string }> = {};
-    const existingStudentIds: string[] = [];
-    existingScores.forEach(s => {
-      initialInputs[s.studentId] = {
-        score: s.score.toString(),
-        avg: s.average?.toString(),
-        rank: s.rank?.toString(),
-      };
-      existingStudentIds.push(s.studentId);
-    });
-
-    // 시험 범위에 따라 자동으로 학생 필터링
-    let autoAddIds: string[] = [];
-    if (exam.scope === 'academy' || !exam.scope) {
-      // 학원 전체: 기존 성적이 있는 학생만 (전체는 너무 많을 수 있음)
-      autoAddIds = existingStudentIds;
-    } else if (exam.scope === 'grade' && exam.targetGrades && exam.targetGrades.length > 0) {
-      // 학년별: 해당 학년 학생들 자동 추가
-      autoAddIds = students
-        .filter(s => s.status === 'active' && exam.targetGrades?.includes(s.grade || ''))
-        .map(s => s.id);
-    } else if (exam.scope === 'class' && exam.targetClassIds && exam.targetClassIds.length > 0) {
-      // 반별: 해당 반 학생들 자동 추가 (enrollment 기반)
-      autoAddIds = students
-        .filter(s => {
-          if (s.status !== 'active') return false;
-          return s.enrollments?.some(e => exam.targetClassIds?.includes(e.classId));
-        })
-        .map(s => s.id);
-    } else if (exam.scope === 'subject') {
-      // 과목별: 해당 과목 수강 학생 자동 추가
-      const targetSubject = exam.subject === 'both' ? undefined : exam.subject;
-      if (targetSubject) {
-        autoAddIds = students
-          .filter(s => {
-            if (s.status !== 'active') return false;
-            return s.enrollments?.some(e => e.subject === targetSubject);
-          })
-          .map(s => s.id);
-      }
-    }
-
-    // 기존 성적 학생 + 자동 추가 학생 병합 (중복 제거)
-    const mergedIds = [...new Set([...existingStudentIds, ...autoAddIds])];
-
-    setScoreInputs(initialInputs);
-    setAddedStudentIds(mergedIds);
   };
 
+  // 마이그레이션 (통계 초기화)
+  const [isMigrating, setIsMigrating] = useState(false);
+  const handleMigrateStats = async () => {
+    if (!confirm('모든 시험의 통계(평균, 등수 등)를 재계산하여 DB에 저장합니다.\n이 작업은 데이터 양에 따라 시간이 걸릴 수 있습니다.\n계속하시겠습니까?')) return;
 
-  if (loadingExams || loadingScores) {
+    setIsMigrating(true);
+    try {
+      // 1. 모든 성적 가져오기 (비용 발생하지만 1회성)
+      const scoresSnapshot = await getDocs(collection(db, 'student_scores'));
+      const scores = scoresSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudentScore));
+
+      // 2. 각 시험별로 통계 계산 및 업데이트
+      const updatePromises = exams.map(async (exam) => {
+        const examScores = scores.filter(s => s.examId === exam.id);
+        if (examScores.length === 0) return;
+
+        const scoresVal = examScores.map(s => s.score);
+        const avg = scoresVal.reduce((a, b) => a + b, 0) / scoresVal.length;
+
+        await updateExam.mutateAsync({
+          id: exam.id,
+          updates: {
+            stats: {
+              count: examScores.length,
+              avg: Math.round(avg),
+              max: Math.max(...scoresVal),
+              min: Math.min(...scoresVal),
+            }
+          }
+        });
+      });
+
+      await Promise.all(updatePromises);
+      alert('통계 업데이트가 완료되었습니다.');
+      refetchExams();
+    } catch (error) {
+      console.error('Migration failed:', error);
+      alert('통계 업데이트 중 오류가 발생했습니다.');
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
+  if (loadingExams) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -367,14 +510,40 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+
+          {/* 마이그레이션 버튼 (임시) */}
+          <button
+            onClick={handleMigrateStats}
+            disabled={isMigrating}
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
+            title="DB 최적화: 통계 재계산"
+          >
+            {isMigrating ? <Loader2 className="w-3 h-3 animate-spin" /> : <BarChart3 className="w-3 h-3" />}
+            <span>통계 갱신</span>
+          </button>
         </div>
-        <button
-          onClick={() => setIsCreatingExam(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-lg hover:bg-[#0a1a35] transition-colors text-sm font-medium"
-        >
-          <Plus className="w-4 h-4" />
-          <span>시험 등록</span>
-        </button>
+
+        <div className="flex items-center gap-2">
+          {/* 검색 기능 이동 */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="시험명 검색..."
+              className="w-64 pl-9 pr-3 py-2 text-sm border border-[#081429]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent transition-all"
+            />
+          </div>
+
+          <button
+            onClick={() => setIsCreatingExam(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-lg hover:bg-[#0a1a35] transition-colors text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            <span>시험 등록</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -453,84 +622,120 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
             </div>
 
             <div className="overflow-auto max-h-[calc(100vh-420px)]">
-              <table className="w-full">
-                <thead className="bg-gray-50 sticky top-0">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">학생</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">학년</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">점수</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">평균</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">석차</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">등급</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase w-12"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {addedStudents.map(student => {
-                    const input = scoreInputs[student.id] || { score: '' };
-                    const percentage = input.score ? (Number(input.score) / selectedExam.maxScore) * 100 : null;
-                    const grade = percentage !== null ? calculateGrade(percentage) : null;
+              {/* 계산된 평균과 석차 (addedStudents 기준) */}
+              {(() => {
+                // 점수 입력된 학생들만 추출하여 평균/석차 계산
+                const studentsWithScores = addedStudents
+                  .map(s => ({
+                    id: s.id,
+                    score: scoreInputs[s.id]?.score ? Number(scoreInputs[s.id].score) : null
+                  }))
+                  .filter(s => s.score !== null) as { id: string; score: number }[];
 
-                    return (
-                      <tr key={student.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900">{student.name}</div>
-                          {student.englishName && (
-                            <div className="text-xs text-gray-500">{student.englishName}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{student.grade || '-'}</td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            value={input.score || ''}
-                            onChange={(e) => handleScoreInputChange(student.id, 'score', e.target.value)}
-                            placeholder="점수"
-                            min={0}
-                            max={selectedExam.maxScore}
-                            className="w-20 px-2 py-1 text-center border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            value={input.avg || ''}
-                            onChange={(e) => handleScoreInputChange(student.id, 'avg', e.target.value)}
-                            placeholder="평균"
-                            className="w-20 px-2 py-1 text-center border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="number"
-                            value={input.rank || ''}
-                            onChange={(e) => handleScoreInputChange(student.id, 'rank', e.target.value)}
-                            placeholder="석차"
-                            min={1}
-                            className="w-20 px-2 py-1 text-center border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {grade && (
-                            <span className={`px-2 py-1 text-xs font-semibold rounded ${GRADE_COLORS[grade].bg} ${GRADE_COLORS[grade].text}`}>
-                              {grade}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => handleRemoveStudent(student.id)}
-                            className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="학생 제거"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
+                // 평균 계산 (소숫점 1자리)
+                const avg = studentsWithScores.length > 0
+                  ? (studentsWithScores.reduce((sum, s) => sum + s.score, 0) / studentsWithScores.length).toFixed(1)
+                  : null;
+
+                // 석차 계산 (같은 점수면 같은 등수)
+                const sortedScores = [...studentsWithScores].sort((a, b) => b.score - a.score);
+                const rankMap: Record<string, number> = {};
+                sortedScores.forEach((s, idx) => {
+                  // 같은 점수면 같은 등수
+                  const sameScoreBefore = sortedScores.findIndex(x => x.score === s.score);
+                  rankMap[s.id] = sameScoreBefore + 1;
+                });
+
+                return (
+                  <table className="w-full">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase w-36">이름</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase w-28">학교/학년</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-20">점수</th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-16">
+                          평균
+                          <span className="block text-[10px] font-normal text-gray-400">
+                            {avg ? avg : '-'}
+                          </span>
+                        </th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-16">
+                          석차
+                          <span className="block text-[10px] font-normal text-gray-400">
+                            /{studentsWithScores.length || addedStudents.length}명
+                          </span>
+                        </th>
+                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-16">
+                          등급
+                          <span className="block text-[10px] font-normal text-gray-400">(추후)</span>
+                        </th>
+                        <th className="px-3 py-2 w-10"></th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {addedStudents.map(student => {
+                        const input = scoreInputs[student.id] || { score: '' };
+                        const score = input.score ? Number(input.score) : null;
+                        const studentRank = score !== null ? rankMap[student.id] : null;
+                        const schoolGrade = `${student.school || '-'}${student.grade || ''}`;
+                        const isEditing = editingStudentIds.includes(student.id);
+
+                        return (
+                          <tr key={student.id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2">
+                              <div className="font-medium text-gray-900 text-sm">{student.name}</div>
+                            </td>
+                            <td className="px-3 py-2 text-xs text-gray-600">{schoolGrade}</td>
+                            <td className="px-3 py-2 text-center">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={input.score || ''}
+                                  onChange={(e) => handleScoreInputChange(student.id, 'score', e.target.value)}
+                                  placeholder="-"
+                                  min={0}
+                                  max={selectedExam.maxScore}
+                                  className="w-16 px-2 py-1 text-center text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              ) : (
+                                <span className={`text-sm ${input.score ? 'font-medium text-gray-900' : 'text-gray-400'}`}>
+                                  {input.score || '-'}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center text-sm text-gray-600">
+                              {/* 평균은 자동 계산된 값(전체 평균)을 표시 */}
+                              <span>{avg || '-'}</span>
+                            </td>
+                            <td className="px-3 py-2 text-center text-sm font-medium text-gray-800">
+                              {studentRank !== null ? studentRank : '-'}
+                            </td>
+                            <td className="px-3 py-2 text-center text-xs text-gray-400">
+                              -
+                            </td>
+                            <td className="px-3 py-2 text-center flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleToggleEdit(student.id)}
+                                className={`p-1 rounded transition-colors ${isEditing ? 'text-green-600 hover:bg-green-50' : 'text-blue-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                                title={isEditing ? "완료" : "수정"}
+                              >
+                                {isEditing ? <Check className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                              </button>
+                              <button
+                                onClick={() => handleRemoveStudent(student.id)}
+                                className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="학생 제거"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                );
+              })()}
             </div>
           </div>
         ) : (
@@ -544,7 +749,8 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
               </div>
             ) : (
               filteredExams.map(exam => {
-                const stats = getExamStats(exam.id);
+                // 기존 getExamStats 제거하고 exam.stats 사용
+                const stats = exam.stats || { count: 0, avg: 0, max: 0, min: 0 };
                 const isExpanded = expandedExamId === exam.id;
 
                 return (
@@ -770,11 +976,24 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
               {newExam.scope === 'class' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">대상 반 선택</label>
+                  {/* 검색 필드 */}
+                  <div className="relative mb-2">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={classSearchQuery}
+                      onChange={(e) => setClassSearchQuery(e.target.value)}
+                      placeholder="반 검색..."
+                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                   <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
-                    {classes.length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-2">등록된 반이 없습니다</p>
+                    {filteredClasses.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-2">
+                        {classes.length === 0 ? '등록된 반이 없습니다' : '검색 결과 없음'}
+                      </p>
                     ) : (
-                      classes.map(cls => (
+                      filteredClasses.map(cls => (
                         <label key={cls.id} className="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
                           <input
                             type="checkbox"
@@ -825,6 +1044,52 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                   </div>
                   {newExam.targetGrades.length > 0 && (
                     <p className="mt-2 text-xs text-gray-500">{newExam.targetGrades.join(', ')} 선택됨</p>
+                  )}
+                </div>
+              )}
+
+              {/* 대상 선택: 학교별 */}
+              {newExam.scope === 'school' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">대상 학교 선택</label>
+                  {/* 검색 필드 */}
+                  <div className="relative mb-2">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={schoolSearchQuery}
+                      onChange={(e) => setSchoolSearchQuery(e.target.value)}
+                      placeholder="학교 검색..."
+                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
+                    {filteredSchools.length === 0 ? (
+                      <p className="text-sm text-gray-400 text-center py-2">
+                        {availableSchools.length === 0 ? '등록된 학교가 없습니다' : '검색 결과 없음'}
+                      </p>
+                    ) : (
+                      filteredSchools.map(school => (
+                        <label key={school} className="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newExam.targetSchools.includes(school)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setNewExam(prev => ({ ...prev, targetSchools: [...prev.targetSchools, school] }));
+                              } else {
+                                setNewExam(prev => ({ ...prev, targetSchools: prev.targetSchools.filter(s => s !== school) }));
+                              }
+                            }}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">{school}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  {newExam.targetSchools.length > 0 && (
+                    <p className="mt-1 text-xs text-gray-500">{newExam.targetSchools.length}개 학교 선택됨</p>
                   )}
                 </div>
               )}

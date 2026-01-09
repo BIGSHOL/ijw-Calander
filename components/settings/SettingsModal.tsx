@@ -9,6 +9,7 @@ import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, 
 import { Holiday } from '../../types';
 import MyEventsModal from '../Calendar/MyEventsModal';
 import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab, DepartmentsTab, GanttCategoriesTab } from './';
+import HashtagsTab from './HashtagsTab';
 import { useTabPermissions } from '../../hooks/useTabPermissions';
 import SalarySettingsTab from '../Attendance/components/SalarySettingsTab';
 import { useAttendanceConfig, useSaveAttendanceConfig } from '../../hooks/useAttendance';
@@ -29,7 +30,7 @@ interface SettingsModalProps {
 }
 
 type MainTabMode = 'calendar' | 'timetable' | 'permissions' | 'gantt' | 'attendance';
-type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions' | 'tab_access' | 'migration' | 'gantt_departments' | 'gantt_categories' | 'salary_settings';
+type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions' | 'tab_access' | 'migration' | 'gantt_departments' | 'gantt_categories' | 'salary_settings' | 'calendar_hashtags';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -781,7 +782,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"
+        className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[100]"
         onClick={onClose}
       >
         <div
@@ -846,6 +847,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       {canManageMenus && (
                         <button onClick={() => setActiveTab('departments')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           부서 관리
+                        </button>
+                      )}
+                      {(isMaster || isAdmin) && (
+                        <button onClick={() => setActiveTab('calendar_hashtags')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'calendar_hashtags' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          # 해시태그
                         </button>
                       )}
                     </>
@@ -1443,6 +1449,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* ATTENDANCE SALARY SETTINGS TAB */}
             {activeTab === 'salary_settings' && (isMaster || isAdmin) && (
               <SalarySettingsTab teachers={teachers} />
+            )}
+
+            {/* CALENDAR HASHTAGS TAB */}
+            {activeTab === 'calendar_hashtags' && (isMaster || isAdmin) && (
+              <HashtagsTab isMaster={isMaster} />
             )}
 
             {/* MIGRATION TAB */}

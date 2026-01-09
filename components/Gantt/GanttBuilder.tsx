@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { format, addDays, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { useQuery } from '@tanstack/react-query';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import { GanttSubTask, GanttTemplate, UserProfile, ProjectVisibility, ProjectMember, ProjectMemberRole, GanttDepartment } from '../../types';
+import { GanttSubTask, GanttTemplate, UserProfile, ProjectVisibility, ProjectMember, ProjectMemberRole } from '../../types';
 import { useGanttCategories } from '../../hooks/useGanttCategories';
+import { useGanttDepartments } from '../../hooks/useGanttDepartments';
 import { Plus, X, User, Building2, Calendar, Clock, FileText, ChevronRight, Save, Edit2, RotateCcw, Lock, Globe } from 'lucide-react';
 
 interface GanttBuilderProps {
@@ -46,20 +44,8 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
     const [category, setCategory] = useState<string>('planning');
     const [dependsOn, setDependsOn] = useState<string[]>([]);
 
-    // Phase 6: Dynamic Department Loading
-    const { data: dynamicDepartments = [] } = useQuery({
-        queryKey: ['ganttDepartments'],
-        queryFn: async () => {
-            const q = query(collection(db, 'gantt_departments'), orderBy('order', 'asc'));
-            const snapshot = await getDocs(q);
-            if (snapshot.empty) return [];
-            return snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            } as GanttDepartment));
-        },
-        staleTime: 5 * 60 * 1000,
-    });
+    // Phase 6: Dynamic Department Loading - P2 개선: 중앙화된 hook 사용
+    const { data: dynamicDepartments = [] } = useGanttDepartments();
 
     // Sorted users: current user first, then by displayName (가나다순)
     const sortedUsers = useMemo(() => {

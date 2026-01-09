@@ -882,11 +882,19 @@ async function detectAnomalies() {
     ↓
 analytics-expert (데이터 분석) ← 현재 에이전트
     ↓
-academy-domain-expert (비즈니스 해석)
+report-summarizer (분석 요약) ← 선택적
     ↓
 doc-writer (리포트 문서화)
     ↓
 notification-designer (리포트 자동 발송)
+```
+
+### report-summarizer 연계
+분석 리포트가 길 경우, 사용자가 "요약해줘"라고 하면 핵심만 브리핑:
+```
+사용자: "매출 분석하고 핵심만 알려줘"
+→ analytics-expert 실행 → report-summarizer 자동 연결
+→ "🟢 매출 5,230만(+8.9%), 재원생 102명(+5). 미수금 180만 주의."
 ```
 
 ### 트리거 조건

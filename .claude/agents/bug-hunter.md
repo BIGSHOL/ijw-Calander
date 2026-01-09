@@ -141,6 +141,32 @@ trigger_on_phrases: ["버그", "에러", "오류", "bug", "error", "문제 발�
 - Conditional breakpoint
 - Watch expressions
 
+## 협업 프로토콜
+
+### 다른 에이전트와의 협업
+
+```
+[버그 발생]
+    ↓
+bug-hunter (버그 분석) ← 현재 에이전트
+    ↓
+report-summarizer (분석 요약) ← 선택적
+    ↓
+code-fixer (수정 적용)
+    ↓
+test-writer (회귀 테스트)
+    ↓
+[버그 수정 완료]
+```
+
+### report-summarizer 연계
+버그 분석 리포트가 길 경우, 사용자가 "요약해줘"라고 하면 핵심만 브리핑:
+```
+사용자: "버그 분석하고 핵심만 알려줘"
+→ bug-hunter 실행 → report-summarizer 자동 연결
+→ "🐛 근본 원인: useEffect 의존성 누락. 위치: StudentList.tsx:45. 권장: 옵션 A로 수정"
+```
+
 ## 주의사항
 - 추측이 아닌 증거 기반 분석
 - 한 번에 하나의 변경사항만 테스트

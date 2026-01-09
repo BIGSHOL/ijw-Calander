@@ -101,7 +101,8 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
         // isHidden 강사도 teachersData에는 포함 (색상 정보 유지)
         // 표시 여부는 각 컴포넌트에서 제어
         const visibleTeachers = filtered.filter(t => !t.isHidden);
-        setTeachers(visibleTeachers.map(t => t.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ko')));
+        // 초기 정렬 제거 - sortedTeachers에서 teacherOrder 기반으로 정렬됨
+        setTeachers(visibleTeachers.map(t => t.name).filter(Boolean));
     }, [propsTeachers]);
 
     // Subscribe to Order Config only

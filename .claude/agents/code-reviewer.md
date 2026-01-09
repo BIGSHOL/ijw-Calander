@@ -52,9 +52,19 @@ trigger_on_code_review: true
     ↓
 2. firebase-cost-optimizer - Firebase 비용 분석 (Firestore 코드 발견 시 필수)
     ↓
-3. code-fixer - 리뷰 피드백을 실제 코드에 반영
+3. report-summarizer - 리뷰 결과 요약 (선택적, "요약해줘" 요청 시)
+    ↓
+4. code-fixer - 리뷰 피드백을 실제 코드에 반영
     ↓
 [개선 완료]
+```
+
+### report-summarizer 연계
+코드 리뷰 리포트가 길 경우, 사용자가 "요약해줘"라고 하면 핵심만 브리핑:
+```
+사용자: "코드 리뷰하고 요약해줘"
+→ code-reviewer 실행 → report-summarizer 자동 연결
+→ "🟡 Critical 2건, Important 5건. 즉시 수정: StudentList.tsx"
 ```
 
 ### 자동 트리거 조건

@@ -1,7 +1,9 @@
 # 🔄 에이전트 협업 워크플로우
 
-> **작성일**: 2026-01-08
+> **작성일**: 2026-01-09
 > **목적**: Claude Code 에이전트 간 효율적인 협업 프로세스 정의
+> **에이전트 수**: 14개
+> **워크플로우**: 8가지 + 요약 연계
 
 ---
 
@@ -107,11 +109,12 @@ graph LR
 graph LR
     A[리팩토링 필요] --> B[refactor-expert]
     B --> C[리팩토링 계획]
-    C --> D[코드 개선]
-    D --> E[test-writer]
-    E --> F[회귀 테스트]
-    F --> G[code-reviewer]
-    G --> H[품질 재검증]
+    C --> D[code-fixer]
+    D --> E[코드 개선]
+    E --> F[test-writer]
+    F --> G[회귀 테스트]
+    G --> H[code-reviewer]
+    H --> I[품질 재검증]
 ```
 
 **실행 명령어 순서**:
@@ -148,6 +151,150 @@ graph LR
 
 **트리거 키워드**:
 - "문서 작성", "README", "API 문서", "가이드"
+
+---
+
+### 6️⃣ 🆕 보안 점검 워크플로우
+
+```mermaid
+graph LR
+    A[코드 작성/수정] --> B[code-reviewer]
+    B --> C[품질 검토]
+    C --> D[security-auditor]
+    D --> E{보안 이슈?}
+    E -->|Yes| F[code-fixer]
+    E -->|No| G[배포 준비]
+    F --> H[보안 이슈 수정]
+    H --> I[재검토]
+    I --> G
+```
+
+**실행 명령어 순서**:
+```bash
+1. code-reviewer 에이전트 실행 (기본 품질 검토)
+2. security-auditor 에이전트 실행 (보안 취약점 검사)
+3. code-fixer 에이전트 실행 (보안 이슈 수정)
+4. [배포 진행]
+```
+
+**트리거 키워드**:
+- "보안", "보안 검사", "취약점", "XSS", "인증", "개인정보", "배포 전 점검"
+
+**언제 사용?**
+- 배포 전 최종 점검
+- 개인정보 관련 코드 수정 후
+- 인증/권한 로직 변경 후
+- Firebase Security Rules 변경 후
+
+---
+
+### 7️⃣ 🆕 알림 기능 개발 워크플로우
+
+```mermaid
+graph LR
+    A[알림 요구사항] --> B[academy-domain-expert]
+    B --> C[비즈니스 로직]
+    C --> D[notification-designer]
+    D --> E[알림 설계]
+    E --> F[cloud-function-architect]
+    F --> G[트리거 설계]
+    G --> H[code-fixer]
+    H --> I[구현]
+    I --> J[security-auditor]
+    J --> K[개인정보 검토]
+```
+
+**실행 명령어 순서**:
+```bash
+1. academy-domain-expert 에이전트 실행 (비즈니스 요구사항)
+2. notification-designer 에이전트 실행 (알림 채널/템플릿 설계)
+3. cloud-function-architect 에이전트 실행 (트리거 설계)
+4. code-fixer 에이전트 실행 (구현)
+5. security-auditor 에이전트 실행 (개인정보 보호 검토)
+```
+
+**트리거 키워드**:
+- "알림", "푸시", "SMS", "카카오", "알림톡", "메시지 발송"
+
+**언제 사용?**
+- 새로운 알림 기능 추가 시
+- 알림 채널 변경/추가 시
+- 알림 비용 최적화 필요 시
+- 학부모/학생 알림 시스템 구축 시
+
+---
+
+### 8️⃣ 🆕 데이터 분석 워크플로우
+
+```mermaid
+graph LR
+    A[분석 요청] --> B[analytics-expert]
+    B --> C[데이터 분석]
+    C --> D[인사이트 도출]
+    D --> E[doc-writer]
+    E --> F[리포트 문서화]
+    F --> G{자동 발송?}
+    G -->|Yes| H[notification-designer]
+    G -->|No| I[완료]
+    H --> J[발송 설정]
+    J --> I
+```
+
+**실행 명령어 순서**:
+```bash
+1. analytics-expert 에이전트 실행 (데이터 분석)
+2. doc-writer 에이전트 실행 (리포트 문서화)
+3. notification-designer 에이전트 실행 (자동 발송 설정, 선택)
+```
+
+**트리거 키워드**:
+- "통계", "분석", "리포트", "대시보드", "KPI", "현황", "추이"
+
+**언제 사용?**
+- 정기 리포트 생성 (주간/월간)
+- 의사결정용 데이터 필요 시
+- 대시보드 설계 시
+- 운영 현황 파악 시
+
+---
+
+### 🆕 요약 연계 (report-summarizer)
+
+모든 리포트 생성 에이전트는 `report-summarizer`와 연계할 수 있습니다.
+
+```mermaid
+graph LR
+    A[리포트 생성 에이전트] --> B{리포트 생성}
+    B --> C[사용자: 요약해줘]
+    C --> D[report-summarizer]
+    D --> E[핵심 브리핑]
+    E --> F[사용자 의사결정]
+```
+
+**지원하는 에이전트**:
+| 에이전트 | 요약 예시 |
+|---------|----------|
+| code-reviewer | "🟡 Critical 2건, Important 5건. 즉시 수정: StudentList.tsx" |
+| security-auditor | "🔴 배포 불가. XSS 1건 즉시 수정 필요" |
+| analytics-expert | "🟢 매출 5,230만(+8.9%), 재원생 102명(+5). 미수금 180만 주의" |
+| firebase-cost-optimizer | "💰 월 15,000원 → 최적화 시 4,500원(-70%)" |
+| bug-hunter | "🐛 근본 원인: useEffect 의존성 누락. 위치: StudentList.tsx:45" |
+| refactor-expert | "🔄 3단계 리팩토링 필요. 우선순위: 컴포넌트 분리 → 훅 추출" |
+
+**사용 방법**:
+```bash
+# 방법 1: 체인 요청 (처음부터)
+"코드 리뷰하고 요약해줘"
+→ code-reviewer 실행 → report-summarizer 자동 연결
+
+# 방법 2: 후속 요청 (리포트 생성 후)
+[리포트 생성 완료]
+"요약해줘" 또는 "핵심만" 또는 "한줄로"
+→ report-summarizer 실행
+```
+
+**트리거 키워드**:
+- "요약", "요약해줘", "핵심만", "간단히", "브리핑", "정리해줘", "한줄로", "결론만"
 
 ---
 
@@ -325,42 +472,6 @@ code-reviewer가 Firestore 쿼리 발견 시 자동 호출
 - 성능 최적화
 - 기능 보존 (중요!)
 
-#### 📝 실행 예시
-
-**Step 1: refactor-expert 실행**
-```
-사용자: "StudentList 컴포넌트 리팩토링 계획 세워줘"
-→ refactor-expert 실행
-→ 현재 코드 분석
-→ 개선 포인트 식별
-→ 리팩토링 계획 제시
-→ 우선순위 정렬
-```
-
-**Step 2: code-fixer 실행**
-```
-사용자: "리팩토링 계획 실행해줘"
-→ 단계별 코드 수정
-→ 기능 보존 확인
-→ 성능 측정
-```
-
-**Step 3: test-writer 실행**
-```
-사용자: "리팩토링 후 회귀 테스트 강화해줘"
-→ 기존 테스트 검증
-→ 추가 테스트 작성
-→ Edge case 보강
-```
-
-**Step 4: code-reviewer 실행**
-```
-사용자: "리팩토링 결과 검증해줘"
-→ 코드 품질 재검증
-→ 성능 개선 확인
-→ 베스트 프랙티스 준수 확인
-```
-
 #### ✅ 완료 기준
 - [ ] 기능 100% 보존
 - [ ] 코드 복잡도 감소
@@ -384,34 +495,6 @@ code-reviewer가 Firestore 쿼리 발견 시 자동 호출
 - 완전한 정보 제공
 - 지속적인 품질 유지
 
-#### 📝 실행 예시
-
-**Step 1: doc-writer 실행**
-```
-사용자: "출석 관리 API 문서 작성해줘"
-→ doc-writer 실행
-→ API 엔드포인트 문서화
-→ 요청/응답 예시 작성
-→ 에러 코드 설명
-```
-
-**Step 2: report-analyst 실행**
-```
-사용자: "작성한 문서 검토해줘"
-→ report-analyst 실행
-→ 구조 분석
-→ 내용 완결성 검증
-→ 가독성 평가
-→ 개선안 제시
-```
-
-**Step 3: doc-writer 실행 (개선)**
-```
-사용자: "피드백 반영해서 수정해줘"
-→ 개선안 적용
-→ 최종 문서 완성
-```
-
 #### ✅ 완료 기준
 - [ ] 모든 필수 정보 포함
 - [ ] 예시 코드 작동 확인
@@ -421,39 +504,212 @@ code-reviewer가 Firestore 쿼리 발견 시 자동 호출
 
 ---
 
+### 워크플로우 6: 🆕 보안 점검
+
+#### 📍 언제 사용?
+- 배포 전 최종 점검
+- 개인정보 관련 코드 수정 후
+- 인증/권한 로직 변경 후
+- Firebase Security Rules 변경 후
+
+#### 🎯 목표
+- 보안 취약점 제거
+- 개인정보 보호 강화
+- 안전한 배포
+
+#### 📝 실행 예시
+
+**Step 1: code-reviewer 실행**
+```
+사용자: "배포 전 코드 점검해줘"
+→ code-reviewer 실행
+→ 기본 품질 검토
+```
+
+**Step 2: security-auditor 실행**
+```
+사용자: "보안 검사해줘"
+→ security-auditor 실행
+→ XSS/CSRF 취약점 검사
+→ 인증/인가 검토
+→ 개인정보 노출 검사
+→ Firebase Security Rules 검토
+```
+
+**Step 3: code-fixer 실행 (이슈 발견 시)**
+```
+사용자: "보안 이슈 수정해줘"
+→ code-fixer 실행
+→ Critical 보안 이슈 수정
+→ 재검증
+```
+
+#### ✅ 완료 기준
+- [ ] XSS 취약점 0개
+- [ ] CSRF 취약점 0개
+- [ ] 인증/인가 검증 완료
+- [ ] 개인정보 암호화 확인
+- [ ] API 키 노출 없음
+- [ ] Firebase Security Rules 적절함
+
+---
+
+### 워크플로우 7: 🆕 알림 기능 개발
+
+#### 📍 언제 사용?
+- 새로운 알림 기능 추가 시
+- 알림 채널 변경/추가 시
+- 알림 비용 최적화 필요 시
+- 학부모/학생 알림 시스템 구축 시
+
+#### 🎯 목표
+- 효과적인 알림 전달
+- 적절한 채널 선택
+- 비용 최적화
+- 개인정보 보호
+
+#### 📝 실행 예시
+
+**Step 1: academy-domain-expert 실행**
+```
+사용자: "학부모에게 출결 알림 보내는 기능 설계해줘"
+→ academy-domain-expert 실행
+→ 비즈니스 요구사항 정리
+→ 알림 시점/대상 정의
+```
+
+**Step 2: notification-designer 실행**
+```
+사용자: "알림 채널과 템플릿 설계해줘"
+→ notification-designer 실행
+→ 채널 선택 (푸시/카카오/SMS)
+→ 메시지 템플릿 설계
+→ 비용 분석
+```
+
+**Step 3: cloud-function-architect 실행**
+```
+사용자: "Cloud Function 트리거 설계해줘"
+→ cloud-function-architect 실행
+→ 트리거 설계 (onCreate/onUpdate/scheduled)
+→ 발송 로직 설계
+```
+
+**Step 4: code-fixer 실행**
+```
+사용자: "알림 기능 구현해줘"
+→ code-fixer 실행
+→ 코드 구현
+```
+
+**Step 5: security-auditor 실행**
+```
+사용자: "개인정보 노출 검사해줘"
+→ security-auditor 실행
+→ 수신자 정보 보호 확인
+→ 알림 내용 개인정보 검토
+```
+
+#### ✅ 완료 기준
+- [ ] 알림 채널 선택 완료
+- [ ] 메시지 템플릿 승인 (카카오 등)
+- [ ] Cloud Function 트리거 설정
+- [ ] 개인정보 보호 확인
+- [ ] 비용 예측 완료
+- [ ] 테스트 발송 성공
+
+---
+
+### 워크플로우 8: 🆕 데이터 분석
+
+#### 📍 언제 사용?
+- 정기 리포트 생성 (주간/월간)
+- 의사결정용 데이터 필요 시
+- 대시보드 설계 시
+- 운영 현황 파악 시
+
+#### 🎯 목표
+- 정확한 데이터 분석
+- 실행 가능한 인사이트
+- 효과적인 시각화
+- 자동화된 리포트
+
+#### 📝 실행 예시
+
+**Step 1: analytics-expert 실행**
+```
+사용자: "이번 달 매출 분석해줘"
+→ analytics-expert 실행
+→ KPI 정의
+→ 데이터 쿼리 설계
+→ 분석 결과 제시
+→ 인사이트 도출
+```
+
+**Step 2: doc-writer 실행**
+```
+사용자: "분석 결과를 리포트로 만들어줘"
+→ doc-writer 실행
+→ 리포트 문서화
+→ 차트/그래프 포함
+```
+
+**Step 3: notification-designer 실행 (선택)**
+```
+사용자: "매주 자동으로 리포트 발송하고 싶어"
+→ notification-designer 실행
+→ 자동 발송 스케줄 설정
+→ 수신자 목록 설정
+```
+
+#### ✅ 완료 기준
+- [ ] KPI 정의 완료
+- [ ] 데이터 쿼리 작성
+- [ ] 분석 결과 검증
+- [ ] 리포트 문서화
+- [ ] (선택) 자동 발송 설정
+
+---
+
 ## 🗂️ 에이전트 역할 매트릭스
 
 ### 전체 에이전트 목록과 역할
 
 | 에이전트 | 주요 역할 | 입력 | 출력 | 다음 단계 |
 |---------|----------|------|------|----------|
-| **academy-domain-expert** | 학원 도메인 설계 | 기능 요구사항 | 도메인 모델, 비즈니스 로직 | cloud-function-architect / 코드 구현 |
+| **academy-domain-expert** | 학원 도메인 설계 | 기능 요구사항 | 도메인 모델, 비즈니스 로직 | cloud-function-architect / notification-designer |
 | **bug-hunter** | 버그 분석 | 에러 메시지, 증상 | 원인 분석, 수정 방안 | code-fixer |
 | **cloud-function-architect** | 서버리스 설계 | 기능 요구사항 | Cloud Function 설계 | 코드 구현 |
 | **code-fixer** | 자동 수정 | 리뷰 피드백 | 수정된 코드 | 검증 |
-| **code-reviewer** | 코드 품질 검토 | 소스 코드 | 리뷰 리포트 | firebase-cost-optimizer / code-fixer |
+| **code-reviewer** | 코드 품질 검토 | 소스 코드 | 리뷰 리포트 | firebase-cost-optimizer / security-auditor / code-fixer |
 | **doc-writer** | 문서 작성 | 코드, 기능 설명 | README, API 문서 | report-analyst |
 | **firebase-cost-optimizer** | 비용 최적화 | Firestore 쿼리 | 비용 분석, 최적화 권장 | code-fixer |
 | **refactor-expert** | 리팩토링 | 기존 코드 | 리팩토링 계획 | code-fixer |
 | **report-analyst** | 문서 검토 | 마크다운 문서 | 개선안 | doc-writer |
 | **test-writer** | 테스트 작성 | 소스 코드 | 테스트 코드 | code-reviewer |
+| 🆕 **security-auditor** | 보안 검사 | 소스 코드 | 보안 리포트 | code-fixer |
+| 🆕 **notification-designer** | 알림 설계 | 알림 요구사항 | 알림 설계서 | cloud-function-architect |
+| 🆕 **analytics-expert** | 데이터 분석 | 분석 요청 | 분석 리포트, 대시보드 설계 | doc-writer |
 
 ---
 
 ### 협업 관계 매트릭스
 
-| From ↓ / To → | academy | bug | cloud | fixer | reviewer | doc | firebase | refactor | report | test |
-|--------------|---------|-----|-------|-------|----------|-----|----------|----------|--------|------|
-| **academy-domain-expert** | - | | ✅ | | | ✅ | | | | |
-| **bug-hunter** | | - | | ✅ | | | | | | ✅ |
-| **cloud-function-architect** | | | - | ✅ | | ✅ | | | | |
-| **code-fixer** | | | | - | ✅ | | | | | |
-| **code-reviewer** | | | | ✅ | - | | ✅ | | | |
-| **doc-writer** | | | | | | - | | | ✅ | |
-| **firebase-cost-optimizer** | | | | ✅ | | | - | | | |
-| **refactor-expert** | | | | ✅ | | | | - | | ✅ |
-| **report-analyst** | | | | | | ✅ | | | - | |
-| **test-writer** | | | | | ✅ | | | | | - |
+| From ↓ / To → | academy | bug | cloud | fixer | reviewer | doc | firebase | refactor | report | test | security | notif | analytics |
+|--------------|---------|-----|-------|-------|----------|-----|----------|----------|--------|------|----------|-------|-----------|
+| **academy-domain-expert** | - | | ✅ | | | ✅ | | | | | | ✅ | |
+| **bug-hunter** | | - | | ✅ | | | | | | ✅ | | | |
+| **cloud-function-architect** | | | - | ✅ | | ✅ | | | | | | | |
+| **code-fixer** | | | | - | ✅ | | | | | | | | |
+| **code-reviewer** | | | | ✅ | - | | ✅ | | | | ✅ | | |
+| **doc-writer** | | | | | | - | | | ✅ | | | | |
+| **firebase-cost-optimizer** | | | | ✅ | | | - | | | | | | |
+| **refactor-expert** | | | | ✅ | | | | - | | ✅ | | | |
+| **report-analyst** | | | | | | ✅ | | | - | | | | |
+| **test-writer** | | | | | ✅ | | | | | - | | | |
+| 🆕 **security-auditor** | | | | ✅ | | | | | | | - | | |
+| 🆕 **notification-designer** | | | ✅ | ✅ | | | | | | | ✅ | - | |
+| 🆕 **analytics-expert** | | | | | | ✅ | | | | | | ✅ | - |
 
 ✅ = 직접 협업 관계
 
@@ -469,16 +725,14 @@ code-reviewer가 Firestore 쿼리 발견 시 자동 호출
 | **firebase-cost-optimizer** | `trigger_on_firebase_code: true` | Firestore 코드 발견 시 |
 | **code-fixer** | `trigger_after_code_review: true` | code-reviewer가 Critical/Important 이슈 발견 시 |
 | **cloud-function-architect** | `trigger_on_phrases` | "Cloud Function", "클라우드 펑션", "서버리스", "트리거" |
-
-### 추가 권장 트리거 (업데이트 예정)
-
-| 에이전트 | 권장 트리거 |
-|---------|----------|
-| **bug-hunter** | "버그", "에러", "오류", "bug", "error", "문제 발생" |
-| **test-writer** | refactor-expert 실행 후, 새 기능 구현 후 |
-| **doc-writer** | 새 기능 완성 후, API 변경 시 |
-| **refactor-expert** | 복잡도 임계값 초과 시 |
-| **report-analyst** | .md 파일 업로드 시 |
+| **bug-hunter** | `trigger_on_phrases` | "버그", "에러", "오류", "bug", "error", "문제 발생" |
+| **test-writer** | `trigger_after_refactoring: true` | refactor-expert 실행 후, 새 기능 구현 후 |
+| **doc-writer** | `trigger_on_new_features: true` | 새 기능 완성 후, API 변경 시 |
+| **refactor-expert** | `trigger_on_complexity_threshold: true` | 복잡도 임계값 초과 시 |
+| **report-analyst** | `trigger_on_file_extension: [".md"]` | .md 파일 업로드 시 |
+| 🆕 **security-auditor** | `trigger_before_deployment: true` | "보안", "취약점", "배포 전", "개인정보" |
+| 🆕 **notification-designer** | `trigger_on_domain_features: true` | "알림", "푸시", "SMS", "카카오", "알림톡" |
+| 🆕 **analytics-expert** | `trigger_on_domain_features: true` | "통계", "분석", "리포트", "대시보드", "KPI" |
 
 ---
 
@@ -542,75 +796,87 @@ Step 5: "최종 검증"
 
 ---
 
-### 시나리오 3: 레거시 코드 리팩토링
+### 시나리오 3: 🆕 학부모 출결 알림 기능 개발
 
 ```
-[상황] App.tsx가 2000줄로 비대해짐
+[상황] 학부모에게 자녀 출결 알림을 보내는 기능 필요
 
-Step 1: "App.tsx 리팩토링 계획 세워줘"
-→ refactor-expert 실행
-→ 컴포넌트 분리 계획 제시
+Step 1: "학부모에게 출결 알림 보내는 기능 설계해줘"
+→ academy-domain-expert 실행
+→ 비즈니스 요구사항 정리 (언제, 누구에게, 어떤 정보)
 
-Step 2: "계획대로 리팩토링 실행해줘"
+Step 2: "알림 채널과 템플릿 설계해줘"
+→ notification-designer 실행
+→ 푸시 알림 + 카카오 알림톡 선택
+→ 메시지 템플릿 설계
+→ 비용 분석 (월 15,600원 예상)
+
+Step 3: "Cloud Function 트리거 설계해줘"
+→ cloud-function-architect 실행
+→ attendance 컬렉션 onCreate 트리거
+
+Step 4: "알림 기능 구현해줘"
 → code-fixer 실행
-→ 컴포넌트 분리
-→ 커스텀 훅 추출
+→ 코드 구현
 
-Step 3: "리팩토링 후 회귀 테스트 강화"
-→ test-writer 실행
+Step 5: "개인정보 노출 검사해줘"
+→ security-auditor 실행
+→ 학생 정보 마스킹 확인
+→ 수신자 정보 보호 확인
 
-Step 4: "리팩토링 결과 검증"
+Step 6: [배포]
+```
+
+---
+
+### 시나리오 4: 🆕 월간 운영 리포트 생성
+
+```
+[상황] 원장님이 월간 운영 현황을 파악하고 싶음
+
+Step 1: "이번 달 학원 운영 현황 분석해줘"
+→ analytics-expert 실행
+→ 매출, 수강생, 출석률 KPI 분석
+→ 전월 대비 비교
+→ 인사이트 도출
+
+Step 2: "분석 결과를 리포트로 만들어줘"
+→ doc-writer 실행
+→ 월간 리포트 문서화
+→ 차트/그래프 포함
+
+Step 3: "매월 자동으로 리포트 발송하고 싶어"
+→ notification-designer 실행
+→ Cloud Function scheduled 트리거 설계
+→ 이메일 발송 설정
+```
+
+---
+
+### 시나리오 5: 🆕 배포 전 보안 점검
+
+```
+[상황] 새 기능 개발 완료, 배포 전 보안 확인 필요
+
+Step 1: "배포 전 코드 점검해줘"
 → code-reviewer 실행
+→ 기본 품질 검토
 
-Step 5: "변경 사항 문서화"
-→ doc-writer 실행
-```
+Step 2: "보안 검사해줘"
+→ security-auditor 실행
+→ XSS 취약점 1건 발견
+→ Firebase Security Rules 개선점 발견
 
----
-
-### 시나리오 4: 긴급 버그 수정
-
-```
-[상황] 프로덕션에서 출석 체크 시 에러 발생
-
-Step 1: "출석 체크 에러 원인 찾아줘"
-→ bug-hunter 실행
-→ null 참조 에러 발견
-
-Step 2: "버그 즉시 수정해줘"
+Step 3: "보안 이슈 수정해줘"
 → code-fixer 실행
-→ null 체크 추가
+→ XSS 취약점 수정 (DOMPurify 적용)
+→ Security Rules 강화
 
-Step 3: "회귀 테스트 추가"
-→ test-writer 실행
+Step 4: "재검사해줘"
+→ security-auditor 실행
+→ 모든 이슈 해결 확인
 
-Step 4: "핫픽스 코드 최종 검증"
-→ code-reviewer 실행 (빠른 검토)
-
-Step 5: [배포]
-```
-
----
-
-### 시나리오 5: 월간 보고서 작성
-
-```
-[상황] 월간 개발 현황 보고서 작성 필요
-
-Step 1: "12월 개발 현황 보고서 초안 작성"
-→ doc-writer 실행
-→ 기본 구조 작성
-
-Step 2: "보고서 품질 검토"
-→ report-analyst 실행
-→ 구조, 내용, 가독성 평가
-→ 개선안 제시
-
-Step 3: "피드백 반영해서 수정"
-→ doc-writer 실행
-
-Step 4: "최종 검토"
-→ report-analyst 실행
+Step 5: [배포 진행]
 ```
 
 ---
@@ -627,20 +893,22 @@ Step 4: "최종 검토"
 ### 2. 체인 실행
 ```
 # 순차 실행이 필요한 경우
-사용자: "코드 리뷰 → 비용 최적화 → 자동 수정까지 한 번에"
-→ code-reviewer → firebase-cost-optimizer → code-fixer 순차 실행
+사용자: "코드 리뷰 → 보안 검사 → 자동 수정까지 한 번에"
+→ code-reviewer → security-auditor → code-fixer 순차 실행
 ```
 
 ### 3. 조건부 실행
 ```
 # 결과에 따라 다음 단계 결정
 code-reviewer 결과에 Critical 이슈가 없으면 code-fixer 생략
+security-auditor 결과에 보안 이슈가 없으면 바로 배포
 ```
 
 ### 4. 컨텍스트 공유
 ```
 # 이전 에이전트 결과를 다음 에이전트에 전달
 bug-hunter가 발견한 원인을 code-fixer가 참조
+notification-designer 설계를 cloud-function-architect가 참조
 ```
 
 ---
@@ -652,6 +920,7 @@ bug-hunter가 발견한 원인을 code-fixer가 참조
 1. **순서 준수**
    - 의존 관계가 있는 에이전트는 순서대로 실행
    - 예: code-reviewer → code-fixer (역순 불가)
+   - 예: notification-designer → cloud-function-architect (역순 불가)
 
 2. **중복 실행 방지**
    - 같은 에이전트를 짧은 시간에 반복 실행하지 않기
@@ -669,14 +938,19 @@ bug-hunter가 발견한 원인을 code-fixer가 참조
    - 중요한 변경사항은 문서에 기록
    - 워크플로우 실행 로그 보관
 
+6. **🆕 보안 검사 필수**
+   - 배포 전 반드시 security-auditor 실행
+   - 개인정보 관련 코드는 특히 주의
+
 ---
 
 ## 🔄 워크플로우 업데이트
 
 ### 버전 관리
-- **v1.0** (2026-01-08): 초기 워크플로우 정의
-- **v1.1** (예정): 자동 트리거 조건 추가
-- **v1.2** (예정): 중복 기능 정리 완료
+- **v1.0** (2026-01-08): 초기 워크플로우 정의 (5개)
+- **v1.1** (2026-01-08): 자동 트리거 조건 추가
+- **v1.2** (2026-01-08): 중복 기능 정리 완료
+- **v1.3** (2026-01-09): 🆕 신규 에이전트 3개 추가, 워크플로우 8개로 확장
 
 ### 피드백
 워크플로우 개선 제안은 팀 회의 또는 이슈 트래커에 등록
@@ -691,5 +965,5 @@ bug-hunter가 발견한 원인을 code-fixer가 참조
 
 ---
 
-**문서 작성**: Claude Sonnet 4.5
-**최종 검토**: 2026-01-08
+**문서 작성**: Claude
+**최종 검토**: 2026-01-09

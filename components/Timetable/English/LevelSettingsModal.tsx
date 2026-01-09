@@ -135,7 +135,7 @@ const LevelSettingsModal: React.FC<LevelSettingsModalProps> = ({ isOpen, onClose
         try {
             // Re-assign order based on array index
             const orderedLevels = newLevels.map((lvl, idx) => ({ ...lvl, order: idx }));
-            await setDoc(doc(db, 'settings', 'english_levels'), { levels: orderedLevels });
+            await setDoc(doc(db, 'settings', 'english_levels'), { levels: orderedLevels }, { merge: true });
             // Local update strictly not needed due to snapshot, but good for UX responsiveness if snapshot lags
         } catch (error) {
             console.error('Failed to save levels:', error);

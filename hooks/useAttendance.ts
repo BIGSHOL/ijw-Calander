@@ -39,25 +39,27 @@ export const useAttendanceStudents = (options?: {
 }) => {
     // Phase 1: Fetch basic student list with React Query (Cost-Optimized)
     const {
-        data: basicStudents = [],
+        data: studentData = { filtered: [], all: [] }, // Default structure
         isLoading: isLoadingStudents,
         error: studentsError,
         refetch: refetchStudents
     } = useQuery({
         queryKey: ['attendanceStudents', options?.teacherId, options?.subject],
-        queryFn: async (): Promise<Student[]> => {
+        queryFn: async (): Promise<{ filtered: Student[], all: Student[] }> => {
             // === COST OPTIMIZATION: getDocs instead of onSnapshot ===
             // Benefit: No reconnection reads, proper caching
             const q = query(collection(db, STUDENTS_COLLECTION), orderBy('name'));
             const snapshot = await getDocs(q);
 
-            let data = snapshot.docs.map(d => ({
+            const allRaw = snapshot.docs.map(d => ({
                 id: d.id,
                 ...d.data(),
                 attendance: {},
                 memos: {},
                 teacherIds: d.data().teacherIds || [],
             } as Student));
+
+            let data = [...allRaw];
 
             // Client-side filtering (same logic as before)
             if (options?.teacherId) {
@@ -143,7 +145,7 @@ export const useAttendanceStudents = (options?: {
                 });
             }
 
-            return data;
+            return { filtered: data, all: allRaw };
         },
         enabled: options?.enabled !== false,
         staleTime: 1000 * 60 * 5, // === COST OPTIMIZATION: 5-minute cache ===
@@ -154,22 +156,24 @@ export const useAttendanceStudents = (options?: {
 
     // Phase 2: Fetch attendance records for current month
     const {
-        data: mergedStudents = basicStudents,
+        data: mergedStudents = studentData.filtered, // Use filtered list for merging
         isLoading: isLoadingRecords,
         refetch: refetchRecords
     } = useQuery({
-        queryKey: ['attendanceRecords', options?.yearMonth, basicStudents.map((s: Student) => s.id).join(',')],
+        queryKey: ['attendanceRecords', options?.yearMonth, studentData.filtered.map((s: Student) => s.id).join(',')],
         queryFn: async (): Promise<Student[]> => {
             // If no students or no month, return basic students
-            if (basicStudents.length === 0 || !options?.yearMonth) {
-                return basicStudents;
+            if (studentData.filtered.length === 0 || !options?.yearMonth) {
+                return studentData.filtered;
             }
 
             try {
                 // === ALREADY OPTIMIZED: Batch fetch records (not N+1) ===
-                const expectedDocIds = basicStudents.map((s: Student) => `${s.id}_${options.yearMonth}`);
+                const expectedDocIds = studentData.filtered.map((s: Student) => `${s.id}_${options.yearMonth}`);
 
-                // Chunking for large student lists (Firestore batch limit)
+                // Chunking for large student lists (Firestore batch limit is usually 30 for 'in' query, 
+                // but here we are fetching by ID. `getDoc` is 1 read per call.
+                // Wait, the previous implementation was doing `getDoc` in parallel.
                 const CHUNK_SIZE = 30;
                 const chunks: string[][] = [];
                 for (let i = 0; i < expectedDocIds.length; i += CHUNK_SIZE) {
@@ -184,12 +188,12 @@ export const useAttendanceStudents = (options?: {
                             const docSnap = await getDoc(doc(db, RECORDS_COLLECTION, docId));
                             if (docSnap.exists()) {
                                 const idParts = docId.split('_');
-                                idParts.pop();
+                                idParts.pop(); // Remove yearMonth part
                                 const extractedStudentId = idParts.join('_');
                                 return {
                                     studentId: extractedStudentId,
-                                    attendance: docSnap.data().attendance || {},
-                                    memos: docSnap.data().memos || {}
+                                    attendance: (docSnap.data().attendance || {}) as Record<string, number>,
+                                    memos: (docSnap.data().memos || {}) as Record<string, string>
                                 };
                             }
                         } catch (e) {
@@ -210,7 +214,7 @@ export const useAttendanceStudents = (options?: {
                 }
 
                 // Merge attendance records into student objects
-                const merged = basicStudents.map((student: Student) => {
+                const merged = studentData.filtered.map((student: Student) => {
                     const record = recordsMap.get(student.id);
                     return {
                         ...student,
@@ -222,10 +226,10 @@ export const useAttendanceStudents = (options?: {
                 return merged;
             } catch (err) {
                 console.error('Error loading attendance records:', err);
-                return basicStudents; // Fallback to basic students
+                return studentData.filtered; // Fallback to basic students
             }
         },
-        enabled: options?.enabled !== false && basicStudents.length > 0,
+        enabled: options?.enabled !== false && !!options?.yearMonth && studentData.filtered.length > 0,
         staleTime: 1000 * 60 * 5, // === COST OPTIMIZATION: 5-minute cache ===
         gcTime: 1000 * 60 * 30,
         refetchOnWindowFocus: false,
@@ -241,6 +245,7 @@ export const useAttendanceStudents = (options?: {
 
     return {
         students: mergedStudents,
+        allStudents: studentData.all,
         isLoading: isLoadingStudents || isLoadingRecords,
         error: studentsError,
         refetch
@@ -490,7 +495,7 @@ export const useSaveAttendanceConfig = () => {
 
     return useMutation({
         mutationFn: async ({ config, configId = 'salary' }: { config: SalaryConfig, configId?: string }) => {
-            await setDoc(doc(db, CONFIG_COLLECTION, configId), config);
+            await setDoc(doc(db, CONFIG_COLLECTION, configId), config, { merge: true });
             return { config, configId };
         },
         onSuccess: (data) => {
@@ -525,7 +530,7 @@ export const useSaveMonthlySettlement = () => {
 
     return useMutation({
         mutationFn: async ({ monthKey, data }: { monthKey: string; data: MonthlySettlement }) => {
-            await setDoc(doc(db, CONFIG_COLLECTION, 'settlements', 'months', monthKey), data);
+            await setDoc(doc(db, CONFIG_COLLECTION, 'settlements', 'months', monthKey), data, { merge: true });
             return { monthKey, data };
         },
         onSuccess: () => {

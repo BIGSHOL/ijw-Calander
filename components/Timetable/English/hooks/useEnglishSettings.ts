@@ -53,8 +53,15 @@ export const useEnglishSettings = () => {
     }, []);
 
     const updateSettings = async (newSettings: IntegrationSettings) => {
-        setSettings(newSettings);
-        await setDoc(doc(db, 'settings', 'english_class_integration'), newSettings);
+        // 안전장치: customGroups가 비어있고 기존 데이터가 있다면 보존
+        const safeSettings = { ...newSettings };
+        if ((!safeSettings.customGroups || safeSettings.customGroups.length === 0) &&
+            settings.customGroups && settings.customGroups.length > 0) {
+            safeSettings.customGroups = settings.customGroups;
+        }
+
+        setSettings(safeSettings);
+        await setDoc(doc(db, 'settings', 'english_class_integration'), safeSettings, { merge: true });
     };
 
     return {
