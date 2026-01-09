@@ -112,9 +112,11 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                 }
 
                 // Sync English schedule (영어 시간표용 - 문서 ID가 강사명)
-                console.log(`🔍 영어 시간표: "${oldName}" → "${newName}" 스케줄 이전 중...`);
-                const oldEnglishDocRef = doc(db, 'english_schedules', oldName);
-                const oldEnglishDocSnap = await getDoc(oldEnglishDocRef);
+                // 영어를 가르치는 강사만 처리
+                if (editTeacherSubjects.includes('english')) {
+                    console.log(`🔍 영어 시간표: "${oldName}" → "${newName}" 스케줄 이전 중...`);
+                    const oldEnglishDocRef = doc(db, 'english_schedules', oldName);
+                    const oldEnglishDocSnap = await getDoc(oldEnglishDocRef);
 
                 if (oldEnglishDocSnap.exists()) {
                     let data = oldEnglishDocSnap.data();
@@ -164,6 +166,9 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                 } else {
                     console.log(`ℹ️ 영어: "${oldName}" 스케줄 없음 (영어 수업 없는 강사)`);
                 }
+                } else {
+                    console.log(`⏭️ 영어 시간표 스킵: "${oldName}"은 영어 강사가 아님`);
+                }
             } else {
                 // Just update the existing document
                 await setDoc(doc(db, '강사목록', id), {
@@ -194,9 +199,11 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                     }
 
                     // Sync English schedule
-                    console.log(`🔍 영어 시간표: "${oldName}" → "${newName}" 스케줄 이전 중...`);
-                    const oldEnglishDocRef = doc(db, 'english_schedules', oldName);
-                    const oldEnglishDocSnap = await getDoc(oldEnglishDocRef);
+                    // 영어를 가르치는 강사만 처리
+                    if (editTeacherSubjects.includes('english')) {
+                        console.log(`🔍 영어 시간표: "${oldName}" → "${newName}" 스케줄 이전 중...`);
+                        const oldEnglishDocRef = doc(db, 'english_schedules', oldName);
+                        const oldEnglishDocSnap = await getDoc(oldEnglishDocRef);
 
                     if (oldEnglishDocSnap.exists()) {
                         let data = oldEnglishDocSnap.data();
@@ -243,6 +250,9 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                         console.log(`✅ 영어: "${oldName}" 스케줄을 "${newName}"으로 이전 완료 (모든 키와 값의 강사명 포함)`);
                     } else {
                         console.log(`ℹ️ 영어: "${oldName}" 스케줄 없음 (영어 수업 없는 강사)`);
+                    }
+                    } else {
+                        console.log(`⏭️ 영어 시간표 스킵: "${oldName}"은 영어 강사가 아님`);
                     }
                 }
             }

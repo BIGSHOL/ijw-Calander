@@ -72,13 +72,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
     return Array.from(groups.values());
   }, [student.enrollments]);
 
-  // 담임 강사 결정 (영어 시간표 로직과 동일)
-  const determineMainTeacher = (group: GroupedEnrollment) => {
-    // 각 강사별 수업 횟수 계산 (isHidden 강사 제외)
+  // 과목별 담임 강사 결정
+  const determineMainTeacherBySubject = (subject: 'math' | 'english') => {
     const teacherCounts: Record<string, number> = {};
 
     student.enrollments
-      .filter(e => e.className === group.className)
+      .filter(e => e.subject === subject)
       .forEach(enrollment => {
         const teacherName = enrollment.teacherId;
         // isHidden 강사는 담임 계산에서 제외
@@ -114,14 +113,74 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
     return topTeachers[0][0];
   };
 
-  // isHidden이 아닌 강사만 필터링하고 담임/부담임 구분
-  const getTeacherInfo = (group: GroupedEnrollment) => {
+  // 영어: 같은 수업(className) 내에서 담임 강사 결정
+  const determineMainTeacherForEnglishClass = (group: GroupedEnrollment) => {
+    const teacherCounts: Record<string, number> = {};
+
+    student.enrollments
+      .filter(e => e.className === group.className)
+      .forEach(enrollment => {
+        const teacherName = enrollment.teacherId;
+        const teacherData = teachers.find(t => t.name === teacherName);
+        if (teacherData?.isHidden) return;
+
+        const dayCount = enrollment.days?.length || 0;
+        teacherCounts[teacherName] = (teacherCounts[teacherName] || 0) + dayCount;
+      });
+
+    const teacherEntries = Object.entries(teacherCounts);
+    if (teacherEntries.length === 0) return null;
+
+    const maxCount = Math.max(...teacherEntries.map(([, count]) => count));
+    const topTeachers = teacherEntries.filter(([, count]) => count === maxCount);
+
+    if (topTeachers.length === 1) {
+      return topTeachers[0][0];
+    }
+
+    const nonNativeTopTeachers = topTeachers.filter(([name]) => {
+      const teacherData = teachers.find(t => t.name === name);
+      return !teacherData?.isNative;
+    });
+
+    if (nonNativeTopTeachers.length > 0) {
+      return nonNativeTopTeachers[0][0];
+    }
+
+    return topTeachers[0][0];
+  };
+
+  // 수학: 과목 전체에서 담임/부담임 구분
+  const getMathTeacherInfo = (group: GroupedEnrollment) => {
     const visibleTeachers = group.teachers.filter(name => {
       const teacher = teachers.find(t => t.name === name);
       return !teacher?.isHidden;
     });
 
-    const mainTeacher = determineMainTeacher(group);
+    const mathMainTeacher = determineMainTeacherBySubject('math');
+
+    // 담임을 맨 앞으로 정렬
+    const sortedTeachers = [...visibleTeachers].sort((a, b) => {
+      if (a === mathMainTeacher) return -1;
+      if (b === mathMainTeacher) return 1;
+      return 0;
+    });
+
+    return {
+      teachers: sortedTeachers,
+      mainTeacher: mathMainTeacher,
+      isMainTeacherInClass: visibleTeachers.includes(mathMainTeacher || '')
+    };
+  };
+
+  // 영어: 같은 수업 내에서 담임/부담임 구분
+  const getEnglishTeacherInfo = (group: GroupedEnrollment) => {
+    const visibleTeachers = group.teachers.filter(name => {
+      const teacher = teachers.find(t => t.name === name);
+      return !teacher?.isHidden;
+    });
+
+    const mainTeacher = determineMainTeacherForEnglishClass(group);
     const subTeachers = visibleTeachers.filter(name => name !== mainTeacher);
 
     return { mainTeacher, subTeachers };
@@ -144,107 +203,178 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
     );
   }
 
+  // 과목별로 그룹화
+  const mathClasses = groupedEnrollments
+    .filter(g => g.subject === 'math')
+    .sort((a, b) => {
+      // 담임 선생님이 있는 수업을 위로 올림
+      const { isMainTeacherInClass: aIsMain } = getMathTeacherInfo(a);
+      const { isMainTeacherInClass: bIsMain } = getMathTeacherInfo(b);
+      if (aIsMain && !bIsMain) return -1;
+      if (!aIsMain && bIsMain) return 1;
+      return 0;
+    });
+  const englishClasses = groupedEnrollments.filter(g => g.subject === 'english');
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">
-          수강 중인 강좌 ({groupedEnrollments.length}개)
-        </h3>
-      </div>
-
-      {groupedEnrollments.map((group, index) => {
-        const subjectInfo =
-          group.subject === 'math'
-            ? { label: '수학', color: 'bg-blue-100 text-blue-800 border-blue-200' }
-            : { label: '영어', color: 'bg-green-100 text-green-800 border-green-200' };
-
-        const { mainTeacher, subTeachers } = getTeacherInfo(group);
-
-        return (
-          <div
-            key={index}
-            className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-gray-600" />
-                  <h4 className="text-base font-semibold text-gray-800">
-                    {group.className}
-                  </h4>
-                </div>
-                <span className={`text-xs px-3 py-1 rounded-full border ${subjectInfo.color}`}>
-                  {subjectInfo.label}
-                </span>
+      {/* 수학 과목 카드 */}
+      {mathClasses.length > 0 && (
+        <div className="bg-white rounded-lg border-2 border-blue-200 shadow-sm">
+          <div className="p-4 bg-blue-50 border-b-2 border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-bold text-blue-800">수학</h3>
               </div>
-            </div>
-
-            <div className="p-4 space-y-3">
-              {/* 담임 강사 */}
-              {mainTeacher && (
-                <div className="flex items-start">
-                  <div className="flex items-center gap-2 w-1/3 text-gray-600">
-                    <User className="w-4 h-4" />
-                    <span className="text-sm font-medium">담임 강사</span>
-                  </div>
-                  <div className="w-2/3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-800 font-semibold">{mainTeacher}</span>
-                      <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold">
-                        담임
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 부담임 강사 */}
-              {subTeachers.length > 0 && (
-                <div className="flex items-start">
-                  <div className="flex items-center gap-2 w-1/3 text-gray-600">
-                    <User className="w-4 h-4" />
-                    <span className="text-sm font-medium">부담임</span>
-                  </div>
-                  <div className="w-2/3">
-                    <div className="flex flex-wrap gap-2">
-                      {subTeachers.map((teacherName, idx) => (
-                        <span key={idx} className="text-sm text-gray-600">
-                          {teacherName}
-                          {idx < subTeachers.length - 1 && ','}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* 수업 요일 */}
-              <div className="flex items-start">
-                <div className="flex items-center gap-2 w-1/3 text-gray-600">
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-sm font-medium">수업 요일</span>
-                </div>
-                <div className="w-2/3">
-                  <div className="flex flex-wrap gap-1">
-                    {group.days && group.days.length > 0 ? (
-                      group.days.map((day, idx) => (
-                        <span
-                          key={idx}
-                          className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded"
-                        >
-                          {day}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-sm text-gray-400 italic">요일 정보 없음</span>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <span className="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-300 font-semibold">
+                {mathClasses.length}개 수업
+              </span>
             </div>
           </div>
-        );
-      })}
+
+          <div className="p-3 space-y-3">
+            {mathClasses.map((group, index) => {
+              const { teachers, mainTeacher, isMainTeacherInClass } = getMathTeacherInfo(group);
+
+              return (
+                <div
+                  key={index}
+                  className="bg-gray-50 rounded-lg border border-gray-200 p-3 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-bold text-gray-800">{group.className}</h4>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    {/* 강사 목록 (담임/부담임 구분) */}
+                    <div className="flex items-center gap-2">
+                      <User className="w-3 h-3 text-gray-500" />
+                      <span className="text-gray-600">강사:</span>
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        {teachers.map((teacherName, idx) => (
+                          <div key={idx} className="flex items-center gap-1">
+                            <span className={`${teacherName === mainTeacher ? 'text-gray-800 font-semibold' : 'text-gray-700'}`}>
+                              {teacherName}
+                            </span>
+                            {teacherName === mainTeacher && (
+                              <span className="text-[9px] bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded font-bold">
+                                담임
+                              </span>
+                            )}
+                            {teacherName !== mainTeacher && (
+                              <span className="text-[9px] bg-gray-100 text-gray-600 px-1 py-0.5 rounded font-bold">
+                                부담임
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 수업 요일 */}
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3 h-3 text-gray-500" />
+                      <span className="text-gray-600">요일:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {[...group.days].sort((a, b) => {
+                          const order = ['월', '화', '수', '목', '금', '토', '일'];
+                          return order.indexOf(a) - order.indexOf(b);
+                        }).map((day, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] px-1.5 py-0.5 bg-white text-gray-700 rounded border border-gray-300"
+                          >
+                            {day}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 영어 과목 카드 */}
+      {englishClasses.length > 0 && (
+        <div className="bg-white rounded-lg border-2 border-green-200 shadow-sm">
+          <div className="p-4 bg-green-50 border-b-2 border-green-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-green-600" />
+                <h3 className="text-lg font-bold text-green-800">영어</h3>
+              </div>
+              <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700 border border-green-300 font-semibold">
+                {englishClasses.length}개 수업
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3 space-y-3">
+            {englishClasses.map((group, index) => {
+              const { mainTeacher, subTeachers } = getEnglishTeacherInfo(group);
+
+              return (
+                <div
+                  key={index}
+                  className="bg-gray-50 rounded-lg border border-gray-200 p-3 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-bold text-gray-800">{group.className}</h4>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    {/* 담임 강사 */}
+                    {mainTeacher && (
+                      <div className="flex items-center gap-2">
+                        <User className="w-3 h-3 text-gray-500" />
+                        <span className="text-gray-600">담임:</span>
+                        <span className="text-gray-800 font-semibold">{mainTeacher}</span>
+                        <span className="text-[9px] bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded font-bold">
+                          담임
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 부담임 강사 */}
+                    {subTeachers.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <User className="w-3 h-3 text-gray-500" />
+                        <span className="text-gray-600">부담임:</span>
+                        <span className="text-gray-700">
+                          {subTeachers.join(', ')}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* 수업 요일 */}
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3 h-3 text-gray-500" />
+                      <span className="text-gray-600">요일:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {[...group.days].sort((a, b) => {
+                          const order = ['월', '화', '수', '목', '금', '토', '일'];
+                          return order.indexOf(a) - order.indexOf(b);
+                        }).map((day, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] px-1.5 py-0.5 bg-white text-gray-700 rounded border border-gray-300"
+                          >
+                            {day}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 추가 기능 안내 */}
       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
