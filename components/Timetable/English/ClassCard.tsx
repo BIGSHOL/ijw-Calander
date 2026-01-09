@@ -149,7 +149,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             <div
                 onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
                 onDrop={isTimeColumnOnly ? undefined : handleDrop}
-                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white transition-opacity ${isHidden && mode === 'edit' ? 'opacity-50' : ''} ${mode === 'edit' && !isTimeColumnOnly ? 'hover:bg-gray-50' : ''}`}
+                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white ${mode === 'edit' && !isTimeColumnOnly ? 'hover:bg-gray-50' : ''}`}
             >
                 {/* Header - 키워드 색상 적용 */}
                 {(() => {

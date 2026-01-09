@@ -218,16 +218,17 @@ const StudentList: React.FC<StudentListProps> = ({
                       {student.grade && <div>학년: {student.grade}</div>}
                       {student.enrollments.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {student.enrollments.map((e, idx) => (
+                          {/* 과목별로 중복 제거하여 표시 */}
+                          {Array.from(new Set(student.enrollments.map(e => e.subject))).map((subject) => (
                             <span
-                              key={idx}
+                              key={subject}
                               className={`text-xs px-1.5 py-0.5 rounded ${
-                                e.subject === 'math'
+                                subject === 'math'
                                   ? 'bg-blue-100 text-blue-700'
                                   : 'bg-green-100 text-green-700'
                               }`}
                             >
-                              {e.subject === 'math' ? '수학' : '영어'}
+                              {subject === 'math' ? '수학' : '영어'}
                             </span>
                           ))}
                         </div>

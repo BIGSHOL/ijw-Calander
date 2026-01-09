@@ -287,8 +287,8 @@ const Table: React.FC<Props> = ({
 
   return (
     <>
-      <table className="border-collapse w-full min-w-max text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm">
-        <thead className="bg-[#081429] text-white font-medium sticky top-0 z-20 shadow-md">
+      <table className="border-separate border-spacing-0 w-full min-w-max text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm">
+        <thead className="bg-[#081429] text-white font-medium sticky top-0 z-[100] shadow-md">
           <tr>
             {/* Sticky Left Columns - Added align-middle for vertical centering */}
             <th className="p-3 sticky left-0 top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 w-12 text-center text-gray-400 align-middle">#</th>
@@ -499,6 +499,15 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
     });
   }, [students, groupOrder, uniqueGroups]);
 
+  // Build effective group order (existing order + any new groups)
+  const effectiveGroupOrder = useMemo(() => {
+    const order = [...groupOrder];
+    uniqueGroups.forEach(g => {
+      if (!order.includes(g)) order.push(g);
+    });
+    return order;
+  }, [groupOrder, uniqueGroups]);
+
   const rows: React.ReactNode[] = [];
   let currentGroup: string | null = null;
   let rankIndex = 0;
@@ -510,9 +519,9 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
     const studentGroup = student.group || '그룹 없음';
     if (student.group && studentGroup !== currentGroup) {
       currentGroup = studentGroup;
-      const groupIdx = groupOrder.indexOf(currentGroup);
+      const groupIdx = effectiveGroupOrder.indexOf(currentGroup);
       const isFirst = groupIdx <= 0;
-      const isLast = groupIdx >= groupOrder.length - 1 || groupIdx === -1;
+      const isLast = groupIdx >= effectiveGroupOrder.length - 1;
 
       rows.push(
         <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">

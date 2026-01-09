@@ -35,14 +35,14 @@ const StudentManagementTab: React.FC = () => {
     <div className="flex h-full bg-gray-50">
       {/* 좌측 패널: 학생 목록 (40%) */}
       <div className="w-2/5 border-r border-gray-300 bg-white flex flex-col">
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
+        <div className="p-3 border-b border-gray-200 bg-[#081429] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-bold text-gray-800">학생 목록</h2>
-            <span className="ml-auto text-sm text-gray-600">
-              총 {students.length}명
-            </span>
+            <Users className="w-4 h-4 text-[#fdb813]" />
+            <span className="text-sm font-bold text-white">학생 목록</span>
           </div>
+          <span className="text-xs text-gray-400 bg-white/10 px-2 py-0.5 rounded-full">
+            총 {students.length}명
+          </span>
         </div>
         <StudentList
           students={students}

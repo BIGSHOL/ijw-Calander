@@ -1378,7 +1378,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         {accessibleTabs.includes('timetable') && <option value="timetable">📊 시간표</option>}
                         {accessibleTabs.includes('payment') && <option value="payment">💰 전자 결재</option>}
                         {accessibleTabs.includes('gantt') && <option value="gantt">📈 간트 차트</option>}
-                        {accessibleTabs.includes('consultation') && <option value="consultation">💬 상담 관리</option>}
+                        {accessibleTabs.includes('consultation') && <option value="consultation">📞 콜앤상담</option>}
                       </select>
                     </div>
                   )}

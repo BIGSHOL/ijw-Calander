@@ -546,7 +546,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   attendance: { label: '출석부', icon: '📝' },
   payment: { label: '전자 결제', icon: '💳' },
   gantt: { label: '간트 차트', icon: '📊' },
-  consultation: { label: '상담 관리', icon: '💬' },
+  consultation: { label: '콜앤상담', icon: '📞' },
   students: { label: '학생 관리', icon: '👥' },
 };
 

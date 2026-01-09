@@ -1474,10 +1474,10 @@ const App: React.FC = () => {
           // Available teachers for filter dropdown
           const availableTeachers = canManageCurrentSubject
             ? teachers.filter(t => {
-                if (attendanceSubject === 'math') return t.subjects?.includes('math');
-                if (attendanceSubject === 'english') return t.subjects?.includes('english');
-                return true;
-              })
+              if (attendanceSubject === 'math') return t.subjects?.includes('math');
+              if (attendanceSubject === 'english') return t.subjects?.includes('english');
+              return true;
+            })
             : [];
 
           // Determine user's teacherId for filtering
@@ -1488,7 +1488,7 @@ const App: React.FC = () => {
           // Determine which teacherId to filter by
           const filterTeacherId = canManageCurrentSubject
             ? (availableTeachers.some(t => t.name === attendanceTeacherId) && attendanceTeacherId) ||
-              (availableTeachers.length > 0 ? availableTeachers[0].name : undefined)
+            (availableTeachers.length > 0 ? availableTeachers[0].name : undefined)
             : currentTeacherId;
 
           // Month navigation functions
@@ -1508,11 +1508,10 @@ const App: React.FC = () => {
                   {(canManageMath || isMasterOrAdmin) && (
                     <button
                       onClick={() => setAttendanceSubject('math')}
-                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                        attendanceSubject === 'math'
-                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      }`}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'math'
+                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }`}
                     >
                       📐 수학
                     </button>
@@ -1520,11 +1519,10 @@ const App: React.FC = () => {
                   {(canManageEnglish || isMasterOrAdmin) && (
                     <button
                       onClick={() => setAttendanceSubject('english')}
-                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                        attendanceSubject === 'english'
-                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      }`}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'english'
+                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }`}
                     >
                       📕 영어
                     </button>
@@ -1572,6 +1570,27 @@ const App: React.FC = () => {
             </div>
           );
         })()}
+
+        {/* Row 4: Students Navigation Bar - Only show in students mode */}
+        {appMode === 'students' && (
+          <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
+            <div className="flex items-center gap-3">
+              {/* Subject Toggle */}
+              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                <button
+                  className="px-3 py-1 rounded-md text-xs font-bold transition-all bg-[#fdb813] text-[#081429] shadow-sm"
+                >
+                  📚 전체
+                </button>
+              </div>
+
+              {/* Search Info */}
+              <div className="text-gray-400 text-xs">
+                학생 검색 및 관리
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Filter Popover Panel */}
         {
@@ -1872,7 +1891,7 @@ const App: React.FC = () => {
           </div>
         ) : appMode === 'attendance' ? (
           /* Attendance Manager View */
-          <div className="w-full flex-1 flex flex-col">
+          <div className="w-full flex-1 flex flex-col overflow-hidden">
             <AttendanceManager
               userProfile={userProfile}
               teachers={teachers}
@@ -1992,7 +2011,7 @@ const App: React.FC = () => {
                         {tab === 'timetable' && '📚 시간표'}
                         {tab === 'payment' && '💳 전자 결제'}
                         {tab === 'gantt' && '📊 간트 차트'}
-                        {tab === 'consultation' && '💬 상담 관리'}
+                        {tab === 'consultation' && '📞 콜앤상담'}
                       </span>
                     ))}
                   </div>
