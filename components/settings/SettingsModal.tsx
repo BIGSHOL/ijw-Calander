@@ -8,12 +8,11 @@ import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, 
 
 import { Holiday } from '../../types';
 import MyEventsModal from '../Calendar/MyEventsModal';
-import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab, DepartmentsTab, GanttCategoriesTab } from './';
+import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab, DepartmentsTab, GanttCategoriesTab, MigrationTab } from './';
 import HashtagsTab from './HashtagsTab';
 import { useTabPermissions } from '../../hooks/useTabPermissions';
 import SalarySettingsTab from '../Attendance/components/SalarySettingsTab';
 import { useAttendanceConfig, useSaveAttendanceConfig } from '../../hooks/useAttendance';
-// import MigrationPanel from './settings/MigrationPanel';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -884,6 +883,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         </button>
                       )}
 
+                      {isMaster && (
+                        <button onClick={() => setActiveTab('migration')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'migration' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                          데이터 마이그레이션
+                        </button>
+                      )}
+
                       {canManageUsers && (
                         <button onClick={() => setActiveTab('users')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'users' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           사용자 관리
@@ -1293,7 +1298,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <ClassesTab isMaster={isMaster} canEdit={isMaster || hasPermission('system.classes.edit')} />
             )}
 
-            {/* SYSTEM TAB */}
+            {/* TAB ACCESS TAB */}
             {activeTab === 'tab_access' && (
               <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f8f9fa] p-4 md:p-8">
                 <TabAccessTab
@@ -1301,6 +1306,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   isAdmin={isAdmin}
                   currentUserRole={currentUserProfile?.role}
                 />
+              </div>
+            )}
+
+            {/* MIGRATION TAB */}
+            {activeTab === 'migration' && isMaster && (
+              <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f8f9fa] p-4 md:p-8">
+                <MigrationTab />
               </div>
             )}
 

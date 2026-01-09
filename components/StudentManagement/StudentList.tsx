@@ -116,7 +116,7 @@ const StudentList: React.FC<StudentListProps> = ({
                         {student.school && student.grade && <span className="text-[#373d41]/30">·</span>}
                         {student.grade && <span>{student.grade}</span>}
                       </div>
-                      {student.enrollments.length > 0 && (
+                      {student.enrollments && student.enrollments.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {/* 과목별로 중복 제거하여 표시 */}
                           {Array.from(new Set(student.enrollments.map(e => e.subject))).map((subject) => (

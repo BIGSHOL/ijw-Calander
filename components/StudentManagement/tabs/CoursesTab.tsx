@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { UnifiedStudent, Teacher } from '../../../types';
-import { BookOpen, User, Calendar, Loader2 } from 'lucide-react';
+import { BookOpen, User, Calendar, Loader2, Plus } from 'lucide-react';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
+import AssignClassModal from '../AssignClassModal';
+import { useStudents } from '../../../hooks/useStudents';
 
 interface CoursesTabProps {
   student: UnifiedStudent;
@@ -18,6 +20,8 @@ interface GroupedEnrollment {
 const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loadingTeachers, setLoadingTeachers] = useState(true);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const { refreshStudents } = useStudents();
 
   // Teachers 컬렉션 조회
   useEffect(() => {
@@ -44,7 +48,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
   const groupedEnrollments = useMemo(() => {
     const groups = new Map<string, GroupedEnrollment>();
 
-    student.enrollments.forEach(enrollment => {
+    (student.enrollments || []).forEach(enrollment => {
       const key = enrollment.className;
 
       if (groups.has(key)) {
@@ -76,7 +80,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
   const determineMainTeacherBySubject = (subject: 'math' | 'english') => {
     const teacherCounts: Record<string, number> = {};
 
-    student.enrollments
+    (student.enrollments || [])
       .filter(e => e.subject === subject)
       .forEach(enrollment => {
         const teacherName = enrollment.teacherId;
@@ -186,12 +190,31 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
     return { mainTeacher, subTeachers };
   };
 
+  const handleAssignSuccess = () => {
+    refreshStudents();
+  };
+
   if (student.enrollments.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
-        <p className="text-lg">수강 중인 강좌가 없습니다</p>
-      </div>
+      <>
+        <div className="text-center py-12 text-gray-500">
+          <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
+          <p className="text-lg">수강 중인 강좌가 없습니다</p>
+          <button
+            onClick={() => setIsAssignModalOpen(true)}
+            className="mt-4 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg text-sm font-bold hover:bg-[#fdb813]/90 transition-colors inline-flex items-center gap-2"
+          >
+            <Plus size={16} />
+            <span>수업 배정하기</span>
+          </button>
+        </div>
+        <AssignClassModal
+          isOpen={isAssignModalOpen}
+          onClose={() => setIsAssignModalOpen(false)}
+          student={student}
+          onSuccess={handleAssignSuccess}
+        />
+      </>
     );
   }
 
@@ -217,8 +240,20 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
   const englishClasses = groupedEnrollments.filter(g => g.subject === 'english');
 
   return (
-    <div className="space-y-4">
-      {/* 수학 과목 카드 */}
+    <>
+      <div className="space-y-4">
+        {/* 수업 배정 버튼 */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => setIsAssignModalOpen(true)}
+            className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg text-sm font-bold hover:bg-[#fdb813]/90 transition-colors inline-flex items-center gap-2 shadow-sm"
+          >
+            <Plus size={16} />
+            <span>수업 배정</span>
+          </button>
+        </div>
+
+        {/* 수학 과목 카드 */}
       {mathClasses.length > 0 && (
         <div className="bg-white rounded-lg border-2 border-blue-200 shadow-sm">
           <div className="p-4 bg-blue-50 border-b-2 border-blue-200">
@@ -383,6 +418,15 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
         </p>
       </div>
     </div>
+
+    {/* 수업 배정 모달 */}
+    <AssignClassModal
+      isOpen={isAssignModalOpen}
+      onClose={() => setIsAssignModalOpen(false)}
+      student={student}
+      onSuccess={handleAssignSuccess}
+    />
+  </>
   );
 };
 

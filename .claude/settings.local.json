@@ -31,7 +31,8 @@
       "Bash(node scripts\\\\extractAuditReports.js:*)",
       "Bash(node:*)",
       "Bash(echo \"Firebase 콘솔에서 다음 인덱스를 생성해야 합니다:\n\n컬렉션: students\n필드 1: status \\(Ascending\\)\n필드 2: withdrawalDate \\(Ascending\\)\n\n아래 링크를 클릭하여 자동으로 생성하세요:\nhttps://console.firebase.google.com/v1/r/project/ijw-calander/firestore/indexes/create_composite=Ckt3cnQNZiVRN0cyUnancHtzKysVZStZNiZzdF0tWiJhcZVz1yNzZWZndhW0K59jZXkzZWNtdaW9idR1xJQtXBzL3N0Q0tlbiRnZE2iuZGVyM2MxXx48Gqx8JnNdYzRt1cxA8GhllK0hpGiQHkcmF3YWeXtYXNREAxaDdxkX1butV1iX18xQnQ\")",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(npm run migrate:*)"
     ]
   }
 }

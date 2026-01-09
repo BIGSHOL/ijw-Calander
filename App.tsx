@@ -171,50 +171,54 @@ const App: React.FC = () => {
   // Modal State for Attendance "Add Student" (lifted from AttendanceManager)
   const [isAttendanceAddStudentModalOpen, setIsAttendanceAddStudentModalOpen] = useState(false);
 
+  // TEMPORARY: Disabled auto-initialization based on permissions
+  // TODO: Re-enable after fixing permission configuration
   // Initialize timetable subject based on user's permissions (edit permission takes priority)
-  useEffect(() => {
-    if (!userProfile) return;
+  // useEffect(() => {
+  //   if (!userProfile) return;
 
-    let initialSubject: 'math' | 'english' = 'math';
+  //   let initialSubject: 'math' | 'english' = 'math';
 
-    // Priority 1: Edit permission (user's primary subject)
-    if (hasPermission('timetable.english.edit')) {
-      initialSubject = 'english';
-    } else if (hasPermission('timetable.math.edit')) {
-      initialSubject = 'math';
-    }
-    // Priority 2: View permission (if no edit permission)
-    else if (hasPermission('timetable.english.view') && !hasPermission('timetable.math.view')) {
-      initialSubject = 'english';
-    }
-    // else: default 'math'
+  //   // Priority 1: Edit permission (user's primary subject)
+  //   if (hasPermission('timetable.english.edit')) {
+  //     initialSubject = 'english';
+  //   } else if (hasPermission('timetable.math.edit')) {
+  //     initialSubject = 'math';
+  //   }
+  //   // Priority 2: View permission (if no edit permission)
+  //   else if (hasPermission('timetable.english.view') && !hasPermission('timetable.math.view')) {
+  //     initialSubject = 'english';
+  //   }
+  //   // else: default 'math'
 
-    if (timetableSubject !== initialSubject) {
-      console.log(`[Init] Setting initial timetableSubject to: ${initialSubject}`);
-      setTimetableSubject(initialSubject);
-    }
-  }, [userProfile, hasPermission, timetableSubject]);
+  //   if (timetableSubject !== initialSubject) {
+  //     console.log(`[Init] Setting initial timetableSubject to: ${initialSubject}`);
+  //     setTimetableSubject(initialSubject);
+  //   }
+  // }, [userProfile, hasPermission, timetableSubject]);
 
   // Guard: Strictly enforce permission access to subjects
   // If a user somehow lands on a subject they don't have permission for, switch them.
-  useEffect(() => {
-    if (!userProfile) return;
+  // TEMPORARY: Disabled permission guard for timetable subject switching
+  // TODO: Re-enable after fixing permission issues
+  // useEffect(() => {
+  //   if (!userProfile) return;
 
-    const canViewMath = hasPermission('timetable.math.view') || hasPermission('timetable.math.edit');
-    const canViewEnglish = hasPermission('timetable.english.view') || hasPermission('timetable.english.edit');
+  //   const canViewMath = hasPermission('timetable.math.view') || hasPermission('timetable.math.edit');
+  //   const canViewEnglish = hasPermission('timetable.english.view') || hasPermission('timetable.english.edit');
 
-    if (timetableSubject === 'math' && !canViewMath) {
-      if (canViewEnglish) {
-        console.log('[Guard] Switching to English due to missing Math permission');
-        setTimetableSubject('english');
-      }
-    } else if (timetableSubject === 'english' && !canViewEnglish) {
-      if (canViewMath) {
-        console.log('[Guard] Switching to Math due to missing English permission');
-        setTimetableSubject('math');
-      }
-    }
-  }, [timetableSubject, hasPermission, userProfile]);
+  //   if (timetableSubject === 'math' && !canViewMath) {
+  //     if (canViewEnglish) {
+  //       console.log('[Guard] Switching to English due to missing Math permission');
+  //       setTimetableSubject('english');
+  //     }
+  //   } else if (timetableSubject === 'english' && !canViewEnglish) {
+  //     if (canViewMath) {
+  //       console.log('[Guard] Switching to Math due to missing English permission');
+  //       setTimetableSubject('math');
+  //     }
+  //   }
+  // }, [timetableSubject, hasPermission, userProfile]);
 
   // Initialize attendance subject based on user's permissions
   useEffect(() => {

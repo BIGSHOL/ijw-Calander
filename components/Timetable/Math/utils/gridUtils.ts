@@ -25,10 +25,17 @@ export const getClassesForCell = (
     viewType: 'teacher' | 'room' | 'class'
 ) => {
     return filteredClasses.filter(cls => {
-        const resourceMatch = viewType === 'teacher' ? cls.teacher === resource : cls.room === resource;
-        // Check exact match first
-        const targetSlot = `${day} ${period}`;
-        const scheduleMatch = cls.schedule?.some(s => s === targetSlot);
+        const resourceMatch = viewType === 'teacher' ? (cls.teacher?.trim() === resource?.trim()) : (cls.room?.trim() === resource?.trim());
+
+        // Remove spaces for robust comparison
+        const targetSlot = `${day}${period}`.replace(/\s+/g, '');
+
+        const scheduleMatch = cls.schedule?.some(s => {
+            const normalizedS = s.replace(/\s+/g, '');
+            // Check exact match or sub-period matching
+            return normalizedS === targetSlot || normalizedS.startsWith(`${targetSlot}-`);
+        });
+
         return resourceMatch && scheduleMatch;
     });
 };

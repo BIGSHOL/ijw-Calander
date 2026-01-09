@@ -46,6 +46,7 @@ export interface Student {
 
   attendance: Record<string, number>;
   memos?: Record<string, string>;
+  homework?: Record<string, boolean>;  // 과제 완료 여부 (날짜별)
 
   // Legacy/Optional Compatibility
   isHomeroom?: boolean;

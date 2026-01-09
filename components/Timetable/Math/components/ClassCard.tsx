@@ -7,6 +7,7 @@ interface ClassCardProps {
     span: number;
     searchQuery: string;
     showStudents: boolean;
+    showClassName: boolean;
     showSchool: boolean;
     showGrade: boolean;
     canEdit: boolean;
@@ -24,6 +25,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     span,
     searchQuery,
     showStudents,
+    showClassName,
     showSchool,
     showGrade,
     canEdit,
@@ -32,7 +34,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onDragStart,
     onDragOver,
     onDragLeave,
-
     onDrop,
     studentMap
 }) => {
@@ -59,9 +60,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
             }}
         >
             {/* Class Name Header */}
-            <div className={`text-center font-bold py-1 px-1 text-[10px] border-b ${theme.border} bg-white/50 text-gray-800`}>
-                ({cls.className})
-            </div>
+            {showClassName && (
+                <div className={`text-center font-bold py-1 px-1 text-[10px] border-b ${theme.border} bg-white/50 text-gray-800`}>
+                    ({cls.className})
+                </div>
+            )}
 
             {/* Student List */}
             {showStudents && (
