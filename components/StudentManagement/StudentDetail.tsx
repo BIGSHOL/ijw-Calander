@@ -4,7 +4,7 @@ import BasicInfoTab from './tabs/BasicInfoTab';
 import CoursesTab from './tabs/CoursesTab';
 import GradesTab from './tabs/GradesTab';
 import ConsultationsTab from './tabs/ConsultationsTab';
-import { User, BookOpen, Phone, GraduationCap } from 'lucide-react';
+import { User, BookOpen, MessageSquare, GraduationCap } from 'lucide-react';
 
 interface StudentDetailProps {
   student: UnifiedStudent;
@@ -19,7 +19,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
     { id: 'basic', label: '기본정보', icon: <User className="w-4 h-4" /> },
     { id: 'courses', label: '수업', icon: <BookOpen className="w-4 h-4" /> },
     { id: 'grades', label: '성적', icon: <GraduationCap className="w-4 h-4" /> },
-    { id: 'consultations', label: '콜앤상담', icon: <Phone className="w-4 h-4" /> },
+    { id: 'consultations', label: '상담', icon: <MessageSquare className="w-4 h-4" /> },
   ];
 
   return (

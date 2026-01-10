@@ -539,9 +539,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     } catch (e) { console.error(e); alert("부서 생성 실패"); }
   };
 
+  /* Department Delete Handler - Modified to update local state immediately */
   const handleDelete = async (id: string) => {
     if (confirm('삭제하시겠습니까? (즉시 반영)')) {
-      try { await deleteDoc(doc(db, "부서목록", id)); } catch (e) { console.error(e); }
+      try {
+        await deleteDoc(doc(db, "부서목록", id));
+        // Remove from local state immediately to prevents 'Save Changes' from trying to update a deleted doc
+        setLocalDepartments(prev => prev.filter(d => d.id !== id));
+      } catch (e) { console.error(e); }
     }
   };
 
@@ -1026,7 +1031,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         {accessibleTabs.includes('timetable') && <option value="timetable">📊 시간표</option>}
                         {accessibleTabs.includes('payment') && <option value="payment">💰 전자 결재</option>}
                         {accessibleTabs.includes('gantt') && <option value="gantt">📈 간트 차트</option>}
-                        {accessibleTabs.includes('consultation') && <option value="consultation">📞 콜앤상담</option>}
+                        {accessibleTabs.includes('consultation') && <option value="consultation">💬 상담</option>}
                       </select>
                     </div>
                   )}
