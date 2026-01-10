@@ -15,6 +15,7 @@ import SalarySettingsTab from '../Attendance/components/SalarySettingsTab';
 import { useAttendanceConfig, useSaveAttendanceConfig } from '../../hooks/useAttendance';
 import UserDetailModal from './modals/UserDetailModal';
 import DepartmentsManagementTab from './tabs/DepartmentsManagementTab';
+import { NewDepartmentForm, CategoryManagementState, DepartmentFilterState, INITIAL_DEPARTMENT_FORM } from '../../types/departmentForm';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -76,16 +77,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const [mainTab, setMainTab] = useState<MainTabMode>('permissions');
   const [activeTab, setActiveTab] = useState<TabMode>('system');
-  const [newDeptName, setNewDeptName] = useState('');
-  // Default Colors for New Department
-  const [newDeptCategory, setNewDeptCategory] = useState(''); // New Category State
-  const [newDeptDefaultColor, setNewDeptDefaultColor] = useState('#ffffff');
-  const [newDeptDefaultTextColor, setNewDeptDefaultTextColor] = useState('#000000');
-  const [newDeptDefaultBorderColor, setNewDeptDefaultBorderColor] = useState('#fee2e2');
-  const [newDeptDefaultPermission, setNewDeptDefaultPermission] = useState<'view' | 'block' | 'edit'>('view'); // Default permission for all users
 
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [deptSearchTerm, setDeptSearchTerm] = useState('');
+  // Grouped department form state
+  const [newDepartmentForm, setNewDepartmentForm] = useState<NewDepartmentForm>(INITIAL_DEPARTMENT_FORM);
+
+  // Category management state
+  const [categoryManagement, setCategoryManagement] = useState<CategoryManagementState>({
+    newCategoryName: '',
+  });
+
+  // Department filter state
+  const [departmentFilterState, setDepartmentFilterState] = useState<DepartmentFilterState>({
+    searchTerm: '',
+    isCreating: false,
+    draggedIndex: null,
+  });
+
   const [userSearchTerm, setUserSearchTerm] = useState(''); // New User Search
   const [userTab, setUserTab] = useState<'approved' | 'pending'>('approved'); // New Sub-tab state
 
@@ -176,18 +183,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [newKeywordBgColor, setNewKeywordBgColor] = useState('#fee2e2');
   const [newKeywordTextColor, setNewKeywordTextColor] = useState('#dc2626');
 
-  // --- Category Management State ---
-  const [newCategoryName, setNewCategoryName] = useState('');
-
   const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return alert('카테고리 이름을 입력해주세요.');
-    const trimmed = newCategoryName.trim();
+    if (!categoryManagement.newCategoryName.trim()) return alert('카테고리 이름을 입력해주세요.');
+    const trimmed = categoryManagement.newCategoryName.trim();
     if (sysCategories.includes(trimmed)) return alert('이미 존재하는 카테고리입니다.');
 
     try {
       const newCats = [...sysCategories, trimmed].sort();
       await setDoc(doc(db, 'system', 'config'), { categories: newCats }, { merge: true });
-      setNewCategoryName('');
+      setCategoryManagement({ newCategoryName: '' });
     } catch (e) {
       console.error(e);
       alert('카테고리 추가 실패');
@@ -310,9 +314,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
     setDraggedTeacherId(null);
   };
-
-  // --- Creation State ---
-  const [isCreating, setIsCreating] = useState(false);
 
   // --- Role Permissions State (MASTER only) ---
   const [rolePermissions, setRolePermissions] = useState<RolePermissions>(DEFAULT_ROLE_PERMISSIONS);
@@ -475,22 +476,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // --- Handlers (Immediate Action) ---
   // Department Create/Delete remains immediate
   const handleAdd = async () => {
-    // ... (Existing implementation, kept same for brevity but using localDepartments state for logic where possible)
-    // For simplicity of this Plan execution, let's keep the exact same Immediate logic for Add/Delete as before.
-    // Copying previous handleAdd logic...
     if (hasChanges) {
       if (!confirm("저장되지 않은 변경사항이 있습니다. 부서를 생성하시겠습니까?")) return;
     }
-    if (!newDeptName.trim()) return;
+    if (!newDepartmentForm.name.trim()) return;
     const newDept: Department = {
-      id: newDeptName.trim().replace(/\//g, '_'),
-      name: newDeptName.trim(),
+      id: newDepartmentForm.name.trim().replace(/\//g, '_'),
+      name: newDepartmentForm.name.trim(),
       order: departments.length + 1,
-      category: newDeptCategory.trim(), // Save Category
+      category: newDepartmentForm.category.trim(),
       color: '#ffffff',
-      defaultColor: newDeptDefaultColor,
-      defaultTextColor: newDeptDefaultTextColor,
-      defaultBorderColor: newDeptDefaultBorderColor,
+      defaultColor: newDepartmentForm.defaultColor,
+      defaultTextColor: newDepartmentForm.defaultTextColor,
+      defaultBorderColor: newDepartmentForm.defaultBorderColor,
     };
     try {
       await setDoc(doc(db, "부서목록", newDept.id), {
@@ -514,10 +512,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         const currentAllowed = user.allowedDepartments || [];
 
         // Master always gets edit permission
-        const permissionToApply = user.role === 'master' ? 'edit' : newDeptDefaultPermission;
+        const permissionToApply = user.role === 'master' ? 'edit' : newDepartmentForm.defaultPermission;
 
-        // Skip block permission (don't add to departmentPermissions, and don't add to allowedDepartments)
-        if (permissionToApply === 'block') {
+        // Skip none permission (don't add to departmentPermissions, and don't add to allowedDepartments)
+        // @ts-ignore - 'block' is legacy value for backwards compatibility
+        if (permissionToApply === 'none' || permissionToApply === 'block') {
           // Block: remove from allowedDepartments if exists, don't add to permissions
           batch.update(userRef, {
             allowedDepartments: currentAllowed.filter((id: string) => id !== newDept.id),
@@ -535,19 +534,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       await batch.commit();
 
       // Reset form
-      setNewDeptName('');
-      setNewDeptCategory('');
-      setNewDeptDefaultColor('#ffffff');
-      setNewDeptDefaultTextColor('#000000');
-      setNewDeptDefaultBorderColor('#fee2e2');
-      setNewDeptDefaultPermission('view');
-      setIsCreating(false);
+      setNewDepartmentForm(INITIAL_DEPARTMENT_FORM);
+      setDepartmentFilterState({ ...departmentFilterState, isCreating: false });
     } catch (e) { console.error(e); alert("부서 생성 실패"); }
   };
 
+  /* Department Delete Handler - Modified to update local state immediately */
   const handleDelete = async (id: string) => {
     if (confirm('삭제하시겠습니까? (즉시 반영)')) {
-      try { await deleteDoc(doc(db, "부서목록", id)); } catch (e) { console.error(e); }
+      try {
+        await deleteDoc(doc(db, "부서목록", id));
+        // Remove from local state immediately to prevents 'Save Changes' from trying to update a deleted doc
+        setLocalDepartments(prev => prev.filter(d => d.id !== id));
+      } catch (e) { console.error(e); }
     }
   };
 
@@ -747,33 +746,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <DepartmentsManagementTab
                 localDepartments={localDepartments}
                 sysCategories={sysCategories}
-                newCategoryName={newCategoryName}
-                deptSearchTerm={deptSearchTerm}
-                isCreating={isCreating}
-                newDeptName={newDeptName}
-                newDeptCategory={newDeptCategory}
-                newDeptDefaultColor={newDeptDefaultColor}
-                newDeptDefaultTextColor={newDeptDefaultTextColor}
-                newDeptDefaultBorderColor={newDeptDefaultBorderColor}
-                newDeptDefaultPermission={newDeptDefaultPermission}
-                draggedIndex={draggedIndex}
                 currentUserProfile={currentUserProfile}
+                newDepartmentForm={newDepartmentForm}
+                categoryManagement={categoryManagement}
+                departmentFilterState={departmentFilterState}
                 canManageCategories={canManageCategories}
                 canCreateDept={canCreateDept}
                 canEditDept={canEditDept}
                 canDeleteDept={canDeleteDept}
                 isMaster={isMaster}
                 isAdmin={isAdmin}
-                setNewCategoryName={setNewCategoryName}
-                setDeptSearchTerm={setDeptSearchTerm}
-                setIsCreating={setIsCreating}
-                setNewDeptName={setNewDeptName}
-                setNewDeptCategory={setNewDeptCategory}
-                setNewDeptDefaultColor={setNewDeptDefaultColor}
-                setNewDeptDefaultTextColor={setNewDeptDefaultTextColor}
-                setNewDeptDefaultBorderColor={setNewDeptDefaultBorderColor}
-                setNewDeptDefaultPermission={setNewDeptDefaultPermission}
-                setDraggedIndex={setDraggedIndex}
+                setNewDepartmentForm={setNewDepartmentForm}
+                setCategoryManagement={setCategoryManagement}
+                setDepartmentFilterState={setDepartmentFilterState}
                 setLocalDepartments={setLocalDepartments}
                 handleAddCategory={handleAddCategory}
                 handleDeleteCategory={handleDeleteCategory}
@@ -1046,7 +1031,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         {accessibleTabs.includes('timetable') && <option value="timetable">📊 시간표</option>}
                         {accessibleTabs.includes('payment') && <option value="payment">💰 전자 결재</option>}
                         {accessibleTabs.includes('gantt') && <option value="gantt">📈 간트 차트</option>}
-                        {accessibleTabs.includes('consultation') && <option value="consultation">📞 콜앤상담</option>}
+                        {accessibleTabs.includes('consultation') && <option value="consultation">💬 상담</option>}
                       </select>
                     </div>
                   )}
