@@ -76,131 +76,130 @@ const ClassManagementTab: React.FC = () => {
   }, [classes, filters]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* 헤더 */}
-      <div className="bg-[#081429] text-white rounded-lg p-6 mb-6 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <BookOpen className="w-8 h-8" />
-            <div>
-              <h1 className="text-2xl font-bold">수업 관리</h1>
-              <p className="text-sm text-gray-300 mt-1">
-                수업 중심으로 학생과 시간표를 관리합니다
-              </p>
-            </div>
-          </div>
-          <button
-            className="bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-colors"
-            onClick={() => setShowAddModal(true)}
-          >
-            <Plus className="w-5 h-5" />
-            새 수업 추가
-          </button>
-        </div>
-      </div>
-
-      {/* 필터 영역 */}
-      <div className="bg-white rounded-lg p-6 mb-6 shadow-sm border border-[#081429] border-opacity-10">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter className="w-5 h-5 text-[#081429]" />
-          <h2 className="text-[#081429] font-bold text-lg">필터</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* 과목 필터 */}
-          <div>
-            <label className="block text-[#373d41] text-sm font-medium mb-2">
-              과목
-            </label>
-            <select
-              value={filters.subject}
-              onChange={(e) => setFilters({ ...filters, subject: e.target.value as any })}
-              className="w-full px-4 py-2 border border-[#081429] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] text-[#081429]"
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* 상단 네비게이션 바 (다른 탭과 동일한 스타일) */}
+      <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
+        <div className="flex items-center gap-3">
+          {/* 과목 토글 */}
+          <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+            <button
+              onClick={() => setFilters({ ...filters, subject: 'all' })}
+              className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                filters.subject === 'all'
+                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
             >
-              <option value="all">전체</option>
-              <option value="math">수학</option>
-              <option value="english">영어</option>
-            </select>
+              📚 전체
+            </button>
+            <button
+              onClick={() => setFilters({ ...filters, subject: 'math' })}
+              className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                filters.subject === 'math'
+                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              📐 수학
+            </button>
+            <button
+              onClick={() => setFilters({ ...filters, subject: 'english' })}
+              className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                filters.subject === 'english'
+                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              📕 영어
+            </button>
           </div>
+
+          {/* 구분선 */}
+          <div className="w-px h-4 bg-white/20 mx-1"></div>
 
           {/* 강사 필터 */}
-          <div>
-            <label className="block text-[#373d41] text-sm font-medium mb-2">
-              강사
-            </label>
+          {teachers.length > 0 && (
             <select
               value={filters.teacher}
               onChange={(e) => setFilters({ ...filters, teacher: e.target.value })}
-              className="w-full px-4 py-2 border border-[#081429] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] text-[#081429]"
+              className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
             >
               <option value="all">전체 강사</option>
               {teachers.map(teacher => (
                 <option key={teacher} value={teacher}>{teacher}</option>
               ))}
             </select>
-          </div>
+          )}
+
+          {/* 구분선 */}
+          <div className="w-px h-4 bg-white/20 mx-1"></div>
 
           {/* 정렬 */}
-          <div>
-            <label className="block text-[#373d41] text-sm font-medium mb-2">
-              정렬
-            </label>
-            <select
-              value={filters.sortBy}
-              onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
-              className="w-full px-4 py-2 border border-[#081429] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] text-[#081429]"
-            >
-              <option value="name">수업명</option>
-              <option value="studentCount">학생 수</option>
-              <option value="teacher">강사명</option>
-            </select>
-          </div>
+          <select
+            value={filters.sortBy}
+            onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
+            className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+          >
+            <option value="name">수업명순</option>
+            <option value="studentCount">학생수순</option>
+            <option value="teacher">강사명순</option>
+          </select>
+
+          {/* 구분선 */}
+          <div className="w-px h-4 bg-white/20 mx-1"></div>
 
           {/* 검색 */}
-          <div>
-            <label className="block text-[#373d41] text-sm font-medium mb-2">
-              검색
-            </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#373d41]" />
-              <input
-                type="text"
-                value={filters.searchQuery}
-                onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                placeholder="수업명 또는 강사명"
-                className="w-full pl-10 pr-4 py-2 border border-[#081429] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] text-[#081429]"
-              />
-            </div>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="수업명, 강사명 검색..."
+              value={filters.searchQuery}
+              onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
+              className="bg-[#1e293b] border border-gray-700 rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
+            />
           </div>
         </div>
 
-        {/* 결과 카운트 */}
-        <div className="mt-4 pt-4 border-t border-[#081429] border-opacity-10">
-          <p className="text-[#373d41] text-sm">
-            총 <span className="text-[#fdb813] font-semibold">{filteredClasses.length}</span>개 수업
-          </p>
+        <div className="flex items-center gap-2">
+          {/* 결과 카운트 */}
+          <span className="text-gray-400 text-xs">
+            총 <span className="text-[#fdb813] font-bold">{filteredClasses.length}</span>개 수업
+          </span>
+
+          {/* 새 수업 추가 버튼 */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+          >
+            <Plus size={14} />
+            <span>새 수업</span>
+          </button>
         </div>
       </div>
 
-      {/* 에러 상태 */}
-      {error && (
-        <div className="bg-red-50 border border-red-300 rounded-lg p-4 mb-6">
-          <p className="text-red-800">데이터를 불러오는 중 오류가 발생했습니다.</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-2 bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-4 py-2 rounded font-semibold text-sm"
-          >
-            다시 시도
-          </button>
-        </div>
-      )}
+      {/* 메인 콘텐츠 영역 */}
+      <div className="flex-1 overflow-auto bg-gray-50 p-6">
+        {/* 에러 상태 */}
+        {error && (
+          <div className="bg-red-50 border border-red-300 rounded-lg p-4 mb-6">
+            <p className="text-red-800">데이터를 불러오는 중 오류가 발생했습니다.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-4 py-2 rounded font-semibold text-sm"
+            >
+              다시 시도
+            </button>
+          </div>
+        )}
 
-      {/* 수업 목록 */}
-      <ClassList
-        classes={filteredClasses}
-        onClassClick={setSelectedClass}
-        isLoading={isLoading}
-      />
+        {/* 수업 목록 */}
+        <ClassList
+          classes={filteredClasses}
+          onClassClick={setSelectedClass}
+          isLoading={isLoading}
+        />
+      </div>
 
       {/* 수업 상세 모달 */}
       {selectedClass && (
