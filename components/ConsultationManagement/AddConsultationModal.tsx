@@ -7,6 +7,7 @@ import { auth } from '../../firebaseConfig';
 interface AddConsultationModalProps {
     onClose: () => void;
     onSuccess: () => void;
+    preSelectedStudentId?: string;  // 학생 관리 탭에서 호출 시 자동 선택
 }
 
 /**
@@ -18,13 +19,14 @@ interface AddConsultationModalProps {
 const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
     onClose,
     onSuccess,
+    preSelectedStudentId,
 }) => {
     const currentUser = auth.currentUser;
     const { students, loading: studentsLoading } = useStudents();
     const createConsultation = useCreateConsultation();
 
     // 폼 상태
-    const [studentId, setStudentId] = useState('');
+    const [studentId, setStudentId] = useState(preSelectedStudentId || '');
     const [type, setType] = useState<'parent' | 'student'>('parent');
     const [category, setCategory] = useState<ConsultationCategory>('general');
     const [subject, setSubject] = useState<'math' | 'english' | 'all'>('all');
@@ -128,20 +130,26 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                 <label className="block text-sm font-medium text-[#373d41] mb-2">
                                     학생 선택 <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                    value={studentId}
-                                    onChange={(e) => setStudentId(e.target.value)}
-                                    className="w-full border border-[#081429] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
-                                    required
-                                    disabled={studentsLoading}
-                                >
-                                    <option value="">학생을 선택하세요</option>
-                                    {students.map(student => (
-                                        <option key={student.id} value={student.id}>
-                                            {student.name} ({student.grade || '학년 미정'})
-                                        </option>
-                                    ))}
-                                </select>
+                                {preSelectedStudentId ? (
+                                    <div className="w-full border border-[#081429] bg-gray-50 rounded-lg px-3 py-2 text-[#373d41]">
+                                        {selectedStudent?.name} ({selectedStudent?.grade || '학년 미정'})
+                                    </div>
+                                ) : (
+                                    <select
+                                        value={studentId}
+                                        onChange={(e) => setStudentId(e.target.value)}
+                                        className="w-full border border-[#081429] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                                        required
+                                        disabled={studentsLoading}
+                                    >
+                                        <option value="">학생을 선택하세요</option>
+                                        {students.map(student => (
+                                            <option key={student.id} value={student.id}>
+                                                {student.name} ({student.grade || '학년 미정'})
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
                             </div>
 
                             {/* 상담 유형 */}
