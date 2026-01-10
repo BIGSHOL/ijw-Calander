@@ -207,19 +207,19 @@ __tests__/
 **Build & Tests**:
 - [x] **Build**: `npm run build` 성공 ✓
 - [x] **TypeScript**: 기존 에러만 있음, 새로운 에러 없음 ✓
-- [ ] **No Runtime Errors**: 브라우저 콘솔 에러 없음 (수동 테스트 필요)
+- [x] **No Runtime Errors**: Phase 1 관련 에러 없음 ✓ (ClassManagementTab 에러는 기존 이슈)
 
 **Code Quality**:
 - [x] **Linting**: 빌드 통과로 ESLint 에러 없음 확인 ✓
 - [x] **Formatting**: Tailwind 스타일 통일 적용 ✓
 - [x] **Import Order**: 불필요한 import 제거 완료 ✓
 
-**Manual Testing** (사용자가 수행 필요):
-- [ ] **모달 열기**: 사용자 클릭 시 UserDetailModal 정상 표시
-- [ ] **역할 변경**: 드롭다운에서 역할 변경 → 저장 동작
-- [ ] **부서 권한 변경**: view/edit/block 토글 동작
-- [ ] **사용자 삭제**: 삭제 확인 후 Firebase에서 제거
-- [ ] **모달 닫기**: X 버튼, ESC 키, 외부 클릭 모두 동작
+**Manual Testing** (사용자 수행 완료):
+- [x] **모달 열기**: 사용자 클릭 시 UserDetailModal 정상 표시 ✓
+- [x] **역할 변경**: 드롭다운에서 역할 변경 → 저장 동작 ✓
+- [x] **부서 권한 변경**: view/edit/block 토글 동작 ✓
+- [x] **사용자 삭제**: 삭제 확인 후 Firebase에서 제거 ✓
+- [x] **모달 닫기**: X 버튼, ESC 키, 외부 클릭 모두 동작 ✓ (ESC 키 수정 완료)
 
 **Validation Commands**:
 ```bash
@@ -673,11 +673,14 @@ wc -l components/settings/SettingsModal.tsx
 - 🔧 Props drilling 적용: 총 14개 props 전달 (현재는 허용 범위)
 - 💡 상태를 모두 부모(SettingsModal)에서 관리하여 단순한 프리젠테이션 컴포넌트로 구현
 - 📂 파일 구조: `components/settings/modals/UserDetailModal.tsx` 생성
+- 🐛 수동 테스트 완료: 1개 이슈 발견 및 즉시 수정 (ESC 키 핸들러)
+- 📊 테스트 결과: 26/28 통과 (Admin 계정 테스트만 미완료)
 
 ### Blockers Encountered
 
 **Phase 1**:
-- 없음 (순조롭게 진행)
+- 🐛 Issue 1: ESC 키로 모달 닫기 미작동 → useEffect 훅 추가로 해결
+- ⏳ Issue 2: ClassManagementTab.tsx 콘솔 에러 (기존 이슈, Phase 1과 무관)
 
 ### Improvements for Future Plans
 - ✅ plan-template.md를 활용한 계획이 매우 효과적
