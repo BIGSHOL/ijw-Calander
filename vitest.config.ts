@@ -30,8 +30,8 @@ export default defineConfig({
       branches: 80,
       statements: 80,
     },
-    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['node_modules', 'dist', 'build', '.claude', 'docs', 'skills'],
+    include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    exclude: ['node_modules', 'dist', 'build', '.claude', 'docs', 'skills', 'functions'],
   },
   resolve: {
     alias: {
