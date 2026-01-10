@@ -2201,7 +2201,7 @@ const App: React.FC = () => {
                         {tab === 'timetable' && '📚 시간표'}
                         {tab === 'payment' && '💳 전자 결제'}
                         {tab === 'gantt' && '📊 간트 차트'}
-                        {tab === 'consultation' && '📞 콜앤상담'}
+                        {tab === 'consultation' && '💬 상담'}
                       </span>
                     ))}
                   </div>

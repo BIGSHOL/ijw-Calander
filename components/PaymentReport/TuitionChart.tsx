@@ -21,9 +21,9 @@ export const TuitionChart: React.FC<TuitionChartProps> = ({ data }) => {
     };
 
     return (
-        <div className="h-[300px] w-full bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+        <div className="h-[300px] w-full bg-white p-4 rounded-xl shadow-sm border border-gray-200" style={{ minHeight: '300px' }}>
             <h3 className="text-lg font-semibold text-[#081429] mb-4">사업장별 수강료 현황</h3>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
                 <BarChart
                     data={data}
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
