@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Department, UserProfile, Teacher, UserRole, ROLE_LABELS } from '../../../types';
 import { canAssignRole, getAssignableRoles } from '../../../hooks/usePermissions';
 import { X, Trash2, Shield, ShieldCheck, Users, BookUser } from 'lucide-react';
@@ -36,6 +36,18 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({
   onDeptPermissionChange,
   onDeleteUser,
 }) => {
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
