@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Department, UserProfile, Teacher, UserRole, ROLE_LABELS } from '../../../types';
 import { canAssignRole, getAssignableRoles } from '../../../hooks/usePermissions';
 import { X, Trash2, Shield, ShieldCheck, Users, BookUser } from 'lucide-react';
 import { PERMISSION_LEVELS, PERMISSION_LABELS, PERMISSION_STYLES } from '../../../constants/permissions';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 interface UserDetailModalProps {
   user: UserProfile;
@@ -37,24 +38,19 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({
   onDeptPermissionChange,
   onDeleteUser,
 }) => {
-  // Handle ESC key to close modal
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+  // Focus trap hook handles ESC key, Tab cycling, and focus restoration
+  const modalRef = useFocusTrap(true, onClose);
 
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="user-detail-title"
     >
       <div
+        ref={modalRef}
         className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -66,7 +62,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 {user.role === 'master' ? <ShieldCheck /> : user.role === 'admin' ? <Shield /> : <Users />}
               </div>
               <div>
-                <h3 className="text-xl font-bold text-[#081429]">{user.email}</h3>
+                <h3 id="user-detail-title" className="text-xl font-bold text-[#081429]">{user.email}</h3>
                 <div className="flex items-center gap-2 mt-1">
                   <input
                     value={user.jobTitle || ''}
@@ -99,8 +95,8 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 </div>
               </div>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X size={24} />
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="모달 닫기">
+              <X size={24} aria-hidden="true" />
             </button>
           </div>
         </div>
