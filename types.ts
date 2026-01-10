@@ -553,7 +553,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -568,9 +568,11 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   attendance: { label: '출석부', icon: '📝' },
   payment: { label: '전자 결제', icon: '💳' },
   gantt: { label: '간트 차트', icon: '📊' },
-  consultation: { label: '콜앤상담', icon: '📞' },
+  consultation: { label: '입학 상담', icon: '📞' },
   students: { label: '학생 관리', icon: '👥' },
   grades: { label: '성적 관리', icon: '📊' },
+  classes: { label: '수업 관리', icon: '📚' },
+  'student-consultations': { label: '상담 관리', icon: '💬' },
 };
 
 // Tab Group 구조 - 무한 확장 가능
@@ -595,14 +597,14 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'class',
     label: '수업',
     icon: '📚',
-    tabs: ['timetable', 'attendance'],
+    tabs: ['timetable', 'attendance', 'classes'],
     order: 2,
   },
   {
     id: 'student',
     label: '학생',
     icon: '👥',
-    tabs: ['students', 'consultation', 'grades'],
+    tabs: ['students', 'consultation', 'student-consultations', 'grades'],
     order: 3,
   },
   {
@@ -628,12 +630,12 @@ export type TabPermissionConfig = {
 
 // Default Tab Permissions (Fallback)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students', 'grades'],
-  admin: ['calendar', 'timetable', 'attendance', 'payment', 'students', 'grades'],
-  manager: ['calendar', 'attendance', 'students', 'grades'],
+  master: ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'student-consultations'],
+  admin: ['calendar', 'timetable', 'attendance', 'payment', 'students', 'grades', 'classes', 'student-consultations'],
+  manager: ['calendar', 'attendance', 'students', 'grades', 'classes', 'student-consultations'],
   editor: ['calendar'],
-  math_lead: ['timetable', 'attendance', 'students', 'grades'],
-  english_lead: ['timetable', 'attendance', 'students', 'grades'],
+  math_lead: ['timetable', 'attendance', 'students', 'grades', 'classes', 'student-consultations'],
+  english_lead: ['timetable', 'attendance', 'students', 'grades', 'classes', 'student-consultations'],
   user: ['calendar', 'attendance'],
   viewer: ['calendar'],
   guest: ['calendar'],
@@ -902,6 +904,86 @@ export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
   competition: '경시대회',
   diagnostic: '진단 평가',
   other: '기타',
+};
+
+// ============ CONSULTATION MANAGEMENT TYPES (Phase 1) ============
+
+/**
+ * 상담 카테고리
+ */
+export type ConsultationCategory =
+  | 'academic'        // 학업 성취도
+  | 'behavior'        // 행동/태도
+  | 'attendance'      // 출석 관련
+  | 'progress'        // 학습 진도
+  | 'concern'         // 고민 상담
+  | 'compliment'      // 칭찬/격려
+  | 'complaint'       // 불만/개선 요청
+  | 'general'         // 일반 상담
+  | 'other';          // 기타
+
+/**
+ * 상담 기록 (재원생 대상 학부모/학생 상담)
+ */
+export interface Consultation {
+  // 기본 정보
+  id: string;
+  studentId: string;
+  studentName: string;
+
+  // 상담 정보
+  type: 'parent' | 'student';
+  consultantId: string;
+  consultantName: string;
+  date: string;                        // YYYY-MM-DD
+  time?: string;                       // HH:mm
+  duration?: number;                   // 분
+
+  // 상담 내용
+  category: ConsultationCategory;
+  subject?: 'math' | 'english' | 'all';
+  title: string;
+  content: string;
+
+  // 학부모 상담 전용
+  parentName?: string;
+  parentRelation?: string;
+  parentContact?: string;
+
+  // 학생 상담 전용
+  studentMood?: 'positive' | 'neutral' | 'negative';
+
+  // 후속 조치
+  followUpNeeded: boolean;
+  followUpDate?: string;
+  followUpDone: boolean;
+  followUpNotes?: string;
+
+  // 메타데이터
+  createdAt: number;
+  updatedAt: number;
+  createdBy: string;
+}
+
+/**
+ * 카테고리 설정 (UI 표시용)
+ */
+export interface ConsultationCategoryConfig {
+  icon: string;
+  label: string;
+  color: string;
+}
+
+export const CATEGORY_CONFIG: Record<ConsultationCategory, ConsultationCategoryConfig> = {
+  academic: { icon: '📚', label: '학업 성취도', color: '#081429' },
+  behavior: { icon: '⚠️', label: '행동/태도', color: '#f59e0b' },
+  attendance: { icon: '📅', label: '출석 관련', color: '#3b82f6' },
+  progress: { icon: '📈', label: '학습 진도', color: '#10b981' },
+  concern: { icon: '💭', label: '고민 상담', color: '#8b5cf6' },
+  compliment: { icon: '⭐', label: '칭찬/격려', color: '#fdb813' },
+  complaint: { icon: '📢', label: '불만/개선', color: '#ef4444' },
+  general: { icon: '💬', label: '일반 상담', color: '#373d41' },
+  other: { icon: '📝', label: '기타', color: '#6b7280' },
 };
 
 // ============ CALENDAR HASHTAG & SEMINAR TYPES ============

@@ -32,16 +32,23 @@ export const useClasses = (subject?: 'math' | 'english') => {
                 localStorage.setItem('useNewDataStructure', 'true');
             }
 
+            console.log(`[useClasses] subject: ${subject}, useNewStructure: ${useNewStructure}`);
+
             if (useNewStructure) {
                 // 새로운 구조: enrollments에서 데이터 조회
-                return await fetchClassesFromEnrollments(subject);
+                const classes = await fetchClassesFromEnrollments(subject);
+                console.log(`[useClasses] Fetched ${classes.length} classes from enrollments for subject: ${subject}`);
+                return classes;
             } else {
                 // 기존 구조: 수업목록에서 데이터 조회
-                return await fetchClassesFromOldStructure(subject);
+                const classes = await fetchClassesFromOldStructure(subject);
+                console.log(`[useClasses] Fetched ${classes.length} classes from old structure for subject: ${subject}`);
+                return classes;
             }
         },
-        staleTime: 1000 * 60 * 10,  // 10분 캐싱
-        gcTime: 1000 * 60 * 30,     // 30분 GC
+        staleTime: 1000 * 60 * 10,   // 10분 캐싱 (자주 변경되지 않는 데이터)
+        gcTime: 1000 * 60 * 30,      // 30분 GC
+        refetchOnMount: false,       // 캐시된 데이터 우선 사용 (성능 최적화)
     });
 };
 
@@ -82,8 +89,18 @@ async function fetchClassesFromOldStructure(subject?: 'math' | 'english'): Promi
  * 새로운 구조에서 클래스 조회 (students/enrollments)
  */
 async function fetchClassesFromEnrollments(subject?: 'math' | 'english'): Promise<ClassInfo[]> {
-    // collectionGroup으로 모든 enrollments 조회
-    const enrollmentsQuery = query(collectionGroup(db, 'enrollments'));
+    // collectionGroup으로 enrollments 조회 (subject 필터링 적용)
+    let enrollmentsQuery;
+    if (subject) {
+        // subject가 지정된 경우 필터 적용하여 조회 최적화
+        enrollmentsQuery = query(
+            collectionGroup(db, 'enrollments'),
+            where('subject', '==', subject)
+        );
+    } else {
+        // subject가 없는 경우 전체 조회
+        enrollmentsQuery = query(collectionGroup(db, 'enrollments'));
+    }
     const snapshot = await getDocs(enrollmentsQuery);
 
     // className + subject 조합으로 그룹화 (같은 이름이라도 과목이 다르면 별개)
@@ -129,9 +146,14 @@ async function fetchClassesFromEnrollments(subject?: 'math' | 'english'): Promis
         studentCount: classData.studentIds.size,
     }));
 
+    console.log(`[fetchClassesFromEnrollments] Before filtering: ${classes.length} classes`);
+    console.log(`[fetchClassesFromEnrollments] Subjects in data:`, [...new Set(classes.map(c => c.subject))]);
+
     // 과목 필터링
     if (subject) {
+        const beforeFilter = classes.length;
         classes = classes.filter(c => c.subject === subject);
+        console.log(`[fetchClassesFromEnrollments] After filtering by ${subject}: ${classes.length} classes (was ${beforeFilter})`);
     }
 
     // 정렬
@@ -147,12 +169,27 @@ async function fetchClassesFromEnrollments(subject?: 'math' | 'english'): Promis
 const inferSubject = (className: string, teacher: string): 'math' | 'english' => {
     const englishPatterns = [
         /^DP/, /^PL/, /^LE/, /^RTT/, /^RW/, /^GR/, /^VT/,  // 영어 레벨 약어
+        /^JP/, /^KW/, /^LT/, /^MEC/, /^PJ/, /^RTS/,  // 영어 레벨 약어 추가
+        /E_/,  // E_ 포함
         /phonics/i, /grammar/i, /reading/i, /writing/i,
+        /초등\s*브릿지/, /중등E/, /고등E/, /중고E/,
     ];
 
     for (const pattern of englishPatterns) {
         if (pattern.test(className)) {
             return 'english';
+        }
+    }
+
+    // 수학 패턴
+    const mathPatterns = [
+        /수학/, /개념/, /유형/, /심화/, /최상위/, /사고력/,
+        /M_/,
+    ];
+
+    for (const pattern of mathPatterns) {
+        if (pattern.test(className)) {
+            return 'math';
         }
     }
 

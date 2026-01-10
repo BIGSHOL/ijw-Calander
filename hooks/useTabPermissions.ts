@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { UserProfile, AppTab, DEFAULT_TAB_PERMISSIONS, TabPermissionConfig } from '../types';
+import { UserProfile, AppTab, DEFAULT_TAB_PERMISSIONS, TabPermissionConfig, TAB_META } from '../types';
 import { useSystemConfig } from './useFirebaseQueries';
 
 /**
@@ -43,9 +43,11 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
         };
 
         // Pre-calculate accessible tabs for easy mapping
-        const accessibleTabs: AppTab[] = (['calendar', 'timetable', 'payment', 'gantt', 'consultation', 'attendance', 'students', 'grades'] as AppTab[]).filter((t) =>
-            canAccessTab(t)
-        );
+        // Master gets ALL tabs automatically
+        const allTabs = Object.keys(TAB_META) as AppTab[];
+        const accessibleTabs: AppTab[] = userProfile?.role === 'master'
+            ? allTabs  // Master gets everything
+            : allTabs.filter((t) => canAccessTab(t));
 
         return {
             canAccessTab,

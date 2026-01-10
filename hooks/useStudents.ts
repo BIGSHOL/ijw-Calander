@@ -10,6 +10,7 @@ import {
     deleteDoc,
     query,
     where,
+    collectionGroup,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { UnifiedStudent } from '../types';
@@ -65,15 +66,27 @@ export function useStudents(includeWithdrawn = false) {
                     ...withdrawnStudents
                 ];
 
-                // enrollments 서브컬렉션 로드 (각 학생마다)
-                await Promise.all(studentList.map(async (student) => {
-                    const enrollmentsRef = collection(db, `students/${student.id}/enrollments`);
-                    const enrollmentsSnap = await getDocs(enrollmentsRef);
-                    student.enrollments = enrollmentsSnap.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    })) as any[];
-                }));
+                // enrollments 한 번에 조회 후 학생별로 그룹화 (성능 최적화)
+                const allEnrollmentsSnap = await getDocs(collectionGroup(db, 'enrollments'));
+                const enrollmentsByStudent = new Map<string, any[]>();
+
+                allEnrollmentsSnap.docs.forEach(doc => {
+                    const studentId = doc.ref.parent.parent?.id;
+                    if (studentId) {
+                        if (!enrollmentsByStudent.has(studentId)) {
+                            enrollmentsByStudent.set(studentId, []);
+                        }
+                        enrollmentsByStudent.get(studentId)!.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    }
+                });
+
+                // 각 학생에게 enrollments 할당
+                studentList.forEach(student => {
+                    student.enrollments = enrollmentsByStudent.get(student.id) || [];
+                });
 
                 // Client-side sort by name
                 studentList.sort((a, b) => a.name.localeCompare(b.name));
@@ -92,15 +105,27 @@ export function useStudents(includeWithdrawn = false) {
                     ...docSnap.data()
                 } as UnifiedStudent));
 
-                // enrollments 서브컬렉션 로드 (각 학생마다)
-                await Promise.all(studentList.map(async (student) => {
-                    const enrollmentsRef = collection(db, `students/${student.id}/enrollments`);
-                    const enrollmentsSnap = await getDocs(enrollmentsRef);
-                    student.enrollments = enrollmentsSnap.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    })) as any[];
-                }));
+                // enrollments 한 번에 조회 후 학생별로 그룹화 (성능 최적화)
+                const allEnrollmentsSnap = await getDocs(collectionGroup(db, 'enrollments'));
+                const enrollmentsByStudent = new Map<string, any[]>();
+
+                allEnrollmentsSnap.docs.forEach(doc => {
+                    const studentId = doc.ref.parent.parent?.id;
+                    if (studentId) {
+                        if (!enrollmentsByStudent.has(studentId)) {
+                            enrollmentsByStudent.set(studentId, []);
+                        }
+                        enrollmentsByStudent.get(studentId)!.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    }
+                });
+
+                // 각 학생에게 enrollments 할당
+                studentList.forEach(student => {
+                    student.enrollments = enrollmentsByStudent.get(student.id) || [];
+                });
 
                 // Client-side sort by name
                 studentList.sort((a, b) => a.name.localeCompare(b.name));
