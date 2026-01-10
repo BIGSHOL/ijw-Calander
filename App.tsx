@@ -18,6 +18,8 @@ import GanttManager from './components/Gantt/GanttManager';
 import ConsultationManager from './components/Consultation/ConsultationManager';
 import StudentManagementTab from './components/StudentManagement/StudentManagementTab';
 import GradesManager from './components/Grades/GradesManager';
+import { ClassManagementTab } from './components/ClassManagement';
+import { ConsultationManagementTab } from './components/ConsultationManagement';
 import NavigationBar from './components/Navigation/NavigationBar';
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
@@ -42,7 +44,7 @@ const formatUserDisplay = (u: UserProfile) => {
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | null>(null);
 
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
@@ -2082,6 +2084,16 @@ const App: React.FC = () => {
               searchQuery={gradesSearchQuery}
               onSearchChange={setGradesSearchQuery}
             />
+          </div>
+        ) : appMode === 'classes' ? (
+          /* Class Management View */
+          <div className="w-full flex-1 overflow-auto">
+            <ClassManagementTab />
+          </div>
+        ) : appMode === 'student-consultations' ? (
+          /* Student Consultation Management View */
+          <div className="w-full flex-1 overflow-auto">
+            <ConsultationManagementTab />
           </div>
         ) : null}
 

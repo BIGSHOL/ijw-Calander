@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영어 수업 Subject 수정</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .pattern-list {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .pattern-list h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .pattern-list ul {
+            list-style: disc;
+            margin-left: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .pattern-list li {
+            margin: 5px 0;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .results h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .stat {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .stat strong {
+            font-weight: 600;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
+        .logs {
+            margin-top: 20px;
+            background: #1a1a1a;
+            color: #4CAF50;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-line {
+            margin: 2px 0;
+        }
+        .next-step {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 6px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 영어 수업 Subject 수정</h1>
+
+        <div class="info-box">
+            <strong>문제:</strong> 모든 enrollments의 subject가 'math'로 저장되어 있어, 영어 수업이 수학 탭에 표시됨<br>
+            <strong>해결:</strong> className 패턴을 기반으로 영어 수업을 자동 감지하여 subject 수정
+        </div>
+
+        <div class="pattern-list">
+            <h3>영어 수업 패턴:</h3>
+            <ul>
+                <li>DP, PL, LE, RTT, RW, GR, VT로 시작</li>
+                <li>E_로 시작</li>
+                <li>"초등 브릿지", "중등E" 포함</li>
+                <li>phonics, grammar, reading, writing 포함</li>
+            </ul>
+        </div>
+
+        <button id="startBtn" onclick="startFix()">수정 시작</button>
+
+        <div id="results" class="results" style="display: none;">
+            <h2>📊 결과</h2>
+            <div class="stat">총 enrollments: <strong id="total">0</strong>개</div>
+            <div class="stat">수학 (math): <strong id="math">0</strong>개</div>
+            <div class="stat">영어 (english): <strong id="english">0</strong>개</div>
+            <div class="stat success">영어로 수정됨: <strong id="updated">0</strong>개</div>
+            <div class="stat error">에러: <strong id="errors">0</strong>개</div>
+
+            <div class="next-step">
+                💡 <strong>다음 단계:</strong> 브라우저를 새로고침하고 수업 배정 모달에서 확인하세요.
+            </div>
+        </div>
+
+        <div id="logs" class="logs" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collectionGroup, getDocs, updateDoc, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase config from environment (you need to replace these with actual values)
+        const firebaseConfig = {
+            apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "YOUR_API_KEY",
+            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "YOUR_AUTH_DOMAIN",
+            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "YOUR_PROJECT_ID",
+            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "YOUR_STORAGE_BUCKET",
+            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "YOUR_SENDER_ID",
+            appId: import.meta.env.VITE_FIREBASE_APP_ID || "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        function addLog(message) {
+            const logsDiv = document.getElementById('logs');
+            logsDiv.style.display = 'block';
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.textContent = message;
+            logsDiv.appendChild(line);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function inferSubject(className) {
+            const englishPatterns = [
+                /^DP/, /^PL/, /^LE/, /^RTT/, /^RW/, /^GR/, /^VT/,
+                /^E_/, /phonics/i, /grammar/i, /reading/i, /writing/i,
+                /초등\s*브릿지/, /중등E/
+            ];
+            return englishPatterns.some(p => p.test(className)) ? 'english' : 'math';
+        }
+
+        window.startFix = async function() {
+            const btn = document.getElementById('startBtn');
+            btn.disabled = true;
+            btn.textContent = '실행 중...';
+
+            const stats = { total: 0, math: 0, english: 0, updated: 0, errors: 0 };
+
+            try {
+                addLog('🚀 영어 수업 subject 수정 시작');
+                addLog('📋 enrollments 조회 중...');
+
+                const snapshot = await getDocs(collectionGroup(db, 'enrollments'));
+                stats.total = snapshot.docs.length;
+                addLog(`✅ 발견: ${stats.total}개\n`);
+
+                for (const enrollmentDoc of snapshot.docs) {
+                    const data = enrollmentDoc.data();
+                    const currentSubject = data.subject || 'math';
+                    const className = data.className || '';
+                    const studentId = enrollmentDoc.ref.parent.parent?.id || 'unknown';
+                    const inferredSubject = inferSubject(className);
+
+                    if (currentSubject === 'math') stats.math++;
+                    else stats.english++;
+
+                    if (currentSubject !== inferredSubject) {
+                        try {
+                            addLog(`🔄 ${className} (${studentId}): ${currentSubject} → ${inferredSubject}`);
+                            await updateDoc(enrollmentDoc.ref, {
+                                subject: inferredSubject,
+                                updatedAt: Timestamp.now(),
+                                subjectFixedAt: Timestamp.now()
+                            });
+                            stats.updated++;
+                        } catch (error) {
+                            addLog(`❌ ${className}: ${error.message}`);
+                            stats.errors++;
+                        }
+                    }
+                }
+
+                addLog('\n✅ 수정 완료!');
+
+                // Show results
+                document.getElementById('results').style.display = 'block';
+                document.getElementById('total').textContent = stats.total;
+                document.getElementById('math').textContent = stats.math;
+                document.getElementById('english').textContent = stats.english;
+                document.getElementById('updated').textContent = stats.updated;
+                document.getElementById('errors').textContent = stats.errors;
+
+            } catch (error) {
+                addLog(`❌ 오류: ${error.message}`);
+                console.error('오류:', error);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '수정 완료';
+            }
+        };
+    </script>
+</body>
+</html>
