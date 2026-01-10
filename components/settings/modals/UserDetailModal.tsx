@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Department, UserProfile, Teacher, UserRole, ROLE_LABELS } from '../../../types';
 import { canAssignRole, getAssignableRoles } from '../../../hooks/usePermissions';
 import { X, Trash2, Shield, ShieldCheck, Users, BookUser } from 'lucide-react';
+import { PERMISSION_LEVELS, PERMISSION_LABELS, PERMISSION_STYLES } from '../../../constants/permissions';
 
 interface UserDetailModalProps {
   user: UserProfile;
@@ -192,24 +193,24 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({
                   {/* Permission Toggle - Segmented Control */}
                   <div className="flex bg-white rounded-lg p-0.5 border border-gray-200 shrink-0">
                     <button
-                      onClick={() => onDeptPermissionChange(user.uid, dept.id, 'none')}
-                      className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${!current ? 'bg-gray-100 text-gray-400 shadow-inner' : 'text-gray-300 hover:text-gray-500 hover:bg-gray-50'}`}
+                      onClick={() => onDeptPermissionChange(user.uid, dept.id, PERMISSION_LEVELS.NONE)}
+                      className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${!current ? PERMISSION_STYLES.none : 'text-gray-300 hover:text-gray-500 hover:bg-gray-50'}`}
                     >
-                      차단
+                      {PERMISSION_LABELS.none}
                     </button>
                     <div className="w-px bg-gray-100 my-1" />
                     <button
-                      onClick={() => onDeptPermissionChange(user.uid, dept.id, 'view')}
-                      className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${current === 'view' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                      onClick={() => onDeptPermissionChange(user.uid, dept.id, PERMISSION_LEVELS.VIEW)}
+                      className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${current === PERMISSION_LEVELS.VIEW ? PERMISSION_STYLES.view : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                     >
-                      조회
+                      {PERMISSION_LABELS.view}
                     </button>
                     <div className="w-px bg-gray-100 my-1" />
                     <button
-                      onClick={() => onDeptPermissionChange(user.uid, dept.id, 'edit')}
-                      className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${current === 'edit' ? 'bg-green-50 text-green-600 shadow-sm' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                      onClick={() => onDeptPermissionChange(user.uid, dept.id, PERMISSION_LEVELS.EDIT)}
+                      className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${current === PERMISSION_LEVELS.EDIT ? PERMISSION_STYLES.edit : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                     >
-                      수정
+                      {PERMISSION_LABELS.edit}
                     </button>
                   </div>
                 </div>
