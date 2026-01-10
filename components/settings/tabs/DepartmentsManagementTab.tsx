@@ -1,22 +1,18 @@
 import React from 'react';
 import { Department, UserProfile } from '../../../types';
+import { NewDepartmentForm, CategoryManagementState, DepartmentFilterState } from '../../../types/departmentForm';
 import { LayoutGrid, Plus, X, Search, List, Trash2 } from 'lucide-react';
 
 interface DepartmentsManagementTabProps {
   // State props
   localDepartments: Department[];
   sysCategories: string[];
-  newCategoryName: string;
-  deptSearchTerm: string;
-  isCreating: boolean;
-  newDeptName: string;
-  newDeptCategory: string;
-  newDeptDefaultColor: string;
-  newDeptDefaultTextColor: string;
-  newDeptDefaultBorderColor: string;
-  newDeptDefaultPermission: 'view' | 'block' | 'edit';
-  draggedIndex: number | null;
   currentUserProfile: UserProfile | null;
+
+  // Grouped state props
+  newDepartmentForm: NewDepartmentForm;
+  categoryManagement: CategoryManagementState;
+  departmentFilterState: DepartmentFilterState;
 
   // Permission flags
   canManageCategories: boolean;
@@ -26,17 +22,10 @@ interface DepartmentsManagementTabProps {
   isMaster: boolean;
   isAdmin: boolean;
 
-  // State setters
-  setNewCategoryName: (value: string) => void;
-  setDeptSearchTerm: (value: string) => void;
-  setIsCreating: (value: boolean) => void;
-  setNewDeptName: (value: string) => void;
-  setNewDeptCategory: (value: string) => void;
-  setNewDeptDefaultColor: (value: string) => void;
-  setNewDeptDefaultTextColor: (value: string) => void;
-  setNewDeptDefaultBorderColor: (value: string) => void;
-  setNewDeptDefaultPermission: (value: 'view' | 'block' | 'edit') => void;
-  setDraggedIndex: (value: number | null) => void;
+  // Grouped state setters
+  setNewDepartmentForm: (value: NewDepartmentForm | ((prev: NewDepartmentForm) => NewDepartmentForm)) => void;
+  setCategoryManagement: (value: CategoryManagementState | ((prev: CategoryManagementState) => CategoryManagementState)) => void;
+  setDepartmentFilterState: (value: DepartmentFilterState | ((prev: DepartmentFilterState) => DepartmentFilterState)) => void;
   setLocalDepartments: (value: Department[] | ((prev: Department[]) => Department[])) => void;
 
   // Handlers
@@ -51,33 +40,19 @@ interface DepartmentsManagementTabProps {
 const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
   localDepartments,
   sysCategories,
-  newCategoryName,
-  deptSearchTerm,
-  isCreating,
-  newDeptName,
-  newDeptCategory,
-  newDeptDefaultColor,
-  newDeptDefaultTextColor,
-  newDeptDefaultBorderColor,
-  newDeptDefaultPermission,
-  draggedIndex,
   currentUserProfile,
+  newDepartmentForm,
+  categoryManagement,
+  departmentFilterState,
   canManageCategories,
   canCreateDept,
   canEditDept,
   canDeleteDept,
   isMaster,
   isAdmin,
-  setNewCategoryName,
-  setDeptSearchTerm,
-  setIsCreating,
-  setNewDeptName,
-  setNewDeptCategory,
-  setNewDeptDefaultColor,
-  setNewDeptDefaultTextColor,
-  setNewDeptDefaultBorderColor,
-  setNewDeptDefaultPermission,
-  setDraggedIndex,
+  setNewDepartmentForm,
+  setCategoryManagement,
+  setDepartmentFilterState,
   setLocalDepartments,
   handleAddCategory,
   handleDeleteCategory,
@@ -97,8 +72,8 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
             </h3>
             <div className="flex gap-2">
               <input
-                value={newCategoryName}
-                onChange={e => setNewCategoryName(e.target.value)}
+                value={categoryManagement.newCategoryName}
+                onChange={e => setCategoryManagement({ newCategoryName: e.target.value })}
                 placeholder="새 카테고리"
                 className="border border-gray-300 rounded-lg px-3 py-1 text-xs focus:border-[#fdb813] outline-none w-32"
               />
@@ -123,26 +98,26 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
           <input
             type="text"
             placeholder="부서 검색"
-            value={deptSearchTerm}
-            onChange={(e) => setDeptSearchTerm(e.target.value)}
+            value={departmentFilterState.searchTerm}
+            onChange={(e) => setDepartmentFilterState({ ...departmentFilterState, searchTerm: e.target.value })}
             className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
           />
         </div>
-        {!isCreating && canCreateDept && (
-          <button onClick={() => setIsCreating(true)} className="px-4 py-2 bg-[#081429] text-white rounded-lg text-xs font-bold hover:bg-[#1e293b] flex items-center gap-1 transition-colors">
+        {!departmentFilterState.isCreating && canCreateDept && (
+          <button onClick={() => setDepartmentFilterState({ ...departmentFilterState, isCreating: true })} className="px-4 py-2 bg-[#081429] text-white rounded-lg text-xs font-bold hover:bg-[#1e293b] flex items-center gap-1 transition-colors">
             <Plus size={14} /> 새 부서 만들기
           </button>
         )}
       </div>
 
-      {isCreating && (
+      {departmentFilterState.isCreating && (
         <div className="bg-white p-4 rounded-xl border border-[#fdb813] space-y-3">
           <div className="flex gap-2">
-            <input type="text" value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="부서명" className="flex-1 border p-2 rounded" />
+            <input type="text" value={newDepartmentForm.name} onChange={(e) => setNewDepartmentForm({ ...newDepartmentForm, name: e.target.value })} placeholder="부서명" className="flex-1 border p-2 rounded" />
 
             <select
-              value={newDeptCategory}
-              onChange={(e) => setNewDeptCategory(e.target.value)}
+              value={newDepartmentForm.category}
+              onChange={(e) => setNewDepartmentForm({ ...newDepartmentForm, category: e.target.value })}
               className="w-32 border p-2 rounded text-xs"
             >
               <option value="">카테고리 선택</option>
@@ -160,21 +135,21 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
           <div className="flex gap-4 text-xs font-bold text-gray-500">
             <label className="flex items-center gap-2 cursor-pointer">
               <span>기본 배경</span>
-              <input type="color" value={newDeptDefaultColor} onChange={(e) => setNewDeptDefaultColor(e.target.value)} className="w-6 h-6 rounded overflow-hidden" />
+              <input type="color" value={newDepartmentForm.defaultColor} onChange={(e) => setNewDepartmentForm({ ...newDepartmentForm, defaultColor: e.target.value })} className="w-6 h-6 rounded overflow-hidden" />
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <span>기본 글자</span>
-              <input type="color" value={newDeptDefaultTextColor} onChange={(e) => setNewDeptDefaultTextColor(e.target.value)} className="w-6 h-6 rounded overflow-hidden" />
+              <input type="color" value={newDepartmentForm.defaultTextColor} onChange={(e) => setNewDepartmentForm({ ...newDepartmentForm, defaultTextColor: e.target.value })} className="w-6 h-6 rounded overflow-hidden" />
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <span>기본 테두리</span>
-              <input type="color" value={newDeptDefaultBorderColor} onChange={(e) => setNewDeptDefaultBorderColor(e.target.value)} className="w-6 h-6 rounded overflow-hidden" />
+              <input type="color" value={newDepartmentForm.defaultBorderColor} onChange={(e) => setNewDepartmentForm({ ...newDepartmentForm, defaultBorderColor: e.target.value })} className="w-6 h-6 rounded overflow-hidden" />
             </label>
             <label className="flex items-center gap-2 cursor-pointer ml-4">
               <span>기본 권한</span>
               <select
-                value={newDeptDefaultPermission}
-                onChange={(e) => setNewDeptDefaultPermission(e.target.value as 'view' | 'block' | 'edit')}
+                value={newDepartmentForm.defaultPermission}
+                onChange={(e) => setNewDepartmentForm({ ...newDepartmentForm, defaultPermission: e.target.value as 'view' | 'block' | 'edit' })}
                 className="border rounded px-2 py-1 text-xs font-bold"
               >
                 <option value="view">👁️ 조회</option>
@@ -185,7 +160,7 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
           </div>
 
           <div className="flex gap-2">
-            <button onClick={() => setIsCreating(false)} className="flex-1 bg-gray-100 py-2 rounded">취소</button>
+            <button onClick={() => setDepartmentFilterState({ ...departmentFilterState, isCreating: false })} className="flex-1 bg-gray-100 py-2 rounded">취소</button>
             <button onClick={handleAdd} className="flex-1 bg-[#081429] text-white py-2 rounded">생성</button>
           </div>
         </div>
@@ -202,31 +177,31 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
 
         <div className="bg-white border-x border-b border-gray-200 text-sm rounded-b-xl divide-y divide-gray-100 shadow-sm border-t-0">
           {localDepartments
-            .filter(d => d.name.includes(deptSearchTerm))
+            .filter(d => d.name.includes(departmentFilterState.searchTerm))
             .filter(d => isMaster || isAdmin || currentUserProfile?.departmentPermissions?.[d.id] === 'edit')
             .map((dept, index) => (
               <div
                 key={dept.id}
                 draggable={canEditDept}
-                onDragStart={() => canEditDept && setDraggedIndex(index)}
+                onDragStart={() => canEditDept && setDepartmentFilterState({ ...departmentFilterState, draggedIndex: index })}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  if (canEditDept && draggedIndex !== null && draggedIndex !== index) {
+                  if (canEditDept && departmentFilterState.draggedIndex !== null && departmentFilterState.draggedIndex !== index) {
                     // visual feedback handled by opacity
                   }
                 }}
                 onDrop={() => {
-                  if (canEditDept && draggedIndex !== null && draggedIndex !== index) {
+                  if (canEditDept && departmentFilterState.draggedIndex !== null && departmentFilterState.draggedIndex !== index) {
                     const newDepts = [...localDepartments];
-                    const [removed] = newDepts.splice(draggedIndex, 1);
+                    const [removed] = newDepts.splice(departmentFilterState.draggedIndex, 1);
                     newDepts.splice(index, 0, removed);
                     const reordered = newDepts.map((d, i) => ({ ...d, order: i + 1 }));
                     setLocalDepartments(reordered);
                     markChanged();
-                    setDraggedIndex(null);
+                    setDepartmentFilterState({ ...departmentFilterState, draggedIndex: null });
                   }
                 }}
-                className={`grid grid-cols-12 gap-4 p-3 items-center hover:bg-yellow-50/30 transition-colors group ${draggedIndex === index ? 'opacity-50 bg-gray-50' : ''}`}
+                className={`grid grid-cols-12 gap-4 p-3 items-center hover:bg-yellow-50/30 transition-colors group ${departmentFilterState.draggedIndex === index ? 'opacity-50 bg-gray-50' : ''}`}
               >
                 {/* Info */}
                 <div className="col-span-4 flex items-center gap-3 pl-2">
