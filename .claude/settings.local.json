@@ -45,7 +45,8 @@
       "Bash(Move-Item -Path \"verification_report_20260103.md\" -Destination \"done/\")",
       "Bash(dir:*)",
       "Bash(dir %TEMP%claude*.txt)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(npm ls:*)"
     ]
   }
 }
