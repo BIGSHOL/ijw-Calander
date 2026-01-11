@@ -131,7 +131,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                     onChange={(e) => setNewKeywordBgColor(e.target.value)}
                                     className="w-7 h-7 rounded cursor-pointer"
                                 />
-                                <span className="text-[10px] text-gray-500 font-mono w-16">{newKeywordBgColor}</span>
+                                <span className="text-xxs text-gray-500 font-mono w-16">{newKeywordBgColor}</span>
                             </div>
                         </div>
                         <div>
@@ -143,7 +143,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                     onChange={(e) => setNewKeywordTextColor(e.target.value)}
                                     className="w-7 h-7 rounded cursor-pointer"
                                 />
-                                <span className="text-[10px] text-gray-500 font-mono w-16">{newKeywordTextColor}</span>
+                                <span className="text-xxs text-gray-500 font-mono w-16">{newKeywordTextColor}</span>
                             </div>
                         </div>
                         <button

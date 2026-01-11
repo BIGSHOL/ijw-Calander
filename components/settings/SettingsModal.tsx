@@ -653,12 +653,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   {mainTab === 'calendar' && (
                     <>
                       {canManageMenus && (
-                        <button onClick={() => setActiveTab('departments')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setActiveTab('departments')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           부서 관리
                         </button>
                       )}
                       {(isMaster || isAdmin) && (
-                        <button onClick={() => setActiveTab('calendar_hashtags')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'calendar_hashtags' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setActiveTab('calendar_hashtags')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'calendar_hashtags' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           # 해시태그
                         </button>
                       )}
@@ -667,12 +667,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   {mainTab === 'timetable' && (
                     <>
                       {(isMaster || canViewTeachers) && (
-                        <button onClick={() => setActiveTab('teachers')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'teachers' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setActiveTab('teachers')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'teachers' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           강사 관리
                         </button>
                       )}
                       {(isMaster || canViewClasses) && (
-                        <button onClick={() => setActiveTab('classes')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'classes' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setActiveTab('classes')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'classes' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           수업 관리
                         </button>
                       )}
@@ -681,30 +681,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   {mainTab === 'permissions' && (
                     <>
                       {(isMaster || canManageRolePermissions) && (
-                        <button onClick={() => setActiveTab('role_permissions')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'role_permissions' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setActiveTab('role_permissions')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'role_permissions' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           역할 권한
                         </button>
                       )}
 
                       {isMaster && (
-                        <button onClick={() => setActiveTab('tab_access')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'tab_access' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setActiveTab('tab_access')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'tab_access' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           탭 관리
                         </button>
                       )}
 
                       {isMaster && (
-                        <button onClick={() => setActiveTab('migration')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'migration' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setActiveTab('migration')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'migration' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           데이터 마이그레이션
                         </button>
                       )}
 
                       {canManageUsers && (
-                        <button onClick={() => setActiveTab('users')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'users' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setActiveTab('users')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'users' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           사용자 관리
                         </button>
                       )}
                       {/* 기타 설정 is always visible */}
-                      <button onClick={() => setActiveTab('system')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'system' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                      <button onClick={() => setActiveTab('system')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'system' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                         기타 설정
                       </button>
                     </>
@@ -712,12 +712,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   {mainTab === 'gantt' && (
                     <>
                       {(isMaster || hasPermission('gantt.view')) && (
-                        <button onClick={() => setActiveTab('gantt_departments')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'gantt_departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setActiveTab('gantt_departments')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'gantt_departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           부서 관리
                         </button>
                       )}
                       {(isMaster || hasPermission('settings.manage_categories')) && (
-                        <button onClick={() => setActiveTab('gantt_categories')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'gantt_categories' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        <button onClick={() => setActiveTab('gantt_categories')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'gantt_categories' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           카테고리 관리
                         </button>
                       )}
@@ -725,7 +725,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                   {mainTab === 'attendance' && (
                     <>
-                      <button onClick={() => setActiveTab('salary_settings')} className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all ${activeTab === 'salary_settings' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
+                      <button onClick={() => setActiveTab('salary_settings')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'salary_settings' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                         급여 설정
                       </button>
                     </>
@@ -779,7 +779,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     className={`pb-2 px-1 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${userTab === 'approved' ? 'border-[#081429] text-[#081429]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                   >
                     정회원 (Members)
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${userTab === 'approved' ? 'bg-[#081429] text-white' : 'bg-gray-100'}`}>
+                    <span className={`text-xxs px-1.5 py-0.5 rounded-full ${userTab === 'approved' ? 'bg-[#081429] text-white' : 'bg-gray-100'}`}>
                       {localUsers.filter(u => u.status === 'approved').length}
                     </span>
                   </button>
@@ -791,7 +791,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     {localUsers.filter(u => u.status === 'pending').length > 0 && (
                       <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                     )}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${userTab === 'pending' ? 'bg-[#fdb813] text-[#081429]' : 'bg-gray-100'}`}>
+                    <span className={`text-xxs px-1.5 py-0.5 rounded-full ${userTab === 'pending' ? 'bg-[#fdb813] text-[#081429]' : 'bg-gray-100'}`}>
                       {localUsers.filter(u => u.status === 'pending').length}
                     </span>
                   </button>
@@ -854,7 +854,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
                         {/* Role */}
                         <div className="col-span-2 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-black ${user.role === 'master' ? 'bg-red-100 text-red-700' :
+                          <span className={`px-2 py-0.5 rounded text-xxs font-black ${user.role === 'master' ? 'bg-red-100 text-red-700' :
                             user.role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
                               user.role === 'manager' ? 'bg-purple-100 text-purple-700' :
                                 user.role === 'editor' ? 'bg-blue-100 text-blue-700' :
@@ -872,7 +872,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
                         {/* Status */}
                         <div className="col-span-2 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${user.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          <span className={`px-2 py-0.5 rounded text-xxs font-bold ${user.status === 'approved' ? 'bg-green-100 text-green-700' :
                             user.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'
                             }`}>
                             {user.status === 'approved' ? '승인됨' : user.status === 'pending' ? '대기중' : '차단됨'}

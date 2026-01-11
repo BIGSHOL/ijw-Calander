@@ -103,7 +103,7 @@ const StudentList: React.FC<StudentListProps> = ({
                       )}
                       {getStatusBadge(student.status)}
                       {student.isOldWithdrawn && (
-                        <span className="text-[10px] bg-[#fdb813]/20 text-[#fdb813] px-1.5 py-0.5 rounded font-medium border border-[#fdb813]/30">
+                        <span className="text-xxs bg-[#fdb813]/20 text-[#fdb813] px-1.5 py-0.5 rounded font-medium border border-[#fdb813]/30">
                           과거
                         </span>
                       )}
@@ -122,7 +122,7 @@ const StudentList: React.FC<StudentListProps> = ({
                           {Array.from(new Set(student.enrollments.map(e => e.subject))).map((subject) => (
                             <span
                               key={subject}
-                              className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                              className={`text-xxs px-1.5 py-0.5 rounded font-medium ${
                                 subject === 'math'
                                   ? 'bg-blue-100 text-blue-700'
                                   : 'bg-purple-100 text-purple-700'

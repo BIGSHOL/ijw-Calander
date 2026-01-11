@@ -403,7 +403,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                     <h2 className="text-sm font-bold flex items-center gap-2">
                         <Users size={18} className="text-[#fdb813]" />
                         {fullClassName} - 학생 관리
-                        {isDirty && <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded ml-2">변경사항 있음</span>}
+                        {isDirty && <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded ml-2">변경사항 있음</span>}
                     </h2>
                     <button
                         onClick={handleClose}

@@ -51,7 +51,7 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                     <span className="bg-[#081429] text-white px-3 py-0.5 rounded-full text-xs font-bold">
                         {selectedCells.size}개 선택됨
                     </span>
-                    <span className="text-[10px] text-gray-400">Ctrl/Cmd+Click for Multi-select</span>
+                    <span className="text-xxs text-gray-400">Ctrl/Cmd+Click for Multi-select</span>
                 </div>
 
                 {/* Right Buttons */}
@@ -90,9 +90,9 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                 {/* Main Class Card */}
                 <div className="bg-[#fff9db] p-2 rounded-lg border border-yellow-200 shadow-sm flex flex-col gap-1 w-[140px] shrink-0 animate-in zoom-in duration-200">
                     <div className="flex justify-between items-center -mt-1">
-                        <span className="text-[10px] font-bold text-yellow-700">#1</span>
+                        <span className="text-xxs font-bold text-yellow-700">#1</span>
                         <label className="flex items-center gap-0.5 cursor-pointer select-none">
-                            <span className="text-[8px] text-yellow-700 font-bold">밑줄</span>
+                            <span className="text-nano text-yellow-700 font-bold">밑줄</span>
                             <input
                                 type="checkbox"
                                 checked={inputData.underline || false}
@@ -129,7 +129,7 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                     className="w-[60px] h-[70px] rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-[#fdb813] hover:text-[#fdb813] hover:bg-yellow-50 flex flex-col items-center justify-center gap-1 shrink-0 transition-all"
                 >
                     <Plus size={20} />
-                    <span className="text-[10px] font-bold">합반</span>
+                    <span className="text-xxs font-bold">합반</span>
                 </button>
 
                 {/* Merged List */}
@@ -139,12 +139,12 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                         className="bg-[#fff9db] p-2 rounded-lg border border-yellow-200 shadow-sm flex flex-col gap-1 w-[140px] shrink-0 relative group animate-in zoom-in duration-200"
                     >
                         <div className="flex justify-between items-center -mt-1">
-                            <span className="text-[10px] font-bold text-yellow-700">
+                            <span className="text-xxs font-bold text-yellow-700">
                                 #{idx + 2}
                             </span>
                             <div className="flex items-center gap-1">
                                 <label className="flex items-center gap-0.5 cursor-pointer select-none">
-                                    <span className="text-[8px] text-yellow-700 font-bold">밑줄</span>
+                                    <span className="text-nano text-yellow-700 font-bold">밑줄</span>
                                     <input
                                         type="checkbox"
                                         checked={m.underline || false}

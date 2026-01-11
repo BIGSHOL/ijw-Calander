@@ -83,7 +83,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-500 mb-1">교실</label>
+                            <label className="block text-xxs font-bold text-gray-500 mb-1">교실</label>
                             <input
                                 type="text"
                                 value={newRoom}
@@ -101,7 +101,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({
                             <div className="flex flex-col mr-2">
                                 <div className="text-xs font-bold text-gray-400 mb-1 h-[24px]"></div>
                                 {(newSubject === '수학' ? MATH_PERIODS : ENGLISH_PERIODS).map(period => (
-                                    <div key={period} className="text-[10px] text-gray-600 font-bold h-[32px] flex items-center justify-end pr-2 whitespace-nowrap">
+                                    <div key={period} className="text-xxs text-gray-600 font-bold h-[32px] flex items-center justify-end pr-2 whitespace-nowrap">
                                         {MATH_PERIOD_TIMES[period] || period}
                                     </div>
                                 ))}

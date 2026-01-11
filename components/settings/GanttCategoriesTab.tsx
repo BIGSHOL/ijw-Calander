@@ -236,7 +236,7 @@ const GanttCategoriesTab = ({ isMaster }: GanttCategoriesTabProps) => {
                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">새 카테고리 추가</h4>
                     <div className="flex gap-3 items-end">
                         <div className="flex-1">
-                            <label className="text-[11px] font-medium text-gray-500 mb-1 block">카테고리명</label>
+                            <label className="text-xs font-medium text-gray-500 mb-1 block">카테고리명</label>
                             <input
                                 type="text"
                                 className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500"
@@ -247,19 +247,19 @@ const GanttCategoriesTab = ({ isMaster }: GanttCategoriesTabProps) => {
                             />
                         </div>
                         <div>
-                            <label className="text-[11px] font-medium text-gray-500 mb-1 block">배경 색상</label>
+                            <label className="text-xs font-medium text-gray-500 mb-1 block">배경 색상</label>
                             <div className="flex items-center gap-2">
                                 <input type="color" value={newBgColor} onChange={e => setNewBgColor(e.target.value)} className="w-9 h-10 rounded cursor-pointer border border-gray-200" />
                             </div>
                         </div>
                         <div>
-                            <label className="text-[11px] font-medium text-gray-500 mb-1 block">글자 색상</label>
+                            <label className="text-xs font-medium text-gray-500 mb-1 block">글자 색상</label>
                             <div className="flex items-center gap-2">
                                 <input type="color" value={newTextColor} onChange={e => setNewTextColor(e.target.value)} className="w-9 h-10 rounded cursor-pointer border border-gray-200" />
                             </div>
                         </div>
                         <div>
-                            <label className="text-[11px] font-medium text-gray-500 mb-1 block">미리보기</label>
+                            <label className="text-xs font-medium text-gray-500 mb-1 block">미리보기</label>
                             <div
                                 className="px-4 py-2.5 rounded font-bold text-xs shadow-sm min-w-[80px] text-center"
                                 style={{ backgroundColor: newBgColor, color: newTextColor }}
@@ -329,7 +329,7 @@ const GanttCategoriesTab = ({ isMaster }: GanttCategoriesTabProps) => {
                                             <div className="flex items-center gap-3">
                                                 <span className="text-sm font-bold text-gray-800">{cat.label}</span>
                                                 <span
-                                                    className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                                                    className="text-xxs px-1.5 py-0.5 rounded font-medium"
                                                     style={{ backgroundColor: cat.backgroundColor, color: cat.textColor }}
                                                 >
                                                     미리보기

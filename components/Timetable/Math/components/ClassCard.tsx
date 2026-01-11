@@ -61,7 +61,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
         >
             {/* Class Name Header */}
             {showClassName && (
-                <div className={`text-center font-bold py-1 px-1 text-[10px] border-b ${theme.border} bg-white/50 text-gray-800`}>
+                <div className={`text-center font-bold py-1 px-1 text-xxs border-b ${theme.border} bg-white/50 text-gray-800`}>
                     ({cls.className})
                 </div>
             )}
@@ -85,7 +85,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                     key={s.id}
                                     draggable={canEdit}
                                     onDragStart={(e) => canEdit && onDragStart(e, s.id, cls.id)}
-                                    className={`py-0.5 px-1 rounded text-center text-[10px] transition-colors truncate flex items-center justify-between group
+                                    className={`py-0.5 px-1 rounded text-center text-xxs transition-colors truncate flex items-center justify-between group
                                     ${canEdit ? 'cursor-grab' : ''}
                                     ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : `hover:bg-white/80 ${theme.text}`}`}
                                 >
@@ -99,7 +99,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             )}
 
             {/* Footer with Student Count */}
-            <div className={`text-center py-1 font-bold border-t ${theme.border} ${theme.bg} text-[9px] ${theme.text}`}>
+            <div className={`text-center py-1 font-bold border-t ${theme.border} ${theme.bg} text-micro ${theme.text}`}>
                 총 {cls.studentList?.length || 0}명
             </div>
         </div>

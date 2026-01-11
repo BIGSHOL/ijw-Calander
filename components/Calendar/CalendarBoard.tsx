@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { format, setMonth, setYear, isToday, isPast, isFuture, parseISO, startOfDay, endOfDay, isSameDay, addDays, subDays, differenceInMinutes, setHours, setMinutes, getHours, getMinutes, getDaysInMonth, getDate, setDate, addWeeks, subWeeks, addMonths, subMonths, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
@@ -98,11 +98,11 @@ const DailyView: React.FC<{
                     color: event.textColor || '#ffffff'
                   }}
                 >
-                  <span className="bg-white/50 px-1.5 rounded text-[10px] uppercase tracking-wider text-inherit mix-blend-multiply opacity-80">All Day</span>
+                  <span className="bg-white/50 px-1.5 rounded text-xxs uppercase tracking-wider text-inherit mix-blend-multiply opacity-80">All Day</span>
                   {relatedDepts.length > 1 && (
                     <div className="flex gap-1">
                       {relatedDepts.map(d => (
-                        <span key={d.id} className="text-[10px] bg-white/40 px-1 rounded text-inherit mix-blend-multiply border border-black/5">{d.name}</span>
+                        <span key={d.id} className="text-xxs bg-white/40 px-1 rounded text-inherit mix-blend-multiply border border-black/5">{d.name}</span>
                       ))}
                     </div>
                   )}
@@ -247,7 +247,14 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
 
   // Phase 9: Archiving Integration - Now using Prop
   // const [showArchived, setShowArchived] = React.useState(false); // Removed local state
-  const { events: archivedEvents } = useArchivedEvents(showArchived, currentYear);
+  const { events: archivedEvents, error: archivedError } = useArchivedEvents(showArchived, currentYear);
+
+  // 아카이브 로딩 오류 시 콘솔 경고 (UI 차단 없이)
+  useEffect(() => {
+    if (archivedError) {
+      console.warn('아카이브 이벤트 로딩 실패:', archivedError.message);
+    }
+  }, [archivedError]);
 
   // Merge active and archived events
   const allEvents = useMemo(() => {
@@ -571,7 +578,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                         <span>카테고리</span>
 
                         {selectedDeptsInput.length > 0 && (
-                          <button onClick={() => setSelectedDeptsInput([])} className="text-[10px] text-gray-400 hover:text-red-500">초기화</button>
+                          <button onClick={() => setSelectedDeptsInput([])} className="text-xxs text-gray-400 hover:text-red-500">초기화</button>
                         )}
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -599,7 +606,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                         <span>기간 설정</span>
 
                         {(filterBaseDateInput || filterDurationInput) && (
-                          <button onClick={() => { setFilterBaseDateInput(null); setFilterDurationInput(null); }} className="text-[10px] text-gray-400 hover:text-red-500">초기화</button>
+                          <button onClick={() => { setFilterBaseDateInput(null); setFilterDurationInput(null); }} className="text-xxs text-gray-400 hover:text-red-500">초기화</button>
                         )}
                       </div>
                       <div className="flex flex-col gap-3">
@@ -672,7 +679,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                         setActiveSearch({ query: '', depts: [], baseDate: null, duration: null, direction: 'before' });
                         // Re-open Filter Panel (Search Mode)
                         setIsFilterOpen(true);
-                      }} className="text-[10px] text-indigo-500 hover:underline">
+                      }} className="text-xxs text-indigo-500 hover:underline">
                         모두 지우기
                       </button>
                     </div>
@@ -689,10 +696,10 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                             className="p-2 hover:bg-indigo-50 cursor-pointer rounded-lg group transition-colors border border-transparent hover:border-indigo-100"
                           >
                             <div className="flex items-center justify-between mb-0.5">
-                              <span className="text-[10px] font-bold bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 group-hover:bg-white transition-colors">
+                              <span className="text-xxs font-bold bg-gray-100 px-1.5 py-0.5 rounded text-gray-600 group-hover:bg-white transition-colors">
                                 {format(parseISO(event.startDate), 'yyyy. MM. dd (EEE)', { locale: ko })}
                               </span>
-                              <span className="text-[10px] text-gray-400">
+                              <span className="text-xxs text-gray-400">
                                 {event.startTime ? `${event.startTime} - ${event.endTime} ` : '하루종일'}
                               </span>
                             </div>
@@ -706,7 +713,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                                   {event.title}
                                 </div>
                                 {event.description && event.description !== event.title && (
-                                  <div className="text-[10px] text-gray-500 truncate">{event.description}</div>
+                                  <div className="text-xxs text-gray-500 truncate">{event.description}</div>
                                 )}
                               </div>
                               {/* Tags Display */}
@@ -717,7 +724,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                                     return (
                                       <span
                                         key={tagId}
-                                        className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                                        className="text-micro px-1.5 py-0.5 rounded-full font-bold"
                                         style={{
                                           backgroundColor: tagDef?.color ? `${tagDef.color}20` : '#E5E7EB',
                                           color: tagDef?.color || '#6B7280',
@@ -728,12 +735,12 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                                     );
                                   })}
                                   {event.tags.length > 2 && (
-                                    <span className="text-[9px] text-gray-400">+{event.tags.length - 2}</span>
+                                    <span className="text-micro text-gray-400">+{event.tags.length - 2}</span>
                                   )}
                                 </div>
                               )}
                               {primaryDept && (
-                                <span className="text-[10px] px-2 py-1 rounded bg-gray-50 font-medium text-gray-500 whitespace-nowrap">
+                                <span className="text-xxs px-2 py-1 rounded bg-gray-50 font-medium text-gray-500 whitespace-nowrap">
                                   {primaryDept.name}
                                 </span>
                               )}
@@ -782,7 +789,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                     }).length;
                     if (pendingCount === 0) return null;
                     return (
-                      <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-extrabold px-1.5 h-4 min-w-[16px] flex items-center justify-center rounded-full shadow-sm ring-2 ring-white animate-pulse">
+                      <div className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xxs font-extrabold px-1.5 h-4 min-w-[16px] flex items-center justify-center rounded-full shadow-sm ring-2 ring-white animate-pulse">
                         {pendingCount > 99 ? '99+' : pendingCount}
                       </div>
                     )

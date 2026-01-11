@@ -404,7 +404,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                                 />
                             </div>
                         )}
-                        <div className="text-[11px] text-gray-400">
+                        <div className="text-xs text-gray-400">
                             어떤 그룹에도 속하지 않은 수업은 "기타 그룹"에 자동으로 모아집니다.
                         </div>
                     </section>
@@ -413,7 +413,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                     <section className="border border-gray-200 rounded-lg p-3 space-y-2">
                         <div className="flex items-center justify-between mb-2">
                             <span className="font-bold text-gray-700">강사 설정 (표시/숨김)</span>
-                            <div className="text-[10px] text-gray-400 space-x-2">
+                            <div className="text-xxs text-gray-400 space-x-2">
                                 <span>시간표 숨김: {safeSettings.hiddenTeachers?.length || 0}</span>
                                 <span>목록 제외: {safeSettings.hiddenLegendTeachers?.length || 0}</span>
                             </div>
@@ -421,7 +421,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
 
                         <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
                             {/* Header */}
-                            <div className="flex items-center text-[10px] font-bold text-gray-500 bg-gray-100 border-b border-gray-200 px-2 py-1.5">
+                            <div className="flex items-center text-xxs font-bold text-gray-500 bg-gray-100 border-b border-gray-200 px-2 py-1.5">
                                 <div className="flex-1">강사명</div>
                                 <div className="w-16 text-center" title="시간표 타임라인에서 숨깁니다">시간표 숨김</div>
                                 <div className="w-16 text-center" title="상단 강사 목록(범례)에서 제외합니다">목록 제외</div>
@@ -439,7 +439,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                                             {/* Name Badge */}
                                             <div className="flex-1 flex items-center">
                                                 <div
-                                                    className={`px-2 py-0.5 rounded text-[11px] font-bold border ${isScheduleHidden ? 'opacity-50 line-through' : ''}`}
+                                                    className={`px-2 py-0.5 rounded text-xs font-bold border ${isScheduleHidden ? 'opacity-50 line-through' : ''}`}
                                                     style={{ backgroundColor: colors.bg, color: colors.text, borderColor: 'rgba(0,0,0,0.1)' }}
                                                 >
                                                     {teacher}
@@ -472,7 +472,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                                 })}
                             </div>
                         </div>
-                        <div className="text-[10px] text-gray-400 mt-1">
+                        <div className="text-xxs text-gray-400 mt-1">
                             • <b>시간표 숨김</b>: 해당 강사의 수업이 시간표 셀에서 보이지 않게 됩니다.<br />
                             • <b>목록 제외</b>: 상단 '강사 목록' 범례에서 해당 이름이 빠집니다. (LAB 등)
                         </div>
@@ -600,7 +600,7 @@ const GroupCard = React.memo<GroupCardProps>(({
 
             {/* Selected Classes (Ordered List) */}
             <div className="space-y-1 bg-gray-50 p-2 rounded border border-gray-100">
-                <div className="text-[10px] text-gray-500 font-bold mb-1">
+                <div className="text-xxs text-gray-500 font-bold mb-1">
                     선택된 수업 (순서 변경 가능)
                 </div>
                 {checkedClasses.length === 0 && (
@@ -642,7 +642,7 @@ const GroupCard = React.memo<GroupCardProps>(({
 
             {/* Class Search & Add */}
             <div className="pt-2 border-t border-gray-100">
-                <div className="text-[10px] text-gray-500 font-bold mb-1 px-1">
+                <div className="text-xxs text-gray-500 font-bold mb-1 px-1">
                     수업 추가
                 </div>
                 <input

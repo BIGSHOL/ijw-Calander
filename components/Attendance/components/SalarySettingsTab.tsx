@@ -280,7 +280,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
                                     />
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">이하</span>
                                 </div>
-                                <p className="text-[10px] text-gray-400 mt-1">이 비율 이하로 퇴원생 발생 시 인센티브 적용</p>
+                                <p className="text-xxs text-gray-400 mt-1">이 비율 이하로 퇴원생 발생 시 인센티브 적용</p>
                             </div>
                         </div>
                     </div>

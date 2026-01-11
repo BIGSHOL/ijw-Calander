@@ -505,7 +505,7 @@ const TimetableManager = ({
                             <div
                                 key={cls.id}
                                 onClick={() => canEditMath && setSelectedClass(cls)}
-                                className={`flex items-center gap-1 px-2 py-1 ${theme.bg} ${theme.border} border rounded text-[10px] font-bold ${canEditMath ? 'cursor-pointer hover:brightness-95' : ''}`}
+                                className={`flex items-center gap-1 px-2 py-1 ${theme.bg} ${theme.border} border rounded text-xxs font-bold ${canEditMath ? 'cursor-pointer hover:brightness-95' : ''}`}
                             >
 
                                 <span className={theme.text}>{cls.className}</span>
@@ -514,7 +514,7 @@ const TimetableManager = ({
                         );
                     })}
                     {filteredClasses.length > 10 && (
-                        <span className="text-[10px] text-gray-400 self-center">+{filteredClasses.length - 10}개</span>
+                        <span className="text-xxs text-gray-400 self-center">+{filteredClasses.length - 10}개</span>
                     )}
                 </div>
             </div >

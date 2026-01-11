@@ -61,7 +61,7 @@ const StudentBatchActions: React.FC<StudentBatchActionsProps> = ({
                             className="w-full text-left px-4 py-3 text-xs text-gray-700 hover:bg-gray-50 border-b border-gray-100 last:border-0"
                         >
                             <div className="font-bold mb-0.5">영어 이름 일괄 삭제</div>
-                            <div className="text-gray-400 text-[10px]">모든 학생의 영어 이름을 지웁니다.</div>
+                            <div className="text-gray-400 text-xxs">모든 학생의 영어 이름을 지웁니다.</div>
                         </button>
                         <button
                             onClick={() => {
@@ -71,7 +71,7 @@ const StudentBatchActions: React.FC<StudentBatchActionsProps> = ({
                             className="w-full text-left px-4 py-3 text-xs text-gray-700 hover:bg-gray-50"
                         >
                             <div className="font-bold mb-0.5">학년 일괄 승급 (+1)</div>
-                            <div className="text-gray-400 text-[10px]">모든 학생의 학년을 1씩 올립니다.</div>
+                            <div className="text-gray-400 text-xxs">모든 학생의 학년을 1씩 올립니다.</div>
                         </button>
                     </div>
                 )}

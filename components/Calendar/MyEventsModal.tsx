@@ -166,7 +166,7 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
                             {status === 'pending' && '미정'}
                             {status === 'joined' && '참석'}
                             {status === 'declined' && '불참'}
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${filterStatus === status ? 'bg-white/20' : 'bg-gray-100'}`}>
+                            <span className={`text-xxs px-1.5 py-0.5 rounded-full ${filterStatus === status ? 'bg-white/20' : 'bg-gray-100'}`}>
                                 {statusCounts[status]}
                             </span>
                         </button>

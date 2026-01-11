@@ -91,7 +91,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             <thead className="sticky top-0 z-10 bg-gray-50">
                 {/* Date + Day Row */}
                 <tr>
-                    <th className="p-1.5 text-[10px] font-bold text-gray-500 border-b border-r border-gray-200 bg-gray-100 sticky left-0 z-20" rowSpan={2} style={{ width: '60px', minWidth: '60px' }}>
+                    <th className="p-1.5 text-xxs font-bold text-gray-500 border-b border-r border-gray-200 bg-gray-100 sticky left-0 z-20" rowSpan={2} style={{ width: '60px', minWidth: '60px' }}>
                         교시
                     </th>
                     {orderedSelectedDays.map(day => {
@@ -131,7 +131,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                         if (teachersForDay.length === 0) {
                             return (
-                                <th key={`${day}-empty`} className="p-1.5 text-[10px] text-blue-200 border-b border-r border-blue-400 bg-blue-500" style={getCellWidthStyle()}>
+                                <th key={`${day}-empty`} className="p-1.5 text-xxs text-blue-200 border-b border-r border-blue-400 bg-blue-500" style={getCellWidthStyle()}>
                                     -
                                 </th>
                             );
@@ -144,7 +144,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             return (
                                 <th
                                     key={`${day}-${resource}`}
-                                    className="p-1.5 text-[10px] font-bold border-b border-r truncate"
+                                    className="p-1.5 text-xxs font-bold border-b border-r truncate"
                                     style={{
                                         ...getCellWidthStyle(),
                                         backgroundColor: bgColor,
@@ -163,7 +163,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             <tbody>
                 {currentPeriods.map(period => (
                     <tr key={period} className="hover:bg-gray-50/50">
-                        <td className="p-1.5 text-[10px] font-bold text-gray-600 border-b border-r border-gray-200 text-center bg-gray-50 sticky left-0 z-10" style={{ width: '90px', minWidth: '90px' }}>
+                        <td className="p-1.5 text-xxs font-bold text-gray-600 border-b border-r border-gray-200 text-center bg-gray-50 sticky left-0 z-10" style={{ width: '90px', minWidth: '90px' }}>
                             {MATH_PERIOD_TIMES[period] || period}
                         </td>
                         {orderedSelectedDays.map(day => {
@@ -202,7 +202,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         rowSpan={maxSpan > 1 ? maxSpan : undefined}
                                     >
                                         {cellClasses.length === 0 && showEmptyRooms ? (
-                                            <div className="text-[10px] text-gray-400 text-center py-1">
+                                            <div className="text-xxs text-gray-400 text-center py-1">
                                                 {viewType === 'room' ? resource : '빈 강의실'}
                                             </div>
                                         ) : (

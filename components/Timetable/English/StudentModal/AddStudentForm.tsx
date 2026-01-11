@@ -31,7 +31,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd }) => {
             <div className="flex items-end gap-2">
                 <div className="flex-1 grid grid-cols-4 gap-2">
                     <div className="col-span-1">
-                        <label className="text-[10px] text-gray-500 font-bold mb-1 block">이름</label>
+                        <label className="text-xxs text-gray-500 font-bold mb-1 block">이름</label>
                         <input
                             type="text"
                             placeholder="이름"
@@ -42,7 +42,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd }) => {
                         />
                     </div>
                     <div className="col-span-1">
-                        <label className="text-[10px] text-gray-500 font-bold mb-1 block">E.Name</label>
+                        <label className="text-xxs text-gray-500 font-bold mb-1 block">E.Name</label>
                         <input
                             type="text"
                             placeholder="영어이름"
@@ -53,7 +53,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd }) => {
                         />
                     </div>
                     <div className="col-span-1">
-                        <label className="text-[10px] text-gray-500 font-bold mb-1 block">학교</label>
+                        <label className="text-xxs text-gray-500 font-bold mb-1 block">학교</label>
                         <input
                             type="text"
                             placeholder="학교"
@@ -64,7 +64,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd }) => {
                         />
                     </div>
                     <div className="col-span-1">
-                        <label className="text-[10px] text-gray-500 font-bold mb-1 block">학년</label>
+                        <label className="text-xxs text-gray-500 font-bold mb-1 block">학년</label>
                         <input
                             type="text"
                             placeholder="학년"

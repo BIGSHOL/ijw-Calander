@@ -261,7 +261,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {isTimeColumnOnly ? (
                                     <span className="font-bold text-orange-800">강의실</span>
                                 ) : (
-                                    <div className="flex-1 p-0.5 text-center font-bold text-navy flex items-center justify-center break-all h-full leading-tight text-[11px]">
+                                    <div className="flex-1 p-0.5 text-center font-bold text-navy flex items-center justify-center break-all h-full leading-tight text-xs">
                                         {classInfo.formattedRoomStr || classInfo.mainRoom || '-'}
                                     </div>
                                 )}
@@ -272,7 +272,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
                 <div className="border-b border-gray-300 flex-none">
                     {/* Grid Header */}
-                    <div className="flex bg-gray-200 text-[10px] font-bold border-b border-gray-400 h-[24px]">
+                    <div className="flex bg-gray-200 text-xxs font-bold border-b border-gray-400 h-[24px]">
                         {!hideTime && (
                             <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
                         )}
@@ -342,7 +342,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                     </button>
                                 </div>
 
-                                <div className="flex-1 overflow-y-auto px-2 py-1.5 text-[10px] flex flex-col custom-scrollbar">
+                                <div className="flex-1 overflow-y-auto px-2 py-1.5 text-xxs flex flex-col custom-scrollbar">
                                     {(() => {
                                         const activeStudents = displayStudents.filter(s => !s.withdrawalDate && !s.onHold);
 
@@ -402,7 +402,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 {student.name}
                                                                 {student.englishName && <span className={`font-normal ml-0.5 ${style.englishTextClass || 'text-gray-500'}`}>({student.englishName})</span>}
                                                             </span>
-                                                            <span className={`text-[9px] ml-1 shrink-0 ${style.subTextClass || 'text-gray-500'} text-right leading-none`}>
+                                                            <span className={`text-micro ml-1 shrink-0 ${style.subTextClass || 'text-gray-500'} text-right leading-none`}>
                                                                 {student.school?.replace(/초등학교|중학교/g, '') || ''}{student.grade}
                                                             </span>
                                                         </div>
@@ -427,10 +427,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {(() => {
                                     const holdStudents = displayStudents.filter(s => s.onHold && !s.withdrawalDate);
                                     if (holdStudents.length === 0) {
-                                        return <span className="text-[10px] text-violet-300">-</span>;
+                                        return <span className="text-xxs text-violet-300">-</span>;
                                     }
                                     return (
-                                        <div className="flex flex-wrap gap-1 text-[10px]">
+                                        <div className="flex flex-wrap gap-1 text-xxs">
                                             {holdStudents.slice(0, 3).map(s => (
                                                 <span key={s.id} className="bg-violet-100 text-violet-800 px-1 rounded">{s.name}</span>
                                             ))}
@@ -445,7 +445,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {(() => {
                                     const withdrawnStudents = displayStudents.filter(s => s.withdrawalDate);
                                     if (withdrawnStudents.length === 0) {
-                                        return <span className="text-[10px] text-gray-500 flex items-center justify-center h-full">-</span>;
+                                        return <span className="text-xxs text-gray-500 flex items-center justify-center h-full">-</span>;
                                     }
                                     return (
                                         <>
@@ -459,13 +459,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                         <span className="font-medium">{student.name}</span>
                                                         {student.englishName && <span className="ml-1 text-gray-400">({student.englishName})</span>}
                                                     </div>
-                                                    <span className="text-[10px] ml-1 shrink-0 text-gray-300 text-right leading-none">
+                                                    <span className="text-xxs ml-1 shrink-0 text-gray-300 text-right leading-none">
                                                         {student.school?.replace(/초등학교|중학교/g, '') || ''}{student.grade}
                                                     </span>
                                                 </div>
                                             ))}
                                             {withdrawnStudents.length > 3 && (
-                                                <span className="text-[9px] text-gray-400">+{withdrawnStudents.length - 3}명</span>
+                                                <span className="text-micro text-gray-400">+{withdrawnStudents.length - 3}명</span>
                                             )}
                                         </>
                                     );
@@ -478,7 +478,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     !isTimeColumnOnly && !displayOptions?.showTeacher && !displayOptions?.showRoom && (
                         <div className="flex-1 flex flex-col items-center justify-center min-h-[100px] text-gray-300 gap-1 bg-white">
                             <EyeOff size={20} />
-                            <span className="text-[10px]">정보 숨김</span>
+                            <span className="text-xxs">정보 숨김</span>
                         </div>
                     )
                 )}

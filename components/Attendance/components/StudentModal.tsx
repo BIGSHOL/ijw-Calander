@@ -138,7 +138,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
                 className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
                 title="시간표에서 자동으로 설정됩니다."
               />
-              <p className="text-[10px] text-gray-400 mt-1">* 시간표 연동으로 자동 설정됩니다.</p>
+              <p className="text-xxs text-gray-400 mt-1">* 시간표 연동으로 자동 설정됩니다.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">학교</label>
@@ -211,7 +211,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                   placeholder="계속 수강중"
                 />
-                <p className="text-[10px] text-gray-400 mt-1">
+                <p className="text-xxs text-gray-400 mt-1">
                   * 이 날짜 이후에는 출석부에서 제외되거나 비활성화됩니다.
                 </p>
               </div>
@@ -235,7 +235,7 @@ const StudentModal: React.FC<Props> = ({ isOpen, onClose, onSave, onDelete, init
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-gray-400 mt-1">* 수업 요일은 시간표 연동으로 자동 설정됩니다.</p>
+            <p className="text-xxs text-gray-400 mt-1">* 수업 요일은 시간표 연동으로 자동 설정됩니다.</p>
           </div>
 
           <div className="pt-4 flex gap-3 border-t border-gray-100 mt-2">

@@ -244,7 +244,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                                     key={cols}
                                     onClick={() => setViewColumns(cols)}
                                     className={`
-                                    px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
+                                    px-2 py-0.5 rounded-md text-xs font-bold transition-all
                                     ${viewColumns === cols
                                             ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                                             : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -381,14 +381,14 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${view === 'dashboard' ? 'text-indigo-600' : 'text-slate-400'}`}
                 >
                     <LayoutDashboard size={24} strokeWidth={view === 'dashboard' ? 2.5 : 2} />
-                    <span className="text-[10px] font-medium">대시보드</span>
+                    <span className="text-xxs font-medium">대시보드</span>
                 </button>
                 <button
                     onClick={() => setView('table')}
                     className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${view === 'table' ? 'text-indigo-600' : 'text-slate-400'}`}
                 >
                     <List size={24} strokeWidth={view === 'table' ? 2.5 : 2} />
-                    <span className="text-[10px] font-medium">상담목록</span>
+                    <span className="text-xxs font-medium">상담목록</span>
                 </button>
             </div>
 

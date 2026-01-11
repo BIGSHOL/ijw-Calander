@@ -1,8 +1,8 @@
 # 🤖 Claude Code 에이전트 시스템
 
 > **프로젝트**: ijw-calander (학원 관리 시스템)
-> **업데이트**: 2026-01-09
-> **에이전트 수**: 14개
+> **업데이트**: 2026-01-11
+> **에이전트 수**: 18개
 
 ---
 
@@ -118,16 +118,48 @@
 
 ---
 
-### 테스트 (1개)
+### 테스트 (2개)
 
 #### 14. [test-writer](test-writer.md)
 **역할**: 단위/통합/E2E 테스트 작성
 **트리거**: `trigger_on_phrases` + `trigger_after_refactoring: true` + `trigger_after_bug_fix: true`
 **키워드**: "테스트 작성", "테스트 추가", "test", "커버리지"
 
+#### 15. 🆕 [tdd-expert](tdd-expert.md)
+**역할**: TDD 사이클 관리 (RED → GREEN → REFACTOR)
+**트리거**: `trigger_on_phrases`
+**키워드**: "TDD", "테스트 먼저", "테스트 주도", "RED GREEN"
+**협업**: **tdd-expert** → test-writer → code-fixer → code-reviewer
+
 ---
 
-## 🔄 핵심 워크플로우 (8가지)
+### 디자인/성능 (2개)
+
+#### 16. 🆕 [design-system-guardian](design-system-guardian.md)
+**역할**: UI/UX 일관성 점검, 디자인 시스템 관리
+**트리거**: `trigger_on_phrases`
+**키워드**: "디자인 점검", "UI 일관성", "타이포그래피", "색상 점검"
+**협업**: **design-system-guardian** → refactor-expert → code-fixer
+
+#### 17. 🆕 [performance-optimizer](performance-optimizer.md)
+**역할**: 성능 분석 및 최적화 (번들, 렌더링, 메모리)
+**트리거**: `trigger_on_phrases`
+**키워드**: "성능 분석", "성능 최적화", "느림", "번들 크기", "Lighthouse"
+**협업**: **performance-optimizer** → firebase-cost-optimizer → refactor-expert
+
+---
+
+### 마이그레이션 (1개)
+
+#### 18. 🆕 [migration-helper](migration-helper.md)
+**역할**: 데이터/스키마 마이그레이션, 하위 호환성 관리
+**트리거**: `trigger_on_phrases`
+**키워드**: "마이그레이션", "데이터 이전", "스키마 변경", "구조 통일"
+**협업**: academy-domain-expert → **migration-helper** → test-writer
+
+---
+
+## 🔄 핵심 워크플로우 (11가지)
 
 ### 1️⃣ 코드 품질 관리 (가장 자주 사용)
 
@@ -263,6 +295,57 @@ analytics-expert → doc-writer → notification-designer
 
 ---
 
+### 9️⃣ 🆕 TDD 개발
+
+```
+tdd-expert → test-writer → code-fixer → code-reviewer
+```
+
+**사용 예**:
+```
+사용자: "권한 시스템 TDD로 개발해줘"
+→ tdd-expert 실행 (테스트 시나리오 설계)
+→ test-writer 실행 (🔴 실패 테스트 작성)
+→ code-fixer 실행 (🟢 최소 구현)
+→ refactor-expert 실행 (🔵 리팩토링)
+→ 반복
+```
+
+---
+
+### 🔟 🆕 디자인 시스템 점검
+
+```
+design-system-guardian → refactor-expert → code-fixer
+```
+
+**사용 예**:
+```
+사용자: "전체 UI 일관성 점검해줘"
+→ design-system-guardian 실행 (타이포그래피/색상 분석)
+→ refactor-expert 실행 (표준화 작업)
+→ code-fixer 실행 (수정 적용)
+```
+
+---
+
+### 1️⃣1️⃣ 🆕 데이터 마이그레이션
+
+```
+academy-domain-expert → migration-helper → test-writer → code-reviewer
+```
+
+**사용 예**:
+```
+사용자: "수학/영어 시간표 데이터 구조 통일해줘"
+→ academy-domain-expert 실행 (도메인 분석)
+→ migration-helper 실행 (마이그레이션 계획 및 스크립트)
+→ test-writer 실행 (검증 테스트)
+→ code-reviewer 실행 (최종 검토)
+```
+
+---
+
 ## 🚀 빠른 시작
 
 ### Step 1: 상황 파악
@@ -272,10 +355,14 @@ analytics-expert → doc-writer → notification-designer
 - 기능 설계? → `academy-domain-expert`
 - 리팩토링? → `refactor-expert`
 - 문서 작성? → `doc-writer`
-- 🆕 보안 검사? → `security-auditor`
-- 🆕 알림 설계? → `notification-designer`
-- 🆕 데이터 분석? → `analytics-expert`
-- 🆕 리포트 요약? → `report-summarizer`
+- 보안 검사? → `security-auditor`
+- 알림 설계? → `notification-designer`
+- 데이터 분석? → `analytics-expert`
+- 리포트 요약? → `report-summarizer`
+- 🆕 TDD 개발? → `tdd-expert`
+- 🆕 UI 일관성? → `design-system-guardian`
+- 🆕 성능 최적화? → `performance-optimizer`
+- 🆕 데이터 마이그레이션? → `migration-helper`
 
 ### Step 2: 워크플로우 확인
 [WORKFLOW.md](WORKFLOW.md)에서 해당 워크플로우 찾기
@@ -302,7 +389,11 @@ analytics-expert → doc-writer → notification-designer
 | 🆕 보안 걱정 | "보안 검사해줘" | security-auditor |
 | 🆕 알림 기능 | "알림 설계해줘" | notification-designer |
 | 🆕 데이터 분석 | "통계 분석해줘" | analytics-expert |
-| 🆕 리포트 요약 | "요약해줘" / "핵심만" | report-summarizer |
+| 리포트 요약 | "요약해줘" / "핵심만" | report-summarizer |
+| 🆕 TDD 개발 | "TDD로 개발해줘" | tdd-expert |
+| 🆕 UI 점검 | "디자인 점검해줘" | design-system-guardian |
+| 🆕 성능 분석 | "성능 분석해줘" | performance-optimizer |
+| 🆕 데이터 이전 | "마이그레이션해줘" | migration-helper |
 
 ---
 
@@ -393,7 +484,15 @@ analytics-expert → doc-writer → notification-designer
 
 ## 📝 변경 이력
 
-### v1.4 (2026-01-09) - 현재
+### v1.5 (2026-01-11) - 현재
+- ✅ **tdd-expert** 추가 (TDD 워크플로우)
+- ✅ **design-system-guardian** 추가 (UI/UX 일관성)
+- ✅ **performance-optimizer** 추가 (성능 최적화)
+- ✅ **migration-helper** 추가 (데이터 마이그레이션)
+- ✅ 에이전트 18개로 확장
+- ✅ 워크플로우 11개로 확장
+
+### v1.4 (2026-01-09)
 - ✅ **report-summarizer** 추가 (리포트 요약)
 - ✅ 에이전트 14개로 확장
 - ✅ 기존 에이전트에 report-summarizer 협업 연계 추가
@@ -470,4 +569,4 @@ analytics-expert → doc-writer → notification-designer
 
 **관리자**: ijw-calander 개발팀
 **문서 작성**: Claude
-**최종 업데이트**: 2026-01-09
+**최종 업데이트**: 2026-01-11

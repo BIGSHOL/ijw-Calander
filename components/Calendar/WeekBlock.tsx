@@ -280,11 +280,11 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
             >
               <>
                 <div className="flex items-center gap-1 leading-none">
-                  <span className="text-[10px] font-bold uppercase opacity-60 tracking-wider">{dayName}</span>
+                  <span className="text-xxs font-bold uppercase opacity-60 tracking-wider">{dayName}</span>
                 </div>
                 <span className={`font-extrabold leading-none mt-0.5 ${isHoliday ? 'text-base' : 'text-sm'}`}>{dayNum}</span>
                 {isHoliday && (
-                  <span className="text-[8px] text-red-600 font-bold bg-red-100 px-1.5 py-0.5 rounded-full mt-0.5 whitespace-nowrap border border-red-200">
+                  <span className="text-nano text-red-600 font-bold bg-red-100 px-1.5 py-0.5 rounded-full mt-0.5 whitespace-nowrap border border-red-200">
                     {holiday.name}
                   </span>
                 )}
@@ -335,7 +335,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
               {!dept.color.startsWith('#') && (
                 <div className={`absolute left-0 top-0 bottom-0 w-[6px] ${dept.color}`} />
               )}
-              <div className="font-bold text-[#081429] text-center text-[11px] break-keep leading-tight pl-1">{dept.name}</div>
+              <div className="font-bold text-[#081429] text-center text-xs break-keep leading-tight pl-1">{dept.name}</div>
             </div>
 
             {/* Grid Cells */}
@@ -453,7 +453,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                     )}
                     {/* Recurrence indicator */}
                     {event.recurrenceGroupId && pos.isStart && (
-                      <span className="relative z-10 mr-0.5 text-[10px]" style={{ color: textColor }}>🔄</span>
+                      <span className="relative z-10 mr-0.5 text-xxs" style={{ color: textColor }}>🔄</span>
                     )}
                     {/* Inner border div removed, applied to container instead */}
                     <span className="relative z-10 truncate" style={{ color: textColor }}>

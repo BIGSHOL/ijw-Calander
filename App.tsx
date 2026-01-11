@@ -8,7 +8,7 @@ import { useGanttProjects } from './hooks/useGanttProjects';
 import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
 import { useTabPermissions } from './hooks/useTabPermissions';
 import EventModal from './components/Calendar/EventModal';
-import SettingsModal from './components/Settings/SettingsModal';
+import SettingsModal from './components/settings/SettingsModal';
 import LoginModal from './components/Auth/LoginModal';
 import CalendarBoard from './components/Calendar/CalendarBoard';
 import TimetableManager from './components/Timetable/TimetableManager';
@@ -1265,7 +1265,7 @@ const App: React.FC = () => {
               <div className="hidden md:flex flex-row items-center gap-1.5 ml-4 pl-4 border-l border-white/10 overflow-hidden">
                 {/* Role Badge */}
                 {userProfile?.role && userProfile.role !== 'guest' && (
-                  <span className={`text-white text-[9px] px-1 py-0.5 rounded font-black tracking-tighter shadow-sm ${userProfile.role === 'master' ? 'bg-red-600' :
+                  <span className={`text-white text-micro px-1 py-0.5 rounded font-black tracking-tighter shadow-sm ${userProfile.role === 'master' ? 'bg-red-600' :
                     userProfile.role === 'admin' ? 'bg-indigo-600' :
                       userProfile.role === 'manager' ? 'bg-purple-600' :
                         userProfile.role === 'editor' ? 'bg-blue-600' :
@@ -1284,7 +1284,7 @@ const App: React.FC = () => {
                   {(userProfile?.email || currentUser?.email)?.split('@')[0]}
                 </span>
                 {/* Job Title Badge */}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded flex items-center justify-center font-bold tracking-tight whitespace-nowrap ${getJobTitleStyle(userProfile?.jobTitle)}`}>
+                <span className={`text-xxs px-1.5 py-0.5 rounded flex items-center justify-center font-bold tracking-tight whitespace-nowrap ${getJobTitleStyle(userProfile?.jobTitle)}`}>
                   {userProfile?.jobTitle || '직급 미설정'}
                 </span>
               </div>
@@ -1305,7 +1305,7 @@ const App: React.FC = () => {
                 setInitialEndTime('');
                 setIsEventModalOpen(true);
               }}
-              className="h-7 px-2 bg-[#fdb813] text-[#081429] rounded hover:brightness-110 flex-shrink-0 flex items-center justify-center gap-1 font-bold shadow-sm transition-all active:scale-95 text-[11px] whitespace-nowrap"
+              className="h-7 px-2 bg-[#fdb813] text-[#081429] rounded hover:brightness-110 flex-shrink-0 flex items-center justify-center gap-1 font-bold shadow-sm transition-all active:scale-95 text-xs whitespace-nowrap"
             >
               <Plus size={14} /> <span className="hidden lg:inline">일정 추가</span>
             </button>
@@ -1328,7 +1328,7 @@ const App: React.FC = () => {
                 >
                   <Bell size={20} />
                   {unreadMemoCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-xxs font-bold rounded-full flex items-center justify-center">
                       {unreadMemoCount}
                     </span>
                   )}
@@ -1370,7 +1370,7 @@ const App: React.FC = () => {
                                     {!memo.isRead && <span className="w-2 h-2 bg-blue-500 rounded-full" />}
                                   </div>
                                   <p className="text-gray-600 text-xs mt-1 line-clamp-2">{memo.message}</p>
-                                  <span className="text-gray-400 text-[10px] mt-1 block">
+                                  <span className="text-gray-400 text-xxs mt-1 block">
                                     {new Date(memo.createdAt).toLocaleString('ko-KR')}
                                   </span>
                                 </div>
@@ -1450,7 +1450,7 @@ const App: React.FC = () => {
                       key={m}
                       onClick={() => setViewMode(m)}
                       className={`
-                    px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
+                    px-2 py-0.5 rounded-md text-xs font-bold transition-all
                     ${viewMode === m
                           ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                           : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -1474,7 +1474,7 @@ const App: React.FC = () => {
                         key={cols}
                         onClick={() => setViewColumns(cols)}
                         className={`
-                       px-2 py-0.5 rounded-md text-[11px] font-bold transition-all
+                       px-2 py-0.5 rounded-md text-xs font-bold transition-all
                        ${viewColumns === cols
                             ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                             : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -2260,7 +2260,7 @@ const App: React.FC = () => {
                         };
                         return enabledPerms.map(([permId]) => (
                           <div key={permId} className="flex items-center gap-2 text-xs text-gray-600 py-1">
-                            <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center text-[10px]">✓</span>
+                            <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center text-xxs">✓</span>
                             {permLabels[permId] || permId}
                           </div>
                         ));
