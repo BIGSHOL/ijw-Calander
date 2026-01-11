@@ -9,7 +9,17 @@ export default {
     "./hooks/**/*.{ts,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Consolas', 'monospace'],
+      },
+      fontSize: {
+        'xxs': ['10px', { lineHeight: '14px' }],
+        'micro': ['9px', { lineHeight: '12px' }],
+        'nano': ['8px', { lineHeight: '10px' }],
+      },
+    },
   },
   plugins: [],
   safelist: [

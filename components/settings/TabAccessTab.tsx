@@ -138,7 +138,7 @@ const TabAccessTab: React.FC<TabAccessTabProps> = ({
                                     <th className="text-left px-4 py-3 font-bold text-gray-700 sticky left-0 bg-gray-50 min-w-[150px]">메뉴(탭)</th>
                                     {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
                                         <th key={role} className="text-center px-3 py-3 font-bold text-gray-700 min-w-[90px]">
-                                            <span className={`px-2 py-1 rounded text-[10px] font-black whitespace-nowrap ${role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
+                                            <span className={`px-2 py-1 rounded text-xxs font-black whitespace-nowrap ${role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
                                                 role === 'manager' ? 'bg-purple-100 text-purple-700' :
                                                     role === 'editor' ? 'bg-blue-100 text-blue-700' :
                                                         role === 'math_lead' ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-300' :
@@ -160,7 +160,7 @@ const TabAccessTab: React.FC<TabAccessTabProps> = ({
                                     <tr key={tab.id} className="border-b border-gray-100 hover:bg-gray-50/50">
                                         <td className="px-4 py-3 sticky left-0 bg-white">
                                             <div className="font-bold text-gray-700">{tab.label}</div>
-                                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">{tab.id}</div>
+                                            <div className="text-xxs text-gray-400 font-mono mt-0.5">{tab.id}</div>
                                         </td>
                                         {ROLE_HIERARCHY.filter(r => r !== 'master').map((role) => {
                                             const isChecked = tabPermissions[role as UserRole]?.includes(tab.id) ?? false;

@@ -655,19 +655,19 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                         <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-20">점수</th>
                         <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-16">
                           평균
-                          <span className="block text-[10px] font-normal text-gray-400">
+                          <span className="block text-xxs font-normal text-gray-400">
                             {avg ? avg : '-'}
                           </span>
                         </th>
                         <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-16">
                           석차
-                          <span className="block text-[10px] font-normal text-gray-400">
+                          <span className="block text-xxs font-normal text-gray-400">
                             /{studentsWithScores.length || addedStudents.length}명
                           </span>
                         </th>
                         <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-16">
                           등급
-                          <span className="block text-[10px] font-normal text-gray-400">(추후)</span>
+                          <span className="block text-xxs font-normal text-gray-400">(추후)</span>
                         </th>
                         <th className="px-3 py-2 w-10"></th>
                       </tr>

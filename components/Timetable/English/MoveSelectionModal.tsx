@@ -45,7 +45,7 @@ const MoveSelectionModal: React.FC<MoveSelectionModalProps> = ({
                             className="w-full bg-white border border-gray-200 p-3 rounded-lg shadow-sm hover:border-[#081429] hover:bg-gray-50 flex justify-between items-center group transition-all"
                         >
                             <div className="flex flex-col items-start">
-                                <span className="text-[10px] text-gray-400 font-bold mb-0.5">
+                                <span className="text-xxs text-gray-400 font-bold mb-0.5">
                                     메인 수업
                                 </span>
                                 <span className="font-bold text-gray-700 text-sm">
@@ -66,7 +66,7 @@ const MoveSelectionModal: React.FC<MoveSelectionModalProps> = ({
                             >
                                 <div className="flex flex-col items-start">
                                     <div className="flex items-center gap-2 mb-0.5">
-                                        <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 px-1.5 rounded">
+                                        <span className="text-xxs font-bold text-yellow-600 bg-yellow-100 px-1.5 rounded">
                                             합반 #{idx + 1}
                                         </span>
                                     </div>

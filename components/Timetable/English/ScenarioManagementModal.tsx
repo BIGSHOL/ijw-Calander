@@ -400,9 +400,9 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                         ) : (
                                             <span className="font-bold text-gray-800">{scenario.name}</span>
                                         )}
-                                        {isLatest && <span className="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold">최신</span>}
-                                        {isBackup && <span className="text-[10px] bg-gray-500 text-white px-1.5 py-0.5 rounded font-bold">자동 백업</span>}
-                                        {!validation.isValid && <span className="text-[10px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold">손상됨</span>}
+                                        {isLatest && <span className="text-xxs bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold">최신</span>}
+                                        {isBackup && <span className="text-xxs bg-gray-500 text-white px-1.5 py-0.5 rounded font-bold">자동 백업</span>}
+                                        {!validation.isValid && <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded font-bold">손상됨</span>}
                                     </div>
 
                                     {/* Description */}
@@ -419,7 +419,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                     ) : null}
 
                                     {/* Metadata */}
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-500 mb-2">
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-2">
                                         <span className="flex items-center gap-1">
                                             <Clock size={10} />
                                             {formatDate(scenario.createdAt)}

@@ -32,8 +32,8 @@ const MiniGridRow: React.FC<MiniGridRowProps> = ({
             {/* Period Label - Time Only */}
             {!hideTime && (
                 <div className="w-[48px] border-r border-gray-100 flex flex-col items-center justify-center bg-gray-50 shrink-0 leading-tight py-0.5">
-                    <span className="text-[9px] font-bold text-gray-700 tracking-tighter">{start}</span>
-                    <span className="text-[9px] text-gray-500 tracking-tighter">~{end}</span>
+                    <span className="text-micro font-bold text-gray-700 tracking-tighter">{start}</span>
+                    <span className="text-micro text-gray-500 tracking-tighter">~{end}</span>
                 </div>
             )}
 
@@ -80,7 +80,7 @@ const MiniGridRow: React.FC<MiniGridRowProps> = ({
                 return (
                     <div
                         key={day}
-                        className="flex-1 border-r border-gray-100 last:border-r-0 flex flex-col justify-center items-center text-center px-0.5 overflow-hidden text-[10px]"
+                        className="flex-1 border-r border-gray-100 last:border-r-0 flex flex-col justify-center items-center text-center px-0.5 overflow-hidden text-xxs"
                         style={teacherStyle}
                         title={cell?.teacher || ''}
                     >

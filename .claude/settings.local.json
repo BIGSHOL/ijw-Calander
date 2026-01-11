@@ -42,7 +42,10 @@
       "Bash(Move-Item -Path \"unified_db_completion_report_20260107.md\" -Destination \"done/\")",
       "Bash(Move-Item -Path \"archive_toggle_refactor_report_20260107.md\" -Destination \"done/\")",
       "Bash(Move-Item -Path \"consultation_ui_update_report.md\" -Destination \"done/\")",
-      "Bash(Move-Item -Path \"verification_report_20260103.md\" -Destination \"done/\")"
+      "Bash(Move-Item -Path \"verification_report_20260103.md\" -Destination \"done/\")",
+      "Bash(dir:*)",
+      "Bash(dir %TEMP%claude*.txt)",
+      "Bash(git check-ignore:*)"
     ]
   }
 }

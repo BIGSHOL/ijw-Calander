@@ -261,13 +261,13 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                 `}
                             >
                                 <div className="flex justify-between items-center mb-1 sm:mb-1.5">
-                                    <h3 className={`text-[10px] sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-[#081429]' : 'text-gray-600'}`}>
+                                    <h3 className={`text-xxs sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-[#081429]' : 'text-gray-600'}`}>
                                         {format(month, 'M월')}
                                     </h3>
                                     <div className="flex gap-1 items-center">
                                         {monthCount > 0 && (
                                             <span
-                                                className="text-[8px] sm:text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                                                className="text-[8px] sm:text-xxs px-1.5 py-0.5 rounded-full font-bold"
                                                 style={{ backgroundColor: COLORS.yellow, color: COLORS.navy }}
                                             >
                                                 {monthCount}
@@ -304,7 +304,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                                 <span
                                                     className={`
                                                         w-full h-full flex items-center justify-center
-                                                        text-[6px] sm:text-[8px] lg:text-[10px] font-medium
+                                                        text-[6px] sm:text-[8px] lg:text-xxs font-medium
                                                         rounded-[2px] sm:rounded-[3px]
                                                         ${totalCount === 0 ? 'text-gray-600' : ''}
                                                     `}
@@ -348,7 +348,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                     <div className="h-1" style={{ backgroundColor: COLORS.yellow }} />
                                     <div className="p-2">
                                         <div className="flex items-center justify-between mb-1">
-                                            <span className="text-[10px] font-bold text-gray-500">
+                                            <span className="text-xxs font-bold text-gray-500">
                                                 {record.consultationDate ? format(new Date(record.consultationDate), 'M/d') : '-'}
                                             </span>
                                             <span
@@ -361,7 +361,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                         <div className="text-xs font-medium text-gray-800 line-clamp-1">
                                             {record.studentName}
                                         </div>
-                                        <div className="text-[10px] text-gray-500">
+                                        <div className="text-xxs text-gray-500">
                                             {record.schoolName}{record.grade?.replace(/^[초중고]/, '')} · {record.subject}
                                         </div>
                                     </div>

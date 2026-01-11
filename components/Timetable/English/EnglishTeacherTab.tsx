@@ -744,19 +744,19 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                     <div className="flex items-center bg-gray-100 rounded-lg p-0.5 mr-2 flex-shrink-0">
                         <button
                             onClick={() => setViewSize('small')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
+                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
                         >
                             작게
                         </button>
                         <button
                             onClick={() => setViewSize('medium')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
+                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
                         >
                             보통
                         </button>
                         <button
                             onClick={() => setViewSize('large')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
+                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
                         >
                             크게
                         </button>
@@ -779,14 +779,14 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                     <div className="flex bg-gray-200 rounded-lg p-0.5 gap-0.5">
                         <button
                             onClick={() => changeMode('view')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all flex items-center ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500'} `}
+                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all flex items-center ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500'} `}
                         >
                             <Eye size={10} className="mr-1" />조회
                         </button>
                         {canEditEnglish && (
                             <button
                                 onClick={() => changeMode('edit')}
-                                className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all flex items-center ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'} `}
+                                className={`px-2 py-0.5 text-xs font-bold rounded transition-all flex items-center ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'} `}
                             >
                                 <Edit3 size={10} className="mr-1" />편집
                             </button>
@@ -794,7 +794,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         {canEditEnglish && (
                             <button
                                 onClick={() => changeMode('move')}
-                                className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all flex items-center ${mode === 'move' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'} `}
+                                className={`px-2 py-0.5 text-xs font-bold rounded transition-all flex items-center ${mode === 'move' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'} `}
                             >
                                 <Move size={10} className="mr-1" />이동
                             </button>
@@ -817,7 +817,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
 
                     {/* Weekday Visibility Toggles */}
                     <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
-                        <span className="text-[10px] text-gray-500 mr-1">요일:</span>
+                        <span className="text-xxs text-gray-500 mr-1">요일:</span>
                         {EN_WEEKDAYS.map(day => (
                             <label key={day} className="flex items-center gap-0.5 cursor-pointer">
                                 <input
@@ -826,7 +826,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                     onChange={() => toggleWeekday(day)}
                                     className="w-3 h-3 cursor-pointer"
                                 />
-                                <span className="text-[10px] text-gray-700">{day}</span>
+                                <span className="text-xxs text-gray-700">{day}</span>
                             </label>
                         ))}
                     </div>
@@ -869,7 +869,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                     filteredWeekdays.map((day, dIdx) => (
                                         <th
                                             key={`${teacher}-${day}`}
-                                            className={`p-1 bg-gray-50 text-[10px] text-gray-500
+                                            className={`p-1 bg-gray-50 text-xxs text-gray-500
                                             ${viewSize === 'large' ? 'w-[100px]' : ''}
                                             ${viewSize === 'medium' ? 'w-[70px]' : ''}
                                             ${viewSize === 'small' ? 'w-[40px]' : ''}
@@ -888,7 +888,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                 <tr key={period.id}>
                                     <td className="p-2 border bg-gray-50 text-xs font-bold text-gray-600 text-center whitespace-nowrap">
                                         <div>{period.label}</div>
-                                        <div className="text-[9px] text-gray-400">{period.time}</div>
+                                        <div className="text-micro text-gray-400">{period.time}</div>
                                     </td>
                                     {filteredTeachers.map((teacher, tIdx) => (
                                         filteredWeekdays.map((day, dIdx) => {
@@ -960,8 +960,8 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                                             ${viewSize === 'large'
                                                                                 ? (cellData.className.length > 12 ? 'text-[13px]' : (cellData.className.length > 8 ? 'text-[14px]' : 'text-[16px]'))
                                                                                 : viewSize === 'medium'
-                                                                                    ? 'text-[10px]'
-                                                                                    : 'text-[8px] leading-[1.1]'
+                                                                                    ? 'text-xxs'
+                                                                                    : 'text-nano leading-[1.1]'
                                                                             }
                                                                         `}
                                                                         style={
@@ -988,7 +988,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
 
                                                         {cellData?.room && (
                                                             <div
-                                                                className={`${viewSize === 'large' ? 'text-[14px]' : (viewSize === 'medium' ? 'text-[9px]' : 'text-[8px]')} font-medium`}
+                                                                className={`${viewSize === 'large' ? 'text-sm' : (viewSize === 'medium' ? 'text-micro' : 'text-nano')} font-medium`}
                                                                 style={{ color: matchedKw ? getContrastColor(matchedKw.bgColor) : '#6B7280' }}
                                                             >
                                                                 {cellData.room}
@@ -999,12 +999,12 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                         {cellData?.merged && cellData.merged.length > 0 && (
                                                             <PortalTooltip
                                                                 position="top"
-                                                                triggerClassName="absolute top-0.5 right-0.5 bg-red-500 text-white text-[9px] font-bold px-1 rounded-sm shadow-sm z-20 cursor-help pointer-events-auto hover:scale-110 transition-transform"
+                                                                triggerClassName="absolute top-0.5 right-0.5 bg-red-500 text-white text-micro font-bold px-1 rounded-sm shadow-sm z-20 cursor-help pointer-events-auto hover:scale-110 transition-transform"
                                                                 content={
                                                                     <div className="w-48 bg-slate-800 text-white p-2 rounded shadow-xl z-50 text-left pointer-events-none">
                                                                         <div className="flex justify-between items-center bg-slate-700/50 px-2 py-1 -mx-2 -mt-2 mb-2 rounded-t border-b border-slate-700">
-                                                                            <span className="text-[10px] font-bold text-slate-300">합반 수업 목록</span>
-                                                                            <span className="text-[9px] bg-slate-700 px-1 rounded ml-1 text-slate-400">총 {cellData.merged.length}개</span>
+                                                                            <span className="text-xxs font-bold text-slate-300">합반 수업 목록</span>
+                                                                            <span className="text-micro bg-slate-700 px-1 rounded ml-1 text-slate-400">총 {cellData.merged.length}개</span>
                                                                         </div>
                                                                         <div className="flex flex-col gap-1.5">
                                                                             {cellData.merged.map((m, idx) => {
@@ -1015,8 +1015,8 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                                                 })();
                                                                                 return (
                                                                                     <div key={idx} className="flex justify-between items-center" style={isMoved ? { backgroundColor: '#dcfce7', padding: '2px', borderRadius: '4px' } : {}}>
-                                                                                        <div className={`text-[10px] font-bold ${isMoved ? 'text-green-800' : 'text-slate-200'}`}>{m.className}</div>
-                                                                                        {m.room && <div className="text-[9px] bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{m.room}</div>}
+                                                                                        <div className={`text-xxs font-bold ${isMoved ? 'text-green-800' : 'text-slate-200'}`}>{m.className}</div>
+                                                                                        {m.room && <div className="text-micro bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{m.room}</div>}
                                                                                     </div>
                                                                                 );
                                                                             })}

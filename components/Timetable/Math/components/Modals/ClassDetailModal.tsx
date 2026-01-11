@@ -105,7 +105,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                 <div className="flex flex-col mr-2">
                                     <div className="text-xs font-bold text-gray-400 mb-1 h-[24px]"></div>
                                     {(selectedClass.subject === '수학' ? MATH_PERIODS : ENGLISH_PERIODS).map(period => (
-                                        <div key={period} className="text-[10px] text-gray-600 font-bold h-[32px] flex items-center justify-end pr-2 whitespace-nowrap">
+                                        <div key={period} className="text-xxs text-gray-600 font-bold h-[32px] flex items-center justify-end pr-2 whitespace-nowrap">
                                             {MATH_PERIOD_TIMES[period] || period}
                                         </div>
                                     ))}
@@ -157,7 +157,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                             <div className="flex items-end gap-2">
                                 <div className="flex-1 grid grid-cols-3 gap-2">
                                     <div className="col-span-1">
-                                        <label className="text-[10px] text-gray-500 font-bold mb-1 block">이름</label>
+                                        <label className="text-xxs text-gray-500 font-bold mb-1 block">이름</label>
                                         <input
                                             type="text"
                                             value={newStudentName}
@@ -168,7 +168,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                         />
                                     </div>
                                     <div className="col-span-1">
-                                        <label className="text-[10px] text-gray-500 font-bold mb-1 block">학교</label>
+                                        <label className="text-xxs text-gray-500 font-bold mb-1 block">학교</label>
                                         <input
                                             type="text"
                                             value={newStudentSchool}
@@ -179,7 +179,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                         />
                                     </div>
                                     <div className="col-span-1">
-                                        <label className="text-[10px] text-gray-500 font-bold mb-1 block">학년</label>
+                                        <label className="text-xxs text-gray-500 font-bold mb-1 block">학년</label>
                                         <input
                                             type="text"
                                             value={newStudentGrade}
@@ -225,7 +225,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                                         className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-grab group transition-colors"
                                                     >
                                                         <div className="flex items-center gap-3 flex-1">
-                                                            <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-[10px] font-bold flex items-center justify-center shrink-0">
+                                                            <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-xxs font-bold flex items-center justify-center shrink-0">
                                                                 {idx + 1}
                                                             </span>
                                                             <span className="font-bold text-sm text-[#373d41]">
@@ -240,13 +240,13 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
                                                                 onClick={() => handleWithdrawal(student.id)}
-                                                                className="px-2 py-0.5 text-[10px] rounded border border-gray-200 text-gray-400 hover:bg-gray-800 hover:text-white hover:border-gray-800 transition-colors"
+                                                                className="px-2 py-0.5 text-xxs rounded border border-gray-200 text-gray-400 hover:bg-gray-800 hover:text-white hover:border-gray-800 transition-colors"
                                                             >
                                                                 퇴원
                                                             </button>
                                                             <button
                                                                 onClick={() => handleRemoveStudent(student.id)}
-                                                                className="px-2 py-0.5 text-[10px] rounded border bg-white text-red-400 border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
+                                                                className="px-2 py-0.5 text-xxs rounded border bg-white text-red-400 border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
                                                             >
                                                                 삭제
                                                             </button>
@@ -281,13 +281,13 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                                                     <div className="flex gap-1">
                                                                         <button
                                                                             onClick={() => handleRestoreStudent(student.id)}
-                                                                            className="px-2 py-0.5 text-[10px] rounded border transition-colors bg-black text-white border-black hover:bg-gray-800"
+                                                                            className="px-2 py-0.5 text-xxs rounded border transition-colors bg-black text-white border-black hover:bg-gray-800"
                                                                         >
                                                                             복구
                                                                         </button>
                                                                         <button
                                                                             onClick={() => handleRemoveStudent(student.id)}
-                                                                            className="px-2 py-0.5 text-[10px] rounded border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                                                                            className="px-2 py-0.5 text-xxs rounded border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
                                                                         >
                                                                             삭제
                                                                         </button>

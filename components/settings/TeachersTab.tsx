@@ -484,7 +484,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                                     }}
                                                     className="w-3 h-3 accent-[#081429]"
                                                 />
-                                                <span className="text-[10px] text-gray-600">수학</span>
+                                                <span className="text-xxs text-gray-600">수학</span>
                                             </label>
                                             <label className="flex items-center gap-1 cursor-pointer">
                                                 <input
@@ -496,13 +496,13 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                                     }}
                                                     className="w-3 h-3 accent-[#081429]"
                                                 />
-                                                <span className="text-[10px] text-gray-600">영어</span>
+                                                <span className="text-xxs text-gray-600">영어</span>
                                             </label>
                                         </div>
                                         <div className="flex items-center gap-2 px-1 pt-1">
-                                            <span className="text-[10px] text-gray-500 font-medium">퍼스널 컬러:</span>
+                                            <span className="text-xxs text-gray-500 font-medium">퍼스널 컬러:</span>
                                             <label className="flex items-center gap-1">
-                                                <span className="text-[10px] text-gray-500">배경</span>
+                                                <span className="text-xxs text-gray-500">배경</span>
                                                 <input
                                                     type="color"
                                                     value={editTeacherBgColor}
@@ -511,7 +511,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                                 />
                                             </label>
                                             <label className="flex items-center gap-1">
-                                                <span className="text-[10px] text-gray-500">글자</span>
+                                                <span className="text-xxs text-gray-500">글자</span>
                                                 <input
                                                     type="color"
                                                     value={editTeacherTextColor}
@@ -520,24 +520,24 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                                 />
                                             </label>
                                             <div
-                                                className="px-2 py-0.5 rounded text-[10px] font-bold border"
+                                                className="px-2 py-0.5 rounded text-xxs font-bold border"
                                                 style={{ backgroundColor: editTeacherBgColor, color: editTeacherTextColor, borderColor: editTeacherBgColor }}
                                             >
                                                 미리보기
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 px-1 pt-1">
-                                            <span className="text-[10px] text-gray-500 font-medium">🏫 고정 강의실:</span>
+                                            <span className="text-xxs text-gray-500 font-medium">🏫 고정 강의실:</span>
                                             <input
                                                 type="text"
                                                 value={editTeacherDefaultRoom}
                                                 onChange={(e) => setEditTeacherDefaultRoom(e.target.value)}
                                                 placeholder="예: 601"
-                                                className="flex-1 max-w-[100px] px-2 py-1 border border-gray-200 rounded text-[10px] focus:border-[#fdb813] outline-none"
+                                                className="flex-1 max-w-[100px] px-2 py-1 border border-gray-200 rounded text-xxs focus:border-[#fdb813] outline-none"
                                             />
                                         </div>
                                         <div className="flex items-center gap-2 px-1 pt-1">
-                                            <span className="text-[10px] text-gray-500 font-medium">🌐 원어민 강사:</span>
+                                            <span className="text-xxs text-gray-500 font-medium">🌐 원어민 강사:</span>
                                             <label className="flex items-center gap-1 cursor-pointer">
                                                 <input
                                                     type="checkbox"
@@ -545,7 +545,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                                     onChange={(e) => setEditTeacherIsNative(e.target.checked)}
                                                     className="w-3.5 h-3.5 accent-green-600"
                                                 />
-                                                <span className="text-[10px] text-gray-600">{editTeacherIsNative ? '예' : '아니오'}</span>
+                                                <span className="text-xxs text-gray-600">{editTeacherIsNative ? '예' : '아니오'}</span>
                                             </label>
                                         </div>
                                     </div>
@@ -554,23 +554,23 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                         <div className="flex flex-col gap-1">
                                             <span className="font-bold text-gray-700">{teacher.name}</span>
                                             <div className="flex gap-1 items-center">
-                                                {(!teacher.subjects || teacher.subjects.includes('math')) && <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-medium">수학</span>}
-                                                {(!teacher.subjects || teacher.subjects.includes('english')) && <span className="text-[10px] bg-[#fff8e1] text-[#b45309] px-1.5 py-0.5 rounded border border-[#fef3c7] font-medium">영어</span>}
+                                                {(!teacher.subjects || teacher.subjects.includes('math')) && <span className="text-xxs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-medium">수학</span>}
+                                                {(!teacher.subjects || teacher.subjects.includes('english')) && <span className="text-xxs bg-[#fff8e1] text-[#b45309] px-1.5 py-0.5 rounded border border-[#fef3c7] font-medium">영어</span>}
                                                 {(teacher.bgColor || teacher.textColor) && (
                                                     <span
-                                                        className="text-[9px] px-1.5 py-0.5 rounded font-bold ml-1"
+                                                        className="text-micro px-1.5 py-0.5 rounded font-bold ml-1"
                                                         style={{ backgroundColor: teacher.bgColor || '#3b82f6', color: teacher.textColor || '#ffffff' }}
                                                     >
                                                         컬러
                                                     </span>
                                                 )}
                                                 {teacher.defaultRoom && (
-                                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 font-medium ml-1">
+                                                    <span className="text-micro px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 font-medium ml-1">
                                                         🏫 {teacher.defaultRoom}
                                                     </span>
                                                 )}
                                                 {teacher.isNative && (
-                                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-200 font-medium ml-1">
+                                                    <span className="text-micro px-1.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-200 font-medium ml-1">
                                                         🌐 원어민
                                                     </span>
                                                 )}

@@ -74,7 +74,7 @@ const ViewSettingsModal: React.FC<ViewSettingsModalProps> = ({
                                 <button
                                     key={h}
                                     onClick={() => setRowHeight(h)}
-                                    className={`flex-1 py-1.5 text-[10px] rounded border ${rowHeight === h ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500'}`}
+                                    className={`flex-1 py-1.5 text-xxs rounded border ${rowHeight === h ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500'}`}
                                 >
                                     {h === 'short' ? '좁게' : h === 'normal' ? '보통' : h === 'tall' ? '넓게' : '아주넓게'}
                                 </button>
@@ -90,7 +90,7 @@ const ViewSettingsModal: React.FC<ViewSettingsModalProps> = ({
                                 <button
                                     key={f}
                                     onClick={() => setFontSize(f)}
-                                    className={`flex-1 py-1.5 text-[10px] rounded border ${fontSize === f ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500'}`}
+                                    className={`flex-1 py-1.5 text-xxs rounded border ${fontSize === f ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500'}`}
                                 >
                                     {f === 'small' ? '작게' : f === 'normal' ? '보통' : f === 'large' ? '크게' : '매우크게'}
                                 </button>

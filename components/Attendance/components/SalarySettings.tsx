@@ -169,7 +169,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                     />
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">이하</span>
                                 </div>
-                                <p className="text-[10px] text-gray-400 mt-1">이 비율 이하로 퇴원생이 발생하면 인센티브가 적용됩니다.</p>
+                                <p className="text-xxs text-gray-400 mt-1">이 비율 이하로 퇴원생이 발생하면 인센티브가 적용됩니다.</p>
                             </div>
                         </div>
                     </div>

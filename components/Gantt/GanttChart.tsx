@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { GanttSubTask } from '../../types';
 import { ZoomIn, ZoomOut, Maximize, Calendar, Filter, CheckCircle2, MoreHorizontal, ChevronRight } from 'lucide-react';
 import { format, addDays, parseISO } from 'date-fns';
@@ -108,8 +108,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
         return lastDay + 1; // 최소 7일, 마지막 작업 후 1일 여유
     }, [tasks]);
 
-    // Auto Fit
-    useEffect(() => {
+    // Auto Fit - useLayoutEffect로 페인팅 전에 레이아웃 계산
+    useLayoutEffect(() => {
         if (isFitToScreen && containerRef.current) {
             const availableWidth = containerRef.current.clientWidth - 32;
             const newDayWidth = Math.max(30, availableWidth / (maxDay + 2));
@@ -396,7 +396,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                     return (
                                         <div
                                             key={i}
-                                            className={`text-[10px] font-mono flex flex-col items-center justify-end border-r border-gray-200 ${isWeekend ? 'text-red-400' : 'text-gray-400'}`}
+                                            className={`text-xxs font-mono flex flex-col items-center justify-end border-r border-gray-200 ${isWeekend ? 'text-red-400' : 'text-gray-400'}`}
                                             style={{ width: dayWidth, height: 50 }}
                                         >
                                             {showMonth && (
@@ -536,11 +536,11 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                                     }}
                                                 >
                                                     {/* Single Line: Title + Assignee */}
-                                                    <span className="text-[10px] font-bold text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis">
+                                                    <span className="text-xxs font-bold text-gray-800 whitespace-nowrap overflow-hidden text-ellipsis">
                                                         {task.title}
                                                     </span>
                                                     {task.assigneeName && task.duration > 2 && (
-                                                        <span className="text-[9px] text-white/70 whitespace-nowrap">
+                                                        <span className="text-micro text-white/70 whitespace-nowrap">
                                                             @{task.assigneeName}
                                                         </span>
                                                     )}
@@ -569,7 +569,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                                                         <span className="text-gray-400">관련 부서</span>
                                                                         <div className="flex flex-wrap gap-1">
                                                                             {task.departmentIds.map(d => (
-                                                                                <span key={d} className="bg-white/10 px-1.5 py-0.5 rounded text-[10px]">
+                                                                                <span key={d} className="bg-white/10 px-1.5 py-0.5 rounded text-xxs">
                                                                                     {d.toUpperCase()}
                                                                                 </span>
                                                                             ))}

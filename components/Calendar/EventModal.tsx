@@ -466,7 +466,7 @@ const EventModal: React.FC<EventModalProps> = ({
                           {dept.name}
                         </span>
                         {!hasEditAccess && hasViewAccess && (
-                          <span className="text-[10px] text-gray-400 ml-auto">(조회전용)</span>
+                          <span className="text-xxs text-gray-400 ml-auto">(조회전용)</span>
                         )}
                       </label>
                     );
@@ -510,7 +510,7 @@ const EventModal: React.FC<EventModalProps> = ({
                   </span>
                 </div>
                 {lastDate && (
-                  <span className="text-[10px] text-blue-500 ml-7">
+                  <span className="text-xxs text-blue-500 ml-7">
                     마지막 반복: {lastDate}
                   </span>
                 )}
@@ -710,7 +710,7 @@ const EventModal: React.FC<EventModalProps> = ({
                               }}
                               disabled={!canEditStatus}
                               className={`
-                                    text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1 transition-all
+                                    text-xxs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1 transition-all
                                     ${currentStatus === 'joined' ? 'bg-green-100 text-green-700 border-green-200' : ''}
                                     ${currentStatus === 'declined' ? 'bg-red-100 text-red-700 border-red-200' : ''}
                                     ${currentStatus === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : ''}
@@ -796,7 +796,7 @@ const EventModal: React.FC<EventModalProps> = ({
                     className={`w-9 h-9 rounded-lg cursor-pointer border-2 border-gray-200 ${(!canEditCurrent) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title="배경색 선택"
                   />
-                  <span className="text-[10px] font-bold text-gray-500">배경</span>
+                  <span className="text-xxs font-bold text-gray-500">배경</span>
                 </div>
 
                 {/* Text Color */}
@@ -809,7 +809,7 @@ const EventModal: React.FC<EventModalProps> = ({
                     className={`w-9 h-9 rounded-lg cursor-pointer border-2 border-gray-200 ${(!canEditCurrent) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title="글자색 선택"
                   />
-                  <span className="text-[10px] font-bold text-gray-500">글자</span>
+                  <span className="text-xxs font-bold text-gray-500">글자</span>
                 </div>
 
                 {/* Border Color */}
@@ -822,7 +822,7 @@ const EventModal: React.FC<EventModalProps> = ({
                     className={`w-9 h-9 rounded-lg cursor-pointer border-2 border-gray-200 ${(!canEditCurrent) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title="테두리색 선택"
                   />
-                  <span className="text-[10px] font-bold text-gray-500">테두리</span>
+                  <span className="text-xxs font-bold text-gray-500">테두리</span>
                 </div>
               </div>
             </div>
@@ -965,7 +965,7 @@ const EventModal: React.FC<EventModalProps> = ({
                 )}
 
                 {/* Timestamps Display */}
-                <div className="mt-2 flex flex-col gap-0.5 text-[10px] text-gray-400 font-medium px-1">
+                <div className="mt-2 flex flex-col gap-0.5 text-xxs text-gray-400 font-medium px-1">
                   {existingEvent.createdAt && (
                     <span>생성: {format(new Date(existingEvent.createdAt), 'yyyy-MM-dd HH:mm')}</span>
                   )}
@@ -998,7 +998,7 @@ const EventModal: React.FC<EventModalProps> = ({
             ) : (
               // Author Display (Bottom Left)
               <div className="flex flex-col justify-center px-1">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">작성자</span>
+                <span className="text-xxs font-bold text-gray-400 uppercase tracking-widest mb-0.5">작성자</span>
                 {(currentUser?.canManageEventAuthors || currentUser?.role === 'master') ? (
                   <div className="relative">
                     <select

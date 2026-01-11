@@ -249,21 +249,21 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
                     {/* Student Stats Badges */}
                     <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold">
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xxs font-bold">
                             재원 {studentStats.active}
                         </span>
                         {studentStats.new1 > 0 && (
-                            <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full text-[10px] font-bold">
+                            <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full text-xxs font-bold">
                                 신입1 {studentStats.new1}
                             </span>
                         )}
                         {studentStats.new2 > 0 && (
-                            <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[10px] font-bold">
+                            <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xxs font-bold">
                                 신입2 {studentStats.new2}
                             </span>
                         )}
                         {studentStats.withdrawn > 0 && (
-                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-[10px] font-bold">
+                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xxs font-bold">
                                 퇴원 {studentStats.withdrawn}
                             </span>
                         )}
@@ -393,7 +393,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                         e.stopPropagation();
                                         dismissTooltip();
                                     }}
-                                    className="self-end bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-[10px] font-bold transition-colors"
+                                    className="self-end bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-xxs font-bold transition-colors"
                                 >
                                     알겠습니다
                                 </button>
@@ -424,14 +424,14 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
             {/* Teacher Legend */}
             <div className="px-4 py-2 bg-white border-b flex flex-wrap gap-2 items-center flex-shrink-0">
-                <span className="text-[11px] font-bold text-gray-400 mr-1">강사 목록:</span>
+                <span className="text-xs font-bold text-gray-400 mr-1">강사 목록:</span>
                 {teachers.filter(t => !settings.hiddenLegendTeachers?.includes(t)).map(teacher => {
                     const colors = getTeacherColor(teacher, teachersData);
 
                     return (
                         <div
                             key={teacher}
-                            className="px-2 py-0.5 rounded text-[11px] font-bold shadow-sm border border-black/5"
+                            className="px-2 py-0.5 rounded text-xs font-bold shadow-sm border border-black/5"
                             style={{ backgroundColor: colors.bg, color: colors.text }}
                         >
                             {teacher}

@@ -293,12 +293,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
                               {teacherName}
                             </span>
                             {teacherName === mainTeacher && (
-                              <span className="text-[9px] bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded font-bold">
+                              <span className="text-micro bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded font-bold">
                                 담임
                               </span>
                             )}
                             {teacherName !== mainTeacher && (
-                              <span className="text-[9px] bg-gray-100 text-gray-600 px-1 py-0.5 rounded font-bold">
+                              <span className="text-micro bg-gray-100 text-gray-600 px-1 py-0.5 rounded font-bold">
                                 부담임
                               </span>
                             )}
@@ -318,7 +318,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
                         }).map((day, idx) => (
                           <span
                             key={idx}
-                            className="text-[10px] px-1.5 py-0.5 bg-white text-gray-700 rounded border border-gray-300"
+                            className="text-xxs px-1.5 py-0.5 bg-white text-gray-700 rounded border border-gray-300"
                           >
                             {day}
                           </span>
@@ -368,7 +368,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
                         <User className="w-3 h-3 text-gray-500" />
                         <span className="text-gray-600">담임:</span>
                         <span className="text-gray-800 font-semibold">{mainTeacher}</span>
-                        <span className="text-[9px] bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded font-bold">
+                        <span className="text-micro bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded font-bold">
                           담임
                         </span>
                       </div>
@@ -396,7 +396,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
                         }).map((day, idx) => (
                           <span
                             key={idx}
-                            className="text-[10px] px-1.5 py-0.5 bg-white text-gray-700 rounded border border-gray-300"
+                            className="text-xxs px-1.5 py-0.5 bg-white text-gray-700 rounded border border-gray-300"
                           >
                             {day}
                           </span>

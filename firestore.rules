@@ -175,14 +175,39 @@ service cloud.firestore {
     }
 
     // Unified Student DB (Phase 1)
+    // 입력값 검증 함수
+    function isValidStudent(data) {
+      return data.name is string &&
+             data.name.size() >= 1 &&
+             data.name.size() <= 50 &&
+             (!('status' in data) || data.status in ['active', 'on_hold', 'withdrawn', 'pending']);
+    }
+
     match /students/{studentId} {
       // Read: Authenticated users (subject to component filtering)
       allow read: if isAuthenticated();
-      
+
       // Write: Master, Admin, Manager, and Leads (for their respective subjects)
-      allow create, update, delete: if isAuthenticated() && (
+      // + 입력값 검증 (create/update 시)
+      allow create: if isAuthenticated() &&
+        isValidStudent(request.resource.data) &&
+        (hasRole(['master']) ||
+         hasPermission('timetable.math.edit') ||
+         hasPermission('timetable.english.edit') ||
+         hasPermission('attendance.manage_math') ||
+         hasPermission('attendance.manage_english'));
+
+      allow update: if isAuthenticated() &&
+        isValidStudent(request.resource.data) &&
+        (hasRole(['master']) ||
+         hasPermission('timetable.math.edit') ||
+         hasPermission('timetable.english.edit') ||
+         hasPermission('attendance.manage_math') ||
+         hasPermission('attendance.manage_english'));
+
+      allow delete: if isAuthenticated() && (
         hasRole(['master']) ||
-        hasPermission('timetable.math.edit') || 
+        hasPermission('timetable.math.edit') ||
         hasPermission('timetable.english.edit') ||
         hasPermission('attendance.manage_math') ||
         hasPermission('attendance.manage_english')
@@ -290,10 +315,12 @@ service cloud.firestore {
     match /consultations/{consultationId} {
       // Read: All authenticated users can view
       allow read: if isAuthenticated();
-      
-      // Create/Update: Based on future consultation permission or master
-      allow create, update: if hasRole(['master']) || isAuthenticated();
-      
+
+      // Create/Update: Master or users with consultation permission
+      allow create, update: if hasRole(['master']) ||
+                              hasPermission('consultations.edit') ||
+                              hasPermission('consultations.create');
+
       // Delete: Only master
       allow delete: if hasRole(['master']);
     }
@@ -310,13 +337,16 @@ service cloud.firestore {
       allow write: if hasRole(['master']) || hasPermission('system.classes.edit');
     }
 
-    // === Default: Authenticated Users Only ===
-    // Only Firebase Authentication users can read data
-    // Write access requires master or admin role
+    // === Default: Deny by Default ===
+    // Explicit rules above handle all known collections
+    // This fallback denies access to undefined collections for safety
+    // NOTE: 새 컬렉션 추가 시 위에 명시적 규칙 필요
 
     match /{document=**} {
-      allow read: if isAuthenticated();  // 인증된 사용자만 읽기 가능
-      allow write: if isAuthenticated() && hasRole(['master', 'admin']);
+      // 기본 거부 - 명시적으로 허용된 컬렉션만 접근 가능
+      // Master/Admin은 새 컬렉션 테스트를 위해 접근 허용
+      allow read: if hasRole(['master', 'admin']);
+      allow write: if hasRole(['master']);
     }
   }
 }

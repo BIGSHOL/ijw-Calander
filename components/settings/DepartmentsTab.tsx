@@ -188,7 +188,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">새 부서 추가</h4>
                     <div className="flex gap-3 items-end">
                         <div className="flex-1">
-                            <label className="text-[11px] font-medium text-gray-500 mb-1 block">부서명</label>
+                            <label className="text-xs font-medium text-gray-500 mb-1 block">부서명</label>
                             <input
                                 type="text"
                                 placeholder="예: 마케팅팀"
@@ -199,7 +199,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                             />
                         </div>
                         <div>
-                            <label className="text-[11px] font-medium text-gray-500 mb-1 block">배경 색상</label>
+                            <label className="text-xs font-medium text-gray-500 mb-1 block">배경 색상</label>
                             <div className="flex items-center gap-2">
                                 <input
                                     type="color"
@@ -218,7 +218,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                             </div>
                         </div>
                         <div>
-                            <label className="text-[11px] font-medium text-gray-500 mb-1 block">미리보기</label>
+                            <label className="text-xs font-medium text-gray-500 mb-1 block">미리보기</label>
                             <div
                                 className="w-24 h-9 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm"
                                 style={{ backgroundColor: newColor }}

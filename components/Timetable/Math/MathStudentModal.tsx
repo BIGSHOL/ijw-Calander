@@ -265,7 +265,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                         <div className="flex items-end gap-2">
                             <div className="flex-1 grid grid-cols-3 gap-2">
                                 <div className="col-span-1">
-                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">이름</label>
+                                    <label className="text-xxs text-gray-500 font-bold mb-1 block">이름</label>
                                     <input
                                         type="text"
                                         placeholder="이름"
@@ -276,7 +276,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                                     />
                                 </div>
                                 <div className="col-span-1">
-                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">학교</label>
+                                    <label className="text-xxs text-gray-500 font-bold mb-1 block">학교</label>
                                     <input
                                         type="text"
                                         placeholder="학교"
@@ -287,7 +287,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                                     />
                                 </div>
                                 <div className="col-span-1">
-                                    <label className="text-[10px] text-gray-500 font-bold mb-1 block">학년</label>
+                                    <label className="text-xxs text-gray-500 font-bold mb-1 block">학년</label>
                                     <input
                                         type="text"
                                         placeholder="학년"
@@ -373,7 +373,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                                                 className={`flex items-center gap-3 flex-1 ${canEdit ? 'cursor-pointer' : ''}`}
                                                 onClick={() => startEditing(student)}
                                             >
-                                                <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-[10px] font-bold flex items-center justify-center shrink-0">
+                                                <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-xxs font-bold flex items-center justify-center shrink-0">
                                                     {idx + 1}
                                                 </span>
                                                 <span className={`font-bold text-sm ${student.underline ? 'underline text-blue-600' : 'text-[#373d41]'}`}>
@@ -392,7 +392,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                                                             e.stopPropagation();
                                                             handleToggleUnderline(student.id);
                                                         }}
-                                                        className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${student.underline
+                                                        className={`px-2 py-0.5 text-xxs rounded border transition-colors ${student.underline
                                                             ? 'bg-blue-500 text-white border-blue-500'
                                                             : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'
                                                             }`}
@@ -405,7 +405,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                                                             e.stopPropagation();
                                                             handleRemoveStudent(student.id);
                                                         }}
-                                                        className="px-2 py-0.5 text-[10px] rounded border bg-white text-red-400 border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
+                                                        className="px-2 py-0.5 text-xxs rounded border bg-white text-red-400 border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300"
                                                         title="삭제"
                                                     >
                                                         삭제

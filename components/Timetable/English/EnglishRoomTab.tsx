@@ -98,19 +98,19 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                     <div className="flex items-center bg-gray-100 rounded-lg p-0.5 mr-2 flex-shrink-0">
                         <button
                             onClick={() => setViewSize('small')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                         >
                             작게
                         </button>
                         <button
                             onClick={() => setViewSize('medium')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                         >
                             보통
                         </button>
                         <button
                             onClick={() => setViewSize('large')}
-                            className={`px-2 py-0.5 text-[11px] font-bold rounded transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                         >
                             크게
                         </button>
@@ -132,7 +132,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
 
                     {/* Weekday Visibility Toggles */}
                     <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
-                        <span className="text-[10px] text-gray-500 mr-1">요일:</span>
+                        <span className="text-xxs text-gray-500 mr-1">요일:</span>
                         {EN_WEEKDAYS.map(day => (
                             <label key={day} className="flex items-center gap-0.5 cursor-pointer">
                                 <input
@@ -141,13 +141,13 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                     onChange={() => toggleWeekday(day)}
                                     className="w-3 h-3 cursor-pointer"
                                 />
-                                <span className="text-[10px] text-gray-700">{day}</span>
+                                <span className="text-xxs text-gray-700">{day}</span>
                             </label>
                         ))}
                     </div>
                 </div>
 
-                <span className="text-[10px] text-indigo-400 font-normal">
+                <span className="text-xxs text-indigo-400 font-normal">
                     * 수정은 '강사별 시간표'에서만 가능합니다.
                 </span>
             </div>
@@ -181,7 +181,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                     filteredWeekdays.map((day, dIdx) => (
                                         <th
                                             key={`${room}-${day}`}
-                                            className={`p-1 bg-gray-50 text-[10px] text-gray-500
+                                            className={`p-1 bg-gray-50 text-xxs text-gray-500
                                                 ${viewSize === 'large' ? 'w-[100px]' : ''}
                                                 ${viewSize === 'medium' ? 'w-[70px]' : ''}
                                                 ${viewSize === 'small' ? 'w-[40px]' : ''}
@@ -200,7 +200,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                 <tr key={period.id}>
                                     <td className="p-2 border bg-gray-50 text-xs font-bold text-gray-600 text-center whitespace-nowrap">
                                         <div>{period.label}</div>
-                                        <div className="text-[9px] text-gray-400">{period.time}</div>
+                                        <div className="text-micro text-gray-400">{period.time}</div>
                                     </td>
                                     {filteredRooms.map((room, rIdx) => (
                                         filteredWeekdays.map((day, dIdx) => {
@@ -235,7 +235,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                                     {cellData?.className && (
                                                         <>
                                                             <div
-                                                                className={`${viewSize === 'small' ? 'text-[9px]' : 'text-[10px]'}`}
+                                                                className={`${viewSize === 'small' ? 'text-micro' : 'text-xxs'}`}
                                                                 style={matchedKw ? { color: matchedKw.textColor } : { color: '#374151' }}
                                                             >
                                                                 {formatClassNameWithBreaks(cellData.className).map((part, idx, arr) => (
@@ -247,7 +247,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                                             </div>
                                                             {viewSize !== 'small' && (
                                                                 <div
-                                                                    className="text-[9px]"
+                                                                    className="text-micro"
                                                                     style={{ color: matchedKw ? getContrastColor(matchedKw.bgColor) : '#9CA3AF', opacity: matchedKw ? 0.85 : 1 }}
                                                                 >
                                                                     {cellData.teacher}

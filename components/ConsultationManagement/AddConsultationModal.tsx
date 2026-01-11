@@ -94,7 +94,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                 followUpNeeded,
                 followUpDate: followUpNeeded ? followUpDate : undefined,
                 followUpDone: false,
-                createdBy: user?.uid || '',
+                createdBy: currentUser?.uid || '',
             });
 
             alert('상담 기록이 저장되었습니다.');

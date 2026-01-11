@@ -168,7 +168,7 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                     {perm.label}
                     {/* {perm.disabled && <span className="text-[10px] text-red-400 ml-2">(MASTER 전용)</span>} */}
                 </div>
-                <div className="text-[10px] text-gray-400">{perm.desc}</div>
+                <div className="text-xxs text-gray-400">{perm.desc}</div>
             </td>
             {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
                 <td key={role} className="text-center px-3 py-2.5">
@@ -219,7 +219,7 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                                     <th className="text-left px-4 py-3 font-bold text-gray-700 sticky left-0 z-20 bg-gray-50 min-w-[200px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">권한</th>
                                     {ROLE_HIERARCHY.filter(r => r !== 'master').map(role => (
                                         <th key={role} className="text-center px-3 py-3 font-bold text-gray-700 min-w-[90px]">
-                                            <span className={`px-2 py-1 rounded text-[10px] font-black whitespace-nowrap ${role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
+                                            <span className={`px-2 py-1 rounded text-xxs font-black whitespace-nowrap ${role === 'admin' ? 'bg-indigo-100 text-indigo-700' :
                                                 role === 'manager' ? 'bg-purple-100 text-purple-700' :
                                                     role === 'editor' ? 'bg-blue-100 text-blue-700' :
                                                         role === 'math_lead' ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-300' :

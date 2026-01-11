@@ -41,8 +41,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                 const user = userCredential.user;
 
                 // Determine Role and Status
-                // Master hardcoded logic
-                const isMaster = email === 'st2000423@gmail.com';
+                // Master 이메일은 환경변수에서 관리 (콤마로 구분된 복수 이메일 지원)
+                const masterEmails = (import.meta.env.VITE_MASTER_EMAILS || 'st2000423@gmail.com')
+                    .split(',')
+                    .map((e: string) => e.trim().toLowerCase());
+                const isMaster = masterEmails.includes(email.toLowerCase());
 
                 const newProfile: UserProfile = {
                     uid: user.uid,

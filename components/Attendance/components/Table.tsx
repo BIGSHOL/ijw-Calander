@@ -176,17 +176,17 @@ const Table: React.FC<Props> = ({
             >
               {student.name}
               {student.isHomeroom && (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-micro font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
                   담임
                 </span>
               )}
               {isNew && (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#fdb813] text-[#081429] text-[9px] font-extrabold shadow-sm animate-pulse">
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#fdb813] text-[#081429] text-micro font-extrabold shadow-sm animate-pulse">
                   <Sparkles size={8} fill="#081429" /> NEW
                 </span>
               )}
               {isLeaving && (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 text-[9px] font-bold">
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 text-micro font-bold">
                   <LogOut size={8} /> END
                 </span>
               )}
@@ -200,7 +200,7 @@ const Table: React.FC<Props> = ({
                 <span>{student.grade}</span>
               </div>
               <span
-                className={`text-[10px] px-2 py-0.5 rounded-full w-fit font-bold ${badgeClass}`}
+                className={`text-xxs px-2 py-0.5 rounded-full w-fit font-bold ${badgeClass}`}
                 style={badgeStyle}
               >
                 {levelName}
@@ -220,7 +220,7 @@ const Table: React.FC<Props> = ({
                 if (dayChar === '토') colorClass = "bg-blue-50 border-blue-200 text-blue-600";
                 if (dayChar === '일') colorClass = "bg-red-50 border-red-200 text-red-600";
                 return (
-                  <span key={d} className={`text-[9px] border px-1 rounded ${colorClass}`}>{dayChar}</span>
+                  <span key={d} className={`text-micro border px-1 rounded ${colorClass}`}>{dayChar}</span>
                 );
               })}
             </div>
@@ -317,8 +317,8 @@ const Table: React.FC<Props> = ({
                     }`}
                 >
                   <div className="flex flex-col items-center justify-center leading-tight">
-                    <span className="text-[10px] font-bold">{date}</span>
-                    <span className="text-[9px] uppercase opacity-75">{dayName}</span>
+                    <span className="text-xxs font-bold">{date}</span>
+                    <span className="text-micro uppercase opacity-75">{dayName}</span>
                   </div>
                 </th>
               );
@@ -363,7 +363,7 @@ const Table: React.FC<Props> = ({
             <>
               <div className="px-3 py-2 text-xs font-semibold text-gray-500 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
                 <span>수업 시간 선택</span>
-                <span className="font-normal text-[10px] text-gray-400">{contextMenu.dateKey}</span>
+                <span className="font-normal text-xxs text-gray-400">{contextMenu.dateKey}</span>
               </div>
 
               <button onClick={() => setContextMenu({ ...contextMenu, mode: 'memo' })} className="w-full text-left px-4 py-2 hover:bg-yellow-50 text-sm text-yellow-700 flex items-center gap-2 border-b border-gray-50">
@@ -644,7 +644,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
   return (
     <tr className="group hover:bg-gray-50 transition-colors">
       {/* Fixed Columns - Compact */}
-      <td className="p-1 sticky left-0 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-[#373d41]/50 font-mono text-[10px] align-middle w-8">
+      <td className="p-1 sticky left-0 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-[#373d41]/50 font-mono text-xxs align-middle w-8">
         {idx}
       </td>
       <td className="p-1 sticky left-8 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[70px]">
@@ -654,12 +654,12 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
         >
           <span className="truncate">{student.name}</span>
           {isNew && (
-            <span className="inline-flex items-center px-1 py-0.5 rounded-full bg-[#fdb813] text-[#081429] text-[8px] font-extrabold">
+            <span className="inline-flex items-center px-1 py-0.5 rounded-full bg-[#fdb813] text-[#081429] text-nano font-extrabold">
               N
             </span>
           )}
           {isLeaving && (
-            <span className="inline-flex items-center px-1 py-0.5 rounded-full bg-red-100 text-red-600 text-[8px] font-bold">
+            <span className="inline-flex items-center px-1 py-0.5 rounded-full bg-red-100 text-red-600 text-nano font-bold">
               E
             </span>
           )}
@@ -667,11 +667,11 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
       </td>
       <td className="p-1 sticky left-[102px] z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[80px]">
         <div className="flex flex-col gap-0.5 justify-center">
-          <div className="text-[10px] text-[#373d41] font-medium truncate" title={`${student.school} ${student.grade}`}>
+          <div className="text-xxs text-[#373d41] font-medium truncate" title={`${student.school} ${student.grade}`}>
             {student.school} {student.grade}
           </div>
           <span
-            className={`text-[9px] px-1.5 py-0.5 rounded-full w-fit font-bold ${badgeClass}`}
+            className={`text-micro px-1.5 py-0.5 rounded-full w-fit font-bold ${badgeClass}`}
             style={badgeStyle}
           >
             {levelName}
@@ -691,7 +691,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
             if (dayChar === '토') colorClass = "bg-blue-50 border-blue-200 text-blue-600";
             if (dayChar === '일') colorClass = "bg-red-50 border-red-200 text-red-600";
             return (
-              <span key={d} className={`text-[9px] border px-1 rounded font-medium ${colorClass}`}>{dayChar}</span>
+              <span key={d} className={`text-micro border px-1 rounded font-medium ${colorClass}`}>{dayChar}</span>
             );
           })}
         </div>
@@ -704,8 +704,8 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
       {days.map((day) => {
         const dateKey = formatDateKey(day);
         const { day: dayName } = formatDateDisplay(day);
-        const status = pendingUpdates && dateKey in pendingUpdates ? pendingUpdates[dateKey]! : student.attendance[dateKey];
-        const memo = pendingMemos && dateKey in pendingMemos ? pendingMemos[dateKey]! : student.memos?.[dateKey];
+        const status = pendingUpdates?.[dateKey] ?? student.attendance[dateKey];
+        const memo = pendingMemos?.[dateKey] ?? student.memos?.[dateKey];
         const isWeekend = day.getDay() === 0 || day.getDay() === 6;
         const isScheduled = (student.days || []).includes(dayName);
 
@@ -776,7 +776,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
           <td
             key={dateKey}
             onContextMenu={(e) => onContextMenu(e, student, dateKey, isValid)}
-            className={`p-0 border-r border-b border-gray-200 text-center text-[10px] font-medium relative ${cellBaseClass} align-middle`}
+            className={`p-0 border-r border-b border-gray-200 text-center text-xxs font-medium relative ${cellBaseClass} align-middle`}
             title={memo ? `메모: ${memo}` : undefined}
           >
             {isValid ? (
@@ -809,7 +809,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
                   title={dailyExamScore ? `쪽지시험: ${dailyExamScore.score}/${dailyExamScore.maxScore} (${dailyExamScore.grade})` : undefined}
                 >
                   {dailyExamScore && (
-                    <span className={`text-[8px] font-bold ${GRADE_COLORS[dailyExamScore.grade || 'F'].text}`}>
+                    <span className={`text-nano font-bold ${GRADE_COLORS[dailyExamScore.grade || 'F'].text}`}>
                       {dailyExamScore.grade || Math.round(dailyExamScore.percentage || 0)}
                     </span>
                   )}
@@ -823,7 +823,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
                   title={otherExamScore ? `시험: ${otherExamScore.score}/${otherExamScore.maxScore} (${otherExamScore.grade})` : undefined}
                 >
                   {otherExamScore && (
-                    <span className={`text-[8px] font-bold ${GRADE_COLORS[otherExamScore.grade || 'F'].text}`}>
+                    <span className={`text-nano font-bold ${GRADE_COLORS[otherExamScore.grade || 'F'].text}`}>
                       {otherExamScore.grade || Math.round(otherExamScore.percentage || 0)}
                     </span>
                   )}
