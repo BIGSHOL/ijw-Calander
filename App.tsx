@@ -1314,20 +1314,23 @@ const App: React.FC = () => {
           {/* Right: Actions */}
           <div className="flex items-center justify-end gap-3 w-[250px]">
 
-            <button
-              onClick={() => {
-                setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
-                setSelectedEndDate(format(new Date(), 'yyyy-MM-dd'));
-                setSelectedDeptId(visibleDepartments[0]?.id || departments[0]?.id);
-                setEditingEvent(null);
-                setInitialStartTime('');
-                setInitialEndTime('');
-                setIsEventModalOpen(true);
-              }}
-              className="h-7 px-2 bg-[#fdb813] text-[#081429] rounded hover:brightness-110 flex-shrink-0 flex items-center justify-center gap-1 font-bold shadow-sm transition-all active:scale-95 text-xs whitespace-nowrap"
-            >
-              <Plus size={14} /> <span className="hidden lg:inline">일정 추가</span>
-            </button>
+            {/* 일정 추가 버튼: 일정 탭의 연간 뷰에서만 표시 */}
+            {appMode === 'calendar' && viewMode === 'yearly' && (
+              <button
+                onClick={() => {
+                  setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
+                  setSelectedEndDate(format(new Date(), 'yyyy-MM-dd'));
+                  setSelectedDeptId(visibleDepartments[0]?.id || departments[0]?.id);
+                  setEditingEvent(null);
+                  setInitialStartTime('');
+                  setInitialEndTime('');
+                  setIsEventModalOpen(true);
+                }}
+                className="h-7 px-2 bg-[#fdb813] text-[#081429] rounded hover:brightness-110 flex-shrink-0 flex items-center justify-center gap-1 font-bold shadow-sm transition-all active:scale-95 text-xs whitespace-nowrap"
+              >
+                <Plus size={14} /> <span className="hidden lg:inline">일정 추가</span>
+              </button>
+            )}
 
             {hasPermission('settings.access') && (
               <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
