@@ -46,7 +46,15 @@
       "Bash(dir:*)",
       "Bash(dir %TEMP%claude*.txt)",
       "Bash(git check-ignore:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(findstr:*)",
+      "Bash(wmic process:*)",
+      "Bash(npx firebase:*)",
+      "Bash(cd /d f:ijw-calander)",
+      "Bash(firebase:*)",
+      "Bash(timeout 10 firebase firestore:delete:*)"
     ]
   }
 }

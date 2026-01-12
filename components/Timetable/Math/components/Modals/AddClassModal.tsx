@@ -1,5 +1,6 @@
 import React from 'react';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS, MATH_PERIOD_TIMES } from '../../../constants';
+import { SUBJECT_LABELS, SubjectType } from '../../../../../utils/styleUtils';
 
 interface AddClassModalProps {
     isOpen: boolean;
@@ -36,24 +37,31 @@ const AddClassModal: React.FC<AddClassModalProps> = ({
 }) => {
     if (!isOpen) return null;
 
+    // 과목 버튼 설정 (확장 가능)
+    const subjectButtons: Array<{ value: string; label: string }> = [
+        { value: '수학', label: SUBJECT_LABELS.math },
+        { value: '영어', label: SUBJECT_LABELS.english },
+    ];
+
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 <div className="bg-[#fdb813] px-6 py-4 flex justify-between items-center">
                     <h3 className="text-lg font-bold text-[#081429]">새 수업 추가</h3>
                     <div className="flex gap-2 bg-white/20 p-1 rounded-lg">
-                        <button
-                            onClick={() => setNewSubject('수학')}
-                            className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${newSubject === '수학' ? 'bg-[#081429] text-white' : 'text-[#081429] hover:bg-white/30'}`}
-                        >
-                            수학
-                        </button>
-                        <button
-                            onClick={() => setNewSubject('영어')}
-                            className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${newSubject === '영어' ? 'bg-[#081429] text-white' : 'text-[#081429] hover:bg-white/30'}`}
-                        >
-                            영어
-                        </button>
+                        {subjectButtons.map(({ value, label }) => (
+                            <button
+                                key={value}
+                                onClick={() => setNewSubject(value)}
+                                className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${
+                                    newSubject === value
+                                        ? 'bg-[#081429] text-white'
+                                        : 'text-[#081429] hover:bg-white/30'
+                                }`}
+                            >
+                                {label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 

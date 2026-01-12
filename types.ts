@@ -10,6 +10,9 @@ export interface Department {
   defaultBorderColor?: string;
 }
 
+// Subject Type for unified structure
+export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'other';
+
 // Detailed Enrollment Information
 export interface Enrollment {
   subject: 'math' | 'english';
@@ -17,6 +20,38 @@ export interface Enrollment {
   className: string;  // Name of the class
   teacherId: string;  // Teacher Name/ID
   days: string[];     // Class schedule days (e.g., ['월', '수'])
+}
+
+// Phase 1: Unified Schedule Slot
+export interface ScheduleSlot {
+  day: string;           // 요일 (월, 화, 수, 목, 금, 토, 일)
+  periodId: string;      // 교시 ID (e.g., "1-1", "5")
+  startTime?: string;    // 시작 시간 (HH:mm)
+  endTime?: string;      // 종료 시간 (HH:mm)
+  room?: string;         // 강의실 (슬롯별로 다를 수 있음)
+  teacher?: string;      // 담당 강사 (영어는 요일별로 다를 수 있음)
+}
+
+// Phase 1: Unified Class Structure
+export interface UnifiedClass {
+  id: string;
+  className: string;
+  subject: SubjectType;
+  teacher: string;              // 주 담당 강사
+  assistants?: string[];        // 보조 강사 (영어 원어민 등)
+  room?: string;                // 기본 강의실
+  schedule: ScheduleSlot[];     // 통일된 스케줄
+  color?: string;
+  isActive: boolean;
+
+  // 레거시 호환
+  legacySchedule?: string[];    // 기존 "월 1교시" 형식
+
+  // 마이그레이션 메타데이터
+  migratedFrom?: 'math' | 'english';
+  originalDocId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Phase 1: Unified Student DB
@@ -522,6 +557,7 @@ export interface EnglishLevel {
   fullName: string;    // e.g., "Dr. Phonics"
   order: number;       // Sort order index
   color?: string;      // Optional color
+  isEiE?: boolean;     // EiE(English in English) 전용 레벨 여부
 }
 
 export interface LevelSettings {

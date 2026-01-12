@@ -5,6 +5,7 @@ import { collection, query, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import AssignClassModal from '../AssignClassModal';
 import { useStudents } from '../../../hooks/useStudents';
+import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../../utils/styleUtils';
 
 interface CoursesTabProps {
   student: UnifiedStudent;
@@ -255,14 +256,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
 
         {/* 수학 과목 카드 */}
       {mathClasses.length > 0 && (
-        <div className="bg-white rounded-lg border-2 border-blue-200 shadow-sm">
-          <div className="p-4 bg-blue-50 border-b-2 border-blue-200">
+        <div className="bg-white rounded-lg border-2 shadow-sm" style={{ borderColor: SUBJECT_COLORS.math.border }}>
+          <div className="p-4 border-b-2" style={{ backgroundColor: SUBJECT_COLORS.math.light, borderColor: SUBJECT_COLORS.math.border }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-bold text-blue-800">수학</h3>
+                <BookOpen className="w-5 h-5" style={{ color: SUBJECT_COLORS.math.bg }} />
+                <h3 className="text-lg font-bold" style={{ color: SUBJECT_COLORS.math.text }}>{SUBJECT_LABELS.math}</h3>
               </div>
-              <span className="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-300 font-semibold">
+              <span className="text-xs px-3 py-1 rounded-full font-semibold" style={{ backgroundColor: SUBJECT_COLORS.math.bg, color: SUBJECT_COLORS.math.text }}>
                 {mathClasses.length}개 수업
               </span>
             </div>
@@ -335,14 +336,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
 
       {/* 영어 과목 카드 */}
       {englishClasses.length > 0 && (
-        <div className="bg-white rounded-lg border-2 border-green-200 shadow-sm">
-          <div className="p-4 bg-green-50 border-b-2 border-green-200">
+        <div className="bg-white rounded-lg border-2 shadow-sm" style={{ borderColor: SUBJECT_COLORS.english.border }}>
+          <div className="p-4 border-b-2" style={{ backgroundColor: SUBJECT_COLORS.english.light, borderColor: SUBJECT_COLORS.english.border }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-green-600" />
-                <h3 className="text-lg font-bold text-green-800">영어</h3>
+                <BookOpen className="w-5 h-5" style={{ color: SUBJECT_COLORS.english.bg }} />
+                <h3 className="text-lg font-bold" style={{ color: SUBJECT_COLORS.english.bg }}>{SUBJECT_LABELS.english}</h3>
               </div>
-              <span className="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700 border border-green-300 font-semibold">
+              <span className="text-xs px-3 py-1 rounded-full font-semibold" style={{ backgroundColor: SUBJECT_COLORS.english.bg, color: SUBJECT_COLORS.english.text }}>
                 {englishClasses.length}개 수업
               </span>
             </div>

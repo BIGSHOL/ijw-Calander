@@ -1,63 +1,120 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, orderBy, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { SubjectType } from './useUnifiedClasses';
 
-const COL_CLASSES = '수업목록';
+const COL_CLASSES_OLD = '수업목록';
+const COL_CLASSES_NEW = 'classes';
 
 export interface ClassInfo {
     id: string;
     className: string;
     teacher: string;
-    subject: 'math' | 'english';
+    subject: SubjectType;
     schedule?: string[];
     studentCount?: number;
+    assistants?: string[];
+    room?: string;
 }
 
 /**
  * 반(수업) 목록 조회 Hook
  * @param subject 과목 필터 (선택)
  *
- * localStorage의 'useNewDataStructure' 설정에 따라:
- * - true: students/enrollments 구조에서 데이터 조회
- * - false: 수업목록 컬렉션에서 데이터 조회 (기존 방식)
+ * 데이터 소스 우선순위:
+ * 1. classes 컬렉션 (Phase 1 마이그레이션 후 통일된 구조)
+ * 2. enrollments 구조 (레거시 - useNewDataStructure=true)
+ * 3. 수업목록 컬렉션 (레거시 - useNewDataStructure=false)
  */
-export const useClasses = (subject?: 'math' | 'english') => {
+export const useClasses = (subject?: SubjectType) => {
     return useQuery<ClassInfo[]>({
         queryKey: ['classes', subject],
         queryFn: async () => {
+            // 1. 먼저 새로운 classes 컬렉션 확인
+            const unifiedClasses = await fetchClassesFromUnifiedCollection(subject);
+            if (unifiedClasses.length > 0) {
+                console.log(`[useClasses] Fetched ${unifiedClasses.length} classes from unified 'classes' collection`);
+                return unifiedClasses;
+            }
+
+            // 2. classes 컬렉션이 비어있으면 레거시 방식 사용
             const stored = localStorage.getItem('useNewDataStructure');
-            // 기본값: true (새 구조 사용)
             const useNewStructure = stored === null ? true : stored === 'true';
             if (stored === null) {
                 localStorage.setItem('useNewDataStructure', 'true');
             }
 
-            console.log(`[useClasses] subject: ${subject}, useNewStructure: ${useNewStructure}`);
+            console.log(`[useClasses] Unified collection empty, falling back. subject: ${subject}, useNewStructure: ${useNewStructure}`);
 
             if (useNewStructure) {
-                // 새로운 구조: enrollments에서 데이터 조회
                 const classes = await fetchClassesFromEnrollments(subject);
-                console.log(`[useClasses] Fetched ${classes.length} classes from enrollments for subject: ${subject}`);
+                console.log(`[useClasses] Fetched ${classes.length} classes from enrollments`);
                 return classes;
             } else {
-                // 기존 구조: 수업목록에서 데이터 조회
                 const classes = await fetchClassesFromOldStructure(subject);
-                console.log(`[useClasses] Fetched ${classes.length} classes from old structure for subject: ${subject}`);
+                console.log(`[useClasses] Fetched ${classes.length} classes from old structure`);
                 return classes;
             }
         },
-        staleTime: 1000 * 60 * 10,   // 10분 캐싱 (자주 변경되지 않는 데이터)
-        gcTime: 1000 * 60 * 30,      // 30분 GC
-        refetchOnMount: false,       // 캐시된 데이터 우선 사용 (성능 최적화)
+        staleTime: 1000 * 60 * 10,
+        gcTime: 1000 * 60 * 30,
+        refetchOnMount: false,
     });
 };
 
 /**
+ * 통일된 classes 컬렉션에서 조회 (Phase 1 마이그레이션 후)
+ */
+async function fetchClassesFromUnifiedCollection(subject?: SubjectType): Promise<ClassInfo[]> {
+    let q;
+
+    if (subject) {
+        q = query(
+            collection(db, COL_CLASSES_NEW),
+            where('subject', '==', subject),
+            where('isActive', '==', true)
+        );
+    } else {
+        q = query(
+            collection(db, COL_CLASSES_NEW),
+            where('isActive', '==', true)
+        );
+    }
+
+    const snapshot = await getDocs(q);
+
+    const classes: ClassInfo[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+
+        // schedule을 레거시 문자열 형식으로 변환
+        const scheduleStrings = data.schedule?.map((slot: any) =>
+            `${slot.day} ${slot.periodId}`
+        ) || data.legacySchedule || [];
+
+        return {
+            id: doc.id,
+            className: data.className || '',
+            teacher: data.teacher || '',
+            subject: data.subject || 'math',
+            schedule: scheduleStrings,
+            studentCount: data.studentIds?.length || 0,
+            assistants: data.assistants,
+            room: data.room,
+        };
+    });
+
+    // className 기준 정렬
+    classes.sort((a, b) => a.className.localeCompare(b.className, 'ko'));
+
+    return classes;
+}
+
+/**
  * 기존 구조에서 클래스 조회 (수업목록 컬렉션)
  */
-async function fetchClassesFromOldStructure(subject?: 'math' | 'english'): Promise<ClassInfo[]> {
+async function fetchClassesFromOldStructure(subject?: SubjectType): Promise<ClassInfo[]> {
     const q = query(
-        collection(db, COL_CLASSES),
+        collection(db, COL_CLASSES_OLD),
         orderBy('className')
     );
 
@@ -88,7 +145,7 @@ async function fetchClassesFromOldStructure(subject?: 'math' | 'english'): Promi
 /**
  * 새로운 구조에서 클래스 조회 (students/enrollments)
  */
-async function fetchClassesFromEnrollments(subject?: 'math' | 'english'): Promise<ClassInfo[]> {
+async function fetchClassesFromEnrollments(subject?: SubjectType): Promise<ClassInfo[]> {
     // collectionGroup으로 enrollments 조회 (subject 필터링 적용)
     let enrollmentsQuery;
     if (subject) {

@@ -1,8 +1,8 @@
 # 🤖 Claude Code 에이전트 시스템
 
 > **프로젝트**: ijw-calander (학원 관리 시스템)
-> **업데이트**: 2026-01-11
-> **에이전트 수**: 18개
+> **업데이트**: 2026-01-09
+> **에이전트 수**: 17개
 
 ---
 
@@ -30,7 +30,7 @@
 
 ## 🎯 에이전트 목록
 
-### 코드 품질 관리 (4개)
+### 코드 품질 관리 (5개)
 
 #### 1. [code-reviewer](code-reviewer.md)
 **역할**: 코드 품질 검토 및 개선점 제안
@@ -53,21 +53,28 @@
 **키워드**: "보안", "취약점", "XSS", "인증", "개인정보"
 **협업**: code-reviewer → **security-auditor** → code-fixer
 
+#### 5. 🆕 [design-system-guardian](design-system-guardian.md)
+**역할**: UI 디자인 일관성 검사, 브랜드 색상 준수 확인
+**트리거**: `trigger_after_component_creation: true`
+**키워드**: "디자인", "UI 검사", "스타일", "색상", "일관성"
+**브랜드 색상**: 곤색(#081429), 노란색(#fdb813), 회색(#373d41)
+**협업**: code-reviewer → **design-system-guardian** → code-fixer
+
 ---
 
 ### 도메인 전문가 (3개)
 
-#### 5. [academy-domain-expert](academy-domain-expert.md)
+#### 6. [academy-domain-expert](academy-domain-expert.md)
 **역할**: 학원 관리 시스템 도메인 로직 설계
 **트리거**: `trigger_on_phrases` + `trigger_on_domain_features: true`
 **키워드**: "학원", "원생", "출석", "수강", "강좌"
 
-#### 6. [cloud-function-architect](cloud-function-architect.md)
+#### 7. [cloud-function-architect](cloud-function-architect.md)
 **역할**: Firebase Cloud Functions 아키텍처 설계
 **트리거**: `trigger_on_phrases`
 **키워드**: "Cloud Function", "클라우드 펑션", "서버리스", "트리거"
 
-#### 7. 🆕 [notification-designer](notification-designer.md)
+#### 8. 🆕 [notification-designer](notification-designer.md)
 **역할**: 알림 시스템 설계, 푸시/SMS/카카오 연동
 **트리거**: `trigger_on_domain_features: true`
 **키워드**: "알림", "푸시", "SMS", "카카오", "알림톡"
@@ -77,13 +84,13 @@
 
 ### 문제 해결 (2개)
 
-#### 8. [bug-hunter](bug-hunter.md)
+#### 9. [bug-hunter](bug-hunter.md)
 **역할**: 버그 추적 및 디버깅
 **트리거**: `trigger_on_phrases`
 **키워드**: "버그", "에러", "오류", "bug", "error", "문제 발생"
 **협업**: **bug-hunter** → code-fixer → test-writer
 
-#### 9. [refactor-expert](refactor-expert.md)
+#### 10. [refactor-expert](refactor-expert.md)
 **역할**: 코드 리팩토링 및 최적화
 **트리거**: `trigger_on_phrases` + `trigger_on_complexity_threshold: true`
 **키워드**: "리팩토링", "코드 개선", "최적화", "구조 개선"
@@ -93,24 +100,24 @@
 
 ### 문서화 및 분석 (4개)
 
-#### 10. [doc-writer](doc-writer.md)
+#### 11. [doc-writer](doc-writer.md)
 **역할**: 기술 문서 및 API 문서 작성
 **트리거**: `trigger_on_phrases` + `trigger_on_new_features: true`
 **키워드**: "문서 작성", "README", "API 문서", "가이드"
 **협업**: **doc-writer** → report-analyst
 
-#### 11. [report-analyst](report-analyst.md)
+#### 12. [report-analyst](report-analyst.md)
 **역할**: 마크다운 보고서 분석 및 개선
 **트리거**: `trigger_on_file_extension: [".md"]` + `trigger_on_phrases`
 **키워드**: "보고서 검토", "문서 검토", "리포트 분석"
 
-#### 12. 🆕 [analytics-expert](analytics-expert.md)
+#### 13. 🆕 [analytics-expert](analytics-expert.md)
 **역할**: 운영 데이터 분석, 리포트 생성, 시각화
 **트리거**: `trigger_on_domain_features: true`
 **키워드**: "통계", "분석", "리포트", "대시보드", "KPI"
 **협업**: **analytics-expert** → doc-writer → notification-designer
 
-#### 13. 🆕 [report-summarizer](report-summarizer.md)
+#### 14. 🆕 [report-summarizer](report-summarizer.md)
 **역할**: 긴 리포트를 핵심만 빠르게 요약, 의사결정 지원
 **트리거**: `trigger_after_report_generation: true`
 **키워드**: "요약", "핵심만", "간단히", "브리핑", "정리해줘", "한줄로"
@@ -118,48 +125,32 @@
 
 ---
 
-### 테스트 (2개)
+### 테스트 (1개)
 
-#### 14. [test-writer](test-writer.md)
+#### 15. [test-writer](test-writer.md)
 **역할**: 단위/통합/E2E 테스트 작성
 **트리거**: `trigger_on_phrases` + `trigger_after_refactoring: true` + `trigger_after_bug_fix: true`
 **키워드**: "테스트 작성", "테스트 추가", "test", "커버리지"
 
-#### 15. 🆕 [tdd-expert](tdd-expert.md)
-**역할**: TDD 사이클 관리 (RED → GREEN → REFACTOR)
-**트리거**: `trigger_on_phrases`
-**키워드**: "TDD", "테스트 먼저", "테스트 주도", "RED GREEN"
-**협업**: **tdd-expert** → test-writer → code-fixer → code-reviewer
+---
+
+### 🎖️ 시스템 관리 (2개)
+
+#### 16. 🆕 [agent-orchestrator](agent-orchestrator.md)
+**역할**: 에이전트 시스템 총괄 관리 (추가/삭제/수정 시 문서 자동 업데이트)
+**트리거**: `priority: highest`
+**키워드**: "에이전트 추가", "에이전트 삭제", "에이전트 현황", "시스템 관리"
+**특징**: 에이전트 변경 시 README, WORKFLOW, ROLE-CLARIFICATION, UPDATE-GUIDE 자동 업데이트
+
+#### 17. 🆕 [token-optimizer](token-optimizer.md)
+**역할**: 토큰 사용량 최소화, 모든 에이전트의 효율화 가이드라인
+**트리거**: `priority: reference`
+**키워드**: "토큰", "비용", "효율", "간단히", "짧게"
+**특징**: Grep 우선 읽기, 간결한 응답, 필요한 체인만 실행
 
 ---
 
-### 디자인/성능 (2개)
-
-#### 16. 🆕 [design-system-guardian](design-system-guardian.md)
-**역할**: UI/UX 일관성 점검, 디자인 시스템 관리
-**트리거**: `trigger_on_phrases`
-**키워드**: "디자인 점검", "UI 일관성", "타이포그래피", "색상 점검"
-**협업**: **design-system-guardian** → refactor-expert → code-fixer
-
-#### 17. 🆕 [performance-optimizer](performance-optimizer.md)
-**역할**: 성능 분석 및 최적화 (번들, 렌더링, 메모리)
-**트리거**: `trigger_on_phrases`
-**키워드**: "성능 분석", "성능 최적화", "느림", "번들 크기", "Lighthouse"
-**협업**: **performance-optimizer** → firebase-cost-optimizer → refactor-expert
-
----
-
-### 마이그레이션 (1개)
-
-#### 18. 🆕 [migration-helper](migration-helper.md)
-**역할**: 데이터/스키마 마이그레이션, 하위 호환성 관리
-**트리거**: `trigger_on_phrases`
-**키워드**: "마이그레이션", "데이터 이전", "스키마 변경", "구조 통일"
-**협업**: academy-domain-expert → **migration-helper** → test-writer
-
----
-
-## 🔄 핵심 워크플로우 (11가지)
+## 🔄 핵심 워크플로우 (8가지)
 
 ### 1️⃣ 코드 품질 관리 (가장 자주 사용)
 
@@ -295,57 +286,6 @@ analytics-expert → doc-writer → notification-designer
 
 ---
 
-### 9️⃣ 🆕 TDD 개발
-
-```
-tdd-expert → test-writer → code-fixer → code-reviewer
-```
-
-**사용 예**:
-```
-사용자: "권한 시스템 TDD로 개발해줘"
-→ tdd-expert 실행 (테스트 시나리오 설계)
-→ test-writer 실행 (🔴 실패 테스트 작성)
-→ code-fixer 실행 (🟢 최소 구현)
-→ refactor-expert 실행 (🔵 리팩토링)
-→ 반복
-```
-
----
-
-### 🔟 🆕 디자인 시스템 점검
-
-```
-design-system-guardian → refactor-expert → code-fixer
-```
-
-**사용 예**:
-```
-사용자: "전체 UI 일관성 점검해줘"
-→ design-system-guardian 실행 (타이포그래피/색상 분석)
-→ refactor-expert 실행 (표준화 작업)
-→ code-fixer 실행 (수정 적용)
-```
-
----
-
-### 1️⃣1️⃣ 🆕 데이터 마이그레이션
-
-```
-academy-domain-expert → migration-helper → test-writer → code-reviewer
-```
-
-**사용 예**:
-```
-사용자: "수학/영어 시간표 데이터 구조 통일해줘"
-→ academy-domain-expert 실행 (도메인 분석)
-→ migration-helper 실행 (마이그레이션 계획 및 스크립트)
-→ test-writer 실행 (검증 테스트)
-→ code-reviewer 실행 (최종 검토)
-```
-
----
-
 ## 🚀 빠른 시작
 
 ### Step 1: 상황 파악
@@ -355,14 +295,12 @@ academy-domain-expert → migration-helper → test-writer → code-reviewer
 - 기능 설계? → `academy-domain-expert`
 - 리팩토링? → `refactor-expert`
 - 문서 작성? → `doc-writer`
-- 보안 검사? → `security-auditor`
-- 알림 설계? → `notification-designer`
-- 데이터 분석? → `analytics-expert`
-- 리포트 요약? → `report-summarizer`
-- 🆕 TDD 개발? → `tdd-expert`
-- 🆕 UI 일관성? → `design-system-guardian`
-- 🆕 성능 최적화? → `performance-optimizer`
-- 🆕 데이터 마이그레이션? → `migration-helper`
+- 🆕 보안 검사? → `security-auditor`
+- 🆕 알림 설계? → `notification-designer`
+- 🆕 데이터 분석? → `analytics-expert`
+- 🆕 리포트 요약? → `report-summarizer`
+- 🆕 디자인 일관성? → `design-system-guardian`
+- 🆕 에이전트 관리? → `agent-orchestrator`
 
 ### Step 2: 워크플로우 확인
 [WORKFLOW.md](WORKFLOW.md)에서 해당 워크플로우 찾기
@@ -389,11 +327,10 @@ academy-domain-expert → migration-helper → test-writer → code-reviewer
 | 🆕 보안 걱정 | "보안 검사해줘" | security-auditor |
 | 🆕 알림 기능 | "알림 설계해줘" | notification-designer |
 | 🆕 데이터 분석 | "통계 분석해줘" | analytics-expert |
-| 리포트 요약 | "요약해줘" / "핵심만" | report-summarizer |
-| 🆕 TDD 개발 | "TDD로 개발해줘" | tdd-expert |
-| 🆕 UI 점검 | "디자인 점검해줘" | design-system-guardian |
-| 🆕 성능 분석 | "성능 분석해줘" | performance-optimizer |
-| 🆕 데이터 이전 | "마이그레이션해줘" | migration-helper |
+| 🆕 리포트 요약 | "요약해줘" / "핵심만" | report-summarizer |
+| 🆕 UI 일관성 | "디자인 검사해줘" | design-system-guardian |
+| 🆕 에이전트 관리 | "에이전트 추가/삭제/현황" | agent-orchestrator |
+| 🆕 토큰 절약 | "간단히" / "짧게" | token-optimizer (참조) |
 
 ---
 
@@ -484,18 +421,14 @@ academy-domain-expert → migration-helper → test-writer → code-reviewer
 
 ## 📝 변경 이력
 
-### v1.5 (2026-01-11) - 현재
-- ✅ **tdd-expert** 추가 (TDD 워크플로우)
-- ✅ **design-system-guardian** 추가 (UI/UX 일관성)
-- ✅ **performance-optimizer** 추가 (성능 최적화)
-- ✅ **migration-helper** 추가 (데이터 마이그레이션)
-- ✅ 에이전트 18개로 확장
-- ✅ 워크플로우 11개로 확장
-
-### v1.4 (2026-01-09)
+### v1.4 (2026-01-09) - 현재
 - ✅ **report-summarizer** 추가 (리포트 요약)
-- ✅ 에이전트 14개로 확장
+- ✅ **design-system-guardian** 추가 (디자인 일관성)
+- ✅ **agent-orchestrator** 추가 (시스템 총괄 관리)
+- ✅ **token-optimizer** 추가 (토큰 효율화)
+- ✅ 에이전트 17개로 확장
 - ✅ 기존 에이전트에 report-summarizer 협업 연계 추가
+- ✅ 학원 브랜드 색상 시스템 정의 (곤색/노란색/회색)
 
 ### v1.3 (2026-01-09)
 - ✅ **security-auditor** 추가 (보안 검사)
@@ -569,4 +502,4 @@ academy-domain-expert → migration-helper → test-writer → code-reviewer
 
 **관리자**: ijw-calander 개발팀
 **문서 작성**: Claude
-**최종 업데이트**: 2026-01-11
+**최종 업데이트**: 2026-01-09

@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, where, collectionGroup } from 'firebase/firestore';
+import { collection, getDocs, query, where, collectionGroup, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { UnifiedStudent } from '../types';
+
+const COL_CLASSES = 'classes';
 
 export interface ClassStudent {
   id: string;
@@ -18,6 +20,8 @@ export interface ClassDetail {
   schedule: string[];
   studentCount: number;
   students: ClassStudent[];
+  room?: string;
+  slotTeachers?: Record<string, string>;  // { "월-4": "부담임명", ... }
 }
 
 /**
@@ -28,9 +32,9 @@ export interface ClassDetail {
  * @returns 수업 상세 정보 + 학생 목록
  *
  * 로직:
- * 1. students 컬렉션 전체 조회
- * 2. 각 학생의 enrollments 서브컬렉션에서 해당 className + subject와 일치하는 것만 필터
- * 3. 학생 정보 + enrollment 정보 조합
+ * 1. classes 컬렉션에서 수업 정보 (teacher, schedule) 조회
+ * 2. enrollments에서 학생 ID 수집
+ * 3. students 컬렉션에서 학생 정보 조회
  */
 export const useClassDetail = (className: string, subject: 'math' | 'english') => {
   return useQuery<ClassDetail>({
@@ -38,33 +42,67 @@ export const useClassDetail = (className: string, subject: 'math' | 'english') =
     queryFn: async () => {
       console.log(`[useClassDetail] Fetching details for class: ${className}, subject: ${subject}`);
 
-      // collectionGroup으로 모든 enrollments 조회 (subject + className 필터)
-      const enrollmentsQuery = query(
-        collectionGroup(db, 'enrollments'),
-        where('subject', '==', subject),
-        where('className', '==', className)
-      );
-
-      const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-
-      // 학생 ID 수집
-      const studentIds = new Set<string>();
       let teacher = '';
       let schedule: string[] = [];
+      let room = '';
+      let slotTeachers: Record<string, string> = {};
 
-      enrollmentsSnapshot.docs.forEach(doc => {
-        const studentId = doc.ref.parent.parent?.id;
-        if (studentId) {
-          studentIds.add(studentId);
-        }
+      // 1. classes 컬렉션에서 수업 정보 조회 (우선)
+      try {
+        const classesQuery = query(
+          collection(db, COL_CLASSES),
+          where('subject', '==', subject),
+          where('className', '==', className)
+        );
+        const classesSnapshot = await getDocs(classesQuery);
 
-        // enrollment 데이터에서 teacher, schedule 가져오기 (첫 번째 것 사용)
-        if (!teacher) {
-          const data = doc.data();
-          teacher = data.teacherId || data.teacher || '';
-          schedule = data.schedule || [];
+        if (classesSnapshot.docs.length > 0) {
+          const classDoc = classesSnapshot.docs[0].data();
+          teacher = classDoc.teacher || '';
+          room = classDoc.room || '';
+          slotTeachers = classDoc.slotTeachers || {};
+          // schedule이 ScheduleSlot[] 형식이면 문자열로 변환
+          if (classDoc.schedule && Array.isArray(classDoc.schedule)) {
+            if (typeof classDoc.schedule[0] === 'object') {
+              schedule = classDoc.schedule.map((slot: any) => `${slot.day} ${slot.periodId}`);
+            } else {
+              schedule = classDoc.legacySchedule || classDoc.schedule || [];
+            }
+          }
+          console.log(`[useClassDetail] Found class info from classes collection: teacher=${teacher}, room=${room}, schedule=${JSON.stringify(schedule)}`);
         }
-      });
+      } catch (err) {
+        console.warn('[useClassDetail] Error fetching from classes collection:', err);
+      }
+
+      // 2. enrollments에서 학생 ID 수집
+      const studentIds = new Set<string>();
+
+      try {
+        const enrollmentsQuery = query(
+          collectionGroup(db, 'enrollments'),
+          where('subject', '==', subject),
+          where('className', '==', className)
+        );
+
+        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+
+        enrollmentsSnapshot.docs.forEach(doc => {
+          const studentId = doc.ref.parent.parent?.id;
+          if (studentId) {
+            studentIds.add(studentId);
+          }
+
+          // classes에서 못 가져왔으면 enrollment에서 fallback
+          if (!teacher) {
+            const data = doc.data();
+            teacher = data.teacherId || data.teacher || '';
+            schedule = data.schedule || [];
+          }
+        });
+      } catch (err) {
+        console.warn('[useClassDetail] Error fetching from enrollments:', err);
+      }
 
       console.log(`[useClassDetail] Found ${studentIds.size} students in class ${className}`);
 
@@ -99,6 +137,8 @@ export const useClassDetail = (className: string, subject: 'math' | 'english') =
         schedule,
         studentCount: students.length,
         students,
+        room,
+        slotTeachers,
       };
     },
     enabled: !!className && !!subject, // className과 subject가 있을 때만 실행

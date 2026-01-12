@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, RefreshCw, CheckCircle2, AlertCircle, ArrowRight, Wrench } from 'lucide-react';
+import { Database, RefreshCw, CheckCircle2, AlertCircle, ArrowRight, Wrench, Layers, Play, Eye } from 'lucide-react';
 import { db } from '../../firebaseConfig';
 import {
   collection,
@@ -57,6 +57,18 @@ const MigrationTab: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
   const [resetLogs, setResetLogs] = useState<string[]>([]);
 
+  // Phase 1: 통일된 classes 컬렉션 마이그레이션 상태
+  const [isPhase1Running, setIsPhase1Running] = useState(false);
+  const [phase1Logs, setPhase1Logs] = useState<string[]>([]);
+  const [phase1Stats, setPhase1Stats] = useState<{
+    totalMath: number;
+    totalEnglish: number;
+    migratedMath: number;
+    migratedEnglish: number;
+    skipped: number;
+    errors: string[];
+  } | null>(null);
+
   const addLog = (message: string) => {
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
   };
@@ -71,6 +83,10 @@ const MigrationTab: React.FC = () => {
 
   const addResetLog = (message: string) => {
     setResetLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
+  };
+
+  const addPhase1Log = (message: string) => {
+    setPhase1Logs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
   };
 
   // 탭 권한 업데이트: 새로운 탭(classes, student-consultations)을 권한에 추가
@@ -258,6 +274,286 @@ const MigrationTab: React.FC = () => {
       addResetLog(`❌ 치명적 오류: ${error.message}`);
     } finally {
       setIsResetting(false);
+    }
+  };
+
+  // Phase 1: 통일된 classes 컬렉션 마이그레이션
+  const handlePhase1Migration = async (dryRun: boolean) => {
+    const action = dryRun ? '테스트 실행 (Dry Run)' : '실제 마이그레이션';
+
+    if (!dryRun && !window.confirm(
+      `⚠️ 통일된 classes 컬렉션 마이그레이션\n\n` +
+      `이 작업은:\n` +
+      `- 새로운 'classes' 컬렉션을 생성합니다\n` +
+      `- 수학/영어 수업을 통일된 구조로 마이그레이션합니다\n` +
+      `- 기존 데이터(수업목록, english_schedules)는 보존됩니다\n\n` +
+      `계속하시겠습니까?`
+    )) {
+      return;
+    }
+
+    setIsPhase1Running(true);
+    setPhase1Logs([]);
+    setPhase1Stats(null);
+
+    try {
+      addPhase1Log(`🚀 Phase 1 ${action} 시작...`);
+
+      // 기존 classes 컬렉션 확인
+      const existingSnapshot = await getDocs(collection(db, 'classes'));
+      const existingClassIds = new Set(existingSnapshot.docs.map(d => d.id));
+      addPhase1Log(`📋 기존 classes 컬렉션: ${existingClassIds.size}개 문서`);
+
+      // 수업목록 컬렉션 로드
+      const classesSnapshot = await getDocs(collection(db, '수업목록'));
+      addPhase1Log(`📚 수업목록 컬렉션: ${classesSnapshot.docs.length}개 문서`);
+
+      // 영어 스케줄 컬렉션 로드
+      const englishSnapshot = await getDocs(collection(db, 'english_schedules'));
+      addPhase1Log(`📗 english_schedules 컬렉션: ${englishSnapshot.docs.length}개 문서`);
+
+      let mathMigrated = 0;
+      let englishMigrated = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      // 1. 수학 수업 마이그레이션
+      addPhase1Log('\n📘 수학 수업 마이그레이션...');
+      const mathClasses = classesSnapshot.docs.filter(doc => {
+        const className = doc.data().className || doc.id;
+        return !doc.id.startsWith('영어_') && inferSubjectFromClassName(className) === 'math';
+      });
+
+      for (const docSnap of mathClasses) {
+        const data = docSnap.data();
+        const className = data.className || docSnap.id;
+        const newDocId = `math_${className}`;
+
+        if (existingClassIds.has(newDocId)) {
+          skipped++;
+          continue;
+        }
+
+        // 스케줄 변환 (periodId 통일: "1-1" -> "1")
+        const scheduleSlots: any[] = [];
+        if (data.schedule && Array.isArray(data.schedule)) {
+          data.schedule.forEach((s: string) => {
+            const parts = s.trim().split(' ');
+            if (parts.length >= 2 && ['월', '화', '수', '목', '금', '토', '일'].includes(parts[0])) {
+              const legacyPeriodId = parts.slice(1).join(' ');
+              scheduleSlots.push({
+                day: parts[0],
+                periodId: convertMathPeriodId(legacyPeriodId),
+                room: data.room,
+                teacher: data.teacher,
+              });
+            }
+          });
+        }
+
+        const now = new Date().toISOString();
+        const unifiedClass: Record<string, any> = {
+          className,
+          subject: 'math',
+          teacher: data.teacher || '',
+          schedule: scheduleSlots,
+          isActive: true,
+          migratedFrom: 'math',
+          originalDocId: docSnap.id,
+          createdAt: now,
+          updatedAt: now,
+        };
+        // Optional fields (Firebase doesn't allow undefined)
+        if (data.room) unifiedClass.room = data.room;
+        if (data.color) unifiedClass.color = data.color;
+        if (data.schedule) unifiedClass.legacySchedule = data.schedule;
+
+        if (!dryRun) {
+          await setDoc(doc(db, 'classes', newDocId), unifiedClass);
+        }
+
+        existingClassIds.add(newDocId);
+        mathMigrated++;
+
+        if (mathMigrated <= 3) {
+          addPhase1Log(`   [${className}] teacher: ${data.teacher}, slots: ${scheduleSlots.length}개`);
+        }
+      }
+      addPhase1Log(`✅ 수학 완료: ${mathMigrated}개 마이그레이션`);
+
+      // 2. 영어 수업 마이그레이션 (english_schedules에서)
+      addPhase1Log('\n📗 영어 수업 마이그레이션...');
+
+      // 클래스별 데이터 수집
+      const classDataMap = new Map<string, {
+        teachers: Set<string>;
+        scheduleSlots: any[];
+        room?: string;
+        teacherCounts: Record<string, number>;
+      }>();
+
+      englishSnapshot.forEach(docSnap => {
+        const teacherName = docSnap.id;
+        const data = docSnap.data();
+
+        Object.entries(data).forEach(([fieldKey, cellData]: [string, any]) => {
+          if (!cellData || typeof cellData !== 'object') return;
+
+          const className = cellData.className;
+          if (!className) return;
+          if (className.toUpperCase().includes('LAB')) return;
+
+          const keyParts = fieldKey.split('-');
+          if (keyParts.length !== 3) return;
+
+          const [, periodId, day] = keyParts;
+          if (!['월', '화', '수', '목', '금', '토', '일'].includes(day)) return;
+
+          if (!classDataMap.has(className)) {
+            classDataMap.set(className, {
+              teachers: new Set(),
+              scheduleSlots: [],
+              teacherCounts: {},
+            });
+          }
+
+          const classInfo = classDataMap.get(className)!;
+          classInfo.teachers.add(teacherName);
+          classInfo.room = classInfo.room || cellData.room;
+          classInfo.teacherCounts[teacherName] = (classInfo.teacherCounts[teacherName] || 0) + 1;
+
+          classInfo.scheduleSlots.push({
+            day,
+            periodId,
+            teacher: teacherName,
+            room: cellData.room,
+          });
+        });
+      });
+
+      addPhase1Log(`   📊 ${classDataMap.size}개 영어 클래스 발견`);
+
+      for (const [className, classInfo] of classDataMap) {
+        const newDocId = `english_${className}`;
+
+        if (existingClassIds.has(newDocId)) {
+          skipped++;
+          continue;
+        }
+
+        // 담임 결정 (가장 많이 가르치는 강사)
+        const teacherEntries = Object.entries(classInfo.teacherCounts);
+        teacherEntries.sort((a, b) => b[1] - a[1]);
+        const homeroomTeacher = teacherEntries[0]?.[0] || '';
+        const assistants = Array.from(classInfo.teachers).filter(t => t !== homeroomTeacher);
+
+        // 중복 슬롯 제거
+        const uniqueSlots: any[] = [];
+        const slotKeys = new Set<string>();
+        classInfo.scheduleSlots.forEach(slot => {
+          const key = `${slot.day}-${slot.periodId}-${slot.teacher}`;
+          if (!slotKeys.has(key)) {
+            slotKeys.add(key);
+            uniqueSlots.push(slot);
+          }
+        });
+
+        const now = new Date().toISOString();
+        const unifiedClass: Record<string, any> = {
+          className,
+          subject: 'english',
+          teacher: homeroomTeacher,
+          schedule: uniqueSlots,
+          isActive: true,
+          migratedFrom: 'english',
+          originalDocId: 'english_schedules_aggregated',
+          createdAt: now,
+          updatedAt: now,
+        };
+        // Optional fields (Firebase doesn't allow undefined)
+        if (assistants.length > 0) unifiedClass.assistants = assistants;
+        if (classInfo.room) unifiedClass.room = classInfo.room;
+
+        if (!dryRun) {
+          await setDoc(doc(db, 'classes', newDocId), unifiedClass);
+        }
+
+        existingClassIds.add(newDocId);
+        englishMigrated++;
+
+        if (englishMigrated <= 3) {
+          addPhase1Log(`   [${className}] teacher: ${homeroomTeacher}, assistants: ${assistants.length}명, slots: ${uniqueSlots.length}개`);
+        }
+      }
+      addPhase1Log(`✅ 영어 완료: ${englishMigrated}개 마이그레이션`);
+
+      // 결과 저장
+      setPhase1Stats({
+        totalMath: mathClasses.length,
+        totalEnglish: classDataMap.size,
+        migratedMath: mathMigrated,
+        migratedEnglish: englishMigrated,
+        skipped,
+        errors,
+      });
+
+      addPhase1Log('\n' + '='.repeat(50));
+      addPhase1Log(`📊 결과: 수학 ${mathMigrated}개, 영어 ${englishMigrated}개 마이그레이션`);
+      addPhase1Log(`   스킵(중복): ${skipped}개`);
+
+      if (dryRun) {
+        addPhase1Log('\n💡 실제 마이그레이션을 실행하려면 "마이그레이션 실행" 버튼을 클릭하세요.');
+      } else {
+        addPhase1Log('\n✅ 마이그레이션 완료! classes 컬렉션이 생성되었습니다.');
+        queryClient.invalidateQueries({ queryKey: ['unified-classes'] });
+        queryClient.invalidateQueries({ queryKey: ['class-stats'] });
+      }
+
+    } catch (error: any) {
+      addPhase1Log(`❌ 오류: ${error.message}`);
+    } finally {
+      setIsPhase1Running(false);
+    }
+  };
+
+  // 수학 periodId 변환: "1-1" -> "1", "1-2" -> "2", ... "4-2" -> "8"
+  const convertMathPeriodId = (legacyPeriodId: string): string => {
+    const mapping: Record<string, string> = {
+      '1-1': '1',
+      '1-2': '2',
+      '2-1': '3',
+      '2-2': '4',
+      '3-1': '5',
+      '3-2': '6',
+      '4-1': '7',
+      '4-2': '8',
+    };
+    return mapping[legacyPeriodId] || legacyPeriodId;
+  };
+
+  // 수업목록에서 color 필드가 있는 문서 찾기 (디버그용)
+  const handleFindColorFields = async () => {
+    addPhase1Log('\n🔍 수업목록에서 color 필드가 있는 문서 검색...');
+
+    try {
+      const snapshot = await getDocs(collection(db, '수업목록'));
+      let found = 0;
+
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.color) {
+          found++;
+          addPhase1Log(`   ✅ [${docSnap.id}] color: ${data.color}`);
+        }
+      });
+
+      if (found === 0) {
+        addPhase1Log('   ℹ️ color 필드가 있는 문서가 없습니다.');
+      } else {
+        addPhase1Log(`\n📊 총 ${found}개 문서에 color 필드가 있습니다.`);
+      }
+    } catch (error: any) {
+      addPhase1Log(`❌ 오류: ${error.message}`);
     }
   };
 
@@ -616,9 +912,142 @@ const MigrationTab: React.FC = () => {
         </div>
       </div>
 
-      {/* 마이그레이션 버튼 */}
+      {/* Phase 1: 통일된 classes 컬렉션 마이그레이션 */}
+      <div className="bg-white rounded-lg border-2 border-indigo-200 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Layers className="w-6 h-6 text-indigo-600" />
+          <h3 className="text-lg font-bold text-gray-800">Phase 1: 통일된 classes 컬렉션 마이그레이션</h3>
+          <span className="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-1 rounded">NEW</span>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-indigo-800">
+                <p className="font-semibold mb-2">이 마이그레이션의 목표:</p>
+                <ul className="list-disc list-inside space-y-1 text-indigo-700">
+                  <li>수학/영어 수업을 <strong>통일된 구조</strong>의 <code>classes</code> 컬렉션으로 마이그레이션</li>
+                  <li>향후 다른 과목(과학, 국어 등) 추가 시 동일한 구조 사용</li>
+                  <li><strong>기존 데이터(수업목록, english_schedules)는 보존</strong>됩니다</li>
+                </ul>
+                <p className="mt-3 font-semibold">통일된 구조 (ScheduleSlot 기반):</p>
+                <code className="block bg-indigo-100 text-indigo-900 p-2 rounded mt-1 text-xs overflow-x-auto">
+                  {'{ className, subject, teacher, schedule: [{ day, periodId, room, teacher }], ... }'}
+                </code>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <button
+              onClick={() => handlePhase1Migration(true)}
+              disabled={isPhase1Running}
+              className={`py-3 rounded-lg font-bold text-white flex items-center justify-center gap-2 transition-colors ${
+                isPhase1Running
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-indigo-500 hover:bg-indigo-600'
+              }`}
+            >
+              {isPhase1Running ? (
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  실행 중...
+                </>
+              ) : (
+                <>
+                  <Eye className="w-5 h-5" />
+                  Dry Run (테스트)
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={() => handlePhase1Migration(false)}
+              disabled={isPhase1Running}
+              className={`py-3 rounded-lg font-bold text-white flex items-center justify-center gap-2 transition-colors ${
+                isPhase1Running
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
+            >
+              {isPhase1Running ? (
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  실행 중...
+                </>
+              ) : (
+                <>
+                  <Play className="w-5 h-5" />
+                  마이그레이션 실행
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleFindColorFields}
+              className="py-3 rounded-lg font-bold text-gray-700 bg-gray-200 hover:bg-gray-300 flex items-center justify-center gap-2 transition-colors"
+            >
+              🔍 Color 필드 검색
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Phase 1 로그 */}
+      {phase1Logs.length > 0 && (
+        <div className="bg-gray-900 rounded-lg p-4">
+          <h3 className="text-sm font-bold text-gray-300 mb-3">Phase 1 마이그레이션 로그</h3>
+          <div className="space-y-1 max-h-96 overflow-y-auto font-mono text-xs">
+            {phase1Logs.map((log, index) => (
+              <div key={index} className="text-gray-300 whitespace-pre-wrap">
+                {log}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Phase 1 결과 */}
+      {phase1Stats && (
+        <div className="bg-white rounded-lg border-2 border-indigo-200 p-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Phase 1 마이그레이션 결과</h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-blue-600">{phase1Stats.migratedMath}</div>
+              <div className="text-sm text-gray-600">수학 마이그레이션</div>
+              <div className="text-xs text-gray-500">/ {phase1Stats.totalMath}개</div>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-purple-600">{phase1Stats.migratedEnglish}</div>
+              <div className="text-sm text-gray-600">영어 마이그레이션</div>
+              <div className="text-xs text-gray-500">/ {phase1Stats.totalEnglish}개</div>
+            </div>
+            <div className="bg-green-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-green-600">{phase1Stats.migratedMath + phase1Stats.migratedEnglish}</div>
+              <div className="text-sm text-gray-600">총 마이그레이션</div>
+            </div>
+            <div className="bg-yellow-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-yellow-600">{phase1Stats.skipped}</div>
+              <div className="text-sm text-gray-600">스킵 (중복)</div>
+            </div>
+            <div className="bg-red-50 rounded-lg p-4">
+              <div className="text-2xl font-bold text-red-600">{phase1Stats.errors.length}</div>
+              <div className="text-sm text-gray-600">에러</div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-green-50 rounded border border-green-200">
+            <p className="text-sm font-semibold text-green-800">
+              💡 다음 단계: <code>useUnifiedClasses</code> 훅을 사용하여 새 데이터를 로드하세요.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 기존 마이그레이션 버튼 */}
       <div className="bg-white rounded-lg border-2 border-gray-200 p-6">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">1단계: 마이그레이션 실행</h3>
+        <h3 className="text-lg font-bold text-gray-800 mb-4">레거시: Enrollments 마이그레이션</h3>
 
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
