@@ -1,26 +1,87 @@
-import React, { useState } from 'react';
-import { X, Plus, BookOpen, User, Calendar, Users } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Plus, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCreateClass, CreateClassData } from '../../hooks/useClassMutations';
 import { useStudents } from '../../hooks/useStudents';
+import { SUBJECT_LABELS } from '../../utils/styleUtils';
+import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
 
 interface AddClassModalProps {
   onClose: () => void;
   defaultSubject?: 'math' | 'english';
 }
 
+const WEEKDAYS = ['월', '화', '수', '목', '금', '토'];
+const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
+
+// 슬롯 정렬 함수 (월화수목금토일 순 → 교시 순)
+const sortSlots = (slots: string[]): string[] => {
+  return slots.sort((a, b) => {
+    const [dayA, periodA] = a.split('-');
+    const [dayB, periodB] = b.split('-');
+    const dayOrderA = WEEKDAY_ORDER[dayA] ?? 99;
+    const dayOrderB = WEEKDAY_ORDER[dayB] ?? 99;
+    if (dayOrderA !== dayOrderB) return dayOrderA - dayOrderB;
+    return Number(periodA) - Number(periodB);
+  });
+};
+
 const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject = 'math' }) => {
+  // 기본 정보
   const [className, setClassName] = useState('');
   const [subject, setSubject] = useState<'math' | 'english'>(defaultSubject);
-  const [teacher, setTeacher] = useState('');
-  const [scheduleInput, setScheduleInput] = useState('');
+  const [mainTeacher, setMainTeacher] = useState('');
+  const [room, setRoom] = useState('');
+
+  // 스케줄 (그리드 선택)
+  const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set()); // "월-5" 형태
+  const [slotTeachers, setSlotTeachers] = useState<Record<string, string>>({}); // 교시별 강사
+  const [showAdvancedSchedule, setShowAdvancedSchedule] = useState(false);
+
+  // 학생 선택
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [showStudentList, setShowStudentList] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
+
   const [error, setError] = useState('');
 
-  // Hooks
   const { students, loading: studentsLoading } = useStudents(false);
   const createClassMutation = useCreateClass();
 
-  // 학생 선택/해제
+  // 과목별 교시
+  const periods = subject === 'english' ? ENGLISH_UNIFIED_PERIODS : MATH_UNIFIED_PERIODS;
+
+  // 학생 필터링
+  const filteredStudents = useMemo(() => {
+    if (!studentSearch.trim()) return students;
+    const search = studentSearch.toLowerCase();
+    return students.filter(s =>
+      s.name.toLowerCase().includes(search) ||
+      s.school?.toLowerCase().includes(search) ||
+      s.grade?.toLowerCase().includes(search)
+    );
+  }, [students, studentSearch]);
+
+  // 슬롯 토글
+  const toggleSlot = (day: string, periodId: string) => {
+    const key = `${day}-${periodId}`;
+    const newSlots = new Set(selectedSlots);
+    if (newSlots.has(key)) {
+      newSlots.delete(key);
+      const newTeachers = { ...slotTeachers };
+      delete newTeachers[key];
+      setSlotTeachers(newTeachers);
+    } else {
+      newSlots.add(key);
+    }
+    setSelectedSlots(newSlots);
+  };
+
+  // 슬롯 강사 설정
+  const setSlotTeacher = (key: string, teacher: string) => {
+    setSlotTeachers(prev => ({ ...prev, [key]: teacher }));
+  };
+
+  // 학생 토글
   const toggleStudent = (studentId: string) => {
     if (selectedStudentIds.includes(studentId)) {
       setSelectedStudentIds(selectedStudentIds.filter(id => id !== studentId));
@@ -29,24 +90,14 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
     }
   };
 
-  // 모든 학생 선택/해제
-  const toggleAllStudents = () => {
-    if (selectedStudentIds.length === students.length) {
-      setSelectedStudentIds([]);
-    } else {
-      setSelectedStudentIds(students.map(s => s.id));
-    }
-  };
-
   // 저장
   const handleSave = async () => {
-    // 유효성 검사
     if (!className.trim()) {
       setError('수업명을 입력해주세요.');
       return;
     }
-    if (!teacher.trim()) {
-      setError('강사명을 입력해주세요.');
+    if (!mainTeacher.trim()) {
+      setError('담임 강사를 입력해주세요.');
       return;
     }
     if (selectedStudentIds.length === 0) {
@@ -56,15 +107,16 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
     setError('');
 
-    // 스케줄 파싱 (쉼표로 구분)
-    const schedule = scheduleInput
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
+    // 스케줄 변환
+    const schedule: string[] = [];
+    selectedSlots.forEach(key => {
+      const [day, periodId] = key.split('-');
+      schedule.push(`${day} ${periodId}`);
+    });
 
     const classData: CreateClassData = {
       className: className.trim(),
-      teacher: teacher.trim(),
+      teacher: mainTeacher.trim(),
       subject,
       schedule,
       studentIds: selectedStudentIds,
@@ -75,187 +127,271 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
       onClose();
     } catch (err) {
       console.error('[AddClassModal] Error creating class:', err);
-      setError('수업 생성에 실패했습니다. 다시 시도해주세요.');
+      setError('수업 생성에 실패했습니다.');
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <div className="bg-[#081429] text-white p-6 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <Plus className="w-6 h-6" />
-            <h2 className="text-xl font-bold">새 수업 추가</h2>
+        <div className="bg-[#081429] text-white px-4 py-3 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            <h2 className="font-bold">새 수업 추가</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6" />
+          <button onClick={onClose} className="hover:bg-white/20 p-1.5 rounded-lg transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* 본문 */}
-        <div className="p-6">
-          {/* 에러 메시지 */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {error && (
-            <div className="bg-red-50 border border-red-300 rounded-lg p-3 mb-4">
-              <p className="text-red-800 text-sm">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700 text-sm">
+              {error}
             </div>
           )}
 
-          {/* 수업 정보 입력 */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <BookOpen className="w-5 h-5 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-lg">수업 정보</h3>
+          {/* 기본 정보 - 2열 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                수업명 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={className}
+                onChange={(e) => setClassName(e.target.value)}
+                placeholder="예: LT1a"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
+              />
             </div>
 
-            <div className="space-y-4">
-              {/* 수업명 */}
-              <div>
-                <label className="block text-[#373d41] text-sm font-medium mb-2">
-                  수업명 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={className}
-                  onChange={(e) => setClassName(e.target.value)}
-                  placeholder="예: 중등수학1-1"
-                  className="w-full px-4 py-2 border border-[#081429] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] text-[#081429]"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                과목 <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={subject}
+                onChange={(e) => {
+                  setSubject(e.target.value as 'math' | 'english');
+                  setSelectedSlots(new Set());
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
+              >
+                {(['math', 'english'] as const).map(key => (
+                  <option key={key} value={key}>{SUBJECT_LABELS[key]}</option>
+                ))}
+              </select>
+            </div>
 
-              {/* 과목 */}
-              <div>
-                <label className="block text-[#373d41] text-sm font-medium mb-2">
-                  과목 <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value as 'math' | 'english')}
-                  className="w-full px-4 py-2 border border-[#081429] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] text-[#081429]"
-                >
-                  <option value="math">수학</option>
-                  <option value="english">영어</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                담임 강사 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={mainTeacher}
+                onChange={(e) => setMainTeacher(e.target.value)}
+                placeholder="예: Ellen"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
+              />
+            </div>
 
-              {/* 강사명 */}
-              <div>
-                <label className="block text-[#373d41] text-sm font-medium mb-2">
-                  강사명 <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#373d41]" />
-                  <input
-                    type="text"
-                    value={teacher}
-                    onChange={(e) => setTeacher(e.target.value)}
-                    placeholder="예: 김선생님"
-                    className="w-full pl-10 pr-4 py-2 border border-[#081429] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] text-[#081429]"
-                  />
-                </div>
-              </div>
-
-              {/* 스케줄 */}
-              <div>
-                <label className="block text-[#373d41] text-sm font-medium mb-2">
-                  스케줄 (선택)
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#373d41]" />
-                  <input
-                    type="text"
-                    value={scheduleInput}
-                    onChange={(e) => setScheduleInput(e.target.value)}
-                    placeholder="예: 월 1교시, 수 3교시 (쉼표로 구분)"
-                    className="w-full pl-10 pr-4 py-2 border border-[#081429] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] text-[#081429]"
-                  />
-                </div>
-                <p className="text-xs text-[#373d41] mt-1">
-                  쉼표(,)로 구분하여 입력하세요.
-                </p>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">강의실</label>
+              <input
+                type="text"
+                value={room}
+                onChange={(e) => setRoom(e.target.value)}
+                placeholder="예: 302"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
+              />
             </div>
           </div>
 
-          {/* 학생 선택 */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-lg">
-                  학생 선택 <span className="text-red-500">*</span>
-                </h3>
+          {/* 스케줄 그리드 */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">스케줄 선택</label>
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              {/* 헤더 */}
+              <div className="grid bg-gray-50 border-b border-gray-200" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
+                <div className="p-1 text-center text-[10px] font-semibold text-gray-400 border-r border-gray-200"></div>
+                {WEEKDAYS.map((day, idx) => (
+                  <div key={day} className={`p-1 text-center text-xs font-semibold text-gray-600 ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-200' : ''}`}>
+                    {day}
+                  </div>
+                ))}
               </div>
-              <button
-                onClick={toggleAllStudents}
-                className="text-[#fdb813] hover:text-[#e5a60f] text-sm font-semibold"
-              >
-                {selectedStudentIds.length === students.length ? '전체 해제' : '전체 선택'}
-              </button>
+
+              {/* 교시 */}
+              <div className="max-h-36 overflow-y-auto">
+                {periods.map(periodId => (
+                  <div
+                    key={periodId}
+                    className="grid border-b border-gray-100 last:border-b-0"
+                    style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
+                  >
+                    <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                      {periodId}
+                    </div>
+                    {WEEKDAYS.map((day, idx) => {
+                      const key = `${day}-${periodId}`;
+                      const isSelected = selectedSlots.has(key);
+                      const slotTeacher = slotTeachers[key];
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => toggleSlot(day, periodId)}
+                          className={`p-1 transition-colors text-[10px] min-h-[24px] ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-100' : ''} ${
+                            isSelected
+                              ? 'bg-[#fdb813] text-[#081429] font-semibold'
+                              : 'hover:bg-gray-100 text-gray-300'
+                          }`}
+                        >
+                          {isSelected ? (slotTeacher || mainTeacher || '✓').slice(0, 3) : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {studentsLoading ? (
-              <div className="bg-gray-50 rounded-lg p-6 text-center">
-                <p className="text-[#373d41]">학생 목록을 불러오는 중...</p>
-              </div>
-            ) : students.length === 0 ? (
-              <div className="bg-gray-50 rounded-lg p-6 text-center">
-                <Users className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#373d41]" />
-                <p className="text-[#373d41]">등록된 학생이 없습니다.</p>
-              </div>
-            ) : (
-              <div className="bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto border border-[#081429] border-opacity-10">
-                <div className="space-y-2">
-                  {students.map(student => (
-                    <label
-                      key={student.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedStudentIds.includes(student.id)
-                          ? 'bg-[#fdb813] bg-opacity-20 border border-[#fdb813]'
-                          : 'bg-white border border-[#081429] border-opacity-10 hover:bg-gray-100'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedStudentIds.includes(student.id)}
-                        onChange={() => toggleStudent(student.id)}
-                        className="w-5 h-5 text-[#fdb813] rounded focus:ring-[#fdb813]"
-                      />
-                      <div className="flex-1">
-                        <p className="text-[#081429] font-semibold">{student.name}</p>
-                        <p className="text-[#373d41] text-xs">
-                          {student.grade || '학년 미정'} | {student.status === 'active' ? '재원생' : student.status === 'on_hold' ? '대기' : '퇴원'}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
+            {selectedSlots.size > 0 && (
+              <div className="mt-1.5 flex items-center justify-between">
+                <p className="text-[10px] text-gray-500">{selectedSlots.size}개 교시 선택</p>
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedSchedule(!showAdvancedSchedule)}
+                  className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
+                >
+                  {showAdvancedSchedule ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                  교시별 강사 설정
+                </button>
               </div>
             )}
 
-            <p className="text-sm text-[#373d41] mt-2">
-              선택된 학생: <span className="text-[#fdb813] font-semibold">{selectedStudentIds.length}명</span>
-            </p>
+            {showAdvancedSchedule && selectedSlots.size > 0 && (
+              <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200">각 교시별 강사 (비워두면 담임)</p>
+                {/* 선택된 교시별 강사 입력 */}
+                {(() => {
+                  const selectedPeriods = new Set<string>();
+                  selectedSlots.forEach(key => {
+                    const [, periodId] = key.split('-');
+                    selectedPeriods.add(periodId);
+                  });
+                  const sortedPeriods = Array.from(selectedPeriods).sort((a, b) => Number(a) - Number(b));
+
+                  return sortedPeriods.map(periodId => (
+                    <div
+                      key={periodId}
+                      className="grid border-b border-gray-100 last:border-b-0"
+                      style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
+                    >
+                      <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                        {periodId}
+                      </div>
+                      {WEEKDAYS.map((day, idx) => {
+                        const key = `${day}-${periodId}`;
+                        const isSelected = selectedSlots.has(key);
+                        if (!isSelected) {
+                          return <div key={key} className={`bg-gray-50 min-h-[28px] ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-100' : ''}`} />;
+                        }
+                        return (
+                          <div key={key} className={`p-0.5 ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-100' : ''}`}>
+                            <input
+                              type="text"
+                              value={slotTeachers[key] || ''}
+                              onChange={(e) => setSlotTeacher(key, e.target.value)}
+                              placeholder={mainTeacher || '-'}
+                              className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+          </div>
+
+          {/* 학생 선택 */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowStudentList(!showStudentList)}
+              className="w-full flex items-center justify-between p-2.5 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-semibold text-gray-700">
+                  학생 선택 <span className="text-red-500">*</span>
+                </span>
+                <span className="text-xs text-[#fdb813] font-semibold">{selectedStudentIds.length}명</span>
+              </div>
+              {showStudentList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            {showStudentList && (
+              <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
+                <div className="p-2 border-b border-gray-100">
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    placeholder="학생 검색..."
+                    className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-[#fdb813] outline-none"
+                  />
+                </div>
+
+                <div className="max-h-32 overflow-y-auto">
+                  {studentsLoading ? (
+                    <div className="p-3 text-center text-gray-400 text-sm">로딩 중...</div>
+                  ) : filteredStudents.length === 0 ? (
+                    <div className="p-3 text-center text-gray-400 text-sm">학생이 없습니다</div>
+                  ) : (
+                    filteredStudents.map(student => (
+                      <label
+                        key={student.id}
+                        className={`flex items-center gap-2 px-2.5 py-1.5 cursor-pointer transition-colors text-sm ${
+                          selectedStudentIds.includes(student.id) ? 'bg-[#fdb813]/10' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedStudentIds.includes(student.id)}
+                          onChange={() => toggleStudent(student.id)}
+                          className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813]"
+                        />
+                        <span className="text-gray-800">{student.name}</span>
+                        <span className="text-[10px] text-gray-400">{student.grade}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* 푸터 */}
-        <div className="bg-gray-50 p-4 flex items-center justify-end gap-3 border-t border-[#081429] border-opacity-10 sticky bottom-0">
+        <div className="bg-gray-50 px-4 py-2.5 flex items-center justify-end gap-2 border-t shrink-0">
           <button
             onClick={onClose}
             disabled={createClassMutation.isPending}
-            className="px-6 py-2 border border-[#081429] text-[#081429] rounded-lg font-semibold hover:bg-[#081429] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
           >
             취소
           </button>
           <button
             onClick={handleSave}
             disabled={createClassMutation.isPending}
-            className="bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-6 py-2 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-1.5 text-sm bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] rounded-lg font-semibold transition-colors disabled:opacity-50"
           >
             {createClassMutation.isPending ? '저장 중...' : '저장'}
           </button>

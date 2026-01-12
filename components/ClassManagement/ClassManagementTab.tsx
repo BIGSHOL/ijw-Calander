@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { BookOpen, Search, Plus, Filter } from 'lucide-react';
 import { useClasses, ClassInfo } from '../../hooks/useClasses';
+import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import ClassList from './ClassList';
 import ClassDetailModal from './ClassDetailModal';
 import AddClassModal from './AddClassModal';
@@ -75,6 +76,16 @@ const ClassManagementTab: React.FC = () => {
     return result;
   }, [classes, filters]);
 
+  // 과목 필터 버튼 설정 (확장 가능)
+  const subjectFilters: Array<{ value: 'all' | SubjectType; label: string; emoji: string }> = [
+    { value: 'all', label: '전체', emoji: '📚' },
+    { value: 'math', label: SUBJECT_LABELS.math, emoji: '📐' },
+    { value: 'english', label: SUBJECT_LABELS.english, emoji: '📕' },
+    // 추후 확장 가능
+    // { value: 'science', label: SUBJECT_LABELS.science, emoji: '🔬' },
+    // { value: 'korean', label: SUBJECT_LABELS.korean, emoji: '📖' },
+  ];
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* 상단 네비게이션 바 (다른 탭과 동일한 스타일) */}
@@ -82,36 +93,19 @@ const ClassManagementTab: React.FC = () => {
         <div className="flex items-center gap-3">
           {/* 과목 토글 */}
           <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
-            <button
-              onClick={() => setFilters({ ...filters, subject: 'all' })}
-              className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                filters.subject === 'all'
-                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              📚 전체
-            </button>
-            <button
-              onClick={() => setFilters({ ...filters, subject: 'math' })}
-              className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                filters.subject === 'math'
-                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              📐 수학
-            </button>
-            <button
-              onClick={() => setFilters({ ...filters, subject: 'english' })}
-              className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                filters.subject === 'english'
-                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              📕 영어
-            </button>
+            {subjectFilters.map(({ value, label, emoji }) => (
+              <button
+                key={value}
+                onClick={() => setFilters({ ...filters, subject: value })}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                  filters.subject === value
+                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {emoji} {label}
+              </button>
+            ))}
           </div>
 
           {/* 구분선 */}

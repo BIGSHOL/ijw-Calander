@@ -9,10 +9,12 @@ import {
   query,
   where,
   collectionGroup,
+  setDoc,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 const COL_STUDENTS = 'students';
+const COL_CLASSES = 'classes';
 
 /**
  * 새 수업 추가 (선택된 학생들에게 enrollment 추가)
@@ -84,6 +86,8 @@ export interface UpdateClassData {
   newClassName: string;
   newTeacher: string;
   newSchedule?: string[];
+  newRoom?: string;
+  slotTeachers?: Record<string, string>;  // { "월-4": "부담임명", ... }
 }
 
 export const useUpdateClass = () => {
@@ -91,35 +95,101 @@ export const useUpdateClass = () => {
 
   return useMutation({
     mutationFn: async (updateData: UpdateClassData) => {
-      const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [] } = updateData;
+      const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [], newRoom, slotTeachers } = updateData;
 
-      console.log(`[useUpdateClass] Updating class: ${originalClassName} -> ${newClassName}`);
+      console.log(`[useUpdateClass] Updating class: ${originalClassName} (${originalSubject}) -> ${newClassName}`);
 
-      // 해당 className + subject와 일치하는 모든 enrollments 조회
-      const enrollmentsQuery = query(
-        collectionGroup(db, 'enrollments'),
-        where('subject', '==', originalSubject),
-        where('className', '==', originalClassName)
-      );
+      let classesUpdated = 0;
+      let enrollmentsUpdated = 0;
 
-      const snapshot = await getDocs(enrollmentsQuery);
-
-      console.log(`[useUpdateClass] Found ${snapshot.docs.length} enrollments to update`);
-
-      // 각 enrollment 업데이트
-      const promises = snapshot.docs.map(async (docSnap) => {
-        await updateDoc(docSnap.ref, {
-          className: newClassName,
-          teacherId: newTeacher,
-          teacher: newTeacher,
-          schedule: newSchedule,
-          updatedAt: new Date().toISOString(),
-        });
+      // 스케줄을 ScheduleSlot[] 형식으로 변환
+      const scheduleSlots = newSchedule.map(s => {
+        const parts = s.split(' ');
+        return { day: parts[0], periodId: parts[1] || '' };
       });
 
-      await Promise.all(promises);
+      // 1. classes 컬렉션에서 해당 수업 찾기 및 업데이트
+      try {
+        const classesQuery = query(
+          collection(db, COL_CLASSES),
+          where('subject', '==', originalSubject),
+          where('className', '==', originalClassName)
+        );
 
-      console.log(`[useUpdateClass] Successfully updated ${snapshot.docs.length} enrollments`);
+        const classesSnapshot = await getDocs(classesQuery);
+        console.log(`[useUpdateClass] Found ${classesSnapshot.docs.length} classes in unified collection`);
+
+        // classes 컬렉션 업데이트
+        const classUpdatePromises = classesSnapshot.docs.map(async (docSnap) => {
+          const updatePayload: Record<string, any> = {
+            className: newClassName,
+            teacher: newTeacher,
+            schedule: scheduleSlots,
+            legacySchedule: newSchedule,
+            updatedAt: new Date().toISOString(),
+          };
+          // room과 slotTeachers가 있으면 추가
+          if (newRoom !== undefined) {
+            updatePayload.room = newRoom;
+          }
+          if (slotTeachers && Object.keys(slotTeachers).length > 0) {
+            updatePayload.slotTeachers = slotTeachers;
+          }
+          console.log('[useUpdateClass] Updating doc:', docSnap.id, 'with:', updatePayload);
+          await updateDoc(docSnap.ref, updatePayload);
+        });
+
+        await Promise.all(classUpdatePromises);
+        classesUpdated = classesSnapshot.docs.length;
+      } catch (err) {
+        console.error('[useUpdateClass] Error updating classes collection:', err);
+      }
+
+      // 2. enrollments도 업데이트 (레거시 호환 - 인덱스 없으면 스킵)
+      try {
+        const enrollmentsQuery = query(
+          collectionGroup(db, 'enrollments'),
+          where('subject', '==', originalSubject),
+          where('className', '==', originalClassName)
+        );
+
+        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+        console.log(`[useUpdateClass] Found ${enrollmentsSnapshot.docs.length} enrollments to update`);
+
+        // 각 enrollment 업데이트
+        const enrollmentPromises = enrollmentsSnapshot.docs.map(async (docSnap) => {
+          await updateDoc(docSnap.ref, {
+            className: newClassName,
+            teacherId: newTeacher,
+            teacher: newTeacher,
+            schedule: newSchedule,
+            updatedAt: new Date().toISOString(),
+          });
+        });
+
+        await Promise.all(enrollmentPromises);
+        enrollmentsUpdated = enrollmentsSnapshot.docs.length;
+      } catch (err: any) {
+        // 인덱스 에러는 경고만 표시 (classes가 업데이트되면 괜찮음)
+        if (err?.message?.includes('index')) {
+          console.warn('[useUpdateClass] Enrollments index not available, skipping enrollment update');
+        } else {
+          console.error('[useUpdateClass] Error updating enrollments:', err);
+        }
+      }
+
+      // classes가 업데이트되었으면 성공
+      if (classesUpdated > 0) {
+        console.log(`[useUpdateClass] Successfully updated ${classesUpdated} classes and ${enrollmentsUpdated} enrollments`);
+        return;
+      }
+
+      // classes도 enrollments도 업데이트 실패한 경우에만 에러 throw
+      if (enrollmentsUpdated === 0) {
+        throw new Error(`수업을 찾을 수 없습니다: ${originalClassName} (${originalSubject})`);
+      }
+
+      console.log(`[useUpdateClass] Successfully updated ${classesUpdated} classes and ${enrollmentsUpdated} enrollments`);
     },
     onSuccess: () => {
       // 수업 목록 및 관련 캐시 무효화

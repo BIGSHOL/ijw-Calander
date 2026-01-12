@@ -1,20 +1,40 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ClassKeywordColor } from '../../types';
 import { db } from '../../firebaseConfig';
-import { setDoc, doc, deleteDoc, collection, onSnapshot } from 'firebase/firestore';
-import { X, Edit2, Check } from 'lucide-react';
+import { setDoc, doc, deleteDoc, collection, onSnapshot, getDoc } from 'firebase/firestore';
+import { X, Edit2, Check, Clock, Hash } from 'lucide-react';
 
 interface ClassesTabProps {
     isMaster: boolean;
     canEdit?: boolean; // Optional for backwards compatibility
 }
 
+// 스케줄 표기 방식 타입
+type ScheduleDisplayMode = 'period' | 'time';
+
+interface ScheduleDisplaySettings {
+    math: ScheduleDisplayMode;
+    english: ScheduleDisplayMode;
+}
+
+const DEFAULT_SCHEDULE_DISPLAY: ScheduleDisplaySettings = {
+    math: 'period',
+    english: 'period',
+};
+
 const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster }) => {
+    const queryClient = useQueryClient();
+
     // --- Local State ---
     const [classKeywords, setClassKeywords] = useState<ClassKeywordColor[]>([]);
     const [newKeyword, setNewKeyword] = useState('');
     const [newKeywordBgColor, setNewKeywordBgColor] = useState('#fee2e2');
     const [newKeywordTextColor, setNewKeywordTextColor] = useState('#dc2626');
+
+    // 스케줄 표기 설정
+    const [scheduleDisplay, setScheduleDisplay] = useState<ScheduleDisplaySettings>(DEFAULT_SCHEDULE_DISPLAY);
+    const [scheduleDisplayLoading, setScheduleDisplayLoading] = useState(true);
 
     // Edit State
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -33,6 +53,39 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
         });
         return () => unsubscribe();
     }, []);
+
+    // 스케줄 표기 설정 로드
+    useEffect(() => {
+        const loadScheduleDisplay = async () => {
+            try {
+                const docRef = doc(db, 'settings', 'scheduleDisplay');
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setScheduleDisplay({ ...DEFAULT_SCHEDULE_DISPLAY, ...docSnap.data() } as ScheduleDisplaySettings);
+                }
+            } catch (e) {
+                console.error('Failed to load schedule display settings:', e);
+            } finally {
+                setScheduleDisplayLoading(false);
+            }
+        };
+        loadScheduleDisplay();
+    }, []);
+
+    // 스케줄 표기 설정 저장
+    const handleScheduleDisplayChange = async (subject: 'math' | 'english', mode: ScheduleDisplayMode) => {
+        const newSettings = { ...scheduleDisplay, [subject]: mode };
+        setScheduleDisplay(newSettings);
+
+        try {
+            await setDoc(doc(db, 'settings', 'scheduleDisplay'), newSettings);
+            // React Query 캐시 무효화 - 즉시 반영
+            queryClient.invalidateQueries({ queryKey: ['scheduleDisplaySettings'] });
+        } catch (e) {
+            console.error('Failed to save schedule display settings:', e);
+            alert('설정 저장 실패');
+        }
+    };
 
     // --- Handlers ---
     const handleAddKeyword = async () => {
@@ -97,6 +150,95 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-20">
+            {/* 스케줄 표기 방식 설정 */}
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                <h3 className="font-bold mb-1 flex items-center gap-2 text-blue-700">
+                    <Clock size={18} />
+                    스케줄 표기 방식
+                </h3>
+                <p className="text-xs text-gray-500 mb-4">
+                    수업 카드와 상세 정보에서 시간을 어떻게 표시할지 설정합니다.
+                </p>
+
+                {scheduleDisplayLoading ? (
+                    <div className="text-center py-4 text-gray-400">로딩 중...</div>
+                ) : (
+                    <div className="space-y-4">
+                        {/* 수학 */}
+                        <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                            <div className="flex items-center gap-2">
+                                <span className="px-2 py-1 bg-[#fdb813] text-[#081429] rounded text-xs font-bold">수학</span>
+                                <span className="text-sm text-gray-600">
+                                    {scheduleDisplay.math === 'period' ? '월목 4교시' : '월목 20:10~22:00'}
+                                </span>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => handleScheduleDisplayChange('math', 'period')}
+                                    disabled={!canEdit}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                        scheduleDisplay.math === 'period'
+                                            ? 'bg-[#081429] text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    <Hash size={12} className="inline mr-1" />
+                                    교시
+                                </button>
+                                <button
+                                    onClick={() => handleScheduleDisplayChange('math', 'time')}
+                                    disabled={!canEdit}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                        scheduleDisplay.math === 'time'
+                                            ? 'bg-[#081429] text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    <Clock size={12} className="inline mr-1" />
+                                    시간대
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* 영어 */}
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <div className="flex items-center gap-2">
+                                <span className="px-2 py-1 bg-[#081429] text-white rounded text-xs font-bold">영어</span>
+                                <span className="text-sm text-gray-600">
+                                    {scheduleDisplay.english === 'period' ? '월목 1~3교시' : '월목 14:20~16:20'}
+                                </span>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => handleScheduleDisplayChange('english', 'period')}
+                                    disabled={!canEdit}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                        scheduleDisplay.english === 'period'
+                                            ? 'bg-[#081429] text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    <Hash size={12} className="inline mr-1" />
+                                    교시
+                                </button>
+                                <button
+                                    onClick={() => handleScheduleDisplayChange('english', 'time')}
+                                    disabled={!canEdit}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                        scheduleDisplay.english === 'time'
+                                            ? 'bg-[#081429] text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    <Clock size={12} className="inline mr-1" />
+                                    시간대
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
             {/* 수업 키워드 색상 관리 */}
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                 <h3 className="font-bold mb-1 flex items-center gap-2 text-purple-700">

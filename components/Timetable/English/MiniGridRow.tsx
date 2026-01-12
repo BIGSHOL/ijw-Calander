@@ -84,12 +84,10 @@ const MiniGridRow: React.FC<MiniGridRowProps> = ({
                         style={teacherStyle}
                         title={cell?.teacher || ''}
                     >
-                        {cell && !isHidden ? (
+                        {cell && !isHidden && (
                             <span className={`leading-tight line-clamp-2 break-all ${cell.underline ? 'underline italic' : ''}`}>
                                 {cell.teacher.slice(0, 4)}
                             </span>
-                        ) : (
-                            <span className="text-gray-200">-</span>
                         )}
                     </div>
                 );
