@@ -553,7 +553,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -566,13 +566,16 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   calendar: { label: '연간 일정', icon: '📅' },
   timetable: { label: '시간표', icon: '📋' },
   attendance: { label: '출석부', icon: '📝' },
-  payment: { label: '전자 결제', icon: '💳' },
+  'daily-attendance': { label: '출결 관리', icon: '✅' },
+  payment: { label: '전자 결재', icon: '💳' },
   gantt: { label: '간트 차트', icon: '📊' },
   consultation: { label: '입학 상담', icon: '📞' },
   students: { label: '학생 관리', icon: '👥' },
   grades: { label: '성적 관리', icon: '📊' },
   classes: { label: '수업 관리', icon: '📚' },
   'student-consultations': { label: '상담 관리', icon: '💬' },
+  staff: { label: '직원 관리', icon: '👔' },
+  billing: { label: '수납 관리', icon: '💰' },
 };
 
 // Tab Group 구조 - 무한 확장 가능
@@ -597,7 +600,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'class',
     label: '수업',
     icon: '📚',
-    tabs: ['timetable', 'attendance', 'classes'],
+    tabs: ['timetable', 'attendance', 'daily-attendance', 'classes'],
     order: 2,
   },
   {
@@ -611,7 +614,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'admin',
     label: '관리',
     icon: '⚙️',
-    tabs: ['payment'],
+    tabs: ['payment', 'staff', 'billing'],
     order: 4,
   },
 ];
@@ -630,13 +633,13 @@ export type TabPermissionConfig = {
 
 // Default Tab Permissions (Fallback)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'student-consultations'],
-  admin: ['calendar', 'timetable', 'attendance', 'payment', 'students', 'grades', 'classes', 'student-consultations'],
-  manager: ['calendar', 'attendance', 'students', 'grades', 'classes', 'student-consultations'],
+  master: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing'],
+  admin: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing'],
+  manager: ['calendar', 'attendance', 'daily-attendance', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing'],
   editor: ['calendar'],
-  math_lead: ['timetable', 'attendance', 'students', 'grades', 'classes', 'student-consultations'],
-  english_lead: ['timetable', 'attendance', 'students', 'grades', 'classes', 'student-consultations'],
-  user: ['calendar', 'attendance'],
+  math_lead: ['timetable', 'attendance', 'daily-attendance', 'students', 'grades', 'classes', 'student-consultations'],
+  english_lead: ['timetable', 'attendance', 'daily-attendance', 'students', 'grades', 'classes', 'student-consultations'],
+  user: ['calendar', 'attendance', 'daily-attendance'],
   viewer: ['calendar'],
   guest: ['calendar'],
 };
@@ -1077,3 +1080,237 @@ export const DEFAULT_EVENT_TAGS: EventTag[] = [
   { id: 'training', name: '연수', color: '#06B6D4' },
   { id: 'parent-meeting', name: '학부모상담', color: '#84CC16' },
 ];
+
+// ============ STAFF MANAGEMENT TYPES ============
+
+/**
+ * 주간 근무 일정
+ */
+export interface WeeklySchedule {
+  mon?: string[]; // ['09:00-12:00', '14:00-18:00']
+  tue?: string[];
+  wed?: string[];
+  thu?: string[];
+  fri?: string[];
+  sat?: string[];
+  sun?: string[];
+}
+
+/**
+ * 직원 정보
+ */
+export interface StaffMember {
+  id: string;
+  userId?: string; // 기존 users 컬렉션 연동
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'teacher' | 'admin' | 'staff';
+  subjects?: ('math' | 'english')[];
+  hireDate: string;
+  status: 'active' | 'inactive' | 'resigned';
+  workSchedule?: WeeklySchedule;
+  profileImage?: string;
+  memo?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 휴가 정보
+ */
+export interface StaffLeave {
+  id: string;
+  staffId: string;
+  staffName: string;
+  type: 'annual' | 'sick' | 'personal' | 'other';
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approvedBy?: string;
+  approvedAt?: string;
+  createdAt: string;
+}
+
+/**
+ * 직원 역할 라벨
+ */
+export const STAFF_ROLE_LABELS: Record<StaffMember['role'], string> = {
+  teacher: '강사',
+  admin: '관리자',
+  staff: '직원',
+};
+
+/**
+ * 휴가 유형 라벨
+ */
+export const LEAVE_TYPE_LABELS: Record<StaffLeave['type'], string> = {
+  annual: '연차',
+  sick: '병가',
+  personal: '개인사유',
+  other: '기타',
+};
+
+/**
+ * 휴가 상태 라벨
+ */
+export const LEAVE_STATUS_LABELS: Record<StaffLeave['status'], string> = {
+  pending: '대기중',
+  approved: '승인',
+  rejected: '반려',
+};
+
+/**
+ * 직원 상태 라벨
+ */
+export const STAFF_STATUS_LABELS: Record<StaffMember['status'], string> = {
+  active: '재직',
+  inactive: '휴직',
+  resigned: '퇴사',
+};
+
+// ============ DAILY ATTENDANCE TYPES (Phase: Daily Check-In) ============
+
+/**
+ * 일별 출결 기록
+ * Firestore: daily_attendance/{date}/records/{recordId}
+ */
+export interface DailyAttendanceRecord {
+  id: string;
+  date: string; // 'YYYY-MM-DD' 형식
+  studentId: string;
+  studentName: string;
+  classId: string;
+  className: string;
+  status: AttendanceStatus;
+  checkInTime?: string;  // HH:mm 형식
+  checkOutTime?: string; // HH:mm 형식
+  note?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 출결 상태 타입
+ */
+export type AttendanceStatus = 'present' | 'late' | 'absent' | 'early_leave' | 'excused';
+
+/**
+ * 출결 상태 라벨
+ */
+export const ATTENDANCE_STATUS_LABELS: Record<AttendanceStatus, string> = {
+  present: '출석',
+  late: '지각',
+  absent: '결석',
+  early_leave: '조퇴',
+  excused: '사유결석',
+};
+
+/**
+ * 출결 상태별 색상 설정
+ */
+export const ATTENDANCE_STATUS_COLORS: Record<AttendanceStatus, { bg: string; text: string; border: string }> = {
+  present: { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-200' },
+  late: { bg: 'bg-amber-100', text: 'text-amber-800', border: 'border-amber-200' },
+  absent: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' },
+  early_leave: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200' },
+  excused: { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' },
+};
+
+/**
+ * 일별 출결 통계
+ */
+export interface DailyAttendanceStats {
+  date: string;
+  total: number;
+  present: number;
+  late: number;
+  absent: number;
+  earlyLeave: number;
+  excused: number;
+  attendanceRate: number; // 출석률 (%)
+}
+
+// ============ BILLING MANAGEMENT TYPES ============
+
+/**
+ * 수납 항목 (청구 내역)
+ */
+export interface BillingItem {
+  name: string; // '수학', '영어' 등
+  amount: number;
+}
+
+/**
+ * 수납 상태
+ */
+export type BillingStatus = 'pending' | 'partial' | 'paid' | 'overdue';
+
+/**
+ * 결제 수단
+ */
+export type PaymentMethod = 'card' | 'cash' | 'transfer';
+
+/**
+ * 수납 기록
+ */
+export interface BillingRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  month: string; // '2026-01' 형식
+  amount: number; // 청구 금액
+  paidAmount: number; // 납부 금액
+  status: BillingStatus;
+  paymentMethod?: PaymentMethod;
+  dueDate: string; // YYYY-MM-DD
+  paidDate?: string; // YYYY-MM-DD
+  items: BillingItem[];
+  memo?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 수납 통계
+ */
+export interface BillingSummaryStats {
+  totalBilled: number; // 총 청구 금액
+  totalPaid: number; // 총 납부 금액
+  pendingCount: number; // 미납 건수
+  paidCount: number; // 완납 건수
+  overdueCount: number; // 연체 건수
+  collectionRate: number; // 수납률 (%)
+}
+
+/**
+ * 수납 상태 색상
+ */
+export const BILLING_STATUS_COLORS: Record<BillingStatus, { bg: string; text: string; border: string }> = {
+  pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-200' },
+  partial: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200' },
+  paid: { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-200' },
+  overdue: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' },
+};
+
+/**
+ * 수납 상태 라벨
+ */
+export const BILLING_STATUS_LABELS: Record<BillingStatus, string> = {
+  pending: '미납',
+  partial: '부분납부',
+  paid: '완납',
+  overdue: '연체',
+};
+
+/**
+ * 결제 수단 라벨
+ */
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  card: '카드',
+  cash: '현금',
+  transfer: '계좌이체',
+};
