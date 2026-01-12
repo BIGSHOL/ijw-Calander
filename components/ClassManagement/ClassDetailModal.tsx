@@ -7,7 +7,6 @@ import ClassStudentList from './ClassStudentList';
 import EditClassModal from './EditClassModal';
 import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { formatScheduleCompact, SubjectForSchedule, ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
-import { useScheduleDisplaySettings } from '../../hooks/useScheduleDisplaySettings';
 
 interface ClassDetailModalProps {
   classInfo: ClassInfo;
@@ -19,9 +18,6 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
   const { className, subject, studentCount } = classInfo;
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // 스케줄 표기 설정 가져오기
-  const { data: displaySettings } = useScheduleDisplaySettings();
-
   // 수업 상세 정보 조회 (학생 목록 포함)
   const { data: classDetail, isLoading: detailLoading } = useClassDetail(className, subject);
   const deleteClassMutation = useDeleteClass();
@@ -32,10 +28,9 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
   const room = classDetail?.room || classInfo.room;
   const slotTeachers = classDetail?.slotTeachers;
 
-  // 스케줄 포맷팅 ("월 7, 월 8, 목 7, 목 8" -> "월목 4교시" 또는 "월목 20:10~22:00")
+  // 스케줄 포맷팅 ("월 7, 월 8, 목 7, 목 8" -> "월목 4교시")
   const subjectForSchedule: SubjectForSchedule = subject === 'english' ? 'english' : 'math';
-  const showTime = displaySettings?.[subjectForSchedule] === 'time';
-  const formattedSchedule = formatScheduleCompact(schedule, subjectForSchedule, showTime);
+  const formattedSchedule = formatScheduleCompact(schedule, subjectForSchedule, false);
 
   // 수업 삭제
   const handleDelete = async () => {
