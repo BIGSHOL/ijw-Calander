@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, getDate, endOfMonth, differenceInDays } from 'date-fns';
 import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor, AppTab } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
@@ -7,20 +7,29 @@ import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemCo
 import { useGanttProjects } from './hooks/useGanttProjects';
 import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
 import { useTabPermissions } from './hooks/useTabPermissions';
+
+// 항상 필요한 컴포넌트 (즉시 로딩)
 import EventModal from './components/Calendar/EventModal';
 import SettingsModal from './components/settings/SettingsModal';
 import LoginModal from './components/Auth/LoginModal';
 import CalendarBoard from './components/Calendar/CalendarBoard';
-import TimetableManager from './components/Timetable/TimetableManager';
-import AttendanceManager from './components/Attendance/AttendanceManager';
-import PaymentReport from './components/PaymentReport/PaymentReport';
-import GanttManager from './components/Gantt/GanttManager';
-import ConsultationManager from './components/Consultation/ConsultationManager';
-import StudentManagementTab from './components/StudentManagement/StudentManagementTab';
-import GradesManager from './components/Grades/GradesManager';
-import { ClassManagementTab } from './components/ClassManagement';
-import { ConsultationManagementTab } from './components/ConsultationManagement';
 import NavigationBar from './components/Navigation/NavigationBar';
+
+// 탭별 컴포넌트 (lazy loading - 해당 탭 진입 시 로딩)
+const TimetableManager = lazy(() => import('./components/Timetable/TimetableManager'));
+const AttendanceManager = lazy(() => import('./components/Attendance/AttendanceManager'));
+const PaymentReport = lazy(() => import('./components/PaymentReport/PaymentReport'));
+const GanttManager = lazy(() => import('./components/Gantt/GanttManager'));
+const ConsultationManager = lazy(() => import('./components/Consultation/ConsultationManager'));
+const StudentManagementTab = lazy(() => import('./components/StudentManagement/StudentManagementTab'));
+const GradesManager = lazy(() => import('./components/Grades/GradesManager'));
+const ClassManagementTab = lazy(() => import('./components/ClassManagement').then(m => ({ default: m.ClassManagementTab })));
+const ConsultationManagementTab = lazy(() => import('./components/ConsultationManagement').then(m => ({ default: m.ConsultationManagementTab })));
+
+// 신규 탭 (lazy loading)
+const BillingManager = lazy(() => import('./components/Billing').then(m => ({ default: m.BillingManager })));
+const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
+const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
@@ -35,6 +44,16 @@ import './scripts/migrateStudents'; // Temporary: for v6 migration
 // Import Style Utilities
 import { INJAEWON_LOGO, getJobTitleStyle } from './utils/styleUtils';
 
+// Lazy loading 폴백 컴포넌트
+const TabLoadingFallback = () => (
+  <div className="w-full h-64 flex items-center justify-center">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-8 h-8 border-3 border-[#fdb813] border-t-transparent rounded-full animate-spin" />
+      <span className="text-sm text-gray-500">로딩 중...</span>
+    </div>
+  </div>
+);
+
 // Helper to format user display: Name (JobTitle) or Email (JobTitle)
 const formatUserDisplay = (u: UserProfile) => {
   const name = u.displayName || u.email.split('@')[0];
@@ -44,7 +63,7 @@ const formatUserDisplay = (u: UserProfile) => {
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
 
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
@@ -2028,73 +2047,112 @@ const App: React.FC = () => {
           </div>
         ) : appMode === 'timetable' ? (
           /* Timetable View */
-          <div className="w-full flex-1 p-4 md:p-6">
-            <TimetableManager
-              subjectTab={timetableSubject}
-              onSubjectChange={setTimetableSubject}
-              viewType={timetableViewType}
-              onViewTypeChange={setTimetableViewType}
-              currentUser={userProfile}
-              /* Removed global state props */
-              teachers={teachers}
-              classKeywords={classKeywords}
-            />
-          </div>
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 p-4 md:p-6">
+              <TimetableManager
+                subjectTab={timetableSubject}
+                onSubjectChange={setTimetableSubject}
+                viewType={timetableViewType}
+                onViewTypeChange={setTimetableViewType}
+                currentUser={userProfile}
+                /* Removed global state props */
+                teachers={teachers}
+                classKeywords={classKeywords}
+              />
+            </div>
+          </Suspense>
         ) : appMode === 'payment' ? (
           /* Payment Report View */
-          <div className="w-full flex-1 overflow-auto">
-            <PaymentReport />
-          </div>
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 overflow-auto">
+              <PaymentReport />
+            </div>
+          </Suspense>
         ) : appMode === 'gantt' ? (
           /* Gantt Chart View */
-          <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
-            <GanttManager userProfile={userProfile} allUsers={users} />
-          </div>
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
+              <GanttManager userProfile={userProfile} allUsers={users} />
+            </div>
+          </Suspense>
         ) : appMode === 'consultation' ? (
           /* Consultation Manager View */
-          <div className="w-full flex-1 overflow-auto">
-            <ConsultationManager userProfile={userProfile} />
-          </div>
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 overflow-auto">
+              <ConsultationManager userProfile={userProfile} />
+            </div>
+          </Suspense>
         ) : appMode === 'attendance' ? (
           /* Attendance Manager View */
-          <div className="w-full flex-1 flex flex-col overflow-hidden">
-            <AttendanceManager
-              userProfile={userProfile}
-              teachers={teachers}
-              selectedSubject={attendanceSubject}
-              selectedTeacherId={attendanceTeacherId}
-              currentDate={attendanceDate}
-              isAddStudentModalOpen={isAttendanceAddStudentModalOpen}
-              onCloseAddStudentModal={() => setIsAttendanceAddStudentModalOpen(false)}
-            />
-          </div>
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 flex flex-col overflow-hidden">
+              <AttendanceManager
+                userProfile={userProfile}
+                teachers={teachers}
+                selectedSubject={attendanceSubject}
+                selectedTeacherId={attendanceTeacherId}
+                currentDate={attendanceDate}
+                isAddStudentModalOpen={isAttendanceAddStudentModalOpen}
+                onCloseAddStudentModal={() => setIsAttendanceAddStudentModalOpen(false)}
+              />
+            </div>
+          </Suspense>
         ) : appMode === 'students' ? (
           /* Student Management View */
-          <div className="w-full flex-1 overflow-auto">
-            <StudentManagementTab
-              filters={studentFilters}
-              sortBy={studentSortBy}
-            />
-          </div>
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 overflow-auto">
+              <StudentManagementTab
+                filters={studentFilters}
+                sortBy={studentSortBy}
+              />
+            </div>
+          </Suspense>
         ) : appMode === 'grades' ? (
           /* Grades Management View */
-          <div className="w-full flex-1 overflow-auto">
-            <GradesManager
-              subjectFilter={gradesSubjectFilter}
-              searchQuery={gradesSearchQuery}
-              onSearchChange={setGradesSearchQuery}
-            />
-          </div>
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 overflow-auto">
+              <GradesManager
+                subjectFilter={gradesSubjectFilter}
+                searchQuery={gradesSearchQuery}
+                onSearchChange={setGradesSearchQuery}
+              />
+            </div>
+          </Suspense>
         ) : appMode === 'classes' ? (
           /* Class Management View */
-          <div className="w-full flex-1 overflow-auto">
-            <ClassManagementTab />
-          </div>
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 overflow-auto">
+              <ClassManagementTab />
+            </div>
+          </Suspense>
         ) : appMode === 'student-consultations' ? (
           /* Student Consultation Management View */
-          <div className="w-full flex-1 overflow-auto">
-            <ConsultationManagementTab />
-          </div>
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 overflow-auto">
+              <ConsultationManagementTab />
+            </div>
+          </Suspense>
+        ) : appMode === 'billing' ? (
+          /* Billing Management View */
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 overflow-auto">
+              <BillingManager userProfile={userProfile} />
+            </div>
+          </Suspense>
+        ) : appMode === 'daily-attendance' ? (
+          /* Daily Attendance Management View */
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 overflow-auto">
+              <DailyAttendanceManager userProfile={userProfile} />
+            </div>
+          </Suspense>
+        ) : appMode === 'staff' ? (
+          /* Staff Management View */
+          <Suspense fallback={<TabLoadingFallback />}>
+            <div className="w-full flex-1 overflow-auto">
+              <StaffManager userProfile={userProfile} />
+            </div>
+          </Suspense>
         ) : null}
 
         {/* Floating Save Button for Pending Moves */}
@@ -2199,7 +2257,7 @@ const App: React.FC = () => {
                       <span key={tab} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
                         {tab === 'calendar' && '📅 연간 일정'}
                         {tab === 'timetable' && '📚 시간표'}
-                        {tab === 'payment' && '💳 전자 결제'}
+                        {tab === 'payment' && '💳 전자 결재'}
                         {tab === 'gantt' && '📊 간트 차트'}
                         {tab === 'consultation' && '💬 상담'}
                       </span>
