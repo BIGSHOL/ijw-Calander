@@ -217,25 +217,24 @@ export const useEnglishClasses = (
             c.startPeriod = effectiveMin;
 
             // 3. Visible Periods (5-Period Window)
-            // Logic from academy-app: Try to center but keep size 4 (actually 5 items: start to start+4)
-            // Fixed logic: always show 5 periods if possible
+            // Logic: always show 4 periods if possible
             let start = effectiveMin;
             let end = effectiveMax;
 
-            // Ensure minimal window of 5
-            if (end - start < 4) {
-                end = start + 4;
+            // Ensure minimal window of 4
+            if (end - start < 3) {
+                end = start + 3;
             }
 
             // Clamp
             start = Math.max(1, Math.min(start, 10));
             end = Math.max(1, Math.min(end, 10));
 
-            // Adjust if still < 5 (e.g. at edges)
-            if (end - start < 4) {
+            // Adjust if still < 4 (e.g. at edges)
+            if (end - start < 3) {
                 // Try to expand down or up
-                if (start > 1) start = Math.max(1, end - 4);
-                if (end < 10) end = Math.min(10, start + 4);
+                if (start > 1) start = Math.max(1, end - 3);
+                if (end < 10) end = Math.min(10, start + 3);
             }
 
             // 그룹 설정에 따른 시간대 선택
