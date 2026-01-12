@@ -3,7 +3,6 @@ import { Users, Clock, BookOpen, User } from 'lucide-react';
 import { ClassInfo } from '../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { formatScheduleCompact, SubjectForSchedule } from '../Timetable/constants';
-import { useScheduleDisplaySettings } from '../../hooks/useScheduleDisplaySettings';
 
 interface ClassCardProps {
   classInfo: ClassInfo;
@@ -13,17 +12,13 @@ interface ClassCardProps {
 const ClassCard: React.FC<ClassCardProps> = ({ classInfo, onClick }) => {
   const { className, teacher, subject, schedule, studentCount } = classInfo;
 
-  // 스케줄 표기 설정 가져오기
-  const { data: displaySettings } = useScheduleDisplaySettings();
-
   // 과목 색상 (전역 스타일 시스템 사용)
   const subjectColors = SUBJECT_COLORS[subject as SubjectType] || SUBJECT_COLORS.math;
   const subjectLabel = SUBJECT_LABELS[subject as SubjectType] || subject;
 
-  // 스케줄 텍스트 포맷팅 ("월 7, 월 8, 목 7, 목 8" -> "월목 4교시" 또는 "월목 20:10~22:00")
+  // 스케줄 텍스트 포맷팅 ("월 7, 월 8, 목 7, 목 8" -> "월목 4교시")
   const subjectForSchedule: SubjectForSchedule = subject === 'english' ? 'english' : 'math';
-  const showTime = displaySettings?.[subjectForSchedule] === 'time';
-  const scheduleText = formatScheduleCompact(schedule, subjectForSchedule, showTime);
+  const scheduleText = formatScheduleCompact(schedule, subjectForSchedule, false);
 
   return (
     <div
