@@ -7,6 +7,7 @@ import ClassStudentList from './ClassStudentList';
 import EditClassModal from './EditClassModal';
 import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { formatScheduleCompact, SubjectForSchedule, ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
+import { useTeachers } from '../../hooks/useFirebaseQueries';
 
 interface ClassDetailModalProps {
   classInfo: ClassInfo;
@@ -21,6 +22,16 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
   // 수업 상세 정보 조회 (학생 목록 포함)
   const { data: classDetail, isLoading: detailLoading } = useClassDetail(className, subject);
   const deleteClassMutation = useDeleteClass();
+  const { data: teachersData } = useTeachers();
+
+  // 강사 색상 가져오기
+  const getTeacherColor = (teacherName: string) => {
+    const teacherInfo = teachersData?.find(t => t.name === teacherName);
+    return {
+      bgColor: teacherInfo?.bgColor || '#fdb813',
+      textColor: teacherInfo?.textColor || '#081429'
+    };
+  };
 
   // classDetail에서 최신 데이터 사용 (없으면 props fallback)
   const teacher = classDetail?.teacher || classInfo.teacher;
@@ -173,12 +184,19 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                           const key = `${day}-${periodId}`;
                           const isSelected = selectedSlots.has(key);
                           const slotTeacher = slotTeachers?.[key];
+                          const displayTeacher = slotTeacher || teacher;
+                          const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
+
                           return (
                             <div
                               key={key}
                               className={`p-1 text-center text-[10px] min-h-[24px] flex items-center justify-center ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-100' : ''} ${
-                                isSelected ? 'bg-[#fdb813] text-[#081429] font-semibold' : 'bg-white'
+                                isSelected ? 'font-semibold' : 'bg-white'
                               }`}
+                              style={isSelected ? {
+                                backgroundColor: colors.bgColor,
+                                color: colors.textColor
+                              } : undefined}
                             >
                               {isSelected ? (slotTeacher || teacher || '').slice(0, 4) : ''}
                             </div>

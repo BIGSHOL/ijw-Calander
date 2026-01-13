@@ -15,6 +15,8 @@ export interface ClassInfo {
     studentCount?: number;
     assistants?: string[];
     room?: string;
+    slotTeachers?: Record<string, string>;
+    slotRooms?: Record<string, string>;
 }
 
 /**
@@ -100,6 +102,8 @@ async function fetchClassesFromUnifiedCollection(subject?: SubjectType): Promise
             studentCount: data.studentIds?.length || 0,
             assistants: data.assistants,
             room: data.room,
+            slotTeachers: data.slotTeachers,
+            slotRooms: data.slotRooms,
         };
     });
 

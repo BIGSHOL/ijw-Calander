@@ -30,7 +30,10 @@ export interface CreateClassData {
   teacher: string;
   subject: 'math' | 'english';
   schedule?: string[];
+  room?: string;
   studentIds: string[];
+  slotTeachers?: Record<string, string>;
+  slotRooms?: Record<string, string>;
 }
 
 export const useCreateClass = () => {
@@ -38,11 +41,34 @@ export const useCreateClass = () => {
 
   return useMutation({
     mutationFn: async (classData: CreateClassData) => {
-      const { className, teacher, subject, schedule = [], studentIds } = classData;
+      const { className, teacher, subject, schedule = [], room, studentIds, slotTeachers, slotRooms } = classData;
 
       console.log(`[useCreateClass] Creating class: ${className} for ${studentIds.length} students`);
 
-      // 각 학생의 enrollments 서브컬렉션에 새 enrollment 추가
+      // 1. classes 컬렉션에 수업 추가
+      const scheduleSlots = schedule.map(s => {
+        const parts = s.split(' ');
+        return { day: parts[0], periodId: parts[1] || '' };
+      });
+
+      const classDoc: any = {
+        className,
+        teacher,
+        subject,
+        schedule: scheduleSlots,
+        legacySchedule: schedule,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (room) classDoc.room = room;
+      if (slotTeachers && Object.keys(slotTeachers).length > 0) classDoc.slotTeachers = slotTeachers;
+      if (slotRooms && Object.keys(slotRooms).length > 0) classDoc.slotRooms = slotRooms;
+
+      await addDoc(collection(db, COL_CLASSES), classDoc);
+
+      // 2. 각 학생의 enrollments 서브컬렉션에 새 enrollment 추가
       const promises = studentIds.map(async (studentId) => {
         const enrollmentsRef = collection(db, COL_STUDENTS, studentId, 'enrollments');
         await addDoc(enrollmentsRef, {
@@ -88,6 +114,7 @@ export interface UpdateClassData {
   newSchedule?: string[];
   newRoom?: string;
   slotTeachers?: Record<string, string>;  // { "월-4": "부담임명", ... }
+  slotRooms?: Record<string, string>;  // { "월-4": "301", ... }
 }
 
 export const useUpdateClass = () => {
@@ -95,7 +122,7 @@ export const useUpdateClass = () => {
 
   return useMutation({
     mutationFn: async (updateData: UpdateClassData) => {
-      const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [], newRoom, slotTeachers } = updateData;
+      const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [], newRoom, slotTeachers, slotRooms } = updateData;
 
       console.log(`[useUpdateClass] Updating class: ${originalClassName} (${originalSubject}) -> ${newClassName}`);
 
@@ -128,12 +155,16 @@ export const useUpdateClass = () => {
             legacySchedule: newSchedule,
             updatedAt: new Date().toISOString(),
           };
-          // room과 slotTeachers가 있으면 추가
+          // room, slotTeachers, slotRooms 추가/업데이트
           if (newRoom !== undefined) {
             updatePayload.room = newRoom;
           }
-          if (slotTeachers && Object.keys(slotTeachers).length > 0) {
+          // slotTeachers와 slotRooms는 항상 업데이트 (비어있어도 빈 객체로 저장하여 기존 데이터 삭제)
+          if (slotTeachers !== undefined) {
             updatePayload.slotTeachers = slotTeachers;
+          }
+          if (slotRooms !== undefined) {
+            updatePayload.slotRooms = slotRooms;
           }
           console.log('[useUpdateClass] Updating doc:', docSnap.id, 'with:', updatePayload);
           await updateDoc(docSnap.ref, updatePayload);

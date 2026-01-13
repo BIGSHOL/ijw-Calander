@@ -4,6 +4,7 @@ import { useUpdateClass, UpdateClassData } from '../../hooks/useClassMutations';
 import { ClassInfo } from '../../hooks/useClasses';
 import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
+import { useTeachers } from '../../hooks/useFirebaseQueries';
 
 interface EditClassModalProps {
   classInfo: ClassInfo;
@@ -34,11 +35,22 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   // 스케줄 그리드
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [slotTeachers, setSlotTeachers] = useState<Record<string, string>>(initialSlotTeachers || {});
+  const [slotRooms, setSlotRooms] = useState<Record<string, string>>({});
   const [showAdvancedSchedule, setShowAdvancedSchedule] = useState(false);
 
   const [error, setError] = useState('');
 
   const updateClassMutation = useUpdateClass();
+  const { data: teachersData } = useTeachers();
+
+  // 강사 색상 가져오기
+  const getTeacherColor = (teacherName: string) => {
+    const teacherInfo = teachersData?.find(t => t.name === teacherName);
+    return {
+      bgColor: teacherInfo?.bgColor || '#fdb813',
+      textColor: teacherInfo?.textColor || '#081429'
+    };
+  };
 
   // 과목별 교시
   const periods = classInfo.subject === 'english' ? ENGLISH_UNIFIED_PERIODS : MATH_UNIFIED_PERIODS;
@@ -57,7 +69,17 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       });
       setSelectedSlots(slots);
     }
-  }, [classInfo.schedule]);
+
+    // 기존 slotTeachers 데이터 로드
+    if (classInfo.slotTeachers) {
+      setSlotTeachers(classInfo.slotTeachers);
+    }
+
+    // 기존 slotRooms 데이터 로드
+    if (classInfo.slotRooms) {
+      setSlotRooms(classInfo.slotRooms);
+    }
+  }, [classInfo.schedule, classInfo.slotTeachers, classInfo.slotRooms]);
 
   // 슬롯 토글
   const toggleSlot = (day: string, periodId: string) => {
@@ -66,8 +88,11 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     if (newSlots.has(key)) {
       newSlots.delete(key);
       const newTeachers = { ...slotTeachers };
+      const newRooms = { ...slotRooms };
       delete newTeachers[key];
+      delete newRooms[key];
       setSlotTeachers(newTeachers);
+      setSlotRooms(newRooms);
     } else {
       newSlots.add(key);
     }
@@ -77,6 +102,11 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   // 슬롯 강사 설정
   const setSlotTeacher = (key: string, teacherName: string) => {
     setSlotTeachers(prev => ({ ...prev, [key]: teacherName }));
+  };
+
+  // 슬롯 강의실 설정
+  const setSlotRoom = (key: string, roomName: string) => {
+    setSlotRooms(prev => ({ ...prev, [key]: roomName }));
   };
 
   // 저장
@@ -102,12 +132,20 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     console.log('[EditClassModal] Saving with schedule:', schedule);
     console.log('[EditClassModal] Selected slots:', Array.from(selectedSlots));
     console.log('[EditClassModal] Slot teachers:', slotTeachers);
+    console.log('[EditClassModal] Slot rooms:', slotRooms);
 
-    // 빈 문자열인 slotTeachers 항목 제거
+    // 빈 문자열인 slotTeachers 및 slotRooms 항목 제거
     const filteredSlotTeachers: Record<string, string> = {};
     Object.entries(slotTeachers).forEach(([key, value]) => {
       if (value && value.trim()) {
         filteredSlotTeachers[key] = value.trim();
+      }
+    });
+
+    const filteredSlotRooms: Record<string, string> = {};
+    Object.entries(slotRooms).forEach(([key, value]) => {
+      if (value && value.trim()) {
+        filteredSlotRooms[key] = value.trim();
       }
     });
 
@@ -119,6 +157,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       newSchedule: schedule,
       newRoom: room.trim(),
       slotTeachers: filteredSlotTeachers,
+      slotRooms: filteredSlotRooms,
     };
 
     try {
@@ -206,18 +245,18 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">스케줄 선택</label>
             <div className="border border-gray-200 rounded-lg overflow-hidden">
-              {/* 헤더 */}
-              <div className="grid bg-gray-50 border-b border-gray-200" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
-                <div className="p-1 text-center text-[10px] font-semibold text-gray-400 border-r border-gray-200"></div>
-                {WEEKDAYS.map((day, idx) => (
-                  <div key={day} className={`p-1 text-center text-xs font-semibold text-gray-600 ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-200' : ''}`}>
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              {/* 교시 */}
               <div className="max-h-36 overflow-y-auto">
+                {/* 헤더 - Sticky */}
+                <div className="grid bg-gray-50 border-b border-gray-200 sticky top-0 z-10" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
+                  <div className="p-1 text-center text-[10px] font-semibold text-gray-400 border-r border-gray-200"></div>
+                  {WEEKDAYS.map((day) => (
+                    <div key={day} className="p-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200 last:border-r-0">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 교시 */}
                 {periods.map(periodId => (
                   <div
                     key={periodId}
@@ -227,22 +266,29 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                     <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
                       {periodId}
                     </div>
-                    {WEEKDAYS.map((day, idx) => {
+                    {WEEKDAYS.map((day) => {
                       const key = `${day}-${periodId}`;
                       const isSelected = selectedSlots.has(key);
                       const slotTeacher = slotTeachers[key];
+                      const displayTeacher = slotTeacher || teacher;
+                      const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
+
                       return (
                         <button
                           key={key}
                           type="button"
                           onClick={() => toggleSlot(day, periodId)}
-                          className={`p-1 transition-colors text-[10px] min-h-[24px] ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-100' : ''} ${
+                          className={`p-1 transition-colors text-[10px] min-h-[24px] border-r border-gray-200 last:border-r-0 ${
                             isSelected
-                              ? 'bg-[#fdb813] text-[#081429] font-semibold'
+                              ? 'font-semibold'
                               : 'hover:bg-gray-100 text-gray-300'
                           }`}
+                          style={isSelected ? {
+                            backgroundColor: colors.bgColor,
+                            color: colors.textColor
+                          } : undefined}
                         >
-                          {isSelected ? (slotTeacher || teacher || '✓').slice(0, 3) : ''}
+                          {isSelected ? (slotTeacher || teacher || '✓') : ''}
                         </button>
                       );
                     })}
@@ -260,53 +306,98 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                   className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
                 >
                   {showAdvancedSchedule ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                  교시별 강사 설정
+                  교시별 강사/강의실 설정
                 </button>
               </div>
             )}
 
             {showAdvancedSchedule && selectedSlots.size > 0 && (
-              <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200">각 교시별 강사 (비워두면 담임)</p>
-                {/* 선택된 교시별 강사 입력 */}
-                {(() => {
-                  const selectedPeriods = new Set<string>();
-                  selectedSlots.forEach(key => {
-                    const [, periodId] = key.split('-');
-                    selectedPeriods.add(periodId);
-                  });
-                  const sortedPeriods = Array.from(selectedPeriods).sort((a, b) => Number(a) - Number(b));
+              <div className="mt-2 space-y-2">
+                {/* 교시별 강사 설정 */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200 bg-blue-50 font-semibold">교시별 강사 (비워두면 담임)</p>
+                  {(() => {
+                    const selectedPeriods = new Set<string>();
+                    selectedSlots.forEach(key => {
+                      const [, periodId] = key.split('-');
+                      selectedPeriods.add(periodId);
+                    });
+                    const sortedPeriods = Array.from(selectedPeriods).sort((a, b) => Number(a) - Number(b));
 
-                  return sortedPeriods.map(periodId => (
-                    <div
-                      key={periodId}
-                      className="grid border-b border-gray-100 last:border-b-0"
-                      style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
-                    >
-                      <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
-                        {periodId}
+                    return sortedPeriods.map(periodId => (
+                      <div
+                        key={periodId}
+                        className="grid border-b border-gray-100 last:border-b-0"
+                        style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
+                      >
+                        <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                          {periodId}
+                        </div>
+                        {WEEKDAYS.map((day) => {
+                          const key = `${day}-${periodId}`;
+                          const isSelected = selectedSlots.has(key);
+                          if (!isSelected) {
+                            return <div key={key} className="bg-gray-50 min-h-[28px] border-r border-gray-200 last:border-r-0" />;
+                          }
+                          return (
+                            <div key={key} className="p-0.5 border-r border-gray-200 last:border-r-0">
+                              <input
+                                type="text"
+                                value={slotTeachers[key] || ''}
+                                onChange={(e) => setSlotTeacher(key, e.target.value)}
+                                placeholder={teacher || '-'}
+                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
-                      {WEEKDAYS.map((day, idx) => {
-                        const key = `${day}-${periodId}`;
-                        const isSelected = selectedSlots.has(key);
-                        if (!isSelected) {
-                          return <div key={key} className={`bg-gray-50 min-h-[28px] ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-100' : ''}`} />;
-                        }
-                        return (
-                          <div key={key} className={`p-0.5 ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-100' : ''}`}>
-                            <input
-                              type="text"
-                              value={slotTeachers[key] || ''}
-                              onChange={(e) => setSlotTeacher(key, e.target.value)}
-                              placeholder={teacher || '-'}
-                              className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ));
-                })()}
+                    ));
+                  })()}
+                </div>
+
+                {/* 교시별 강의실 설정 */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200 bg-purple-50 font-semibold">교시별 강의실 (비워두면 기본 강의실)</p>
+                  {(() => {
+                    const selectedPeriods = new Set<string>();
+                    selectedSlots.forEach(key => {
+                      const [, periodId] = key.split('-');
+                      selectedPeriods.add(periodId);
+                    });
+                    const sortedPeriods = Array.from(selectedPeriods).sort((a, b) => Number(a) - Number(b));
+
+                    return sortedPeriods.map(periodId => (
+                      <div
+                        key={periodId}
+                        className="grid border-b border-gray-100 last:border-b-0"
+                        style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
+                      >
+                        <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                          {periodId}
+                        </div>
+                        {WEEKDAYS.map((day) => {
+                          const key = `${day}-${periodId}`;
+                          const isSelected = selectedSlots.has(key);
+                          if (!isSelected) {
+                            return <div key={key} className="bg-gray-50 min-h-[28px] border-r border-gray-200 last:border-r-0" />;
+                          }
+                          return (
+                            <div key={key} className="p-0.5 border-r border-gray-200 last:border-r-0">
+                              <input
+                                type="text"
+                                value={slotRooms[key] || ''}
+                                onChange={(e) => setSlotRoom(key, e.target.value)}
+                                placeholder={room || '-'}
+                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ));
+                  })()}
+                </div>
               </div>
             )}
           </div>
