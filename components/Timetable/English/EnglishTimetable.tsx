@@ -49,40 +49,107 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
     const canSimulation = hasPermission('timetable.english.simulation') || isMaster;
     const canViewBackup = hasPermission('timetable.english.backup.view') || isMaster;
 
-    // Optimized: Use Real-time listener instead of manual fetch
+    // Data loading with structure toggle support
     useEffect(() => {
-        const targetCollection = isSimulationMode ? EN_DRAFT_COLLECTION : EN_COLLECTION;
-        const unsubscribe = onSnapshot(collection(db, targetCollection), (snapshot) => {
-            const mergedData: ScheduleData = {};
-            snapshot.docs.forEach((docSnap) => {
-                const data = docSnap.data();
-                // Handle both FLAT (ijw-calander new) and NESTED (academy-app legacy) formats
-                Object.entries(data).forEach(([key, value]) => {
-                    if (typeof value === 'object' && value !== null) {
-                        // Check if this is a nested structure (academy-app format: {teacher-period: {day: cell}})
-                        // Keys like "Sarah-5" with values like {월: {...}, 화: {...}}
-                        const isNested = Object.keys(value).some(k => ['월', '화', '수', '목', '금', '토', '일'].includes(k));
-                        if (isNested) {
-                            // Flatten nested structure
-                            Object.entries(value as Record<string, ScheduleCell>).forEach(([day, cell]) => {
-                                const flatKey = `${key}-${day}`;
-                                mergedData[flatKey] = cell;
-                            });
-                        } else {
-                            // Already flat format
-                            mergedData[key] = value as ScheduleCell;
-                        }
-                    }
-                });
-            });
-            setScheduleData(mergedData);
-            setLoading(false);
-        }, (error) => {
-            console.error('데이터 로딩 실패:', error);
-            setLoading(false);
-        });
+        const useNewStructure = localStorage.getItem('useNewDataStructure') === 'true';
 
-        return () => unsubscribe();
+        // 시뮬레이션 모드: 항상 english_schedules_draft 사용
+        if (isSimulationMode) {
+            const unsubscribe = onSnapshot(collection(db, EN_DRAFT_COLLECTION), (snapshot) => {
+                const mergedData: ScheduleData = {};
+                snapshot.docs.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    Object.entries(data).forEach(([key, value]) => {
+                        if (typeof value === 'object' && value !== null) {
+                            const isNested = Object.keys(value).some(k => ['월', '화', '수', '목', '금', '토', '일'].includes(k));
+                            if (isNested) {
+                                Object.entries(value as Record<string, ScheduleCell>).forEach(([day, cell]) => {
+                                    const flatKey = `${key}-${day}`;
+                                    mergedData[flatKey] = cell;
+                                });
+                            } else {
+                                mergedData[key] = value as ScheduleCell;
+                            }
+                        }
+                    });
+                });
+                setScheduleData(mergedData);
+                setLoading(false);
+            }, (error) => {
+                console.error('시뮬레이션 데이터 로딩 실패:', error);
+                setLoading(false);
+            });
+            return () => unsubscribe();
+        }
+
+        // 일반 모드: 토글에 따라 데이터 소스 결정
+        if (useNewStructure) {
+            // 새 구조: classes 컬렉션에서 영어 수업 로드
+            const unsubscribe = onSnapshot(
+                collection(db, 'classes'),
+                (snapshot) => {
+                    const scheduleData: ScheduleData = {};
+
+                    snapshot.docs.forEach((docSnap) => {
+                        const cls = docSnap.data();
+
+                        // 영어 수업만 처리
+                        if (cls.subject !== 'english') return;
+
+                        // schedule 배열을 순회하여 scheduleData 생성
+                        if (!cls.schedule || !Array.isArray(cls.schedule)) return;
+
+                        cls.schedule.forEach((slot: any) => {
+                            const slotKey = `${slot.day}-${slot.periodId}`;
+                            const slotTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
+                            const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room;
+
+                            const key = `${slotTeacher}-${slot.periodId}-${slot.day}`;
+                            scheduleData[key] = {
+                                className: cls.className,
+                                room: slotRoom,
+                                teacher: slotTeacher
+                            };
+                        });
+                    });
+
+                    setScheduleData(scheduleData);
+                    setLoading(false);
+                },
+                (error) => {
+                    console.error('classes 컬렉션 로딩 실패:', error);
+                    setLoading(false);
+                }
+            );
+            return () => unsubscribe();
+        } else {
+            // 기존 구조: english_schedules 컬렉션 사용
+            const unsubscribe = onSnapshot(collection(db, EN_COLLECTION), (snapshot) => {
+                const mergedData: ScheduleData = {};
+                snapshot.docs.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    Object.entries(data).forEach(([key, value]) => {
+                        if (typeof value === 'object' && value !== null) {
+                            const isNested = Object.keys(value).some(k => ['월', '화', '수', '목', '금', '토', '일'].includes(k));
+                            if (isNested) {
+                                Object.entries(value as Record<string, ScheduleCell>).forEach(([day, cell]) => {
+                                    const flatKey = `${key}-${day}`;
+                                    mergedData[flatKey] = cell;
+                                });
+                            } else {
+                                mergedData[key] = value as ScheduleCell;
+                            }
+                        }
+                    });
+                });
+                setScheduleData(mergedData);
+                setLoading(false);
+            }, (error) => {
+                console.error('데이터 로딩 실패:', error);
+                setLoading(false);
+            });
+            return () => unsubscribe();
+        }
     }, [isSimulationMode]);
 
     // Manual refresh is no longer strictly needed for data, but can trigger re-sync if needed.
