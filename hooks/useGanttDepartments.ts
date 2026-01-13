@@ -7,9 +7,9 @@ import { GanttDepartment } from '../types';
  * 기본 부서 (컬렉션 비어있을 때 폴백)
  */
 const DEFAULT_DEPARTMENTS: GanttDepartment[] = [
-    { id: 'math', label: '수학부', order: 0 },
-    { id: 'english', label: '영어부', order: 1 },
-    { id: 'admin', label: '행정부', order: 2 },
+    { id: 'math', label: '수학부', order: 0, color: '#3B82F6' },
+    { id: 'english', label: '영어부', order: 1, color: '#8B5CF6' },
+    { id: 'admin', label: '행정부', order: 2, color: '#10B981' },
 ];
 
 /**
@@ -34,11 +34,16 @@ export const useGanttDepartments = () => {
                 return DEFAULT_DEPARTMENTS;
             }
 
-            return snapshot.docs.map(doc => ({
-                id: doc.id,
-                label: doc.data().label || doc.id,
-                order: doc.data().order ?? 0,
-            }));
+            return snapshot.docs.map(doc => {
+                const data = doc.data() as any;
+                return {
+                    id: doc.id,
+                    label: data.label || doc.id,
+                    order: data.order ?? 0,
+                    color: data.color || '#6B7280',
+                    createdAt: data.createdAt,
+                };
+            });
         },
         staleTime: 1000 * 60 * 30, // 30분 캐싱
         gcTime: 1000 * 60 * 60,    // 1시간 GC

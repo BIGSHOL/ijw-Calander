@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Department, UserProfile, CalendarEvent, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS, Teacher, ClassKeywordColor } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
-import { X, FolderKanban, Users, Shield, ShieldAlert, ShieldCheck, Database, Search, Save, UserCog, CalendarClock, Calendar, Archive } from 'lucide-react';
+import { X, FolderKanban, Users, Shield, ShieldAlert, ShieldCheck, Database, Search, Save, UserCog, CalendarClock, Calendar, Archive, Clock, BarChart3, FileText } from 'lucide-react';
+import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { STANDARD_HOLIDAYS } from '../../constants_holidays';
 import { db, auth } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
@@ -613,7 +614,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => { setMainTab('calendar'); setActiveTab('departments'); }}
                       className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'calendar' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
                     >
-                      📅 연간 일정
+                      <Calendar className="inline-block w-4 h-4 mr-1" />
+                      연간 일정
                     </button>
                   )}
                   {(isMaster || canViewTeachers || canViewClassKeywords) && (
@@ -621,7 +623,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => { setMainTab('timetable'); setActiveTab('teachers'); }}
                       className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'timetable' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
                     >
-                      🕐 시간표
+                      <Clock className="inline-block w-4 h-4 mr-1" />
+                      시간표
                     </button>
                   )}
                   {(isMaster || hasPermission('gantt.view')) && (
@@ -629,7 +632,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => { setMainTab('gantt'); setActiveTab('gantt_departments'); }}
                       className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'gantt' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
                     >
-                      📊 간트 차트
+                      <BarChart3 className="inline-block w-4 h-4 mr-1" />
+                      간트 차트
                     </button>
                   )}
                   {(isMaster || isAdmin) && (
@@ -637,7 +641,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => { setMainTab('attendance'); setActiveTab('salary_settings'); }}
                       className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'attendance' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
                     >
-                      📝 출석부
+                      <FileText className="inline-block w-4 h-4 mr-1" />
+                      출석부
                     </button>
                   )}
                   {/* 시스템 설정 is always visible for all users */}
@@ -838,9 +843,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <p className="text-xs text-gray-400">앱 시작 시 기본으로 표시할 뷰</p>
                       </div>
                       <select
-                        value={localStorage.getItem('default_view_mode') || 'monthly'}
+                        value={storage.getString(STORAGE_KEYS.DEFAULT_VIEW_MODE) || 'monthly'}
                         onChange={(e) => {
-                          localStorage.setItem('default_view_mode', e.target.value);
+                          storage.setString(STORAGE_KEYS.DEFAULT_VIEW_MODE, e.target.value);
                           setHasChanges(true); // Hint update
                         }}
                         className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none"
@@ -861,15 +866,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                     <button
                       onClick={() => {
-                        const current = localStorage.getItem('dark_mode') === 'true';
-                        localStorage.setItem('dark_mode', String(!current));
+                        const current = storage.getBoolean(STORAGE_KEYS.DARK_MODE, false);
+                        storage.setBoolean(STORAGE_KEYS.DARK_MODE, !current);
                         if (!current) {
                           document.documentElement.classList.add('dark');
                         } else {
                           document.documentElement.classList.remove('dark');
                         }
                       }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${localStorage.getItem('dark_mode') === 'true' ? 'bg-[#081429]' : 'bg-gray-200'
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${storage.getBoolean(STORAGE_KEYS.DARK_MODE, false) ? 'bg-[#081429]' : 'bg-gray-200'
                         }`}
                     >
                       <span

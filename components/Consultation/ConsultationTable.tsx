@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
-import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, Settings2, X } from 'lucide-react';
+import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, Settings2, X, ClipboardList } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -224,7 +224,10 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
             {showSettings && (
                 <div className="p-4 rounded-xl shadow-sm border" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
                     <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-bold" style={{ color: COLORS.navy }}>📋 보기 설정</h4>
+                        <h4 className="text-sm font-bold flex items-center gap-2" style={{ color: COLORS.navy }}>
+                            <ClipboardList className="w-4 h-4" />
+                            보기 설정
+                        </h4>
                         <div className="flex gap-2">
                             <button
                                 onClick={selectAllColumns}

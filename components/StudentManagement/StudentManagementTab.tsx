@@ -4,7 +4,7 @@ import { useStudents, searchStudentsByQuery } from '../../hooks/useStudents';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
-import { Users, Loader2, RefreshCw, UserPlus } from 'lucide-react';
+import { Users, Loader2, RefreshCw, UserPlus, ClipboardList } from 'lucide-react';
 
 export interface StudentFilters {
   searchQuery: string;
@@ -189,7 +189,8 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         {oldWithdrawnStudents.length > 0 && !isSearchingOld && (
           <div className="p-2 bg-[#fdb813]/10 border-b border-[#fdb813]/20">
             <p className="text-xs text-[#081429] font-medium">
-              📋 과거 퇴원생 {oldWithdrawnStudents.length}명 포함됨 (90일 이전)
+              <ClipboardList className="inline-block w-4 h-4 mr-1" />
+              과거 퇴원생 {oldWithdrawnStudents.length}명 포함됨 (90일 이전)
             </p>
           </div>
         )}

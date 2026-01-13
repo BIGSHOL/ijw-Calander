@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, onSnapshot, doc, getDocs, writeBatch, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
+import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { X, RotateCcw, Clock, User, AlertTriangle, Pencil, Trash2, Check } from 'lucide-react';
 import { EN_COLLECTION, CLASS_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -160,7 +161,7 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        return listenerRegistry.register('BackupHistoryModal', unsubscribe);
     }, [isOpen]);
 
     const handleRestore = async (backup: BackupEntry) => {

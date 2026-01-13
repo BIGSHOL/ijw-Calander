@@ -12,6 +12,7 @@ import {
   setDoc,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { SubjectType } from '../types';
 
 const COL_STUDENTS = 'students';
 const COL_CLASSES = 'classes';
@@ -28,7 +29,7 @@ const COL_CLASSES = 'classes';
 export interface CreateClassData {
   className: string;
   teacher: string;
-  subject: 'math' | 'english';
+  subject: SubjectType;
   schedule?: string[];
   room?: string;
   studentIds: string[];
@@ -108,7 +109,7 @@ export const useCreateClass = () => {
  */
 export interface UpdateClassData {
   originalClassName: string;
-  originalSubject: 'math' | 'english';
+  originalSubject: SubjectType;
   newClassName: string;
   newTeacher: string;
   newSchedule?: string[];
@@ -242,7 +243,7 @@ export const useUpdateClass = () => {
  */
 export interface DeleteClassData {
   className: string;
-  subject: 'math' | 'english';
+  subject: SubjectType;
 }
 
 export const useDeleteClass = () => {
@@ -292,7 +293,7 @@ export const useDeleteClass = () => {
 export interface ManageClassStudentsData {
   className: string;
   teacher: string;
-  subject: 'math' | 'english';
+  subject: SubjectType;
   schedule?: string[];
   addStudentIds?: string[];     // 추가할 학생 IDs
   removeStudentIds?: string[];  // 제거할 학생 IDs

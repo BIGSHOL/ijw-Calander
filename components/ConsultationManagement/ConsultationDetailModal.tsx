@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ClipboardList, FileText, Bell } from 'lucide-react';
 import { Consultation, CATEGORY_CONFIG } from '../../types';
 import { useDeleteConsultation, useCompleteFollowUp } from '../../hooks/useConsultationMutations';
 import { getFollowUpUrgency, getFollowUpDaysLeft } from '../../hooks/useStudentConsultations';
@@ -84,7 +85,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                     {/* 기본 정보 */}
                     <section>
                         <h3 className="text-lg font-bold text-[#081429] mb-3 flex items-center gap-2">
-                            📋 기본 정보
+                            <ClipboardList className="inline-block w-5 h-5 mr-1" />
+                            기본 정보
                         </h3>
                         <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                             <div className="flex items-center gap-2">
@@ -167,7 +169,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                     {/* 상담 내용 */}
                     <section>
                         <h3 className="text-lg font-bold text-[#081429] mb-3 flex items-center gap-2">
-                            📝 상담 내용
+                            <FileText className="inline-block w-5 h-5 mr-1" />
+                            상담 내용
                         </h3>
                         <div className="bg-gray-50 rounded-lg p-4">
                             <h4 className="font-semibold text-[#081429] mb-2">
@@ -183,7 +186,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                     {consultation.followUpNeeded && (
                         <section>
                             <h3 className="text-lg font-bold text-[#081429] mb-3 flex items-center gap-2">
-                                🔔 후속 조치
+                                <Bell className="inline-block w-5 h-5 mr-1" />
+                                후속 조치
                             </h3>
                             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                                 <div className="flex items-center gap-3">

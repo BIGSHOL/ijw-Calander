@@ -10,6 +10,7 @@ import {
 } from '../../types';
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, onSnapshot } from 'firebase/firestore';
+import { listenerRegistry } from '../../utils/firebaseCleanup';
 import { RotateCcw, Save, Layout } from 'lucide-react';
 
 interface TabAccessTabProps {
@@ -55,7 +56,8 @@ const TabAccessTab: React.FC<TabAccessTabProps> = ({
             }
             setLoaded(true);
         });
-        return () => unsubscribe();
+
+        return listenerRegistry.register('TabAccessTab', unsubscribe);
     }, [canView]);
 
     // --- Handlers ---

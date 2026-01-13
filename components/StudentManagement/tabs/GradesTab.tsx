@@ -110,6 +110,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
             type: newExam.type,
             subject: newExam.subject,
             maxScore: parseFloat(newExam.maxScore) || 100,
+            scope: 'academy', // 기본값: 학원 전체
             createdBy: user?.uid || '',
             createdByName: user?.displayName || user?.email || '',
         });

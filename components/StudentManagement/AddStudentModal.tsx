@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { X, UserPlus, Loader2 } from 'lucide-react';
 import { db } from '../../firebaseConfig';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
+import { useForm } from '../../hooks/useForm';
+import { required, phone as phoneValidator } from '../../utils/formValidation';
 
 interface AddStudentModalProps {
     isOpen: boolean;
@@ -9,72 +11,75 @@ interface AddStudentModalProps {
     onSuccess: () => void;
 }
 
+interface StudentFormData {
+    name: string;
+    school: string;
+    grade: string;
+    englishName: string;
+    phone: string;
+    parentPhone: string;
+}
+
 const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSuccess }) => {
-    const [name, setName] = useState('');
-    const [school, setSchool] = useState('');
-    const [grade, setGrade] = useState('');
-    const [englishName, setEnglishName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [parentPhone, setParentPhone] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState('');
+    const {
+        values,
+        errors,
+        touched,
+        isSubmitting,
+        handleChange,
+        handleBlur,
+        handleSubmit,
+        resetForm,
+        setErrors,
+    } = useForm<StudentFormData>({
+        initialValues: {
+            name: '',
+            school: '',
+            grade: '',
+            englishName: '',
+            phone: '',
+            parentPhone: '',
+        },
+        validationRules: {
+            name: [required('이름을 입력해주세요')],
+            school: [required('학교를 입력해주세요')],
+            grade: [required('학년을 선택해주세요')],
+            phone: [phoneValidator()],
+            parentPhone: [phoneValidator()],
+        },
+        validateOnBlur: true,
+        onSubmit: async (formData) => {
+            try {
+                // studentId 형식: "이름_학교_학년"
+                const studentId = `${formData.name.trim()}_${formData.school.trim()}_${formData.grade.trim()}`;
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
+                // students 컬렉션에 추가
+                await setDoc(doc(db, 'students', studentId), {
+                    name: formData.name.trim(),
+                    school: formData.school.trim(),
+                    grade: formData.grade.trim(),
+                    englishName: formData.englishName.trim() || null,
+                    phone: formData.phone.trim() || null,
+                    parentPhone: formData.parentPhone.trim() || null,
+                    status: 'active',
+                    enrollmentDate: Timestamp.now(),
+                    createdAt: Timestamp.now(),
+                    updatedAt: Timestamp.now(),
+                });
 
-        if (!name.trim()) {
-            setError('이름을 입력해주세요');
-            return;
-        }
-
-        if (!school.trim() || !grade.trim()) {
-            setError('학교와 학년을 입력해주세요');
-            return;
-        }
-
-        setIsSubmitting(true);
-
-        try {
-            // studentId 형식: "이름_학교_학년"
-            const studentId = `${name.trim()}_${school.trim()}_${grade.trim()}`;
-
-            // students 컬렉션에 추가
-            await setDoc(doc(db, 'students', studentId), {
-                name: name.trim(),
-                school: school.trim(),
-                grade: grade.trim(),
-                englishName: englishName.trim() || null,
-                phone: phone.trim() || null,
-                parentPhone: parentPhone.trim() || null,
-                status: 'active',
-                enrollmentDate: Timestamp.now(),
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
-            });
-
-            // 성공 처리
-            onSuccess();
-            onClose();
-
-            // 폼 초기화
-            setName('');
-            setSchool('');
-            setGrade('');
-            setEnglishName('');
-            setPhone('');
-            setParentPhone('');
-        } catch (err) {
-            console.error('학생 추가 오류:', err);
-            setError('학생 추가 중 오류가 발생했습니다');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+                // 성공 처리
+                onSuccess();
+                handleClose();
+            } catch (err) {
+                console.error('학생 추가 오류:', err);
+                setErrors({ name: '학생 추가 중 오류가 발생했습니다' });
+            }
+        },
+    });
 
     const handleClose = () => {
         if (isSubmitting) return;
-        setError('');
+        resetForm();
         onClose();
     };
 
@@ -103,54 +108,63 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="p-6">
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-                            {error}
-                        </div>
-                    )}
-
                     <div className="space-y-4">
                         {/* 이름 */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                            <label htmlFor="name" className="block text-sm font-bold text-gray-700 mb-1.5">
                                 이름 <span className="text-red-500">*</span>
                             </label>
                             <input
+                                id="name"
                                 type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm"
+                                value={values.name}
+                                onChange={(e) => handleChange('name', e.target.value)}
+                                onBlur={() => handleBlur('name')}
+                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm ${
+                                    touched.name && errors.name ? 'border-red-500' : 'border-gray-300'
+                                }`}
                                 placeholder="홍길동"
-                                required
                                 autoFocus
                             />
+                            {touched.name && errors.name && (
+                                <p className="mt-1 text-xs text-red-600">{errors.name}</p>
+                            )}
                         </div>
 
                         {/* 학교 */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                            <label htmlFor="school" className="block text-sm font-bold text-gray-700 mb-1.5">
                                 학교 <span className="text-red-500">*</span>
                             </label>
                             <input
+                                id="school"
                                 type="text"
-                                value={school}
-                                onChange={(e) => setSchool(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm"
+                                value={values.school}
+                                onChange={(e) => handleChange('school', e.target.value)}
+                                onBlur={() => handleBlur('school')}
+                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm ${
+                                    touched.school && errors.school ? 'border-red-500' : 'border-gray-300'
+                                }`}
                                 placeholder="칠성초"
-                                required
                             />
+                            {touched.school && errors.school && (
+                                <p className="mt-1 text-xs text-red-600">{errors.school}</p>
+                            )}
                         </div>
 
                         {/* 학년 */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                            <label htmlFor="grade" className="block text-sm font-bold text-gray-700 mb-1.5">
                                 학년 <span className="text-red-500">*</span>
                             </label>
                             <select
-                                value={grade}
-                                onChange={(e) => setGrade(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm"
-                                required
+                                id="grade"
+                                value={values.grade}
+                                onChange={(e) => handleChange('grade', e.target.value)}
+                                onBlur={() => handleBlur('grade')}
+                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm ${
+                                    touched.grade && errors.grade ? 'border-red-500' : 'border-gray-300'
+                                }`}
                             >
                                 <option value="">선택하세요</option>
                                 <option value="초1">초1</option>
@@ -166,17 +180,21 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 <option value="고2">고2</option>
                                 <option value="고3">고3</option>
                             </select>
+                            {touched.grade && errors.grade && (
+                                <p className="mt-1 text-xs text-red-600">{errors.grade}</p>
+                            )}
                         </div>
 
                         {/* 영어 이름 (선택) */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                            <label htmlFor="englishName" className="block text-sm font-bold text-gray-700 mb-1.5">
                                 영어 이름 (선택)
                             </label>
                             <input
+                                id="englishName"
                                 type="text"
-                                value={englishName}
-                                onChange={(e) => setEnglishName(e.target.value)}
+                                value={values.englishName}
+                                onChange={(e) => handleChange('englishName', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm"
                                 placeholder="Hong Gil Dong"
                             />
@@ -184,30 +202,44 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
 
                         {/* 학생 연락처 (선택) */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                            <label htmlFor="phone" className="block text-sm font-bold text-gray-700 mb-1.5">
                                 학생 연락처 (선택)
                             </label>
                             <input
+                                id="phone"
                                 type="tel"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm"
+                                value={values.phone}
+                                onChange={(e) => handleChange('phone', e.target.value)}
+                                onBlur={() => handleBlur('phone')}
+                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm ${
+                                    touched.phone && errors.phone ? 'border-red-500' : 'border-gray-300'
+                                }`}
                                 placeholder="010-1234-5678"
                             />
+                            {touched.phone && errors.phone && (
+                                <p className="mt-1 text-xs text-red-600">{errors.phone}</p>
+                            )}
                         </div>
 
                         {/* 학부모 연락처 (선택) */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                            <label htmlFor="parentPhone" className="block text-sm font-bold text-gray-700 mb-1.5">
                                 학부모 연락처 (선택)
                             </label>
                             <input
+                                id="parentPhone"
                                 type="tel"
-                                value={parentPhone}
-                                onChange={(e) => setParentPhone(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm"
+                                value={values.parentPhone}
+                                onChange={(e) => handleChange('parentPhone', e.target.value)}
+                                onBlur={() => handleBlur('parentPhone')}
+                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-transparent text-sm ${
+                                    touched.parentPhone && errors.parentPhone ? 'border-red-500' : 'border-gray-300'
+                                }`}
                                 placeholder="010-9876-5432"
                             />
+                            {touched.parentPhone && errors.parentPhone && (
+                                <p className="mt-1 text-xs text-red-600">{errors.parentPhone}</p>
+                            )}
                         </div>
                     </div>
 

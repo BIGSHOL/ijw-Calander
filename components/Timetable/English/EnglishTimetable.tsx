@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { collection, onSnapshot, getDocs, doc, setDoc, writeBatch, query, orderBy } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
+import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { Clock, RefreshCw, AlertTriangle, Copy, Upload, ArrowRightLeft, History, Save } from 'lucide-react';
+import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { EN_COLLECTION, EN_DRAFT_COLLECTION, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -51,7 +53,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
 
     // Data loading with structure toggle support
     useEffect(() => {
-        const useNewStructure = localStorage.getItem('useNewDataStructure') === 'true';
+        const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, false);
 
         // 시뮬레이션 모드: 항상 english_schedules_draft 사용
         if (isSimulationMode) {
@@ -79,7 +81,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                 console.error('시뮬레이션 데이터 로딩 실패:', error);
                 setLoading(false);
             });
-            return () => unsubscribe();
+            return listenerRegistry.register('EnglishTimetable(draft)', unsubscribe);
         }
 
         // 일반 모드: 토글에 따라 데이터 소스 결정
@@ -121,7 +123,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                     setLoading(false);
                 }
             );
-            return () => unsubscribe();
+            return listenerRegistry.register('EnglishTimetable(new)', unsubscribe);
         } else {
             // 기존 구조: english_schedules 컬렉션 사용
             const unsubscribe = onSnapshot(collection(db, EN_COLLECTION), (snapshot) => {
@@ -148,7 +150,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                 console.error('데이터 로딩 실패:', error);
                 setLoading(false);
             });
-            return () => unsubscribe();
+            return listenerRegistry.register('EnglishTimetable(old)', unsubscribe);
         }
     }, [isSimulationMode]);
 
@@ -179,7 +181,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                 setTeacherOrder(doc.data().teacherOrder || []);
             }
         });
-        return () => unsubscribeOrder();
+        return listenerRegistry.register('EnglishTimetable(config)', unsubscribeOrder);
     }, []);
 
     // Derived sorted teachers
@@ -264,7 +266,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
 
     const handlePublishDraftToLive = async () => {
         // 백업 이름 입력 받기
-        const backupName = prompt('📝 백업 이름을 입력하세요 (선택사항)\\n예: 1월 시간표 확정, 신입생 추가 반영 등', '');
+        const backupName = prompt('백업 이름을 입력하세요 (선택사항)\\n예: 1월 시간표 확정, 신입생 추가 반영 등', '');
 
         if (!confirm('⚠️ 정말로 실제 시간표에 반영하시겠습니까?\\n이 작업은 되돌릴 수 없으며, 모든 사용자에게 즉시 반영됩니다.')) return;
         setLoading(true);

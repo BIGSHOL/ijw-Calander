@@ -19,6 +19,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { X, GripVertical, ChevronUp, ChevronDown, Plus, Trash2, Edit2, RotateCcw } from 'lucide-react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
+import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { EnglishLevel, LevelSettings } from '../../../types';
 import { DEFAULT_ENGLISH_LEVELS } from './englishUtils';
 
@@ -128,7 +129,7 @@ const LevelSettingsModal: React.FC<LevelSettingsModalProps> = ({ isOpen, onClose
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        return listenerRegistry.register('LevelSettingsModal', unsubscribe);
     }, [isOpen]);
 
     const saveLevels = async (newLevels: EnglishLevel[]) => {

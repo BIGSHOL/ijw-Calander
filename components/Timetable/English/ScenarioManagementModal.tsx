@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, getDocs, writeBatch, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, FileText } from 'lucide-react';
+import { listenerRegistry } from '../../../utils/firebaseCleanup';
+import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, FileText, BarChart3 } from 'lucide-react';
 import { EN_DRAFT_COLLECTION, CLASS_DRAFT_COLLECTION, SCENARIO_COLLECTION } from './englishUtils';
 import { validateScenarioData, calculateScenarioStats, generateScenarioId } from './scenarioUtils';
 import { ScenarioEntry } from '../../../types';
@@ -75,7 +76,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        return listenerRegistry.register('ScenarioManagementModal', unsubscribe);
     }, [isOpen]);
 
     // Save current draft as scenario
@@ -162,7 +163,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
         const confirmMsg = `시나리오 "${scenario.name}"를 불러오시겠습니까?
 
-📊 통계:
+통계:
 - 시간표 문서: ${scenario.stats?.timetableDocCount || Object.keys(scenario.data).length}개
 - 수업: ${scenario.stats?.classCount || 0}개
 - 학생: ${scenario.stats?.studentCount || 0}명
@@ -430,7 +431,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                         </span>
                                         {scenario.stats && (
                                             <span>
-                                                📊 시간표 {scenario.stats.timetableDocCount}개 / 수업 {scenario.stats.classCount}개 / 학생 {scenario.stats.studentCount}명
+                                                시간표 {scenario.stats.timetableDocCount}개 / 수업 {scenario.stats.classCount}개 / 학생 {scenario.stats.studentCount}명
                                             </span>
                                         )}
                                     </div>

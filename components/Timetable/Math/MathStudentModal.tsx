@@ -1,8 +1,9 @@
 // MathStudentModal.tsx - 수학 시간표 학생 관리 모달 (영어 스타일 적용)
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Trash2, Check, Underline, Settings, UserPlus } from 'lucide-react';
+import { X, Trash2, Check, Underline, Settings, UserPlus, GraduationCap } from 'lucide-react';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
+import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { TimetableStudent, TimetableClass } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 
@@ -66,7 +67,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
             }
         );
 
-        return () => unsubscribe();
+        return listenerRegistry.register('MathStudentModal', unsubscribe);
     }, [mathClass?.id]);
 
     // Save changes to Firestore
@@ -209,7 +210,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                 {/* Header */}
                 <div className="relative px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-[#fdb813]/20 to-[#fdb813]/5">
                     <div className="flex items-center gap-2">
-                        <span className="text-xl">👨‍🎓</span>
+                        <GraduationCap className="inline-block w-5 h-5" />
                         <h2 className="text-lg font-extrabold text-[#081429]">{mathClass.className} - 학생 관리</h2>
                     </div>
                     <div className="absolute top-4 right-4 flex items-center gap-2">
@@ -234,13 +235,15 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                                 onClick={handleBatchGradePromotion}
                                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
                             >
-                                🎓 학년 진급
+                                <GraduationCap className="inline-block w-4 h-4 mr-1" />
+                                학년 진급
                             </button>
                             <button
                                 onClick={handleDeleteAll}
                                 className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
                             >
-                                🗑️ 전체 삭제
+                                <Trash2 className="inline-block w-4 h-4 mr-1" />
+                                전체 삭제
                             </button>
                         </div>
                     )}

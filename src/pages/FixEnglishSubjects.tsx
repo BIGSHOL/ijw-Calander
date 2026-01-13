@@ -8,6 +8,7 @@
  */
 
 import { useState } from 'react';
+import { ClipboardList, BarChart3, FileText } from 'lucide-react';
 import { collectionGroup, getDocs, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 
@@ -58,7 +59,7 @@ const FixEnglishSubjects = () => {
 
     try {
       addLog('🚀 영어 수업 subject 수정 시작');
-      addLog('📋 enrollments 조회 중...');
+      addLog('enrollments 조회 중...');
 
       const snapshot = await getDocs(collectionGroup(db, 'enrollments'));
       newStats.total = snapshot.docs.length;
@@ -148,7 +149,10 @@ const FixEnglishSubjects = () => {
 
           {stats && (
             <div className="mt-6 p-4 bg-gray-100 rounded">
-              <h2 className="font-bold text-lg mb-3">📊 결과</h2>
+              <h2 className="font-bold text-lg mb-3 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                결과
+              </h2>
               <div className="space-y-1 text-sm">
                 <p>총 enrollments: <strong>{stats.total}개</strong></p>
                 <p>수학 (math): <strong>{stats.math}개</strong></p>
@@ -184,7 +188,10 @@ const FixEnglishSubjects = () => {
 
           {logs.length > 0 && (
             <div className="mt-6">
-              <h2 className="font-bold text-lg mb-3">📝 로그</h2>
+              <h2 className="font-bold text-lg mb-3 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                로그
+              </h2>
               <div className="bg-black text-green-400 p-4 rounded font-mono text-xs h-96 overflow-y-auto">
                 {logs.map((log, index) => (
                   <div key={index}>{log}</div>

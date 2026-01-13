@@ -2,21 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Dark Mode Styles */
+/* Global Focus Indicators - Addresses Issue #6 */
+@layer base {
+  /* Ensure all focusable elements have visible focus */
+  *:focus {
+    outline: 2px solid #fdb813;
+    outline-offset: 2px;
+  }
+
+  /* Use focus-visible for better UX (no outline on mouse click) */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  *:focus-visible {
+    outline: 2px solid #fdb813;
+    outline-offset: 2px;
+  }
+
+  /* Specific focus styles for interactive elements */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible,
+  [role="tab"]:focus-visible,
+  [role="link"]:focus-visible {
+    outline: 2px solid #fdb813;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(253, 184, 19, 0.1);
+  }
+}
+
+/* Dark Mode Styles - Addresses Issue #3 */
 :root {
+    /* Light mode (default) */
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
     --text-primary: #081429;
     --text-secondary: #64748b;
+    --text-tertiary: #94a3b8;
     --border-color: #e2e8f0;
+    --border-color-hover: #cbd5e1;
+    
+    /* Brand colors */
+    --color-primary: #081429;
+    --color-accent: #fdb813;
+    --color-success: #10b981;
+    --color-error: #ef4444;
+    --color-warning: #f59e0b;
+    --color-info: #3b82f6;
 }
 
 .dark {
+    /* Dark mode */
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
     --text-primary: #f1f5f9;
     --text-secondary: #94a3b8;
+    --text-tertiary: #64748b;
     --border-color: #334155;
+    --border-color-hover: #475569;
 }
 
 /* Apply dark mode to key elements */
@@ -25,78 +74,137 @@
     color: var(--text-primary);
 }
 
+/* Background colors */
 .dark .bg-white {
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-secondary) !important;
 }
 
-.dark .bg-gray-50,
+.dark .bg-gray-50 {
+    background-color: var(--bg-primary) !important;
+}
+
 .dark .bg-gray-100 {
-    background-color: var(--bg-primary);
+    background-color: var(--bg-tertiary) !important;
+}
+
+.dark .bg-gray-200 {
+    background-color: #475569 !important;
+}
+
+/* Text colors */
+.dark .text-black,
+.dark .text-gray-900 {
+    color: var(--text-primary) !important;
 }
 
 .dark .text-gray-800,
-.dark .text-gray-700,
+.dark .text-gray-700 {
+    color: var(--text-primary) !important;
+}
+
 .dark .text-gray-600 {
-    color: var(--text-primary);
+    color: var(--text-secondary) !important;
 }
 
 .dark .text-gray-500,
 .dark .text-gray-400 {
-    color: var(--text-secondary);
+    color: var(--text-secondary) !important;
 }
 
-.dark .border-gray-200,
-.dark .border-gray-100 {
-    border-color: var(--border-color);
+.dark .text-gray-300 {
+    color: #cbd5e1 !important;
 }
 
+/* Border colors */
+.dark .border-gray-100,
+.dark .border-gray-200 {
+    border-color: var(--border-color) !important;
+}
+
+.dark .border-gray-300 {
+    border-color: var(--border-color-hover) !important;
+}
+
+/* Shadows */
 .dark .shadow-xl,
 .dark .shadow-lg,
 .dark .shadow-md,
 .dark .shadow-sm {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
 }
 
-/* Dark Mode - Additional Text Colors */
-.dark .text-black,
-.dark .text-gray-900 {
-    color: var(--text-primary);
-}
-
-.dark .text-gray-300 {
-    color: #cbd5e1;
-}
-
-/* Dark Mode - Input Fields */
-.dark input,
+/* Form elements */
+.dark input:not([type="checkbox"]):not([type="radio"]),
 .dark select,
 .dark textarea {
-    background-color: var(--bg-primary);
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: var(--text-tertiary) !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+    border-color: var(--color-accent) !important;
+}
+
+/* Buttons - preserve specific colors but adjust for dark mode */
+.dark button:not(.bg-accent):not(.bg-primary):not(.bg-error):not(.bg-success) {
+    background-color: var(--bg-tertiary);
     color: var(--text-primary);
-    border-color: var(--border-color);
 }
 
-.dark input::placeholder {
-    color: var(--text-secondary);
+.dark button:hover:not(.bg-accent):not(.bg-primary):not(.bg-error):not(.bg-success) {
+    background-color: var(--border-color-hover);
 }
 
-/* Dark Mode - Department Names in Sidebar (specific selector) */
-.dark [class*="text-white"] {
-    color: #ffffff;
-}
-
-/* Dark Mode - Table Elements */
+/* Tables */
 .dark th,
 .dark td {
-    color: var(--text-primary);
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
 }
 
 .dark thead {
-    background-color: var(--bg-primary) !important;
+    background-color: var(--bg-tertiary) !important;
 }
 
 .dark tbody tr {
     border-color: var(--border-color) !important;
+}
+
+.dark tbody tr:hover {
+    background-color: var(--bg-tertiary) !important;
+}
+
+/* Cards */
+.dark .rounded-lg,
+.dark .rounded-xl,
+.dark [class*="rounded"] {
+    background-color: var(--bg-secondary);
+}
+
+/* Preserve brand colors in dark mode */
+.dark .bg-accent,
+.dark .text-accent,
+.dark .bg-primary,
+.dark .text-primary,
+.dark .bg-success,
+.dark .bg-error,
+.dark .bg-warning,
+.dark .bg-info {
+    /* These should maintain their original colors */
+}
+
+/* Ensure white text stays white */
+.dark [class*="text-white"],
+.dark .text-white {
+    color: #ffffff !important;
 }
 
 /* Dark Mode - Timetable Cell Text */
@@ -249,4 +357,260 @@
 .dark .bg-gray-50:not([class*="hover:"]),
 .dark .bg-gray-100:not([class*="hover:"]) {
     background-color: var(--bg-primary);
+}
+
+/* ==================== MOBILE RESPONSIVE & TOUCH TARGETS ==================== */
+/* Issue #13, #15: Mobile responsive breakpoints and touch targets (44x44px) */
+
+/* Minimum touch target size for mobile (WCAG 2.1 Level AAA) */
+@media (max-width: 768px) {
+  /* Ensure all interactive elements meet 44x44px minimum */
+  button:not(.btn-compact),
+  a:not(.link-compact),
+  input[type="checkbox"],
+  input[type="radio"],
+  select:not(.select-compact),
+  .touch-target {
+    min-height: 44px;
+  }
+
+  /* Button padding adjustments for mobile */
+  button:not(.btn-compact):not([class*="p-0"]):not([class*="p-1"]) {
+    padding: 12px 16px;
+  }
+
+  /* Icon buttons should be larger on mobile */
+  button[aria-label]:not(.btn-compact) {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 12px;
+  }
+
+  /* Calendar date cells touch targets */
+  .calendar-cell,
+  [class*="date-cell"],
+  [class*="day-cell"] {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Table action buttons */
+  .table-action-button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+
+  /* Tabs should be easier to tap */
+  [role="tab"],
+  .tab-button {
+    min-height: 48px;
+    padding: 12px 16px;
+  }
+
+  /* Form inputs should be comfortable to tap */
+  input:not([type="checkbox"]):not([type="radio"]):not(.input-compact),
+  textarea:not(.textarea-compact),
+  select:not(.select-compact) {
+    min-height: 44px;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+
+  /* Checkbox and radio with larger click area */
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    margin: 12px;
+  }
+
+  /* Modal close buttons */
+  .modal-close-button,
+  [class*="modal"] button[aria-label*="닫기"],
+  [class*="modal"] button[aria-label*="Close"] {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  /* Dropdown triggers */
+  [role="button"][aria-haspopup],
+  .dropdown-trigger {
+    min-height: 48px;
+    padding: 12px;
+  }
+}
+
+/* Mobile-specific table styles */
+@media (max-width: 768px) {
+  /* Stack table rows vertically on mobile */
+  .responsive-table {
+    display: block;
+  }
+
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table tbody {
+    display: block;
+  }
+
+  .responsive-table tr {
+    display: block;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .responsive-table td {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border: none;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-right: 12px;
+  }
+}
+
+/* Calendar mobile optimizations */
+@media (max-width: 768px) {
+  /* Compact calendar header on mobile */
+  .calendar-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Stack calendar controls */
+  .calendar-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  /* Larger month/year selectors */
+  .calendar-month-selector,
+  .calendar-year-selector {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  /* Calendar grid adjustments */
+  .calendar-grid {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Week view should scroll horizontally */
+  .week-view {
+    min-width: 768px;
+  }
+
+  /* Event cards in mobile */
+  .calendar-event:not(.event-compact) {
+    font-size: 12px;
+    padding: 8px 10px;
+    min-height: 40px;
+  }
+
+  /* Time slots in daily view */
+  .time-slot {
+    min-height: 60px;
+  }
+}
+
+/* Responsive font sizes */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.125rem; }
+  h4 { font-size: 1rem; }
+
+  /* Reduce padding on mobile */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Hide/Show utilities for mobile */
+@media (max-width: 640px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+
+  .show-on-mobile {
+    display: block !important;
+  }
+
+  .show-on-mobile-flex {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 641px) {
+  .hide-on-desktop {
+    display: none !important;
+  }
+
+  .show-on-desktop {
+    display: block !important;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-width: 896px) and (orientation: landscape) {
+  /* Reduce header height in landscape */
+  .app-header {
+    padding: 8px 16px;
+  }
+
+  /* Compact navigation in landscape */
+  .navigation-bar {
+    font-size: 12px;
+  }
+
+  /* Maximize vertical space */
+  .content-area {
+    max-height: calc(100vh - 60px);
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Optimize for tablet touch */
+  button:not(.btn-compact),
+  a:not(.link-compact) {
+    min-height: 40px;
+  }
+
+  /* Table should still be responsive but with more space */
+  .responsive-table-tablet {
+    font-size: 14px;
+  }
+
+  /* Sidebar adjustments for tablet */
+  .sidebar {
+    width: 240px;
+  }
+}
+
+/* Accessibility: Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

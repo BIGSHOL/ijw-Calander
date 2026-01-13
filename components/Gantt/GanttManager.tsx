@@ -8,7 +8,7 @@ import GanttTaskList from './GanttTaskList';
 import GanttProgressBar from './GanttProgressBar';
 import GanttTemplateSelector from './GanttTemplateSelector';
 import TabSubNavigation from '../Common/TabSubNavigation';
-import { FolderKanban, Plus, Edit2, Trash2, BookmarkPlus } from 'lucide-react';
+import { FolderKanban, Plus, Edit2, Trash2, BookmarkPlus, BarChart3 } from 'lucide-react';
 
 interface GanttManagerProps {
     userProfile: UserProfile | null;
@@ -205,7 +205,9 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
         return (
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center">
-                    <div className="text-4xl mb-4">📊</div>
+                    <div className="mb-4">
+                        <BarChart3 className="w-16 h-16 mx-auto text-gray-300" />
+                    </div>
                     <p className="text-gray-500">템플릿을 불러오는 중...</p>
                 </div>
             </div>

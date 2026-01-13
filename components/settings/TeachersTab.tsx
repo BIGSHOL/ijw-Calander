@@ -96,12 +96,12 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                 await deleteDoc(doc(db, '강사목록', id));
 
                 // Sync all classes with this teacher (수학 시간표용)
-                console.log(`🔍 수학 시간표: "${oldName}" → "${newName}" 수업 검색 중...`);
+                console.log(`수학 시간표: "${oldName}" → "${newName}" 수업 검색 중...`);
                 const classesSnapshot = await getDocs(
                     query(collection(db, '수업목록'), where('teacher', '==', oldName))
                 );
 
-                console.log(`📊 수학: 발견된 수업 ${classesSnapshot.docs.length}개`);
+                console.log(`수학: 발견된 수업 ${classesSnapshot.docs.length}개`);
                 if (classesSnapshot.docs.length > 0) {
                     const batch = writeBatch(db);
                     classesSnapshot.docs.forEach(docSnap => {
@@ -114,7 +114,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                 // Sync English schedule (영어 시간표용 - 문서 ID가 강사명)
                 // 영어를 가르치는 강사만 처리
                 if (editTeacherSubjects.includes('english')) {
-                    console.log(`🔍 영어 시간표: "${oldName}" → "${newName}" 스케줄 이전 중...`);
+                    console.log(`영어 시간표: "${oldName}" → "${newName}" 스케줄 이전 중...`);
                     const oldEnglishDocRef = doc(db, 'english_schedules', oldName);
                     const oldEnglishDocSnap = await getDoc(oldEnglishDocRef);
 

@@ -24,11 +24,13 @@ export default defineConfig({
         'scripts/',
         'skills/',
       ],
-      all: true,
-      lines: 80,
-      functions: 80,
-      branches: 80,
-      statements: 80,
+      // all: true, // Not supported in v8 provider
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80,
+      },
     },
     include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist', 'build', '.claude', 'docs', 'skills', 'functions'],

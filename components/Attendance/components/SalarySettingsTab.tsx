@@ -140,7 +140,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
                                 {teachers
                                     .filter(t => t.subjects?.some(s => s.includes('수학') || s.toLowerCase().includes('math')))
                                     .map(t => (
-                                        <option key={t.id} value={t.id}>👨‍🏫 {t.name} 선생님</option>
+                                        <option key={t.id} value={t.id}>{t.name} 선생님</option>
                                     ))}
                             </optgroup>
 
@@ -149,7 +149,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
                                 {teachers
                                     .filter(t => t.subjects?.some(s => s.includes('영어') || s.toLowerCase().includes('english')))
                                     .map(t => (
-                                        <option key={t.id} value={t.id}>👨‍🏫 {t.name} 선생님</option>
+                                        <option key={t.id} value={t.id}>{t.name} 선생님</option>
                                     ))}
                             </optgroup>
 
@@ -161,7 +161,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
                                         s.includes('영어') || s.toLowerCase().includes('english')
                                     ))
                                     .map(t => (
-                                        <option key={t.id} value={t.id}>👨‍🏫 {t.name} 선생님</option>
+                                        <option key={t.id} value={t.id}>{t.name} 선생님</option>
                                     ))}
                             </optgroup>
                         </select>

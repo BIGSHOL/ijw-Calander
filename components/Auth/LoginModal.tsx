@@ -100,7 +100,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xl flex items-center justify-center z-[100]" onClick={() => canClose && onClose()}>
+        <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-xl flex items-center justify-center z-[100]" 
+            onClick={() => canClose && onClose()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="login-modal-title"
+        >
             <div
                 className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-0 relative overflow-hidden border border-gray-200"
                 onClick={(e) => e.stopPropagation()}
@@ -108,17 +114,18 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
 
                 {/* Header */}
                 <div className="bg-[#081429] p-6 text-center">
-                    <div className="bg-white/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-                        {isSignUp ? <UserPlus size={32} className="text-[#fdb813]" /> : <LockIcon size={32} className="text-[#fdb813]" />}
+                    <div className="bg-[#fdb813] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        {isSignUp ? <UserPlus size={32} className="text-[#081429]" /> : <LockIcon size={32} className="text-[#081429]" />}
                     </div>
-                    <h2 className="text-xl font-bold text-white">{isSignUp ? '관리자/직원 가입' : '로그인'}</h2>
-                    <p className="text-blue-200 text-sm mt-1">
+                    <h2 id="login-modal-title" className="text-xl font-bold text-white">{isSignUp ? '관리자/직원 가입' : '로그인'}</h2>
+                    <p className="text-gray-300 text-sm mt-1">
                         {isSignUp ? '새로운 계정을 생성합니다.' : '일정 관리 시스템에 접속합니다.'}
                     </p>
 
                     <button
                         onClick={onClose}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                        className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:ring-offset-2 focus:ring-offset-[#081429]"
+                        aria-label="닫기"
                     >
                         <X size={24} />
                     </button>
@@ -128,26 +135,32 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                 <div className="p-8">
                     <form onSubmit={handleAuth} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">이메일</label>
+                            <label htmlFor="email-input" className="block text-sm font-bold text-gray-700 mb-1">이메일</label>
                             <input
+                                id="email-input"
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#081429] focus:ring-2 focus:ring-[#081429]/10 outline-none transition-all font-medium"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#fdb813] focus:ring-2 focus:ring-[#fdb813]/20 outline-none transition-all font-medium"
                                 placeholder="name@example.com"
                                 required
+                                aria-required="true"
+                                autoComplete="email"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-1">비밀번호</label>
+                            <label htmlFor="password-input" className="block text-sm font-bold text-gray-700 mb-1">비밀번호</label>
                             <input
+                                id="password-input"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#081429] focus:ring-2 focus:ring-[#081429]/10 outline-none transition-all font-medium"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#fdb813] focus:ring-2 focus:ring-[#fdb813]/20 outline-none transition-all font-medium"
                                 placeholder="••••••••"
                                 required
+                                aria-required="true"
+                                autoComplete={isSignUp ? "new-password" : "current-password"}
                             />
                         </div>
 

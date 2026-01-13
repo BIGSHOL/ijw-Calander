@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, collectionGroup, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { UnifiedStudent } from '../types';
+import { UnifiedStudent, SubjectType } from '../types';
 
 const COL_CLASSES = 'classes';
 
@@ -16,7 +16,7 @@ export interface ClassStudent {
 export interface ClassDetail {
   className: string;
   teacher: string;
-  subject: 'math' | 'english';
+  subject: SubjectType;
   schedule: string[];
   studentCount: number;
   students: ClassStudent[];
@@ -28,7 +28,7 @@ export interface ClassDetail {
  * 수업 상세 정보 조회 Hook
  *
  * @param className 수업명
- * @param subject 과목 (math/english)
+ * @param subject 과목 (math/english/science/korean/other)
  * @returns 수업 상세 정보 + 학생 목록
  *
  * 로직:
@@ -36,7 +36,7 @@ export interface ClassDetail {
  * 2. enrollments에서 학생 ID 수집
  * 3. students 컬렉션에서 학생 정보 조회
  */
-export const useClassDetail = (className: string, subject: 'math' | 'english') => {
+export const useClassDetail = (className: string, subject: SubjectType) => {
   return useQuery<ClassDetail>({
     queryKey: ['classDetail', className, subject],
     queryFn: async () => {

@@ -17,7 +17,7 @@ import {
 import { EntryForm } from './EntryForm';
 import { TuitionChart } from './TuitionChart';
 import { generateReportInsight } from '../../services/geminiService';
-
+import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { TuitionEntry } from '../../types';
 import ReactMarkdown from 'react-markdown';
 
@@ -53,20 +53,21 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
     const [history, setHistory] = useState<TuitionHistory>(() => {
         try {
-            const savedHistory = localStorage.getItem('tuition_history');
-            if (savedHistory) {
-                return JSON.parse(savedHistory);
+            const savedHistory = storage.getJSON<TuitionHistory>(STORAGE_KEYS.TUITION_HISTORY, {});
+            if (Object.keys(savedHistory).length > 0) {
+                return savedHistory;
             }
-            const oldData = localStorage.getItem('tuition_entries');
-            if (oldData) {
+            // Migration: Check old key
+            const oldData = storage.getJSON<TuitionEntry[]>(STORAGE_KEYS.TUITION_ENTRIES, []);
+            if (oldData.length > 0) {
                 const currentMonth = new Date().toISOString().slice(0, 7);
-                return { [currentMonth]: JSON.parse(oldData) };
+                return { [currentMonth]: oldData };
             }
             return {};
         } catch (error) {
             console.error('Failed to parse localStorage data:', error);
-            localStorage.removeItem('tuition_history');
-            localStorage.removeItem('tuition_entries');
+            storage.remove(STORAGE_KEYS.TUITION_HISTORY);
+            storage.remove(STORAGE_KEYS.TUITION_ENTRIES);
             return {};
         }
     });
@@ -90,8 +91,8 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
         queueMicrotask(() => {
             try {
-                localStorage.setItem('tuition_history', JSON.stringify(newHistory));
-                localStorage.setItem('tuition_entries', JSON.stringify(newEntries));
+                storage.setJSON(STORAGE_KEYS.TUITION_HISTORY, newHistory);
+                storage.setJSON(STORAGE_KEYS.TUITION_ENTRIES, newEntries);
             } catch (error) {
                 console.error('Failed to save to localStorage:', error);
             }

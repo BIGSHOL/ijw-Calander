@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     ChevronLeft, ChevronRight, Search, X, Filter, ChevronUp, ChevronDown,
-    Eye, EyeOff, Settings, Plus
+    Eye, EyeOff, Settings, Plus, Calendar
 } from 'lucide-react';
 
 const ALL_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
@@ -227,7 +227,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                             className="px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
                             title="요일 순서 설정"
                         >
-                            📅 요일 순서
+                            <Calendar className="inline-block w-4 h-4 mr-1" />
+                            요일 순서
                         </button>
                     </div>
                 )}

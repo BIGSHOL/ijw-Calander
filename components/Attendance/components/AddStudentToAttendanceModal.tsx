@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Search, UserPlus, Check } from 'lucide-react';
+import { X, Search, UserPlus, Check, Target, BookOpen } from 'lucide-react';
 import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 
@@ -152,7 +152,8 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
                                 }`}
                             onClick={() => setEnrollmentType('temporary')}
                         >
-                            🎯 특강/보강 (1회)
+                            <Target className="inline-block w-4 h-4 mr-1" />
+                            특강/보강 (1회)
                         </button>
                         <button
                             className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-colors ${enrollmentType === 'regular'
@@ -161,7 +162,8 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
                                 }`}
                             onClick={() => setEnrollmentType('regular')}
                         >
-                            📚 정규 등록
+                            <BookOpen className="inline-block w-4 h-4 mr-1" />
+                            정규 등록
                         </button>
                     </div>
                 </div>

@@ -4,6 +4,7 @@ import { X, Users, Save } from 'lucide-react';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
+import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { TimetableStudent, EnglishLevel } from '../../../types';
 import { DEFAULT_ENGLISH_LEVELS, parseClassName, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import AddStudentForm from './StudentModal/AddStudentForm';
@@ -173,7 +174,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
             }
         });
 
-        return () => unsub();
+        return listenerRegistry.register('EnglishStudentModal', unsub);
     }, [classDocId, isSimulationMode]);
 
 

@@ -8,7 +8,8 @@ import {
 } from '../../types';
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, onSnapshot } from 'firebase/firestore';
-import { RotateCcw, Save } from 'lucide-react';
+import { listenerRegistry } from '../../utils/firebaseCleanup';
+import { RotateCcw, Save, Calendar, Settings as SettingsIcon } from 'lucide-react';
 
 interface RolePermissionsTabProps {
     isMaster: boolean;
@@ -48,7 +49,8 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
             }
             setRolePermissionsLoaded(true);
         });
-        return () => unsubscribe();
+
+        return listenerRegistry.register('RolePermissionsTab', unsubscribe);
     }, [canViewRolePermissions]);
 
     // --- Handlers ---
@@ -239,19 +241,28 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                             <tbody>
                                 {/* 일정 관리 섹션 */}
                                 <tr className="bg-blue-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-blue-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-blue-50">📅 연간 일정 (Calendar) - 일정</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-blue-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-blue-50">
+                                        <Calendar className="inline-block w-4 h-4 mr-1" />
+                                        연간 일정 (Calendar) - 일정
+                                    </td>
                                 </tr>
                                 {eventPermissions.map(renderPermissionRow)}
 
                                 {/* 부서 관리 섹션 */}
                                 <tr className="bg-green-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-green-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-green-50">⚙️ 시스템 (System) - 부서 관리</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-green-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-green-50">
+                                        <SettingsIcon className="inline-block w-4 h-4 mr-1" />
+                                        시스템 (System) - 부서 관리
+                                    </td>
                                 </tr>
                                 {deptPermissions.map(renderPermissionRow)}
 
                                 {/* 강사 관리 섹션 */}
                                 <tr className="bg-emerald-50/50">
-                                    <td colSpan={7} className="px-4 py-2 font-bold text-emerald-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-emerald-50">⚙️ 시스템 (System) - 강사 관리</td>
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-emerald-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-emerald-50">
+                                        <SettingsIcon className="inline-block w-4 h-4 mr-1" />
+                                        시스템 (System) - 강사 관리
+                                    </td>
                                 </tr>
                                 {teacherPermissions.map(renderPermissionRow)}
 

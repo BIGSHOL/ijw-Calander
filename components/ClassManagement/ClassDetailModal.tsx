@@ -40,6 +40,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
   const slotTeachers = classDetail?.slotTeachers;
 
   // 스케줄 포맷팅 ("월 7, 월 8, 목 7, 목 8" -> "월목 4교시")
+  // SubjectType을 SubjectForSchedule로 변환 (science, korean, other는 math로 취급)
   const subjectForSchedule: SubjectForSchedule = subject === 'english' ? 'english' : 'math';
   const formattedSchedule = formatScheduleCompact(schedule, subjectForSchedule, false);
 

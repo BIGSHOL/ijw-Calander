@@ -67,6 +67,8 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
             ? 'bg-[#fdb813] text-[#081429] shadow-sm'
             : 'text-gray-400 hover:text-white hover:bg-white/5'
         }`}
+        aria-label={`${meta.label} 탭으로 이동`}
+        aria-current={active ? 'page' : undefined}
       >
         {meta.icon} {meta.label}
       </button>
@@ -96,17 +98,24 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
             ? 'bg-[#fdb813] text-[#081429] shadow-sm'
             : 'text-gray-400 hover:text-white hover:bg-white/5'
         }`}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        aria-label={`${group.label} 메뉴`}
+        onClick={() => setIsOpen(!isOpen)}
       >
         {group.icon} {group.label}
         <ChevronDown
           size={12}
           className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          aria-hidden="true"
         />
       </button>
 
       {isOpen && (
         <div
           className="absolute top-full left-0 min-w-[140px] bg-[#1e293b] border border-white/10 rounded-lg shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-2 duration-150"
+          role="menu"
+          aria-label={`${group.label} 하위 메뉴`}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
@@ -126,8 +135,11 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
                     ? 'bg-[#fdb813]/20 text-[#fdb813]'
                     : 'text-gray-300 hover:bg-white/10 hover:text-white'
                 }`}
+                role="menuitem"
+                aria-label={`${meta.label} 탭으로 이동`}
+                aria-current={active ? 'page' : undefined}
               >
-                <span className="text-base">{meta.icon}</span>
+                <span className="text-base" aria-hidden="true">{meta.icon}</span>
                 {meta.label}
               </button>
             );
