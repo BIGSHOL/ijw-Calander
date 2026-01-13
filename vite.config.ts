@@ -13,12 +13,12 @@ function chunkOrderPlugin(): Plugin {
         /(<script type="module"[^>]*src="\/assets\/index-[^"]+\.js"><\/script>)/,
         (match) => {
           // Extract chunk file names from modulepreload links
-          const reactVendorMatch = html.match(/href="(\/assets\/react-vendor-[^"]+\.js)"/);
-          const iconsMatch = html.match(/href="(\/assets\/icons-[^"]+\.js)"/);
+          const vendorMatch = html.match(/href="(\/assets\/vendor-[^"]+\.js)"/);
+          const lucideMatch = html.match(/href="(\/assets\/lucide-[^"]+\.js)"/);
 
-          if (reactVendorMatch && iconsMatch) {
-            return `  <script type="module" crossorigin src="${reactVendorMatch[1]}"></script>
-  <script type="module" crossorigin src="${iconsMatch[1]}"></script>
+          if (vendorMatch && lucideMatch) {
+            return `  <script type="module" crossorigin src="${vendorMatch[1]}"></script>
+  <script type="module" crossorigin src="${lucideMatch[1]}"></script>
 ${match}`;
           }
           return match;
@@ -68,19 +68,9 @@ export default defineConfig(({ mode }) => {
               return 'firebase';
             }
 
-            // React core WITHOUT lucide-react
-            if ((id.includes('react') || id.includes('react-dom')) && !id.includes('lucide-react')) {
-              return 'react-vendor';
-            }
-
-            // Lucide-react in its own chunk (loaded after react-vendor)
+            // Lucide-react in separate chunk
             if (id.includes('lucide-react')) {
-              return 'icons';
-            }
-
-            // React Query
-            if (id.includes('@tanstack/react-query')) {
-              return 'react-query';
+              return 'lucide';
             }
 
             // Charts - 큰 라이브러리
@@ -92,8 +82,6 @@ export default defineConfig(({ mode }) => {
             if (id.includes('date-fns')) {
               return 'date-fns';
             }
-
-            // Icons - bundled with react-vendor to ensure proper initialization
 
             // DnD Kit
             if (id.includes('@dnd-kit')) {
@@ -120,7 +108,7 @@ export default defineConfig(({ mode }) => {
               return 'common-components';
             }
 
-            // Node modules that are not separated above
+            // ALL node_modules (including React) in vendor
             if (id.includes('node_modules')) {
               return 'vendor';
             }
