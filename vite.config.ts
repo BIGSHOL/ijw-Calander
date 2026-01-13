@@ -1,6 +1,32 @@
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+
+// Plugin to ensure correct chunk loading order in HTML
+function chunkOrderPlugin(): Plugin {
+  return {
+    name: 'chunk-order-plugin',
+    enforce: 'post',
+    transformIndexHtml(html) {
+      // Replace modulepreload links with script tags in correct order
+      return html.replace(
+        /(<script type="module"[^>]*src="\/assets\/index-[^"]+\.js"><\/script>)/,
+        (match) => {
+          // Extract chunk file names from modulepreload links
+          const reactVendorMatch = html.match(/href="(\/assets\/react-vendor-[^"]+\.js)"/);
+          const iconsMatch = html.match(/href="(\/assets\/icons-[^"]+\.js)"/);
+
+          if (reactVendorMatch && iconsMatch) {
+            return `  <script type="module" crossorigin src="${reactVendorMatch[1]}"></script>
+  <script type="module" crossorigin src="${iconsMatch[1]}"></script>
+${match}`;
+          }
+          return match;
+        }
+      );
+    }
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -11,7 +37,7 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       host: '0.0.0.0',
     },
-    plugins: [react()],
+    plugins: [react(), chunkOrderPlugin()],
     optimizeDeps: {
       include: ['lucide-react'],
       exclude: []
@@ -42,9 +68,14 @@ export default defineConfig(({ mode }) => {
               return 'firebase';
             }
 
-            // React core + lucide-react together (must be loaded before vendor)
-            if (id.includes('react') || id.includes('react-dom') || id.includes('lucide-react')) {
+            // React core WITHOUT lucide-react
+            if ((id.includes('react') || id.includes('react-dom')) && !id.includes('lucide-react')) {
               return 'react-vendor';
+            }
+
+            // Lucide-react in its own chunk (loaded after react-vendor)
+            if (id.includes('lucide-react')) {
+              return 'icons';
             }
 
             // React Query
