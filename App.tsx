@@ -1,19 +1,25 @@
 import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, getDate, endOfMonth, differenceInDays } from 'date-fns';
-import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor, AppTab } from './types';
+import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor, AppTab, TAB_META, TAB_GROUPS } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
 import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig } from './hooks/useFirebaseQueries';
 import { useGanttProjects } from './hooks/useGanttProjects';
 import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
 import { useTabPermissions } from './hooks/useTabPermissions';
+import { storage, STORAGE_KEYS } from './utils/localStorage';
+import { useStudents } from './hooks/useStudents';
+import { useClasses } from './hooks/useClasses';
 
 // 항상 필요한 컴포넌트 (즉시 로딩)
 import EventModal from './components/Calendar/EventModal';
 import SettingsModal from './components/settings/SettingsModal';
 import LoginModal from './components/Auth/LoginModal';
 import CalendarBoard from './components/Calendar/CalendarBoard';
-import NavigationBar from './components/Navigation/NavigationBar';
+import Sidebar from './components/Navigation/Sidebar';
+import Breadcrumb, { BreadcrumbItem } from './components/Common/Breadcrumb';
+import SkipLink from './components/Common/SkipLink';
+import GlobalSearch, { SearchResult } from './components/Common/GlobalSearch';
 
 // 탭별 컴포넌트 (lazy loading - 해당 탭 진입 시 로딩)
 const TimetableManager = lazy(() => import('./components/Timetable/TimetableManager'));
@@ -30,10 +36,11 @@ const ConsultationManagementTab = lazy(() => import('./components/ConsultationMa
 const BillingManager = lazy(() => import('./components/Billing').then(m => ({ default: m.BillingManager })));
 const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
 const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
-import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit } from 'lucide-react';
+import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit, Calculator, BookOpen, Library, Building, ClipboardList, MessageCircle, BarChart3, Check, DollarSign } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { listenerRegistry } from './utils/firebaseCleanup';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -83,6 +90,10 @@ const App: React.FC = () => {
   const { data: systemConfig } = useSystemConfig(!!currentUser);
   const lookbackYears = systemConfig?.eventLookbackYears || 2;
   const sysCategories = systemConfig?.categories || [];
+  
+  // Students and Classes for Global Search
+  const { students: globalStudents = [] } = useStudents(false);
+  const { data: allClasses = [] } = useClasses();
 
   // Tab Permissions
 
@@ -93,19 +104,18 @@ const App: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); // New State
   const [isPermissionViewOpen, setIsPermissionViewOpen] = useState(false); // Permission View Toggle
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false); // Global Search Modal
 
 
 
   // Local Settings
   const [hiddenDeptIds, setHiddenDeptIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('dept_hidden_ids');
-    return saved ? JSON.parse(saved) : [];
+    return storage.getJSON<string[]>(STORAGE_KEYS.DEPT_HIDDEN_IDS, []);
   });
 
   // Dark Mode Setting
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('dark_mode');
-    return saved === 'true';
+    return storage.getBoolean(STORAGE_KEYS.DARK_MODE, false);
   });
 
   // Apply dark mode class to document
@@ -115,7 +125,7 @@ const App: React.FC = () => {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('dark_mode', String(isDarkMode));
+    storage.setBoolean(STORAGE_KEYS.DARK_MODE, isDarkMode);
   }, [isDarkMode]);
 
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -126,7 +136,7 @@ const App: React.FC = () => {
   const [selectedEndDate, setSelectedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedDeptId, setSelectedDeptId] = useState<string>(''); // For creating new events
   const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>(() => {
-    const saved = localStorage.getItem('default_view_mode');
+    const saved = storage.getString(STORAGE_KEYS.DEFAULT_VIEW_MODE);
     return (saved as 'daily' | 'weekly' | 'monthly' | 'yearly') || 'monthly';
   });
   const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(2); // 1단, 2단, 3단
@@ -278,7 +288,7 @@ const App: React.FC = () => {
     // Initial setup: if appMode is null, set to first accessible tab (or user's preferred tab)
     if (appMode === null) {
       // Check for user's preferred default tab
-      const preferredTab = localStorage.getItem('default_main_tab');
+      const preferredTab = storage.getString(STORAGE_KEYS.DEFAULT_MAIN_TAB);
 
       if (preferredTab && preferredTab !== 'auto' && canAccessTab(preferredTab as AppTab)) {
         console.log(`[Init] Setting appMode to user preferred tab: ${preferredTab}`);
@@ -429,6 +439,124 @@ const App: React.FC = () => {
     }
   }, [currentUser]);
 
+  // Global Search Handler (Issue #10) - Enhanced with Classes and Teachers
+  const handleGlobalSearch = async (query: string): Promise<SearchResult[]> => {
+    const results: SearchResult[] = [];
+    const lowerQuery = query.toLowerCase();
+
+    // Search students (max 5 results)
+    globalStudents
+      .filter(s => 
+        s.status === 'active' && (
+          s.name.toLowerCase().includes(lowerQuery) || 
+          s.englishName?.toLowerCase().includes(lowerQuery) ||
+          s.school?.toLowerCase().includes(lowerQuery)
+        )
+      )
+      .slice(0, 5)
+      .forEach(s => {
+        results.push({
+          id: s.id,
+          type: 'student',
+          title: s.name,
+          subtitle: s.englishName || s.school,
+          metadata: s.grade,
+        });
+      });
+
+    // Search events (max 5 results)
+    events
+      .filter(e => 
+        e.title.toLowerCase().includes(lowerQuery) ||
+        e.description?.toLowerCase().includes(lowerQuery)
+      )
+      .slice(0, 5)
+      .forEach(e => {
+        const dept = departments.find(d => d.id === e.departmentId);
+        results.push({
+          id: e.id,
+          type: 'event',
+          title: e.title,
+          subtitle: dept?.name,
+          metadata: format(parseISO(e.startDate), 'yyyy-MM-dd'),
+        });
+      });
+
+    // Search classes (max 5 results)
+    allClasses
+      .filter(c => 
+        c.className.toLowerCase().includes(lowerQuery) ||
+        c.teacher.toLowerCase().includes(lowerQuery)
+      )
+      .slice(0, 5)
+      .forEach(c => {
+        results.push({
+          id: c.id,
+          type: 'class',
+          title: c.className,
+          subtitle: `강사: ${c.teacher}`,
+          metadata: c.subject === 'math' ? '수학' : '영어',
+        });
+      });
+
+    // Search teachers (max 5 results)
+    teachers
+      .filter(t => 
+        t.name.toLowerCase().includes(lowerQuery)
+      )
+      .slice(0, 5)
+      .forEach(t => {
+        const subjects = t.subjects?.map(s => s === 'math' ? '수학' : '영어').join(', ') || '';
+        results.push({
+          id: t.id,
+          type: 'teacher',
+          title: t.name,
+          subtitle: subjects,
+          metadata: t.defaultRoom || '',
+        });
+      });
+
+    return results;
+  };
+
+  const handleSearchSelect = (result: SearchResult) => {
+    switch (result.type) {
+      case 'student':
+        setAppMode('students');
+        setStudentFilters(prev => ({ ...prev, searchQuery: result.title }));
+        break;
+      case 'event':
+        const event = events.find(e => e.id === result.id);
+        if (event) {
+          setAppMode('calendar');
+          setEditingEvent(event);
+          setIsEventModalOpen(true);
+        }
+        break;
+      case 'class':
+        setAppMode('classes');
+        // The ClassManagementTab will filter based on URL or state if needed
+        break;
+      case 'teacher':
+        setAppMode('timetable');
+        // Teacher-specific view can be enhanced later
+        break;
+    }
+  };
+
+  // Cmd+K shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsGlobalSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Derive Permissions
   const isMaster = userProfile?.role === 'master';
   const isAdmin = userProfile?.role === 'admin';
@@ -576,7 +704,7 @@ const App: React.FC = () => {
 
       setTaskMemos(sortedMemos);
     });
-    return () => unsubscribe();
+    return listenerRegistry.register('App(taskMemos)', unsubscribe);
   }, [currentUser]);
 
   // Unread memo count
@@ -1236,6 +1364,33 @@ const App: React.FC = () => {
 
   const pendingEventIds = pendingEventMoves.map(m => m.original.id);
 
+  // Generate breadcrumb items based on current tab
+  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => {
+    if (!appMode) return [];
+    
+    const currentTabMeta = TAB_META[appMode];
+    if (!currentTabMeta) return [];
+
+    // Find the group that contains this tab
+    const currentGroup = TAB_GROUPS.find(group => group.tabs.includes(appMode));
+    
+    const items: BreadcrumbItem[] = [];
+    
+    if (currentGroup) {
+      items.push({
+        label: currentGroup.label,
+        onClick: undefined, // Group is not clickable
+      });
+    }
+    
+    items.push({
+      label: currentTabMeta.label,
+      isActive: true,
+    });
+    
+    return items;
+  }, [appMode]);
+
   // Initial Loading Screen (Waiting for Auth or Tab Permissions or appMode initialization)
   // This prevents flashing of unauthorized content before we know which tab user can access.
   if (authLoading || (currentUser && isTabPermissionLoading) || (currentUser && appMode === null)) {
@@ -1249,39 +1404,31 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f0f4f8]">
-      <header className="no-print z-40 sticky top-0 flex flex-col shadow-2xl relative">
+    <div className="min-h-screen flex bg-[#f0f4f8]">
+      {/* Skip Link for Keyboard Navigation - Addresses Issue #7 */}
+      <SkipLink targetId="main-content">메인 콘텐츠로 건너뛰기</SkipLink>
+      
+      {/* Sidebar Navigation - Addresses Issues #1, #2 */}
+      <Sidebar
+        currentTab={appMode}
+        accessibleTabs={accessibleTabs}
+        onTabSelect={(tab) => setAppMode(tab as typeof appMode)}
+        logoUrl={INJAEWON_LOGO}
+      />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="no-print z-40 sticky top-0 bg-[#081429] shadow-lg flex flex-col" role="banner">
         {/* Row 1: Primary Header (Navy) */}
         <div className="bg-[#081429] h-16 flex items-center justify-between px-4 md:px-6 border-b border-white/10 z-50 relative">
 
-          {/* Left: Branding */}
-          <div className="flex items-center gap-3 min-w-[250px]">
-            <div className="w-10 h-10 flex items-center justify-center overflow-hidden flex-shrink-0">
-              <img
-                src={INJAEWON_LOGO}
-                alt="Logo"
-                className="w-full h-full object-contain filter drop-shadow-md"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            </div>
-            <h1 className="text-xl font-black text-white tracking-tighter hidden md:flex items-center gap-1 flex-shrink-0">
-              인재원 <span className="text-[#fdb813]">학원</span>
-            </h1>
-
-            {/* Top-level App Mode Tabs - Grouped Navigation */}
-            <div className="hidden md:flex ml-4">
-              <NavigationBar
-                currentTab={appMode}
-                accessibleTabs={accessibleTabs}
-                onTabSelect={(tab) => setAppMode(tab as typeof appMode)}
-              />
-            </div>
-
-            {/* User Info Display (Moved to Left) */}
+          {/* Left: Breadcrumb Navigation - Addresses Issue #21 */}
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <Breadcrumb items={breadcrumbItems} showHome={false} />
+            
+            {/* User Info Display (Desktop) */}
             {currentUser && (
-              <div className="hidden md:flex flex-row items-center gap-1.5 ml-4 pl-4 border-l border-white/10 overflow-hidden">
+              <div className="hidden lg:flex flex-row items-center gap-1.5 ml-4 pl-4 border-l border-white/10">
                 {/* Role Badge */}
                 {userProfile?.role && userProfile.role !== 'guest' && (
                   <span className={`text-white text-micro px-1 py-0.5 rounded font-black tracking-tighter shadow-sm ${userProfile.role === 'master' ? 'bg-red-600' :
@@ -1546,7 +1693,7 @@ const App: React.FC = () => {
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
                         }`}
                     >
-                      📐 수학
+                     <Calculator size={14} className="inline" /> 수학
                     </button>
                   )}
                   {(canManageEnglish || isMasterOrAdmin) && (
@@ -1557,7 +1704,7 @@ const App: React.FC = () => {
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
                         }`}
                     >
-                      📕 영어
+                     <BookOpen size={14} className="inline" /> 영어
                     </button>
                   )}
                 </div>
@@ -1627,7 +1774,7 @@ const App: React.FC = () => {
                   onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'all' }))}
                   className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'all' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
                 >
-                  📚 전체
+                 <Library size={14} className="inline" /> 전체
                 </button>
                 <button
                   onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'math' }))}
@@ -1878,11 +2025,11 @@ const App: React.FC = () => {
                     className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
                     title="클릭하여 과목 전환"
                   >
-                    {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
+                    {timetableSubject === 'math' ? <><Calculator size={12} className="inline" /> 수학</> : <><BookOpen size={12} className="inline" /> 영어</>}
                   </button>
                 ) : (
                   <div className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 font-bold text-xs">
-                    {timetableSubject === 'math' ? '📐 수학' : '📕 영어'}
+                    {timetableSubject === 'math' ? <><Calculator size={12} className="inline" /> 수학</> : <><BookOpen size={12} className="inline" /> 영어</>}
                   </div>
                 )}
 
@@ -1906,7 +2053,7 @@ const App: React.FC = () => {
                   className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
                   title="클릭하여 보기방식 전환"
                 >
-                  {timetableViewType === 'teacher' ? '👨‍🏫 강사별' : (timetableViewType === 'class' ? '📋 통합' : '🏫 교실별')}
+                  {timetableViewType === 'teacher' ? <><UserIcon size={12} className="inline" /> 강사별</> : (timetableViewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합</> : <><Building size={12} className="inline" /> 교실별</>)}
                 </button>
 
                 {/* Removed Summary Indicators */}
@@ -1943,7 +2090,7 @@ const App: React.FC = () => {
         )}
       </header >
 
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <main id="main-content" className="flex-1 flex flex-col md:flex-row overflow-hidden" role="main">
         {/* Render Gating: If permission fails, show nothing (Redirect will happen in useEffect) */}
         {!canAccessTab(appMode) ? (
           <div className="flex-1 flex items-center justify-center bg-gray-50">
@@ -2135,7 +2282,7 @@ const App: React.FC = () => {
           /* Staff Management View */
           <Suspense fallback={<TabLoadingFallback />}>
             <div className="w-full flex-1 overflow-auto">
-              <StaffManager userProfile={userProfile} />
+              <StaffManager />
             </div>
           </Suspense>
         ) : null}
@@ -2159,6 +2306,15 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+    </div>
+
+      {/* Global Search Modal - Addresses Issue #10 */}
+      <GlobalSearch
+        isOpen={isGlobalSearchOpen}
+        onClose={() => setIsGlobalSearchOpen(false)}
+        onSearch={handleGlobalSearch}
+        onSelect={handleSearchSelect}
+      />
 
       <LoginModal
         isOpen={isLoginModalOpen}
@@ -2235,16 +2391,16 @@ const App: React.FC = () => {
                 {/* Tab Permissions */}
                 <div className="mb-4">
                   <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    📋 허용된 탭
+                   <ClipboardList size={14} className="inline mr-1" />허용된 탭
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {accessibleTabs.map(tab => (
                       <span key={tab} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                        {tab === 'calendar' && '📅 연간 일정'}
-                        {tab === 'timetable' && '📚 시간표'}
+                       {tab === 'calendar' && <><CalendarIcon size={12} className="inline mr-1" />연간 일정</>}
+                        {tab === 'timetable' && <><Library size={12} className="inline mr-1" />시간표</>}
                         {tab === 'payment' && '💳 전자 결재'}
-                        {tab === 'gantt' && '📊 간트 차트'}
-                        {tab === 'consultation' && '💬 상담'}
+                       {tab === 'gantt' && <><BarChart3 size={12} className="inline mr-1" />간트 차트</>}
+                        {tab === 'consultation' && <><MessageCircle size={12} className="inline mr-1" />상담</>}
                       </span>
                     ))}
                   </div>
@@ -2303,7 +2459,7 @@ const App: React.FC = () => {
                         };
                         return enabledPerms.map(([permId]) => (
                           <div key={permId} className="flex items-center gap-2 text-xs text-gray-600 py-1">
-                            <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center text-xxs">✓</span>
+                           <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center"><Check size={10} /></span>
                             {permLabels[permId] || permId}
                           </div>
                         ));

@@ -29,7 +29,11 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
   }, [sortedGroups, accessibleTabs]);
 
   return (
-    <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+    <nav 
+      className="flex bg-black/20 p-0.5 rounded-lg border border-white/5" 
+      role="navigation"
+      aria-label="주 메뉴 탐색"
+    >
       {visibleGroups.map(group => (
         <TabGroupDropdown
           key={group.id}
@@ -39,7 +43,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
           onTabSelect={onTabSelect}
         />
       ))}
-    </div>
+    </nav>
   );
 };
 

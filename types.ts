@@ -125,17 +125,7 @@ export interface CalendarEvent {
   // Phase 14: Hashtag & Event Type Support
   tags?: string[];             // 해시태그 ID 배열 (예: ['meeting', 'deadline'])
   eventType?: 'general' | 'seminar'; // 이벤트 유형
-  seminarData?: {              // 세미나 전용 데이터 (eventType === 'seminar'일 때)
-    speaker?: string;
-    speakerBio?: string;
-    manager?: string;
-    managerContact?: string;
-    maxAttendees?: number;
-    venue?: string;
-    materials?: string[];
-    registrationDeadline?: string;
-    isPublic?: boolean;
-  };
+  seminarData?: SeminarEventData;    // 세미나 전용 데이터 (eventType === 'seminar'일 때)
 }
 
 export interface DragSelection {
@@ -825,6 +815,7 @@ export interface Exam {
   targetClassIds?: string[];             // scope='class'일 때 대상 반 IDs
   targetGrades?: string[];               // scope='grade'일 때 대상 학년들 ['중1', '중2']
   targetSchools?: string[];              // scope='school'일 때 대상 학교들
+  gradeLevel?: string;                   // 학년 필터링용 (단일 학년, 레거시 호환)
 
   // 태그 및 시리즈
   tags?: string[];                       // 태그 배열 ['#내신대비', '#재시험']
@@ -1059,6 +1050,7 @@ export interface SeminarAttendee {
   ageGroup?: 'elementary' | 'middle' | 'high' | 'adult';  // 연령대
   grade?: string;             // 학년 (초1, 중2, 고3 등)
   address?: string;           // 주소 (간단히)
+  organization?: string;      // 소속 기관/학교 (비재원생용)
 
   // 신청 정보
   registrationSource?: string; // 신청경로 (지인소개, 온라인, 전단지 등)

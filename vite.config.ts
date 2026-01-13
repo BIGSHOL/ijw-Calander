@@ -26,24 +26,77 @@ export default defineConfig(({ mode }) => {
         drop: isProduction ? ['console', 'debugger'] : [],
         pure: isProduction ? ['console.log', 'console.info', 'console.debug'] : [],
       },
-      // 번들 최적화: 코드 스플리팅
+      // 번들 최적화: 코드 스플리팅 - Addresses Issue #16
       build: {
         rollupOptions: {
           output: {
-            manualChunks: {
-              // Firebase를 별도 청크로 분리 (가장 큰 의존성)
-              'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-              // React 관련 라이브러리
-              'react-vendor': ['react', 'react-dom'],
-              // 차트/시각화 라이브러리
-              'charts': ['recharts'],
-              // 유틸리티 라이브러리
-              'utils': ['date-fns'],
+            manualChunks: (id) => {
+              // Firebase - 가장 큰 의존성
+              if (id.includes('firebase')) {
+                return 'firebase';
+              }
+              
+              // React core
+              if (id.includes('react') || id.includes('react-dom')) {
+                return 'react-vendor';
+              }
+              
+              // React Query
+              if (id.includes('@tanstack/react-query')) {
+                return 'react-query';
+              }
+              
+              // Charts - 큰 라이브러리
+              if (id.includes('recharts')) {
+                return 'charts';
+              }
+              
+              // Date utilities
+              if (id.includes('date-fns')) {
+                return 'date-fns';
+              }
+              
+              // Icons - Lucide
+              if (id.includes('lucide-react')) {
+                return 'icons';
+              }
+              
+              // DnD Kit
+              if (id.includes('@dnd-kit')) {
+                return 'dnd-kit';
+              }
+              
+              // PDF generation - lazy load
+              if (id.includes('html2canvas') || id.includes('jspdf')) {
+                return 'pdf-generation';
+              }
+              
+              // OCR - lazy load
+              if (id.includes('tesseract')) {
+                return 'ocr';
+              }
+              
+              // Markdown
+              if (id.includes('react-markdown')) {
+                return 'markdown';
+              }
+              
+              // Common components - separate chunk
+              if (id.includes('/components/Common/')) {
+                return 'common-components';
+              }
+              
+              // Node modules that are not separated above
+              if (id.includes('node_modules')) {
+                return 'vendor';
+              }
             },
           },
         },
-        // 청크 크기 경고 임계값 (KB)
-        chunkSizeWarningLimit: 600,
+        // 청크 크기 경고 임계값 줄임
+        chunkSizeWarningLimit: 500,
+        // 소스맵 비활성화 for production
+        sourcemap: false,
       },
     };
 });

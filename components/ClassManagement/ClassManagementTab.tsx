@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BookOpen, Search, Plus, Filter } from 'lucide-react';
+import { BookOpen, Search, Plus, Filter, Calculator } from 'lucide-react';
 import { useClasses, ClassInfo } from '../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import ClassList from './ClassList';
@@ -77,13 +77,13 @@ const ClassManagementTab: React.FC = () => {
   }, [classes, filters]);
 
   // 과목 필터 버튼 설정 (확장 가능)
-  const subjectFilters: Array<{ value: 'all' | SubjectType; label: string; emoji: string }> = [
-    { value: 'all', label: '전체', emoji: '📚' },
-    { value: 'math', label: SUBJECT_LABELS.math, emoji: '📐' },
-    { value: 'english', label: SUBJECT_LABELS.english, emoji: '📕' },
+  const subjectFilters: Array<{ value: 'all' | 'math' | 'english'; label: string; icon: React.ReactNode }> = [
+    { value: 'all', label: '전체', icon: <BookOpen className="w-4 h-4" /> },
+    { value: 'math', label: SUBJECT_LABELS.math, icon: <Calculator className="w-4 h-4" /> },
+    { value: 'english', label: SUBJECT_LABELS.english, icon: <BookOpen className="w-4 h-4" /> },
     // 추후 확장 가능
-    // { value: 'science', label: SUBJECT_LABELS.science, emoji: '🔬' },
-    // { value: 'korean', label: SUBJECT_LABELS.korean, emoji: '📖' },
+    // { value: 'science', label: SUBJECT_LABELS.science, icon: <Microscope className="w-4 h-4" /> },
+    // { value: 'korean', label: SUBJECT_LABELS.korean, icon: <Book className="w-4 h-4" /> },
   ];
 
   return (
@@ -93,7 +93,7 @@ const ClassManagementTab: React.FC = () => {
         <div className="flex items-center gap-3">
           {/* 과목 토글 */}
           <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
-            {subjectFilters.map(({ value, label, emoji }) => (
+            {subjectFilters.map(({ value, label, icon }) => (
               <button
                 key={value}
                 onClick={() => setFilters({ ...filters, subject: value })}
@@ -103,7 +103,9 @@ const ClassManagementTab: React.FC = () => {
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                {emoji} {label}
+                  <span className="inline-flex items-center gap-1.5">
+                    {icon} {label}
+                  </span>
               </button>
             ))}
           </div>

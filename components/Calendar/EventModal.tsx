@@ -8,6 +8,7 @@ import { X, Trash2, Clock, Users, AlignLeft, Type, Edit3, Plus, Link as LinkIcon
 import { format } from 'date-fns';
 import { db } from '../../firebaseConfig';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { listenerRegistry } from '../../utils/firebaseCleanup';
 import SeminarPanel from './SeminarPanel';
 
 interface EventModalProps {
@@ -288,7 +289,7 @@ const EventModal: React.FC<EventModalProps> = ({
         setSeminarTags(data.seminarTags || ['seminar', 'workshop', 'meeting']);
       }
     });
-    return () => unsubscribe();
+    return listenerRegistry.register('EventModal', unsubscribe);
   }, []);
 
   // Auto-open panel when seminar tags are selected

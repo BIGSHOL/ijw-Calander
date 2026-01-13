@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Users, UserMinus, UserPlus } from 'lucide-react';
+import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject } from './types';
 import { formatCurrency, calculateStats } from './utils';
 import Table from './components/Table';
@@ -207,18 +208,17 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
 
   // Group order state (per teacher, stored in localStorage)
-  const groupOrderKey = `attendance_groupOrder_${filterTeacherId || 'all'}_${selectedSubject}`;
+  const groupOrderKey = STORAGE_KEYS.attendanceGroupOrder(filterTeacherId || 'all', selectedSubject);
   const [groupOrder, setGroupOrder] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem(groupOrderKey);
-      return saved ? JSON.parse(saved) : [];
+      return storage.getJSON<string[]>(groupOrderKey, []);
     } catch { return []; }
   });
 
   // Persist group order changes
   const handleGroupOrderChange = (newOrder: string[]) => {
     setGroupOrder(newOrder);
-    localStorage.setItem(groupOrderKey, JSON.stringify(newOrder));
+    storage.setJSON(groupOrderKey, newOrder);
   };
 
 

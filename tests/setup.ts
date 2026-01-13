@@ -68,6 +68,8 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 // Suppress console errors in tests (optional)
+import { beforeAll, afterAll } from 'vitest';
+
 const originalError = console.error;
 beforeAll(() => {
   console.error = (...args: any[]) => {

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ClassKeywordColor } from '../../types';
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, collection, onSnapshot, getDoc } from 'firebase/firestore';
+import { listenerRegistry } from '../../utils/firebaseCleanup';
 import { X, Edit2, Check, Clock, Hash } from 'lucide-react';
 
 interface ClassesTabProps {
@@ -51,7 +52,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
             } as ClassKeywordColor)).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
             setClassKeywords(keywords);
         });
-        return () => unsubscribe();
+        return listenerRegistry.register('ClassesTab', unsubscribe);
     }, []);
 
     // 스케줄 표기 설정 로드

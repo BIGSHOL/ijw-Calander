@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, GraduationCap } from 'lucide-react';
 import { useStudentConsultations, StudentConsultationFilters } from '../../hooks/useStudentConsultations';
 import { ConsultationCategory, CATEGORY_CONFIG } from '../../types';
 import ConsultationList from './ConsultationList';
@@ -89,7 +89,8 @@ const ConsultationManagementTab: React.FC = () => {
                                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                             }`}
                         >
-                            🎓 학생
+                            <GraduationCap className="inline-block w-4 h-4 mr-1" />
+                            학생
                         </button>
                     </div>
 

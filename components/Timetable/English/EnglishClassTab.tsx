@@ -2,7 +2,8 @@
 // 영어 통합 시간표 탭 - 수업별 컬럼 뷰 (Refactored to match academy-app style with Logic Port)
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Settings, Eye, ChevronDown, Users, Home, User } from 'lucide-react';
+import { Search, Settings, Eye, ChevronDown, Users, Home, User, Edit } from 'lucide-react';
+import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
@@ -91,7 +92,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
 
     useEffect(() => {
-        const hasSeenGuide = localStorage.getItem('english_timetable_guide_shown');
+        const hasSeenGuide = storage.getBoolean(STORAGE_KEYS.ENGLISH_TIMETABLE_GUIDE_SHOWN, false);
         if (!hasSeenGuide) {
             // Show tooltip after a slight delay to draw attention
             const timer = setTimeout(() => setIsTooltipVisible(true), 1000);
@@ -101,7 +102,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
     const dismissTooltip = () => {
         setIsTooltipVisible(false);
-        localStorage.setItem('english_timetable_guide_shown', 'true');
+        storage.setBoolean(STORAGE_KEYS.ENGLISH_TIMETABLE_GUIDE_SHOWN, true);
     };
 
 
@@ -230,7 +231,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                 onClick={() => setMode('edit')}
                                 className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                             >
-                                ✏️ 수정
+                                <Edit className="inline-block w-3 h-3 mr-1" />
+                                수정
                             </button>
                         )}
                     </div>

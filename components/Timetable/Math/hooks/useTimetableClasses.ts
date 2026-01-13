@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
+import { listenerRegistry } from '../../../../utils/firebaseCleanup';
+import { storage, STORAGE_KEYS } from '../../../../utils/localStorage';
 import { TimetableClass, TimetableStudent } from '../../../../types';
 import { useEnrollmentsAsClasses } from '../../../../hooks/useEnrollments';
 import { useTeachers } from '../../../../hooks/useFirebaseQueries';
@@ -16,14 +18,9 @@ export const useTimetableClasses = () => {
 
     // Check localStorage for data structure preference
     useEffect(() => {
-        const stored = localStorage.getItem('useNewDataStructure');
         // 기본값: true (새 구조 사용)
-        if (stored === null) {
-            localStorage.setItem('useNewDataStructure', 'true');
-            setUseNewStructure(true);
-        } else {
-            setUseNewStructure(stored === 'true');
-        }
+        const stored = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, true);
+        setUseNewStructure(stored);
     }, []);
 
     // 통일된 classes 컬렉션 확인 (Phase 1 마이그레이션 후)
@@ -116,8 +113,7 @@ export const useTimetableClasses = () => {
                 console.error('[useTimetableClasses] Error loading unified classes:', error);
                 setLoading(false);
             });
-
-            return () => unsubscribe();
+            return listenerRegistry.register('useTimetableClasses(new)', unsubscribe);
         }
 
         // 통일된 컬렉션이 비어있으면 레거시 방식 사용
@@ -154,7 +150,7 @@ export const useTimetableClasses = () => {
             console.error("수업 목록 로딩 에러:", error);
             setLoading(false);
         });
-        return () => unsubscribe();
+        return listenerRegistry.register('useTimetableClasses(old)', unsubscribe);
     }, [unifiedClassesCount, useNewStructure, enrollmentClasses, enrollmentLoading, teachers]);
 
     return { classes, loading };

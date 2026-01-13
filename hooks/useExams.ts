@@ -137,10 +137,14 @@ export const useDeleteExam = () => {
  */
 export const groupExamsByType = (exams: Exam[]): Record<ExamType, Exam[]> => {
     const grouped: Record<ExamType, Exam[]> = {
+        daily: [],
+        weekly: [],
+        monthly: [],
         midterm: [],
         final: [],
         mock: [],
-        weekly: [],
+        school: [],
+        competition: [],
         diagnostic: [],
         other: [],
     };

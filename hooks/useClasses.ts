@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, orderBy, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { SubjectType } from './useUnifiedClasses';
+import { storage, STORAGE_KEYS } from '../utils/localStorage';
+
+export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'other';
 
 const COL_CLASSES_OLD = '수업목록';
 const COL_CLASSES_NEW = 'classes';
@@ -40,11 +42,7 @@ export const useClasses = (subject?: SubjectType) => {
             }
 
             // 2. classes 컬렉션이 비어있으면 레거시 방식 사용
-            const stored = localStorage.getItem('useNewDataStructure');
-            const useNewStructure = stored === null ? true : stored === 'true';
-            if (stored === null) {
-                localStorage.setItem('useNewDataStructure', 'true');
-            }
+            const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, true);
 
             console.log(`[useClasses] Unified collection empty, falling back. subject: ${subject}, useNewStructure: ${useNewStructure}`);
 
@@ -86,7 +84,7 @@ async function fetchClassesFromUnifiedCollection(subject?: SubjectType): Promise
     const snapshot = await getDocs(q);
 
     const classes: ClassInfo[] = snapshot.docs.map(doc => {
-        const data = doc.data();
+        const data = doc.data() as any;
 
         // schedule을 레거시 문자열 형식으로 변환
         const scheduleStrings = data.schedule?.map((slot: any) =>
@@ -124,7 +122,7 @@ async function fetchClassesFromOldStructure(subject?: SubjectType): Promise<Clas
 
     const snapshot = await getDocs(q);
     let classes = snapshot.docs.map(doc => {
-        const data = doc.data();
+        const data = doc.data() as any;
         // subject 추론: className 패턴이나 teacher 기반으로 추론
         const inferredSubject = inferSubject(data.className, data.teacher);
 
@@ -174,7 +172,7 @@ async function fetchClassesFromEnrollments(subject?: SubjectType): Promise<Class
     }>();
 
     snapshot.docs.forEach(doc => {
-        const data = doc.data();
+        const data = doc.data() as any;
         const studentId = doc.ref.parent.parent?.id || '';
         const className = data.className || '';
         const enrollmentSubject = data.subject || 'math';

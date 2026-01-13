@@ -103,14 +103,14 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
       isCurrentStudent: true,
       studentId: student.id,
       name: student.name,
-      phone: student.phoneNumber || '',
+      phone: '', // Phone number not stored in UnifiedStudent, will be manually entered
       // TODO: student 데이터에서 추가 정보 매핑 (gender, grade 등)
     });
     setStudentSearch('');
   };
 
   const filteredStudents = students.filter(s =>
-    (studentSearch === '' || s.name.includes(studentSearch) || s.id.includes(studentSearch) || (s.phoneNumber && s.phoneNumber.includes(studentSearch)))
+    (studentSearch === '' || s.name.includes(studentSearch) || s.id.includes(studentSearch))
   );
 
   const filteredAttendees = attendees.filter(a =>
@@ -295,7 +295,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                         type="text"
                         value={studentSearch}
                         onChange={(e) => setStudentSearch(e.target.value)}
-                        placeholder="학생 이름 또는 전화번호 검색"
+                        placeholder="학생 이름 검색"
                         className="w-full pl-9 pr-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
                       />
                       {studentSearch && (
@@ -308,7 +308,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                                 className="w-full text-left px-3 py-2 hover:bg-purple-50 text-sm border-b border-gray-100 last:border-0"
                               >
                                 <div className="font-bold text-gray-900">{student.name}</div>
-                                <div className="text-xs text-gray-500">{student.phoneNumber || student.id}</div>
+                                <div className="text-xs text-gray-500">{student.school && student.grade ? `${student.school} ${student.grade}` : student.id}</div>
                               </button>
                             ))
                           ) : (

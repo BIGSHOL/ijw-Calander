@@ -149,12 +149,12 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
               <span>기본 권한</span>
               <select
                 value={newDepartmentForm.defaultPermission}
-                onChange={(e) => setNewDepartmentForm({ ...newDepartmentForm, defaultPermission: e.target.value as 'view' | 'block' | 'edit' })}
+                onChange={(e) => setNewDepartmentForm({ ...newDepartmentForm, defaultPermission: e.target.value as 'view' | 'none' | 'edit' })}
                 className="border rounded px-2 py-1 text-xs font-bold"
               >
-                <option value="view">👁️ 조회</option>
-                <option value="block">🚫 차단</option>
-                <option value="edit">✏️ 수정</option>
+                <option value="view">조회</option>
+                <option value="none">차단</option>
+                <option value="edit">수정</option>
               </select>
             </label>
           </div>

@@ -3,6 +3,7 @@ import { Hash, Plus, Trash2, Edit, Save, X, GripVertical, Users, Settings } from
 import { EventTag, DEFAULT_EVENT_TAGS } from '../../types';
 import { db } from '../../firebaseConfig';
 import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { listenerRegistry } from '../../utils/firebaseCleanup';
 
 interface HashtagsTabProps {
   isMaster: boolean;
@@ -53,7 +54,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return listenerRegistry.register('HashtagsTab', unsubscribe);
   }, []);
 
   // 설정 저장

@@ -4,7 +4,7 @@ import { ko } from 'date-fns/locale';
 import { GanttSubTask, GanttTemplate, UserProfile, ProjectVisibility, ProjectMember, ProjectMemberRole } from '../../types';
 import { useGanttCategories } from '../../hooks/useGanttCategories';
 import { useGanttDepartments } from '../../hooks/useGanttDepartments';
-import { Plus, X, User, Building2, Calendar, Clock, FileText, ChevronRight, Save, Edit2, RotateCcw, Lock, Globe } from 'lucide-react';
+import { Plus, X, User, Building2, Calendar, Clock, FileText, ChevronRight, Save, Edit2, RotateCcw, Lock, Globe, ClipboardList } from 'lucide-react';
 
 interface GanttBuilderProps {
     onSave: (template: GanttTemplate) => void;
@@ -46,6 +46,8 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
 
     // Phase 6: Dynamic Department Loading - P2 개선: 중앙화된 hook 사용
     const { data: dynamicDepartments = [] } = useGanttDepartments();
+    // Type guard to ensure array for safe usage
+    const departments = Array.isArray(dynamicDepartments) ? dynamicDepartments : [];
 
     // Sorted users: current user first, then by displayName (가나다순)
     const sortedUsers = useMemo(() => {
@@ -391,10 +393,10 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                                 onChange={(e) => updateMemberRole(member.userId, e.target.value as ProjectMemberRole)}
                                                 className="text-micro px-2 py-0.5 rounded font-bold cursor-pointer outline-none bg-white border border-gray-300 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
                                             >
-                                                <option value="viewer">👁 관찰자</option>
-                                                <option value="editor">✏️ 편집자</option>
-                                                <option value="admin">⚙️ 관리자</option>
-                                                <option value="owner">👑 소유자</option>
+                                                <option value="viewer">관찰자</option>
+                                                <option value="editor">편집자</option>
+                                                <option value="admin">관리자</option>
+                                                <option value="owner">소유자</option>
                                             </select>
                                         </div>
                                     ))}
@@ -450,7 +452,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                         <div className="mt-2 p-2.5 bg-purple-50 rounded-lg border border-purple-200">
                             <p className="text-micro text-purple-700 mb-1.5 font-bold">공개할 부서:</p>
                             <div className="flex flex-wrap gap-1.5">
-                                {dynamicDepartments.map(dept => {
+                                {departments.map(dept => {
                                     const isSelected = projectDepartmentIds.includes(dept.id);
                                     return (
                                         <button
@@ -568,7 +570,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
 
                         {/* Row 3: Departments (Task Level - Phase 6: Dynamic) */}
                         <div className="flex gap-1 mb-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                            {dynamicDepartments.map(dept => (
+                            {departments.map(dept => (
                                 <button
                                     key={dept.id}
                                     type="button"
@@ -663,7 +665,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                         {tasks.length === 0 ? (
                             <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
                                 <div className="w-14 h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-2 shadow-inner">
-                                    <span className="text-2xl">📋</span>
+                                    <ClipboardList className="w-6 h-6 text-gray-400" />
                                 </div>
                                 <p className="text-[#081429] text-xxs font-bold">항목이 없습니다</p>
                                 <p className="text-gray-400 text-micro mt-1">왼쪽 폼에서 항목을 추가하세요</p>

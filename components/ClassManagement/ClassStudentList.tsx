@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Users, UserMinus, ExternalLink, AlertCircle } from 'lucide-react';
 import { ClassStudent } from '../../hooks/useClassDetail';
 import { useManageClassStudents } from '../../hooks/useClassMutations';
+import { SubjectType } from '../../types';
 
 interface ClassStudentListProps {
   students: ClassStudent[];
   className: string;
   teacher: string;
-  subject: 'math' | 'english';
+  subject: SubjectType;
   schedule?: string[];
   onStudentClick?: (studentId: string) => void;
 }

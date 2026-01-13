@@ -1,4 +1,5 @@
 import React from 'react';
+import { FileText } from 'lucide-react';
 import { Consultation } from '../../types';
 import ConsultationCard from './ConsultationCard';
 
@@ -49,7 +50,9 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
     if (consultations.length === 0) {
         return (
             <div className="bg-white border border-[#081429] border-opacity-20 rounded-lg p-12 text-center">
-                <div className="text-6xl mb-4">📝</div>
+                <div className="mb-4">
+                    <FileText className="w-16 h-16 mx-auto text-gray-300" />
+                </div>
                 <h3 className="text-xl font-semibold text-[#081429] mb-2">
                     상담 기록이 없습니다
                 </h3>

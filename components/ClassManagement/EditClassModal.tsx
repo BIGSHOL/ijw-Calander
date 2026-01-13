@@ -178,7 +178,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
             <Edit className="w-5 h-5" />
             <h2 className="font-bold">수업 편집</h2>
           </div>
-          <button onClick={onClose} className="hover:bg-white/20 p-1.5 rounded-lg transition-colors">
+          <button onClick={() => onClose(false)} className="hover:bg-white/20 p-1.5 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -415,7 +415,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         {/* 푸터 */}
         <div className="bg-gray-50 px-4 py-2.5 flex items-center justify-end gap-2 border-t shrink-0">
           <button
-            onClick={onClose}
+            onClick={() => onClose(false)}
             disabled={updateClassMutation.isPending}
             className="px-4 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
           >

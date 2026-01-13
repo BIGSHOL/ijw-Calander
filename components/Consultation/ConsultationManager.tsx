@@ -5,7 +5,7 @@ import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
 import { ConsultationForm } from './ConsultationForm';
-import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
 
 interface ConsultationManagerProps {
     userProfile: UserProfile | null;
@@ -135,7 +135,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
         return (
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center">
-                    <div className="text-4xl mb-4">📋</div>
+                    <div className="mb-4">
+                        <ClipboardList className="w-16 h-16 mx-auto text-gray-300" />
+                    </div>
                     <p className="text-gray-500">상담 데이터를 불러오는 중...</p>
                 </div>
             </div>

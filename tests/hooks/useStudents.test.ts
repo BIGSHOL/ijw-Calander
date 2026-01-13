@@ -39,24 +39,30 @@ describe('useStudents Hook', () => {
       name: '김철수',
       birthdate: '2010-05-15',
       school: '테스트초등학교',
-      grade: 5,
+      grade: '초5',
       phone: '010-1234-5678',
       parentPhone: '010-8765-4321',
       address: '서울시 강남구',
-      enrollmentDate: '2024-03-01',
+      startDate: '2024-03-01',
+      enrollments: [],
       status: 'active',
+      createdAt: '2024-03-01T00:00:00Z',
+      updatedAt: '2024-03-01T00:00:00Z',
     },
     {
       id: 'student2',
       name: '이영희',
       birthdate: '2011-08-22',
       school: '테스트중학교',
-      grade: 3,
+      grade: '중3',
       phone: '010-2345-6789',
       parentPhone: '010-9876-5432',
       address: '서울시 서초구',
-      enrollmentDate: '2024-03-01',
+      startDate: '2024-03-01',
+      enrollments: [],
       status: 'active',
+      createdAt: '2024-03-01T00:00:00Z',
+      updatedAt: '2024-03-01T00:00:00Z',
     },
   ];
 
@@ -65,13 +71,16 @@ describe('useStudents Hook', () => {
     name: '박민수',
     birthdate: '2009-12-10',
     school: '테스트고등학교',
-    grade: 2,
+    grade: '고2',
     phone: '010-3456-7890',
     parentPhone: '010-7654-3210',
     address: '서울시 송파구',
-    enrollmentDate: '2023-03-01',
+    startDate: '2023-03-01',
     withdrawalDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days ago
+    enrollments: [],
     status: 'withdrawn',
+    createdAt: '2023-03-01T00:00:00Z',
+    updatedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
   };
 
   beforeEach(() => {
@@ -358,12 +367,13 @@ describe('useStudents Hook', () => {
         name: '최지훈',
         birthdate: '2012-03-18',
         school: '테스트초등학교',
-        grade: 4,
+        grade: '초4',
         phone: '010-4567-8901',
         parentPhone: '010-6543-2109',
         address: '서울시 강동구',
-        enrollmentDate: '2024-03-01',
-        status: 'active',
+        startDate: '2024-03-01',
+        enrollments: [],
+        status: 'active' as const,
       };
 
       (addDoc as any).mockResolvedValueOnce({
@@ -407,12 +417,13 @@ describe('useStudents Hook', () => {
         name: '최지훈',
         birthdate: '2012-03-18',
         school: '테스트초등학교',
-        grade: 4,
+        grade: '초4',
         phone: '010-4567-8901',
         parentPhone: '010-6543-2109',
         address: '서울시 강동구',
-        enrollmentDate: '2024-03-01',
-        status: 'active',
+        startDate: '2024-03-01',
+        enrollments: [],
+        status: 'active' as const,
       };
 
       const mockError = new Error('Failed to add student');
@@ -446,8 +457,8 @@ describe('useStudents Hook', () => {
   describe('updateStudent Mutation', () => {
     it('should update student successfully', async () => {
       const updatedData = {
-        phone: '010-9999-9999',
-        address: '서울시 마포구',
+        school: '변경된초등학교',
+        grade: '초6',
       };
 
       (updateDoc as any).mockResolvedValueOnce(undefined);
@@ -483,7 +494,7 @@ describe('useStudents Hook', () => {
 
     it('should handle update student errors', async () => {
       const updatedData = {
-        phone: '010-9999-9999',
+        school: '변경된초등학교',
       };
 
       const mockError = new Error('Failed to update student');
@@ -649,12 +660,13 @@ describe('useStudents Hook', () => {
         name: '최지훈',
         birthdate: '2012-03-18',
         school: '테스트초등학교',
-        grade: 4,
+        grade: '초4',
         phone: '010-4567-8901',
         parentPhone: '010-6543-2109',
         address: '서울시 강동구',
-        enrollmentDate: '2024-03-01',
-        status: 'active',
+        startDate: '2024-03-01',
+        enrollments: [],
+        status: 'active' as const,
       };
 
       (addDoc as any).mockResolvedValueOnce({ id: 'new-id' });
@@ -718,7 +730,7 @@ describe('useStudents Hook', () => {
       expect(result.current.isUpdating).toBeDefined();
       expect(typeof result.current.isUpdating).toBe('boolean');
 
-      await result.current.updateStudent('student1', { phone: '010-9999-9999' });
+      await result.current.updateStudent('student1', { school: '변경된초등학교' });
 
       // Mutation completed successfully
       expect(updateDoc).toHaveBeenCalled();
