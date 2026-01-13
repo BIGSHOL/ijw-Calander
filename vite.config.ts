@@ -34,25 +34,22 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
+          // Ensure proper chunk loading order
+          inlineDynamicImports: false,
           manualChunks: (id) => {
             // Firebase - 가장 큰 의존성
             if (id.includes('firebase')) {
               return 'firebase';
             }
 
-            // React core (excluding lucide-react to prevent initialization issues)
-            if ((id.includes('react') || id.includes('react-dom')) && !id.includes('lucide-react')) {
+            // React core + lucide-react together (must be loaded before vendor)
+            if (id.includes('react') || id.includes('react-dom') || id.includes('lucide-react')) {
               return 'react-vendor';
             }
 
             // React Query
             if (id.includes('@tanstack/react-query')) {
               return 'react-query';
-            }
-
-            // Lucide icons - bundle with vendor for stable initialization
-            if (id.includes('lucide-react')) {
-              return 'vendor';
             }
 
             // Charts - 큰 라이브러리
@@ -65,7 +62,7 @@ export default defineConfig(({ mode }) => {
               return 'date-fns';
             }
 
-            // Icons - now in separate chunk with proper initialization order
+            // Icons - bundled with react-vendor to ensure proper initialization
 
             // DnD Kit
             if (id.includes('@dnd-kit')) {
