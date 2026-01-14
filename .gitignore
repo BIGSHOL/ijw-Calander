@@ -37,3 +37,6 @@ nul
 nul*
 __pycache__/
 *.pyc
+
+# Claude Code temporary files
+tmpclaude-*
