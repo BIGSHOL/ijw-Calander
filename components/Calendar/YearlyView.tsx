@@ -205,7 +205,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
 
                 {/* 12 Month Grid */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-                    <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-1 sm:gap-1.5 lg:gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-1 sm:gap-1.5 lg:gap-2">
                         {months.map(month => {
                             const mStart = startOfMonth(month);
                             const mEnd = endOfMonth(month);

@@ -239,16 +239,11 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
 
           {/* 수강 학생 섹션 */}
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-lg">
-                  수강 학생
-                  <span className="text-[#fdb813] ml-2">
-                    ({classDetail?.studentCount || studentCount || 0}명)
-                  </span>
-                </h3>
-              </div>
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="w-5 h-5 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-lg">
+                현재 등록된 학생 ({classDetail?.studentCount || studentCount || 0}명)
+              </h3>
             </div>
 
             {/* 학생 목록 */}
@@ -259,10 +254,6 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
             ) : classDetail ? (
               <ClassStudentList
                 students={classDetail.students}
-                className={className}
-                teacher={teacher}
-                subject={subject}
-                schedule={schedule}
                 onStudentClick={onStudentClick}
               />
             ) : (

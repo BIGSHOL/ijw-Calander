@@ -449,7 +449,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
 
 
   return (
-    <div className="flex-1 bg-white shadow-xl print:shadow-none p-4 md:p-8 print:p-0 rounded-2xl border border-gray-200 print:border-none min-w-[350px] flex flex-col overflow-hidden">
+    <div className="@container flex-1 bg-white shadow-xl print:shadow-none p-2 @sm:p-4 @lg:p-8 print:p-0 rounded-2xl border border-gray-200 print:border-none min-w-[280px] flex flex-col overflow-hidden">
 
       {/* Yearly View Content */}
       {viewMode === 'yearly' ? (
@@ -469,18 +469,18 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
       ) : (
         <>
           {/* Unified Header */}
-          <div className="mb-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-30 bg-white py-2 -mx-4 md:-mx-8 px-4 md:px-8 border-b border-gray-100">
+          <div className="mb-1 @sm:mb-2 @lg:mb-4 flex flex-row justify-between items-center gap-1 @sm:gap-2 @lg:gap-4 sticky top-0 z-30 bg-white py-1 @sm:py-2 -mx-2 @sm:-mx-4 @lg:-mx-8 px-2 @sm:px-4 @lg:px-8 border-b border-gray-100">
 
             {/* Navigation Group (Left) */}
-            <div className="flex items-center gap-1 w-full md:w-auto p-1.5 bg-[#f8fafc] rounded-2xl border border-gray-200 shadow-sm flex-none">
+            <div className="flex items-center gap-0.5 p-0.5 @xs:p-1 @sm:p-1.5 bg-[#f8fafc] rounded-lg @sm:rounded-xl @lg:rounded-2xl border border-gray-200 shadow-sm flex-none">
               <button
                 onClick={handlePrev}
-                className="p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-xl transition-all text-gray-400 hover:text-[#081429]"
+                className="p-1 @xs:p-1.5 @sm:p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-md @sm:rounded-lg @lg:rounded-xl transition-all text-gray-400 hover:text-[#081429]"
               >
-                <ChevronLeft size={20} strokeWidth={3} />
+                <ChevronLeft size={14} className="@sm:w-4 @sm:h-4 @lg:w-5 @lg:h-5" strokeWidth={3} />
               </button>
 
-              <div className="flex items-center justify-center px-1">
+              <div className="flex items-center justify-center px-0.5">
                 {/* Year Selector */}
                 <CustomSelect
                   value={currentYear}
@@ -519,14 +519,14 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
 
               <button
                 onClick={handleNext}
-                className="p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-xl transition-all text-gray-400 hover:text-[#081429]"
+                className="p-1 @xs:p-1.5 @sm:p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-md @sm:rounded-lg @lg:rounded-xl transition-all text-gray-400 hover:text-[#081429]"
               >
-                <ChevronRight size={20} strokeWidth={3} />
+                <ChevronRight size={14} className="@sm:w-4 @sm:h-4 @lg:w-5 @lg:h-5" strokeWidth={3} />
               </button>
             </div>
 
             {isPrimaryView && (
-              <div className="flex-1 w-full md:max-w-md relative z-30 mx-2">
+              <div className="hidden @lg:block flex-1 w-full max-w-md relative z-30 mx-2">
                 <div className="flex items-center gap-2 w-full">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -764,17 +764,17 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
 
             {/* Right Action Group (Right) - Only show My Events on Primary View */}
             {isPrimaryView && (
-              <div className="flex items-center gap-3 w-full md:w-auto justify-end flex-none">
-                <div className="hidden md:flex text-sm font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/10 px-4 py-2 rounded-xl border border-[#fdb813]/20">
+              <div className="flex items-center gap-1 @sm:gap-2 @lg:gap-3 w-auto justify-end flex-none">
+                <div className="hidden @xl:flex text-xs @2xl:text-sm font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/10 px-2 @2xl:px-4 py-1.5 @2xl:py-2 rounded-lg @2xl:rounded-xl border border-[#fdb813]/20">
                   {format(currentDate, 'yyyy. MM')}
                 </div>
                 <div className="relative">
                   <button
                     onClick={() => setIsMyEventsOpen(true)}
-                    className="flex items-center gap-2 bg-[#081429] hover:bg-[#081429]/90 text-white px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg font-bold text-sm transform hover:-translate-y-0.5"
+                    className="flex items-center gap-1 @sm:gap-1.5 @lg:gap-2 bg-[#081429] hover:bg-[#081429]/90 text-white px-1.5 @xs:px-2 @sm:px-3 @lg:px-5 py-1.5 @sm:py-2 @lg:py-2.5 rounded-lg @sm:rounded-xl transition-all shadow-md hover:shadow-lg font-bold text-[10px] @xs:text-xs @lg:text-sm transform hover:-translate-y-0.5"
                   >
-                    <List size={16} className="text-[#fdb813]" />
-                    내 일정
+                    <List size={14} className="text-[#fdb813] @sm:w-4 @sm:h-4" />
+                    <span className="hidden @sm:inline">내 일정</span>
                   </button>
                   {/* Notification Badge */}
                   {(() => {
