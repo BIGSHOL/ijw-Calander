@@ -53,7 +53,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
 
     // Data loading with structure toggle support
     useEffect(() => {
-        const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, false);
+        const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, true);
 
         // 시뮬레이션 모드: 항상 english_schedules_draft 사용
         if (isSimulationMode) {

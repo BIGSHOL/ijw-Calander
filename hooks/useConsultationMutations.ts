@@ -26,8 +26,11 @@ export function useCreateConsultation() {
             });
             return docRef.id;
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['student_consultations'] });
+        onSuccess: async () => {
+            // 캐시 무효화 완료까지 대기하여 확실한 동기화 보장
+            await queryClient.invalidateQueries({
+                queryKey: ['student_consultations'],
+            });
         },
         onError: (error) => {
             console.error('상담 기록 생성 실패:', error);
@@ -51,8 +54,10 @@ export function useUpdateConsultation() {
             });
             return { id, updates };
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['student_consultations'] });
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({
+                queryKey: ['student_consultations'],
+            });
         },
         onError: (error) => {
             console.error('상담 기록 수정 실패:', error);
@@ -72,8 +77,10 @@ export function useDeleteConsultation() {
             await deleteDoc(docRef);
             return id;
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['student_consultations'] });
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({
+                queryKey: ['student_consultations'],
+            });
         },
         onError: (error) => {
             console.error('상담 기록 삭제 실패:', error);
@@ -98,8 +105,10 @@ export function useCompleteFollowUp() {
             });
             return { id, notes };
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['student_consultations'] });
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({
+                queryKey: ['student_consultations'],
+            });
         },
         onError: (error) => {
             console.error('후속 조치 완료 처리 실패:', error);

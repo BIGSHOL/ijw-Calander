@@ -4,12 +4,12 @@ import { useStudents, searchStudentsByQuery } from '../../hooks/useStudents';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
-import { Users, Loader2, RefreshCw, UserPlus, ClipboardList } from 'lucide-react';
+import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft } from 'lucide-react';
 
 export interface StudentFilters {
   searchQuery: string;
   grade: string;
-  status: 'all' | 'active' | 'on_hold' | 'withdrawn';
+  status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn';
   subject: string;
 }
 
@@ -123,7 +123,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#fdb813] mx-auto mb-2" />
           <p className="text-gray-600">학생 목록을 불러오는 중...</p>
         </div>
       </div>
@@ -142,15 +142,19 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   }
 
   return (
-    <div className="flex h-full bg-gray-50">
-      {/* 좌측 패널: 학생 목록 (28% - 축소됨) */}
-      <div className="w-[28%] min-w-[280px] max-w-[350px] border-r border-gray-300 bg-white flex flex-col">
+    <div className="flex flex-col md:flex-row h-full bg-gray-50">
+      {/* 좌측 패널: 학생 목록 - 모바일에서 학생 선택 시 숨김 */}
+      <div className={`
+        w-full md:w-[28%] md:min-w-[280px] md:max-w-[350px]
+        border-r border-gray-300 bg-white flex flex-col
+        ${selectedStudent ? 'hidden md:flex' : 'flex'}
+      `}>
         <div className="p-3 border-b border-gray-200 bg-[#081429] flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-[#fdb813]" />
             <span className="text-sm font-bold text-white">학생 목록</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2">
             <button
               onClick={() => setIsAddStudentModalOpen(true)}
               className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
@@ -164,7 +168,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 await refreshStudents();
                 setIsRefreshing(false);
               }}
-              className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
               title="새로고침"
               disabled={isRefreshing}
             >
@@ -202,16 +206,31 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         />
       </div>
 
-      {/* 우측 패널: 학생 상세 정보 (72% - 확장됨) */}
-      <div className="flex-1 bg-white">
+      {/* 우측 패널: 학생 상세 정보 - 모바일에서 학생 선택 시 전체 표시 */}
+      <div className={`
+        flex-1 bg-white flex flex-col
+        ${selectedStudent ? 'flex' : 'hidden md:flex'}
+      `}>
         {selectedStudent ? (
-          <StudentDetail student={selectedStudent} />
+          <>
+            {/* 모바일 전용 뒤로가기 버튼 */}
+            <div className="md:hidden p-2 border-b border-gray-200 bg-[#081429]">
+              <button
+                onClick={() => setSelectedStudent(null)}
+                className="flex items-center gap-2 text-white hover:text-[#fdb813] transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm font-medium">목록으로</span>
+              </button>
+            </div>
+            <StudentDetail student={selectedStudent} />
+          </>
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400">
-            <div className="text-center">
-              <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg">학생을 선택하세요</p>
-              <p className="text-sm mt-2">좌측 목록에서 학생을 클릭하면 상세 정보가 표시됩니다</p>
+            <div className="text-center p-4">
+              <Users className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 opacity-50" />
+              <p className="text-base md:text-lg">학생을 선택하세요</p>
+              <p className="text-xs md:text-sm mt-2">좌측 목록에서 학생을 클릭하면 상세 정보가 표시됩니다</p>
             </div>
           </div>
         )}

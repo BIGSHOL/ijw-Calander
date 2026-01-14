@@ -36,6 +36,8 @@ const StudentList: React.FC<StudentListProps> = ({
   };
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case 'prospect':
+        return <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-medium border border-orange-200">예비</span>;
       case 'active':
         return <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">재원</span>;
       case 'on_hold':
@@ -49,20 +51,19 @@ const StudentList: React.FC<StudentListProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* 페이지 크기 선택 */}
+      {/* 페이지 크기 선택 - 터치 영역 최적화 (최소 44x32px) */}
       <div className="px-3 py-2 border-b border-[#373d41]/20 bg-[#081429]">
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-300 font-medium">페이지당</span>
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             {[10, 20, 50, 100].map((size) => (
               <button
                 key={size}
                 onClick={() => handlePageSizeChange(size)}
-                className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                  pageSize === size
+                className={`min-w-[44px] px-3 py-2 text-xs rounded-lg transition-colors ${pageSize === size
                     ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
                     : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10'
-                }`}
+                  }`}
               >
                 {size}
               </button>
@@ -84,13 +85,12 @@ const StudentList: React.FC<StudentListProps> = ({
               <li
                 key={student.id}
                 onClick={() => onSelectStudent(student)}
-                className={`p-3 cursor-pointer transition-colors ${
-                  selectedStudent?.id === student.id
+                className={`p-3 cursor-pointer transition-colors ${selectedStudent?.id === student.id
                     ? 'bg-[#fdb813]/10 border-l-4 border-[#fdb813]'
                     : student.isOldWithdrawn
-                    ? 'hover:bg-[#fdb813]/5 bg-[#fdb813]/5'
-                    : 'hover:bg-[#081429]/5'
-                }`}
+                      ? 'hover:bg-[#fdb813]/5 bg-[#fdb813]/5'
+                      : 'hover:bg-[#081429]/5'
+                  }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
@@ -122,11 +122,10 @@ const StudentList: React.FC<StudentListProps> = ({
                           {Array.from(new Set(student.enrollments.map(e => e.subject))).map((subject) => (
                             <span
                               key={subject}
-                              className={`text-xxs px-1.5 py-0.5 rounded font-medium ${
-                                subject === 'math'
+                              className={`text-xxs px-1.5 py-0.5 rounded font-medium ${subject === 'math'
                                   ? 'bg-blue-100 text-blue-700'
                                   : 'bg-purple-100 text-purple-700'
-                              }`}
+                                }`}
                             >
                               {subject === 'math' ? '수학' : '영어'}
                             </span>
@@ -142,7 +141,7 @@ const StudentList: React.FC<StudentListProps> = ({
         )}
       </div>
 
-      {/* 페이지네이션 컨트롤 */}
+      {/* 페이지네이션 컨트롤 - 터치 영역 최적화 (최소 44x32px) */}
       {students.length > 0 && totalPages > 1 && (
         <div className="px-3 py-2 border-t border-[#373d41]/20 bg-[#081429]">
           <div className="flex items-center justify-between">
@@ -154,7 +153,7 @@ const StudentList: React.FC<StudentListProps> = ({
               <button
                 onClick={() => handlePageChange(1)}
                 disabled={currentPage === 1}
-                className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
                 title="첫 페이지"
               >
                 <ChevronsLeft className="w-4 h-4 text-gray-300" />
@@ -164,7 +163,7 @@ const StudentList: React.FC<StudentListProps> = ({
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
                 title="이전 페이지"
               >
                 <ChevronLeft className="w-4 h-4 text-gray-300" />
@@ -177,11 +176,11 @@ const StudentList: React.FC<StudentListProps> = ({
                   <>
                     <button
                       onClick={() => handlePageChange(1)}
-                      className="px-2 py-0.5 text-xs rounded hover:bg-white/10 text-gray-300"
+                      className="min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg hover:bg-white/10 text-gray-300 flex items-center justify-center"
                     >
                       1
                     </button>
-                    {currentPage > 4 && <span className="text-xs text-gray-400">...</span>}
+                    {currentPage > 4 && <span className="text-xs text-gray-400 px-1">...</span>}
                   </>
                 )}
 
@@ -194,11 +193,10 @@ const StudentList: React.FC<StudentListProps> = ({
                     <button
                       key={page}
                       onClick={() => handlePageChange(page)}
-                      className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                        currentPage === page
+                      className={`min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-center ${currentPage === page
                           ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
                           : 'hover:bg-white/10 text-gray-300'
-                      }`}
+                        }`}
                     >
                       {page}
                     </button>
@@ -207,10 +205,10 @@ const StudentList: React.FC<StudentListProps> = ({
                 {/* 마지막 페이지 근처 */}
                 {currentPage < totalPages - 2 && (
                   <>
-                    {currentPage < totalPages - 3 && <span className="text-xs text-gray-400">...</span>}
+                    {currentPage < totalPages - 3 && <span className="text-xs text-gray-400 px-1">...</span>}
                     <button
                       onClick={() => handlePageChange(totalPages)}
-                      className="px-2 py-0.5 text-xs rounded hover:bg-white/10 text-gray-300"
+                      className="min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg hover:bg-white/10 text-gray-300 flex items-center justify-center"
                     >
                       {totalPages}
                     </button>
@@ -222,7 +220,7 @@ const StudentList: React.FC<StudentListProps> = ({
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
                 title="다음 페이지"
               >
                 <ChevronRight className="w-4 h-4 text-gray-300" />
@@ -232,7 +230,7 @@ const StudentList: React.FC<StudentListProps> = ({
               <button
                 onClick={() => handlePageChange(totalPages)}
                 disabled={currentPage === totalPages}
-                className="p-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
                 title="마지막 페이지"
               >
                 <ChevronsRight className="w-4 h-4 text-gray-300" />
