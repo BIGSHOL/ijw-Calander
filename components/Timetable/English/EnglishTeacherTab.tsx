@@ -6,13 +6,15 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { doc, setDoc, deleteField, collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { Edit3, Move, Eye, Settings } from 'lucide-react';
-import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks, isExcludedStudent } from './englishUtils'; // Added isExcludedStudent
+import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks, isExcludedStudent } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { Teacher, ClassKeywordColor, PermissionId } from '../../../types';
 import BatchInputBar, { InputData, MergedClass } from './BatchInputBar';
 import MoveConfirmBar from './MoveConfirmBar';
 import MoveSelectionModal from './MoveSelectionModal';
 import PortalTooltip from '../../Common/PortalTooltip';
+import { useEnglishClassUpdater } from '../../../hooks/useEnglishClassUpdater';
+import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 
 export interface ScheduleCell {
     className?: string;
@@ -47,6 +49,19 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
+
+    // Feature Flag: 새로운 classes 컬렉션 기반 쓰기 사용 여부
+    const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, true);
+
+    // classes 컬렉션 업데이터 훅 (새 구조 사용 시)
+    const {
+        assignCellToClass,
+        removeCellFromClass,
+        removeAllClassesFromCell,
+        moveClass: moveClassToNewStructure,
+        moveSelectedClasses
+    } = useEnglishClassUpdater();
+
     const [mode, setMode] = useState<'view' | 'edit' | 'move'>('view');
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
     const [filterTeacher, setFilterTeacher] = useState<string>('all');
@@ -282,21 +297,128 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         performMove(source, target);
     };
 
-    const performMove = (source: any, target: any, moveIndices: number[] | null = null) => {
-        const newData = { ...scheduleData };
-
+    const performMove = async (source: any, target: any, moveIndices: number[] | null = null) => {
         const sKey = getCellKeyFromCoords(source.tIdx, source.pIdx, source.dIdx);
         const tKey = getCellKeyFromCoords(target.tIdx, target.pIdx, target.dIdx);
 
         // If keys are invalid, return
         if (!sKey || !tKey) return;
 
-        const sData = newData[sKey];
-        const tData = newData[tKey];
+        const sData = scheduleData[sKey];
         const sTeacher = filteredTeachers[source.tIdx];
-        const tTeacher = filteredTeachers[target.tIdx];
 
         if (!sData) return;
+
+        // === 새 구조 사용 시: classes 컬렉션에 즉시 저장 ===
+        if (useNewStructure) {
+            try {
+                // 이동할 수업 목록과 남길 수업 목록 계산
+                const sMain = sData.className ? { className: sData.className, room: sData.room, underline: sData.underline } : null;
+                const sMerged = sData.merged || [];
+
+                let classesToMove: { className: string; room?: string; underline?: boolean }[] = [];
+                let classesToKeep: { className: string; room?: string; underline?: boolean }[] = [];
+
+                if (moveIndices) {
+                    // 선택적 이동
+                    const indicesToMove = new Set(moveIndices);
+
+                    if (sMain) {
+                        if (indicesToMove.has(-1) && !isExcludedStudent(sMain.className)) {
+                            classesToMove.push(sMain);
+                        } else {
+                            classesToKeep.push(sMain);
+                        }
+                    }
+
+                    sMerged.forEach((m, idx) => {
+                        if (indicesToMove.has(idx) && !isExcludedStudent(m.className)) {
+                            classesToMove.push({ className: m.className, room: m.room, underline: m.underline });
+                        } else {
+                            classesToKeep.push({ className: m.className, room: m.room, underline: m.underline });
+                        }
+                    });
+                } else {
+                    // 전체 이동 (제외 대상 제외)
+                    if (sMain) {
+                        if (isExcludedStudent(sMain.className)) {
+                            classesToKeep.push(sMain);
+                        } else {
+                            classesToMove.push(sMain);
+                        }
+                    }
+
+                    sMerged.forEach(m => {
+                        if (isExcludedStudent(m.className)) {
+                            classesToKeep.push({ className: m.className, room: m.room, underline: m.underline });
+                        } else {
+                            classesToMove.push({ className: m.className, room: m.room, underline: m.underline });
+                        }
+                    });
+                }
+
+                if (classesToMove.length === 0) {
+                    alert("이동할 학생이 없습니다 (모두 제외 대상)");
+                    setPendingMove(null);
+                    return;
+                }
+
+                // classes 컬렉션에 직접 저장
+                await moveSelectedClasses(sKey, tKey, classesToMove, classesToKeep);
+
+                // UI 업데이트 (로컬 상태도 업데이트하여 즉시 반영)
+                const newData = { ...scheduleData };
+
+                // 소스 업데이트
+                if (classesToKeep.length > 0) {
+                    const mainKeep = classesToKeep[0];
+                    newData[sKey] = {
+                        className: mainKeep.className,
+                        room: mainKeep.room,
+                        underline: mainKeep.underline,
+                        merged: classesToKeep.slice(1).map(c => ({ className: c.className, room: c.room, underline: c.underline })),
+                        teacher: sTeacher
+                    };
+                } else {
+                    delete newData[sKey];
+                }
+
+                // 타겟 업데이트
+                const tData = scheduleData[tKey];
+                const tTeacher = filteredTeachers[target.tIdx];
+                const existingAtTarget = tData ? [
+                    ...(tData.className ? [{ className: tData.className, room: tData.room, underline: tData.underline }] : []),
+                    ...(tData.merged || [])
+                ] : [];
+
+                const allAtTarget = [...classesToMove, ...existingAtTarget];
+                if (allAtTarget.length > 0) {
+                    const mainTarget = allAtTarget[0];
+                    newData[tKey] = {
+                        className: mainTarget.className,
+                        room: mainTarget.room,
+                        underline: mainTarget.underline,
+                        merged: allAtTarget.slice(1).map(c => ({ className: c.className, room: c.room, underline: c.underline })),
+                        teacher: tTeacher
+                    };
+                }
+
+                onUpdateLocal(newData);
+                setHasChanges(true);
+                setPendingMove(null);
+                return;
+            } catch (error) {
+                console.error('이동 실패:', error);
+                alert('이동 중 오류가 발생했습니다');
+                setPendingMove(null);
+                return;
+            }
+        }
+
+        // === 레거시 구조: 로컬 상태만 업데이트 (나중에 saveMoveChanges로 저장) ===
+        const newData = { ...scheduleData };
+        const tData = newData[tKey];
+        const tTeacher = filteredTeachers[target.tIdx];
 
         const nowInfo = new Date().toISOString();
 
@@ -514,6 +636,15 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     };
 
     const saveMoveChanges = async () => {
+        // 새 구조에서는 performMove에서 즉시 저장되므로 여기서는 상태만 리셋
+        if (useNewStructure) {
+            setHasChanges(false);
+            setOriginalData(JSON.parse(JSON.stringify(scheduleData)));
+            alert("저장 완료");
+            return;
+        }
+
+        // 레거시 구조: english_schedules에 저장
         try {
             await saveSplitDataToFirebase(scheduleData);
             setHasChanges(false);
@@ -555,7 +686,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     };
 
     const handleBatchSave = async () => {
-        console.log('handleBatchSave called!', { size: selectedCells.size, inputData });
+        console.log('handleBatchSave called!', { size: selectedCells.size, inputData, useNewStructure });
         if (selectedCells.size === 0) return;
 
         // Save current scroll position before clearing selection
@@ -575,11 +706,45 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
 
         if (overwrite && !window.confirm("덮어쓰시겠습니까?")) return;
 
-        const updates: ScheduleData = { ...scheduleData };
-        const toDelete: Set<string> = new Set();
-        const toUpdate: Set<string> = new Set();
-
         try {
+            // === 새 구조 사용 시: classes 컬렉션에 직접 저장 ===
+            if (useNewStructure) {
+                const isDelete = !inputData.className && (!inputData.merged || inputData.merged.length === 0);
+
+                for (const key of Array.from(selectedCells)) {
+                    if (isDelete) {
+                        // 셀의 모든 수업 제거
+                        await removeAllClassesFromCell(key);
+                    } else {
+                        // 셀에 수업 배치 (합반 포함)
+                        await assignCellToClass(key, {
+                            className: inputData.className,
+                            room: inputData.room,
+                            merged: inputData.merged || [],
+                            underline: inputData.underline || false
+                        });
+                    }
+                }
+
+                // UI는 React Query 캐시 무효화로 자동 업데이트됨
+                setSelectedCells(new Set());
+
+                // Restore scroll position
+                requestAnimationFrame(() => {
+                    if (scrollContainer) {
+                        scrollContainer.scrollTop = scrollTop;
+                        scrollContainer.scrollLeft = scrollLeft;
+                    }
+                });
+
+                return;
+            }
+
+            // === 레거시 구조: english_schedules 컬렉션에 저장 ===
+            const updates: ScheduleData = { ...scheduleData };
+            const toDelete: Set<string> = new Set();
+            const toUpdate: Set<string> = new Set();
+
             selectedCells.forEach(key => {
                 if (!inputData.className && (!inputData.merged || inputData.merged.length === 0)) {
                     delete updates[key];
@@ -592,7 +757,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         room: inputData.room,
                         merged: inputData.merged || [],
                         underline: inputData.underline || false,
-                        teacher: teacherName.trim() // Ensure teacher name is trimmed
+                        teacher: teacherName.trim()
                     };
                     toUpdate.add(key);
                 }
@@ -655,13 +820,34 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         const scrollTop = scrollContainer?.scrollTop || 0;
         const scrollLeft = scrollContainer?.scrollLeft || 0;
 
-        const updates: ScheduleData = { ...scheduleData };
-
-        selectedCells.forEach(key => {
-            delete updates[key];
-        });
-
         try {
+            // === 새 구조 사용 시: classes 컬렉션에서 삭제 ===
+            if (useNewStructure) {
+                for (const key of Array.from(selectedCells)) {
+                    await removeAllClassesFromCell(key);
+                }
+
+                // UI는 React Query 캐시 무효화로 자동 업데이트됨
+                setSelectedCells(new Set<string>());
+
+                // Restore scroll position
+                requestAnimationFrame(() => {
+                    if (scrollContainer) {
+                        scrollContainer.scrollTop = scrollTop;
+                        scrollContainer.scrollLeft = scrollLeft;
+                    }
+                });
+
+                return;
+            }
+
+            // === 레거시 구조: english_schedules 컬렉션에서 삭제 ===
+            const updates: ScheduleData = { ...scheduleData };
+
+            selectedCells.forEach(key => {
+                delete updates[key];
+            });
+
             // Firestore Deletion
             const deletions: GenericObject = {};
             selectedCells.forEach(key => {

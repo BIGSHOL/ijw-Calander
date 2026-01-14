@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
-import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, Settings2, X, ClipboardList } from 'lucide-react';
+import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, Settings2, X, ClipboardList, UserPlus, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -8,6 +8,7 @@ interface ConsultationTableProps {
     data: ConsultationRecord[];
     onEdit: (record: ConsultationRecord) => void;
     onDelete: (id: string) => void;
+    onRegisterProspect?: (record: ConsultationRecord) => void;
 }
 
 // 색상 테마
@@ -36,7 +37,7 @@ const COLUMNS: ColumnConfig[] = [
     { key: 'receiver', label: '수신자', defaultVisible: true, minWidth: '80px' },
     { key: 'studentName', label: '이름', defaultVisible: true, minWidth: '80px' },
     { key: 'schoolGrade', label: '학교학년', defaultVisible: true, minWidth: '100px' },
-    { key: 'parentPhone', label: '주소', defaultVisible: true, minWidth: '120px' },
+    { key: 'parentPhone', label: '연락처', defaultVisible: true, minWidth: '120px' },
     { key: 'consultationDate', label: '상담일', defaultVisible: true, minWidth: '110px' },
     { key: 'subject', label: '상담과목', defaultVisible: true, minWidth: '80px' },
     { key: 'counselor', label: '상담자', defaultVisible: true, minWidth: '80px' },
@@ -51,7 +52,7 @@ const COLUMNS: ColumnConfig[] = [
     { key: 'consultationPath', label: '상담경로', defaultVisible: true, minWidth: '100px' },
 ];
 
-export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEdit, onDelete }) => {
+export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEdit, onDelete, onRegisterProspect }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [showSettings, setShowSettings] = useState(false);
@@ -312,6 +313,26 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                         ))}
                                         <td className="px-3 py-3 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-inherit" style={{ minWidth: '70px' }}>
                                             <div className="flex justify-end space-x-1">
+                                                {/* 예비원생 등록 버튼 */}
+                                                {onRegisterProspect && !record.registeredStudentId && (
+                                                    <button
+                                                        onClick={() => onRegisterProspect(record)}
+                                                        className="p-1.5 rounded-md transition-colors hover:bg-orange-50"
+                                                        style={{ color: '#f97316' }}
+                                                        title="예비원생으로 등록"
+                                                    >
+                                                        <UserPlus size={14} />
+                                                    </button>
+                                                )}
+                                                {/* 이미 등록된 경우 표시 */}
+                                                {record.registeredStudentId && (
+                                                    <span
+                                                        className="p-1.5 text-green-600"
+                                                        title="예비원생 등록됨"
+                                                    >
+                                                        <ExternalLink size={14} />
+                                                    </span>
+                                                )}
                                                 <button
                                                     onClick={() => onEdit(record)}
                                                     className="p-1.5 rounded-md transition-colors"

@@ -40,34 +40,27 @@ export function useStudentConsultations(filters?: StudentConsultationFilters) {
             let q: Query<DocumentData> = collection(db, COL_STUDENT_CONSULTATIONS);
             const constraints: any[] = [];
 
-            // 필터 적용
-            if (filters?.type) {
-                constraints.push(where('type', '==', filters.type));
-            }
-
+            // 필터 적용 - 복합 인덱스 문제를 피하기 위해 단순 where만 사용
+            // studentId 필터가 있으면 단일 where만 사용 (인덱스 불필요)
             if (filters?.studentId) {
                 constraints.push(where('studentId', '==', filters.studentId));
+            } else {
+                // studentId가 없는 경우에만 다른 필터 적용
+                if (filters?.type) {
+                    constraints.push(where('type', '==', filters.type));
+                }
+                if (filters?.consultantId) {
+                    constraints.push(where('consultantId', '==', filters.consultantId));
+                }
+                if (filters?.category) {
+                    constraints.push(where('category', '==', filters.category));
+                }
+                if (filters?.subject) {
+                    constraints.push(where('subject', '==', filters.subject));
+                }
             }
 
-            if (filters?.consultantId) {
-                constraints.push(where('consultantId', '==', filters.consultantId));
-            }
-
-            if (filters?.category) {
-                constraints.push(where('category', '==', filters.category));
-            }
-
-            if (filters?.subject) {
-                constraints.push(where('subject', '==', filters.subject));
-            }
-
-            // 날짜 범위 필터 (클라이언트 사이드)
-            // Firestore에서는 range query가 하나만 가능하므로 클라이언트에서 필터링
-
-            // 정렬: 최신순
-            constraints.push(orderBy('date', 'desc'));
-            constraints.push(orderBy('createdAt', 'desc'));
-
+            // 복합 인덱스 없이 작동하도록 orderBy 제거 - 클라이언트에서 정렬
             if (constraints.length > 0) {
                 q = query(collection(db, COL_STUDENT_CONSULTATIONS), ...constraints);
             }
@@ -77,6 +70,26 @@ export function useStudentConsultations(filters?: StudentConsultationFilters) {
                 id: docSnap.id,
                 ...docSnap.data()
             } as Consultation));
+
+            // 클라이언트 사이드 필터링 (studentId 쿼리에서 제외된 필터들)
+            if (filters?.studentId) {
+                if (filters?.type) {
+                    consultationList = consultationList.filter(c => c.type === filters.type);
+                }
+                if (filters?.category) {
+                    consultationList = consultationList.filter(c => c.category === filters.category);
+                }
+                if (filters?.subject) {
+                    consultationList = consultationList.filter(c => c.subject === filters.subject);
+                }
+            }
+
+            // 클라이언트 사이드 정렬 (최신순)
+            consultationList.sort((a, b) => {
+                const dateCompare = (b.date || '').localeCompare(a.date || '');
+                if (dateCompare !== 0) return dateCompare;
+                return (b.createdAt || 0) - (a.createdAt || 0);
+            });
 
             // 클라이언트 사이드 필터링
             if (filters?.dateRange) {
@@ -112,9 +125,9 @@ export function useStudentConsultations(filters?: StudentConsultationFilters) {
 
             return consultationList;
         },
-        staleTime: 1000 * 60 * 5,    // 5분 캐싱
-        gcTime: 1000 * 60 * 15,       // 15분 GC
-        refetchOnWindowFocus: false,
+        staleTime: 0,                 // 캐시 무효화 시 즉시 refetch (탭 간 동기화 필수)
+        gcTime: 1000 * 60 * 10,       // 10분 GC
+        refetchOnWindowFocus: true,   // 창 포커스 시 자동 갱신
     });
 
     const error = queryError ? (queryError as Error).message : null;

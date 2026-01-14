@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { UnifiedStudent, Consultation, CATEGORY_CONFIG } from '../../../types';
-import { MessageSquare, Plus, Calendar, User, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { useStudentConsultations } from '../../../hooks/useStudentConsultations';
-import { AddConsultationModal } from '../../ConsultationManagement';
+import { MessageSquare, Plus } from 'lucide-react';
+import { useStudentConsultations, getFollowUpUrgency, getFollowUpDaysLeft } from '../../../hooks/useStudentConsultations';
+import { AddConsultationModal, ConsultationDetailModal } from '../../StudentConsultation';
 
 interface ConsultationsTabProps {
   student: UnifiedStudent;
@@ -10,16 +10,16 @@ interface ConsultationsTabProps {
 
 const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student }) => {
   const [showAddModal, setShowAddModal] = useState(false);
-  const { consultations, loading, refetch } = useStudentConsultations({ studentId: student.id });
+  const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
+  const { consultations, loading } = useStudentConsultations({ studentId: student.id });
 
   // 최신순 정렬
   const sortedConsultations = [...consultations].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  const handleAddSuccess = () => {
+  const handleAddSuccess = async () => {
     setShowAddModal(false);
-    refetch();
   };
 
   if (loading) {
@@ -50,22 +50,89 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student }) => {
         </button>
       </div>
 
-      {/* 상담 기록 목록 */}
-      {sortedConsultations.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-          <MessageSquare className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <p className="text-lg font-medium text-gray-600">상담 기록이 없습니다</p>
-          <p className="text-sm mt-2 text-gray-400">
-            "새 상담 기록" 버튼을 눌러 첫 상담을 등록하세요.
-          </p>
+      {/* 상담 기록 목록 - 행 스타일 */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {/* 테이블 헤더 */}
+        <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-[#373d41]">
+          <span className="w-20 shrink-0">날짜</span>
+          <span className="flex-1">제목</span>
+          <span className="w-24 shrink-0 text-center">유형</span>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {sortedConsultations.map((consultation) => (
-            <ConsultationCard key={consultation.id} consultation={consultation} />
-          ))}
-        </div>
-      )}
+
+        {sortedConsultations.length === 0 ? (
+          <div className="text-center py-12">
+            <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p className="text-gray-500">상담 기록이 없습니다</p>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              + 첫 상담 기록하기
+            </button>
+          </div>
+        ) : (
+          <div>
+            {sortedConsultations.map((consultation) => {
+              const categoryConfig = CATEGORY_CONFIG[consultation.category];
+              const urgency = getFollowUpUrgency(consultation);
+
+              return (
+                <div
+                  key={consultation.id}
+                  onClick={() => setSelectedConsultation(consultation)}
+                  className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors cursor-pointer group"
+                >
+                  {/* 날짜 */}
+                  <span className="text-xs text-[#373d41] w-20 shrink-0">
+                    {consultation.date}
+                  </span>
+
+                  {/* 제목 */}
+                  <span className="flex-1 text-sm text-[#081429] truncate">
+                    {consultation.title}
+                  </span>
+
+                  {/* 뱃지들 */}
+                  <div className="flex items-center gap-1 w-24 shrink-0 justify-end">
+                    {/* 상담 유형 */}
+                    <span className={`px-1.5 py-0.5 rounded text-xs ${
+                      consultation.type === 'parent'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}>
+                      {consultation.type === 'parent' ? '학부모' : '학생'}
+                    </span>
+
+                    {/* 카테고리 */}
+                    <span
+                      className="px-1.5 py-0.5 rounded text-xs"
+                      style={{
+                        backgroundColor: `${categoryConfig.color}15`,
+                        color: categoryConfig.color
+                      }}
+                    >
+                      {categoryConfig.icon}
+                    </span>
+
+                    {/* 후속 조치 */}
+                    {urgency && (
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                        urgency === 'urgent' ? 'bg-red-600 text-white' :
+                        urgency === 'pending' ? 'bg-amber-100 text-amber-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
+                        {urgency === 'urgent' && consultation.followUpDate && `D-${getFollowUpDaysLeft(consultation.followUpDate)}`}
+                        {urgency === 'pending' && '대기'}
+                        {urgency === 'done' && '✓'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* 상담 추가 모달 */}
       {showAddModal && (
@@ -75,116 +142,13 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student }) => {
           preSelectedStudentId={student.id}
         />
       )}
-    </div>
-  );
-};
 
-// 상담 카드 컴포넌트
-const ConsultationCard: React.FC<{ consultation: Consultation }> = ({ consultation }) => {
-  const categoryConfig = CATEGORY_CONFIG[consultation.category];
-
-  return (
-    <div className="bg-white border border-[#081429] border-opacity-10 rounded-lg p-4 hover:shadow-md transition-shadow">
-      {/* 상단: 날짜, 유형, 카테고리 */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-[#373d41]">
-            <Calendar className="w-4 h-4" />
-            <span className="font-medium">{consultation.date}</span>
-            {consultation.time && (
-              <>
-                <Clock className="w-4 h-4 ml-2" />
-                <span>{consultation.time}</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* 상담 유형 뱃지 */}
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              consultation.type === 'parent'
-                ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                : 'bg-green-100 text-green-800 border border-green-200'
-            }`}
-          >
-            {consultation.type === 'parent' ? '학부모 상담' : '학생 상담'}
-          </span>
-
-          {/* 카테고리 뱃지 */}
-          <span
-            className="px-3 py-1 rounded-full text-xs font-semibold border"
-            style={{
-              backgroundColor: `${categoryConfig.color}15`,
-              borderColor: `${categoryConfig.color}40`,
-              color: categoryConfig.color,
-            }}
-          >
-            {categoryConfig.icon} {categoryConfig.label}
-          </span>
-        </div>
-      </div>
-
-      {/* 제목 */}
-      <h4 className="font-bold text-[#081429] mb-2">{consultation.title}</h4>
-
-      {/* 내용 미리보기 */}
-      <p className="text-sm text-[#373d41] mb-3 line-clamp-2">
-        {consultation.content}
-      </p>
-
-      {/* 하단: 상담자, 후속조치 */}
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-        <div className="flex items-center gap-2 text-sm text-[#373d41]">
-          <User className="w-4 h-4" />
-          <span>{consultation.consultantName}</span>
-        </div>
-
-        {consultation.followUpNeeded && (
-          <div className="flex items-center gap-2">
-            {consultation.followUpDone ? (
-              <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
-                <CheckCircle className="w-4 h-4" />
-                후속조치 완료
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 text-xs text-amber-600 font-semibold">
-                <AlertCircle className="w-4 h-4" />
-                후속조치 필요
-                {consultation.followUpDate && ` (${consultation.followUpDate})`}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 학부모 상담 추가 정보 */}
-      {consultation.type === 'parent' && consultation.parentName && (
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <p className="text-xs text-[#373d41]">
-            <strong>참석:</strong> {consultation.parentName} ({consultation.parentRelation})
-          </p>
-        </div>
-      )}
-
-      {/* 학생 상담 감정 상태 */}
-      {consultation.type === 'student' && consultation.studentMood && (
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <span
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
-              consultation.studentMood === 'positive'
-                ? 'bg-green-100 text-green-800'
-                : consultation.studentMood === 'negative'
-                ? 'bg-red-100 text-red-800'
-                : 'bg-gray-100 text-gray-800'
-            }`}
-          >
-            {consultation.studentMood === 'positive' && '😊 긍정적'}
-            {consultation.studentMood === 'neutral' && '😐 보통'}
-            {consultation.studentMood === 'negative' && '😔 부정적'}
-          </span>
-        </div>
+      {/* 상담 상세 모달 */}
+      {selectedConsultation && (
+        <ConsultationDetailModal
+          consultation={selectedConsultation}
+          onClose={() => setSelectedConsultation(null)}
+        />
       )}
     </div>
   );

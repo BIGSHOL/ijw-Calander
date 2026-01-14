@@ -62,6 +62,54 @@ export interface UnifiedStudent {
   englishName?: string | null;   // 영어 이름
   school?: string;               // 학교
   grade?: string;                // 학년
+  gender?: 'male' | 'female';    // 성별
+
+  // 연락처 정보
+  studentPhone?: string;         // 학생 휴대폰
+  parentPhone?: string;          // 보호자 휴대폰 (SMS)
+  parentName?: string;           // 보호자명
+  parentRelation?: string;       // 보호자 관계 (모, 부, 기타)
+  otherPhone?: string;           // 기타 알림 번호
+  otherPhoneRelation?: string;   // 기타 알림 관계
+  homePhone?: string;            // 원생 집전화
+
+  // 주소 정보
+  zipCode?: string;              // 우편번호
+  address?: string;              // 주소
+  addressDetail?: string;        // 상세주소
+
+  // 추가 정보
+  birthDate?: string;            // 생년월일 (YYYY-MM-DD)
+  nickname?: string;             // 닉네임
+  studentEmail?: string;         // 원생 이메일
+  emailDomain?: string;          // 이메일 도메인
+  enrollmentReason?: string;     // 입학동기
+
+  // 형제 정보
+  siblings?: string[];           // 형제 학생 ID 배열
+
+  // 수납 정보
+  cashReceiptNumber?: string;           // 현금영수증 발급용 번호
+  cashReceiptType?: 'income' | 'expense'; // 소득공제용/지출증빙용
+  billingDay?: number;                  // 수납 청구일 (매월)
+  billingDiscount?: number;             // 수납 기본할인 (원)
+
+  // 알림 설정
+  smsNotification?: boolean;            // 등하원알림 (SMS)
+  pushNotification?: boolean;           // 등하원알림 (푸시)
+  kakaoNotification?: boolean;          // 등하원알림 (알림톡)
+  otherSmsNotification?: boolean;       // 기타번호 등하원알림 (SMS)
+  otherKakaoNotification?: boolean;     // 기타번호 등하원알림 (알림톡)
+  billingSmsPrimary?: boolean;          // 수납문자발송 - 보호자
+  billingSmsOther?: boolean;            // 수납문자발송 - 기타보호자
+  overdueSmsPrimary?: boolean;          // 미납문자발송 - 보호자
+  overdueSmsOther?: boolean;            // 미납문자발송 - 기타보호자
+
+  // 기타 정보
+  graduationYear?: string;              // 졸업연도
+  customField1?: string;                // 기타항목1
+  customField2?: string;                // 기타항목2
+  memo?: string;                        // 메모
 
   // 수강 정보 (v5: 계층형 구조)
   enrollments: Enrollment[];     // 상세 수강 정보 (Subject -> Class -> Teacher mapping)
@@ -69,11 +117,19 @@ export interface UnifiedStudent {
 
 
   // 상태 관리
-  status: 'active' | 'on_hold' | 'withdrawn';
+  status: 'prospect' | 'active' | 'on_hold' | 'withdrawn';
   startDate: string;             // 등록일 (YYYY-MM-DD)
   endDate?: string;              // 퇴원일
   withdrawalDate?: string;       // 퇴원일 (YYYY-MM-DD) - 영어 시간표와 호환
   isOldWithdrawn?: boolean;      // 90일 이상 경과한 퇴원생 표시 (검색용)
+
+  // 예비원생 전용 필드 (status === 'prospect' 일 때 사용)
+  consultationId?: string;        // 연결된 상담 기록 ID
+  prospectStatus?: 'contacted' | 'pending_registration' | 'pending_test' | 'on_hold';
+  plannedStartDate?: string;      // 등록 예정일 (YYYY-MM-DD)
+  plannedSubjects?: ('math' | 'english')[];
+  followUpDate?: string;          // 팔로업 예정일
+  prospectNotes?: string;         // 예비원생 메모
 
   // 출석부 연동
   salarySettingId?: string;      // 급여 설정
@@ -579,7 +635,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'prospects' | 'grades' | 'classes' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -595,11 +651,12 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   'daily-attendance': { label: '출결 관리', icon: '✅' },
   payment: { label: '전자 결재', icon: '💳' },
   gantt: { label: '간트 차트', icon: '📊' },
-  consultation: { label: '입학 상담', icon: '📞' },
+  consultation: { label: '등록 상담', icon: '📞' },
   students: { label: '학생 관리', icon: '👥' },
+  prospects: { label: '예비원생', icon: '🎯' },
   grades: { label: '성적 관리', icon: '📊' },
   classes: { label: '수업 관리', icon: '📚' },
-  'student-consultations': { label: '상담 관리', icon: '💬' },
+  'student-consultations': { label: '학생 상담', icon: '💬' },
   staff: { label: '직원 관리', icon: '👔' },
   billing: { label: '수납 관리', icon: '💰' },
 };
@@ -633,7 +690,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'student',
     label: '학생',
     icon: '👥',
-    tabs: ['students', 'consultation', 'student-consultations', 'grades'],
+    tabs: ['students', 'prospects', 'consultation', 'student-consultations', 'grades'],
     order: 3,
   },
   {
@@ -744,6 +801,9 @@ export interface ConsultationRecord {
   createdAt: string;
   updatedAt?: string;
   authorId?: string;
+
+  // 예비원생/재원생 연동
+  registeredStudentId?: string;  // 전환된 학생 ID (students 컬렉션)
 }
 
 export interface ConsultationStats {

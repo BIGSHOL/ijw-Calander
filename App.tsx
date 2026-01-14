@@ -26,16 +26,17 @@ const TimetableManager = lazy(() => import('./components/Timetable/TimetableMana
 const AttendanceManager = lazy(() => import('./components/Attendance/AttendanceManager'));
 const PaymentReport = lazy(() => import('./components/PaymentReport/PaymentReport'));
 const GanttManager = lazy(() => import('./components/Gantt/GanttManager'));
-const ConsultationManager = lazy(() => import('./components/Consultation/ConsultationManager'));
+const ConsultationManager = lazy(() => import('./components/RegistrationConsultation/ConsultationManager'));
 const StudentManagementTab = lazy(() => import('./components/StudentManagement/StudentManagementTab'));
 const GradesManager = lazy(() => import('./components/Grades/GradesManager'));
 const ClassManagementTab = lazy(() => import('./components/ClassManagement').then(m => ({ default: m.ClassManagementTab })));
-const ConsultationManagementTab = lazy(() => import('./components/ConsultationManagement').then(m => ({ default: m.ConsultationManagementTab })));
+const StudentConsultationTab = lazy(() => import('./components/StudentConsultation').then(m => ({ default: m.ConsultationManagementTab })));
 
 // 신규 탭 (lazy loading)
 const BillingManager = lazy(() => import('./components/Billing').then(m => ({ default: m.BillingManager })));
 const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
 const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
+const ProspectManagementTab = lazy(() => import('./components/ProspectManagement/ProspectManagementTab'));
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit, Calculator, BookOpen, Library, Building, ClipboardList, MessageCircle, BarChart3, Check, DollarSign } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
@@ -70,7 +71,7 @@ const formatUserDisplay = (u: UserProfile) => {
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'prospects' | 'grades' | 'classes' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
 
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
@@ -90,7 +91,7 @@ const App: React.FC = () => {
   const { data: systemConfig } = useSystemConfig(!!currentUser);
   const lookbackYears = systemConfig?.eventLookbackYears || 2;
   const sysCategories = systemConfig?.categories || [];
-  
+
   // Students and Classes for Global Search
   const { students: globalStudents = [] } = useStudents(false);
   const { data: allClasses = [] } = useClasses();
@@ -154,7 +155,7 @@ const App: React.FC = () => {
   const [studentFilters, setStudentFilters] = useState({
     searchQuery: '',
     grade: 'all',
-    status: 'all' as 'all' | 'active' | 'on_hold' | 'withdrawn',
+    status: 'all' as 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn',
     subject: 'all',
   });
   const [studentSortBy, setStudentSortBy] = useState<'name' | 'grade' | 'startDate'>('name');
@@ -446,9 +447,9 @@ const App: React.FC = () => {
 
     // Search students (max 5 results)
     globalStudents
-      .filter(s => 
+      .filter(s =>
         s.status === 'active' && (
-          s.name.toLowerCase().includes(lowerQuery) || 
+          s.name.toLowerCase().includes(lowerQuery) ||
           s.englishName?.toLowerCase().includes(lowerQuery) ||
           s.school?.toLowerCase().includes(lowerQuery)
         )
@@ -466,7 +467,7 @@ const App: React.FC = () => {
 
     // Search events (max 5 results)
     events
-      .filter(e => 
+      .filter(e =>
         e.title.toLowerCase().includes(lowerQuery) ||
         e.description?.toLowerCase().includes(lowerQuery)
       )
@@ -484,7 +485,7 @@ const App: React.FC = () => {
 
     // Search classes (max 5 results)
     allClasses
-      .filter(c => 
+      .filter(c =>
         c.className.toLowerCase().includes(lowerQuery) ||
         c.teacher.toLowerCase().includes(lowerQuery)
       )
@@ -501,7 +502,7 @@ const App: React.FC = () => {
 
     // Search teachers (max 5 results)
     teachers
-      .filter(t => 
+      .filter(t =>
         t.name.toLowerCase().includes(lowerQuery)
       )
       .slice(0, 5)
@@ -1367,27 +1368,27 @@ const App: React.FC = () => {
   // Generate breadcrumb items based on current tab
   const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => {
     if (!appMode) return [];
-    
+
     const currentTabMeta = TAB_META[appMode];
     if (!currentTabMeta) return [];
 
     // Find the group that contains this tab
     const currentGroup = TAB_GROUPS.find(group => group.tabs.includes(appMode));
-    
+
     const items: BreadcrumbItem[] = [];
-    
+
     if (currentGroup) {
       items.push({
         label: currentGroup.label,
         onClick: undefined, // Group is not clickable
       });
     }
-    
+
     items.push({
       label: currentTabMeta.label,
       isActive: true,
     });
-    
+
     return items;
   }, [appMode]);
 
@@ -1407,7 +1408,7 @@ const App: React.FC = () => {
     <div className="min-h-screen flex bg-[#f0f4f8]">
       {/* Skip Link for Keyboard Navigation - Addresses Issue #7 */}
       <SkipLink targetId="main-content">메인 콘텐츠로 건너뛰기</SkipLink>
-      
+
       {/* Sidebar Navigation - Addresses Issues #1, #2 */}
       <Sidebar
         currentTab={appMode}
@@ -1419,894 +1420,910 @@ const App: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="no-print z-40 sticky top-0 bg-[#081429] shadow-lg flex flex-col" role="banner">
-        {/* Row 1: Primary Header (Navy) */}
-        <div className="bg-[#081429] h-16 flex items-center justify-between px-4 md:px-6 border-b border-white/10 z-50 relative">
+          {/* Row 1: Primary Header (Navy) */}
+          <div className="bg-[#081429] h-16 flex items-center justify-between px-4 md:px-6 border-b border-white/10 z-50 relative">
 
-          {/* Left: Breadcrumb Navigation - Addresses Issue #21 */}
-          <div className="flex items-center gap-4 flex-1 min-w-0">
-            <Breadcrumb items={breadcrumbItems} showHome={false} />
-            
-            {/* User Info Display (Desktop) */}
-            {currentUser && (
-              <div className="hidden lg:flex flex-row items-center gap-1.5 ml-4 pl-4 border-l border-white/10">
-                {/* Role Badge */}
-                {userProfile?.role && userProfile.role !== 'guest' && (
-                  <span className={`text-white text-micro px-1 py-0.5 rounded font-black tracking-tighter shadow-sm ${userProfile.role === 'master' ? 'bg-red-600' :
-                    userProfile.role === 'admin' ? 'bg-indigo-600' :
-                      userProfile.role === 'manager' ? 'bg-purple-600' :
-                        userProfile.role === 'editor' ? 'bg-blue-600' :
-                          userProfile.role === 'math_lead' ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
-                            userProfile.role === 'english_lead' ? 'bg-gradient-to-r from-orange-500 to-red-500' :
-                              userProfile.role === 'math_teacher' ? 'bg-green-500' :
-                                userProfile.role === 'english_teacher' ? 'bg-orange-500' :
-                                  userProfile.role === 'user' ? 'bg-gray-500' :
-                                    userProfile.role === 'viewer' ? 'bg-yellow-600' : 'bg-gray-400'
-                    }`}>
-                    {ROLE_LABELS[userProfile.role] || userProfile.role.toUpperCase()}
-                  </span>
-                )}
-                {/* Name */}
-                <span className="text-xs font-bold text-white whitespace-nowrap">
-                  {(userProfile?.email || currentUser?.email)?.split('@')[0]}
-                </span>
-                {/* Job Title Badge */}
-                <span className={`text-xxs px-1.5 py-0.5 rounded flex items-center justify-center font-bold tracking-tight whitespace-nowrap ${getJobTitleStyle(userProfile?.jobTitle)}`}>
-                  {userProfile?.jobTitle || '직급 미설정'}
-                </span>
-              </div>
-            )}
-          </div>
+            {/* Left: Breadcrumb Navigation - Addresses Issue #21 */}
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <Breadcrumb items={breadcrumbItems} showHome={false} />
 
-
-          {/* Right: Actions */}
-          <div className="flex items-center justify-end gap-3 w-[250px]">
-
-            {hasPermission('settings.access') && (
-              <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
-                <Settings size={20} />
-              </button>
-            )}
-            <button onClick={() => window.print()} className="text-gray-400 hover:text-white transition-colors">
-              <Printer size={20} />
-            </button>
-
-            {/* Memo Notification Bell */}
-            {currentUser && (
-              <div className="relative">
-                <button
-                  onClick={() => setIsMemoDropdownOpen(!isMemoDropdownOpen)}
-                  className={`relative transition-colors mt-[5px] ${isMemoDropdownOpen ? 'text-[#fdb813]' : 'text-gray-400 hover:text-white'}`}
-                >
-                  <Bell size={20} />
-                  {unreadMemoCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-xxs font-bold rounded-full flex items-center justify-center">
-                      {unreadMemoCount}
+              {/* User Info Display (Desktop) */}
+              {currentUser && (
+                <div className="hidden lg:flex flex-row items-center gap-1.5 ml-4 pl-4 border-l border-white/10">
+                  {/* Role Badge */}
+                  {userProfile?.role && userProfile.role !== 'guest' && (
+                    <span className={`text-white text-micro px-1 py-0.5 rounded font-black tracking-tighter shadow-sm ${userProfile.role === 'master' ? 'bg-red-600' :
+                      userProfile.role === 'admin' ? 'bg-indigo-600' :
+                        userProfile.role === 'manager' ? 'bg-purple-600' :
+                          userProfile.role === 'editor' ? 'bg-blue-600' :
+                            userProfile.role === 'math_lead' ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
+                              userProfile.role === 'english_lead' ? 'bg-gradient-to-r from-orange-500 to-red-500' :
+                                userProfile.role === 'math_teacher' ? 'bg-green-500' :
+                                  userProfile.role === 'english_teacher' ? 'bg-orange-500' :
+                                    userProfile.role === 'user' ? 'bg-gray-500' :
+                                      userProfile.role === 'viewer' ? 'bg-yellow-600' : 'bg-gray-400'
+                      }`}>
+                      {ROLE_LABELS[userProfile.role] || userProfile.role.toUpperCase()}
                     </span>
                   )}
+                  {/* Name */}
+                  <span className="text-xs font-bold text-white whitespace-nowrap">
+                    {(userProfile?.email || currentUser?.email)?.split('@')[0]}
+                  </span>
+                  {/* Job Title Badge */}
+                  <span className={`text-xxs px-1.5 py-0.5 rounded flex items-center justify-center font-bold tracking-tight whitespace-nowrap ${getJobTitleStyle(userProfile?.jobTitle)}`}>
+                    {userProfile?.jobTitle || '직급 미설정'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+
+            {/* Right: Actions */}
+            <div className="flex items-center justify-end gap-3 w-[250px]">
+
+              {hasPermission('settings.access') && (
+                <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
+                  <Settings size={20} />
                 </button>
-
-                {isMemoDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-[99998]" onClick={() => setIsMemoDropdownOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-[99999] overflow-hidden">
-                      <div className="p-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-                        <span className="font-bold text-gray-700 text-sm flex items-center gap-2">
-                          <Mail size={14} /> 받은 메모
-                        </span>
-                        <button
-                          onClick={() => { setIsMemoModalOpen(true); setIsMemoDropdownOpen(false); }}
-                          className="text-xs px-2 py-1 bg-[#081429] text-white rounded font-bold hover:brightness-125"
-                        >
-                          + 새 메모
-                        </button>
-                      </div>
-                      <div className="max-h-64 overflow-y-auto">
-                        {taskMemos.length === 0 ? (
-                          <div className="p-6 text-center text-gray-400 text-sm">받은 메모가 없습니다</div>
-                        ) : (
-                          taskMemos.map(memo => (
-                            <div
-                              key={memo.id}
-                              className={`p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer ${!memo.isRead ? 'bg-blue-50/50' : ''}`}
-                              onClick={() => {
-                                setSelectedMemo(memo);
-                                setIsMemoDropdownOpen(false);
-                                handleMarkMemoRead(memo.id);
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-gray-800 text-sm">{memo.fromName}</span>
-                                    {!memo.isRead && <span className="w-2 h-2 bg-blue-500 rounded-full" />}
-                                  </div>
-                                  <p className="text-gray-600 text-xs mt-1 line-clamp-2">{memo.message}</p>
-                                  <span className="text-gray-400 text-xxs mt-1 block">
-                                    {new Date(memo.createdAt).toLocaleString('ko-KR')}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Profile Dropdown */}
-            {currentUser && (
-              <div className="relative">
-                <button
-                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className={`transition-colors mt-[5px] ${isProfileMenuOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`}
-                >
-                  <UserIcon size={20} />
-                </button>
-
-
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Row 2: Filter Bar (Slate) - Only show in calendar mode */}
-        {
-          appMode === 'calendar' && (
-            <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
-
-              {/* Main Filter Toggle */}
-              <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className={`
-              flex items-center gap-2 px-3 h-full border-r border-gray-700 hover:bg-white/5 transition-colors
-              ${isFilterOpen ? 'text-[#fdb813] font-bold bg-white/5' : 'text-gray-300'}
-            `}
-              >
-                <Filter size={14} />
-                <span>부서 필터</span>
-                {isFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              )}
+              <button onClick={() => window.print()} className="text-gray-400 hover:text-white transition-colors">
+                <Printer size={20} />
               </button>
 
-              {/* Active Filters Summary */}
-              <div className="flex items-center gap-2 px-4 overflow-hidden mask-linear-fade flex-1">
-                {hiddenDeptIds.length === 0 ? (
-                  <span className="text-gray-400 flex items-center gap-1.5">
-                    <CheckCircle2 size={12} className="text-green-500" /> 모든 부서 표시중
-                  </span>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400">표시됨:</span>
-                    {visibleDepartments.slice(0, 5).map(d => (
-                      <span key={d.id} className="px-1.5 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300">
-                        {d.name}
+              {/* Memo Notification Bell */}
+              {currentUser && (
+                <div className="relative">
+                  <button
+                    onClick={() => setIsMemoDropdownOpen(!isMemoDropdownOpen)}
+                    className={`relative transition-colors mt-[5px] ${isMemoDropdownOpen ? 'text-[#fdb813]' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    <Bell size={20} />
+                    {unreadMemoCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-xxs font-bold rounded-full flex items-center justify-center">
+                        {unreadMemoCount}
                       </span>
-                    ))}
-
-                    {visibleDepartments.length > 5 && (
-                      <span className="text-gray-500">+{visibleDepartments.length - 5} 더보기</span>
                     )}
-                  </div>
-                )}
-              </div>
+                  </button>
 
-              {/* View Toggles - Moved from Top Header */}
-              <div className="flex items-center gap-2 ml-auto pl-4 border-l border-gray-700 h-[24px] my-auto">
-                {/* Daily/Weekly/Monthly */}
-                <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                  {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setViewMode(m)}
-                      className={`
-                    px-2 py-0.5 rounded-md text-xs font-bold transition-all
-                    ${viewMode === m
-                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
-                        }
-                  `}
-                    >
-                      {m === 'daily' && '일간'}
-                      {m === 'weekly' && '주간'}
-                      {m === 'monthly' && '월간'}
-                      {m === 'yearly' && '연간'}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Column View Toggle (1단/2단/3단) */}
-                <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
-                  {([1, 2, 3] as const)
-                    .filter(cols => viewMode !== 'yearly' || cols !== 3)
-                    .map((cols) => (
-                      <button
-                        key={cols}
-                        onClick={() => setViewColumns(cols)}
-                        className={`
-                       px-2 py-0.5 rounded-md text-xs font-bold transition-all
-                       ${viewColumns === cols
-                            ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                            : 'text-gray-400 hover:text-white hover:bg-white/5'
-                          }
-                     `}
-                      >
-                        {cols}단
-                      </button>
-                    ))}
-                </div>
-
-              </div>
-            </div>
-          )
-        }
-
-        {/* Row 3: Attendance Navigation Bar - Only show in attendance mode */}
-        {appMode === 'attendance' && (() => {
-          const isMasterOrAdmin = userProfile?.role === 'master' || userProfile?.role === 'admin';
-          const canManageMath = hasPermission('attendance.manage_math');
-          const canManageEnglish = hasPermission('attendance.manage_english');
-          const canManageCurrentSubject = isMasterOrAdmin ||
-            (attendanceSubject === 'math' && canManageMath) ||
-            (attendanceSubject === 'english' && canManageEnglish);
-
-          // Available teachers for filter dropdown
-          const availableTeachers = canManageCurrentSubject
-            ? teachers.filter(t => {
-              if (attendanceSubject === 'math') return t.subjects?.includes('math');
-              if (attendanceSubject === 'english') return t.subjects?.includes('english');
-              return true;
-            })
-            : [];
-
-          // Determine user's teacherId for filtering
-          const currentTeacherId = userProfile?.teacherId
-            ? teachers.find(t => t.id === userProfile.teacherId)?.name
-            : undefined;
-
-          // Determine which teacherId to filter by
-          const filterTeacherId = canManageCurrentSubject
-            ? (availableTeachers.some(t => t.name === attendanceTeacherId) && attendanceTeacherId) ||
-            (availableTeachers.length > 0 ? availableTeachers[0].name : undefined)
-            : currentTeacherId;
-
-          // Month navigation functions
-          const changeMonth = (delta: number) => {
-            setAttendanceDate(prev => {
-              const newDate = new Date(prev);
-              newDate.setMonth(newDate.getMonth() + delta);
-              return newDate;
-            });
-          };
-
-          return (
-            <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
-              <div className="flex items-center gap-3">
-                {/* Subject Toggle */}
-                <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
-                  {(canManageMath || isMasterOrAdmin) && (
-                    <button
-                      onClick={() => setAttendanceSubject('math')}
-                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'math'
-                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                        }`}
-                    >
-                     <Calculator size={14} className="inline" /> 수학
-                    </button>
-                  )}
-                  {(canManageEnglish || isMasterOrAdmin) && (
-                    <button
-                      onClick={() => setAttendanceSubject('english')}
-                      className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'english'
-                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                        }`}
-                    >
-                     <BookOpen size={14} className="inline" /> 영어
-                    </button>
+                  {isMemoDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[99998]" onClick={() => setIsMemoDropdownOpen(false)} />
+                      <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-[99999] overflow-hidden">
+                        <div className="p-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                          <span className="font-bold text-gray-700 text-sm flex items-center gap-2">
+                            <Mail size={14} /> 받은 메모
+                          </span>
+                          <button
+                            onClick={() => { setIsMemoModalOpen(true); setIsMemoDropdownOpen(false); }}
+                            className="text-xs px-2 py-1 bg-[#081429] text-white rounded font-bold hover:brightness-125"
+                          >
+                            + 새 메모
+                          </button>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto">
+                          {taskMemos.length === 0 ? (
+                            <div className="p-6 text-center text-gray-400 text-sm">받은 메모가 없습니다</div>
+                          ) : (
+                            taskMemos.map(memo => (
+                              <div
+                                key={memo.id}
+                                className={`p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer ${!memo.isRead ? 'bg-blue-50/50' : ''}`}
+                                onClick={() => {
+                                  setSelectedMemo(memo);
+                                  setIsMemoDropdownOpen(false);
+                                  handleMarkMemoRead(memo.id);
+                                }}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-gray-800 text-sm">{memo.fromName}</span>
+                                      {!memo.isRead && <span className="w-2 h-2 bg-blue-500 rounded-full" />}
+                                    </div>
+                                    <p className="text-gray-600 text-xs mt-1 line-clamp-2">{memo.message}</p>
+                                    <span className="text-gray-400 text-xxs mt-1 block">
+                                      {new Date(memo.createdAt).toLocaleString('ko-KR')}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
+              )}
 
-                {/* Teacher Filter */}
-                {canManageCurrentSubject && availableTeachers.length > 0 && (
-                  <div className="relative">
-                    <select
-                      value={filterTeacherId || ''}
-                      onChange={(e) => setAttendanceTeacherId(e.target.value || undefined)}
-                      className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
-                    >
-                      {availableTeachers.map(t => (
-                        <option key={t.id} value={t.name}>{t.name}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  </div>
-                )}
-
-                {/* Separator */}
-                <div className="w-px h-4 bg-white/20 mx-1"></div>
-
-                {/* Month Navigation */}
-                <div className="flex items-center gap-1">
+              {/* Profile Dropdown */}
+              {currentUser && (
+                <div className="relative">
                   <button
-                    onClick={() => changeMonth(-1)}
-                    className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                    className={`transition-colors mt-[5px] ${isProfileMenuOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`}
                   >
-                    <ChevronLeft size={14} />
+                    <UserIcon size={20} />
                   </button>
-                  <span className="px-2 font-bold text-white text-xs min-w-[100px] text-center">
-                    {attendanceDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
-                  </span>
-                  <button
-                    onClick={() => changeMonth(1)}
-                    className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                  >
-                    <ChevronRight size={14} />
-                  </button>
+
+
                 </div>
-
-                {/* Separator */}
-                <div className="w-px h-4 bg-white/20 mx-1"></div>
-
-                {/* Add Student Button (Special Attendance) */}
-                <button
-                  onClick={() => setIsAttendanceAddStudentModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm ml-2"
-                  title="특강/보강 학생 출석부 추가"
-                >
-                  <UserPlus size={14} />
-                  <span className="font-bold text-xs">학생 추가</span>
-                </button>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Row 4: Students Navigation Bar - Only show in students mode */}
-        {appMode === 'students' && (
-          <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
-            <div className="flex items-center gap-3 flex-1">
-              {/* Subject Toggle */}
-              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
-                <button
-                  onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'all' }))}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'all' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                >
-                 <Library size={14} className="inline" /> 전체
-                </button>
-                <button
-                  onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'math' }))}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'math' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                >
-                  수학
-                </button>
-                <button
-                  onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'english' }))}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'english' ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                >
-                  영어
-                </button>
-              </div>
-
-              {/* Status Toggle */}
-              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
-                <button
-                  onClick={() => setStudentFilters(prev => ({ ...prev, status: 'all' }))}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'all' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                >
-                  전체
-                </button>
-                <button
-                  onClick={() => setStudentFilters(prev => ({ ...prev, status: 'active' }))}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'active' ? 'bg-green-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                >
-                  재원
-                </button>
-                <button
-                  onClick={() => setStudentFilters(prev => ({ ...prev, status: 'on_hold' }))}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'on_hold' ? 'bg-yellow-500 text-black shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                >
-                  대기
-                </button>
-                <button
-                  onClick={() => setStudentFilters(prev => ({ ...prev, status: 'withdrawn' }))}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'withdrawn' ? 'bg-gray-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
-                >
-                  퇴원
-                </button>
-              </div>
-
-              {/* Search Bar */}
-              <div className="relative flex-1 max-w-xs">
-                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="이름, 학교 검색..."
-                  value={studentFilters.searchQuery}
-                  onChange={(e) => setStudentFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
-                  className="w-full pl-8 pr-3 py-1.5 bg-white/10 border border-white/10 rounded-lg text-white placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 focus:border-[#fdb813]/50"
-                />
-                {studentFilters.searchQuery && (
-                  <button
-                    onClick={() => setStudentFilters(prev => ({ ...prev, searchQuery: '' }))}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-
-              {/* Grade Filter */}
-              <select
-                value={studentFilters.grade}
-                onChange={(e) => setStudentFilters(prev => ({ ...prev, grade: e.target.value }))}
-                className="px-2 py-1.5 bg-white/10 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 cursor-pointer"
-              >
-                <option value="all" className="bg-[#081429]">학년</option>
-                <option value="초1" className="bg-[#081429]">초1</option>
-                <option value="초2" className="bg-[#081429]">초2</option>
-                <option value="초3" className="bg-[#081429]">초3</option>
-                <option value="초4" className="bg-[#081429]">초4</option>
-                <option value="초5" className="bg-[#081429]">초5</option>
-                <option value="초6" className="bg-[#081429]">초6</option>
-                <option value="중1" className="bg-[#081429]">중1</option>
-                <option value="중2" className="bg-[#081429]">중2</option>
-                <option value="중3" className="bg-[#081429]">중3</option>
-                <option value="고1" className="bg-[#081429]">고1</option>
-                <option value="고2" className="bg-[#081429]">고2</option>
-                <option value="고3" className="bg-[#081429]">고3</option>
-              </select>
-
-              {/* Sort */}
-              <select
-                value={studentSortBy}
-                onChange={(e) => setStudentSortBy(e.target.value as typeof studentSortBy)}
-                className="px-2 py-1.5 bg-white/10 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 cursor-pointer"
-              >
-                <option value="name" className="bg-[#081429]">이름순</option>
-                <option value="grade" className="bg-[#081429]">학년순</option>
-                <option value="startDate" className="bg-[#081429]">등록일순</option>
-              </select>
-
-              {/* Reset Filters */}
-              {(studentFilters.searchQuery || studentFilters.grade !== 'all' || studentFilters.status !== 'all' || studentFilters.subject !== 'all') && (
-                <button
-                  onClick={() => {
-                    setStudentFilters({ searchQuery: '', grade: 'all', status: 'all', subject: 'all' });
-                    setStudentSortBy('name');
-                  }}
-                  className="px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
-                >
-                  초기화
-                </button>
               )}
             </div>
           </div>
-        )}
 
-        {/* Filter Popover Panel */}
-        {
-          appMode === 'calendar' && isFilterOpen && (
-            <div className="absolute top-[104px] left-0 w-full bg-[#1e293b]/95 backdrop-blur-xl border-b border-gray-700 shadow-2xl p-6 z-10 animate-in slide-in-from-top-2 duration-200">
-              <div className="w-full h-full">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex flex-col gap-2">
-                    <h3 className="text-white font-bold flex items-center gap-2">
-                      <Filter size={16} className="text-[#fdb813]" /> 부서 선택
-                    </h3>
+          {/* Row 2: Filter Bar (Slate) - Only show in calendar mode */}
+          {
+            appMode === 'calendar' && (
+              <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
 
-                    {/* Category Filter Chips */}
-                    {uniqueCategories.length > 0 && (
-                      <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
+                {/* Main Filter Toggle */}
+                <button
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className={`
+              flex items-center gap-2 px-3 h-full border-r border-gray-700 hover:bg-white/5 transition-colors
+              ${isFilterOpen ? 'text-[#fdb813] font-bold bg-white/5' : 'text-gray-300'}
+            `}
+                >
+                  <Filter size={14} />
+                  <span>부서 필터</span>
+                  {isFilterOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
+
+                {/* Active Filters Summary */}
+                <div className="flex items-center gap-2 px-4 overflow-hidden mask-linear-fade flex-1">
+                  {hiddenDeptIds.length === 0 ? (
+                    <span className="text-gray-400 flex items-center gap-1.5">
+                      <CheckCircle2 size={12} className="text-green-500" /> 모든 부서 표시중
+                    </span>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400">표시됨:</span>
+                      {visibleDepartments.slice(0, 5).map(d => (
+                        <span key={d.id} className="px-1.5 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300">
+                          {d.name}
+                        </span>
+                      ))}
+
+                      {visibleDepartments.length > 5 && (
+                        <span className="text-gray-500">+{visibleDepartments.length - 5} 더보기</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* View Toggles - Moved from Top Header */}
+                <div className="flex items-center gap-2 ml-auto pl-4 border-l border-gray-700 h-[24px] my-auto">
+                  {/* Daily/Weekly/Monthly */}
+                  <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+                    {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setViewMode(m)}
+                        className={`
+                    px-2 py-0.5 rounded-md text-xs font-bold transition-all
+                    ${viewMode === m
+                            ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }
+                  `}
+                      >
+                        {m === 'daily' && '일간'}
+                        {m === 'weekly' && '주간'}
+                        {m === 'monthly' && '월간'}
+                        {m === 'yearly' && '연간'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Column View Toggle (1단/2단/3단) */}
+                  <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+                    {([1, 2, 3] as const)
+                      .filter(cols => viewMode !== 'yearly' || cols !== 3)
+                      .map((cols) => (
                         <button
-                          onClick={() => setSelectedCategory(null)}
-                          className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === null
-                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                            : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
-                            }`}
+                          key={cols}
+                          onClick={() => setViewColumns(cols)}
+                          className={`
+                       px-2 py-0.5 rounded-md text-xs font-bold transition-all
+                       ${viewColumns === cols
+                              ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                              : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            }
+                     `}
                         >
-                          전체
+                          {cols}단
                         </button>
-                        {uniqueCategories.map(cat => (
+                      ))}
+                  </div>
+
+                </div>
+              </div>
+            )
+          }
+
+          {/* Row 3: Attendance Navigation Bar - Only show in attendance mode */}
+          {appMode === 'attendance' && (() => {
+            const isMasterOrAdmin = userProfile?.role === 'master' || userProfile?.role === 'admin';
+            const canManageMath = hasPermission('attendance.manage_math');
+            const canManageEnglish = hasPermission('attendance.manage_english');
+            const canManageCurrentSubject = isMasterOrAdmin ||
+              (attendanceSubject === 'math' && canManageMath) ||
+              (attendanceSubject === 'english' && canManageEnglish);
+
+            // Available teachers for filter dropdown
+            const availableTeachers = canManageCurrentSubject
+              ? teachers.filter(t => {
+                if (attendanceSubject === 'math') return t.subjects?.includes('math');
+                if (attendanceSubject === 'english') return t.subjects?.includes('english');
+                return true;
+              })
+              : [];
+
+            // Determine user's teacherId for filtering
+            const currentTeacherId = userProfile?.teacherId
+              ? teachers.find(t => t.id === userProfile.teacherId)?.name
+              : undefined;
+
+            // Determine which teacherId to filter by
+            const filterTeacherId = canManageCurrentSubject
+              ? (availableTeachers.some(t => t.name === attendanceTeacherId) && attendanceTeacherId) ||
+              (availableTeachers.length > 0 ? availableTeachers[0].name : undefined)
+              : currentTeacherId;
+
+            // Month navigation functions
+            const changeMonth = (delta: number) => {
+              setAttendanceDate(prev => {
+                const newDate = new Date(prev);
+                newDate.setMonth(newDate.getMonth() + delta);
+                return newDate;
+              });
+            };
+
+            return (
+              <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
+                <div className="flex items-center gap-3">
+                  {/* Subject Toggle */}
+                  <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                    {(canManageMath || isMasterOrAdmin) && (
+                      <button
+                        onClick={() => setAttendanceSubject('math')}
+                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'math'
+                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                      >
+                        <Calculator size={14} className="inline" /> 수학
+                      </button>
+                    )}
+                    {(canManageEnglish || isMasterOrAdmin) && (
+                      <button
+                        onClick={() => setAttendanceSubject('english')}
+                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'english'
+                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                      >
+                        <BookOpen size={14} className="inline" /> 영어
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Teacher Filter */}
+                  {canManageCurrentSubject && availableTeachers.length > 0 && (
+                    <div className="relative">
+                      <select
+                        value={filterTeacherId || ''}
+                        onChange={(e) => setAttendanceTeacherId(e.target.value || undefined)}
+                        className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                      >
+                        {availableTeachers.map(t => (
+                          <option key={t.id} value={t.name}>{t.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+                  )}
+
+                  {/* Separator */}
+                  <div className="w-px h-4 bg-white/20 mx-1"></div>
+
+                  {/* Month Navigation */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => changeMonth(-1)}
+                      className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <span className="px-2 font-bold text-white text-xs min-w-[100px] text-center">
+                      {attendanceDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
+                    </span>
+                    <button
+                      onClick={() => changeMonth(1)}
+                      className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+
+                  {/* Separator */}
+                  <div className="w-px h-4 bg-white/20 mx-1"></div>
+
+                  {/* Add Student Button (Special Attendance) */}
+                  <button
+                    onClick={() => setIsAttendanceAddStudentModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm ml-2"
+                    title="특강/보강 학생 출석부 추가"
+                  >
+                    <UserPlus size={14} />
+                    <span className="font-bold text-xs">학생 추가</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Row 4: Students Navigation Bar - Only show in students mode */}
+          {appMode === 'students' && (
+            <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
+              <div className="flex items-center gap-3 flex-1">
+                {/* Subject Toggle */}
+                <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                  <button
+                    onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'all' }))}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'all' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    <Library size={14} className="inline" /> 전체
+                  </button>
+                  <button
+                    onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'math' }))}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'math' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    수학
+                  </button>
+                  <button
+                    onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'english' }))}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'english' ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    영어
+                  </button>
+                </div>
+
+                {/* Status Toggle */}
+                <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                  <button
+                    onClick={() => setStudentFilters(prev => ({ ...prev, status: 'all' }))}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'all' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    전체
+                  </button>
+                  <button
+                    onClick={() => setStudentFilters(prev => ({ ...prev, status: 'prospect' }))}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'prospect' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    예비
+                  </button>
+                  <button
+                    onClick={() => setStudentFilters(prev => ({ ...prev, status: 'active' }))}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'active' ? 'bg-green-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    재원
+                  </button>
+                  <button
+                    onClick={() => setStudentFilters(prev => ({ ...prev, status: 'on_hold' }))}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'on_hold' ? 'bg-yellow-500 text-black shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    대기
+                  </button>
+                  <button
+                    onClick={() => setStudentFilters(prev => ({ ...prev, status: 'withdrawn' }))}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'withdrawn' ? 'bg-gray-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    퇴원
+                  </button>
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative flex-1 max-w-xs">
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="이름, 학교 검색..."
+                    value={studentFilters.searchQuery}
+                    onChange={(e) => setStudentFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
+                    className="w-full pl-8 pr-3 py-1.5 bg-white/10 border border-white/10 rounded-lg text-white placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 focus:border-[#fdb813]/50"
+                  />
+                  {studentFilters.searchQuery && (
+                    <button
+                      onClick={() => setStudentFilters(prev => ({ ...prev, searchQuery: '' }))}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Grade Filter */}
+                <select
+                  value={studentFilters.grade}
+                  onChange={(e) => setStudentFilters(prev => ({ ...prev, grade: e.target.value }))}
+                  className="px-2 py-1.5 bg-white/10 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 cursor-pointer"
+                >
+                  <option value="all" className="bg-[#081429]">학년</option>
+                  <option value="초1" className="bg-[#081429]">초1</option>
+                  <option value="초2" className="bg-[#081429]">초2</option>
+                  <option value="초3" className="bg-[#081429]">초3</option>
+                  <option value="초4" className="bg-[#081429]">초4</option>
+                  <option value="초5" className="bg-[#081429]">초5</option>
+                  <option value="초6" className="bg-[#081429]">초6</option>
+                  <option value="중1" className="bg-[#081429]">중1</option>
+                  <option value="중2" className="bg-[#081429]">중2</option>
+                  <option value="중3" className="bg-[#081429]">중3</option>
+                  <option value="고1" className="bg-[#081429]">고1</option>
+                  <option value="고2" className="bg-[#081429]">고2</option>
+                  <option value="고3" className="bg-[#081429]">고3</option>
+                </select>
+
+                {/* Sort */}
+                <select
+                  value={studentSortBy}
+                  onChange={(e) => setStudentSortBy(e.target.value as typeof studentSortBy)}
+                  className="px-2 py-1.5 bg-white/10 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 cursor-pointer"
+                >
+                  <option value="name" className="bg-[#081429]">이름순</option>
+                  <option value="grade" className="bg-[#081429]">학년순</option>
+                  <option value="startDate" className="bg-[#081429]">등록일순</option>
+                </select>
+
+                {/* Reset Filters */}
+                {(studentFilters.searchQuery || studentFilters.grade !== 'all' || studentFilters.status !== 'all' || studentFilters.subject !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setStudentFilters({ searchQuery: '', grade: 'all', status: 'all', subject: 'all' });
+                      setStudentSortBy('name');
+                    }}
+                    className="px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
+                  >
+                    초기화
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Filter Popover Panel */}
+          {
+            appMode === 'calendar' && isFilterOpen && (
+              <div className="absolute top-[104px] left-0 w-full bg-[#1e293b]/95 backdrop-blur-xl border-b border-gray-700 shadow-2xl p-6 z-10 animate-in slide-in-from-top-2 duration-200">
+                <div className="w-full h-full">
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex flex-col gap-2">
+                      <h3 className="text-white font-bold flex items-center gap-2">
+                        <Filter size={16} className="text-[#fdb813]" /> 부서 선택
+                      </h3>
+
+                      {/* Category Filter Chips */}
+                      {uniqueCategories.length > 0 && (
+                        <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
                           <button
-                            key={cat}
-                            onClick={() => setSelectedCategory(prev => prev === cat ? null : cat)}
-                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat
+                            onClick={() => setSelectedCategory(null)}
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === null
                               ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                               : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
                               }`}
                           >
-                            {cat}
+                            전체
                           </button>
-                        ))}
-                      </div>
-                    )}
+                          {uniqueCategories.map(cat => (
+                            <button
+                              key={cat}
+                              onClick={() => setSelectedCategory(prev => prev === cat ? null : cat)}
+                              className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat
+                                ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
+                                }`}
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 items-center">
+                      {/* Favorites Only Toggle */}
+                      <button
+                        onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                        className={`px-3 py-1.5 rounded flex items-center gap-1.5 text-xs font-bold border transition-all ${showFavoritesOnly
+                          ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                          : 'bg-transparent text-gray-400 border-gray-700 hover:border-[#fdb813]/50'
+                          }`}
+                      >
+                        <Star size={12} className={showFavoritesOnly ? 'fill-current' : ''} />
+                        즐겨찾기만
+                      </button>
+                      <button onClick={() => setAllVisibility(true)} className="px-3 py-1.5 rounded bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20 hover:bg-green-500/20">
+                        모두 켜기
+                      </button>
+                      <button onClick={() => setAllVisibility(false)} className="px-3 py-1.5 rounded bg-red-500/10 text-red-500 text-xs font-bold border border-red-500/20 hover:bg-red-500/20">
+                        모두 끄기
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex gap-2 items-center">
-                    {/* Favorites Only Toggle */}
-                    <button
-                      onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                      className={`px-3 py-1.5 rounded flex items-center gap-1.5 text-xs font-bold border transition-all ${showFavoritesOnly
-                        ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                        : 'bg-transparent text-gray-400 border-gray-700 hover:border-[#fdb813]/50'
-                        }`}
-                    >
-                      <Star size={12} className={showFavoritesOnly ? 'fill-current' : ''} />
-                      즐겨찾기만
-                    </button>
-                    <button onClick={() => setAllVisibility(true)} className="px-3 py-1.5 rounded bg-green-500/10 text-green-500 text-xs font-bold border border-green-500/20 hover:bg-green-500/20">
-                      모두 켜기
-                    </button>
-                    <button onClick={() => setAllVisibility(false)} className="px-3 py-1.5 rounded bg-red-500/10 text-red-500 text-xs font-bold border border-red-500/20 hover:bg-red-500/20">
-                      모두 끄기
-                    </button>
-                  </div>
-                </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+                    {departments
+                      .filter(d => !selectedCategory || d.category === selectedCategory)
+                      .map(dept => {
+                        const isHidden = hiddenDeptIds.includes(dept.id);
+                        const isAllowed = userProfile?.departmentPermissions?.[dept.id] || userProfile?.allowedDepartments?.includes(dept.id) || isMaster;
+                        const isFavorite = userProfile?.favoriteDepartments?.includes(dept.id);
 
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-                  {departments
-                    .filter(d => !selectedCategory || d.category === selectedCategory)
-                    .map(dept => {
-                      const isHidden = hiddenDeptIds.includes(dept.id);
-                      const isAllowed = userProfile?.departmentPermissions?.[dept.id] || userProfile?.allowedDepartments?.includes(dept.id) || isMaster;
-                      const isFavorite = userProfile?.favoriteDepartments?.includes(dept.id);
+                        if (!isAllowed) return null;
 
-                      if (!isAllowed) return null;
-
-                      return (
-                        <div
-                          key={dept.id}
-                          className={`
+                        return (
+                          <div
+                            key={dept.id}
+                            className={`
                          flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-bold transition-all
                          ${isHidden
-                              ? 'bg-transparent border-gray-700 text-gray-500'
-                              : 'bg-[#081429] border-[#fdb813]/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
-                            }
+                                ? 'bg-transparent border-gray-700 text-gray-500'
+                                : 'bg-[#081429] border-[#fdb813]/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
+                              }
                        `}
-                        >
-                          {/* Favorite Star */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFavorite(dept.id);
-                            }}
-                            className="hover:scale-110 transition-transform"
                           >
-                            <Star
-                              size={14}
-                              className={isFavorite ? 'text-[#fdb813] fill-[#fdb813]' : 'text-gray-600 hover:text-[#fdb813]'}
-                            />
-                          </button>
+                            {/* Favorite Star */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavorite(dept.id);
+                              }}
+                              className="hover:scale-110 transition-transform"
+                            >
+                              <Star
+                                size={14}
+                                className={isFavorite ? 'text-[#fdb813] fill-[#fdb813]' : 'text-gray-600 hover:text-[#fdb813]'}
+                              />
+                            </button>
 
-                          {/* Toggle Visibility */}
-                          <button
-                            onClick={() => toggleDeptVisibility(dept.id)}
-                            className="flex items-center gap-2 flex-1 text-left"
-                          >
-                            <span className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color?.startsWith('#') ? dept.color : 'white') : undefined }} />
-                            <span className="truncate flex-1">{dept.name}</span>
-                            {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
-                          </button>
-                        </div>
-                      )
-                    })}
+                            {/* Toggle Visibility */}
+                            <button
+                              onClick={() => toggleDeptVisibility(dept.id)}
+                              className="flex items-center gap-2 flex-1 text-left"
+                            >
+                              <span className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color?.startsWith('#') ? dept.color : 'white') : undefined }} />
+                              <span className="truncate flex-1">{dept.name}</span>
+                              {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
+                            </button>
+                          </div>
+                        )
+                      })}
+                  </div>
+                </div>
+
+                {/* Close Handle */}
+                <div
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full bg-[#1e293b] px-6 py-0.5 rounded-b-xl border-b border-x border-gray-700 cursor-pointer hover:bg-[#081429] transition-colors"
+                  onClick={() => setIsFilterOpen(false)}
+                >
+                  <ChevronUp size={16} className="text-gray-400" />
                 </div>
               </div>
+            )
+          }
 
-              {/* Close Handle */}
-              <div
-                className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full bg-[#1e293b] px-6 py-0.5 rounded-b-xl border-b border-x border-gray-700 cursor-pointer hover:bg-[#081429] transition-colors"
-                onClick={() => setIsFilterOpen(false)}
-              >
-                <ChevronUp size={16} className="text-gray-400" />
+          {/* Row 2: Timetable Filter Bar - Only show in timetable mode */}
+          {
+            appMode === 'timetable' && (
+              <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
+                {/* Main Filter Toggle - Only show for Math */}
+                {/* Main Filter Toggle - Only show for Math */
+                  /* Removed Global Option Settings Button */
+                }
+
+                {/* Current Settings Summary - Clickable Toggles */}
+                <div className="flex items-center gap-2 px-4 overflow-hidden flex-1">
+                  {/* Subject Toggle Button */}
+                  {hasPermission('timetable.math.view') && hasPermission('timetable.english.view') ? (
+                    <button
+                      onClick={() => setTimetableSubject(prev => prev === 'math' ? 'english' : 'math')}
+                      className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                      title="클릭하여 과목 전환"
+                    >
+                      {timetableSubject === 'math' ? <><Calculator size={12} className="inline" /> 수학</> : <><BookOpen size={12} className="inline" /> 영어</>}
+                    </button>
+                  ) : (
+                    <div className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 font-bold text-xs">
+                      {timetableSubject === 'math' ? <><Calculator size={12} className="inline" /> 수학</> : <><BookOpen size={12} className="inline" /> 영어</>}
+                    </div>
+                  )}
+
+                  {/* View Type Toggle Button */}
+                  <button
+                    onClick={() => {
+                      if (timetableSubject === 'math') {
+                        // 수학: 강사별 ↔ 교실별
+                        setTimetableViewType(prev => prev === 'teacher' ? 'room' : 'teacher');
+                      } else {
+                        // 영어: 통합 → 강사별 → 교실별 → 통합 (권한 없으면 통합 스킵)
+                        const canViewIntegrated = hasPermission('timetable.integrated.view');
+                        setTimetableViewType(prev => {
+                          if (prev === 'class') return 'teacher';
+                          if (prev === 'teacher') return 'room';
+                          // room -> integrated (if permitted) or teacher
+                          return canViewIntegrated ? 'class' : 'teacher';
+                        });
+                      }
+                    }}
+                    className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+                    title="클릭하여 보기방식 전환"
+                  >
+                    {timetableViewType === 'teacher' ? <><UserIcon size={12} className="inline" /> 강사별</> : (timetableViewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합</> : <><Building size={12} className="inline" /> 교실별</>)}
+                  </button>
+
+                  {/* Removed Summary Indicators */}
+
+
+                </div>
               </div>
-            </div>
-          )
-        }
+            )
+          }
 
-        {/* Row 2: Timetable Filter Bar - Only show in timetable mode */}
-        {
-          appMode === 'timetable' && (
+          {/* Timetable Filter Popover Panel Removed */}
+
+          {/* Row 2: Grades Filter Bar - Only show in grades mode */}
+          {appMode === 'grades' && (
             <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
-              {/* Main Filter Toggle - Only show for Math */}
-              {/* Main Filter Toggle - Only show for Math */
-                /* Removed Global Option Settings Button */
-              }
-
-              {/* Current Settings Summary - Clickable Toggles */}
-              <div className="flex items-center gap-2 px-4 overflow-hidden flex-1">
-                {/* Subject Toggle Button */}
-                {hasPermission('timetable.math.view') && hasPermission('timetable.english.view') ? (
-                  <button
-                    onClick={() => setTimetableSubject(prev => prev === 'math' ? 'english' : 'math')}
-                    className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-                    title="클릭하여 과목 전환"
-                  >
-                    {timetableSubject === 'math' ? <><Calculator size={12} className="inline" /> 수학</> : <><BookOpen size={12} className="inline" /> 영어</>}
-                  </button>
-                ) : (
-                  <div className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 font-bold text-xs">
-                    {timetableSubject === 'math' ? <><Calculator size={12} className="inline" /> 수학</> : <><BookOpen size={12} className="inline" /> 영어</>}
-                  </div>
-                )}
-
-                {/* View Type Toggle Button */}
-                <button
-                  onClick={() => {
-                    if (timetableSubject === 'math') {
-                      // 수학: 강사별 ↔ 교실별
-                      setTimetableViewType(prev => prev === 'teacher' ? 'room' : 'teacher');
-                    } else {
-                      // 영어: 통합 → 강사별 → 교실별 → 통합 (권한 없으면 통합 스킵)
-                      const canViewIntegrated = hasPermission('timetable.integrated.view');
-                      setTimetableViewType(prev => {
-                        if (prev === 'class') return 'teacher';
-                        if (prev === 'teacher') return 'room';
-                        // room -> integrated (if permitted) or teacher
-                        return canViewIntegrated ? 'class' : 'teacher';
-                      });
-                    }
-                  }}
-                  className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
-                  title="클릭하여 보기방식 전환"
-                >
-                  {timetableViewType === 'teacher' ? <><UserIcon size={12} className="inline" /> 강사별</> : (timetableViewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합</> : <><Building size={12} className="inline" /> 교실별</>)}
-                </button>
-
-                {/* Removed Summary Indicators */}
-
-
+              <div className="flex items-center gap-4 flex-1">
+                {/* Subject Filter Toggle */}
+                <div className="flex items-center gap-1 bg-black/20 rounded-lg p-0.5">
+                  {(['all', 'math', 'english'] as const).map(subject => (
+                    <button
+                      key={subject}
+                      onClick={() => setGradesSubjectFilter(subject)}
+                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${gradesSubjectFilter === subject
+                        ? 'bg-[#fdb813] text-[#081429]'
+                        : 'text-gray-400 hover:text-white'
+                        }`}
+                    >
+                      {subject === 'all' ? '전체' : subject === 'math' ? '수학' : '영어'}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          )
-        }
+          )}
+        </header >
 
-        {/* Timetable Filter Popover Panel Removed */}
+        <main id="main-content" className="flex-1 flex flex-col md:flex-row overflow-hidden" role="main">
+          {/* Render Gating: If permission fails, show nothing (Redirect will happen in useEffect) */}
+          {!canAccessTab(appMode) ? (
+            <div className="flex-1 flex items-center justify-center bg-gray-50">
+              {/* Optional: "Not Authorized" message or just blank while redirecting */}
+              <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+            </div>
+          ) : appMode === 'calendar' ? (
+            /* Calendar View */
+            <div className="w-full flex-1 max-w-full mx-auto h-full print:p-0 flex flex-col xl:flex-row gap-4 print:flex-row print:gap-2 overflow-x-auto">
+              {/* 1단: 현재 년도 (항상 표시) */}
+              <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden ${viewColumns >= 2 ? 'min-w-[320px]' : 'min-w-0'}`}>
+                <CalendarBoard
+                  currentDate={baseDate}
+                  onDateChange={setBaseDate}
+                  departments={visibleDepartments}
+                  events={displayEvents}
+                  onCellClick={handleCellClick}
+                  onRangeSelect={handleRangeSelect}
+                  onTimeSlotClick={handleTimeSlotClick}
+                  onEventClick={handleEventClick}
+                  holidays={holidays}
+                  viewMode={viewMode}
+                  currentUser={userProfile}
+                  onEventMove={handleEventMove}
+                  canEditDepartment={canEditDepartment}
+                  pendingEventIds={pendingEventIds}
+                  onViewChange={setViewMode}
+                  showSidePanel={viewColumns === 1} // Only show detail side panel in single column mode
+                  onQuickAdd={handleQuickAdd}
+                  bucketItems={bucketItems}
+                  onAddBucket={handleAddBucketItem}
+                  onEditBucket={handleEditBucketItem}
+                  onDeleteBucket={handleDeleteBucketItem}
+                  onConvertBucket={handleConvertBucketToEvent}
+                  showArchived={showArchived} // Phase 9
+                />
+              </div>
 
-        {/* Row 2: Grades Filter Bar - Only show in grades mode */}
-        {appMode === 'grades' && (
-          <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
-            <div className="flex items-center gap-4 flex-1">
-              {/* Subject Filter Toggle */}
-              <div className="flex items-center gap-1 bg-black/20 rounded-lg p-0.5">
-                {(['all', 'math', 'english'] as const).map(subject => (
-                  <button
-                    key={subject}
-                    onClick={() => setGradesSubjectFilter(subject)}
-                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${gradesSubjectFilter === subject
-                      ? 'bg-[#fdb813] text-[#081429]'
-                      : 'text-gray-400 hover:text-white'
-                      }`}
-                  >
-                    {subject === 'all' ? '전체' : subject === 'math' ? '수학' : '영어'}
-                  </button>
-                ))}
+              {/* 2단: 1년 전 (viewColumns >= 2 일 때 표시) */}
+              <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-[320px] transition-all duration-300 ${viewColumns >= 2 ? '' : 'hidden'}`}>
+                <CalendarBoard
+                  currentDate={rightDate}
+                  onDateChange={(date) => setBaseDate(addYears(date, 1))}
+                  departments={visibleDepartments}
+                  events={displayEvents}
+                  onCellClick={handleCellClick}
+                  onRangeSelect={handleRangeSelect}
+                  onTimeSlotClick={handleTimeSlotClick}
+                  onEventClick={handleEventClick}
+                  holidays={holidays}
+                  viewMode={viewMode}
+                  onEventMove={handleEventMove}
+                  canEditDepartment={canEditDepartment}
+                  pendingEventIds={pendingEventIds}
+                  isPrimaryView={false} // Hide My Events
+                  onViewChange={setViewMode}
+                  showSidePanel={false} // Always hide side panel for comparison views
+                  currentUser={userProfile}
+                  showArchived={showArchived} // Phase 9
+                />
+              </div>
+
+              {/* 3단: 2년 전 (viewColumns >= 3 일 때 표시) */}
+              <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-[320px] transition-all duration-300 ${viewColumns >= 3 ? '' : 'hidden'}`}>
+                <CalendarBoard
+                  currentDate={thirdDate}
+                  onDateChange={(date) => setBaseDate(addYears(date, 2))}
+                  departments={visibleDepartments}
+                  events={displayEvents}
+                  onCellClick={handleCellClick}
+                  onRangeSelect={handleRangeSelect}
+                  onTimeSlotClick={handleTimeSlotClick}
+                  onEventClick={handleEventClick}
+                  holidays={holidays}
+                  viewMode={viewMode}
+                  onEventMove={handleEventMove}
+                  canEditDepartment={canEditDepartment}
+                  pendingEventIds={pendingEventIds}
+                  isPrimaryView={false} // Hide My Events
+                  onViewChange={setViewMode}
+                  showSidePanel={false}
+                  currentUser={userProfile}
+                  showArchived={showArchived} // Phase 9
+                />
               </div>
             </div>
-          </div>
-        )}
-      </header >
+          ) : appMode === 'timetable' ? (
+            /* Timetable View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 p-4 md:p-6">
+                <TimetableManager
+                  subjectTab={timetableSubject}
+                  onSubjectChange={setTimetableSubject}
+                  viewType={timetableViewType}
+                  onViewTypeChange={setTimetableViewType}
+                  currentUser={userProfile}
+                  /* Removed global state props */
+                  teachers={teachers}
+                  classKeywords={classKeywords}
+                />
+              </div>
+            </Suspense>
+          ) : appMode === 'payment' ? (
+            /* Payment Report View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <PaymentReport />
+              </div>
+            </Suspense>
+          ) : appMode === 'gantt' ? (
+            /* Gantt Chart View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
+                <GanttManager userProfile={userProfile} allUsers={users} />
+              </div>
+            </Suspense>
+          ) : appMode === 'consultation' ? (
+            /* Consultation Manager View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <ConsultationManager
+                  userProfile={userProfile}
+                  onNavigate={(tab) => setAppMode(tab as any)}
+                />
+              </div>
+            </Suspense>
+          ) : appMode === 'attendance' ? (
+            /* Attendance Manager View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 flex flex-col overflow-hidden">
+                <AttendanceManager
+                  userProfile={userProfile}
+                  teachers={teachers}
+                  selectedSubject={attendanceSubject}
+                  selectedTeacherId={attendanceTeacherId}
+                  currentDate={attendanceDate}
+                  isAddStudentModalOpen={isAttendanceAddStudentModalOpen}
+                  onCloseAddStudentModal={() => setIsAttendanceAddStudentModalOpen(false)}
+                />
+              </div>
+            </Suspense>
+          ) : appMode === 'students' ? (
+            /* Student Management View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <StudentManagementTab
+                  filters={studentFilters}
+                  sortBy={studentSortBy}
+                />
+              </div>
+            </Suspense>
+          ) : appMode === 'prospects' ? (
+            /* Prospect Management View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <ProspectManagementTab />
+              </div>
+            </Suspense>
+          ) : appMode === 'grades' ? (
+            /* Grades Management View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <GradesManager
+                  subjectFilter={gradesSubjectFilter}
+                  searchQuery={gradesSearchQuery}
+                  onSearchChange={setGradesSearchQuery}
+                />
+              </div>
+            </Suspense>
+          ) : appMode === 'classes' ? (
+            /* Class Management View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <ClassManagementTab />
+              </div>
+            </Suspense>
+          ) : appMode === 'student-consultations' ? (
+            /* Student Consultation Management View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <StudentConsultationTab />
+              </div>
+            </Suspense>
+          ) : appMode === 'billing' ? (
+            /* Billing Management View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <BillingManager userProfile={userProfile} />
+              </div>
+            </Suspense>
+          ) : appMode === 'daily-attendance' ? (
+            /* Daily Attendance Management View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <DailyAttendanceManager userProfile={userProfile} />
+              </div>
+            </Suspense>
+          ) : appMode === 'staff' ? (
+            /* Staff Management View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <StaffManager />
+              </div>
+            </Suspense>
+          ) : null}
 
-      <main id="main-content" className="flex-1 flex flex-col md:flex-row overflow-hidden" role="main">
-        {/* Render Gating: If permission fails, show nothing (Redirect will happen in useEffect) */}
-        {!canAccessTab(appMode) ? (
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            {/* Optional: "Not Authorized" message or just blank while redirecting */}
-            <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
-          </div>
-        ) : appMode === 'calendar' ? (
-          /* Calendar View */
-          <div className="w-full flex-1 max-w-full mx-auto h-full print:p-0 flex flex-col xl:flex-row gap-4 print:flex-row print:gap-2">
-            {/* 1단: 현재 년도 (항상 표시) */}
-            <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0">
-              <CalendarBoard
-                currentDate={baseDate}
-                onDateChange={setBaseDate}
-                departments={visibleDepartments}
-                events={displayEvents}
-                onCellClick={handleCellClick}
-                onRangeSelect={handleRangeSelect}
-                onTimeSlotClick={handleTimeSlotClick}
-                onEventClick={handleEventClick}
-                holidays={holidays}
-                viewMode={viewMode}
-                currentUser={userProfile}
-                onEventMove={handleEventMove}
-                canEditDepartment={canEditDepartment}
-                pendingEventIds={pendingEventIds}
-                onViewChange={setViewMode}
-                showSidePanel={viewColumns === 1} // Only show detail side panel in single column mode
-                onQuickAdd={handleQuickAdd}
-                bucketItems={bucketItems}
-                onAddBucket={handleAddBucketItem}
-                onEditBucket={handleEditBucketItem}
-                onDeleteBucket={handleDeleteBucketItem}
-                onConvertBucket={handleConvertBucketToEvent}
-                showArchived={showArchived} // Phase 9
-              />
+          {/* Floating Save Button for Pending Moves */}
+          {pendingEventMoves.length > 0 && (
+            <div className="fixed bottom-6 right-6 z-50 flex gap-3 animate-in slide-in-from-bottom-4 duration-300">
+              <button
+                onClick={handleCancelPendingMoves}
+                className="px-4 py-3 bg-white text-gray-700 rounded-xl font-bold shadow-lg border border-gray-200 hover:bg-gray-50 transition-all flex items-center gap-2"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSavePendingMoves}
+                className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-xl font-bold shadow-lg hover:brightness-110 transition-all flex items-center gap-2"
+              >
+                <span className="bg-[#081429] text-white px-2 py-0.5 rounded-full text-xs font-black">{pendingEventMoves.length}</span>
+                변경사항 저장
+              </button>
             </div>
-
-            {/* 2단: 1년 전 (viewColumns >= 2 일 때 표시) */}
-            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 2 ? '' : 'hidden'}`}>
-              <CalendarBoard
-                currentDate={rightDate}
-                onDateChange={(date) => setBaseDate(addYears(date, 1))}
-                departments={visibleDepartments}
-                events={displayEvents}
-                onCellClick={handleCellClick}
-                onRangeSelect={handleRangeSelect}
-                onTimeSlotClick={handleTimeSlotClick}
-                onEventClick={handleEventClick}
-                holidays={holidays}
-                viewMode={viewMode}
-                onEventMove={handleEventMove}
-                canEditDepartment={canEditDepartment}
-                pendingEventIds={pendingEventIds}
-                isPrimaryView={false} // Hide My Events
-                onViewChange={setViewMode}
-                showSidePanel={false} // Always hide side panel for comparison views
-                currentUser={userProfile}
-                showArchived={showArchived} // Phase 9
-              />
-            </div>
-
-            {/* 3단: 2년 전 (viewColumns >= 3 일 때 표시) */}
-            <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-0 transition-all duration-300 ${viewColumns >= 3 ? '' : 'hidden'}`}>
-              <CalendarBoard
-                currentDate={thirdDate}
-                onDateChange={(date) => setBaseDate(addYears(date, 2))}
-                departments={visibleDepartments}
-                events={displayEvents}
-                onCellClick={handleCellClick}
-                onRangeSelect={handleRangeSelect}
-                onTimeSlotClick={handleTimeSlotClick}
-                onEventClick={handleEventClick}
-                holidays={holidays}
-                viewMode={viewMode}
-                onEventMove={handleEventMove}
-                canEditDepartment={canEditDepartment}
-                pendingEventIds={pendingEventIds}
-                isPrimaryView={false} // Hide My Events
-                onViewChange={setViewMode}
-                showSidePanel={false}
-                currentUser={userProfile}
-                showArchived={showArchived} // Phase 9
-              />
-            </div>
-          </div>
-        ) : appMode === 'timetable' ? (
-          /* Timetable View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 p-4 md:p-6">
-              <TimetableManager
-                subjectTab={timetableSubject}
-                onSubjectChange={setTimetableSubject}
-                viewType={timetableViewType}
-                onViewTypeChange={setTimetableViewType}
-                currentUser={userProfile}
-                /* Removed global state props */
-                teachers={teachers}
-                classKeywords={classKeywords}
-              />
-            </div>
-          </Suspense>
-        ) : appMode === 'payment' ? (
-          /* Payment Report View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 overflow-auto">
-              <PaymentReport />
-            </div>
-          </Suspense>
-        ) : appMode === 'gantt' ? (
-          /* Gantt Chart View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
-              <GanttManager userProfile={userProfile} allUsers={users} />
-            </div>
-          </Suspense>
-        ) : appMode === 'consultation' ? (
-          /* Consultation Manager View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 overflow-auto">
-              <ConsultationManager userProfile={userProfile} />
-            </div>
-          </Suspense>
-        ) : appMode === 'attendance' ? (
-          /* Attendance Manager View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 flex flex-col overflow-hidden">
-              <AttendanceManager
-                userProfile={userProfile}
-                teachers={teachers}
-                selectedSubject={attendanceSubject}
-                selectedTeacherId={attendanceTeacherId}
-                currentDate={attendanceDate}
-                isAddStudentModalOpen={isAttendanceAddStudentModalOpen}
-                onCloseAddStudentModal={() => setIsAttendanceAddStudentModalOpen(false)}
-              />
-            </div>
-          </Suspense>
-        ) : appMode === 'students' ? (
-          /* Student Management View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 overflow-auto">
-              <StudentManagementTab
-                filters={studentFilters}
-                sortBy={studentSortBy}
-              />
-            </div>
-          </Suspense>
-        ) : appMode === 'grades' ? (
-          /* Grades Management View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 overflow-auto">
-              <GradesManager
-                subjectFilter={gradesSubjectFilter}
-                searchQuery={gradesSearchQuery}
-                onSearchChange={setGradesSearchQuery}
-              />
-            </div>
-          </Suspense>
-        ) : appMode === 'classes' ? (
-          /* Class Management View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 overflow-auto">
-              <ClassManagementTab />
-            </div>
-          </Suspense>
-        ) : appMode === 'student-consultations' ? (
-          /* Student Consultation Management View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 overflow-auto">
-              <ConsultationManagementTab />
-            </div>
-          </Suspense>
-        ) : appMode === 'billing' ? (
-          /* Billing Management View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 overflow-auto">
-              <BillingManager userProfile={userProfile} />
-            </div>
-          </Suspense>
-        ) : appMode === 'daily-attendance' ? (
-          /* Daily Attendance Management View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 overflow-auto">
-              <DailyAttendanceManager userProfile={userProfile} />
-            </div>
-          </Suspense>
-        ) : appMode === 'staff' ? (
-          /* Staff Management View */
-          <Suspense fallback={<TabLoadingFallback />}>
-            <div className="w-full flex-1 overflow-auto">
-              <StaffManager />
-            </div>
-          </Suspense>
-        ) : null}
-
-        {/* Floating Save Button for Pending Moves */}
-        {pendingEventMoves.length > 0 && (
-          <div className="fixed bottom-6 right-6 z-50 flex gap-3 animate-in slide-in-from-bottom-4 duration-300">
-            <button
-              onClick={handleCancelPendingMoves}
-              className="px-4 py-3 bg-white text-gray-700 rounded-xl font-bold shadow-lg border border-gray-200 hover:bg-gray-50 transition-all flex items-center gap-2"
-            >
-              취소
-            </button>
-            <button
-              onClick={handleSavePendingMoves}
-              className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-xl font-bold shadow-lg hover:brightness-110 transition-all flex items-center gap-2"
-            >
-              <span className="bg-[#081429] text-white px-2 py-0.5 rounded-full text-xs font-black">{pendingEventMoves.length}</span>
-              변경사항 저장
-            </button>
-          </div>
-        )}
-      </main>
-    </div>
+          )}
+        </main>
+      </div>
 
       {/* Global Search Modal - Addresses Issue #10 */}
       <GlobalSearch
@@ -2391,15 +2408,15 @@ const App: React.FC = () => {
                 {/* Tab Permissions */}
                 <div className="mb-4">
                   <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                   <ClipboardList size={14} className="inline mr-1" />허용된 탭
+                    <ClipboardList size={14} className="inline mr-1" />허용된 탭
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {accessibleTabs.map(tab => (
                       <span key={tab} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                       {tab === 'calendar' && <><CalendarIcon size={12} className="inline mr-1" />연간 일정</>}
+                        {tab === 'calendar' && <><CalendarIcon size={12} className="inline mr-1" />연간 일정</>}
                         {tab === 'timetable' && <><Library size={12} className="inline mr-1" />시간표</>}
                         {tab === 'payment' && '💳 전자 결재'}
-                       {tab === 'gantt' && <><BarChart3 size={12} className="inline mr-1" />간트 차트</>}
+                        {tab === 'gantt' && <><BarChart3 size={12} className="inline mr-1" />간트 차트</>}
                         {tab === 'consultation' && <><MessageCircle size={12} className="inline mr-1" />상담</>}
                       </span>
                     ))}
@@ -2459,7 +2476,7 @@ const App: React.FC = () => {
                         };
                         return enabledPerms.map(([permId]) => (
                           <div key={permId} className="flex items-center gap-2 text-xs text-gray-600 py-1">
-                           <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center"><Check size={10} /></span>
+                            <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center"><Check size={10} /></span>
                             {permLabels[permId] || permId}
                           </div>
                         ));

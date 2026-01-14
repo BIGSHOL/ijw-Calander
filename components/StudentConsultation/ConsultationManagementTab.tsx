@@ -233,7 +233,7 @@ const ConsultationManagementTab: React.FC = () => {
                     onClose={() => setShowAddModal(false)}
                     onSuccess={() => {
                         setShowAddModal(false);
-                        refetch();
+                        // mutation의 onSuccess에서 캐시 무효화 완료됨 (staleTime: 0)
                     }}
                 />
             )}
