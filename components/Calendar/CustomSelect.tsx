@@ -37,19 +37,19 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`
-          flex items-center justify-center gap-1 min-w-fit px-2 py-1.5
-          rounded-lg transition-all duration-200 group
+          flex items-center justify-center gap-0.5 min-w-fit px-0.5 @xs:px-1 @sm:px-2 py-0.5 @xs:py-1 @sm:py-1.5
+          rounded-md @sm:rounded-lg transition-all duration-200 group
           ${isOpen ? 'bg-gray-100 text-[#081429]' : 'hover:bg-gray-100 text-[#373d41]'}
           ${className}
         `}
             >
-                <span className={`font-extrabold text-sm tracking-tight group-hover:text-[#fdb813] transition-colors`}>
+                <span className={`font-extrabold text-[10px] @xs:text-xs @sm:text-sm tracking-tight group-hover:text-[#fdb813] transition-colors`}>
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>
                 <ChevronDown
-                    size={16}
+                    size={12}
                     strokeWidth={3}
-                    className={`text-gray-300 transition-transform duration-200 group-hover:text-[#fdb813] ${isOpen ? 'rotate-180 text-[#fdb813]' : ''}`}
+                    className={`text-gray-300 transition-transform duration-200 group-hover:text-[#fdb813] @xs:w-3 @xs:h-3 @sm:w-4 @sm:h-4 ${isOpen ? 'rotate-180 text-[#fdb813]' : ''}`}
                 />
             </button>
 

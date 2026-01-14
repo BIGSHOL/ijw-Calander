@@ -79,23 +79,52 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   const updateExam = useUpdateExam(); // 시험 정보 업데이트용 (통계 저장)
   const deleteExamMutation = useDeleteExam();
 
-  // 성적 일괄 입력 mutation
+  // 성적 일괄 입력/수정 mutation (기존 성적은 업데이트, 새 성적은 추가)
   const batchAddScores = useMutation({
     mutationFn: async (scores: Omit<StudentScore, 'id' | 'createdAt' | 'updatedAt'>[]) => {
       const batch = writeBatch(db);
       const now = Date.now();
 
+      // 해당 시험의 기존 성적 조회
+      const examId = scores[0]?.examId;
+      if (!examId) return;
+
+      const existingScoresQuery = query(
+        collection(db, 'student_scores'),
+        where('examId', '==', examId)
+      );
+      const existingSnapshot = await getDocs(existingScoresQuery);
+      const existingScoresMap: Record<string, string> = {}; // studentId -> docId
+      existingSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        existingScoresMap[data.studentId] = doc.id;
+      });
+
       scores.forEach(scoreData => {
         const percentage = (scoreData.score / scoreData.maxScore) * 100;
         const grade = calculateGrade(percentage);
-        const docRef = doc(collection(db, 'student_scores'));
-        batch.set(docRef, {
-          ...scoreData,
-          percentage,
-          grade,
-          createdAt: now,
-          updatedAt: now,
-        });
+        const existingDocId = existingScoresMap[scoreData.studentId];
+
+        if (existingDocId) {
+          // 기존 성적 업데이트
+          const docRef = doc(db, 'student_scores', existingDocId);
+          batch.update(docRef, {
+            ...scoreData,
+            percentage,
+            grade,
+            updatedAt: now,
+          });
+        } else {
+          // 새 성적 생성
+          const docRef = doc(collection(db, 'student_scores'));
+          batch.set(docRef, {
+            ...scoreData,
+            percentage,
+            grade,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
       });
 
       await batch.commit();
@@ -488,7 +517,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2" />
+          <Loader2 className="w-8 h-8 animate-spin text-[#fdb813] mx-auto mb-2" />
           <p className="text-gray-600">데이터 로딩 중...</p>
         </div>
       </div>

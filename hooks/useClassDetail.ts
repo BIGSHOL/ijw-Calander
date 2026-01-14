@@ -8,6 +8,7 @@ const COL_CLASSES = 'classes';
 export interface ClassStudent {
   id: string;
   name: string;
+  school: string;
   grade: string;
   status: 'active' | 'on_hold' | 'withdrawn';
   enrollmentDate: string;
@@ -119,6 +120,7 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
             students.push({
               id: doc.id,
               name: data.name,
+              school: data.school || '',
               grade: data.grade || '미정',
               status: data.status,
               enrollmentDate: data.startDate || '',

@@ -66,7 +66,8 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
   const [hoveredEvent, setHoveredEvent] = useState<CalendarEvent | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number, y: number } | null>(null);
 
-  const gridClass = "grid grid-cols-[120px_repeat(7,1fr)]";
+  // table-layout: fixed 효과를 위해 각 열이 균등하게 분배되도록 함
+  const gridClass = "grid grid-cols-[60px_repeat(7,minmax(0,1fr))] sm:grid-cols-[80px_repeat(7,minmax(0,1fr))] md:grid-cols-[100px_repeat(7,minmax(0,1fr))] lg:grid-cols-[120px_repeat(7,minmax(0,1fr))]";
 
   const handleMouseDown = (date: Date, deptId: string) => {
     setDragStart({ date, deptId });
@@ -272,7 +273,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
           return (
             <div
               key={date.toISOString()}
-              className={`border-r border-gray-300 last:border-r-0 p-1 text-center flex flex-col items-center justify-center min-h-[52px]
+              className={`border-r border-gray-300 last:border-r-0 p-0.5 md:p-1 text-center flex flex-col items-center justify-center min-h-[44px] md:min-h-[52px] overflow-hidden
                 ${isOtherMonth(date) ? 'opacity-40 bg-gray-100' : ''}
                 ${isHoliday && !isOtherMonth(date) ? 'text-red-600 bg-gradient-to-b from-red-50 to-red-100/50' : isHoliday ? 'text-red-400' : isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-[#373d41]'}
                 ${isToday(date) && !isOtherMonth(date) ? 'bg-[#fdb813]/20 font-bold' : ''}
@@ -284,7 +285,10 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                 </div>
                 <span className={`font-extrabold leading-none mt-0.5 ${isHoliday ? 'text-base' : 'text-sm'}`}>{dayNum}</span>
                 {isHoliday && (
-                  <span className="text-nano text-red-600 font-bold bg-red-100 px-1.5 py-0.5 rounded-full mt-0.5 whitespace-nowrap border border-red-200">
+                  <span
+                    className="text-nano text-red-600 font-bold bg-red-100 px-1 py-0.5 rounded-full mt-0.5 border border-red-200 max-w-[90%] truncate block text-center"
+                    title={holiday.name}
+                  >
                     {holiday.name}
                   </span>
                 )}
@@ -335,7 +339,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
               {!dept.color.startsWith('#') && (
                 <div className={`absolute left-0 top-0 bottom-0 w-[6px] ${dept.color}`} />
               )}
-              <div className="font-bold text-[#081429] text-center text-xs break-keep leading-tight pl-1">{dept.name}</div>
+              <div className="font-bold text-[#081429] text-center text-nano md:text-xs break-keep leading-tight pl-1 truncate">{dept.name}</div>
             </div>
 
             {/* Grid Cells */}

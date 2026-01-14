@@ -28,10 +28,10 @@ export const useStudentScores = (studentId: string, subject?: 'math' | 'english'
         queryFn: async () => {
             if (!studentId) return [];
 
-            let q = query(
+            // 복합 인덱스 없이 작동하도록 단순 where 쿼리 사용 후 클라이언트 정렬
+            const q = query(
                 collection(db, COL_STUDENT_SCORES),
-                where('studentId', '==', studentId),
-                orderBy('createdAt', 'desc')
+                where('studentId', '==', studentId)
             );
 
             const snapshot = await getDocs(q);
@@ -44,6 +44,9 @@ export const useStudentScores = (studentId: string, subject?: 'math' | 'english'
             if (subject) {
                 scores = scores.filter(s => s.subject === subject);
             }
+
+            // 클라이언트 사이드 정렬 (최신순)
+            scores.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
             return scores;
         },
@@ -80,6 +83,9 @@ export const useAddScore = () => {
             queryClient.invalidateQueries({ queryKey: ['student_scores', data.studentId] });
             // 전체 성적 캐시도 무효화
             queryClient.invalidateQueries({ queryKey: ['all_scores'] });
+            // GradesManager와 동기화: 시험별 성적 및 시험 통계 무효화
+            queryClient.invalidateQueries({ queryKey: ['exam_scores'] });
+            queryClient.invalidateQueries({ queryKey: ['exams'] });
         },
     });
 };
@@ -110,6 +116,9 @@ export const useUpdateScore = () => {
         },
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['student_scores'] });
+            // GradesManager와 동기화: 시험별 성적 및 시험 통계 무효화
+            queryClient.invalidateQueries({ queryKey: ['exam_scores'] });
+            queryClient.invalidateQueries({ queryKey: ['exams'] });
         },
     });
 };
@@ -128,6 +137,9 @@ export const useDeleteScore = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['student_scores'] });
             queryClient.invalidateQueries({ queryKey: ['all_scores'] });
+            // GradesManager와 동기화: 시험별 성적 및 시험 통계 무효화
+            queryClient.invalidateQueries({ queryKey: ['exam_scores'] });
+            queryClient.invalidateQueries({ queryKey: ['exams'] });
         },
     });
 };

@@ -94,7 +94,7 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[1050] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[1050] flex items-center justify-center p-2 md:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? 'modal-title' : undefined}
@@ -115,7 +115,7 @@ const Modal: React.FC<ModalProps> = ({
         tabIndex={-1}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-gray-200">
             {title && (
               <h2 id="modal-title" className="text-xl font-bold text-gray-900">
                 {title}
@@ -133,12 +133,12 @@ const Modal: React.FC<ModalProps> = ({
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-3 md:px-6 md:py-4">
           {children}
         </div>
 
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-end gap-3 px-4 py-3 md:px-6 md:py-4 border-t border-gray-200 bg-gray-50">
             {footer}
           </div>
         )}

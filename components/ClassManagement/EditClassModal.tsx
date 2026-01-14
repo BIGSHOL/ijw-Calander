@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { X, Edit, ChevronDown, ChevronUp } from 'lucide-react';
-import { useUpdateClass, UpdateClassData } from '../../hooks/useClassMutations';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Edit, ChevronDown, ChevronUp, Users, UserMinus } from 'lucide-react';
+import { useUpdateClass, UpdateClassData, useManageClassStudents } from '../../hooks/useClassMutations';
 import { ClassInfo } from '../../hooks/useClasses';
+import { useClassDetail, ClassStudent } from '../../hooks/useClassDetail';
+import { useStudents } from '../../hooks/useStudents';
 import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
@@ -15,18 +17,6 @@ interface EditClassModalProps {
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토'];
 const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
 
-// 슬롯 정렬 함수 (월화수목금토일 순 → 교시 순)
-const sortSlots = (slots: string[]): string[] => {
-  return slots.sort((a, b) => {
-    const [dayA, periodA] = a.split('-');
-    const [dayB, periodB] = b.split('-');
-    const dayOrderA = WEEKDAY_ORDER[dayA] ?? 99;
-    const dayOrderB = WEEKDAY_ORDER[dayB] ?? 99;
-    if (dayOrderA !== dayOrderB) return dayOrderA - dayOrderB;
-    return Number(periodA) - Number(periodB);
-  });
-};
-
 const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotTeachers, onClose }) => {
   const [className, setClassName] = useState(classInfo.className);
   const [teacher, setTeacher] = useState(classInfo.teacher);
@@ -38,10 +28,23 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const [slotRooms, setSlotRooms] = useState<Record<string, string>>({});
   const [showAdvancedSchedule, setShowAdvancedSchedule] = useState(false);
 
+  // 학생 관리
+  const [showStudentList, setShowStudentList] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentsToAdd, setStudentsToAdd] = useState<Set<string>>(new Set());
+  const [studentsToRemove, setStudentsToRemove] = useState<Set<string>>(new Set());
+
   const [error, setError] = useState('');
 
   const updateClassMutation = useUpdateClass();
+  const manageStudentsMutation = useManageClassStudents();
   const { data: teachersData } = useTeachers();
+  const { data: classDetail } = useClassDetail(classInfo.className, classInfo.subject);
+  const { students: allStudents, loading: studentsLoading } = useStudents(false);
+
+  // 현재 등록된 학생 목록
+  const currentStudents = classDetail?.students || [];
+  const currentStudentIds = currentStudents.map(s => s.id);
 
   // 강사 색상 가져오기
   const getTeacherColor = (teacherName: string) => {
@@ -54,6 +57,33 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
 
   // 과목별 교시
   const periods = classInfo.subject === 'english' ? ENGLISH_UNIFIED_PERIODS : MATH_UNIFIED_PERIODS;
+
+  // 추가 가능한 학생 필터링 (현재 수업에 없고, 재원 상태인 학생)
+  const availableStudents = useMemo(() => {
+    if (!allStudents) return [];
+    return allStudents
+      .filter(s =>
+        s.status === 'active' &&
+        !currentStudentIds.includes(s.id) &&
+        !studentsToAdd.has(s.id)
+      )
+      .filter(s => {
+        if (!studentSearch.trim()) return true;
+        const search = studentSearch.toLowerCase();
+        return (
+          s.name.toLowerCase().includes(search) ||
+          s.school?.toLowerCase().includes(search) ||
+          s.grade?.toLowerCase().includes(search)
+        );
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  }, [allStudents, currentStudentIds, studentsToAdd, studentSearch]);
+
+  // 추가 예정 학생 정보
+  const studentsToAddInfo = useMemo(() => {
+    if (!allStudents) return [];
+    return allStudents.filter(s => studentsToAdd.has(s.id));
+  }, [allStudents, studentsToAdd]);
 
   // 기존 스케줄을 그리드로 변환
   useEffect(() => {
@@ -70,12 +100,10 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       setSelectedSlots(slots);
     }
 
-    // 기존 slotTeachers 데이터 로드
     if (classInfo.slotTeachers) {
       setSlotTeachers(classInfo.slotTeachers);
     }
 
-    // 기존 slotRooms 데이터 로드
     if (classInfo.slotRooms) {
       setSlotRooms(classInfo.slotRooms);
     }
@@ -109,6 +137,35 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     setSlotRooms(prev => ({ ...prev, [key]: roomName }));
   };
 
+  // 학생 추가 토글
+  const toggleAddStudent = (studentId: string) => {
+    const newSet = new Set(studentsToAdd);
+    if (newSet.has(studentId)) {
+      newSet.delete(studentId);
+    } else {
+      newSet.add(studentId);
+    }
+    setStudentsToAdd(newSet);
+  };
+
+  // 기존 학생 제거 토글
+  const toggleRemoveStudent = (studentId: string) => {
+    const newSet = new Set(studentsToRemove);
+    if (newSet.has(studentId)) {
+      newSet.delete(studentId);
+    } else {
+      newSet.add(studentId);
+    }
+    setStudentsToRemove(newSet);
+  };
+
+  // 추가 예정 학생 취소
+  const cancelAddStudent = (studentId: string) => {
+    const newSet = new Set(studentsToAdd);
+    newSet.delete(studentId);
+    setStudentsToAdd(newSet);
+  };
+
   // 저장
   const handleSave = async () => {
     if (!className.trim()) {
@@ -128,11 +185,6 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       const [day, periodId] = key.split('-');
       schedule.push(`${day} ${periodId}`);
     });
-
-    console.log('[EditClassModal] Saving with schedule:', schedule);
-    console.log('[EditClassModal] Selected slots:', Array.from(selectedSlots));
-    console.log('[EditClassModal] Slot teachers:', slotTeachers);
-    console.log('[EditClassModal] Slot rooms:', slotRooms);
 
     // 빈 문자열인 slotTeachers 및 slotRooms 항목 제거
     const filteredSlotTeachers: Record<string, string> = {};
@@ -161,13 +213,30 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     };
 
     try {
+      // 1. 수업 정보 업데이트
       await updateClassMutation.mutateAsync(updateData);
-      onClose(true); // 저장 성공 플래그 전달
+
+      // 2. 학생 추가/제거가 있으면 처리
+      if (studentsToAdd.size > 0 || studentsToRemove.size > 0) {
+        await manageStudentsMutation.mutateAsync({
+          className: className.trim(),
+          teacher: teacher.trim(),
+          subject: classInfo.subject,
+          schedule,
+          addStudentIds: Array.from(studentsToAdd),
+          removeStudentIds: Array.from(studentsToRemove),
+        });
+      }
+
+      onClose(true);
     } catch (err) {
       console.error('[EditClassModal] Error updating class:', err);
       setError('수업 수정에 실패했습니다.');
     }
   };
+
+  // 최종 학생 수 계산
+  const finalStudentCount = currentStudents.length - studentsToRemove.size + studentsToAdd.size;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -402,13 +471,147 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
             )}
           </div>
 
-          {/* 안내 */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-            <p className="text-blue-700 text-xs">
-              <strong>안내:</strong> 수업 정보를 수정하면 등록된 학생 정보도 함께 업데이트됩니다.
-              <br />
-              <span className="text-blue-600">현재 {classInfo.studentCount || 0}명 등록</span>
-            </p>
+          {/* 학생 관리 섹션 */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowStudentList(!showStudentList)}
+              className="w-full flex items-center justify-between p-2.5 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-semibold text-gray-700">학생 관리</span>
+                <span className="text-xs text-[#fdb813] font-semibold">
+                  {finalStudentCount}명
+                  {(studentsToAdd.size > 0 || studentsToRemove.size > 0) && (
+                    <span className="text-gray-400 ml-1">
+                      ({studentsToAdd.size > 0 && `+${studentsToAdd.size}`}
+                      {studentsToAdd.size > 0 && studentsToRemove.size > 0 && ' '}
+                      {studentsToRemove.size > 0 && `-${studentsToRemove.size}`})
+                    </span>
+                  )}
+                </span>
+              </div>
+              {showStudentList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            {showStudentList && (
+              <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
+                {/* 현재 등록된 학생 */}
+                <div className="border-b border-gray-200">
+                  <div className="px-2.5 py-1.5 bg-blue-50 text-xs font-semibold text-blue-700">
+                    현재 등록된 학생 ({currentStudents.length - studentsToRemove.size}명)
+                  </div>
+                  <div className="max-h-28 overflow-y-auto">
+                    {currentStudents.length === 0 ? (
+                      <div className="p-3 text-center text-gray-400 text-sm">등록된 학생이 없습니다</div>
+                    ) : (
+                      currentStudents.map(student => {
+                        const isMarkedForRemoval = studentsToRemove.has(student.id);
+                        return (
+                          <div
+                            key={student.id}
+                            className={`flex items-center justify-between px-2.5 py-1.5 text-sm ${
+                              isMarkedForRemoval ? 'bg-red-50 line-through text-gray-400' : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className={isMarkedForRemoval ? 'text-gray-400' : 'text-gray-800'}>
+                                {student.name}
+                              </span>
+                              <span className="text-[10px] text-gray-400">{student.school}{student.grade}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => toggleRemoveStudent(student.id)}
+                              className={`p-1 rounded transition-colors ${
+                                isMarkedForRemoval
+                                  ? 'text-blue-600 hover:bg-blue-100'
+                                  : 'text-red-500 hover:bg-red-100'
+                              }`}
+                              title={isMarkedForRemoval ? '제거 취소' : '수업에서 제외'}
+                            >
+                              {isMarkedForRemoval ? (
+                                <span className="text-xs font-medium">취소</span>
+                              ) : (
+                                <UserMinus size={14} />
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 추가 예정 학생 */}
+                {studentsToAdd.size > 0 && (
+                  <div className="border-b border-gray-200">
+                    <div className="px-2.5 py-1.5 bg-green-50 text-xs font-semibold text-green-700">
+                      추가 예정 ({studentsToAdd.size}명)
+                    </div>
+                    <div className="max-h-20 overflow-y-auto">
+                      {studentsToAddInfo.map(student => (
+                        <div
+                          key={student.id}
+                          className="flex items-center justify-between px-2.5 py-1.5 text-sm bg-green-50/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-800">{student.name}</span>
+                            <span className="text-[10px] text-gray-400">{student.school}{student.grade}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => cancelAddStudent(student.id)}
+                            className="text-xs text-gray-500 hover:text-red-500 font-medium"
+                          >
+                            취소
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 학생 추가 검색 */}
+                <div className="p-2 border-b border-gray-100">
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    placeholder="학생 검색하여 추가..."
+                    className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-[#fdb813] outline-none"
+                  />
+                </div>
+
+                {/* 추가 가능한 학생 목록 */}
+                <div className="max-h-32 overflow-y-auto">
+                  {studentsLoading ? (
+                    <div className="p-3 text-center text-gray-400 text-sm">로딩 중...</div>
+                  ) : availableStudents.length === 0 ? (
+                    <div className="p-3 text-center text-gray-400 text-sm">
+                      {studentSearch ? '검색 결과가 없습니다' : '추가 가능한 학생이 없습니다'}
+                    </div>
+                  ) : (
+                    availableStudents.map(student => (
+                      <label
+                        key={student.id}
+                        className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer transition-colors hover:bg-gray-50 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={studentsToAdd.has(student.id)}
+                          onChange={() => toggleAddStudent(student.id)}
+                          className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813]"
+                        />
+                        <span className="text-gray-800">{student.name}</span>
+                        <span className="text-[10px] text-gray-400">{student.school}{student.grade}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -416,17 +619,17 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         <div className="bg-gray-50 px-4 py-2.5 flex items-center justify-end gap-2 border-t shrink-0">
           <button
             onClick={() => onClose(false)}
-            disabled={updateClassMutation.isPending}
+            disabled={updateClassMutation.isPending || manageStudentsMutation.isPending}
             className="px-4 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
           >
             취소
           </button>
           <button
             onClick={handleSave}
-            disabled={updateClassMutation.isPending}
+            disabled={updateClassMutation.isPending || manageStudentsMutation.isPending}
             className="px-4 py-1.5 text-sm bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] rounded-lg font-semibold transition-colors disabled:opacity-50"
           >
-            {updateClassMutation.isPending ? '저장 중...' : '저장'}
+            {(updateClassMutation.isPending || manageStudentsMutation.isPending) ? '저장 중...' : '저장'}
           </button>
         </div>
       </div>

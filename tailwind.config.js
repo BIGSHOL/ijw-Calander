@@ -128,7 +128,9 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/container-queries'),
+  ],
   safelist: [
     {
       pattern: /bg-(red|blue|green|yellow|purple|orange|indigo|amber|gray|primary|accent|success|error|warning|info)-(50|100|200|500|600|700)/,
