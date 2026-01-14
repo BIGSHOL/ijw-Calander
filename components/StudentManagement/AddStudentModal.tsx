@@ -1,9 +1,10 @@
 import React from 'react';
 import { X, UserPlus, Loader2 } from 'lucide-react';
 import { db } from '../../firebaseConfig';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { useForm } from '../../hooks/useForm';
 import { required, phone as phoneValidator } from '../../utils/formValidation';
+import { encryptPhone } from '../../utils/encryption';
 
 interface AddStudentModalProps {
     isOpen: boolean;
@@ -50,29 +51,48 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
         validateOnBlur: true,
         onSubmit: async (formData) => {
             try {
-                // studentId 형식: "이름_학교_학년"
-                const studentId = `${formData.name.trim()}_${formData.school.trim()}_${formData.grade.trim()}`;
+                // studentId 기본 형식: "이름_학교_학년"
+                const baseId = `${formData.name.trim()}_${formData.school.trim()}_${formData.grade.trim()}`;
+                let studentId = baseId;
+                let counter = 1;
 
-                // students 컬렉션에 추가
+                // 중복 체크 및 순번 추가
+                while ((await getDoc(doc(db, 'students', studentId))).exists()) {
+                    counter++;
+                    studentId = `${baseId}_${counter}`;
+
+                    // 무한 루프 방지 (최대 100명까지 동일 이름/학교/학년)
+                    if (counter > 100) {
+                        throw new Error('동일한 학생 정보가 너무 많습니다. 관리자에게 문의하세요.');
+                    }
+                }
+
+                // students 컬렉션에 추가 (전화번호는 암호화)
                 await setDoc(doc(db, 'students', studentId), {
                     name: formData.name.trim(),
                     school: formData.school.trim(),
                     grade: formData.grade.trim(),
                     englishName: formData.englishName.trim() || null,
-                    phone: formData.phone.trim() || null,
-                    parentPhone: formData.parentPhone.trim() || null,
+                    phone: encryptPhone(formData.phone),  // 암호화
+                    parentPhone: encryptPhone(formData.parentPhone),  // 암호화
                     status: 'active',
                     enrollmentDate: Timestamp.now(),
                     createdAt: Timestamp.now(),
                     updatedAt: Timestamp.now(),
                 });
 
+                // 중복으로 순번이 추가된 경우 사용자에게 알림
+                if (counter > 1) {
+                    console.info(`동명이인으로 인해 순번 ${counter}가 추가되었습니다: ${studentId}`);
+                }
+
                 // 성공 처리
                 onSuccess();
                 handleClose();
             } catch (err) {
                 console.error('학생 추가 오류:', err);
-                setErrors({ name: '학생 추가 중 오류가 발생했습니다' });
+                const errorMessage = err instanceof Error ? err.message : '학생 추가 중 오류가 발생했습니다';
+                setErrors({ name: errorMessage });
             }
         },
     });

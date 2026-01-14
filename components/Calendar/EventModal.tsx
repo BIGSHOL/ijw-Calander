@@ -276,8 +276,20 @@ const EventModal: React.FC<EventModalProps> = ({
       // When closed, reset loaded ID so it re-initializes next time
       setLoadedEventId(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, existingEvent, initialDate, initialEndDate, initialDepartmentId, initialStartTime, initialEndTime, departments]);
+  }, [
+    isOpen,
+    existingEvent,
+    templateEvent,
+    currentUser,
+    initialDate,
+    initialEndDate,
+    initialDepartmentId,
+    initialDepartmentIds,
+    initialStartTime,
+    initialEndTime,
+    initialTitle,
+    departments
+  ]);
 
   // Load hashtag configuration from Firebase
   useEffect(() => {
