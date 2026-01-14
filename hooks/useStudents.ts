@@ -47,8 +47,15 @@ export function useStudents(includeWithdrawn = false) {
                 );
 
                 const [activeSnap, withdrawnSnap] = await Promise.all([
-                    getDocs(activeQuery),
-                    getDocs(withdrawnQuery)
+                    getDocs(activeQuery).catch(err => {
+                        console.error('Active students query failed:', err);
+                        // 빈 결과 반환하여 부분 실패 허용
+                        return { docs: [] } as any;
+                    }),
+                    getDocs(withdrawnQuery).catch(err => {
+                        console.error('Withdrawn students query failed:', err);
+                        return { docs: [] } as any;
+                    })
                 ]);
 
                 // withdrawalDate 기준 필터링 (클라이언트 사이드)
