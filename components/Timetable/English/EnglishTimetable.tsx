@@ -7,6 +7,7 @@ import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { EN_COLLECTION, EN_DRAFT_COLLECTION, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useClasses } from '../../../hooks/useClasses';
 import EnglishTeacherTab from './EnglishTeacherTab';
 import EnglishClassTab from './EnglishClassTab';
 import EnglishRoomTab from './EnglishRoomTab';
@@ -29,6 +30,7 @@ interface ScheduleCell {
     room?: string;
     teacher?: string;
     note?: string;
+    merged?: { className: string; room?: string; underline?: boolean }[];
 }
 
 type ScheduleData = Record<string, ScheduleCell>;
@@ -50,6 +52,9 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
     const canSimulation = hasPermission('timetable.english.simulation') || isMaster;
     const canViewBackup = hasPermission('timetable.english.backup.view') || isMaster;
+
+    // Fetch classes data for mainTeacher (담임) information
+    const { data: classesData } = useClasses('english');
 
     // Data loading with structure toggle support
     useEffect(() => {
@@ -107,11 +112,26 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                             const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room;
 
                             const key = `${slotTeacher}-${slot.periodId}-${slot.day}`;
-                            scheduleData[key] = {
-                                className: cls.className,
-                                room: slotRoom,
-                                teacher: slotTeacher
-                            };
+
+                            // 같은 키에 이미 수업이 있으면 merged로 추가 (합반 처리)
+                            if (scheduleData[key]) {
+                                const existing = scheduleData[key];
+                                if (!existing.merged) {
+                                    existing.merged = [];
+                                }
+                                existing.merged.push({
+                                    className: cls.className,
+                                    room: slotRoom,
+                                    underline: cls.underline || false
+                                });
+                            } else {
+                                scheduleData[key] = {
+                                    className: cls.className,
+                                    room: slotRoom,
+                                    teacher: slotTeacher,
+                                    merged: []
+                                };
+                            }
                         });
                     });
 
@@ -464,6 +484,7 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
                                 currentUser={currentUser}
                                 isSimulationMode={isSimulationMode}
                                 studentMap={studentMap}
+                                classesData={classesData}
                             />
                         )}
                         {viewType === 'room' && (

@@ -173,7 +173,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       return;
     }
     if (!teacher.trim()) {
-      setError('강사명을 입력해주세요.');
+      setError('담임을 입력해주세요.');
       return;
     }
 
@@ -287,7 +287,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">
-                담임 강사 <span className="text-red-500">*</span>
+                담임 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -375,16 +375,16 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                   className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
                 >
                   {showAdvancedSchedule ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                  교시별 강사/강의실 설정
+                  교시별 부담임/강의실 설정
                 </button>
               </div>
             )}
 
             {showAdvancedSchedule && selectedSlots.size > 0 && (
               <div className="mt-2 space-y-2">
-                {/* 교시별 강사 설정 */}
+                {/* 교시별 부담임 설정 */}
                 <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200 bg-blue-50 font-semibold">교시별 강사 (비워두면 담임)</p>
+                  <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200 bg-blue-50 font-semibold">교시별 부담임 (비워두면 담임)</p>
                   {(() => {
                     const selectedPeriods = new Set<string>();
                     selectedSlots.forEach(key => {
