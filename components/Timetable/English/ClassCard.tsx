@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Eye, EyeOff, MoreVertical, TrendingUp, ArrowUpCircle, UserPlus } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Eye, EyeOff, MoreVertical, TrendingUp, ArrowUpCircle, UserPlus, Clock } from 'lucide-react';
 
 import { TimetableStudent, Teacher, ClassKeywordColor, EnglishLevel } from '../../../types';
 import { ClassInfo } from './hooks/useEnglishClasses';
@@ -7,9 +7,21 @@ import { ClassStudentData } from './hooks/useClassStudents';
 import { MoveChange } from './hooks/useEnglishChanges';
 import { DisplayOptions } from './IntegrationViewSettings';
 import MiniGridRow from './MiniGridRow';
-import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel } from './englishUtils';
+import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, EN_PERIODS, INJAE_PERIODS } from './englishUtils';
 import StudentModal from './StudentModal';
 import LevelUpConfirmModal from './LevelUpConfirmModal';
+
+// 주말 실제 시간대 (09:00~17:00, 1시간 단위)
+const WEEKEND_PERIOD_TIMES: Record<string, string> = {
+    '1': '09:00~10:00',
+    '2': '10:00~11:00',
+    '3': '11:00~12:00',
+    '4': '12:00~13:00',
+    '5': '13:00~14:00',
+    '6': '14:00~15:00',
+    '7': '15:00~16:00',
+    '8': '16:00~17:00',
+};
 
 interface ClassCardProps {
     classInfo: ClassInfo;
@@ -31,6 +43,7 @@ interface ClassCardProps {
     classStudentData?: ClassStudentData; // Cost Optimization: Centralized fetch
     isTimeColumnOnly?: boolean;
     hideTime?: boolean;
+    useInjaePeriod?: boolean; // 뷰 설정에서 인재원 시간표 사용 여부
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -52,7 +65,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     studentMap,
     classStudentData, // Cost Optimization: Centralized fetch
     isTimeColumnOnly = false,
-    hideTime = false
+    hideTime = false,
+    useInjaePeriod = false
 }) => {
     // Width Logic:
     // Normal: 190px (includes 48px time + 142px days) -> Update logic if needed, but for now only changing hideTime width
@@ -65,6 +79,79 @@ const ClassCard: React.FC<ClassCardProps> = ({
     const [students, setStudents] = useState<TimetableStudent[]>([]);
     const [displayStudents, setDisplayStudents] = useState<TimetableStudent[]>([]);
     const [levelUpModal, setLevelUpModal] = useState<{ isOpen: boolean; type: 'number' | 'class'; newName: string }>({ isOpen: false, type: 'number', newName: '' });
+    const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
+
+    // 수업 스케줄 정보 생성 (마우스 오버 툴팁용)
+    // 인재원 시간표 사용 여부는 뷰 설정의 useInjaePeriod prop으로 전달받음
+
+    const scheduleInfo = useMemo(() => {
+        const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+        const scheduleByDay: Record<string, { periods: string[]; times: string[] }> = {};
+
+        // 인재원 시간표 설정이 적용된 그룹은 INJAE_PERIODS, 일반은 EN_PERIODS 사용
+        const periodsToUse = useInjaePeriod ? INJAE_PERIODS : EN_PERIODS;
+
+        // scheduleMap에서 요일별 교시와 시간 정보 추출
+        Object.entries(classInfo.scheduleMap).forEach(([periodId, dayMap]) => {
+            Object.keys(dayMap).forEach(day => {
+                if (!scheduleByDay[day]) {
+                    scheduleByDay[day] = { periods: [], times: [] };
+                }
+
+                const isWeekend = day === '토' || day === '일';
+                const period = periodsToUse.find(p => p.id === periodId);
+
+                // 주말은 실제 시간대(09:00~17:00)로 표시, 평일은 수업 유형에 맞는 시간대 사용
+                let timeStr: string;
+                if (isWeekend) {
+                    timeStr = WEEKEND_PERIOD_TIMES[periodId] || period?.time || '';
+                } else {
+                    timeStr = period?.time || '';
+                }
+
+                // 시간 정보가 없으면 스킵
+                if (!timeStr) return;
+
+                if (!scheduleByDay[day].periods.includes(periodId)) {
+                    scheduleByDay[day].periods.push(periodId);
+                    scheduleByDay[day].times.push(timeStr);
+                }
+            });
+        });
+
+        // 요일 순서대로 정렬하여 반환
+        const sortedDays = Object.keys(scheduleByDay).sort(
+            (a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b)
+        );
+
+        return sortedDays.map(day => {
+            const info = scheduleByDay[day];
+            // 유효한 시간 정보만 필터링
+            const validTimes = info.times.filter(t => t && t.includes('~'));
+            if (validTimes.length === 0) return { day, timeRange: '시간 미정' };
+
+            // 시간 순서대로 정렬
+            const sortedIndices = info.periods
+                .map((p, i) => ({ period: parseInt(p), index: i }))
+                .filter(item => info.times[item.index] && info.times[item.index].includes('~'))
+                .sort((a, b) => a.period - b.period);
+
+            if (sortedIndices.length === 0) return { day, timeRange: '시간 미정' };
+
+            const sortedTimes = sortedIndices.map(item => info.times[item.index]);
+            const firstTime = sortedTimes[0];
+            const lastTime = sortedTimes[sortedTimes.length - 1];
+
+            const startTime = firstTime.split('~')[0];
+            const endTime = lastTime.split('~')[1];
+
+            const timeRange = sortedTimes.length > 1
+                ? `${startTime}~${endTime}`
+                : firstTime;
+
+            return { day, timeRange };
+        }).filter(item => item.timeRange !== '시간 미정');
+    }, [classInfo.scheduleMap, useInjaePeriod]);
 
     // Drag Handlers
     const handleDragOver = (e: React.DragEvent) => {
@@ -166,10 +253,35 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
                     return (
                         <div
-                            className="p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group"
+                            className="p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group cursor-help"
                             style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor } : { backgroundColor: '#EFF6FF', color: '#1F2937' }}
+                            onMouseEnter={() => setShowScheduleTooltip(true)}
+                            onMouseLeave={() => setShowScheduleTooltip(false)}
                         >
                             {classInfo.name}
+
+                            {/* Schedule Tooltip (마우스 오버 시 실제 스케줄 표시) */}
+                            {showScheduleTooltip && scheduleInfo.length > 0 && (
+                                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 p-2 min-w-[140px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
+                                    <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-700">
+                                        <Clock size={12} className="text-yellow-400" />
+                                        <span className="font-bold">수업 시간</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        {scheduleInfo.map(({ day, timeRange }) => (
+                                            <div key={day} className="flex justify-between gap-3">
+                                                <span className={`font-bold ${day === '토' || day === '일' ? 'text-red-400' : 'text-blue-300'}`}>
+                                                    {day}
+                                                </span>
+                                                <span className="text-gray-200">{timeRange}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {/* 툴팁 화살표 */}
+                                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                                </div>
+                            )}
+
                             {/* Edit Controls: Menu & Hide (Edit Mode Only) */}
                             {mode === 'edit' && (
                                 <>

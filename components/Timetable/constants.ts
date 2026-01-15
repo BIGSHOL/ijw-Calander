@@ -45,6 +45,44 @@ export const ENGLISH_PERIOD_INFO: Record<string, PeriodInfo> = {
 // 기본 교시 정보 (수학 기준, 하위 호환용)
 export const PERIOD_INFO: Record<string, PeriodInfo> = MATH_PERIOD_INFO;
 
+// 주말 교시 정보 (9시부터 1시간 단위, 8교시)
+// 레거시 키('1-1', '1-2' 등)도 호환성을 위해 포함
+export const WEEKEND_PERIOD_INFO: Record<string, PeriodInfo> = {
+    // 통일된 교시 ID
+    '1': { id: '1', label: '1교시', time: '09:00~10:00', startTime: '09:00', endTime: '10:00' },
+    '2': { id: '2', label: '2교시', time: '10:00~11:00', startTime: '10:00', endTime: '11:00' },
+    '3': { id: '3', label: '3교시', time: '11:00~12:00', startTime: '11:00', endTime: '12:00' },
+    '4': { id: '4', label: '4교시', time: '12:00~13:00', startTime: '12:00', endTime: '13:00' },
+    '5': { id: '5', label: '5교시', time: '13:00~14:00', startTime: '13:00', endTime: '14:00' },
+    '6': { id: '6', label: '6교시', time: '14:00~15:00', startTime: '14:00', endTime: '15:00' },
+    '7': { id: '7', label: '7교시', time: '15:00~16:00', startTime: '15:00', endTime: '16:00' },
+    '8': { id: '8', label: '8교시', time: '16:00~17:00', startTime: '16:00', endTime: '17:00' },
+    // 레거시 교시 ID (수학 시간표 호환용)
+    '1-1': { id: '1-1', label: '1교시', time: '09:00~10:00', startTime: '09:00', endTime: '10:00' },
+    '1-2': { id: '1-2', label: '2교시', time: '10:00~11:00', startTime: '10:00', endTime: '11:00' },
+    '2-1': { id: '2-1', label: '3교시', time: '11:00~12:00', startTime: '11:00', endTime: '12:00' },
+    '2-2': { id: '2-2', label: '4교시', time: '12:00~13:00', startTime: '12:00', endTime: '13:00' },
+    '3-1': { id: '3-1', label: '5교시', time: '13:00~14:00', startTime: '13:00', endTime: '14:00' },
+    '3-2': { id: '3-2', label: '6교시', time: '14:00~15:00', startTime: '14:00', endTime: '15:00' },
+    '4-1': { id: '4-1', label: '7교시', time: '15:00~16:00', startTime: '15:00', endTime: '16:00' },
+    '4-2': { id: '4-2', label: '8교시', time: '16:00~17:00', startTime: '16:00', endTime: '17:00' },
+};
+
+// 주말용 교시 목록 (수학/영어 공용)
+export const WEEKEND_UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+// 주말용 레거시 교시 시간 (수학 시간표 호환용)
+export const WEEKEND_PERIOD_TIMES: Record<string, string> = {
+    '1-1': '09:00~10:00',
+    '1-2': '10:00~11:00',
+    '2-1': '11:00~12:00',
+    '2-2': '12:00~13:00',
+    '3-1': '13:00~14:00',
+    '3-2': '14:00~15:00',
+    '4-1': '15:00~16:00',
+    '4-2': '16:00~17:00',
+};
+
 // periodId로 시간 정보 가져오기
 export const getPeriodTime = (periodId: string, subject?: 'math' | 'english'): string => {
     const info = subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
@@ -167,7 +205,15 @@ export const formatScheduleCompact = (
     if (!schedule || schedule.length === 0) return '시간 미정';
 
     const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
-    const periodInfo = subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
+    const weekdayPeriodInfo = subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
+
+    // 요일에 따라 적절한 period info 선택
+    const getPeriodInfoForDay = (day: string) => {
+        if (day === '토' || day === '일') {
+            return WEEKEND_PERIOD_INFO;
+        }
+        return weekdayPeriodInfo;
+    };
 
     // 요일별로 periodId 수집
     const dayPeriods: Map<string, string[]> = new Map();
@@ -176,6 +222,7 @@ export const formatScheduleCompact = (
         const parts = item.split(' ');
         const day = parts[0];
         const periodId = parts[1] || '';
+        const periodInfo = getPeriodInfoForDay(day);
         if (!periodId || !periodInfo[periodId]) continue;
 
         if (!dayPeriods.has(day)) {
@@ -191,9 +238,17 @@ export const formatScheduleCompact = (
 
     for (const [day, periods] of dayPeriods) {
         const sortedPeriods = periods.sort((a, b) => Number(a) - Number(b));
-        const label = subject === 'english'
-            ? formatEnglishPeriodsToLabel(sortedPeriods, showTime)
-            : formatMathPeriodsToLabel(sortedPeriods, showTime);
+        const isWeekend = day === '토' || day === '일';
+
+        // 주말은 시간 표시, 평일은 기존 로직
+        let label: string;
+        if (isWeekend) {
+            label = formatWeekendPeriodsToLabel(sortedPeriods, showTime);
+        } else if (subject === 'english') {
+            label = formatEnglishPeriodsToLabel(sortedPeriods, showTime);
+        } else {
+            label = formatMathPeriodsToLabel(sortedPeriods, showTime);
+        }
         dayLabels.set(day, label);
     }
 
@@ -262,6 +317,29 @@ function formatMathPeriodsToLabel(periods: string[], showTime: boolean): string 
         const endTime = times[times.length - 1].endTime;
         return `${startTime}~${endTime}`;
     }
+}
+
+/**
+ * 주말 periodId 배열을 라벨로 변환
+ * - 9:00부터 1시간 단위 (1=09:00~10:00, 2=10:00~11:00, ...)
+ * - 주말은 시간 범위로 표시 (09:00~12:00)
+ */
+function formatWeekendPeriodsToLabel(periods: string[], showTime: boolean): string {
+    if (periods.length === 0) return '시간 미정';
+
+    // 시간순으로 정렬하기 위해 PeriodInfo 기준으로 정렬
+    const times = periods
+        .map(p => WEEKEND_PERIOD_INFO[p])
+        .filter(Boolean)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+    if (times.length === 0) return '시간 미정';
+
+    const startTime = times[0].startTime;
+    const endTime = times[times.length - 1].endTime;
+
+    // 주말은 항상 시간 형식으로만 표시 (09:00~12:00)
+    return `${startTime}~${endTime}`;
 }
 
 /**

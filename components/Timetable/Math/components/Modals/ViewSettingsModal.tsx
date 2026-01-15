@@ -1,6 +1,8 @@
 import React from 'react';
 import { X } from 'lucide-react';
 
+export type GridViewMode = 'teacher-day' | 'day-teacher';
+
 interface ViewSettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -18,6 +20,8 @@ interface ViewSettingsModalProps {
     setShowGrade: (show: boolean) => void;
     showEmptyRooms: boolean;
     setShowEmptyRooms: (show: boolean) => void;
+    gridViewMode?: GridViewMode;
+    setGridViewMode?: (mode: GridViewMode) => void;
 }
 
 const ViewSettingsModal: React.FC<ViewSettingsModalProps> = ({
@@ -36,7 +40,9 @@ const ViewSettingsModal: React.FC<ViewSettingsModalProps> = ({
     showGrade,
     setShowGrade,
     showEmptyRooms,
-    setShowEmptyRooms
+    setShowEmptyRooms,
+    gridViewMode,
+    setGridViewMode
 }) => {
     if (!isOpen) return null;
 

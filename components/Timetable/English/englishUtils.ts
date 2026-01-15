@@ -32,9 +32,13 @@ export const INJAE_PERIODS = [
     { id: '10', label: '10교시', time: '21:05~22:00' },
 ] as const;
 
-// 인재원 수업 판별 (수업명에 'E_' 포함)
+// 인재원 수업 판별 (수업명이 '중등E_중' 또는 '고등E_' 형태)
+// 예: 중등E_중1 정규A (O), 중등E_초6 SKY (X)
 export const isInjaeClass = (className: string): boolean => {
-    return className?.includes('E_') || false;
+    if (!className) return false;
+    // 중등 인재원: "중등E_중" 으로 시작 (중등E_중1, 중등E_중2 등)
+    // 고등 인재원: "고등E_" 로 시작
+    return className.includes('중등E_중') || className.includes('고등E_');
 };
 
 // 드래그 이동 제외 대상 확인 (퇴원생, 신입생 등)

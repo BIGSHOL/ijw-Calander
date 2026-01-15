@@ -8,7 +8,6 @@ import { format, addDays, startOfWeek, addWeeks, subWeeks, getWeek, getMonth, ge
 import { ko } from 'date-fns/locale';
 import EnglishTimetable from './English/EnglishTimetable';
 import TeacherOrderModal from './English/TeacherOrderModal';
-import WeekdayOrderModal from './WeekdayOrderModal';
 import MathStudentModal from './Math/MathStudentModal';
 import { useMathConfig } from './Math/hooks/useMathConfig';
 import { useTimetableClasses } from './Math/hooks/useTimetableClasses';
@@ -22,7 +21,6 @@ import ClassDetailModal from './Math/components/Modals/ClassDetailModal';
 import ViewSettingsModal from './Math/components/Modals/ViewSettingsModal';
 import TimetableGrid from './Math/components/TimetableGrid';
 import { ALL_WEEKDAYS, MATH_PERIODS, MATH_PERIOD_TIMES, ENGLISH_PERIODS } from './constants';
-import { getSubjectTheme } from './Math/utils/gridUtils';
 
 
 
@@ -217,15 +215,63 @@ const TimetableManager = ({
     const [newStudentGrade, setNewStudentGrade] = useState('');
     const [newStudentSchool, setNewStudentSchool] = useState('');
 
-    // View Settings State
+    // View Settings State - 로컬 스토리지에서 초기값 로드
     const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
-    const [showClassName, setShowClassName] = useState(true);
-    const [showSchool, setShowSchool] = useState(false);
-    const [showGrade, setShowGrade] = useState(true);
-    const [showEmptyRooms, setShowEmptyRooms] = useState(false);
-    const [columnWidth, setColumnWidth] = useState<'narrow' | 'normal' | 'wide'>('normal');
-    const [rowHeight, setRowHeight] = useState<'short' | 'normal' | 'tall' | 'very-tall'>('normal');
-    const [fontSize, setFontSize] = useState<'small' | 'normal' | 'large' | 'very-large'>('normal');
+
+    // 로컬 스토리지 키
+    const VIEW_SETTINGS_KEY = 'timetable_view_settings';
+
+    // 로컬 스토리지에서 뷰 설정 로드
+    const loadViewSettings = () => {
+        try {
+            const saved = localStorage.getItem(VIEW_SETTINGS_KEY);
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (e) {
+            console.warn('Failed to load view settings from localStorage:', e);
+        }
+        return null;
+    };
+
+    const savedSettings = loadViewSettings();
+
+    // Timetable View Mode: 'day-based' (월화수목금토일) vs 'teacher-based' (월목/화금/주말/수요일)
+    const [timetableViewMode, setTimetableViewMode] = useState<'day-based' | 'teacher-based'>(
+        savedSettings?.timetableViewMode || 'teacher-based'
+    );
+    const [showClassName, setShowClassName] = useState(savedSettings?.showClassName ?? true);
+    const [showSchool, setShowSchool] = useState(savedSettings?.showSchool ?? false);
+    const [showGrade, setShowGrade] = useState(savedSettings?.showGrade ?? true);
+    const [showEmptyRooms, setShowEmptyRooms] = useState(savedSettings?.showEmptyRooms ?? false);
+    const [columnWidth, setColumnWidth] = useState<'narrow' | 'normal' | 'wide'>(
+        savedSettings?.columnWidth || 'normal'
+    );
+    const [rowHeight, setRowHeight] = useState<'short' | 'normal' | 'tall' | 'very-tall'>(
+        savedSettings?.rowHeight || 'normal'
+    );
+    const [fontSize, setFontSize] = useState<'small' | 'normal' | 'large' | 'very-large'>(
+        savedSettings?.fontSize || 'normal'
+    );
+
+    // 뷰 설정이 변경될 때마다 로컬 스토리지에 저장
+    useEffect(() => {
+        const settings = {
+            timetableViewMode,
+            showClassName,
+            showSchool,
+            showGrade,
+            showEmptyRooms,
+            columnWidth,
+            rowHeight,
+            fontSize
+        };
+        try {
+            localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(settings));
+        } catch (e) {
+            console.warn('Failed to save view settings to localStorage:', e);
+        }
+    }, [timetableViewMode, showClassName, showSchool, showGrade, showEmptyRooms, columnWidth, rowHeight, fontSize]);
 
     // Hook Integration: Drag & Drop
     const {
@@ -279,12 +325,22 @@ const TimetableManager = ({
     const goToNextWeek = () => setCurrentMonday(prev => addWeeks(prev, 1));
     const goToThisWeek = () => setCurrentMonday(startOfWeek(new Date(), { weekStartsOn: 1 }));
 
-    // Week label (e.g., "2025년 12월 4주차")
+    // Week label (e.g., "2025년 12월 4주차 (16일~22일)")
     const weekLabel = useMemo(() => {
         const year = getYear(currentMonday);
         const month = getMonth(currentMonday) + 1; // 0-indexed
         const weekOfMonth = Math.ceil((currentMonday.getDate() + new Date(year, getMonth(currentMonday), 1).getDay()) / 7);
-        return `${year}년 ${month}월 ${weekOfMonth}주차`;
+        const sunday = addDays(currentMonday, 6);
+        const startDay = currentMonday.getDate();
+        const endDay = sunday.getDate();
+        const endMonth = getMonth(sunday) + 1;
+
+        // 같은 달이면 "16일~22일", 다른 달이면 "29일~1/4일"
+        const dateRange = month === endMonth
+            ? `${startDay}일~${endDay}일`
+            : `${startDay}일~${endMonth}/${endDay}일`;
+
+        return `${year}년 ${month}월 ${weekOfMonth}주차 (${dateRange})`;
     }, [currentMonday]);
 
     // Subscribe to Classes
@@ -453,16 +509,13 @@ const TimetableManager = ({
                 setSelectedDays={setSelectedDays}
                 viewType={viewType}
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
-                setIsWeekdayOrderModalOpen={setIsWeekdayOrderModalOpen}
                 setIsViewSettingsOpen={setIsViewSettingsOpen}
                 pendingMovesCount={pendingMoves.length}
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}
                 isSaving={isSaving}
-                subjectTab={subjectTab}
-                canEditMath={canEditMath}
-                canEditEnglish={canEditEnglish}
-                onAddClass={openAddModal}
+                timetableViewMode={timetableViewMode}
+                setTimetableViewMode={setTimetableViewMode}
             />
 
             {/* Timetable Grid */}
@@ -492,32 +545,10 @@ const TimetableManager = ({
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     currentSubjectFilter={currentSubjectFilter}
-                    studentMap={studentMap} // Pass map to grid
+                    studentMap={studentMap}
+                    timetableViewMode={timetableViewMode}
                 />
             </div>
-
-            {/* Class List Summary */}
-            < div className="mt-3 pt-3 border-t border-gray-200 flex-shrink-0" >
-                <div className="flex flex-wrap gap-1.5">
-                    {filteredClasses.slice(0, 10).map(cls => {
-                        const theme = getSubjectTheme(cls.subject);
-                        return (
-                            <div
-                                key={cls.id}
-                                onClick={() => canEditMath && setSelectedClass(cls)}
-                                className={`flex items-center gap-1 px-2 py-1 ${theme.bg} ${theme.border} border rounded text-xxs font-bold ${canEditMath ? 'cursor-pointer hover:brightness-95' : ''}`}
-                            >
-
-                                <span className={theme.text}>{cls.className}</span>
-                                <span className="text-gray-400">({(cls.studentIds || []).length})</span>
-                            </div>
-                        );
-                    })}
-                    {filteredClasses.length > 10 && (
-                        <span className="text-xxs text-gray-400 self-center">+{filteredClasses.length - 10}개</span>
-                    )}
-                </div>
-            </div >
 
             {/* Add Class Modal */}
             <AddClassModal
@@ -590,15 +621,6 @@ const TimetableManager = ({
                 currentOrder={mathConfig.teacherOrder}
                 allTeachers={sortedTeachers}
                 onSave={handleSaveTeacherOrder}
-            />
-
-            {/* Weekday Order Modal */}
-            <WeekdayOrderModal
-                isOpen={isWeekdayOrderModalOpen}
-                onClose={() => setIsWeekdayOrderModalOpen(false)}
-                currentOrder={mathConfig.weekdayOrder}
-                allWeekdays={ALL_WEEKDAYS}
-                onSave={handleSaveWeekdayOrder}
             />
         </div >
     );

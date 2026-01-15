@@ -2270,7 +2270,7 @@ const App: React.FC = () => {
           ) : appMode === 'classes' ? (
             /* Class Management View */
             <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
+              <div className="w-full flex-1 min-h-0 overflow-hidden">
                 <ClassManagementTab />
               </div>
             </Suspense>

@@ -23,6 +23,7 @@ export interface ClassDetail {
   students: ClassStudent[];
   room?: string;
   slotTeachers?: Record<string, string>;  // { "월-4": "부담임명", ... }
+  memo?: string;  // 수업 메모
 }
 
 /**
@@ -47,6 +48,7 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
       let schedule: string[] = [];
       let room = '';
       let slotTeachers: Record<string, string> = {};
+      let memo = '';
 
       // 1. classes 컬렉션에서 수업 정보 조회 (우선)
       try {
@@ -62,6 +64,7 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
           teacher = classDoc.teacher || '';
           room = classDoc.room || '';
           slotTeachers = classDoc.slotTeachers || {};
+          memo = classDoc.memo || '';
           // schedule이 ScheduleSlot[] 형식이면 문자열로 변환
           if (classDoc.schedule && Array.isArray(classDoc.schedule)) {
             if (typeof classDoc.schedule[0] === 'object') {
@@ -141,6 +144,7 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
         students,
         room,
         slotTeachers,
+        memo,
       };
     },
     enabled: !!className && !!subject, // className과 subject가 있을 때만 실행

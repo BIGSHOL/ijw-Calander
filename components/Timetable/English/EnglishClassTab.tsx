@@ -65,7 +65,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [isLevelSettingsOpen, setIsLevelSettingsOpen] = useState(false);
     const [openMenuClass, setOpenMenuClass] = useState<string | null>(null);
     const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
-    const [isTooltipVisible, setIsTooltipVisible] = useState(false);
 
     // --- Hook Integration ---
     // 1. Settings & Levels
@@ -91,22 +90,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             .sort((a, b) => a.startPeriod - b.startPeriod || a.name.localeCompare(b.name, 'ko'));
     }, [rawClasses, searchTerm]);
     // --- End Hook Integration ---
-
-
-
-    useEffect(() => {
-        const hasSeenGuide = storage.getBoolean(STORAGE_KEYS.ENGLISH_TIMETABLE_GUIDE_SHOWN, false);
-        if (!hasSeenGuide) {
-            // Show tooltip after a slight delay to draw attention
-            const timer = setTimeout(() => setIsTooltipVisible(true), 1000);
-            return () => clearTimeout(timer);
-        }
-    }, []);
-
-    const dismissTooltip = () => {
-        setIsTooltipVisible(false);
-        storage.setBoolean(STORAGE_KEYS.ENGLISH_TIMETABLE_GUIDE_SHOWN, true);
-    };
 
 
 
@@ -381,31 +364,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                         )}
                     </div>
 
-                    {/* Guide Tooltip */}
-                    {isTooltipVisible && (
-                        <div className="absolute top-full right-0 mt-2 bg-indigo-600 text-white text-xs p-3 rounded-lg shadow-xl z-50 w-64 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div className="absolute top-[-4px] right-4 w-2 h-2 bg-indigo-600 rotate-45"></div>
-                            <div className="flex flex-col gap-2">
-                                <div className="font-bold flex items-center gap-1">
-                                    💡 보기 설정이 여기로 이동했어요!
-                                </div>
-                                <p className="leading-relaxed opacity-90">
-                                    학생 목록, 강의실, 담임 정보 표시 여부를<br />
-                                    여기서 개별적으로 설정할 수 있습니다.
-                                </p>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        dismissTooltip();
-                                    }}
-                                    className="self-end bg-white/20 hover:bg-white/30 px-2 py-1 rounded text-xxs font-bold transition-colors"
-                                >
-                                    알겠습니다
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
                     {mode === 'edit' && canEditEnglish && (
                         <button
                             onClick={() => setIsSettingsOpen(true)}
@@ -518,6 +476,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 // Cost Optimization: Centralized student data
                                                 classStudentData={classDataMap[cls.name]}
                                                 hideTime={true}
+                                                useInjaePeriod={group.useInjaePeriod}
                                             />
                                         ))}
                                     </div>

@@ -24,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -113,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Navigation Groups */}
-      <nav 
+      <nav
         className="flex-1 overflow-y-auto p-3"
         role="navigation"
         aria-label="주 메뉴 탐색"
@@ -131,7 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   {group.label}
                 </div>
               )}
-              
+
               {isCollapsed && (
                 <div className="w-full h-px bg-gray-200 mb-2" aria-hidden="true" />
               )}
@@ -146,11 +146,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       key={tab}
                       onClick={() => onTabSelect(tab)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        isActive
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
                           ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                           : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                      } ${isCollapsed ? 'justify-center' : ''}`}
+                        } ${isCollapsed ? 'justify-center' : ''}`}
                       aria-label={`${meta.label} 탭으로 이동`}
                       aria-current={isActive ? 'page' : undefined}
                       title={isCollapsed ? meta.label : undefined}
@@ -185,9 +184,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 ${
-          isCollapsed ? 'w-[72px]' : 'w-[280px]'
-        }`}
+        className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 sticky top-0 h-screen ${isCollapsed ? 'w-[72px]' : 'w-[280px]'
+          }`}
         aria-label="사이드바 메뉴"
       >
         {sidebarContent}
@@ -204,9 +202,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Mobile Sidebar */}
       <aside
-        className={`md:hidden fixed left-0 top-0 bottom-0 w-[280px] bg-white z-40 flex flex-col transform transition-transform duration-300 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`md:hidden fixed left-0 top-0 bottom-0 w-[280px] bg-white z-40 flex flex-col transform transition-transform duration-300 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
         aria-label="모바일 사이드바 메뉴"
       >
         {sidebarContent}
