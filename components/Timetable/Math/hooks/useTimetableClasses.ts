@@ -33,7 +33,6 @@ export const useTimetableClasses = () => {
                 );
                 const snapshot = await getDocs(q);
                 setUnifiedClassesCount(snapshot.size);
-                console.log(`[useTimetableClasses] Unified classes count: ${snapshot.size}`);
             } catch (error) {
                 console.error('[useTimetableClasses] Error checking unified collection:', error);
                 setUnifiedClassesCount(0);
@@ -54,7 +53,6 @@ export const useTimetableClasses = () => {
 
         // 통일된 컬렉션에 데이터가 있으면 사용
         if (unifiedClassesCount > 0) {
-            console.log('[useTimetableClasses] Using unified classes collection');
             const q = query(
                 collection(db, COL_CLASSES_NEW),
                 where('isActive', '==', true)

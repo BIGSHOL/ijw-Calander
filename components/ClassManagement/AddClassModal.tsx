@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Plus, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCreateClass, CreateClassData } from '../../hooks/useClassMutations';
 import { useStudents } from '../../hooks/useStudents';
+import { useClasses } from '../../hooks/useClasses';
 import { SUBJECT_LABELS } from '../../utils/styleUtils';
 import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
@@ -11,7 +12,7 @@ interface AddClassModalProps {
   defaultSubject?: 'math' | 'english';
 }
 
-const WEEKDAYS = ['월', '화', '수', '목', '금', '토'];
+const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
 
 // 슬롯 정렬 함수 (월화수목금토일 순 → 교시 순)
@@ -49,6 +50,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
   const { students, loading: studentsLoading } = useStudents(false);
   const createClassMutation = useCreateClass();
   const { data: teachersData } = useTeachers();
+  const { data: existingClasses } = useClasses(subject); // 해당 과목의 기존 수업 목록
 
   // 강사 색상 가져오기
   const getTeacherColor = (teacherName: string) => {
@@ -125,6 +127,16 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
       return;
     }
 
+    // 중복 수업명 검사
+    const trimmedClassName = className.trim();
+    const isDuplicate = existingClasses?.some(
+      cls => cls.className.toLowerCase() === trimmedClassName.toLowerCase()
+    );
+    if (isDuplicate) {
+      setError(`"${trimmedClassName}" 수업명이 이미 존재합니다. 다른 이름을 사용해주세요.`);
+      return;
+    }
+
     setError('');
 
     // 스케줄 변환
@@ -171,7 +183,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
         <div className="bg-[#081429] text-white px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">

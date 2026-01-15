@@ -19,6 +19,7 @@ export interface ClassInfo {
     room?: string;
     slotTeachers?: Record<string, string>;
     slotRooms?: Record<string, string>;
+    memo?: string;
 }
 
 /**
@@ -56,9 +57,9 @@ export const useClasses = (subject?: SubjectType) => {
                 return classes;
             }
         },
-        staleTime: 1000 * 60 * 10,
+        staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 30,
-        refetchOnMount: false,
+        refetchOnWindowFocus: false,
     });
 };
 
@@ -102,6 +103,7 @@ async function fetchClassesFromUnifiedCollection(subject?: SubjectType): Promise
             room: data.room,
             slotTeachers: data.slotTeachers,
             slotRooms: data.slotRooms,
+            memo: data.memo,
         };
     });
 

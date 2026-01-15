@@ -177,7 +177,8 @@ export const useEnglishClasses = (
             if (cell.merged && cell.merged.length > 0) {
                 cell.merged.forEach(m => {
                     if (m.className) {
-                        processClassEntry(m.className, m.room || '', cell.teacher || '', day, m.underline);
+                        // merged 수업은 자체 teacher가 있으면 사용, 없으면 메인 셀의 teacher 사용
+                        processClassEntry(m.className, m.room || '', m.teacher || cell.teacher || '', day, m.underline);
                     }
                 });
             }

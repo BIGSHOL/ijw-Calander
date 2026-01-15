@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Edit, ChevronDown, ChevronUp, Users, UserMinus } from 'lucide-react';
 import { useUpdateClass, UpdateClassData, useManageClassStudents } from '../../hooks/useClassMutations';
-import { ClassInfo } from '../../hooks/useClasses';
+import { ClassInfo, useClasses } from '../../hooks/useClasses';
 import { useClassDetail, ClassStudent } from '../../hooks/useClassDetail';
 import { useStudents } from '../../hooks/useStudents';
 import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
@@ -11,16 +11,17 @@ import { useTeachers } from '../../hooks/useFirebaseQueries';
 interface EditClassModalProps {
   classInfo: ClassInfo;
   initialSlotTeachers?: Record<string, string>;
-  onClose: (saved?: boolean) => void;
+  onClose: (saved?: boolean, newClassName?: string) => void;
 }
 
-const WEEKDAYS = ['월', '화', '수', '목', '금', '토'];
+const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
 
 const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotTeachers, onClose }) => {
   const [className, setClassName] = useState(classInfo.className);
   const [teacher, setTeacher] = useState(classInfo.teacher);
   const [room, setRoom] = useState(classInfo.room || '');
+  const [memo, setMemo] = useState('');
 
   // 스케줄 그리드
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
@@ -41,6 +42,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const { data: teachersData } = useTeachers();
   const { data: classDetail } = useClassDetail(classInfo.className, classInfo.subject);
   const { students: allStudents, loading: studentsLoading } = useStudents(false);
+  const { data: existingClasses } = useClasses(classInfo.subject); // 해당 과목의 기존 수업 목록
 
   // 현재 등록된 학생 목록
   const currentStudents = classDetail?.students || [];
@@ -108,6 +110,13 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       setSlotRooms(classInfo.slotRooms);
     }
   }, [classInfo.schedule, classInfo.slotTeachers, classInfo.slotRooms]);
+
+  // classDetail에서 메모 로드
+  useEffect(() => {
+    if (classDetail?.memo) {
+      setMemo(classDetail.memo);
+    }
+  }, [classDetail?.memo]);
 
   // 슬롯 토글
   const toggleSlot = (day: string, periodId: string) => {
@@ -177,6 +186,19 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       return;
     }
 
+    // 중복 수업명 검사 (자기 자신 제외)
+    const trimmedClassName = className.trim();
+    const originalClassName = classInfo.className;
+    if (trimmedClassName.toLowerCase() !== originalClassName.toLowerCase()) {
+      const isDuplicate = existingClasses?.some(
+        cls => cls.className.toLowerCase() === trimmedClassName.toLowerCase()
+      );
+      if (isDuplicate) {
+        setError(`"${trimmedClassName}" 수업명이 이미 존재합니다. 다른 이름을 사용해주세요.`);
+        return;
+      }
+    }
+
     setError('');
 
     // 스케줄 변환
@@ -210,6 +232,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       newRoom: room.trim(),
       slotTeachers: filteredSlotTeachers,
       slotRooms: filteredSlotRooms,
+      memo: memo.trim(),
     };
 
     try {
@@ -228,7 +251,9 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         });
       }
 
-      onClose(true);
+      // 수업명이 변경되었으면 새 수업명 전달
+      const classNameChanged = className.trim() !== classInfo.className;
+      onClose(true, classNameChanged ? className.trim() : undefined);
     } catch (err) {
       console.error('[EditClassModal] Error updating class:', err);
       setError('수업 수정에 실패했습니다.');
@@ -347,11 +372,10 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                           key={key}
                           type="button"
                           onClick={() => toggleSlot(day, periodId)}
-                          className={`p-1 transition-colors text-[10px] min-h-[24px] border-r border-gray-200 last:border-r-0 ${
-                            isSelected
+                          className={`p-1 transition-colors text-[10px] min-h-[24px] border-r border-gray-200 last:border-r-0 ${isSelected
                               ? 'font-semibold'
                               : 'hover:bg-gray-100 text-gray-300'
-                          }`}
+                            }`}
                           style={isSelected ? {
                             backgroundColor: colors.bgColor,
                             color: colors.textColor
@@ -471,6 +495,18 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
             )}
           </div>
 
+          {/* 메모 */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">메모</label>
+            <textarea
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="수업에 대한 메모를 입력하세요..."
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none resize-none"
+            />
+          </div>
+
           {/* 학생 관리 섹션 */}
           <div>
             <button
@@ -511,9 +547,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                         return (
                           <div
                             key={student.id}
-                            className={`flex items-center justify-between px-2.5 py-1.5 text-sm ${
-                              isMarkedForRemoval ? 'bg-red-50 line-through text-gray-400' : 'hover:bg-gray-50'
-                            }`}
+                            className={`flex items-center justify-between px-2.5 py-1.5 text-sm ${isMarkedForRemoval ? 'bg-red-50 line-through text-gray-400' : 'hover:bg-gray-50'
+                              }`}
                           >
                             <div className="flex items-center gap-2">
                               <span className={isMarkedForRemoval ? 'text-gray-400' : 'text-gray-800'}>
@@ -524,11 +559,10 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                             <button
                               type="button"
                               onClick={() => toggleRemoveStudent(student.id)}
-                              className={`p-1 rounded transition-colors ${
-                                isMarkedForRemoval
+                              className={`p-1 rounded transition-colors ${isMarkedForRemoval
                                   ? 'text-blue-600 hover:bg-blue-100'
                                   : 'text-red-500 hover:bg-red-100'
-                              }`}
+                                }`}
                               title={isMarkedForRemoval ? '제거 취소' : '수업에서 제외'}
                             >
                               {isMarkedForRemoval ? (

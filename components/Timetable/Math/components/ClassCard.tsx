@@ -39,6 +39,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
 }) => {
     const theme = getSubjectTheme(cls.subject);
     const hasSearchMatch = searchQuery && cls.studentList?.some(s => s.name.includes(searchQuery));
+
     const sortedStudents = useMemo(() => {
         if (!cls.studentIds) return cls.studentList && cls.studentList.length > 0 ? [...cls.studentList].sort((a, b) => a.name.localeCompare(b.name, 'ko')) : [];
 
@@ -54,21 +55,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
             onDragOver={(e) => canEdit && onDragOver(e, cls.id)}
             onDragLeave={canEdit ? onDragLeave : undefined}
             onDrop={(e) => canEdit && onDrop(e, cls.id)}
-            className={`flex flex-col rounded-lg border ${theme.border} ${theme.bg} overflow-hidden shadow-sm transition-all mb-1 ${dragOverClassId === cls.id ? 'ring-2 ring-indigo-400 scale-[1.02]' : (canEdit ? 'hover:shadow-md cursor-pointer' : '')} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
-            style={{
-                minHeight: span > 1 ? `${span * 80}px` : undefined
-            }}
+            className={`flex flex-col h-full rounded-lg border ${theme.border} ${theme.bg} overflow-hidden shadow-sm transition-all ${dragOverClassId === cls.id ? 'ring-2 ring-indigo-400 scale-[1.02]' : (canEdit ? 'hover:shadow-md cursor-pointer' : '')} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
         >
             {/* Class Name Header */}
             {showClassName && (
                 <div className={`text-center font-bold py-1 px-1 text-xxs border-b ${theme.border} bg-white/50 text-gray-800`}>
-                    ({cls.className})
+                    {cls.className}
                 </div>
             )}
 
             {/* Student List */}
             {showStudents && (
-                <div className="flex-1 p-1 max-h-[150px] overflow-y-auto">
+                <div className="flex-1 p-1 overflow-y-auto">
                     <ul className="flex flex-col gap-0.5">
                         {sortedStudents.map(s => {
                             const isHighlighted = searchQuery && s.name.includes(searchQuery);
@@ -99,7 +97,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             )}
 
             {/* Footer with Student Count */}
-            <div className={`text-center py-1 font-bold border-t ${theme.border} ${theme.bg} text-micro ${theme.text}`}>
+            <div className={`text-center py-1 font-bold border-t ${theme.border} ${theme.bg} text-micro ${theme.text} mt-auto`}>
                 총 {cls.studentList?.length || 0}명
             </div>
         </div>

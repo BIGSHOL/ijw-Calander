@@ -1,7 +1,199 @@
 import React from 'react';
 import { ClassInfo } from '../../hooks/useClasses';
-import ClassCard from './ClassCard';
-import { Inbox } from 'lucide-react';
+import { Inbox, ChevronRight, Users, FileText, Clock } from 'lucide-react';
+import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
+import { SubjectForSchedule, MATH_PERIOD_INFO, ENGLISH_PERIOD_INFO, MATH_GROUP_TIMES, WEEKEND_PERIOD_INFO } from '../Timetable/constants';
+
+// 요일별 색상 정의
+const DAY_COLORS: Record<string, { bg: string; text: string }> = {
+  '월': { bg: '#fef3c7', text: '#92400e' },  // amber
+  '화': { bg: '#fce7f3', text: '#9d174d' },  // pink
+  '수': { bg: '#dbeafe', text: '#1e40af' },  // blue
+  '목': { bg: '#d1fae5', text: '#065f46' },  // green
+  '금': { bg: '#e0e7ff', text: '#3730a3' },  // indigo
+  '토': { bg: '#fee2e2', text: '#991b1b' },  // red
+  '일': { bg: '#f3e8ff', text: '#6b21a8' },  // purple
+};
+
+interface ScheduleBadgeProps {
+  schedule?: string[];
+  subject: SubjectForSchedule;
+}
+
+/**
+ * 스케줄을 시각적으로 표시하는 컴포넌트
+ * 요일은 색상 배지로, 교시는 굵게 표시
+ */
+const ScheduleBadge: React.FC<ScheduleBadgeProps> = ({ schedule, subject }) => {
+  if (!schedule || schedule.length === 0) {
+    return <span className="text-gray-400 italic">시간 미정</span>;
+  }
+
+  // 요일에 따라 적절한 period info 선택
+  const getPeriodInfoForDay = (day: string) => {
+    if (day === '토' || day === '일') {
+      return WEEKEND_PERIOD_INFO;
+    }
+    return subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
+  };
+
+  const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+
+  // 요일별로 periodId 수집
+  const dayPeriods: Map<string, string[]> = new Map();
+
+  for (const item of schedule) {
+    const parts = item.split(' ');
+    const day = parts[0];
+    const periodId = parts[1] || '';
+    const periodInfo = getPeriodInfoForDay(day);
+    if (!periodId || !periodInfo[periodId]) continue;
+
+    if (!dayPeriods.has(day)) {
+      dayPeriods.set(day, []);
+    }
+    dayPeriods.get(day)!.push(periodId);
+  }
+
+  if (dayPeriods.size === 0) {
+    return <span className="text-gray-400 italic">시간 미정</span>;
+  }
+
+  // 요일별로 라벨 생성
+  const entries: Array<{ days: string[]; label: string }> = [];
+  const dayLabels: Map<string, string> = new Map();
+
+  for (const [day, periods] of dayPeriods) {
+    const sortedPeriods = periods.sort((a, b) => Number(a) - Number(b));
+    const isWeekend = day === '토' || day === '일';
+
+    let label: string;
+    if (isWeekend) {
+      label = formatWeekendLabel(sortedPeriods);
+    } else if (subject === 'english') {
+      label = formatEnglishLabel(sortedPeriods);
+    } else {
+      label = formatMathLabel(sortedPeriods);
+    }
+    dayLabels.set(day, label);
+  }
+
+  // 같은 라벨을 가진 요일끼리 그룹화
+  const labelToDays: Map<string, string[]> = new Map();
+
+  for (const [day, label] of dayLabels) {
+    if (!labelToDays.has(label)) {
+      labelToDays.set(label, []);
+    }
+    labelToDays.get(label)!.push(day);
+  }
+
+  for (const [label, days] of labelToDays) {
+    days.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+    entries.push({ days, label });
+  }
+
+  // 요일 순서대로 정렬
+  entries.sort((a, b) => dayOrder.indexOf(a.days[0]) - dayOrder.indexOf(b.days[0]));
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {entries.map((entry, idx) => (
+        <div key={idx} className="flex items-center gap-0.5">
+          {/* 요일 배지들 */}
+          <div className="flex">
+            {entry.days.map((day, dayIdx) => {
+              const colors = DAY_COLORS[day] || { bg: '#f3f4f6', text: '#374151' };
+              return (
+                <span
+                  key={day}
+                  className={`px-1.5 py-0.5 text-[10px] font-bold ${dayIdx === 0 ? 'rounded-l' : ''} ${dayIdx === entry.days.length - 1 ? 'rounded-r' : ''}`}
+                  style={{ backgroundColor: colors.bg, color: colors.text }}
+                >
+                  {day}
+                </span>
+              );
+            })}
+          </div>
+          {/* 교시/시간 */}
+          <span className="text-xs font-semibold text-gray-700">
+            {entry.label}
+          </span>
+          {/* 구분자 */}
+          {idx < entries.length - 1 && (
+            <span className="text-gray-300 mx-0.5">/</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// 수학 교시 라벨 포맷팅
+function formatMathLabel(periods: string[]): string {
+  const completeGroups: number[] = [];
+  const usedPeriods = new Set<string>();
+
+  for (let group = 1; group <= 4; group++) {
+    const first = String(group * 2 - 1);
+    const second = String(group * 2);
+
+    if (periods.includes(first) && periods.includes(second)) {
+      completeGroups.push(group);
+      usedPeriods.add(first);
+      usedPeriods.add(second);
+    }
+  }
+
+  const allPeriodsUsed = periods.every(p => usedPeriods.has(p));
+
+  if (allPeriodsUsed && completeGroups.length > 0) {
+    return completeGroups.map(g => `${g}교시`).join(', ');
+  } else {
+    const times = periods.map(p => MATH_PERIOD_INFO[p]).filter(Boolean);
+    if (times.length === 0) return '시간 미정';
+
+    const startTime = times[0].startTime;
+    const endTime = times[times.length - 1].endTime;
+    return `${startTime}~${endTime}`;
+  }
+}
+
+// 주말 교시 라벨 포맷팅 (9:00 시작, 1시간 단위)
+function formatWeekendLabel(periods: string[]): string {
+  if (periods.length === 0) return '시간 미정';
+
+  // 시간순으로 정렬
+  const times = periods
+    .map(p => WEEKEND_PERIOD_INFO[p])
+    .filter(Boolean)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+  if (times.length === 0) return '시간 미정';
+
+  const startTime = times[0].startTime;
+  const endTime = times[times.length - 1].endTime;
+  return `${startTime}~${endTime}`;
+}
+
+// 영어 교시 라벨 포맷팅
+function formatEnglishLabel(periods: string[]): string {
+  if (periods.length === 0) return '시간 미정';
+
+  const nums = periods.map(Number).sort((a, b) => a - b);
+
+  if (nums.length === 1) {
+    return `${nums[0]}교시`;
+  }
+
+  const isConsecutive = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
+
+  if (isConsecutive) {
+    return `${nums[0]}~${nums[nums.length - 1]}교시`;
+  } else {
+    return nums.map(n => `${n}교시`).join(', ');
+  }
+}
 
 interface ClassListProps {
   classes: ClassInfo[];
@@ -13,18 +205,18 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading 
   // 로딩 상태
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {[...Array(8)].map((_, index) => (
-          <div
-            key={index}
-            className="bg-white border border-[#081429] border-opacity-10 rounded-lg p-6 animate-pulse"
-          >
-            <div className="h-6 bg-[#081429] bg-opacity-10 rounded mb-4"></div>
-            <div className="h-4 bg-[#081429] bg-opacity-10 rounded mb-3 w-2/3"></div>
-            <div className="h-4 bg-[#081429] bg-opacity-10 rounded mb-3 w-1/2"></div>
-            <div className="h-4 bg-[#081429] bg-opacity-10 rounded w-3/4"></div>
-          </div>
-        ))}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="divide-y divide-gray-100">
+          {[...Array(8)].map((_, index) => (
+            <div key={index} className="px-4 py-3 animate-pulse flex items-center gap-4">
+              <div className="h-5 bg-gray-200 rounded w-32"></div>
+              <div className="h-5 bg-gray-200 rounded w-16"></div>
+              <div className="h-5 bg-gray-200 rounded w-12"></div>
+              <div className="h-5 bg-gray-200 rounded w-24 flex-1"></div>
+              <div className="h-5 bg-gray-200 rounded w-16"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -44,16 +236,79 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading 
     );
   }
 
-  // 수업 목록 그리드
+  // 수업 목록 테이블 (헤더는 ClassManagementTab에서 고정 표시)
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {classes.map((classInfo) => (
-        <ClassCard
-          key={classInfo.id}
-          classInfo={classInfo}
-          onClick={() => onClassClick(classInfo)}
-        />
-      ))}
+    <div className="bg-white rounded-t-none rounded-b-lg border border-t-0 border-gray-200 overflow-hidden shadow-sm">
+      {/* 테이블 바디 */}
+      <div className="divide-y divide-gray-100">
+        {classes.map((classInfo) => {
+          const { className, teacher, subject, schedule, studentCount, memo } = classInfo;
+          const subjectColors = SUBJECT_COLORS[subject as SubjectType] || SUBJECT_COLORS.math;
+          const subjectLabel = SUBJECT_LABELS[subject as SubjectType] || subject;
+          const subjectForSchedule: SubjectForSchedule = subject === 'english' ? 'english' : 'math';
+
+          return (
+            <div
+              key={classInfo.id}
+              onClick={() => onClassClick(classInfo)}
+              className="px-4 py-2.5 grid grid-cols-[80px_1fr_100px_1fr_1fr_70px_40px] gap-3 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
+            >
+              {/* 과목 배지 */}
+              <div className="flex justify-center">
+                <span
+                  className="px-2 py-0.5 rounded text-xs font-semibold"
+                  style={{
+                    backgroundColor: subjectColors.bg,
+                    color: subjectColors.text,
+                  }}
+                >
+                  {subjectLabel}
+                </span>
+              </div>
+
+              {/* 수업명 */}
+              <div className="font-semibold text-[#081429] text-sm truncate">
+                {className}
+              </div>
+
+              {/* 담임 */}
+              <div className="text-[#373d41] text-sm truncate">
+                {teacher || '-'}
+              </div>
+
+              {/* 스케줄 - 시각적 배지 컴포넌트 사용 */}
+              <div className="overflow-hidden">
+                <ScheduleBadge schedule={schedule} subject={subjectForSchedule} />
+              </div>
+
+              {/* 메모 */}
+              <div className="text-gray-500 text-xs truncate flex items-center gap-1" title={memo || ''}>
+                {memo ? (
+                  <>
+                    <FileText className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                    <span className="truncate">{memo}</span>
+                  </>
+                ) : (
+                  <span className="text-gray-300">-</span>
+                )}
+              </div>
+
+              {/* 학생수 */}
+              <div className="flex items-center justify-center gap-1">
+                <Users className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-sm font-medium text-[#081429]">
+                  {studentCount || 0}
+                </span>
+              </div>
+
+              {/* 화살표 */}
+              <div className="flex justify-center">
+                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#fdb813] transition-colors" />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

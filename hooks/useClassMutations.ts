@@ -116,6 +116,7 @@ export interface UpdateClassData {
   newRoom?: string;
   slotTeachers?: Record<string, string>;  // { "월-4": "부담임명", ... }
   slotRooms?: Record<string, string>;  // { "월-4": "301", ... }
+  memo?: string;  // 수업 메모
 }
 
 export const useUpdateClass = () => {
@@ -123,7 +124,7 @@ export const useUpdateClass = () => {
 
   return useMutation({
     mutationFn: async (updateData: UpdateClassData) => {
-      const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [], newRoom, slotTeachers, slotRooms } = updateData;
+      const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [], newRoom, slotTeachers, slotRooms, memo } = updateData;
 
       console.log(`[useUpdateClass] Updating class: ${originalClassName} (${originalSubject}) -> ${newClassName}`);
 
@@ -166,6 +167,10 @@ export const useUpdateClass = () => {
           }
           if (slotRooms !== undefined) {
             updatePayload.slotRooms = slotRooms;
+          }
+          // 메모 업데이트
+          if (memo !== undefined) {
+            updatePayload.memo = memo;
           }
           console.log('[useUpdateClass] Updating doc:', docSnap.id, 'with:', updatePayload);
           await updateDoc(docSnap.ref, updatePayload);

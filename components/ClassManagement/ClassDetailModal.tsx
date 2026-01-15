@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Edit, Trash2, Users, Clock, User, BookOpen, Calendar, MapPin } from 'lucide-react';
+import { X, Edit, Trash2, Users, Clock, User, BookOpen, Calendar, MapPin, FileText } from 'lucide-react';
 import { ClassInfo } from '../../hooks/useClasses';
 import { useClassDetail } from '../../hooks/useClassDetail';
 import { useDeleteClass } from '../../hooks/useClassMutations';
@@ -96,229 +96,243 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
             </div>
           </div>
 
-        {/* 수업 정보 섹션 */}
-        <div className="p-6">
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <BookOpen className="w-5 h-5 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-lg">수업 정보</h3>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-              {/* 수업명 */}
-              <div className="flex items-start gap-3">
-                <span className="text-[#373d41] text-sm font-medium min-w-[80px]">수업명:</span>
-                <span className="text-[#081429] font-bold text-base">{className}</span>
+          {/* 수업 정보 섹션 */}
+          <div className="p-6">
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <BookOpen className="w-5 h-5 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-lg">수업 정보</h3>
               </div>
-
-              {/* 과목 */}
-              <div className="flex items-start gap-3">
-                <span className="text-[#373d41] text-sm font-medium min-w-[80px]">과목:</span>
-                <span className="text-[#373d41]">
-                  {SUBJECT_LABELS[subject as SubjectType] || subject}
-                </span>
-              </div>
-
-              {/* 담임 */}
-              <div className="flex items-start gap-3">
-                <span className="text-[#373d41] text-sm font-medium min-w-[80px]">담임:</span>
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-[#373d41]" />
-                  <span className="text-[#373d41]">{teacher || '미정'}</span>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                {/* 수업명 */}
+                <div className="flex items-start gap-3">
+                  <span className="text-[#373d41] text-sm font-medium min-w-[80px]">수업명:</span>
+                  <span className="text-[#081429] font-bold text-base">{className}</span>
                 </div>
-              </div>
 
-              {/* 스케줄 텍스트 */}
-              <div className="flex items-start gap-3">
-                <span className="text-[#373d41] text-sm font-medium min-w-[80px]">스케줄:</span>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#373d41]" />
-                  <span className="text-[#081429] font-semibold">{formattedSchedule}</span>
+                {/* 과목 */}
+                <div className="flex items-start gap-3">
+                  <span className="text-[#373d41] text-sm font-medium min-w-[80px]">과목:</span>
+                  <span className="text-[#373d41]">
+                    {SUBJECT_LABELS[subject as SubjectType] || subject}
+                  </span>
                 </div>
-              </div>
 
-              {/* 스케줄 그리드 (선택된 교시만) */}
-              {schedule && schedule.length > 0 && (() => {
-                const WEEKDAYS = ['월', '화', '수', '목', '금', '토'];
-                const periods = subject === 'english' ? ENGLISH_UNIFIED_PERIODS : MATH_UNIFIED_PERIODS;
+                {/* 담임 */}
+                <div className="flex items-start gap-3">
+                  <span className="text-[#373d41] text-sm font-medium min-w-[80px]">담임:</span>
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-[#373d41]" />
+                    <span className="text-[#373d41]">{teacher || '미정'}</span>
+                  </div>
+                </div>
 
-                // schedule에서 선택된 슬롯 추출
-                const selectedSlots = new Set<string>();
-                schedule.forEach(item => {
-                  const parts = item.split(' ');
-                  if (parts.length >= 2) {
-                    selectedSlots.add(`${parts[0]}-${parts[1]}`);
-                  }
-                });
+                {/* 스케줄 텍스트 */}
+                <div className="flex items-start gap-3">
+                  <span className="text-[#373d41] text-sm font-medium min-w-[80px]">스케줄:</span>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[#373d41]" />
+                    <span className="text-[#081429] font-semibold">{formattedSchedule}</span>
+                  </div>
+                </div>
 
-                // 선택된 교시만 필터링
-                const selectedPeriodIds = new Set<string>();
-                selectedSlots.forEach(key => {
-                  const [, periodId] = key.split('-');
-                  selectedPeriodIds.add(periodId);
-                });
-                const displayPeriods = periods.filter(p => selectedPeriodIds.has(p));
+                {/* 스케줄 그리드 (선택된 교시만) */}
+                {schedule && schedule.length > 0 && (() => {
+                  const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
+                  const periods = subject === 'english' ? ENGLISH_UNIFIED_PERIODS : MATH_UNIFIED_PERIODS;
 
-                if (displayPeriods.length === 0) return null;
+                  // schedule에서 선택된 슬롯 추출
+                  const selectedSlots = new Set<string>();
+                  schedule.forEach(item => {
+                    const parts = item.split(' ');
+                    if (parts.length >= 2) {
+                      selectedSlots.add(`${parts[0]}-${parts[1]}`);
+                    }
+                  });
 
-                return (
-                  <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
-                    {/* 헤더 */}
-                    <div className="grid bg-gray-100" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
-                      <div className="p-1 text-center text-[10px] font-semibold text-gray-400 border-r border-gray-200"></div>
-                      {WEEKDAYS.map((day, idx) => (
-                        <div key={day} className={`p-1 text-center text-xs font-semibold text-gray-600 ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-200' : ''}`}>
-                          {day}
+                  // 선택된 교시만 필터링
+                  const selectedPeriodIds = new Set<string>();
+                  selectedSlots.forEach(key => {
+                    const [, periodId] = key.split('-');
+                    selectedPeriodIds.add(periodId);
+                  });
+                  const displayPeriods = periods.filter(p => selectedPeriodIds.has(p));
+
+                  if (displayPeriods.length === 0) return null;
+
+                  return (
+                    <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
+                      {/* 헤더 */}
+                      <div className="grid bg-gray-100" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
+                        <div className="p-1 text-center text-[10px] font-semibold text-gray-400 border-r border-gray-200"></div>
+                        {WEEKDAYS.map((day, idx) => (
+                          <div key={day} className={`p-1 text-center text-xs font-semibold text-gray-600 ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-200' : ''}`}>
+                            {day}
+                          </div>
+                        ))}
+                      </div>
+                      {/* 교시 */}
+                      {displayPeriods.map(periodId => (
+                        <div
+                          key={periodId}
+                          className="grid border-t border-gray-100"
+                          style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
+                        >
+                          <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                            {periodId}
+                          </div>
+                          {WEEKDAYS.map((day, idx) => {
+                            const key = `${day}-${periodId}`;
+                            const isSelected = selectedSlots.has(key);
+                            const slotTeacher = slotTeachers?.[key];
+                            const displayTeacher = slotTeacher || teacher;
+                            const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
+
+                            return (
+                              <div
+                                key={key}
+                                className={`p-1 text-center text-[10px] min-h-[24px] flex items-center justify-center ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-100' : ''} ${isSelected ? 'font-semibold' : 'bg-white'
+                                  }`}
+                                style={isSelected ? {
+                                  backgroundColor: colors.bgColor,
+                                  color: colors.textColor
+                                } : undefined}
+                              >
+                                {isSelected ? (slotTeacher || teacher || '').slice(0, 4) : ''}
+                              </div>
+                            );
+                          })}
                         </div>
                       ))}
                     </div>
-                    {/* 교시 */}
-                    {displayPeriods.map(periodId => (
-                      <div
-                        key={periodId}
-                        className="grid border-t border-gray-100"
-                        style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
-                      >
-                        <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
-                          {periodId}
-                        </div>
-                        {WEEKDAYS.map((day, idx) => {
-                          const key = `${day}-${periodId}`;
-                          const isSelected = selectedSlots.has(key);
-                          const slotTeacher = slotTeachers?.[key];
-                          const displayTeacher = slotTeacher || teacher;
-                          const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
+                  );
+                })()}
 
-                          return (
-                            <div
-                              key={key}
-                              className={`p-1 text-center text-[10px] min-h-[24px] flex items-center justify-center ${idx < WEEKDAYS.length - 1 ? 'border-r border-gray-100' : ''} ${
-                                isSelected ? 'font-semibold' : 'bg-white'
-                              }`}
-                              style={isSelected ? {
-                                backgroundColor: colors.bgColor,
-                                color: colors.textColor
-                              } : undefined}
-                            >
-                              {isSelected ? (slotTeacher || teacher || '').slice(0, 4) : ''}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
+                {/* 강의실 */}
+                {room && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-[#373d41] text-sm font-medium min-w-[80px]">강의실:</span>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-[#373d41]" />
+                      <span className="text-[#373d41]">{room}</span>
+                    </div>
                   </div>
-                );
-              })()}
+                )}
 
-              {/* 강의실 */}
-              {room && (
-                <div className="flex items-start gap-3">
-                  <span className="text-[#373d41] text-sm font-medium min-w-[80px]">강의실:</span>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-[#373d41]" />
-                    <span className="text-[#373d41]">{room}</span>
+                {/* 부담임 (교시별 강사) - 이름만 표시 */}
+                {slotTeachers && Object.keys(slotTeachers).length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-[#373d41] text-sm font-medium min-w-[80px]">부담임:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {/* 중복 제거하여 이름만 표시 */}
+                      {[...new Set(Object.values(slotTeachers))].map((name) => (
+                        <span key={name} className="bg-gray-200 px-2 py-0.5 rounded text-xs text-[#373d41]">
+                          {name}
+                        </span>
+                      ))}
+                    </div>
                   </div>
+                )}
+              </div>
+            </div>
+
+            {/* 메모 섹션 */}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="w-5 h-5 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-lg">메모</h3>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                {classDetail?.memo ? (
+                  <p className="text-[#373d41] text-sm whitespace-pre-wrap">{classDetail.memo}</p>
+                ) : (
+                  <p className="text-gray-400 text-sm italic">메모가 없습니다. 편집 버튼을 눌러 메모를 추가하세요.</p>
+                )}
+              </div>
+            </div>
+
+            {/* 수강 학생 섹션 */}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="w-5 h-5 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-lg">
+                  현재 등록된 학생 ({classDetail?.studentCount || studentCount || 0}명)
+                </h3>
+              </div>
+
+              {/* 학생 목록 */}
+              {detailLoading ? (
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <p className="text-[#373d41]">학생 목록을 불러오는 중...</p>
+                </div>
+              ) : classDetail ? (
+                <ClassStudentList
+                  students={classDetail.students}
+                  onStudentClick={onStudentClick}
+                />
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <Users className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#373d41]" />
+                  <p className="text-[#373d41]">학생 정보를 불러올 수 없습니다.</p>
                 </div>
               )}
+            </div>
 
-              {/* 부담임 (교시별 강사) - 이름만 표시 */}
-              {slotTeachers && Object.keys(slotTeachers).length > 0 && (
-                <div className="flex items-start gap-3">
-                  <span className="text-[#373d41] text-sm font-medium min-w-[80px]">부담임:</span>
-                  <div className="flex flex-wrap gap-1">
-                    {/* 중복 제거하여 이름만 표시 */}
-                    {[...new Set(Object.values(slotTeachers))].map((name) => (
-                      <span key={name} className="bg-gray-200 px-2 py-0.5 rounded text-xs text-[#373d41]">
-                        {name}
-                      </span>
-                    ))}
+            {/* 통계 섹션 (Phase 3 예정) */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Calendar className="w-5 h-5 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-lg">통계</h3>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-[#373d41] text-sm mb-1">평균 출석률</p>
+                    <p className="text-[#fdb813] font-bold text-2xl">--%</p>
+                    <p className="text-xs text-[#373d41] mt-1">Phase 3 예정</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[#373d41] text-sm mb-1">이번 달 수업 횟수</p>
+                    <p className="text-[#fdb813] font-bold text-2xl">--회</p>
+                    <p className="text-xs text-[#373d41] mt-1">Phase 3 예정</p>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* 수강 학생 섹션 */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-5 h-5 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-lg">
-                현재 등록된 학생 ({classDetail?.studentCount || studentCount || 0}명)
-              </h3>
-            </div>
-
-            {/* 학생 목록 */}
-            {detailLoading ? (
-              <div className="bg-gray-50 rounded-lg p-6 text-center">
-                <p className="text-[#373d41]">학생 목록을 불러오는 중...</p>
-              </div>
-            ) : classDetail ? (
-              <ClassStudentList
-                students={classDetail.students}
-                onStudentClick={onStudentClick}
-              />
-            ) : (
-              <div className="bg-gray-50 rounded-lg p-6 text-center">
-                <Users className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#373d41]" />
-                <p className="text-[#373d41]">학생 정보를 불러올 수 없습니다.</p>
-              </div>
-            )}
-          </div>
-
-          {/* 통계 섹션 (Phase 3 예정) */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar className="w-5 h-5 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-lg">통계</h3>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <p className="text-[#373d41] text-sm mb-1">평균 출석률</p>
-                  <p className="text-[#fdb813] font-bold text-2xl">--%</p>
-                  <p className="text-xs text-[#373d41] mt-1">Phase 3 예정</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[#373d41] text-sm mb-1">이번 달 수업 횟수</p>
-                  <p className="text-[#fdb813] font-bold text-2xl">--회</p>
-                  <p className="text-xs text-[#373d41] mt-1">Phase 3 예정</p>
-                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* 푸터 */}
-        <div className="bg-gray-50 p-4 flex items-center justify-end gap-3 border-t border-[#081429] border-opacity-10">
-          <button
-            onClick={onClose}
-            disabled={deleteClassMutation.isPending}
-            className="px-6 py-2 border border-[#081429] text-[#081429] rounded-lg font-semibold hover:bg-[#081429] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            닫기
-          </button>
+          {/* 푸터 */}
+          <div className="bg-gray-50 p-4 flex items-center justify-end gap-3 border-t border-[#081429] border-opacity-10">
+            <button
+              onClick={onClose}
+              disabled={deleteClassMutation.isPending}
+              className="px-6 py-2 border border-[#081429] text-[#081429] rounded-lg font-semibold hover:bg-[#081429] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
-    {/* 수업 편집 모달 */}
-    {showEditModal && (
-      <EditClassModal
-        classInfo={classDetail ? {
-          ...classInfo,
-          schedule: classDetail.schedule,
-          teacher: classDetail.teacher,
-          room: classDetail.room,
-        } : classInfo}
-        initialSlotTeachers={classDetail?.slotTeachers}
-        onClose={(saved) => {
-          setShowEditModal(false);
-          // 저장 시 캐시가 무효화되므로 useClassDetail이 자동 리페치됨
-          if (saved) {
-            console.log('[ClassDetailModal] Edit saved, classDetail will refetch');
-          }
-        }}
-      />
-    )}
+      {/* 수업 편집 모달 */}
+      {showEditModal && (
+        <EditClassModal
+          classInfo={classDetail ? {
+            ...classInfo,
+            schedule: classDetail.schedule,
+            teacher: classDetail.teacher,
+            room: classDetail.room,
+          } : classInfo}
+          initialSlotTeachers={classDetail?.slotTeachers}
+          onClose={(saved, newClassName) => {
+            setShowEditModal(false);
+            // 수업명이 변경된 경우 모달을 닫아야 함 (이전 수업명으로 조회하는 문제 방지)
+            if (saved && newClassName) {
+              onClose(); // 상세 모달도 닫음
+            }
+          }}
+        />
+      )}
     </>
   );
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     ChevronLeft, ChevronRight, Search, X, Filter, ChevronUp, ChevronDown,
-    Eye, EyeOff, Settings, Plus, Calendar
+    Eye, EyeOff, Settings, Calendar
 } from 'lucide-react';
 
 const ALL_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
@@ -21,16 +21,14 @@ interface TimetableHeaderProps {
     setSelectedDays: (days: string[]) => void;
     viewType: 'teacher' | 'room' | 'class';
     setIsTeacherOrderModalOpen: (isOpen: boolean) => void;
-    setIsWeekdayOrderModalOpen: (isOpen: boolean) => void;
     setIsViewSettingsOpen: (isOpen: boolean) => void;
     pendingMovesCount: number;
     handleSavePendingMoves: () => void;
     handleCancelPendingMoves: () => void;
     isSaving: boolean;
-    subjectTab: 'math' | 'english';
-    canEditMath: boolean;
-    canEditEnglish: boolean;
-    onAddClass: () => void;
+    // View mode toggle
+    timetableViewMode: 'day-based' | 'teacher-based';
+    setTimetableViewMode: (mode: 'day-based' | 'teacher-based') => void;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -48,16 +46,13 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     setSelectedDays,
     viewType,
     setIsTeacherOrderModalOpen,
-    setIsWeekdayOrderModalOpen,
     setIsViewSettingsOpen,
     pendingMovesCount,
     handleSavePendingMoves,
     handleCancelPendingMoves,
     isSaving,
-    subjectTab,
-    canEditMath,
-    canEditEnglish,
-    onAddClass
+    timetableViewMode,
+    setTimetableViewMode
 }) => {
     return (
         <div className="bg-gray-50 h-10 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs">
@@ -212,8 +207,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     )}
                 </div>
 
-                {/* Order Settings (Math Tab Only) */}
-                {viewType === 'teacher' && canEditMath && (
+                {/* Order Settings & View Mode Toggle */}
+                {viewType === 'teacher' && (
                     <div className="flex items-center gap-1">
                         <button
                             onClick={() => setIsTeacherOrderModalOpen(true)}
@@ -222,14 +217,32 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         >
                             ↕️ 강사 순서
                         </button>
-                        <button
-                            onClick={() => setIsWeekdayOrderModalOpen(true)}
-                            className="px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
-                            title="요일 순서 설정"
-                        >
-                            <Calendar className="inline-block w-4 h-4 mr-1" />
-                            요일 순서
-                        </button>
+                        {/* View Mode Toggle */}
+                        <div className="flex items-center border border-gray-300 rounded overflow-hidden">
+                            <button
+                                onClick={() => setTimetableViewMode('day-based')}
+                                className={`px-2 py-1 text-xs font-medium transition-colors flex items-center gap-1 ${
+                                    timetableViewMode === 'day-based'
+                                        ? 'bg-[#fdb813] text-[#081429]'
+                                        : 'bg-white text-gray-600 hover:bg-gray-100'
+                                }`}
+                                title="날짜 위주 뷰 (월화수목금토일)"
+                            >
+                                <Calendar className="w-3.5 h-3.5" />
+                                날짜 뷰
+                            </button>
+                            <button
+                                onClick={() => setTimetableViewMode('teacher-based')}
+                                className={`px-2 py-1 text-xs font-medium transition-colors flex items-center gap-1 ${
+                                    timetableViewMode === 'teacher-based'
+                                        ? 'bg-[#fdb813] text-[#081429]'
+                                        : 'bg-white text-gray-600 hover:bg-gray-100'
+                                }`}
+                                title="선생님 위주 뷰 (월목/화금/주말/수요일)"
+                            >
+                                👨‍🏫 강사 뷰
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -264,17 +277,6 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         </button>
                     </div>
                 )}
-
-                {/* Add Class Button - Gated by subject-specific edit permission */}
-                {((subjectTab === 'math' && canEditMath) ||
-                    (subjectTab === 'english' && canEditEnglish)) && (
-                        <button
-                            onClick={onAddClass}
-                            className="px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-md text-xs font-bold flex items-center gap-1 hover:brightness-110 transition-all active:scale-95 shadow-sm"
-                        >
-                            <Plus size={14} /> 수업추가
-                        </button>
-                    )}
             </div>
         </div>
     );
