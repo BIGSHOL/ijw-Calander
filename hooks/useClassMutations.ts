@@ -253,27 +253,59 @@ export const useDeleteClass = () => {
     mutationFn: async (deleteData: DeleteClassData) => {
       const { className, subject } = deleteData;
 
-      console.log(`[useDeleteClass] Deleting class: ${className}`);
+      console.log(`[useDeleteClass] Deleting class: ${className} (${subject})`);
 
-      // 해당 className + subject와 일치하는 모든 enrollments 조회
-      const enrollmentsQuery = query(
-        collectionGroup(db, 'enrollments'),
-        where('subject', '==', subject),
-        where('className', '==', className)
-      );
+      let classesDeleted = 0;
+      let enrollmentsDeleted = 0;
 
-      const snapshot = await getDocs(enrollmentsQuery);
+      // 1. classes 컬렉션에서 수업 문서 삭제
+      try {
+        const classesQuery = query(
+          collection(db, COL_CLASSES),
+          where('subject', '==', subject),
+          where('className', '==', className)
+        );
 
-      console.log(`[useDeleteClass] Found ${snapshot.docs.length} enrollments to delete`);
+        const classesSnapshot = await getDocs(classesQuery);
+        console.log(`[useDeleteClass] Found ${classesSnapshot.docs.length} classes to delete`);
 
-      // 각 enrollment 삭제
-      const promises = snapshot.docs.map(async (docSnap) => {
-        await deleteDoc(docSnap.ref);
-      });
+        const classDeletePromises = classesSnapshot.docs.map(async (docSnap) => {
+          await deleteDoc(docSnap.ref);
+        });
 
-      await Promise.all(promises);
+        await Promise.all(classDeletePromises);
+        classesDeleted = classesSnapshot.docs.length;
+      } catch (err) {
+        console.error('[useDeleteClass] Error deleting from classes collection:', err);
+      }
 
-      console.log(`[useDeleteClass] Successfully deleted ${snapshot.docs.length} enrollments`);
+      // 2. 해당 className + subject와 일치하는 모든 enrollments 조회 및 삭제
+      try {
+        const enrollmentsQuery = query(
+          collectionGroup(db, 'enrollments'),
+          where('subject', '==', subject),
+          where('className', '==', className)
+        );
+
+        const snapshot = await getDocs(enrollmentsQuery);
+        console.log(`[useDeleteClass] Found ${snapshot.docs.length} enrollments to delete`);
+
+        const promises = snapshot.docs.map(async (docSnap) => {
+          await deleteDoc(docSnap.ref);
+        });
+
+        await Promise.all(promises);
+        enrollmentsDeleted = snapshot.docs.length;
+      } catch (err: any) {
+        // 인덱스 에러는 경고만 표시
+        if (err?.message?.includes('index')) {
+          console.warn('[useDeleteClass] Enrollments index not available, skipping enrollment deletion');
+        } else {
+          console.error('[useDeleteClass] Error deleting enrollments:', err);
+        }
+      }
+
+      console.log(`[useDeleteClass] Successfully deleted ${classesDeleted} classes and ${enrollmentsDeleted} enrollments`);
     },
     onSuccess: () => {
       // 수업 목록 및 관련 캐시 무효화
