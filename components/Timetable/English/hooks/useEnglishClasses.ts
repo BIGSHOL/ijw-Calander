@@ -105,6 +105,10 @@ export const useEnglishClasses = (
                     }
                 }
 
+                // isHidden 강사(LAB 등)인지 체크
+                const teacherData = teachersData.find(t => t.name === cTeacher);
+                const isHiddenTeacher = teacherData?.isHidden || false;
+
                 if (!classMap.has(cName)) {
                     classMap.set(cName, {
                         name: cName,
@@ -125,13 +129,13 @@ export const useEnglishClasses = (
                 }
                 const info = classMap.get(cName)!;
 
-                // 교시-요일별 강의실 추적
+                // 교시-요일별 강의실 추적 (isHidden 강사의 강의실은 무시)
                 const slotKey = `${mappedPeriodId}-${currentDay}`;
-                if (cRoom) {
+                if (cRoom && !isHiddenTeacher) {
                     info.roomBySlot[slotKey] = cRoom;
                 }
-                // 요일별 강의실 추적 (첫 번째 값만 - 호환성 유지)
-                if (cRoom && !info.roomByDay[currentDay]) {
+                // 요일별 강의실 추적 (첫 번째 값만 - 호환성 유지, isHidden 제외)
+                if (cRoom && !isHiddenTeacher && !info.roomByDay[currentDay]) {
                     info.roomByDay[currentDay] = cRoom;
                 }
 
@@ -148,11 +152,12 @@ export const useEnglishClasses = (
                     underline: cUnderline ?? cell.underline
                 };
 
-                // 선생님별 수업 횟수 카운트
-                if (cTeacher) {
+                // 선생님별 수업 횟수 카운트 (isHidden 강사는 제외 - 담임 후보에서 제외)
+                if (cTeacher && !isHiddenTeacher) {
                     info.teacherCounts[cTeacher] = (info.teacherCounts[cTeacher] || 0) + 1;
                 }
-                if (cRoom) info.mainRoom = cRoom;
+                // mainRoom 설정 (isHidden 강사의 강의실은 무시)
+                if (cRoom && !isHiddenTeacher) info.mainRoom = cRoom;
 
                 // Min/Max Calc
                 const mappedPNum = parseInt(mappedPeriodId);
