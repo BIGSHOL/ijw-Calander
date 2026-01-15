@@ -171,7 +171,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
         <div className="bg-[#081429] text-white px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -253,7 +253,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">스케줄 선택</label>
             <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="max-h-36 overflow-y-auto">
+              <div className="max-h-56 overflow-y-auto">
                 {/* 헤더 - Sticky */}
                 <div className="grid bg-gray-50 border-b border-gray-200 sticky top-0 z-10" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
                   <div className="p-1 text-center text-[10px] font-semibold text-gray-400 border-r border-gray-200"></div>
