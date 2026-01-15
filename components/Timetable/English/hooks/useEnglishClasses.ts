@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { EN_PERIODS, EN_WEEKDAYS, INJAE_PERIODS, EnglishPeriod } from '../englishUtils';
 import { IntegrationSettings } from '../IntegrationViewSettings';
 import { Teacher } from '../../../../types';
+import { ClassInfo as ClassInfoFromDB } from '../../../../hooks/useClasses';
 
 export interface ScheduleCell {
     className?: string;
@@ -28,33 +29,51 @@ export interface ClassInfo {
     weekdayMin: number;
     weekendMin: number;
     roomByDay: Record<string, string>;
+    roomBySlot: Record<string, string>;  // key: "periodId-day", value: room
     teacherCounts: Record<string, number>;
 }
 
 export const useEnglishClasses = (
     scheduleData: ScheduleData,
     settings: IntegrationSettings,
-    teachersData: Teacher[]
+    teachersData: Teacher[],
+    classesData: ClassInfoFromDB[] = []
 ) => {
     return useMemo(() => {
         const classMap = new Map<string, ClassInfo>();
 
-        // Helper: 요일별 강의실을 포맷팅 (예: "월수 301 / 목 304")
-        const formatRoomByDay = (roomByDay: Record<string, string>): string => {
-            if (!roomByDay || Object.keys(roomByDay).length === 0) return '';
-
-            const roomToDays: Record<string, string[]> = {};
-            Object.entries(roomByDay).forEach(([day, room]) => {
-                if (!room) return;
-                if (!roomToDays[room]) roomToDays[room] = [];
-                roomToDays[room].push(day);
-            });
+        // Helper: 교시별 강의실을 포맷팅 (예: "월수 301 / 목 202-302")
+        // roomBySlot: { "1-월": "301", "2-월": "301", "2-목": "202", "3-목": "302" }
+        const formatRoomBySlot = (roomBySlot: Record<string, string>): string => {
+            if (!roomBySlot || Object.keys(roomBySlot).length === 0) return '';
 
             const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
-            const parts = Object.entries(roomToDays)
-                .map(([room, days]) => {
+
+            // 요일별로 강의실 목록 수집 (순서 유지)
+            const roomsByDay: Record<string, string[]> = {};
+            Object.entries(roomBySlot).forEach(([slotKey, room]) => {
+                if (!room) return;
+                const [, day] = slotKey.split('-');
+                if (!roomsByDay[day]) roomsByDay[day] = [];
+                // 중복 제거하면서 순서 유지
+                if (!roomsByDay[day].includes(room)) {
+                    roomsByDay[day].push(room);
+                }
+            });
+
+            // 강의실 패턴별로 요일 그룹화 (예: "301" -> ["월", "수"], "202-302" -> ["목"])
+            const patternToDays: Record<string, string[]> = {};
+            Object.entries(roomsByDay).forEach(([day, rooms]) => {
+                const pattern = rooms.join('-');  // 여러 강의실이면 "202-302"
+                if (!patternToDays[pattern]) patternToDays[pattern] = [];
+                patternToDays[pattern].push(day);
+            });
+
+            // 정렬 및 포맷팅
+            const parts = Object.entries(patternToDays)
+                .map(([pattern, days]) => {
                     const sortedDays = days.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
-                    return `${sortedDays.join('')} ${room}`;
+                    return `${sortedDays.join('')} ${pattern}`;
                 })
                 .sort((a, b) => {
                     const aFirstDay = a.split(' ')[0][0];
@@ -97,6 +116,7 @@ export const useEnglishClasses = (
                         visiblePeriods: [],
                         finalDays: [],
                         roomByDay: {},
+                        roomBySlot: {},
                         teacherCounts: {},
                         minPeriod: 99,
                         weekdayMin: 99,
@@ -105,7 +125,12 @@ export const useEnglishClasses = (
                 }
                 const info = classMap.get(cName)!;
 
-                // 요일별 강의실 추적
+                // 교시-요일별 강의실 추적
+                const slotKey = `${mappedPeriodId}-${currentDay}`;
+                if (cRoom) {
+                    info.roomBySlot[slotKey] = cRoom;
+                }
+                // 요일별 강의실 추적 (첫 번째 값만 - 호환성 유지)
                 if (cRoom && !info.roomByDay[currentDay]) {
                     info.roomByDay[currentDay] = cRoom;
                 }
@@ -163,29 +188,9 @@ export const useEnglishClasses = (
 
         // Pass 3: Calculate Logic (Weekend Shift & Visible Periods)
         return validClasses.map(c => {
-            // 0. 담임 결정
-            let determinedMainTeacher = c.mainTeacher;
-            const teacherEntries = Object.entries(c.teacherCounts);
-            if (teacherEntries.length > 0) {
-                const maxCount = Math.max(...teacherEntries.map(([, count]) => count));
-                const topTeachers = teacherEntries.filter(([, count]) => count === maxCount);
-
-                if (topTeachers.length === 1) {
-                    determinedMainTeacher = topTeachers[0][0];
-                } else {
-                    const nonNativeTopTeachers = topTeachers.filter(([name]) => {
-                        const teacherData = teachersData.find(t => t.name === name);
-                        return !teacherData?.isNative;
-                    });
-
-                    if (nonNativeTopTeachers.length > 0) {
-                        determinedMainTeacher = nonNativeTopTeachers[0][0];
-                    } else {
-                        determinedMainTeacher = topTeachers[0][0];
-                    }
-                }
-            }
-            c.mainTeacher = determinedMainTeacher;
+            // 0. 담임 결정: classes 컬렉션의 teacher 필드에서 가져옴
+            const classFromDB = classesData.find(cls => cls.className === c.name);
+            c.mainTeacher = classFromDB?.teacher || '';
 
             // 1. Weekend Shift Logic
             let weekendShift = 0;
@@ -285,9 +290,9 @@ export const useEnglishClasses = (
             c.finalDays = finalDays;
 
             // 5. Formatted Room String
-            c.formattedRoomStr = formatRoomByDay(c.roomByDay);
+            c.formattedRoomStr = formatRoomBySlot(c.roomBySlot);
 
             return c;
         });
-    }, [scheduleData, settings, teachersData]);
+    }, [scheduleData, settings, teachersData, classesData]);
 };

@@ -118,9 +118,9 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                 </span>
               </div>
 
-              {/* 강사 */}
+              {/* 담임 */}
               <div className="flex items-start gap-3">
-                <span className="text-[#373d41] text-sm font-medium min-w-[80px]">강사:</span>
+                <span className="text-[#373d41] text-sm font-medium min-w-[80px]">담임:</span>
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-[#373d41]" />
                   <span className="text-[#373d41]">{teacher || '미정'}</span>

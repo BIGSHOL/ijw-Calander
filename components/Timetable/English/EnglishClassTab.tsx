@@ -21,6 +21,7 @@ import { useEnglishChanges, MoveChange } from './hooks/useEnglishChanges';
 import { useEnglishClasses, ScheduleCell, ClassInfo } from './hooks/useEnglishClasses';
 import { useClassStudents } from './hooks/useClassStudents';
 import ClassCard from './ClassCard';
+import { ClassInfo as ClassInfoFromHook } from '../../../hooks/useClasses';
 
 
 // ScheduleCell, ScheduleData, ClassInfo definitions removed (imported from hooks)
@@ -34,6 +35,7 @@ interface EnglishClassTabProps {
     currentUser: any;
     isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
     studentMap: Record<string, any>;
+    classesData?: ClassInfoFromHook[];  // classes 컬렉션에서 담임 정보
 }
 
 // ClassInfo removed (imported from hooks)
@@ -48,7 +50,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
     currentUser,
     isSimulationMode = false,
-    studentMap
+    studentMap,
+    classesData = []
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -74,8 +77,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     // 3. Move Changes
     const { moveChanges, isSaving, handleMoveStudent, handleCancelChanges, handleSaveChanges } = useEnglishChanges(isSimulationMode);
 
-    // 4. Classes Data Transformation
-    const rawClasses = useEnglishClasses(scheduleData, settings, teachersData);
+    // 4. Classes Data Transformation (classesData로부터 담임 정보 전달)
+    const rawClasses = useEnglishClasses(scheduleData, settings, teachersData, classesData);
 
     // 5. Centralized Student Data Fetch (Cost Optimization)
     const classNames = useMemo(() => rawClasses.map(c => c.name), [rawClasses]);
