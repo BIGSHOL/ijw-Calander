@@ -212,9 +212,12 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                   );
                 })()}
 
-                {/* 부담임 (교시별 강사) - 이름만 표시 (숨김 강사 제외) */}
+                {/* 부담임 (교시별 강사) - 담임 및 숨김 강사 제외 */}
                 {slotTeachers && Object.keys(slotTeachers).length > 0 && (() => {
                   const visibleSlotTeachers = [...new Set(Object.values(slotTeachers))].filter(name => {
+                    // 담임과 동일하면 제외
+                    if (name === teacher) return false;
+                    // 숨김 강사면 제외
                     const teacherInfo = teachersData?.find(t => t.name === name);
                     return !teacherInfo?.isHidden;
                   });
