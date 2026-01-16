@@ -104,7 +104,6 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     title="보기 설정"
                 >
                     <Settings size={14} />
-                    <span>보기 설정</span>
                 </button>
 
                 {/* Pending Moves */}

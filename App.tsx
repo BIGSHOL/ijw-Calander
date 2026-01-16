@@ -187,6 +187,8 @@ const App: React.FC = () => {
   // Timetable Filter State (for App-level filter bar)
   const [timetableSubject, setTimetableSubject] = useState<'math' | 'english'>('math');
   const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room' | 'class'>('teacher');
+  // 수학 뷰 모드 (날짜별/강사별)
+  const [mathViewMode, setMathViewMode] = useState<'day-based' | 'teacher-based'>('teacher-based');
 
   // Grades Filter State (for App-level filter bar)
   const [gradesSubjectFilter, setGradesSubjectFilter] = useState<'all' | 'math' | 'english'>('all');
@@ -2061,6 +2063,19 @@ const App: React.FC = () => {
                     </button>
                   )}
 
+                  {/* Math View Mode Toggle Button - 수학만 */}
+                  {timetableSubject === 'math' && (
+                    <button
+                      onClick={() => {
+                        setMathViewMode(prev => prev === 'day-based' ? 'teacher-based' : 'day-based');
+                      }}
+                      className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+                      title="클릭하여 뷰 모드 전환"
+                    >
+                      {mathViewMode === 'day-based' ? <><CalendarIcon size={12} className="inline" /> 날짜별</> : <><UserIcon size={12} className="inline" /> 강사별</>}
+                    </button>
+                  )}
+
                   {/* Removed Summary Indicators */}
 
 
@@ -2195,6 +2210,8 @@ const App: React.FC = () => {
                   /* Removed global state props */
                   teachers={teachers}
                   classKeywords={classKeywords}
+                  mathViewMode={mathViewMode}
+                  onMathViewModeChange={setMathViewMode}
                 />
               </div>
             </Suspense>

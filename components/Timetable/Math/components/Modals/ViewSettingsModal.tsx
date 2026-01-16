@@ -145,35 +145,6 @@ const ViewSettingsModal: React.FC<ViewSettingsModalProps> = ({
                                 })}
                             </div>
                         </div>
-
-                        {/* View Mode Toggle - Only for teacher view */}
-                        {viewType === 'teacher' && (
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 block">시간표 뷰 모드</label>
-                                <div className="flex gap-1">
-                                    <button
-                                        onClick={() => setTimetableViewMode('day-based')}
-                                        className={`flex-1 px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 border ${timetableViewMode === 'day-based'
-                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        <Calendar size={14} />
-                                        날짜 뷰
-                                    </button>
-                                    <button
-                                        onClick={() => setTimetableViewMode('teacher-based')}
-                                        className={`flex-1 px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 border ${timetableViewMode === 'teacher-based'
-                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        <User size={14} />
-                                        강사 뷰
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     <div className="w-full h-px bg-gray-200"></div>

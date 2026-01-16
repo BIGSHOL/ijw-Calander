@@ -36,6 +36,9 @@ interface TimetableManagerProps {
     teachers?: Teacher[];  // Centralized from App.tsx
     classKeywords?: ClassKeywordColor[]; // For keyword color coding
     currentUser: any; // Using any for now to avoid circular dependency or import issues if common
+    // 수학 뷰 모드 (날짜별/강사별)
+    mathViewMode?: 'day-based' | 'teacher-based';
+    onMathViewModeChange?: (mode: 'day-based' | 'teacher-based') => void;
 }
 
 const TimetableManager = ({
@@ -50,6 +53,8 @@ const TimetableManager = ({
     teachers: propsTeachers = [],
     classKeywords = [],
     currentUser,
+    mathViewMode: externalMathViewMode,
+    onMathViewModeChange,
 }: TimetableManagerProps) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -184,9 +189,11 @@ const TimetableManager = ({
     const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
 
     // Timetable View Mode: 'day-based' (월화수목금토일) vs 'teacher-based' (월목/화금/주말/수요일)
-    const [timetableViewMode, setTimetableViewMode] = useState<'day-based' | 'teacher-based'>(
+    const [internalTimetableViewMode, setInternalTimetableViewMode] = useState<'day-based' | 'teacher-based'>(
         savedSettings?.timetableViewMode || 'teacher-based'
     );
+    const timetableViewMode = externalMathViewMode ?? internalTimetableViewMode;
+    const setTimetableViewMode = onMathViewModeChange ?? setInternalTimetableViewMode;
     const [showClassName, setShowClassName] = useState(savedSettings?.showClassName ?? true);
     const [showSchool, setShowSchool] = useState(savedSettings?.showSchool ?? false);
     const [showGrade, setShowGrade] = useState(savedSettings?.showGrade ?? true);
