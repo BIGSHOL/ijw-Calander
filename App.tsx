@@ -2041,13 +2041,10 @@ const App: React.FC = () => {
                     </div>
                   )}
 
-                  {/* View Type Toggle Button */}
-                  <button
-                    onClick={() => {
-                      if (timetableSubject === 'math') {
-                        // 수학: 강사별 ↔ 교실별
-                        setTimetableViewType(prev => prev === 'teacher' ? 'room' : 'teacher');
-                      } else {
+                  {/* View Type Toggle Button - 영어만 */}
+                  {timetableSubject === 'english' && (
+                    <button
+                      onClick={() => {
                         // 영어: 통합 → 강사별 → 교실별 → 통합 (권한 없으면 통합 스킵)
                         const canViewIntegrated = hasPermission('timetable.integrated.view');
                         setTimetableViewType(prev => {
@@ -2056,13 +2053,13 @@ const App: React.FC = () => {
                           // room -> integrated (if permitted) or teacher
                           return canViewIntegrated ? 'class' : 'teacher';
                         });
-                      }
-                    }}
-                    className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
-                    title="클릭하여 보기방식 전환"
-                  >
-                    {timetableViewType === 'teacher' ? <><UserIcon size={12} className="inline" /> 강사별</> : (timetableViewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합</> : <><Building size={12} className="inline" /> 교실별</>)}
-                  </button>
+                      }}
+                      className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+                      title="클릭하여 보기방식 전환"
+                    >
+                      {timetableViewType === 'teacher' ? <><UserIcon size={12} className="inline" /> 강사별</> : (timetableViewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합</> : <><Building size={12} className="inline" /> 교실별</>)}
+                    </button>
+                  )}
 
                   {/* Removed Summary Indicators */}
 
