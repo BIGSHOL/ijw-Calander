@@ -20,6 +20,7 @@ export interface Enrollment {
   className: string;  // Name of the class
   teacherId: string;  // Teacher Name/ID
   days: string[];     // Class schedule days (e.g., ['월', '수'])
+  attendanceDays?: string[];  // 실제 등원 요일 (비어있거나 없으면 모든 수업 요일에 등원)
 }
 
 // Phase 1: Unified Schedule Slot
@@ -331,33 +332,31 @@ export interface GanttProject {
 
 export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
-// 11-tier role system (ordered from highest to lowest)
-export type UserRole = 'master' | 'admin' | 'manager' | 'editor' | 'math_lead' | 'english_lead' | 'math_teacher' | 'english_teacher' | 'user' | 'viewer' | 'guest';
+// 8-tier role system (ordered from highest to lowest)
+// Simplified from 11-tier: removed editor, viewer, guest (rarely used)
+export type UserRole = 'master' | 'admin' | 'manager' | 'math_lead' | 'english_lead' | 'math_teacher' | 'english_teacher' | 'user';
 
-export const ROLE_HIERARCHY: UserRole[] = ['master', 'admin', 'manager', 'editor', 'math_lead', 'english_lead', 'math_teacher', 'english_teacher', 'user', 'viewer', 'guest'];
+export const ROLE_HIERARCHY: UserRole[] = ['master', 'admin', 'manager', 'math_lead', 'english_lead', 'math_teacher', 'english_teacher', 'user'];
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   master: 'MASTER',
   admin: 'ADMIN',
   manager: 'MANAGER',
-  editor: 'EDITOR',
   math_lead: '수학팀장',
   english_lead: '영어팀장',
   math_teacher: '수학선생님',
   english_teacher: '영어선생님',
-  user: 'USER',
-  viewer: 'VIEWER',
-  guest: 'GUEST'
+  user: 'USER'
 };
 
 // Permission IDs for granular control
 export type PermissionId =
-  // Calendar Events (consolidated)
+  // Calendar Events
   | 'events.create' | 'events.manage_own' | 'events.manage_others'
   | 'events.drag_move' | 'events.attendance'
-  | 'events.bucket'  // Bucket list management (was buckets.edit/delete_lower_roles)
-  // Departments (consolidated)
-  | 'departments.view_all' | 'departments.manage'  // Was create/edit/delete
+  | 'events.bucket'  // Bucket list management
+  // Departments
+  | 'departments.view_all' | 'departments.manage'
   // Users
   | 'users.view' | 'users.approve' | 'users.change_role' | 'users.change_permissions'
   // Settings
@@ -373,11 +372,21 @@ export type PermissionId =
   | 'timetable.integrated.view'
   // Gantt
   | 'gantt.view' | 'gantt.create' | 'gantt.edit' | 'gantt.delete'
-  // Attendance (consolidated)
-  | 'attendance.manage_own'  // Was view_own + edit_own
-  | 'attendance.edit_all'
+  // Attendance
+  | 'attendance.manage_own' | 'attendance.edit_all'
   | 'attendance.manage_math' | 'attendance.manage_english'
-  | 'attendance.edit_student_info';
+  | 'attendance.edit_student_info'
+  // Students (NEW)
+  | 'students.view' | 'students.edit' | 'students.delete'
+  | 'students.enrollment.manage'  // 수강 배정 관리
+  // Classes Management (NEW)
+  | 'classes.view' | 'classes.create' | 'classes.edit' | 'classes.delete'
+  // Consultation (NEW)
+  | 'consultation.view' | 'consultation.create' | 'consultation.edit' | 'consultation.convert'  // convert: 예비원생→재원생
+  // Grades (NEW)
+  | 'grades.view' | 'grades.edit' | 'grades.manage_exams'
+  // Billing (NEW)
+  | 'billing.view' | 'billing.edit';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -387,118 +396,219 @@ export type RolePermissions = {
 // Default permissions for each role (MASTER has all, these are for others)
 export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
   admin: {
+    // Events
     'events.create': true, 'events.manage_own': true, 'events.manage_others': true,
     'events.drag_move': true, 'events.attendance': true, 'events.bucket': true,
+    // Departments & Users
     'departments.view_all': true, 'departments.manage': true,
     'users.view': true, 'users.approve': true, 'users.change_role': false, 'users.change_permissions': true,
+    // Settings
     'settings.access': true, 'settings.holidays': true, 'settings.role_permissions': false, 'settings.manage_categories': true,
+    // System
     'system.teachers.view': true, 'system.teachers.edit': true,
     'system.classes.view': true, 'system.classes.edit': true,
+    // Timetable
     'timetable.math.view': true, 'timetable.math.edit': true,
     'timetable.english.view': true, 'timetable.english.edit': true,
     'timetable.english.simulation': true,
     'timetable.english.backup.view': true, 'timetable.english.backup.restore': true,
     'timetable.integrated.view': true,
+    // Gantt
     'gantt.view': true, 'gantt.create': true, 'gantt.edit': true, 'gantt.delete': true,
-    // Attendance (Admin: full access)
+    // Attendance
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': true,
     'attendance.edit_student_info': true,
+    // Students
+    'students.view': true, 'students.edit': true, 'students.delete': true,
+    'students.enrollment.manage': true,
+    // Classes
+    'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': true,
+    // Consultation
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true,
+    // Grades
+    'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
+    // Billing
+    'billing.view': true, 'billing.edit': true,
   },
   manager: {
+    // Events
     'events.create': true, 'events.manage_own': true, 'events.manage_others': true,
     'events.drag_move': true, 'events.attendance': true, 'events.bucket': true,
+    // Departments & Users
     'departments.view_all': true, 'departments.manage': false,
     'users.view': true, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
-    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    // Settings
+    'settings.access': true, 'settings.holidays': false, 'settings.role_permissions': false,
+    // Timetable
+    'timetable.math.view': true, 'timetable.math.edit': true,
+    'timetable.english.view': true, 'timetable.english.edit': true,
     'timetable.english.simulation': true,
     'timetable.english.backup.view': true, 'timetable.english.backup.restore': false,
+    'timetable.integrated.view': true,
+    // Gantt
     'gantt.view': true, 'gantt.create': true, 'gantt.edit': true, 'gantt.delete': false,
-    // Attendance (Manager: full access)
+    // Attendance
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': true,
     'attendance.edit_student_info': true,
-  },
-  editor: {
-    'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
-    'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
-    'departments.view_all': true, 'departments.manage': false,
-    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
-    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    // Students
+    'students.view': true, 'students.edit': true, 'students.delete': false,
+    'students.enrollment.manage': true,
+    // Classes
+    'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': false,
+    // Consultation
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true,
+    // Grades
+    'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
+    // Billing
+    'billing.view': true, 'billing.edit': true,
   },
   math_lead: {
+    // Events
     'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
     'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    // Departments & Users
     'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
-    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    // Settings
+    'settings.access': true, 'settings.holidays': false, 'settings.role_permissions': false,
+    // System
+    'system.teachers.view': true, 'system.teachers.edit': false,
+    'system.classes.view': true, 'system.classes.edit': true,
+    // Timetable
     'timetable.math.view': true, 'timetable.math.edit': true,
     'timetable.english.view': true, 'timetable.english.edit': false,
-    'system.classes.view': true, 'system.classes.edit': true,
-    // Attendance (Math Lead: manage math, view/edit all math students)
+    'timetable.integrated.view': true,
+    // Attendance (manage math only)
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': false,
     'attendance.edit_student_info': true,
+    // Students
+    'students.view': true, 'students.edit': true, 'students.delete': false,
+    'students.enrollment.manage': true,
+    // Classes
+    'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': false,
+    // Consultation
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true,
+    // Grades
+    'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
+    // Billing
+    'billing.view': true, 'billing.edit': false,
   },
   english_lead: {
+    // Events
     'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
     'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    // Departments & Users
     'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
-    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    // Settings
+    'settings.access': true, 'settings.holidays': false, 'settings.role_permissions': false,
+    // System
+    'system.teachers.view': true, 'system.teachers.edit': false,
+    'system.classes.view': true, 'system.classes.edit': true,
+    // Timetable
     'timetable.math.view': true, 'timetable.math.edit': false,
     'timetable.english.view': true, 'timetable.english.edit': true,
-    'system.classes.view': true, 'system.classes.edit': true,
-    // Attendance (English Lead: manage english, view/edit all english students)
+    'timetable.english.simulation': true,
+    'timetable.english.backup.view': true, 'timetable.english.backup.restore': false,
+    'timetable.integrated.view': true,
+    // Attendance (manage english only)
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': false, 'attendance.manage_english': true,
     'attendance.edit_student_info': true,
+    // Students
+    'students.view': true, 'students.edit': true, 'students.delete': false,
+    'students.enrollment.manage': true,
+    // Classes
+    'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': false,
+    // Consultation
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true,
+    // Grades
+    'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
+    // Billing
+    'billing.view': true, 'billing.edit': false,
   },
   math_teacher: {
+    // Events
     'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
     'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    // Departments & Users
     'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    // Settings
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    // System
+    'system.teachers.view': true, 'system.teachers.edit': false,
+    'system.classes.view': true, 'system.classes.edit': false,
+    // Timetable (view only)
     'timetable.math.view': true, 'timetable.math.edit': false,
     'timetable.english.view': false, 'timetable.english.edit': false,
-    // Attendance (Math Teacher: view/edit own students only)
+    // Attendance (own students only)
     'attendance.manage_own': true, 'attendance.edit_all': false,
     'attendance.manage_math': false, 'attendance.manage_english': false,
     'attendance.edit_student_info': false,
+    // Students (view only)
+    'students.view': true, 'students.edit': false, 'students.delete': false,
+    'students.enrollment.manage': false,
+    // Classes (view only)
+    'classes.view': true, 'classes.create': false, 'classes.edit': false, 'classes.delete': false,
+    // Consultation
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': false, 'consultation.convert': false,
+    // Grades (view & edit own)
+    'grades.view': true, 'grades.edit': true, 'grades.manage_exams': false,
+    // Billing
+    'billing.view': false, 'billing.edit': false,
   },
   english_teacher: {
+    // Events
     'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
     'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    // Departments & Users
     'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    // Settings
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    // System
+    'system.teachers.view': true, 'system.teachers.edit': false,
+    'system.classes.view': true, 'system.classes.edit': false,
+    // Timetable (view only)
     'timetable.math.view': false, 'timetable.math.edit': false,
     'timetable.english.view': true, 'timetable.english.edit': false,
-    // Attendance (English Teacher: view/edit own students only)
+    // Attendance (own students only)
     'attendance.manage_own': true, 'attendance.edit_all': false,
     'attendance.manage_math': false, 'attendance.manage_english': false,
+    'attendance.edit_student_info': false,
+    // Students (view only)
+    'students.view': true, 'students.edit': false, 'students.delete': false,
+    'students.enrollment.manage': false,
+    // Classes (view only)
+    'classes.view': true, 'classes.create': false, 'classes.edit': false, 'classes.delete': false,
+    // Consultation
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': false, 'consultation.convert': false,
+    // Grades (view & edit own)
+    'grades.view': true, 'grades.edit': true, 'grades.manage_exams': false,
+    // Billing
+    'billing.view': false, 'billing.edit': false,
   },
   user: {
+    // Events (basic)
     'events.create': true, 'events.manage_own': true, 'events.manage_others': false,
     'events.drag_move': true, 'events.attendance': true, 'events.bucket': false,
+    // Departments & Users
     'departments.view_all': true, 'departments.manage': false,
     'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
+    // Settings
     'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
-  },
-  viewer: {
-    'events.create': false, 'events.manage_own': false, 'events.manage_others': false,
-    'events.drag_move': false, 'events.attendance': false, 'events.bucket': false,
-    'departments.view_all': true, 'departments.manage': false,
-    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
-    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
-  },
-  guest: {
-    'events.create': false, 'events.manage_own': false, 'events.manage_others': false,
-    'events.drag_move': false, 'events.attendance': false, 'events.bucket': false,
-    'departments.view_all': false, 'departments.manage': false,
-    'users.view': false, 'users.approve': false, 'users.change_role': false, 'users.change_permissions': false,
-    'settings.access': false, 'settings.holidays': false, 'settings.role_permissions': false,
+    // Attendance (view only)
+    'attendance.manage_own': false, 'attendance.edit_all': false,
+    // Students (view only)
+    'students.view': true, 'students.edit': false, 'students.delete': false,
+    // Consultation (view only)
+    'consultation.view': true, 'consultation.create': false, 'consultation.edit': false, 'consultation.convert': false,
+    // Grades (view only)
+    'grades.view': true, 'grades.edit': false, 'grades.manage_exams': false,
   },
 };
 
@@ -551,6 +661,7 @@ export interface TimetableStudent {
   onHold?: boolean; // 대기생 여부
   isMoved?: boolean; // 반이동 학생 여부
   personalSchedule?: { day: string; period: string }[];
+  attendanceDays?: string[]; // 등원 요일 (비어있으면 모든 수업 요일에 등원)
 }
 
 export interface TimetableClass {
@@ -627,7 +738,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing' | 'role-management';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -650,6 +761,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   'student-consultations': { label: '학생 상담', icon: '💬' },
   staff: { label: '직원 관리', icon: '👔' },
   billing: { label: '수납 관리', icon: '💰' },
+  'role-management': { label: '역할 관리', icon: '🔐' },
 };
 
 // Tab Group 구조 - 무한 확장 가능
@@ -691,6 +803,13 @@ export const TAB_GROUPS: TabGroup[] = [
     tabs: ['payment', 'staff', 'billing'],
     order: 4,
   },
+  {
+    id: 'system',
+    label: '시스템',
+    icon: '🔧',
+    tabs: ['role-management'],
+    order: 5,
+  },
 ];
 
 // Legacy support - 기존 코드 호환성
@@ -706,16 +825,16 @@ export type TabPermissionConfig = {
 };
 
 // Default Tab Permissions (Fallback)
+// Note: master always has access to all tabs (handled in code)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing'],
-  admin: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing'],
-  manager: ['calendar', 'attendance', 'daily-attendance', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing'],
-  editor: ['calendar'],
-  math_lead: ['timetable', 'attendance', 'daily-attendance', 'students', 'grades', 'classes', 'student-consultations'],
-  english_lead: ['timetable', 'attendance', 'daily-attendance', 'students', 'grades', 'classes', 'student-consultations'],
+  master: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing', 'role-management'],
+  admin: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing', 'role-management'],
+  manager: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing'],
+  math_lead: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'student-consultations'],
+  english_lead: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'student-consultations'],
+  math_teacher: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
+  english_teacher: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
   user: ['calendar', 'attendance', 'daily-attendance'],
-  viewer: ['calendar'],
-  guest: ['calendar'],
 };
 
 export interface SystemConfig {

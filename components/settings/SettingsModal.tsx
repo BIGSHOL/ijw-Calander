@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Department, UserProfile, CalendarEvent, ROLE_LABELS, ROLE_HIERARCHY, PermissionId, RolePermissions, DEFAULT_ROLE_PERMISSIONS, Teacher, ClassKeywordColor } from '../../types';
+import { Department, UserProfile, CalendarEvent, ROLE_LABELS, Teacher, ClassKeywordColor } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { X, FolderKanban, Users, Shield, ShieldAlert, ShieldCheck, Database, Search, Save, UserCog, CalendarClock, Calendar, Archive, Clock, BarChart3, FileText } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
@@ -9,7 +9,7 @@ import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, 
 
 import { Holiday } from '../../types';
 import MyEventsModal from '../Calendar/MyEventsModal';
-import { TeachersTab, ClassesTab, HolidaysTab, RolePermissionsTab, TabAccessTab, DepartmentsTab, GanttCategoriesTab, MigrationTab } from './';
+import { TeachersTab, ClassesTab, HolidaysTab, DepartmentsTab, GanttCategoriesTab, MigrationTab } from './';
 import HashtagsTab from './HashtagsTab';
 import { useTabPermissions } from '../../hooks/useTabPermissions';
 import SalarySettingsTab from '../Attendance/components/SalarySettingsTab';
@@ -72,7 +72,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const canManageUsers = canViewUsers;
   const canViewTeachers = hasPermission('system.teachers.view');
   const canViewClasses = hasPermission('system.classes.view');
-  const canManageRolePermissions = hasPermission('settings.role_permissions');
 
   // Get accessible tabs for current user
   const { accessibleTabs } = useTabPermissions(currentUserProfile || null);
@@ -316,10 +315,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setDraggedTeacherId(null);
   };
 
-  // --- Role Permissions State (MASTER only) ---
-  const [rolePermissions, setRolePermissions] = useState<RolePermissions>(DEFAULT_ROLE_PERMISSIONS);
-  const [rolePermissionsLoaded, setRolePermissionsLoaded] = useState(false);
-
   // System Config logic...
   useEffect(() => {
     if (activeTab === 'system' && isMaster) {
@@ -346,30 +341,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [activeTab, canViewClassKeywords]);
 
-  // Role Permissions loading (MASTER, ADMIN, MANAGER can view)
-  const canViewRolePermissions = isMaster || isAdmin || currentUserProfile?.role === 'manager';
-  useEffect(() => {
-    if (activeTab === 'role_permissions' && canViewRolePermissions) {
-      const unsubscribe = onSnapshot(doc(db, 'settings', 'rolePermissions'), (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data() as RolePermissions;
-          // Merge with defaults
-          const merged: RolePermissions = {};
-          for (const role of ROLE_HIERARCHY.filter(r => r !== 'master') as (keyof RolePermissions)[]) {
-            merged[role] = {
-              ...DEFAULT_ROLE_PERMISSIONS[role],
-              ...(data[role] || {})
-            };
-          }
-          setRolePermissions(merged);
-        } else {
-          setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
-        }
-        setRolePermissionsLoaded(true);
-      });
-      return () => unsubscribe();
-    }
-  }, [activeTab, isMaster]);
+  // NOTE: Role permissions moved to RoleManagementPage
 
   // NOTE: Teacher list is now passed as props from App.tsx (centralized subscription)
 
@@ -685,18 +657,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                   {mainTab === 'permissions' && (
                     <>
-                      {(isMaster || canManageRolePermissions) && (
-                        <button onClick={() => setActiveTab('role_permissions')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'role_permissions' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          역할 권한
-                        </button>
-                      )}
-
-                      {isMaster && (
-                        <button onClick={() => setActiveTab('tab_access')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'tab_access' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          탭 관리
-                        </button>
-                      )}
-
                       {isMaster && (
                         <button onClick={() => setActiveTab('migration')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'migration' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                           데이터 마이그레이션
@@ -806,16 +766,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <ClassesTab isMaster={isMaster} canEdit={isMaster || hasPermission('system.classes.edit')} />
             )}
 
-            {/* TAB ACCESS TAB */}
-            {activeTab === 'tab_access' && (
-              <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f8f9fa] p-4 md:p-8">
-                <TabAccessTab
-                  isMaster={isMaster}
-                  isAdmin={isAdmin}
-                  currentUserRole={currentUserProfile?.role}
-                />
-              </div>
-            )}
 
             {/* MIGRATION TAB */}
             {activeTab === 'migration' && isMaster && (
@@ -947,14 +897,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
-            {/* ROLE PERMISSIONS TAB - Viewable by MASTER, ADMIN, MANAGER */}
-            {activeTab === 'role_permissions' && canViewRolePermissions && (
-              <RolePermissionsTab
-                isMaster={isMaster}
-                isAdmin={isAdmin}
-                currentUserRole={currentUserProfile?.role}
-              />
-            )}
 
             {/* GANTT DEPARTMENTS TAB */}
             {activeTab === 'gantt_departments' && isMaster && (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Eye, EyeOff, MoreVertical, TrendingUp, ArrowUpCircle, UserPlus, Clock } from 'lucide-react';
+import { Eye, EyeOff, MoreVertical, TrendingUp, ArrowUpCircle, Users, Clock } from 'lucide-react';
 
 import { TimetableStudent, Teacher, ClassKeywordColor, EnglishLevel } from '../../../types';
 import { ClassInfo } from './hooks/useEnglishClasses';
@@ -235,43 +235,50 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
     }, [students, moveChanges, classInfo.name]);
 
+    // 수정 모드에서 수업 상세 영역(수업명~스케줄) 클릭 핸들러
+    const handleClassDetailClick = (e: React.MouseEvent) => {
+        if (mode === 'edit' && onClassClick && !isTimeColumnOnly) {
+            e.stopPropagation();
+            onClassClick();
+        }
+    };
+
     return (
         <>
             <div
                 onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
                 onDrop={isTimeColumnOnly ? undefined : handleDrop}
-                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white ${mode === 'edit' && !isTimeColumnOnly ? 'hover:bg-gray-50' : ''}`}
+                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white`}
             >
-                {/* Header - 키워드 색상 적용 */}
-                {(() => {
-                    const matchedKw = classKeywords.find(kw => classInfo.name?.includes(kw.keyword));
+                {/* 수업 상세 클릭 영역 (수업명 ~ 스케줄) - 수정 모드에서만 클릭 가능 */}
+                <div
+                    onClick={handleClassDetailClick}
+                    className={mode === 'edit' && !isTimeColumnOnly ? 'cursor-pointer hover:brightness-95' : ''}
+                >
+                    {/* Header - 키워드 색상 적용 */}
+                    {(() => {
+                        const matchedKw = classKeywords.find(kw => classInfo.name?.includes(kw.keyword));
 
-                    // If TimeColumnOnly, render generic empty style but keep height
-                    if (isTimeColumnOnly) {
+                        // If TimeColumnOnly, render generic empty style but keep height
+                        if (isTimeColumnOnly) {
+                            return (
+                                <div className="p-2 text-center font-bold text-sm border-b border-orange-300 flex items-center justify-center h-[50px] bg-orange-200 text-orange-900 select-none">
+                                    수업
+                                </div>
+                            );
+                        }
+
                         return (
-                            <div className="p-2 text-center font-bold text-sm border-b border-orange-300 flex items-center justify-center h-[50px] bg-orange-200 text-orange-900 select-none">
-                                수업
-                            </div>
-                        );
-                    }
-
-                    return (
-                        <div
-                            className={`p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group ${onClassClick ? 'cursor-pointer hover:brightness-95' : 'cursor-help'}`}
-                            style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor } : { backgroundColor: '#EFF6FF', color: '#1F2937' }}
-                            onMouseEnter={() => setShowScheduleTooltip(true)}
-                            onMouseLeave={() => setShowScheduleTooltip(false)}
-                            onClick={(e) => {
-                                if (onClassClick) {
-                                    e.stopPropagation();
-                                    onClassClick();
-                                }
-                            }}
-                        >
+                            <div
+                                className={`p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group ${mode === 'view' ? 'cursor-help' : ''}`}
+                                style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor } : { backgroundColor: '#EFF6FF', color: '#1F2937' }}
+                                onMouseEnter={() => mode !== 'edit' && setShowScheduleTooltip(true)}
+                                onMouseLeave={() => setShowScheduleTooltip(false)}
+                            >
                             {classInfo.name}
 
-                            {/* Schedule Tooltip (마우스 오버 시 실제 스케줄 표시) */}
-                            {showScheduleTooltip && scheduleInfo.length > 0 && (
+                            {/* Schedule Tooltip (조회 모드에서만 마우스 오버 시 실제 스케줄 표시) */}
+                            {mode !== 'edit' && showScheduleTooltip && scheduleInfo.length > 0 && (
                                 <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 p-2 min-w-[140px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
                                     <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-700">
                                         <Clock size={12} className="text-yellow-400" />
@@ -423,6 +430,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         ))}
                     </div>
                 </div>
+                </div>
+                {/* 수업 상세 클릭 영역 끝 */}
 
                 {/* Dynamic Content Section: Student List - 3 Sections */}
                 {displayOptions?.showStudents ? (
@@ -459,7 +468,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             }
                                         }}
                                     >
-                                        {mode === 'edit' && <UserPlus size={14} />}
+                                        {mode === 'edit' && <Users size={14} />}
                                         <span>{studentCount}명</span>
                                     </button>
                                 </div>
@@ -470,12 +479,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
                                         if (activeStudents.length === 0) {
                                             return (
-                                                <div
-                                                    className={`flex flex-col items-center justify-center h-full text-gray-300 ${mode === 'edit' ? 'cursor-pointer hover:text-gray-400' : 'cursor-default'}`}
-                                                    onClick={() => mode === 'edit' && setIsStudentModalOpen(true)}
-                                                >
+                                                <div className="flex flex-col items-center justify-center h-full text-gray-300">
                                                     <span>학생이 없습니다</span>
-                                                    {mode === 'edit' && <span className="text-indigo-400 mt-0.5 hover:underline">+ 추가</span>}
                                                 </div>
                                             );
                                         }
@@ -621,6 +626,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 currentUser={currentUser}
                 readOnly={mode === 'view' || (isSimulationMode && currentUser?.role !== 'master')}
                 isSimulationMode={isSimulationMode}
+                // NEW: Enrollments 기반 데이터 전달
+                studentMap={studentMap}
+                initialStudents={classStudentData?.studentList || []}
             />
 
             {/* Level Up Confirm Modal */}

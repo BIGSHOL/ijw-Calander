@@ -86,6 +86,7 @@ export const useClassStudents = (
                     enrollmentDate: data.enrollmentDate || data.startDate,
                     withdrawalDate: data.withdrawalDate,
                     onHold: data.onHold,
+                    attendanceDays: data.attendanceDays || [],  // 등원 요일 추가
                 };
             });
 
@@ -119,6 +120,7 @@ export const useClassStudents = (
                             withdrawalDate: enrollmentData.withdrawalDate,
                             onHold: enrollmentData.onHold,
                             isMoved: false,
+                            attendanceDays: enrollmentData.attendanceDays || [],  // 등원 요일
                         } as TimetableStudent;
                     })
                     .filter(Boolean) as TimetableStudent[];

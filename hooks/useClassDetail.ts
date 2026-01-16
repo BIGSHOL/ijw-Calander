@@ -12,6 +12,7 @@ export interface ClassStudent {
   grade: string;
   status: 'active' | 'on_hold' | 'withdrawn';
   enrollmentDate: string;
+  attendanceDays?: string[];  // 실제 등원 요일 (비어있으면 모든 수업 요일에 등원)
 }
 
 export interface ClassDetail {
@@ -79,8 +80,9 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
         console.warn('[useClassDetail] Error fetching from classes collection:', err);
       }
 
-      // 2. enrollments에서 학생 ID 수집
+      // 2. enrollments에서 학생 ID 수집 (attendanceDays 포함)
       const studentIds = new Set<string>();
+      const studentAttendanceDays: Record<string, string[]> = {};  // studentId -> attendanceDays
 
       try {
         const enrollmentsQuery = query(
@@ -95,6 +97,11 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
           const studentId = doc.ref.parent.parent?.id;
           if (studentId) {
             studentIds.add(studentId);
+            const data = doc.data();
+            // attendanceDays 저장
+            if (data.attendanceDays && Array.isArray(data.attendanceDays)) {
+              studentAttendanceDays[studentId] = data.attendanceDays;
+            }
           }
 
           // classes에서 못 가져왔으면 enrollment에서 fallback
@@ -127,6 +134,7 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
               grade: data.grade || '미정',
               status: data.status,
               enrollmentDate: data.startDate || '',
+              attendanceDays: studentAttendanceDays[doc.id],  // enrollment에서 가져온 attendanceDays
             });
           }
         });

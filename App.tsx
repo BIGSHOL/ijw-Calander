@@ -36,6 +36,7 @@ const StudentConsultationTab = lazy(() => import('./components/StudentConsultati
 const BillingManager = lazy(() => import('./components/Billing').then(m => ({ default: m.BillingManager })));
 const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
 const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
+const RoleManagementPage = lazy(() => import('./components/RoleManagement/RoleManagementPage'));
 // ProspectManagementTab removed - merged into ConsultationManager
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit, Calculator, BookOpen, Library, Building, ClipboardList, MessageCircle, BarChart3, Check, DollarSign } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
@@ -2293,6 +2294,17 @@ const App: React.FC = () => {
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto">
                 <StaffManager />
+              </div>
+            </Suspense>
+          ) : appMode === 'role-management' ? (
+            /* Role Management View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <RoleManagementPage
+                  isMaster={isMaster}
+                  isAdmin={isAdmin}
+                  currentUserRole={userProfile?.role}
+                />
               </div>
             </Suspense>
           ) : null}
