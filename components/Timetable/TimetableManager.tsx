@@ -134,6 +134,20 @@ const TimetableManager = ({
     // Loading State
     const loading = classesLoading;
 
+    // 로컬 스토리지 키 및 설정 로드 (다른 state보다 먼저 선언)
+    const VIEW_SETTINGS_KEY = 'timetable_view_settings';
+    const savedSettings = useMemo(() => {
+        try {
+            const saved = localStorage.getItem(VIEW_SETTINGS_KEY);
+            if (saved) {
+                return JSON.parse(saved);
+            }
+        } catch (e) {
+            console.warn('Failed to load view settings from localStorage:', e);
+        }
+        return null;
+    }, []);
+
     // Week State (for date display)
     const [currentMonday, setCurrentMonday] = useState(() => {
         const today = new Date();
@@ -141,7 +155,9 @@ const TimetableManager = ({
     });
 
     // View State (use external if provided)
-    const [internalSelectedDays, setInternalSelectedDays] = useState<string[]>(['월', '화', '수', '목', '금']);
+    const [internalSelectedDays, setInternalSelectedDays] = useState<string[]>(
+        savedSettings?.selectedDays || ['월', '화', '수', '목', '금']
+    );
     const selectedDays = externalSelectedDays ?? internalSelectedDays;
     const setSelectedDays = onSelectedDaysChange ?? setInternalSelectedDays;
 
@@ -152,9 +168,7 @@ const TimetableManager = ({
     const [isAddClassOpen, setIsAddClassOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<TimetableClass | null>(null);
 
-    const [isOptionOpen, setIsOptionOpen] = useState(false); // Local option popover state
-
-    const [internalShowStudents, setInternalShowStudents] = useState(true);
+    const [internalShowStudents, setInternalShowStudents] = useState(savedSettings?.showStudents ?? true);
     const showStudents = externalShowStudents ?? internalShowStudents;
     const setShowStudents = onShowStudentsChange ?? setInternalShowStudents;
 
@@ -215,26 +229,8 @@ const TimetableManager = ({
     const [newStudentGrade, setNewStudentGrade] = useState('');
     const [newStudentSchool, setNewStudentSchool] = useState('');
 
-    // View Settings State - 로컬 스토리지에서 초기값 로드
+    // View Settings State
     const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
-
-    // 로컬 스토리지 키
-    const VIEW_SETTINGS_KEY = 'timetable_view_settings';
-
-    // 로컬 스토리지에서 뷰 설정 로드
-    const loadViewSettings = () => {
-        try {
-            const saved = localStorage.getItem(VIEW_SETTINGS_KEY);
-            if (saved) {
-                return JSON.parse(saved);
-            }
-        } catch (e) {
-            console.warn('Failed to load view settings from localStorage:', e);
-        }
-        return null;
-    };
-
-    const savedSettings = loadViewSettings();
 
     // Timetable View Mode: 'day-based' (월화수목금토일) vs 'teacher-based' (월목/화금/주말/수요일)
     const [timetableViewMode, setTimetableViewMode] = useState<'day-based' | 'teacher-based'>(
@@ -264,14 +260,16 @@ const TimetableManager = ({
             showEmptyRooms,
             columnWidth,
             rowHeight,
-            fontSize
+            fontSize,
+            showStudents: internalShowStudents,
+            selectedDays: internalSelectedDays
         };
         try {
             localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(settings));
         } catch (e) {
             console.warn('Failed to save view settings to localStorage:', e);
         }
-    }, [timetableViewMode, showClassName, showSchool, showGrade, showEmptyRooms, columnWidth, rowHeight, fontSize]);
+    }, [timetableViewMode, showClassName, showSchool, showGrade, showEmptyRooms, columnWidth, rowHeight, fontSize, internalShowStudents, internalSelectedDays]);
 
     // Hook Integration: Drag & Drop
     const {
@@ -501,12 +499,6 @@ const TimetableManager = ({
                 goToThisWeek={goToThisWeek}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                isOptionOpen={isOptionOpen}
-                setIsOptionOpen={setIsOptionOpen}
-                showStudents={showStudents}
-                setShowStudents={setShowStudents}
-                selectedDays={selectedDays}
-                setSelectedDays={setSelectedDays}
                 viewType={viewType}
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
                 setIsViewSettingsOpen={setIsViewSettingsOpen}
@@ -514,8 +506,6 @@ const TimetableManager = ({
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}
                 isSaving={isSaving}
-                timetableViewMode={timetableViewMode}
-                setTimetableViewMode={setTimetableViewMode}
             />
 
             {/* Timetable Grid */}
@@ -547,6 +537,7 @@ const TimetableManager = ({
                     currentSubjectFilter={currentSubjectFilter}
                     studentMap={studentMap}
                     timetableViewMode={timetableViewMode}
+                    classKeywords={classKeywords}
                 />
             </div>
 
@@ -594,7 +585,7 @@ const TimetableManager = ({
                 studentMap={studentMap}
             />
 
-            {/* View Settings Modal */}
+            {/* View Settings Modal (통합 설정) */}
             <ViewSettingsModal
                 isOpen={isViewSettingsOpen}
                 onClose={() => setIsViewSettingsOpen(false)}
@@ -612,6 +603,13 @@ const TimetableManager = ({
                 setShowGrade={setShowGrade}
                 showEmptyRooms={showEmptyRooms}
                 setShowEmptyRooms={setShowEmptyRooms}
+                showStudents={showStudents}
+                setShowStudents={setShowStudents}
+                selectedDays={selectedDays}
+                setSelectedDays={setSelectedDays}
+                timetableViewMode={timetableViewMode}
+                setTimetableViewMode={setTimetableViewMode}
+                viewType={viewType}
             />
 
             {/* Teacher Order Modal (Math) */}

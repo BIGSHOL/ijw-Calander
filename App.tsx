@@ -36,7 +36,7 @@ const StudentConsultationTab = lazy(() => import('./components/StudentConsultati
 const BillingManager = lazy(() => import('./components/Billing').then(m => ({ default: m.BillingManager })));
 const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
 const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
-const ProspectManagementTab = lazy(() => import('./components/ProspectManagement/ProspectManagementTab'));
+// ProspectManagementTab removed - merged into ConsultationManager
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit, Calculator, BookOpen, Library, Building, ClipboardList, MessageCircle, BarChart3, Check, DollarSign } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
@@ -71,7 +71,7 @@ const formatUserDisplay = (u: UserProfile) => {
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'prospects' | 'grades' | 'classes' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
 
   const [baseDate, setBaseDate] = useState(new Date());
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
@@ -2220,7 +2220,6 @@ const App: React.FC = () => {
               <div className="w-full flex-1 overflow-auto">
                 <ConsultationManager
                   userProfile={userProfile}
-                  onNavigate={(tab) => setAppMode(tab as any)}
                 />
               </div>
             </Suspense>
@@ -2249,13 +2248,7 @@ const App: React.FC = () => {
                 />
               </div>
             </Suspense>
-          ) : appMode === 'prospects' ? (
-            /* Prospect Management View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <ProspectManagementTab />
-              </div>
-            </Suspense>
+            /* prospects tab removed - merged into consultation */
           ) : appMode === 'grades' ? (
             /* Grades Management View */
             <Suspense fallback={<TabLoadingFallback />}>

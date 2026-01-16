@@ -46,7 +46,14 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
 
   // 수업 삭제
   const handleDelete = async () => {
-    if (!window.confirm(`정말로 "${className}" 수업을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, ${studentCount || 0}명의 학생 등록 정보가 함께 삭제됩니다.`)) {
+    const warningMsg = `정말로 "${className}" 수업을 삭제하시겠습니까?\n\n` +
+      `⚠️ 다음 항목이 모두 삭제됩니다:\n` +
+      `• 수업 정보 (강사, 스케줄, 교실)\n` +
+      `• ${studentCount || 0}명 학생의 수업 배정\n` +
+      `• 시간표에서 해당 수업\n\n` +
+      `이 작업은 되돌릴 수 없습니다.`;
+
+    if (!window.confirm(warningMsg)) {
       return;
     }
 

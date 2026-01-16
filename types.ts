@@ -117,19 +117,11 @@ export interface UnifiedStudent {
 
 
   // 상태 관리
-  status: 'prospect' | 'active' | 'on_hold' | 'withdrawn';
+  status: 'active' | 'on_hold' | 'withdrawn';
   startDate: string;             // 등록일 (YYYY-MM-DD)
   endDate?: string;              // 퇴원일
   withdrawalDate?: string;       // 퇴원일 (YYYY-MM-DD) - 영어 시간표와 호환
   isOldWithdrawn?: boolean;      // 90일 이상 경과한 퇴원생 표시 (검색용)
-
-  // 예비원생 전용 필드 (status === 'prospect' 일 때 사용)
-  consultationId?: string;        // 연결된 상담 기록 ID
-  prospectStatus?: 'contacted' | 'pending_registration' | 'pending_test' | 'on_hold';
-  plannedStartDate?: string;      // 등록 예정일 (YYYY-MM-DD)
-  plannedSubjects?: ('math' | 'english')[];
-  followUpDate?: string;          // 팔로업 예정일
-  prospectNotes?: string;         // 예비원생 메모
 
   // 출석부 연동
   salarySettingId?: string;      // 급여 설정
@@ -635,7 +627,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'prospects' | 'grades' | 'classes' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing';
+export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -653,7 +645,6 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   gantt: { label: '간트 차트', icon: '📊' },
   consultation: { label: '등록 상담', icon: '📞' },
   students: { label: '학생 관리', icon: '👥' },
-  prospects: { label: '예비원생', icon: '🎯' },
   grades: { label: '성적 관리', icon: '📊' },
   classes: { label: '수업 관리', icon: '📚' },
   'student-consultations': { label: '학생 상담', icon: '💬' },
@@ -690,7 +681,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'student',
     label: '학생',
     icon: '👥',
-    tabs: ['students', 'prospects', 'consultation', 'student-consultations', 'grades'],
+    tabs: ['students', 'consultation', 'student-consultations', 'grades'],
     order: 3,
   },
   {

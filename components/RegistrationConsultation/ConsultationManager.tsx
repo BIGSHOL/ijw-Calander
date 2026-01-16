@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { ConsultationRecord, UserProfile } from '../../types';
 import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation } from '../../hooks/useConsultations';
-import { useCreateProspect } from '../../hooks/useProspectConversion';
 import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
@@ -10,10 +9,9 @@ import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, Clipb
 
 interface ConsultationManagerProps {
     userProfile: UserProfile | null;
-    onNavigate?: (tab: string) => void;
 }
 
-const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, onNavigate }) => {
+const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }) => {
     const [view, setView] = useState<'dashboard' | 'table' | 'yearly'>('dashboard');
     const [viewColumns, setViewColumns] = useState<1 | 2>(1); // 1단/2단 보기 상태
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
@@ -31,7 +29,6 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
     const createConsultation = useCreateConsultation();
     const updateConsultation = useUpdateConsultation();
     const deleteConsultation = useDeleteConsultation();
-    const createProspect = useCreateProspect();
 
     const handleAddRecord = useCallback((record: Omit<ConsultationRecord, 'id' | 'createdAt'>) => {
         createConsultation.mutate({
@@ -85,54 +82,6 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
         setIsFormOpen(true);
     };
 
-    // 예비원생 등록 핸들러
-    const handleRegisterProspect = useCallback((record: ConsultationRecord) => {
-        if (record.registeredStudentId) {
-            alert('이미 예비원생으로 등록된 상담 기록입니다.');
-            return;
-        }
-
-        const confirmMsg = `""학생 [${record.studentName}]을(를) 예비원생으로 등록하시겠습니까?\n\n학교: ${record.schoolName}\n학년: ${record.grade}\n상담 과목: ${record.subject}"`;
-        if (!window.confirm(confirmMsg)) return;
-
-        // 상담 과목을 plannedSubjects로 변환
-        const plannedSubjects: ('math' | 'english')[] = [];
-        const subjectLower = record.subject.toLowerCase();
-        if (subjectLower.includes('수학') || subjectLower.includes('math')) {
-            plannedSubjects.push('math');
-        }
-        if (subjectLower.includes('영어') || subjectLower.includes('english') || subjectLower.includes('영수')) {
-            plannedSubjects.push('english');
-        }
-        // 영수 등록인 경우 둘 다 추가
-        if (subjectLower.includes('영수')) {
-            if (!plannedSubjects.includes('math')) plannedSubjects.push('math');
-            if (!plannedSubjects.includes('english')) plannedSubjects.push('english');
-        }
-
-        createProspect.mutate({
-            consultationId: record.id,
-            name: record.studentName,
-            school: record.schoolName,
-            grade: record.grade,
-            parentPhone: record.parentPhone,
-            prospectStatus: 'contacted',
-            plannedSubjects,
-            followUpDate: record.followUpDate || undefined,
-            prospectNotes: record.notes || undefined,
-        }, {
-            onSuccess: () => {
-                alert(`[${record.studentName}] 학생이 예비원생으로 등록되었습니다.\n\n예비원생 탭으로 이동합니다.`);
-                if (onNavigate) {
-                    onNavigate('prospects');
-                }
-            },
-            onError: (error) => {
-                console.error('예비원생 등록 오류:', error);
-                alert('예비원생 등록에 실패했습니다.');
-            }
-        });
-    }, [createProspect]);
 
     // Month navigation - arrows only navigate months (skip 'all')
     const handlePrevMonth = () => {
@@ -391,7 +340,6 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                             data={consultations}
                             onEdit={openEditModal}
                             onDelete={handleDeleteRecord}
-                            onRegisterProspect={handleRegisterProspect}
                         />
                     )}
 

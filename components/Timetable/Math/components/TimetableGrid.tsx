@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { TimetableClass, Teacher } from '../../../../types';
+import { TimetableClass, Teacher, ClassKeywordColor } from '../../../../types';
 import { getClassesForCell, getConsecutiveSpan, shouldSkipCell } from '../utils/gridUtils';
 import ClassCard from './ClassCard';
 import { MATH_PERIOD_TIMES, WEEKEND_PERIOD_TIMES, ENGLISH_PERIODS, ALL_WEEKDAYS } from '../../constants';
@@ -36,6 +36,8 @@ interface TimetableGridProps {
     studentMap: Record<string, any>;
     // Timetable View Mode
     timetableViewMode: 'day-based' | 'teacher-based';
+    // Keyword Colors
+    classKeywords?: ClassKeywordColor[];
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -65,7 +67,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
     currentSubjectFilter,
     studentMap,
-    timetableViewMode
+    timetableViewMode,
+    classKeywords = []
 }) => {
     // Helper to get column width style
     const getColumnWidthStyle = (colspan: number) => {
@@ -257,9 +260,16 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             {/* Teacher/Room Row */}
                             <tr>
                                 <th
-                                    className={`p-1.5 text-xxs font-bold ${groupColors.text} border-b border-gray-200 ${groupColors.light} sticky left-0 z-30`}
+                                    className={`p-1.5 text-xxs font-bold ${groupColors.text} border-b border-gray-200 border-r-2 border-r-gray-400 sticky left-0 z-30`}
                                     rowSpan={2}
-                                    style={{ width: '90px', minWidth: '90px' }}
+                                    style={{
+                                        width: '90px',
+                                        minWidth: '90px',
+                                        backgroundColor: groupColors.light === 'bg-blue-50' ? '#eff6ff' :
+                                            groupColors.light === 'bg-amber-50' ? '#fffbeb' :
+                                            groupColors.light === 'bg-orange-50' ? '#fff7ed' :
+                                            groupColors.light === 'bg-green-50' ? '#f0fdf4' : '#f3f4f6'
+                                    }}
                                 >
                                     교시
                                 </th>
@@ -322,13 +332,27 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     ? (WEEKEND_PERIOD_TIMES[period] || period)
                                     : (MATH_PERIOD_TIMES[period] || period);
 
+                                // 배경색 hex 매핑 (sticky 요소에서 border가 보이도록)
+                                const bgColorMap: Record<string, string> = {
+                                    'bg-blue-50': '#eff6ff',
+                                    'bg-amber-50': '#fffbeb',
+                                    'bg-orange-50': '#fff7ed',
+                                    'bg-green-50': '#f0fdf4'
+                                };
+                                const bgHex = bgColorMap[groupColors.light] || '#f3f4f6';
+
                                 return (
-                                <tr key={period} className="hover:bg-gray-50/50">
+                                <tr key={period}>
                                     <td
-                                        className={`p-1.5 text-xxs font-bold ${groupColors.text} text-center ${groupColors.light} sticky left-0 z-10`}
-                                        style={{ width: '90px', minWidth: '90px' }}
+                                        className={`p-1.5 text-xxs font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                        style={{
+                                            width: '90px',
+                                            minWidth: '90px',
+                                            backgroundColor: bgHex
+                                        }}
                                     >
-                                        {periodTimeDisplay}
+                                        <div className="font-bold text-[10px] text-gray-500">{period}</div>
+                                        <div>{periodTimeDisplay}</div>
                                     </td>
                                     {resources.map(resource => {
                                         const daysForResource = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
@@ -381,18 +405,17 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             const cellHeight = getRowHeight() * maxRowSpan;
                                             const cellStyle = { ...baseWidthStyle, height: `${cellHeight}px` };
 
-                                            const isLastCell = dayIndex + colSpan >= daysForResource.length;
-                                            // 강사별 구분만 굵은선, 나머지는 테두리 없음
-                                            const borderRightStyle = isLastCell ? 'border-r-2 border-r-gray-400' : '';
-
-                                            // 빈 셀 여부 확인 (수업이 없는 교시) - 진한 회색으로 표시
+                                            // 빈 셀 여부 확인 (수업이 없는 교시)
                                             const isEmpty = cellClasses.length === 0;
-                                            const emptyCellBg = isEmpty ? 'bg-gray-300' : 'bg-white';
+
+                                            // 마지막 요일인지 확인 (강사 간 세로 구분선용)
+                                            const isLastDayForResource = (dayIndex + colSpan - 1) === daysForResource.length - 1;
+                                            const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-gray-400' : '';
 
                                             cells.push(
                                                 <td
                                                     key={`${resource}-${day}-${period}`}
-                                                    className={`p-1 ${borderRightStyle} ${emptyCellBg}`}
+                                                    className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass}`}
                                                     style={cellStyle}
                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                     colSpan={colSpan > 1 ? colSpan : undefined}
@@ -420,6 +443,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 onDragLeave={onDragLeave}
                                                                 onDrop={onDrop}
                                                                 studentMap={studentMap}
+                                                                classKeywords={classKeywords}
                                                             />
                                                         ))
                                                     )}
@@ -508,8 +532,16 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             {/* Teacher/Room Row */}
                             <tr>
                                 <th
-                                    className={`p-1.5 text-xxs font-bold ${dayColors.text} border-b border-gray-200 ${dayColors.light} sticky left-0 z-30`}
-                                    style={{ width: '90px', minWidth: '90px' }}
+                                    className={`p-1.5 text-xxs font-bold ${dayColors.text} border-b border-gray-200 border-r-2 border-r-gray-400 sticky left-0 z-30`}
+                                    style={{
+                                        width: '90px',
+                                        minWidth: '90px',
+                                        backgroundColor: dayColors.light === 'bg-blue-50' ? '#eff6ff' :
+                                            dayColors.light === 'bg-amber-50' ? '#fffbeb' :
+                                            dayColors.light === 'bg-orange-50' ? '#fff7ed' :
+                                            dayColors.light === 'bg-green-50' ? '#f0fdf4' :
+                                            dayColors.light === 'bg-gray-50' ? '#f9fafb' : '#f3f4f6'
+                                    }}
                                 >
                                     교시
                                 </th>
@@ -546,17 +578,31 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     ? (WEEKEND_PERIOD_TIMES[period] || period)
                                     : (MATH_PERIOD_TIMES[period] || period);
 
+                                // 배경색 hex 매핑 (sticky 요소에서 border가 보이도록)
+                                const bgColorMap: Record<string, string> = {
+                                    'bg-blue-50': '#eff6ff',
+                                    'bg-amber-50': '#fffbeb',
+                                    'bg-orange-50': '#fff7ed',
+                                    'bg-green-50': '#f0fdf4',
+                                    'bg-gray-50': '#f9fafb'
+                                };
+                                const bgHex = bgColorMap[dayColors.light] || '#f3f4f6';
+
                                 return (
-                                    <tr key={period} className="hover:bg-gray-50/50">
+                                    <tr key={period}>
                                         <td
-                                            className={`p-1.5 text-xxs font-bold ${dayColors.text} text-center ${dayColors.light} sticky left-0 z-10`}
-                                            style={{ width: '90px', minWidth: '90px' }}
+                                            className={`p-1.5 text-xxs font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                            style={{
+                                                width: '90px',
+                                                minWidth: '90px',
+                                                backgroundColor: bgHex
+                                            }}
                                         >
-                                            {periodTimeDisplay}
+                                            <div className="font-bold text-[10px] text-gray-500">{period}</div>
+                                            <div>{periodTimeDisplay}</div>
                                         </td>
-                                        {resources.map((resource, idx) => {
+                                        {resources.map((resource, resourceIdx) => {
                                             const cellClasses = getClassesForCell(filteredClasses, day, period, resource, viewType);
-                                            const isLast = idx === resources.length - 1;
 
                                             // 수직 병합 확인
                                             const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) =>
@@ -574,17 +620,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                             const cellHeight = getRowHeight() * maxRowSpan;
                                             const cellStyle = { ...getCellWidthStyle(), height: `${cellHeight}px` };
-                                            // 강사별 구분만 굵은선, 나머지는 테두리 없음
-                                            const borderRightStyle = isLast ? 'border-r-2 border-r-gray-400' : '';
 
-                                            // 빈 셀 여부 확인 (수업이 없는 교시) - 진한 회색으로 표시
+                                            // 빈 셀 여부 확인 (수업이 없는 교시)
                                             const isEmpty = cellClasses.length === 0;
-                                            const emptyCellBg = isEmpty ? 'bg-gray-300' : 'bg-white';
+
+                                            // 강사 간 세로 구분선
+                                            const isLastResource = resourceIdx === resources.length - 1;
+                                            const borderRightClass = isLastResource ? 'border-r-2 border-r-gray-400' : '';
 
                                             return (
                                                 <td
                                                     key={`${resource}-${period}`}
-                                                    className={`p-1 ${borderRightStyle} ${emptyCellBg}`}
+                                                    className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass}`}
                                                     style={cellStyle}
                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                 >
@@ -611,6 +658,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 onDragLeave={onDragLeave}
                                                                 onDrop={onDrop}
                                                                 studentMap={studentMap}
+                                                                classKeywords={classKeywords}
                                                             />
                                                         ))
                                                     )}
