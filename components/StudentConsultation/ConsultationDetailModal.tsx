@@ -4,6 +4,9 @@ import { Consultation, CATEGORY_CONFIG } from '../../types';
 import { useDeleteConsultation, useCompleteFollowUp } from '../../hooks/useConsultationMutations';
 import { getFollowUpUrgency, getFollowUpDaysLeft } from '../../hooks/useStudentConsultations';
 
+// Lazy load AddConsultationModal to avoid circular dependencies if any
+const AddConsultationModal = React.lazy(() => import('./AddConsultationModal'));
+
 interface ConsultationDetailModalProps {
     consultation: Consultation;
     onClose: () => void;
@@ -21,15 +24,27 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
 }) => {
     const [followUpNotes, setFollowUpNotes] = useState('');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
 
     const deleteConsultation = useDeleteConsultation();
     const completeFollowUp = useCompleteFollowUp();
 
-    const categoryConfig = CATEGORY_CONFIG[consultation.category];
+    const categoryConfig = CATEGORY_CONFIG[consultation.category] || CATEGORY_CONFIG['other'];
     const urgency = getFollowUpUrgency(consultation);
 
     const typeIcon = consultation.type === 'parent' ? '👨‍👩‍👧' : '👤';
     const typeLabel = consultation.type === 'parent' ? '학부모 상담' : '학생 상담';
+
+    // 등록자 정보 파싱 (from ConsultationCard.tsx)
+    const registrar = React.useMemo(() => {
+        // 1. 마이그레이션 데이터: 내용에 [등록자: 이름] 포함된 경우
+        const match = consultation.content.match(/\[등록자:\s*(.*?)\]/);
+        if (match && match[1]) return match[1];
+
+        // 2. 수동 등록 데이터: createdBy는 id이므로 여기서 이름을 알기는 어려움.
+        // 현재는 마이그레이션된 '등록자' 표시가 주 목적이므로 이 로직으로 충분할 수 있음.
+        return '-';
+    }, [consultation.content]);
 
     const handleDelete = async () => {
         try {
@@ -56,8 +71,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 {/* 헤더 */}
                 <div className="bg-[#081429] text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10">
                     <div>
@@ -65,6 +80,12 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                         <p className="text-sm text-gray-300 mt-1">{typeLabel}</p>
                     </div>
                     <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowEditModal(true)}
+                            className="bg-[#fdb813] hover:bg-[#e5a711] text-[#081429] px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        >
+                            수정
+                        </button>
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
                             className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
@@ -96,6 +117,12 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
                                     <span className="text-[#373d41]">상담자:</span>
+                                    <span className="ml-2 text-[#081429] font-medium">
+                                        {registrar}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[#373d41]">담임선생님:</span>
                                     <span className="ml-2 text-[#081429] font-medium">
                                         {consultation.consultantName}
                                     </span>
@@ -256,8 +283,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
 
             {/* 삭제 확인 모달 */}
             {showDeleteConfirm && (
-                <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
-                    <div className="bg-white rounded-lg p-6 max-w-md">
+                <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white rounded-lg p-6 max-w-md" onClick={(e) => e.stopPropagation()}>
                         <h3 className="text-lg font-bold text-[#081429] mb-4">
                             정말 삭제하시겠습니까?
                         </h3>
@@ -279,6 +306,22 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                                 {deleteConsultation.isPending ? '삭제 중...' : '삭제'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 수정 모달 (AddConsultationModal 재사용) */}
+            {showEditModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white w-full max-w-2xl h-[90vh] rounded-lg shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        <AddConsultationModal
+                            onClose={() => setShowEditModal(false)}
+                            onSuccess={() => {
+                                setShowEditModal(false);
+                                onClose(); // 수정 완료 시 상세 모달도 닫기
+                            }}
+                            editingConsultation={consultation}
+                        />
                     </div>
                 </div>
             )}

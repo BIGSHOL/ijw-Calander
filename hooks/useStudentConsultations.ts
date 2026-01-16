@@ -7,6 +7,7 @@ import {
     orderBy,
     Query,
     DocumentData,
+    limit,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Consultation, ConsultationCategory } from '../types';
@@ -60,7 +61,14 @@ export function useStudentConsultations(filters?: StudentConsultationFilters) {
                 }
             }
 
-            // 복합 인덱스 없이 작동하도록 orderBy 제거 - 클라이언트에서 정렬
+            // 복합 인덱스 문제 최소화를 위해 필터가 없을 때만 orderBy/limit 적용 권장
+            // 하지만 리스트 뷰 최적화를 위해 가능한 경우 적용. 인덱스 에러 발생 시 콘솔 링크 통해 생성 필요.
+            if (!filters?.studentId) {
+                // 전체 목록 조회 시 최신 200개만 조회 (비용 절감)
+                constraints.push(orderBy('date', 'desc'));
+                constraints.push(limit(200));
+            }
+
             if (constraints.length > 0) {
                 q = query(collection(db, COL_STUDENT_CONSULTATIONS), ...constraints);
             }
@@ -84,7 +92,7 @@ export function useStudentConsultations(filters?: StudentConsultationFilters) {
                 }
             }
 
-            // 클라이언트 사이드 정렬 (최신순)
+            // 클라이언트 사이드 정렬 (이미 서버 정렬했으면 불필요하지만 안전을 위해 유지 또는 studentId 검색 시 사용)
             consultationList.sort((a, b) => {
                 const dateCompare = (b.date || '').localeCompare(a.date || '');
                 if (dateCompare !== 0) return dateCompare;
@@ -125,9 +133,9 @@ export function useStudentConsultations(filters?: StudentConsultationFilters) {
 
             return consultationList;
         },
-        staleTime: 0,                 // 캐시 무효화 시 즉시 refetch (탭 간 동기화 필수)
+        staleTime: 1000 * 60 * 5,     // 5분 캐싱
         gcTime: 1000 * 60 * 10,       // 10분 GC
-        refetchOnWindowFocus: true,   // 창 포커스 시 자동 갱신
+        refetchOnWindowFocus: false,  // 포커스 시 자동 갱신 비활성화 (비용 절감)
     });
 
     const error = queryError ? (queryError as Error).message : null;

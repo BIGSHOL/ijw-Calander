@@ -7,6 +7,7 @@ import { useStudents } from '../../hooks/useStudents';
 import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
+import { useStaff } from '../../hooks/useStaff';
 
 interface EditClassModalProps {
   classInfo: ClassInfo;
@@ -42,6 +43,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const updateClassMutation = useUpdateClass();
   const manageStudentsMutation = useManageClassStudents();
   const { data: teachersData } = useTeachers();
+  const { staff } = useStaff();
   const { data: classDetail } = useClassDetail(classInfo.className, classInfo.subject);
   const { students: allStudents, loading: studentsLoading } = useStudents(false);
   const { data: existingClasses } = useClasses(classInfo.subject); // 해당 과목의 기존 수업 목록
@@ -49,6 +51,28 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   // 현재 등록된 학생 목록
   const currentStudents = classDetail?.students || [];
   const currentStudentIds = currentStudents.map(s => s.id);
+
+  // 과목별 강사 필터링 (staff에서 role='teacher'이고 해당 과목을 가르치는 직원)
+  const availableTeachers = useMemo(() => {
+    const subjectFilter = classInfo.subject as 'math' | 'english';
+    return staff.filter(member =>
+      member.role === 'teacher' &&
+      member.subjects?.includes(subjectFilter)
+    );
+  }, [staff, classInfo.subject]);
+
+  // 강사 이름 표시 헬퍼 (과목별 다른 표시)
+  const getTeacherDisplayName = (staffMember: typeof staff[0]) => {
+    if (classInfo.subject === 'english') {
+      return staffMember.englishName || staffMember.name;
+    }
+    return staffMember.name;
+  };
+
+  // 강사 이름으로 staff 찾기 (name 또는 englishName 매칭)
+  const findStaffByName = (name: string) => {
+    return staff.find(s => s.name === name || s.englishName === name);
+  };
 
   // 강사 색상 가져오기
   const getTeacherColor = (teacherName: string) => {
@@ -88,6 +112,20 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     if (!allStudents) return [];
     return allStudents.filter(s => studentsToAdd.has(s.id));
   }, [allStudents, studentsToAdd]);
+
+  // 담임 강사 자동 매칭 (staff 데이터 로드 후)
+  useEffect(() => {
+    if (staff.length > 0 && classInfo.teacher) {
+      const matchedStaff = findStaffByName(classInfo.teacher);
+      if (matchedStaff) {
+        // staff의 한글 이름으로 설정 (드롭다운 value와 매칭)
+        setTeacher(matchedStaff.name);
+      } else {
+        // 매칭 실패 시 원본 값 사용
+        setTeacher(classInfo.teacher);
+      }
+    }
+  }, [staff, classInfo.teacher]);
 
   // 기존 스케줄을 그리드로 변환
   useEffect(() => {
@@ -394,13 +432,26 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               <label className="block text-xs font-semibold text-gray-600 mb-1">
                 담임 <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={teacher}
                 onChange={(e) => setTeacher(e.target.value)}
-                placeholder="예: Ellen"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
-              />
+              >
+                <option value="">선택해주세요</option>
+                {availableTeachers.map(t => {
+                  const displayName = getTeacherDisplayName(t);
+                  return (
+                    <option key={t.id} value={t.name}>
+                      {displayName}
+                    </option>
+                  );
+                })}
+              </select>
+              {availableTeachers.length === 0 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  ⚠️ {SUBJECT_LABELS[classInfo.subject]} 과목 강사가 없습니다. 직원 관리에서 추가해주세요.
+                </p>
+              )}
             </div>
 
             <div>
@@ -447,6 +498,20 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                       const displayTeacher = slotTeacher || teacher;
                       const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
 
+                      // 과목에 맞게 표시할 이름 결정
+                      let displayName = '';
+                      if (isSelected) {
+                        if (slotTeacher) {
+                          const staffMember = findStaffByName(slotTeacher);
+                          displayName = staffMember ? getTeacherDisplayName(staffMember) : slotTeacher;
+                        } else if (teacher) {
+                          const staffMember = findStaffByName(teacher);
+                          displayName = staffMember ? getTeacherDisplayName(staffMember) : teacher;
+                        } else {
+                          displayName = '✓';
+                        }
+                      }
+
                       return (
                         <button
                           key={key}
@@ -461,7 +526,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                             color: colors.textColor
                           } : undefined}
                         >
-                          {isSelected ? (slotTeacher || teacher || '✓') : ''}
+                          {displayName}
                         </button>
                       );
                     })}
@@ -514,13 +579,26 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                           }
                           return (
                             <div key={key} className="p-0.5 border-r border-gray-200 last:border-r-0">
-                              <input
-                                type="text"
+                              <select
                                 value={slotTeachers[key] || ''}
                                 onChange={(e) => setSlotTeacher(key, e.target.value)}
-                                placeholder={teacher || '-'}
                                 className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
-                              />
+                              >
+                                <option value="">
+                                  {teacher ? (() => {
+                                    const staffMember = findStaffByName(teacher);
+                                    return staffMember ? getTeacherDisplayName(staffMember) : teacher;
+                                  })() : '담임'}
+                                </option>
+                                {availableTeachers.map(t => {
+                                  const displayName = getTeacherDisplayName(t);
+                                  return (
+                                    <option key={t.id} value={t.name}>
+                                      {displayName}
+                                    </option>
+                                  );
+                                })}
+                              </select>
                             </div>
                           );
                         })}

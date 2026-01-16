@@ -1035,6 +1035,12 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                 <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
                                 {filteredTeachers.map((teacher, tIdx) => {
                                     const colors = getTeacherColor(teacher, teachersData);
+                                    // teacher는 영어 이름일 수 있으므로, name 또는 englishName으로 찾기
+                                    const teacherData = teachersData.find(t =>
+                                        t.name === teacher || t.englishName === teacher
+                                    );
+                                    // teacher 자체가 이미 표시할 이름 (영어 이름 또는 한국 이름)
+                                    const displayName = teacher;
                                     return (
                                         <th
                                             key={teacher}
@@ -1045,7 +1051,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                         `}
                                             style={{ backgroundColor: colors.bg, color: colors.text }}
                                         >
-                                            {teacher}
+                                            {displayName}
                                         </th>
                                     );
                                 })}

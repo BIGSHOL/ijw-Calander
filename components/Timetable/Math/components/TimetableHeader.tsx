@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    ChevronLeft, ChevronRight, Search, X, Settings
+    ChevronLeft, ChevronRight, Search, X, Settings, Sliders
 } from 'lucide-react';
 
 interface TimetableHeaderProps {
@@ -13,6 +13,7 @@ interface TimetableHeaderProps {
     viewType: 'teacher' | 'room' | 'class';
     setIsTeacherOrderModalOpen: (isOpen: boolean) => void;
     setIsViewSettingsOpen: (isOpen: boolean) => void;
+    setIsTimetableSettingsOpen: (isOpen: boolean) => void;
     pendingMovesCount: number;
     handleSavePendingMoves: () => void;
     handleCancelPendingMoves: () => void;
@@ -29,6 +30,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     viewType,
     setIsTeacherOrderModalOpen,
     setIsViewSettingsOpen,
+    setIsTimetableSettingsOpen,
     pendingMovesCount,
     handleSavePendingMoves,
     handleCancelPendingMoves,
@@ -97,13 +99,23 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     </button>
                 )}
 
-                {/* View Settings Button (통합 설정) */}
+                {/* Timetable Settings Button (수업 설정 + 강사 관리) */}
+                <button
+                    onClick={() => setIsTimetableSettingsOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border bg-[#081429] border-[#081429] text-white hover:bg-[#0a1a35] transition-all"
+                    title="시간표 설정"
+                >
+                    <Settings size={14} />
+                    <span>설정</span>
+                </button>
+
+                {/* View Settings Button (보기 설정) */}
                 <button
                     onClick={() => setIsViewSettingsOpen(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border bg-white border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
                     title="보기 설정"
                 >
-                    <Settings size={14} />
+                    <Sliders size={14} />
                 </button>
 
                 {/* Pending Moves */}

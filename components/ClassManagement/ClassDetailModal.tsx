@@ -24,9 +24,18 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
   const deleteClassMutation = useDeleteClass();
   const { data: teachersData } = useTeachers();
 
+  // Helper to display teacher name based on subject
+  const getTeacherDisplayName = (teacherName: string) => {
+    const staffMember = teachersData?.find(t => t.name === teacherName || t.englishName === teacherName);
+    if (subject === 'english') {
+      return staffMember?.englishName || staffMember?.name || teacherName;
+    }
+    return staffMember?.name || teacherName;
+  };
+
   // 강사 색상 가져오기
   const getTeacherColor = (teacherName: string) => {
-    const teacherInfo = teachersData?.find(t => t.name === teacherName);
+    const teacherInfo = teachersData?.find(t => t.name === teacherName || t.englishName === teacherName);
     return {
       bgColor: teacherInfo?.bgColor || '#fdb813',
       textColor: teacherInfo?.textColor || '#081429'
@@ -137,7 +146,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-gray-400" />
-                    <span className="text-gray-600">{teacher || '미정'}</span>
+                    <span className="text-gray-600">{teacher ? getTeacherDisplayName(teacher) : '미정'}</span>
                   </div>
                   {room && (
                     <div className="flex items-center gap-1.5">
@@ -204,6 +213,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                             const slotTeacher = slotTeachers?.[key];
                             const displayTeacher = slotTeacher || teacher;
                             const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
+                            const displayName = displayTeacher ? getTeacherDisplayName(displayTeacher) : '';
 
                             return (
                               <div
@@ -215,7 +225,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                                   color: colors.textColor
                                 } : undefined}
                               >
-                                {isSelected ? (displayTeacher || '').slice(0, 4) : ''}
+                                {isSelected ? displayName.slice(0, 4) : ''}
                               </div>
                             );
                           })}
@@ -231,7 +241,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                     // 담임과 동일하면 제외
                     if (name === teacher) return false;
                     // 숨김 강사면 제외
-                    const teacherInfo = teachersData?.find(t => t.name === name);
+                    const teacherInfo = teachersData?.find(t => t.name === name || t.englishName === name);
                     return !teacherInfo?.isHidden;
                   });
                   if (visibleSlotTeachers.length === 0) return null;
@@ -241,7 +251,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                       <div className="flex flex-wrap gap-1">
                         {visibleSlotTeachers.map((name) => (
                           <span key={name} className="bg-gray-200 px-1.5 py-0.5 rounded text-xs text-gray-600">
-                            {name}
+                            {getTeacherDisplayName(name)}
                           </span>
                         ))}
                       </div>

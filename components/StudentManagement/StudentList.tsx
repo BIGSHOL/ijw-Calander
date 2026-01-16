@@ -41,9 +41,11 @@ const StudentList: React.FC<StudentListProps> = ({
       case 'active':
         return <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">재원</span>;
       case 'on_hold':
+        return <span className="text-xs bg-gray-100 text-gray-800 px-2 py-0.5 rounded font-medium">휴원</span>;
+      case 'waitlisted':
         return <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-medium">대기</span>;
       case 'withdrawn':
-        return <span className="text-xs bg-gray-100 text-gray-800 px-2 py-0.5 rounded font-medium">퇴원</span>;
+        return <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded font-medium">퇴원</span>;
       default:
         return null;
     }
@@ -61,8 +63,8 @@ const StudentList: React.FC<StudentListProps> = ({
                 key={size}
                 onClick={() => handlePageSizeChange(size)}
                 className={`min-w-[44px] px-3 py-2 text-xs rounded-lg transition-colors ${pageSize === size
-                    ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10'
+                  ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
+                  : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10'
                   }`}
               >
                 {size}
@@ -86,10 +88,10 @@ const StudentList: React.FC<StudentListProps> = ({
                 key={student.id}
                 onClick={() => onSelectStudent(student)}
                 className={`p-3 cursor-pointer transition-colors ${selectedStudent?.id === student.id
-                    ? 'bg-[#fdb813]/10 border-l-4 border-[#fdb813]'
-                    : student.isOldWithdrawn
-                      ? 'hover:bg-[#fdb813]/5 bg-[#fdb813]/5'
-                      : 'hover:bg-[#081429]/5'
+                  ? 'bg-[#fdb813]/10 border-l-4 border-[#fdb813]'
+                  : student.isOldWithdrawn
+                    ? 'hover:bg-[#fdb813]/5 bg-[#fdb813]/5'
+                    : 'hover:bg-[#081429]/5'
                   }`}
               >
                 <div className="flex items-start justify-between">
@@ -123,8 +125,8 @@ const StudentList: React.FC<StudentListProps> = ({
                             <span
                               key={subject}
                               className={`text-xxs px-1.5 py-0.5 rounded font-medium ${subject === 'math'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-purple-100 text-purple-700'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-purple-100 text-purple-700'
                                 }`}
                             >
                               {subject === 'math' ? '수학' : '영어'}
@@ -194,8 +196,8 @@ const StudentList: React.FC<StudentListProps> = ({
                       key={page}
                       onClick={() => handlePageChange(page)}
                       className={`min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-center ${currentPage === page
-                          ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
-                          : 'hover:bg-white/10 text-gray-300'
+                        ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
+                        : 'hover:bg-white/10 text-gray-300'
                         }`}
                     >
                       {page}

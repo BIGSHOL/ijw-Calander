@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStudents } from '../../hooks/useStudents';
-import { useCreateConsultation } from '../../hooks/useConsultationMutations';
-import { ConsultationCategory, CATEGORY_CONFIG } from '../../types';
+import { useStaff } from '../../hooks/useStaff'; // Added
+import { useCreateConsultation, useUpdateConsultation } from '../../hooks/useConsultationMutations';
+import { Consultation, ConsultationCategory, CATEGORY_CONFIG } from '../../types';
 import { auth } from '../../firebaseConfig';
-import { X, Search, Loader2, User, Users, Clock, Calendar, MessageSquare } from 'lucide-react';
+import { X, Search, Loader2, User, Users, Clock, Calendar, MessageSquare, Edit2 } from 'lucide-react';
 
 interface AddConsultationModalProps {
     onClose: () => void;
     onSuccess: () => void;
     preSelectedStudentId?: string;
+    editingConsultation?: Consultation;
 }
 
 // 현재 시간을 HH:MM 형식으로 반환
@@ -21,36 +23,45 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
     onClose,
     onSuccess,
     preSelectedStudentId,
+    editingConsultation,
 }) => {
     const currentUser = auth.currentUser;
-    const { students, loading: studentsLoading } = useStudents(true); // 퇴원생 포함하여 StudentManagementTab과 동일한 학생 목록 사용
+    const { students, loading: studentsLoading } = useStudents(true);
+    const { staff } = useStaff();
     const createConsultation = useCreateConsultation();
+    const updateConsultation = useUpdateConsultation();
+    const isEditing = !!editingConsultation;
 
     // 학생 검색
     const [studentSearch, setStudentSearch] = useState('');
     const [showStudentDropdown, setShowStudentDropdown] = useState(false);
 
-    // 폼 상태 - 날짜/시간 자동 설정
-    const [studentId, setStudentId] = useState(preSelectedStudentId || '');
-    const [type, setType] = useState<'parent' | 'student'>('parent');
-    const [category, setCategory] = useState<ConsultationCategory>('general');
-    const [subject, setSubject] = useState<'math' | 'english' | 'other'>('other');
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [time, setTime] = useState(getCurrentTime());
-    const [duration, setDuration] = useState('30');
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
+    // 폼 상태 - 초기값 설정
+    const [studentId, setStudentId] = useState(editingConsultation?.studentId || preSelectedStudentId || '');
+    const [consultantId, setConsultantId] = useState(editingConsultation?.consultantId || currentUser?.uid || '');
+    const [type, setType] = useState<'parent' | 'student'>(editingConsultation?.type || 'parent');
+    const [category, setCategory] = useState<ConsultationCategory>(editingConsultation?.category || 'general');
+    const [subject, setSubject] = useState<'math' | 'english' | 'other'>(
+        (editingConsultation?.subject === 'math' || editingConsultation?.subject === 'english')
+            ? editingConsultation.subject
+            : 'other'
+    );
+    const [date, setDate] = useState(editingConsultation?.date || new Date().toISOString().split('T')[0]);
+    const [time, setTime] = useState(editingConsultation?.time || getCurrentTime());
+    const [duration, setDuration] = useState(editingConsultation?.duration?.toString() || '30');
+    const [title, setTitle] = useState(editingConsultation?.title || '');
+    const [content, setContent] = useState(editingConsultation?.content || '');
 
     // 학부모 상담 전용
-    const [parentName, setParentName] = useState('');
-    const [parentRelation, setParentRelation] = useState('');
+    const [parentName, setParentName] = useState(editingConsultation?.parentName || '');
+    const [parentRelation, setParentRelation] = useState(editingConsultation?.parentRelation || '');
 
     // 학생 상담 전용
-    const [studentMood, setStudentMood] = useState<'positive' | 'neutral' | 'negative'>('neutral');
+    const [studentMood, setStudentMood] = useState<'positive' | 'neutral' | 'negative'>(editingConsultation?.studentMood || 'neutral');
 
     // 후속 조치
-    const [followUpNeeded, setFollowUpNeeded] = useState(false);
-    const [followUpDate, setFollowUpDate] = useState('');
+    const [followUpNeeded, setFollowUpNeeded] = useState(editingConsultation?.followUpNeeded || false);
+    const [followUpDate, setFollowUpDate] = useState(editingConsultation?.followUpDate || '');
 
     const selectedStudent = students.find(s => s.id === studentId);
 
@@ -60,24 +71,41 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
         return Array.from(new Set(selectedStudent.enrollments.map(e => e.subject)));
     }, [selectedStudent]);
 
+    // 과목에 따른 담당선생님 자동 선택 (신규 작성 시에만 동작)
+    useEffect(() => {
+        if (isEditing) return; // 수정 모드에서는 자동 변경 방지
+        if (!studentId || !selectedStudent || !subject || subject === 'other') return;
+
+        const enrollment = selectedStudent.enrollments?.find(e => e.subject === subject);
+        if (enrollment?.teacherId) {
+            const teacher = staff.find(s => s.id === enrollment.teacherId || s.name === enrollment.teacherId);
+            if (teacher) {
+                setConsultantId(teacher.id);
+            }
+        }
+    }, [studentId, subject, selectedStudent, staff, isEditing]);
+
     // preSelectedStudentId가 있을 때 학생 검색창에 이름 표시
     useEffect(() => {
-        if (preSelectedStudentId && students.length > 0) {
-            const student = students.find(s => s.id === preSelectedStudentId);
+        // 수정 모드일 때도 학생 이름 표시
+        const targetId = editingConsultation?.studentId || preSelectedStudentId;
+        if (targetId && students.length > 0) {
+            const student = students.find(s => s.id === targetId);
             if (student) {
                 setStudentSearch(student.name);
             }
         }
-    }, [preSelectedStudentId, students]);
+    }, [preSelectedStudentId, editingConsultation, students]);
 
-    // 학생 선택 시 과목 자동 설정
+    // 학생 선택 시 과목 자동 설정 (신규 작성 시에만)
     useEffect(() => {
+        if (isEditing) return;
         if (studentSubjects.length === 1) {
             setSubject(studentSubjects[0] as 'math' | 'english');
         } else if (studentSubjects.length === 0) {
             setSubject('other');
         }
-    }, [studentSubjects]);
+    }, [studentSubjects, isEditing]);
 
     // 검색된 학생 목록
     const filteredStudents = useMemo(() => {
@@ -117,17 +145,17 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
         try {
             const consultationData: Record<string, any> = {
                 studentId,
-                studentName: selectedStudent?.name || '',
+                studentName: selectedStudent?.name || editingConsultation?.studentName || '',
                 type,
-                consultantId: currentUser?.uid || '',
-                consultantName: currentUser?.displayName || currentUser?.email || '담당자',
+                consultantId: consultantId,
+                consultantName: staff.find(s => s.id === consultantId)?.name || currentUser?.displayName || currentUser?.email || '담당자',
                 date,
                 category,
                 title,
                 content,
                 followUpNeeded,
-                followUpDone: false,
-                createdBy: currentUser?.uid || '',
+                followUpDone: isEditing ? editingConsultation?.followUpDone : false,
+                createdBy: isEditing ? editingConsultation?.createdBy : (currentUser?.uid || ''),
             };
 
             if (time?.trim()) consultationData.time = time.trim();
@@ -147,10 +175,17 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                 consultationData.followUpDate = followUpDate;
             }
 
-            await createConsultation.mutateAsync(consultationData as any);
+            if (isEditing && editingConsultation) {
+                await updateConsultation.mutateAsync({
+                    id: editingConsultation.id,
+                    updates: consultationData,
+                });
+            } else {
+                await createConsultation.mutateAsync(consultationData as any);
+            }
             onSuccess();
         } catch (error) {
-            console.error('상담 기록 생성 실패:', error);
+            console.error('상담 기록 저장 실패:', error);
             alert('상담 기록 저장에 실패했습니다.');
         }
     };
@@ -164,8 +199,8 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                 {/* 헤더 */}
                 <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
                     <div className="flex items-center gap-2">
-                        <MessageSquare className="w-5 h-5 text-[#fdb813]" />
-                        <h2 className="text-lg font-bold text-[#081429]">새 상담 기록</h2>
+                        {isEditing ? <Edit2 className="w-5 h-5 text-[#fdb813]" /> : <MessageSquare className="w-5 h-5 text-[#fdb813]" />}
+                        <h2 className="text-lg font-bold text-[#081429]">{isEditing ? '상담 기록 수정' : '새 상담 기록'}</h2>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
                         <X size={20} />
@@ -179,9 +214,12 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                         <label className="block text-xs font-medium text-gray-600 mb-1.5">
                             학생 <span className="text-red-500">*</span>
                         </label>
+                        {/* 수정 모드 이거나 preSelectedStudentId가 있으면 잠금 처리 느낌, 하지만 수정 모드에서는 변경 가능하게? 아니면 고정? 요구사항 없으므로 변경 가능하게 둠. 단, 초기값은 세팅됨. */}
+                        {/* preSelectedStudentId가 있을 때만 잠금 (특정 학생 컨텍스트에서 생성 시) */}
                         {preSelectedStudentId ? (
-                            <div className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">
-                                {selectedStudent?.name} ({selectedStudent?.grade || '학년 미정'})
+                            <div className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 flex justify-between items-center">
+                                <span>{selectedStudent?.name} {selectedStudent?.grade ? `(${selectedStudent.grade})` : ''}</span>
+                                <span className="text-xs text-gray-400">학생 고정</span>
                             </div>
                         ) : (
                             <>
@@ -208,9 +246,8 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                                 key={student.id}
                                                 type="button"
                                                 onClick={() => handleSelectStudent(student)}
-                                                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
-                                                    studentId === student.id ? 'bg-[#fdb813]/10' : ''
-                                                }`}
+                                                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${studentId === student.id ? 'bg-[#fdb813]/10' : ''
+                                                    }`}
                                             >
                                                 <span className="font-medium text-gray-800">{student.name}</span>
                                                 <span className="text-xs text-gray-500">
@@ -224,6 +261,8 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                         )}
                     </div>
 
+                    {/* ... (나머지 폼 필드) ... */}
+
                     {/* 상담 유형 + 카테고리 */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -232,11 +271,10 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                 <button
                                     type="button"
                                     onClick={() => setType('parent')}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors ${
-                                        type === 'parent'
-                                            ? 'bg-[#081429] text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors ${type === 'parent'
+                                        ? 'bg-[#081429] text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
                                 >
                                     <Users size={12} />
                                     학부모
@@ -244,11 +282,10 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                 <button
                                     type="button"
                                     onClick={() => setType('student')}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors ${
-                                        type === 'student'
-                                            ? 'bg-[#081429] text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors ${type === 'student'
+                                        ? 'bg-[#081429] text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
                                 >
                                     <User size={12} />
                                     학생
@@ -319,11 +356,10 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                         <button
                                             type="button"
                                             onClick={() => setSubject('math')}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                                subject === 'math'
-                                                    ? 'bg-blue-500 text-white'
-                                                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                                            }`}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${subject === 'math'
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                                }`}
                                         >
                                             수학
                                         </button>
@@ -332,11 +368,10 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                         <button
                                             type="button"
                                             onClick={() => setSubject('english')}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                                subject === 'english'
-                                                    ? 'bg-purple-500 text-white'
-                                                    : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
-                                            }`}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${subject === 'english'
+                                                ? 'bg-purple-500 text-white'
+                                                : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+                                                }`}
                                         >
                                             영어
                                         </button>
@@ -345,11 +380,10 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                         <button
                                             type="button"
                                             onClick={() => setSubject('other')}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                                subject === 'other'
-                                                    ? 'bg-gray-600 text-white'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${subject === 'other'
+                                                ? 'bg-gray-600 text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
                                         >
                                             전체
                                         </button>
@@ -357,6 +391,25 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                 </>
                             )}
                         </div>
+                    </div>
+
+                    {/* 상담 담당자 */}
+                    <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1.5">상담 담당자</label>
+                        <select
+                            value={consultantId}
+                            onChange={(e) => setConsultantId(e.target.value)}
+                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
+                        >
+                            <option value={currentUser?.uid || ''}>{currentUser?.displayName || '본인 (Desk)'}</option>
+                            {staff
+                                .filter(s => s.id !== currentUser?.uid)
+                                .map(s => (
+                                    <option key={s.id} value={s.id}>
+                                        {s.name} {s.role ? `(${s.role})` : ''}
+                                    </option>
+                                ))}
+                        </select>
                     </div>
 
                     {/* 학부모 정보 (학부모 상담 시) */}
@@ -403,13 +456,12 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                         key={mood.value}
                                         type="button"
                                         onClick={() => setStudentMood(mood.value as any)}
-                                        className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
-                                            studentMood === mood.value
-                                                ? mood.color === 'green' ? 'bg-green-500 text-white'
+                                        className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${studentMood === mood.value
+                                            ? mood.color === 'green' ? 'bg-green-500 text-white'
                                                 : mood.color === 'red' ? 'bg-red-500 text-white'
-                                                : 'bg-gray-500 text-white'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                                    : 'bg-gray-500 text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
                                     >
                                         {mood.label}
                                     </button>
@@ -482,11 +534,11 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                     </button>
                     <button
                         onClick={handleSubmit}
-                        disabled={createConsultation.isPending || !studentId || !title || !content}
+                        disabled={(isEditing ? updateConsultation.isPending : createConsultation.isPending) || !studentId || !title || !content}
                         className="px-4 py-2 text-sm bg-[#fdb813] text-[#081429] font-semibold rounded-lg hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                        {createConsultation.isPending && <Loader2 size={14} className="animate-spin" />}
-                        저장
+                        {(isEditing ? updateConsultation.isPending : createConsultation.isPending) && <Loader2 size={14} className="animate-spin" />}
+                        {isEditing ? '수정 저장' : '저장'}
                     </button>
                 </div>
             </div>

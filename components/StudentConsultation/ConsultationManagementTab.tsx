@@ -1,9 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, GraduationCap } from 'lucide-react';
+import { Plus, Search, GraduationCap, Upload } from 'lucide-react';
 import { useStudentConsultations, StudentConsultationFilters } from '../../hooks/useStudentConsultations';
 import { ConsultationCategory, CATEGORY_CONFIG } from '../../types';
 import ConsultationList from './ConsultationList';
 import AddConsultationModal from './AddConsultationModal';
+import ConsultationMigrationModal from './ConsultationMigrationModal';
+import { useStudents } from '../../hooks/useStudents';
+import { useStaff } from '../../hooks/useStaff';
 
 /**
  * 상담 관리 메인 탭
@@ -14,9 +17,12 @@ import AddConsultationModal from './AddConsultationModal';
 const ConsultationManagementTab: React.FC = () => {
     const [filters, setFilters] = useState<StudentConsultationFilters>({});
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showMigrationModal, setShowMigrationModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     const { consultations, loading, error, refetch } = useStudentConsultations(filters);
+    const { students } = useStudents();
+    const { staff } = useStaff();
 
     // 검색 쿼리 적용
     const filteredConsultations = useMemo(() => {
@@ -63,31 +69,28 @@ const ConsultationManagementTab: React.FC = () => {
                     <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
                         <button
                             onClick={() => setFilters(prev => ({ ...prev, type: undefined }))}
-                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                                !filters.type
-                                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                            }`}
+                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${!filters.type
+                                ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
                         >
                             💬 전체
                         </button>
                         <button
                             onClick={() => setFilters(prev => ({ ...prev, type: 'parent' }))}
-                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                                filters.type === 'parent'
-                                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                            }`}
+                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filters.type === 'parent'
+                                ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
                         >
                             👨‍👩‍👧 학부모
                         </button>
                         <button
                             onClick={() => setFilters(prev => ({ ...prev, type: 'student' }))}
-                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                                filters.type === 'student'
-                                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                            }`}
+                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filters.type === 'student'
+                                ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
                         >
                             <GraduationCap className="inline-block w-4 h-4 mr-1" />
                             학생
@@ -101,11 +104,10 @@ const ConsultationManagementTab: React.FC = () => {
                     <div className="flex gap-1">
                         <button
                             onClick={() => applyDatePreset('today')}
-                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                filters.dateRange?.start === filters.dateRange?.end
-                                    ? 'bg-[#fdb813] text-[#081429]'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                            }`}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${filters.dateRange?.start === filters.dateRange?.end
+                                ? 'bg-[#fdb813] text-[#081429]'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
                         >
                             오늘
                         </button>
@@ -123,11 +125,10 @@ const ConsultationManagementTab: React.FC = () => {
                         </button>
                         <button
                             onClick={() => applyDatePreset('all')}
-                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                !filters.dateRange
-                                    ? 'bg-[#fdb813] text-[#081429]'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                            }`}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${!filters.dateRange
+                                ? 'bg-[#fdb813] text-[#081429]'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                }`}
                         >
                             전체
                         </button>
@@ -193,6 +194,16 @@ const ConsultationManagementTab: React.FC = () => {
                         총 <span className="text-[#fdb813] font-bold">{filteredConsultations.length}</span>건의 상담
                     </span>
 
+                    {/* 데이터 가져오기 버튼 (마이그레이션) */}
+                    <button
+                        onClick={() => setShowMigrationModal(true)}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 text-white hover:bg-white/20 transition-colors shadow-sm font-bold border border-white/20"
+                        title="MakeEdu 데이터 가져오기"
+                    >
+                        <Upload size={14} />
+                        <span>DB이전(J)</span>
+                    </button>
+
                     {/* 새 상담 기록 버튼 */}
                     <button
                         onClick={() => setShowAddModal(true)}
@@ -224,20 +235,37 @@ const ConsultationManagementTab: React.FC = () => {
                     consultations={filteredConsultations}
                     loading={loading}
                     onRefresh={refetch}
+                    students={students}
+                    staff={staff}
                 />
             </div>
 
             {/* 새 상담 추가 모달 */}
-            {showAddModal && (
-                <AddConsultationModal
-                    onClose={() => setShowAddModal(false)}
-                    onSuccess={() => {
-                        setShowAddModal(false);
-                        // mutation의 onSuccess에서 캐시 무효화 완료됨 (staleTime: 0)
-                    }}
-                />
-            )}
-        </div>
+            {
+                showAddModal && (
+                    <AddConsultationModal
+                        onClose={() => setShowAddModal(false)}
+                        onSuccess={() => {
+                            setShowAddModal(false);
+                            // mutation의 onSuccess에서 캐시 무효화 완료됨 (staleTime: 0)
+                        }}
+                    />
+                )
+            }
+
+            {/* 마이그레이션 모달 */}
+            {
+                showMigrationModal && (
+                    <ConsultationMigrationModal
+                        onClose={() => setShowMigrationModal(false)}
+                        onSuccess={() => {
+                            setShowMigrationModal(false);
+                            refetch();
+                        }}
+                    />
+                )
+            }
+        </div >
     );
 };
 

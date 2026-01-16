@@ -395,6 +395,11 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 <span className="text-xs font-bold text-gray-400 mr-1">강사 목록:</span>
                 {teachers.filter(t => !settings.hiddenLegendTeachers?.includes(t)).map(teacher => {
                     const colors = getTeacherColor(teacher, teachersData);
+                    // 영어이름(한글이름) 형식으로 표시
+                    const staffMember = teachersData?.find(t => t.name === teacher || t.englishName === teacher);
+                    const displayName = staffMember?.englishName
+                        ? `${staffMember.englishName}(${staffMember.name})`
+                        : teacher;
 
                     return (
                         <div
@@ -402,7 +407,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                             className="px-2 py-0.5 rounded text-xs font-bold shadow-sm border border-black/5"
                             style={{ backgroundColor: colors.bg, color: colors.text }}
                         >
-                            {teacher}
+                            {displayName}
                         </div>
                     );
                 })}

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Users, UserMinus, UserPlus } from 'lucide-react';
+import { Users, UserMinus, UserPlus, Settings } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject } from './types';
 import { formatCurrency, calculateStats } from './utils';
@@ -9,6 +9,7 @@ import StudentModal from './components/StudentModal';
 import SettlementModal from './components/SettlementModal';
 import StudentListModal from './components/StudentListModal';
 import AddStudentToAttendanceModal from './components/AddStudentToAttendanceModal';
+import AttendanceSettingsModal from './AttendanceSettingsModal';
 
 import {
   useAttendanceStudents,
@@ -195,6 +196,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const [activeTab, setActiveTab] = useState<'attendance' | 'salary'>('attendance');
   const [isSalaryModalOpen, setSalaryModalOpen] = useState(false);
   const [isStudentModalOpen, setStudentModalOpen] = useState(false);
+  const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
 
   // Use props if provided, otherwise default to closed (or local state if we strictly needed it, but here strict prop control is fine as App controls it)
   // Actually, we should allow local control if props aren't passed, but for now we assume App passes them.
@@ -440,6 +442,18 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     <div className="flex flex-col h-full min-h-0 bg-white text-[#373d41]">
       {/* Navigation is now handled in App.tsx header */}
 
+      {/* Settings Button Header */}
+      <div className="px-6 py-3 flex justify-end border-b border-gray-100 flex-shrink-0">
+        <button
+          onClick={() => setSettingsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg font-bold text-sm hover:bg-gray-600 transition-colors shadow-sm"
+          title="출석부 설정"
+        >
+          <Settings size={16} />
+          설정
+        </button>
+      </div>
+
       {/* Stats Cards - Regular flow (scrolls with content) */}
       <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-5 gap-4 flex-shrink-0 border-b border-gray-100">
         <div
@@ -592,6 +606,12 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         currentTeacherName={filterTeacherId || ''}
         existingStudentIds={visibleStudents.map(s => s.id)}
         onStudentAdded={() => refetch()}
+      />
+
+      <AttendanceSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setSettingsModalOpen(false)}
+        teachers={teachers}
       />
     </div>
   );

@@ -101,9 +101,9 @@ export const DEFAULT_TEACHER_COLORS: Record<string, { bg: string; text: string }
 
 export const getTeacherColor = (
     teacherName: string,
-    teachersData?: { name: string; bgColor?: string; textColor?: string }[]
+    teachersData?: { name: string; englishName?: string; bgColor?: string; textColor?: string }[]
 ): { bg: string; text: string } => {
-    const teacher = teachersData?.find(t => t.name === teacherName);
+    const teacher = teachersData?.find(t => t.name === teacherName || t.englishName === teacherName);
     if (teacher?.bgColor) {
         return { bg: teacher.bgColor, text: teacher.textColor || '#ffffff' };
     }

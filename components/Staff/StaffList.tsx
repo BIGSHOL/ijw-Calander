@@ -85,6 +85,49 @@ const StaffList: React.FC<StaffListProps> = ({
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* Pagination - Top */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">페이지당</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 border border-gray-300 rounded text-sm"
+            >
+              {[10, 20, 50, 100].map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <span className="text-sm text-gray-600">
+              {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, staff.length)} / {staff.length}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <span className="text-sm font-medium text-gray-700">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -121,18 +164,31 @@ const StaffList: React.FC<StaffListProps> = ({
               <tr
                 key={member.id}
                 onClick={() => onSelectStaff(member)}
-                className={`hover:bg-gray-50 cursor-pointer transition-colors ${
+                className={`hover:bg-gray-50 transition-colors ${
                   selectedStaff?.id === member.id ? 'bg-[#fdb813]/10' : ''
                 }`}
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#081429] rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
+                      style={{
+                        backgroundColor: member.role === 'teacher' && member.bgColor ? member.bgColor : '#081429',
+                        color: member.role === 'teacher' && member.textColor ? member.textColor : '#ffffff'
+                      }}
+                    >
                       {member.name.charAt(0)}
                     </div>
                     <div>
-                      <div className="font-medium text-[#081429]">{member.name}</div>
-                      <div className="text-xs text-gray-500">{member.email}</div>
+                      <div className="font-medium text-[#081429]">
+                        {member.name}
+                        {member.englishName && (
+                          <span className="ml-2 text-xs text-gray-500 font-normal">({member.englishName})</span>
+                        )}
+                      </div>
+                      {member.email && (
+                        <div className="text-xs text-gray-500">{member.email}</div>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -270,46 +326,6 @@ const StaffList: React.FC<StaffListProps> = ({
           </tbody>
         </table>
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">페이지당</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="px-2 py-1 border border-gray-300 rounded text-sm"
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">
-              {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, staff.length)} / {staff.length}
-            </span>
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

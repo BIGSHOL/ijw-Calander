@@ -1,23 +1,28 @@
 import React, { useState, useMemo } from 'react';
-import { Users, Plus, Search, Filter, RefreshCw, Calendar, Briefcase } from 'lucide-react';
+import { Users, Plus, Search, Filter, RefreshCw, Calendar, Briefcase, Shield } from 'lucide-react';
 import { useStaff } from '../../hooks/useStaff';
 import { useStaffLeaves } from '../../hooks/useStaffLeaves';
-import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS } from '../../types';
+import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, UserProfile } from '../../types';
 import StaffList from './StaffList';
 import StaffForm from './StaffForm';
 import StaffSchedule from './StaffSchedule';
 import LeaveManagement from './LeaveManagement';
+import UsersManagement from './UsersManagement';
 
-type ViewMode = 'list' | 'schedule' | 'leave';
+type ViewMode = 'list' | 'schedule' | 'leave' | 'users';
 
 interface StaffManagerProps {
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
+  users?: UserProfile[];
+  currentUserProfile?: UserProfile | null;
 }
 
 const StaffManager: React.FC<StaffManagerProps> = ({
   searchQuery: externalSearchQuery,
   onSearchChange: externalOnSearchChange,
+  users = [],
+  currentUserProfile,
 }) => {
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -69,7 +74,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({
     active: staff.filter(s => s.status === 'active').length,
     teachers: staff.filter(s => s.role === 'teacher').length,
     pendingLeaves: pendingCount,
-  }), [staff, pendingCount]);
+    pendingUsers: users.filter(u => u.status === 'pending').length,
+  }), [staff, pendingCount, users]);
 
   // Handlers
   const handleAddNew = () => {
@@ -90,7 +96,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
   const handleFormSubmit = async (data: Omit<StaffMember, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       if (editingStaff) {
-        await updateStaff(editingStaff.id, data);
+        await updateStaff(editingStaff.id, data, editingStaff);
       } else {
         await addStaff(data);
       }
@@ -174,8 +180,24 @@ const StaffManager: React.FC<StaffManagerProps> = ({
                 : 'border-transparent text-gray-500 hover:text-[#081429]'
             }`}
           >
-            <Users className="w-4 h-4" />
+            <Briefcase className="w-4 h-4" />
             <span>직원 목록</span>
+          </button>
+          <button
+            onClick={() => setViewMode('users')}
+            className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+              viewMode === 'users'
+                ? 'border-[#fdb813] text-[#081429] font-semibold'
+                : 'border-transparent text-gray-500 hover:text-[#081429]'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            <span>시스템 사용자</span>
+            {stats.pendingUsers > 0 && (
+              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
+                {stats.pendingUsers}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setViewMode('schedule')}
@@ -275,6 +297,14 @@ const StaffManager: React.FC<StaffManagerProps> = ({
                 onSelectStaff={setSelectedStaff}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+              />
+            )}
+            {viewMode === 'users' && (
+              <UsersManagement
+                users={users}
+                staff={staff}
+                currentUserProfile={currentUserProfile}
+                isMaster={currentUserProfile?.role === 'master'}
               />
             )}
             {viewMode === 'schedule' && (
