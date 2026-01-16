@@ -4,7 +4,8 @@ import { useStudents, searchStudentsByQuery } from '../../hooks/useStudents';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
-import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft } from 'lucide-react';
+import StudentMigrationModal from './StudentMigrationModal';
+import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database } from 'lucide-react';
 
 export interface StudentFilters {
   searchQuery: string;
@@ -25,6 +26,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const [oldWithdrawnStudents, setOldWithdrawnStudents] = useState<UnifiedStudent[]>([]);
   const [isSearchingOld, setIsSearchingOld] = useState(false);
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
 
   // 검색어가 있고 메모리 결과가 적으면 과거 퇴원생 자동 검색
   useEffect(() => {
@@ -155,6 +157,15 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             <span className="text-sm font-bold text-white">학생 목록</span>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2">
+            {/* 데이터 가져오기 버튼 (마이그레이션) */}
+            <button
+              onClick={() => setShowMigrationModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 text-white hover:bg-white/20 transition-colors shadow-sm font-bold border border-white/20"
+              title="원생목록 마이그레이션"
+            >
+              <Database size={14} />
+              <span className="text-xs hidden md:inline">데이터 가져오기</span>
+            </button>
             <button
               onClick={() => setIsAddStudentModalOpen(true)}
               className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
@@ -245,6 +256,16 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
           setIsAddStudentModalOpen(false);
         }}
       />
+
+      {/* 마이그레이션 모달 */}
+      {showMigrationModal && (
+        <StudentMigrationModal
+          onClose={() => {
+            setShowMigrationModal(false);
+            refreshStudents(); // 마이그레이션 후 목록 새로고침
+          }}
+        />
+      )}
     </div>
   );
 };

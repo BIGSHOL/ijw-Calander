@@ -169,10 +169,10 @@ const YearlyView: React.FC<YearlyViewProps> = ({
             <div className="flex flex-col h-full overflow-hidden">
                 {/* Year Navigation Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 flex-shrink-0">
-                    <div className="flex items-center gap-1 p-1 bg-[#f8fafc] rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-1 p-1 bg-[#f8fafc] rounded-none border border-gray-200 shadow-sm">
                         <button
                             onClick={() => onDateChange(subYears(currentDate, 1))}
-                            className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
+                            className="p-1.5 hover:bg-white hover:shadow-md rounded-none transition-all text-gray-400 hover:text-[#081429]"
                         >
                             <ChevronLeft size={16} strokeWidth={3} />
                         </button>
@@ -181,7 +181,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                         </span>
                         <button
                             onClick={() => onDateChange(addYears(currentDate, 1))}
-                            className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
+                            className="p-1.5 hover:bg-white hover:shadow-md rounded-none transition-all text-gray-400 hover:text-[#081429]"
                         >
                             <ChevronRight size={16} strokeWidth={3} />
                         </button>
@@ -196,7 +196,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                     <div className="flex flex-wrap gap-2 items-center">
                         {Object.entries(categoryColorMap).map(([cat, color]) => (
                             <div key={cat} className="flex items-center gap-1">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                                <div className="w-2 h-2 rounded-none" style={{ backgroundColor: color }} />
                                 <span className="text-xxs text-gray-500 font-medium">{cat}</span>
                             </div>
                         ))}
@@ -220,7 +220,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                     onClick={() => handleMonthClick(month)}
                                     onDoubleClick={() => handleMonthDoubleClick(month)}
                                     className={`
-                                    bg-white rounded-md sm:rounded-lg shadow-sm border p-1.5 sm:p-2 transition-all cursor-pointer
+                                    bg-white rounded-none shadow-sm border p-1.5 sm:p-2 transition-all cursor-pointer
                                     ${isSelected ? 'ring-2 ring-[#fdb813] border-transparent' : 'border-gray-100 hover:border-[#fdb813]/50'}
                                 `}
                                 >
@@ -240,7 +240,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
 
                                                 return (
                                                     <div
-                                                        className="flex items-center gap-0.5 text-nano sm:text-xxs lg:text-xs px-1 sm:px-1.5 lg:px-2 py-0.5 rounded-full font-bold transition-all"
+                                                        className="flex items-center gap-0.5 text-nano sm:text-xxs lg:text-xs px-1 sm:px-1.5 lg:px-2 py-0.5 rounded-none font-bold transition-all"
                                                         style={{
                                                             backgroundColor: isSelected ? '#fdb813' : '#fdb81380',
                                                             color: '#081429'
@@ -258,7 +258,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                             {/* 기존 "선택됨" 배지 */}
                                             {isSelected && (
                                                 <span
-                                                    className="text-[6px] sm:text-nano px-1 py-0.5 rounded-full font-bold"
+                                                    className="text-[6px] sm:text-nano px-1 py-0.5 rounded-none font-bold"
                                                     style={{ backgroundColor: '#fdb813', color: '#081429' }}
                                                 >
                                                     선택됨
@@ -302,7 +302,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                                         className={`
                                                         w-full h-full flex items-center justify-center
                                                         text-[6px] sm:text-nano lg:text-xxs font-medium
-                                                        rounded-[2px] sm:rounded-[3px]
+                                                        rounded-none
                                                         ${count === 0 ? 'text-gray-600' : ''}
                                                     `}
                                                         style={getDensityStyle()}
@@ -338,7 +338,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                 {departments.filter(d => departmentCounts[d.id] > 0).map(dept => (
                                     <div
                                         key={dept.id}
-                                        className="flex items-center gap-1 text-xxs font-bold px-2 py-0.5 rounded-full border"
+                                        className="flex items-center gap-1 text-xxs font-bold px-2 py-0.5 rounded-none border"
                                         style={{
                                             backgroundColor: dept.color + '15',
                                             borderColor: dept.color + '40',
@@ -347,7 +347,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                     >
                                         {dept.name}
                                         <span
-                                            className="text-micro px-1 rounded-full"
+                                            className="text-micro px-1 rounded-none"
                                             style={{ backgroundColor: dept.color, color: '#fff' }}
                                         >
                                             {departmentCounts[dept.id]}
@@ -382,14 +382,14 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                                     setIsBucketModalOpen(true);
                                                 }}
                                                 className={`
-                                                flex-shrink-0 w-28 p-2 rounded-lg border cursor-pointer group hover:shadow-md transition-all
+                                                flex-shrink-0 w-28 p-2 rounded-none border cursor-pointer group hover:shadow-md transition-all
                                                 ${bucket.priority === 'high' ? 'bg-red-50 border-red-200' :
                                                         bucket.priority === 'medium' ? 'bg-[#fdb813]/20 border-[#fdb813]/40' :
                                                             'bg-gray-50 border-gray-200'}
                                             `}
                                             >
                                                 <div className="flex items-start justify-between">
-                                                    <div className={`text-nano px-1 py-0.5 rounded font-bold
+                                                    <div className={`text-nano px-1 py-0.5 rounded-none font-bold
                                                     ${bucket.priority === 'high' ? 'bg-red-500 text-white' :
                                                             bucket.priority === 'medium' ? 'bg-[#fdb813] text-[#081429]' :
                                                                 'bg-gray-400 text-white'}
@@ -448,7 +448,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                             setEditingBucketItem(null);
                                             setIsBucketModalOpen(true);
                                         }}
-                                        className="flex-shrink-0 w-28 p-2 rounded-lg border-2 border-dashed border-gray-300 hover:border-[#fdb813] flex items-center justify-center gap-1 text-gray-400 hover:text-[#fdb813] transition-colors"
+                                        className="flex-shrink-0 w-28 p-2 rounded-none border-2 border-dashed border-gray-300 hover:border-[#fdb813] flex items-center justify-center gap-1 text-gray-400 hover:text-[#fdb813] transition-colors"
                                     >
                                         <Plus size={12} />
                                         <span className="text-xxs font-bold">추가</span>
@@ -466,7 +466,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                         return (
                                             <div
                                                 key={evt.id}
-                                                className="flex-shrink-0 w-36 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-all cursor-pointer overflow-hidden"
+                                                className="flex-shrink-0 w-36 bg-white rounded-none border border-gray-100 hover:shadow-md transition-all cursor-pointer overflow-hidden"
                                             >
                                                 {/* Color Bar Top */}
                                                 <div
@@ -481,7 +481,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                                         </span>
                                                         {dept && (
                                                             <span
-                                                                className="text-nano px-1 py-0.5 rounded font-bold"
+                                                                className="text-nano px-1 py-0.5 rounded-none font-bold"
                                                                 style={{
                                                                     backgroundColor: dept.color + '20',
                                                                     color: dept.color

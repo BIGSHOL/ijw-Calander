@@ -1468,7 +1468,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#f0f4f8]">
+    <div className="h-screen overflow-hidden flex bg-[#f0f4f8]">
       {/* Skip Link for Keyboard Navigation - Addresses Issue #7 */}
       <SkipLink targetId="main-content">메인 콘텐츠로 건너뛰기</SkipLink>
 
@@ -2181,7 +2181,7 @@ const App: React.FC = () => {
             /* Calendar View */
             <div className="w-full flex-1 max-w-full mx-auto h-full print:p-0 flex flex-col xl:flex-row gap-4 print:flex-row print:gap-2 overflow-x-auto">
               {/* 1단: 현재 년도 (항상 표시) */}
-              <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden ${viewColumns >= 2 ? 'min-w-[320px]' : 'min-w-0'}`}>
+              <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-y-auto ${viewColumns >= 2 ? 'min-w-[320px]' : 'min-w-0'}`}>
                 <CalendarBoard
                   currentDate={baseDate}
                   onDateChange={setBaseDate}
@@ -2376,7 +2376,7 @@ const App: React.FC = () => {
           ) : appMode === 'role-management' ? (
             /* Role Management View */
             <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
+              <div className="w-full flex-1 overflow-hidden">
                 <RoleManagementPage
                   isMaster={isMaster}
                   isAdmin={isAdmin}
