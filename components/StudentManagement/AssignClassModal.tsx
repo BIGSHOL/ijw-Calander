@@ -60,6 +60,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
 
             // students/{studentId}/enrollments/{enrollmentId}에 추가
             await setDoc(doc(db, `students/${student.id}/enrollments`, enrollmentId), {
+                classId: selectedClass.id, // [FIX] ID 저장 추가
                 subject: selectedSubject,
                 className: selectedClass.className,
                 teacherId: selectedClass.teacher,
@@ -146,11 +147,10 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                         setSelectedSubject('math');
                                         setSelectedClassName('');
                                     }}
-                                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${
-                                        selectedSubject === 'math'
+                                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${selectedSubject === 'math'
                                             ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
+                                        }`}
                                 >
                                     수학
                                 </button>
@@ -160,11 +160,10 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                         setSelectedSubject('english');
                                         setSelectedClassName('');
                                     }}
-                                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${
-                                        selectedSubject === 'english'
+                                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${selectedSubject === 'english'
                                             ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
+                                        }`}
                                 >
                                     영어
                                 </button>
@@ -194,11 +193,10 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                     {availableClasses.map((cls) => (
                                         <label
                                             key={cls.id}
-                                            className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer transition-colors ${
-                                                selectedClassName === cls.className
+                                            className={`flex items-center gap-3 p-3 border-b last:border-b-0 cursor-pointer transition-colors ${selectedClassName === cls.className
                                                     ? 'bg-[#fdb813]/10 border-l-4 border-l-[#fdb813]'
                                                     : 'hover:bg-gray-50'
-                                            }`}
+                                                }`}
                                         >
                                             <input
                                                 type="radio"
