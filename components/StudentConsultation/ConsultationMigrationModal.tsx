@@ -1,0 +1,647 @@
+import React, { useState, useEffect } from 'react';
+import { read, utils } from 'xlsx';
+import { X, Upload, Check, Loader2, Database, Plus } from 'lucide-react';
+import { useStudents } from '../../hooks/useStudents';
+import { useStaff } from '../../hooks/useStaff';
+import { StaffMember, UnifiedStudent } from '../../types';
+import { collection, writeBatch, doc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+
+interface ParsedConsultation {
+    no: number | string;
+    studentName: string;
+    parentPhone: string | number;
+    studentPhone: string | number; // New
+    schoolName: string;
+    grade: string;
+    counselor: string; // 담당선생님
+    registrar: string; // 등록자 (Column K)
+    consultationDate: string;
+    notes: string;
+    subject: string;
+    status: string;
+}
+
+interface MigrationItem extends ParsedConsultation {
+    matchStatus: 'READY' | 'NO_STUDENT' | 'NO_COUNSELOR' | 'ERROR' | 'AMBIGUOUS' | 'NEW_STUDENT';
+    matchedStudent?: UnifiedStudent;
+    matchedConsultant?: StaffMember;
+    generatedTitle?: string;
+    generatedCategory?: string;
+    isNewStudent?: boolean; // New flag for auto-creation
+}
+
+interface ConsultationMigrationModalProps {
+    onClose: () => void;
+    onSuccess: () => void;
+}
+
+// Helper Functions for Excel Parsing
+const mapGrade = (raw: any) => {
+    if (!raw) return '기타';
+    const normalized = String(raw).trim();
+    const map: Record<string, string> = {
+        '초1': '초1', '초2': '초2', '초3': '초3', '초4': '초4', '초5': '초5', '초6': '초6',
+        '중1': '중1', '중2': '중2', '중3': '중3',
+        '고1': '고1', '고2': '고2', '고3': '고3'
+    };
+    return map[normalized] || '기타';
+};
+
+const mapSubjectFromContent = (content: any) => {
+    if (!content) return '기타';
+    const text = String(content);
+
+    // Priority: Brackets first, then specific phrases
+    if (text.includes('[수학')) return '수학';
+    if (text.includes('[영어')) return '영어';
+    if (text.includes('수학 상담')) return '수학';
+    if (text.includes('영어 상담')) return '영어';
+    if (text.includes('EiE')) return '영어';
+
+    // Scan body
+    const hasMath = text.includes('수학');
+    const hasEng = text.includes('영어');
+
+    if (hasMath && !hasEng) return '수학';
+    if (hasEng && !hasMath) return '영어';
+    if (hasMath && hasEng) return '수학'; // Default prioritize Math
+
+    return '기타';
+};
+
+const mapStatus = (statusCell: any, subject: string) => {
+    const status = String(statusCell || '').trim();
+    if (status === '재원생') {
+        if (subject === '수학') return '수학등록';
+        if (subject === '영어') return '영어등록';
+        return '수학등록';
+    }
+    if (status.includes('대기')) return '추후 등록예정';
+    if (status.includes('퇴원')) return '미등록';
+    if (status.includes('미등록')) return '미등록';
+    return '미등록';
+};
+
+const parseExcelDate = (cellVal: any) => {
+    if (!cellVal) return '';
+    if (cellVal instanceof Date) return cellVal.toISOString().split('T')[0];
+    const str = String(cellVal).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    return '';
+};
+
+const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({ onClose, onSuccess }) => {
+    const { students, loading: studentsLoading } = useStudents(true);
+    const { staff: staffMembers, loading: staffLoading } = useStaff();
+
+    const [rawData, setRawData] = useState<ParsedConsultation[]>([]);
+    const [migrationItems, setMigrationItems] = useState<MigrationItem[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [step, setStep] = useState<'load' | 'preview' | 'migrating' | 'done'>('load');
+    const [progress, setProgress] = useState(0);
+
+    // 1. File Upload Handler (Excel & JSON Support)
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const isExcel = file.name.endsWith('.xls') || file.name.endsWith('.xlsx');
+
+            if (isExcel) {
+                const arrayBuffer = await file.arrayBuffer();
+                const workbook = read(arrayBuffer, { cellDates: true });
+                const sheetName = workbook.SheetNames[0];
+                const sheet = workbook.Sheets[sheetName];
+                const jsonData = utils.sheet_to_json(sheet, { header: 'A' }) as any[];
+
+                // Skip header if present (check A column)
+                if (jsonData.length > 0 && jsonData[0]['A'] === 'No') {
+                    jsonData.shift();
+                }
+
+                const records: ParsedConsultation[] = [];
+                let currentRecord: any = null;
+
+                jsonData.forEach((row, index) => {
+                    const no = row['A'];
+
+                    // New Record
+                    if (no && !isNaN(parseInt(no))) {
+                        if (currentRecord) records.push(currentRecord);
+
+                        const content = row['P'] || '';
+                        const subject = mapSubjectFromContent(content);
+                        const statusStr = row['B'] ? String(row['B']) : '';
+                        const dateStr = parseExcelDate(row['L']);
+
+                        // Generate Title
+                        let generatedTitle = `상담 기록 (${dateStr})`;
+                        if (content.length > 0) {
+                            const firstLine = content.split('\n')[0];
+                            if (firstLine.length < 30) generatedTitle = firstLine;
+                            else generatedTitle = firstLine.substring(0, 30) + '...';
+                        }
+
+                        // Determine Category
+                        let generatedCategory = 'general';
+                        if (subject !== '기타') generatedCategory = 'progress';
+                        if (statusStr.includes('등록')) generatedCategory = 'general';
+
+                        // Build Notes
+                        let noteContent = '';
+                        // G is now a column
+                        if (content) noteContent += content;
+
+                        currentRecord = {
+                            no: no,
+                            studentName: row['C'] || '',
+                            parentPhone: row['F'] || '',
+                            studentPhone: row['G'] || '',
+                            schoolName: row['D'] || '',
+                            grade: mapGrade(row['E']),
+                            counselor: '', // Empty
+                            registrar: row['K'] || '',
+                            consultationDate: dateStr,
+                            notes: noteContent.trim(),
+                            subject: subject,
+                            status: mapStatus(statusStr, subject),
+                            generatedTitle,
+                            generatedCategory
+                        };
+                    } else if (currentRecord) {
+                        // Append multi-line content
+                        if (row['P']) {
+                            currentRecord.notes += '\n' + row['P'];
+                        }
+                    }
+                });
+
+                if (currentRecord) records.push(currentRecord);
+
+                const validRecords = records.filter(r => r.studentName && r.studentName !== '이름');
+                setRawData(validRecords);
+                setStep('preview');
+
+            } else {
+                // Legacy JSON support
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const json = JSON.parse(e.target?.result as string);
+                        setRawData(json);
+                        setStep('preview');
+                    } catch (err) {
+                        console.error(err);
+                        setError('파일 형식이 올바르지 않습니다.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+        } catch (err) {
+            console.error(err);
+            setError('데이터 파싱 중 오류가 발생했습니다: ' + (err as Error).message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Remove automatic loading effect since we use upload now
+    useEffect(() => {
+        // Only set step to load initially
+        if (step === 'load' && rawData.length > 0) {
+            // If we somehow have data, move to preview
+            setStep('preview');
+        }
+    }, [step, rawData]);
+
+    // 2. Normalize and Match Data
+    useEffect(() => {
+        if (rawData.length === 0 || studentsLoading || staffLoading) return;
+
+        const processItems = () => {
+            const items: MigrationItem[] = rawData.map(item => {
+                let status: MigrationItem['matchStatus'] = 'READY';
+
+                // Student Matching
+                // Phone normalization: remove dashes, spaces, ensure string
+                const cleanPhone = (phone: string | number | undefined) => {
+                    if (!phone) return '';
+                    return String(phone).replace(/[^0-9]/g, '');
+                };
+                const targetPhone = cleanPhone(item.parentPhone);
+
+                const matchedStudent = students.find(s =>
+                    s.name === item.studentName &&
+                    (cleanPhone(s.parentPhone || '').includes(targetPhone) || (targetPhone && targetPhone.includes(cleanPhone(s.parentPhone || ''))))
+                );
+
+                if (!matchedStudent) {
+                    status = 'NO_STUDENT';
+                    // Allow creation of new student
+                    // We will set isNewStudent = true
+                }
+
+                // Counselor Matching
+                let matchedConsultant = staffMembers.find(s => {
+                    if (!item.counselor) return false;
+                    // Exact match
+                    if (s.name === item.counselor || s.englishName === item.counselor) return true;
+                    // Partial match
+                    if (item.counselor.includes(s.name)) return true;
+                    if (s.englishName && item.counselor.includes(s.englishName)) return true;
+                    return false;
+                });
+
+                // Auto-map Teacher based on Subject & Student Enrollment (User Request)
+                // Refined Logic based on User Request:
+                // 1. One class -> That teacher
+                // 2. Multiple classes -> If registrar matches a teacher name, use that teacher.
+                if (!matchedConsultant && matchedStudent) {
+                    const subjectKey = item.subject === '수학' ? 'math' : (item.subject === '영어' ? 'english' : null);
+                    let candidateEnrollments = matchedStudent.enrollments || [];
+
+                    // Filter by subject if known (e.g. if subject is Math, only look at Math classes)
+                    if (subjectKey) {
+                        candidateEnrollments = candidateEnrollments.filter(e => e.subject === subjectKey);
+                    }
+
+                    if (candidateEnrollments.length === 1) {
+                        // Case 1: Only 1 class found -> Use that teacher
+                        const teacherId = candidateEnrollments[0].teacherId;
+                        matchedConsultant = staffMembers.find(s => s.id === teacherId || s.name === teacherId);
+                    } else if (candidateEnrollments.length > 1) {
+                        // Case 2: Multiple classes -> Check if registrar matches any teacher
+                        // The user said: "Consultant(registrar) matches homeroom teacher"
+                        if (item.registrar) {
+                            const matchingEnrollment = candidateEnrollments.find(e => {
+                                const teacher = staffMembers.find(s => s.id === e.teacherId || s.name === e.teacherId);
+                                // Check Korean name match
+                                return teacher && teacher.name === item.registrar;
+                            });
+
+                            if (matchingEnrollment) {
+                                const teacherId = matchingEnrollment.teacherId;
+                                matchedConsultant = staffMembers.find(s => s.id === teacherId || s.name === teacherId);
+                            }
+                        }
+                    }
+                }
+
+                if (!matchedConsultant && status === 'READY') status = 'NO_COUNSELOR';
+
+                // Generate Title
+                const content = item.notes || '';
+                let title = content.length > 20 ? content.substring(0, 20) + '...' : content;
+                if (!title) title = "상담 기록 (자동 이전)";
+
+                return {
+                    ...item,
+                    matchStatus: status,
+                    matchedStudent,
+                    matchedConsultant,
+                    generatedTitle: title,
+                    generatedCategory: 'general', // Default
+                    isNewStudent: !matchedStudent // Flag to indicate need for creation
+                };
+            });
+            setMigrationItems(items);
+        };
+
+        processItems();
+    }, [rawData, students, staffMembers, studentsLoading, staffLoading]);
+
+    // 3. Execution using Batch
+    const handleMigrate = async () => {
+        if (migrationItems.length === 0) return;
+
+        setStep('migrating');
+        setProgress(0);
+        setError(null);
+
+        try {
+            // Process ALL items, creating students if needed
+            // Filter out Error if any (though currently logic doesn't set ERROR)
+            // Ideally process items that are READY or NO_STUDENT (new student) or NO_COUNSELOR
+            const itemsToProcess = migrationItems.filter(i => i.matchStatus !== 'ERROR');
+            const total = itemsToProcess.length;
+            const batchSize = 100; // Safe batch size
+
+            let processed = 0;
+
+            // Chunking
+            for (let i = 0; i < total; i += batchSize) {
+                const batch = writeBatch(db);
+                const chunk = itemsToProcess.slice(i, i + batchSize);
+
+                for (const item of chunk) {
+                    let studentId = item.matchedStudent?.id;
+                    let studentName = item.matchedStudent?.name || item.studentName;
+
+                    // If NO_STUDENT, create a new student ref
+                    if (!studentId && item.isNewStudent) {
+                        const newStudentRef = doc(collection(db, 'students'));
+                        studentId = newStudentRef.id;
+
+                        const newStudentData = {
+                            id: studentId,
+                            name: item.studentName,
+                            school: item.schoolName || '',
+                            grade: item.grade || '',
+                            parentPhone: String(item.parentPhone || ''),
+                            studentPhone: String(item.studentPhone || ''), // Use parsed studentPhone
+                            status: 'prospective' as any,
+                            source: 'MakeEdu_Migration',
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
+                            enrollments: []
+                        };
+                        batch.set(newStudentRef, newStudentData);
+                    }
+
+                    if (!studentId) continue;
+
+                    // FIX: Use 'student_consultations' instead of 'consultations'
+                    const docRef = doc(collection(db, 'student_consultations'));
+
+                    // Append Registrar to content since schema doesn't have it
+                    let finalContent = item.notes || '';
+                    if (item.registrar) {
+                        finalContent += `\n\n[등록자: ${item.registrar}]`;
+                    }
+
+                    const consultationData = {
+                        id: docRef.id,
+                        studentId: studentId,
+                        studentName: studentName,
+                        type: 'parent',
+                        consultantId: item.matchedConsultant?.id || 'unknown',
+                        consultantName: item.matchedConsultant?.name || item.counselor || '미지정',
+                        date: item.consultationDate,
+                        title: item.generatedTitle || '상담 기록',
+                        content: finalContent,
+                        category: item.generatedCategory || 'general',
+                        subject: (item.subject === '수학' ? 'math' : item.subject === '영어' ? 'english' : null),
+                        createdAt: new Date().getTime(),
+                        updatedAt: new Date().getTime(),
+                        createdBy: 'migration_tool',
+                        followUpNeeded: false,
+                        followUpDone: false,
+                        isMigrated: true,
+                        migrationSource: 'MakeEdu_Excel'
+                    };
+
+                    batch.set(docRef, consultationData);
+                }
+
+                await batch.commit();
+                processed += chunk.length;
+                setProgress(Math.round((processed / total) * 100));
+            }
+
+            setStep('done');
+        } catch (err: any) {
+            console.error(err);
+            setError(`마이그레이션 중 오류 발생: ${err.message}`);
+            setStep('preview');
+        }
+    };
+
+    // 4. Cleanup Function for Wrongly Migrated Data
+    const handleCleanup = async () => {
+        if (!confirm('정말로 잘못 업로드된 데이터를 삭제하시겠습니까? (consultations 컬렉션의 MakeEdu_Excel 데이터)')) return;
+
+        setLoading(true);
+        try {
+            const wrongColRef = collection(db, 'consultations');
+            const q = query(wrongColRef, where('migrationSource', '==', 'MakeEdu_Excel'));
+            const snapshot = await getDocs(q);
+
+            if (snapshot.empty) {
+                alert('삭제할 잘못된 데이터가 없습니다.');
+                setLoading(false);
+                return;
+            }
+
+            const batch = writeBatch(db);
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            alert(`총 ${snapshot.size}건의 잘못된 데이터를 삭제했습니다.`);
+        } catch (err: any) {
+            console.error(err);
+            alert(`삭제 중 오류 발생: ${err.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const readyCount = migrationItems.length; // All processed
+    const newStudentCount = migrationItems.filter(i => i.isNewStudent).length;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl w-[900px] max-h-[90vh] flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="bg-[#081429] px-6 py-4 flex items-center justify-between">
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                        <Database size={20} className="text-[#fdb813]" />
+                        MakeEdu 상담 내역 마이그레이션
+                    </h2>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+                        <X size={24} />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-hidden flex flex-col p-6 bg-gray-50">
+                    {step === 'load' && (
+                        <div className="flex flex-col items-center justify-center h-full gap-6">
+                            <div className="w-full max-w-md p-8 bg-white rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer relative">
+                                <input
+                                    type="file"
+                                    accept=".xls, .xlsx"
+                                    onChange={handleFileUpload}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <Upload className="text-gray-400 mb-4" size={48} />
+                                <h3 className="text-lg font-bold text-gray-900 mb-1">상담 내역 엑셀 업로드</h3>
+                                <p className="text-sm text-gray-500 mb-4">MakeEdu에서 내려받은 엑셀 파일(.xls, .xlsx)을 업로드하세요.</p>
+                                <button className="px-4 py-2 bg-[#081429] text-white rounded-md text-sm font-medium">
+                                    파일 선택하기
+                                </button>
+                            </div>
+
+                            {/* Cleanup Button */}
+                            <button
+                                onClick={handleCleanup}
+                                className="text-xs text-red-500 underline hover:text-red-700 mt-4"
+                            >
+                                잘못된 데이터 삭제 (초기화)
+                            </button>
+
+                            {loading && (
+                                <div className="flex items-center gap-2 text-blue-600">
+                                    <Loader2 className="animate-spin" size={20} />
+                                    <span>데이터 처리 중...</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {step === 'preview' && (
+                        <>
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-3 gap-4 mb-6">
+                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                                    <div className="text-sm text-gray-500 mb-1">총 데이터</div>
+                                    <div className="text-2xl font-bold text-gray-900">{migrationItems.length}건</div>
+                                </div>
+                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 shadow-sm">
+                                    <div className="text-sm text-blue-600 mb-1">이전 진행 (전체)</div>
+                                    <div className="text-xl font-bold text-blue-700">{readyCount}건</div>
+                                </div>
+                                <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 shadow-sm">
+                                    <div className="text-sm text-purple-600 mb-1">신규 생성 예정</div>
+                                    <div className="text-xl font-bold text-purple-700">{newStudentCount}건</div>
+                                </div>
+                            </div>
+
+                            {/* ... Rest of preview UI remains same ... */}
+                            {/* To avoid huge replace block, we target closing parts carefully if needed, but here replacing the whole execution block is safer */}
+
+                            <div className="flex-1 overflow-auto border border-gray-200 rounded-lg bg-white">
+                                <table className="w-full text-xs text-left whitespace-nowrap">
+                                    <thead className="bg-gray-100 font-bold text-gray-700 sticky top-0 z-10">
+                                        <tr>
+                                            <th className="px-3 py-2 border-b w-10">No</th>
+                                            <th className="px-3 py-2 border-b w-16">구분</th>
+                                            <th className="px-3 py-2 border-b w-20">이름</th>
+                                            <th className="px-3 py-2 border-b w-20">학교</th>
+                                            <th className="px-3 py-2 border-b w-12">학년</th>
+                                            <th className="px-3 py-2 border-b w-24">보호자연락처</th>
+                                            <th className="px-3 py-2 border-b w-24">원생연락처</th>
+                                            <th className="px-3 py-2 border-b">제목</th>
+                                            <th className="px-3 py-2 border-b w-20">상담자</th>
+                                            <th className="px-3 py-2 border-b w-20">담임선생님</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {migrationItems.map((item, idx) => (
+                                            <tr key={idx} className={`hover:bg-gray-50 ${item.matchStatus !== 'READY' ? 'bg-purple-50/30' : ''}`}>
+                                                <td className="px-3 py-2 text-gray-500 font-mono">{item.no}</td>
+                                                <td className="px-3 py-2 text-gray-700">{item.status}</td>
+                                                <td className="px-3 py-2 font-medium text-gray-900">
+                                                    {item.studentName}
+                                                    {item.matchStatus === 'NEW_STUDENT' && <span className="text-[10px] text-purple-600 ml-1">(신규)</span>}
+                                                </td>
+                                                <td className="px-3 py-2 text-gray-600">{item.schoolName}</td>
+                                                <td className="px-3 py-2 text-gray-600">{item.grade}</td>
+                                                <td className="px-3 py-2 text-gray-500">{item.parentPhone}</td>
+                                                <td className="px-3 py-2 text-gray-500 text-[11px]">{item.studentPhone}</td>
+                                                <td className="px-3 py-2 max-w-[200px] truncate" title={item.notes}>
+                                                    {item.generatedTitle}
+                                                </td>
+                                                <td className="px-3 py-2 text-gray-600 font-medium">{item.registrar}</td>
+                                                <td className="px-3 py-2 text-gray-400">
+                                                    {item.counselor ? (
+                                                        item.matchedConsultant ? (
+                                                            <span className="text-blue-600">{item.matchedConsultant.name}</span>
+                                                        ) : (
+                                                            <span className="text-red-400">{item.counselor}</span>
+                                                        )
+                                                    ) : (
+                                                        <span className="text-gray-300">-</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
+
+                    {step === 'migrating' && (
+                        <div className="flex flex-col items-center justify-center h-full gap-6">
+                            <div className="relative w-24 h-24">
+                                <div className="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+                                <div className="absolute inset-0 rounded-full border-4 border-[#fdb813] border-t-transparent animate-spin"></div>
+                                <div className="absolute inset-0 flex items-center justify-center font-bold text-xl text-[#081429]">
+                                    {progress}%
+                                </div>
+                            </div>
+                            <div className="text-center">
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">데이터베이스에 저장 중입니다...</h3>
+                                <p className="text-gray-500">잠시만 기다려주세요. 창을 닫지 마세요.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 'done' && (
+                        <div className="flex flex-col items-center justify-center h-full gap-6 animate-in fade-in zoom-in duration-300">
+                            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
+                                <Check size={40} strokeWidth={3} />
+                            </div>
+                            <div className="text-center space-y-2">
+                                <h3 className="text-2xl font-bold text-[#081429]">마이그레이션 완료!</h3>
+                                <p className="text-gray-600">
+                                    총 <span className="text-green-600 font-bold">{readyCount}</span>건의 상담 기록이 성공적으로 저장되었습니다.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded border border-red-200">
+                            {error}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer Actions */}
+                <div className="bg-white border-t border-gray-100 p-4 flex justify-end gap-3">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm transition-colors"
+                        disabled={step === 'migrating'}
+                    >
+                        {step === 'done' ? '닫기' : '취소'}
+                    </button>
+
+                    {step === 'preview' && (
+                        <button
+                            onClick={handleMigrate}
+                            disabled={readyCount === 0}
+                            className={`flex items-center gap-2 px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all ${readyCount > 0
+                                ? 'bg-[#081429] text-white hover:bg-[#112a55]'
+                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                }`}
+                        >
+                            <Upload size={16} />
+                            {readyCount > 0 ? `${readyCount}건 일괄 마이그레이션` : '데이터 없음'}
+                        </button>
+                    )}
+
+                    {step === 'done' && (
+                        <button
+                            onClick={onSuccess}
+                            className="flex items-center gap-2 px-5 py-2 rounded-md font-bold text-sm shadow-sm bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f]"
+                        >
+                            완료 및 새로고침
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ConsultationMigrationModal;

@@ -118,7 +118,7 @@ export interface UnifiedStudent {
 
 
   // 상태 관리
-  status: 'active' | 'on_hold' | 'withdrawn';
+  status: 'active' | 'on_hold' | 'withdrawn' | 'prospect' | 'waitlisted';
   startDate: string;             // 등록일 (YYYY-MM-DD)
   endDate?: string;              // 퇴원일
   withdrawalDate?: string;       // 퇴원일 (YYYY-MM-DD) - 영어 시간표와 호환
@@ -680,6 +680,7 @@ export interface TimetableClass {
 export interface Teacher {
   id: string;
   name: string;
+  englishName?: string; // 영어 이름
   subjects?: string[];  // 담당 과목
   isHidden?: boolean;   // 시간표 표시 여부
   isNative?: boolean;   // 원어민 강사 여부
@@ -1299,9 +1300,10 @@ export interface WeeklySchedule {
  */
 export interface StaffMember {
   id: string;
-  userId?: string; // 기존 users 컬렉션 연동
+  uid?: string; // Firebase Auth UID (users 컬렉션 연동)
   name: string;
-  email: string;
+  englishName?: string;           // 영어 이름
+  email?: string;
   phone?: string;
   role: 'teacher' | 'admin' | 'staff';
   subjects?: ('math' | 'english')[];
@@ -1312,6 +1314,15 @@ export interface StaffMember {
   memo?: string;
   createdAt: string;
   updatedAt: string;
+
+  // === 시스템 권한 필드 (UserProfile 통합) ===
+  systemRole?: UserRole;           // 시스템 권한 역할 (8단계)
+  approvalStatus?: 'approved' | 'pending' | 'rejected';  // 승인 상태
+  departmentPermissions?: Record<string, 'view' | 'edit'>;  // 부서별 권한
+  favoriteDepartments?: string[];  // 즐겨찾기 부서
+  primaryDepartmentId?: string;    // 주 소속 부서
+  jobTitle?: string;               // 호칭
+  teacherId?: string;              // 강사 프로필 연동 ID
 
   // === 선생님 전용 필드 (role === 'teacher'일 때만 사용) ===
   // 시간표 표시 설정

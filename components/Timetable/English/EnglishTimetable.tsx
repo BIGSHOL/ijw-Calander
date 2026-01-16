@@ -187,12 +187,25 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
         const filtered = propsTeachers.filter(t =>
             (!t.subjects || t.subjects.includes('english'))
         );
+
+        // 통합뷰(class, room)에서는 isHidden 강사를 제외
+        // 강사뷰(teacher)에서는 모든 강사 포함 (LAB 등도 표시)
+        const visibleForView = viewType === 'teacher'
+            ? filtered
+            : filtered.filter(t => !t.isHidden);
+
+        // teachersData는 항상 모든 강사 포함 (useEnglishClasses에서 isHidden 체크용)
         setTeachersData(filtered);
-        // 강사뷰에서는 isHidden 강사(LAB 등)도 표시해야 함
-        // isHidden은 통합뷰의 담임/강의실 계산에서만 제외됨
-        // 초기 정렬 제거 - sortedTeachers에서 teacherOrder 기반으로 정렬됨
-        setTeachers(filtered.map(t => t.name).filter(Boolean));
-    }, [propsTeachers]);
+
+        // teachers는 현재 뷰에 맞게 필터링
+        // 영어 이름이 있으면 영어 이름 사용, 없으면 한국 이름 사용
+        setTeachers(visibleForView.map(t => {
+            if (t.englishName) {
+                return t.englishName;
+            }
+            return t.name;
+        }).filter(Boolean));
+    }, [propsTeachers, viewType]);
 
     // Subscribe to Order Config only
     useEffect(() => {

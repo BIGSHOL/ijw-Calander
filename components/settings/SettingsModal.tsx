@@ -745,7 +745,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
 
 
-            {/* TEACHERS TAB - 직원 관리 안내 */}
+            {/* TEACHERS TAB - 시간표 설정 안내 */}
             {activeTab === 'teachers' && (isMaster || canViewTeachers) && (
               <div className="max-w-2xl mx-auto">
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
@@ -758,14 +758,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-blue-900 mb-2">강사 관리가 이동되었습니다</h3>
                       <p className="text-sm text-blue-800 mb-4">
-                        강사 관리 기능이 <strong>직원 관리 탭</strong>으로 통합되었습니다.
-                        이제 강사, 관리자, 직원을 한 곳에서 통합 관리할 수 있습니다.
+                        강사 관리 기능이 <strong>시간표 탭의 설정</strong>으로 이동되었습니다.
+                        시간표와 관련된 강사 정보를 한 곳에서 관리할 수 있습니다.
                       </p>
-                      <div className="flex items-center gap-2 text-xs text-blue-700">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                        <span>상단 메인 탭에서 <strong>👔 직원 관리</strong> 탭을 확인하세요</span>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 text-xs text-blue-700">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          <span>상단 메인 탭에서 <strong>📚 시간표</strong> 탭으로 이동</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-blue-700">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          <span>시간표 화면의 <strong>⚙️ 설정 버튼</strong>에서 강사 관리 탭 확인</span>
+                        </div>
                       </div>
                     </div>
                   </div>

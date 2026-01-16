@@ -7,7 +7,8 @@ import { getMonthWeeks } from '../../utils/dateUtils';
 import WeekBlock from './WeekBlock';
 import MyEventsModal from './MyEventsModal'; // Import
 import CustomSelect from './CustomSelect'; // Import CustomSelect
-import { Archive, Clock, Users, Edit3, ChevronLeft, ChevronRight, Calendar as CalendarIcon, List, Search, Filter, X, Check } from 'lucide-react';
+import CalendarSettingsModal from './CalendarSettingsModal'; // Import CalendarSettingsModal
+import { Archive, Clock, Users, Edit3, ChevronLeft, ChevronRight, Calendar as CalendarIcon, List, Search, Filter, X, Check, Settings } from 'lucide-react';
 import { EVENT_COLORS } from '../../constants';
 import YearlyView from './YearlyView'; // Import YearlyView
 import { useArchivedEvents } from '../../hooks/useArchivedEvents'; // Phase 9: Archiving Hook
@@ -239,6 +240,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   showArchived = false, // Default to false if not provided
 }) => {
   const [isMyEventsOpen, setIsMyEventsOpen] = React.useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const weeks = getMonthWeeks(currentDate); // Restore weeks definition
 
   // Header Logic
@@ -768,6 +770,14 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                 <div className="hidden @xl:flex text-xs @2xl:text-sm font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/10 px-2 @2xl:px-4 py-1.5 @2xl:py-2 rounded-lg @2xl:rounded-xl border border-[#fdb813]/20">
                   {format(currentDate, 'yyyy. MM')}
                 </div>
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="flex items-center gap-1 @sm:gap-1.5 @lg:gap-2 bg-gray-700 hover:bg-gray-600 text-white px-1.5 @xs:px-2 @sm:px-3 py-1.5 @sm:py-2 rounded-lg @sm:rounded-xl transition-all shadow-md hover:shadow-lg font-bold text-[10px] @xs:text-xs @lg:text-sm"
+                  title="연간 일정 설정"
+                >
+                  <Settings size={14} className="@sm:w-4 @sm:h-4" />
+                  <span className="hidden @sm:inline">설정</span>
+                </button>
                 <div className="relative">
                   <button
                     onClick={() => setIsMyEventsOpen(true)}
@@ -807,6 +817,13 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
             events={allEvents}
             currentUser={currentUser}
             onEventClick={onEventClick}
+          />
+
+          {/* Calendar Settings Modal */}
+          <CalendarSettingsModal
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            currentUser={currentUser}
           />
 
           {/* Conditional Rendering based on viewMode */}

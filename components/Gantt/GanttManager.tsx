@@ -344,6 +344,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                         title={activeProjectTitle}
                         startDate={activeStartDate}
                         onSaveAsTemplate={handleSaveAsTemplate}
+                        currentUser={userProfile}
                     />
                 ) : (
                     // Empty State

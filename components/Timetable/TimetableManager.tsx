@@ -18,6 +18,7 @@ import ViewSettingsModal from './Math/components/Modals/ViewSettingsModal';
 import TimetableGrid from './Math/components/TimetableGrid';
 import ClassDetailModal from '../ClassManagement/ClassDetailModal';
 import StudentDetailModal from '../StudentManagement/StudentDetailModal';
+import TimetableSettingsModal from './TimetableSettingsModal';
 import { ClassInfo } from '../../hooks/useClasses';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 
@@ -187,6 +188,9 @@ const TimetableManager = ({
 
     // View Settings State
     const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
+
+    // Timetable Settings State (수업 설정 + 강사 관리)
+    const [isTimetableSettingsOpen, setIsTimetableSettingsOpen] = useState(false);
 
     // Timetable View Mode: 'day-based' (월화수목금토일) vs 'teacher-based' (월목/화금/주말/수요일)
     const [internalTimetableViewMode, setInternalTimetableViewMode] = useState<'day-based' | 'teacher-based'>(
@@ -416,6 +420,7 @@ const TimetableManager = ({
                 viewType={viewType}
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
                 setIsViewSettingsOpen={setIsViewSettingsOpen}
+                setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                 pendingMovesCount={pendingMoves.length}
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}
@@ -541,6 +546,17 @@ const TimetableManager = ({
                 currentOrder={mathConfig.teacherOrder}
                 allTeachers={sortedTeachers}
                 onSave={handleSaveTeacherOrder}
+            />
+
+            {/* Timetable Settings Modal (수업 설정 + 강사 관리) */}
+            <TimetableSettingsModal
+                isOpen={isTimetableSettingsOpen}
+                onClose={() => setIsTimetableSettingsOpen(false)}
+                canEdit={canEditMath}
+                isMaster={isMaster}
+                teachers={propsTeachers}
+                canViewMath={isMaster || hasPermission('timetable.math.view')}
+                canViewEnglish={isMaster || hasPermission('timetable.english.view')}
             />
         </div >
     );

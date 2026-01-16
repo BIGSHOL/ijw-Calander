@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
-import { GanttSubTask } from '../../types';
-import { ZoomIn, ZoomOut, Maximize, Calendar, Filter, CheckCircle2, MoreHorizontal, ChevronRight } from 'lucide-react';
+import { GanttSubTask, UserProfile } from '../../types';
+import { ZoomIn, ZoomOut, Maximize, Calendar, Filter, CheckCircle2, MoreHorizontal, ChevronRight, Settings } from 'lucide-react';
 import { format, addDays, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { useQuery } from '@tanstack/react-query';
 import { GANTT_TASK_COLORS, DEFAULT_GANTT_CATEGORIES, GANTT_DEPENDENCY_CONFIG } from '../../config/ganttConfig';
+import GanttSettingsModal from './GanttSettingsModal';
 
 
 interface GanttChartProps {
@@ -14,16 +15,18 @@ interface GanttChartProps {
     title?: string;
     startDate?: string; // YYYY-MM-DD format
     onSaveAsTemplate?: () => void;
+    currentUser?: UserProfile | null;
 }
 
 // P2 개선: 하드코딩된 색상을 config에서 import
 const COLORS = GANTT_TASK_COLORS;
 
-const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesign", startDate, onSaveAsTemplate }) => {
+const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesign", startDate, onSaveAsTemplate, currentUser = null }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [dayWidth, setDayWidth] = useState(50);
     const [isFitToScreen, setIsFitToScreen] = useState(false);
     const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null); // Phase A: Hover Highlight
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
 
 
@@ -327,6 +330,15 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                             <Filter size={16} /> 필터
                         </button>
 
+                        {/* Settings Button */}
+                        <button
+                            onClick={() => setIsSettingsOpen(true)}
+                            className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-100 transition-all"
+                            title="간트 차트 설정"
+                        >
+                            <Settings size={16} /> 설정
+                        </button>
+
                         {/* Save as Template Button */}
                         {onSaveAsTemplate && (
                             <button
@@ -592,6 +604,13 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                     </div>
                 </div>
             </div>
+
+            {/* Settings Modal */}
+            <GanttSettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                currentUser={currentUser}
+            />
         </div>
     );
 };

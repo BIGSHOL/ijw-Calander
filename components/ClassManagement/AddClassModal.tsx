@@ -6,6 +6,7 @@ import { useClasses } from '../../hooks/useClasses';
 import { SUBJECT_LABELS } from '../../utils/styleUtils';
 import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
+import { useStaff } from '../../hooks/useStaff';
 
 interface AddClassModalProps {
   onClose: () => void;
@@ -50,7 +51,24 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
   const { students, loading: studentsLoading } = useStudents(false);
   const createClassMutation = useCreateClass();
   const { data: teachersData } = useTeachers();
+  const { staff } = useStaff();
   const { data: existingClasses } = useClasses(subject); // 해당 과목의 기존 수업 목록
+
+  // 과목별 강사 필터링 (staff에서 role='teacher'이고 해당 과목을 가르치는 직원)
+  const availableTeachers = useMemo(() => {
+    return staff.filter(member =>
+      member.role === 'teacher' &&
+      member.subjects?.includes(subject)
+    );
+  }, [staff, subject]);
+
+  // 강사 이름 표시 헬퍼 (과목별 다른 표시)
+  const getTeacherDisplayName = (staffMember: typeof staff[0]) => {
+    if (subject === 'english') {
+      return staffMember.englishName || staffMember.name;
+    }
+    return staffMember.name;
+  };
 
   // 강사 색상 가져오기
   const getTeacherColor = (teacherName: string) => {
@@ -240,13 +258,26 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
               <label className="block text-xs font-semibold text-gray-600 mb-1">
                 담임 강사 <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={mainTeacher}
                 onChange={(e) => setMainTeacher(e.target.value)}
-                placeholder="예: Ellen"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
-              />
+              >
+                <option value="">선택해주세요</option>
+                {availableTeachers.map(teacher => {
+                  const displayName = getTeacherDisplayName(teacher);
+                  return (
+                    <option key={teacher.id} value={teacher.name}>
+                      {displayName}
+                    </option>
+                  );
+                })}
+              </select>
+              {availableTeachers.length === 0 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  ⚠️ {SUBJECT_LABELS[subject]} 과목 강사가 없습니다. 직원 관리에서 추가해주세요.
+                </p>
+              )}
             </div>
 
             <div>
@@ -293,6 +324,20 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                       const displayTeacher = slotTeacher || mainTeacher;
                       const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
 
+                      // 과목에 맞게 표시할 이름 결정
+                      let displayName = '';
+                      if (isSelected) {
+                        if (slotTeacher) {
+                          const staffMember = staff.find(s => s.name === slotTeacher || s.englishName === slotTeacher);
+                          displayName = staffMember ? getTeacherDisplayName(staffMember) : slotTeacher;
+                        } else if (mainTeacher) {
+                          const staffMember = staff.find(s => s.name === mainTeacher || s.englishName === mainTeacher);
+                          displayName = staffMember ? getTeacherDisplayName(staffMember) : mainTeacher;
+                        } else {
+                          displayName = '✓';
+                        }
+                      }
+
                       return (
                         <button
                           key={key}
@@ -308,7 +353,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                             color: colors.textColor
                           } : undefined}
                         >
-                          {isSelected ? (slotTeacher || mainTeacher || '✓') : ''}
+                          {displayName}
                         </button>
                       );
                     })}
@@ -361,13 +406,26 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                           }
                           return (
                             <div key={key} className="p-0.5 border-r border-gray-200 last:border-r-0">
-                              <input
-                                type="text"
+                              <select
                                 value={slotTeachers[key] || ''}
                                 onChange={(e) => setSlotTeacher(key, e.target.value)}
-                                placeholder={mainTeacher || '-'}
                                 className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
-                              />
+                              >
+                                <option value="">
+                                  {mainTeacher ? (() => {
+                                    const staffMember = staff.find(s => s.name === mainTeacher || s.englishName === mainTeacher);
+                                    return staffMember ? getTeacherDisplayName(staffMember) : mainTeacher;
+                                  })() : '담임'}
+                                </option>
+                                {availableTeachers.map(teacher => {
+                                  const displayName = getTeacherDisplayName(teacher);
+                                  return (
+                                    <option key={teacher.id} value={teacher.name}>
+                                      {displayName}
+                                    </option>
+                                  );
+                                })}
+                              </select>
                             </div>
                           );
                         })}

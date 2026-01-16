@@ -40,15 +40,17 @@ const RoleManagementPage = lazy(() => import('./components/RoleManagement/RoleMa
 // ProspectManagementTab removed - merged into ConsultationManager
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit, Calculator, BookOpen, Library, Building, ClipboardList, MessageCircle, BarChart3, Check, DollarSign } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
-import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { listenerRegistry } from './utils/firebaseCleanup';
+import { StaffMember } from './types';
 
 type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 // Import Firestore Converters from separate file
 import { departmentConverter, eventConverter } from './converters';
 import './scripts/migrateStudents'; // Temporary: for v6 migration
+import './scripts/migrateUsersToStaff'; // Migration: users → staff integration
 
 // Import Style Utilities
 import { INJAEWON_LOGO, getJobTitleStyle } from './utils/styleUtils';
@@ -67,6 +69,58 @@ const TabLoadingFallback = () => (
 const formatUserDisplay = (u: UserProfile) => {
   const name = u.displayName || u.email.split('@')[0];
   return u.jobTitle ? `${name} (${u.jobTitle})` : name;
+};
+
+// Helper to create staff record when user signs up
+const createStaffFromUser = async (user: User, userProfile: UserProfile) => {
+  try {
+    // Check if staff with this email already exists
+    const staffQuery = query(
+      collection(db, 'staff'),
+      where('email', '==', user.email)
+    );
+    const staffSnapshot = await getDocs(staffQuery);
+
+    if (!staffSnapshot.empty) {
+      // Staff already exists - update with uid
+      const existingStaff = staffSnapshot.docs[0];
+      await updateDoc(existingStaff.ref, {
+        uid: user.uid,
+        englishName: userProfile.jobTitle || '', // jobTitle → englishName
+        systemRole: userProfile.role,
+        approvalStatus: userProfile.status,
+        departmentPermissions: userProfile.departmentPermissions || {},
+        primaryDepartmentId: userProfile.departmentId,
+        teacherId: userProfile.teacherId,
+        updatedAt: new Date().toISOString(),
+      });
+      console.log('✅ Staff updated with user profile:', existingStaff.id);
+    } else {
+      // Create new staff record
+      const newStaffRef = doc(collection(db, 'staff'));
+      const newStaff: StaffMember = {
+        id: newStaffRef.id,
+        uid: user.uid,
+        name: userProfile.displayName || user.email!.split('@')[0],
+        englishName: userProfile.jobTitle || '', // jobTitle → englishName
+        email: user.email!,
+        role: 'staff', // Default to 'staff' role
+        systemRole: userProfile.role,
+        approvalStatus: userProfile.status,
+        departmentPermissions: userProfile.departmentPermissions || {},
+        primaryDepartmentId: userProfile.departmentId,
+        teacherId: userProfile.teacherId,
+        hireDate: new Date().toISOString().split('T')[0],
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await setDoc(newStaffRef, newStaff);
+      console.log('✅ New staff created from user:', newStaffRef.id);
+    }
+  } catch (error) {
+    console.error('❌ Failed to create/update staff from user:', error);
+  }
 };
 
 const App: React.FC = () => {
@@ -384,6 +438,9 @@ const App: React.FC = () => {
               };
               await setDoc(userDocRef, newMasterProfile);
               setUserProfile(newMasterProfile);
+
+              // 마스터는 자동으로 staff 생성
+              await createStaffFromUser(user, newMasterProfile);
             } else {
               // Initial user creation handled here
               const newUserProfile: UserProfile = {
@@ -396,6 +453,9 @@ const App: React.FC = () => {
               };
               await setDoc(userDocRef, newUserProfile);
               setUserProfile(newUserProfile);
+
+              // 일반 사용자도 자동으로 staff 생성
+              await createStaffFromUser(user, newUserProfile);
             }
           }
           setAuthLoading(false);
@@ -2307,7 +2367,10 @@ const App: React.FC = () => {
             /* Staff Management View */
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto">
-                <StaffManager />
+                <StaffManager
+                  users={users}
+                  currentUserProfile={userProfile}
+                />
               </div>
             </Suspense>
           ) : appMode === 'role-management' ? (

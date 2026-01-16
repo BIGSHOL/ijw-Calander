@@ -3,6 +3,7 @@ import { ClassInfo } from '../../hooks/useClasses';
 import { Inbox, ChevronRight, Users, FileText, Clock } from 'lucide-react';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { SubjectForSchedule, MATH_PERIOD_INFO, ENGLISH_PERIOD_INFO, MATH_GROUP_TIMES, WEEKEND_PERIOD_INFO } from '../Timetable/constants';
+import { useTeachers } from '../../hooks/useFirebaseQueries';
 
 // 요일별 색상 정의
 const DAY_COLORS: Record<string, { bg: string; text: string }> = {
@@ -202,6 +203,19 @@ interface ClassListProps {
 }
 
 const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading }) => {
+  // 강사 데이터 가져오기 (영어 이름 매칭용)
+  const { data: teachersData } = useTeachers();
+
+  // Helper to display teacher name as "한글(영어이름)"
+  const getTeacherDisplayName = (teacherName: string) => {
+    if (!teacherName) return '-';
+    const staffMember = teachersData?.find(t => t.name === teacherName || t.englishName === teacherName);
+    if (staffMember && staffMember.englishName) {
+      return `${staffMember.name}(${staffMember.englishName})`;
+    }
+    return teacherName;
+  };
+
   // 로딩 상태
   if (isLoading) {
     return (
@@ -273,7 +287,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading 
 
               {/* 담임 */}
               <div className="text-[#373d41] text-sm truncate">
-                {teacher || '-'}
+                {getTeacherDisplayName(teacher)}
               </div>
 
               {/* 스케줄 - 시각적 배지 컴포넌트 사용 */}

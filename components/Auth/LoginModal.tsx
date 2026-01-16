@@ -16,8 +16,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [displayName, setDisplayName] = useState(''); // 이름
-    const [jobTitle, setJobTitle] = useState(''); // 호칭 (선택)
+    const [displayName, setDisplayName] = useState(''); // 이름(한글)
+    const [jobTitle, setJobTitle] = useState(''); // 닉네임(영어이름) (선택)
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -50,8 +50,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                 const newProfile: UserProfile = {
                     uid: user.uid,
                     email: user.email || '',
-                    displayName: displayName.trim() || email.split('@')[0], // 이름
-                    jobTitle: jobTitle.trim() || '', // 호칭 (선택)
+                    displayName: displayName.trim() || email.split('@')[0], // 이름(한글)
+                    jobTitle: jobTitle.trim() || '', // 닉네임(영어이름) (선택)
                     role: isMaster ? 'master' : 'user',
                     status: isMaster ? 'approved' : 'pending',
                     allowedDepartments: [], // Default none until approved/assigned
@@ -181,7 +181,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         {isSignUp && (
                             <>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">이름 <span className="text-red-500">*</span></label>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">이름(한글) <span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
                                         value={displayName}
@@ -192,13 +192,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">호칭 <span className="text-gray-400 text-xs">(선택)</span></label>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">닉네임(영어이름) <span className="text-gray-400 text-xs">(선택)</span></label>
                                     <input
                                         type="text"
                                         value={jobTitle}
                                         onChange={(e) => setJobTitle(e.target.value)}
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#081429] focus:ring-2 focus:ring-[#081429]/10 outline-none transition-all font-medium"
-                                        placeholder="예: 부원장, 팀장"
+                                        placeholder="예: John, Alice"
                                     />
                                 </div>
                             </>

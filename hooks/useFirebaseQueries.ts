@@ -42,6 +42,7 @@ export const useTeachers = (enabled: boolean = true) => {
                     return {
                         id: d.id,
                         name: staff.name,
+                        englishName: staff.englishName,
                         subjects: staff.subjects,
                         isHidden: staff.isHiddenInTimetable || false,
                         isNative: staff.isNative || false,
