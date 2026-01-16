@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Edit, ChevronDown, ChevronUp, Users, UserMinus } from 'lucide-react';
+import { X, Edit, ChevronDown, ChevronUp, Users, UserMinus, Calendar } from 'lucide-react';
 import { useUpdateClass, UpdateClassData, useManageClassStudents } from '../../hooks/useClassMutations';
 import { ClassInfo, useClasses } from '../../hooks/useClasses';
 import { useClassDetail, ClassStudent } from '../../hooks/useClassDetail';
@@ -34,6 +34,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const [studentSearch, setStudentSearch] = useState('');
   const [studentsToAdd, setStudentsToAdd] = useState<Set<string>>(new Set());
   const [studentsToRemove, setStudentsToRemove] = useState<Set<string>>(new Set());
+  const [studentAttendanceDays, setStudentAttendanceDays] = useState<Record<string, string[]>>({});  // 학생별 등원 요일
+  const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);  // 요일 설정 펼친 학생
 
   const [error, setError] = useState('');
 
@@ -118,6 +120,31 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     }
   }, [classDetail?.memo]);
 
+  // classDetail에서 기존 학생 attendanceDays 로드
+  useEffect(() => {
+    if (classDetail?.students) {
+      const existingDays: Record<string, string[]> = {};
+      classDetail.students.forEach(student => {
+        if (student.attendanceDays && student.attendanceDays.length > 0) {
+          existingDays[student.id] = student.attendanceDays;
+        }
+      });
+      setStudentAttendanceDays(existingDays);
+    }
+  }, [classDetail?.students]);
+
+  // 수업 스케줄에서 요일 목록 추출
+  const classDays = useMemo(() => {
+    const days = new Set<string>();
+    selectedSlots.forEach(slot => {
+      const day = slot.split('-')[0];
+      if (day) days.add(day);
+    });
+    // 요일 순서대로 정렬
+    const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+    return Array.from(days).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+  }, [selectedSlots]);
+
   // 슬롯 토글
   const toggleSlot = (day: string, periodId: string) => {
     const key = `${day}-${periodId}`;
@@ -173,6 +200,57 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     const newSet = new Set(studentsToAdd);
     newSet.delete(studentId);
     setStudentsToAdd(newSet);
+  };
+
+  // 학생 등원 요일 토글
+  const toggleStudentDay = (studentId: string, day: string) => {
+    const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+
+    setStudentAttendanceDays(prev => {
+      const currentDays = prev[studentId] || [];
+      let newDays: string[];
+
+      if (currentDays.includes(day)) {
+        // 해당 요일 제거
+        newDays = currentDays.filter(d => d !== day);
+      } else {
+        // 해당 요일 추가 후 정렬
+        newDays = [...currentDays, day].sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+      }
+
+      // 빈 배열이면 키 자체를 제거 (모든 요일 등원 = 설정 없음)
+      if (newDays.length === 0) {
+        const { [studentId]: _, ...rest } = prev;
+        return rest;
+      }
+
+      return { ...prev, [studentId]: newDays };
+    });
+  };
+
+  // 학생이 특정 요일에 등원하는지 확인
+  const isStudentAttendingDay = (studentId: string, day: string): boolean => {
+    const days = studentAttendanceDays[studentId];
+    // 설정이 없으면 모든 요일 등원
+    if (!days || days.length === 0) return true;
+    return days.includes(day);
+  };
+
+  // 학생의 등원 요일 표시 텍스트 (수업 요일과 동일하면 표시 안함)
+  const getAttendanceDaysText = (studentId: string): string | null => {
+    const days = studentAttendanceDays[studentId];
+    if (!days || days.length === 0) return null;
+
+    // 수업 요일과 등원 요일이 동일하면 표시하지 않음
+    if (days.length === classDays.length) {
+      const sorted1 = [...days].sort();
+      const sorted2 = [...classDays].sort();
+      if (sorted1.every((day, i) => day === sorted2[i])) {
+        return null;
+      }
+    }
+
+    return days.join(', ');
   };
 
   // 저장
@@ -239,8 +317,9 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       // 1. 수업 정보 업데이트
       await updateClassMutation.mutateAsync(updateData);
 
-      // 2. 학생 추가/제거가 있으면 처리
-      if (studentsToAdd.size > 0 || studentsToRemove.size > 0) {
+      // 2. 학생 추가/제거/등원요일 변경이 있으면 처리
+      const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0;
+      if (hasStudentChanges) {
         await manageStudentsMutation.mutateAsync({
           className: className.trim(),
           teacher: teacher.trim(),
@@ -248,6 +327,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
           schedule,
           addStudentIds: Array.from(studentsToAdd),
           removeStudentIds: Array.from(studentsToRemove),
+          studentAttendanceDays,
         });
       }
 
@@ -535,42 +615,91 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
                 {/* 현재 등록된 학생 */}
                 <div className="border-b border-gray-200">
-                  <div className="px-2.5 py-1.5 bg-blue-50 text-xs font-semibold text-blue-700">
-                    현재 등록된 학생 ({currentStudents.length - studentsToRemove.size}명)
+                  <div className="px-2.5 py-1.5 bg-blue-50 text-xs font-semibold text-blue-700 flex items-center justify-between">
+                    <span>현재 등록된 학생 ({currentStudents.length - studentsToRemove.size}명)</span>
+                    {classDays.length > 1 && (
+                      <span className="text-[10px] text-blue-500 font-normal">클릭하여 등원 요일 설정</span>
+                    )}
                   </div>
-                  <div className="max-h-28 overflow-y-auto">
+                  <div className="max-h-40 overflow-y-auto">
                     {currentStudents.length === 0 ? (
                       <div className="p-3 text-center text-gray-400 text-sm">등록된 학생이 없습니다</div>
                     ) : (
                       currentStudents.map(student => {
                         const isMarkedForRemoval = studentsToRemove.has(student.id);
+                        const isExpanded = expandedStudentId === student.id;
+                        const attendanceDaysText = getAttendanceDaysText(student.id);
                         return (
-                          <div
-                            key={student.id}
-                            className={`flex items-center justify-between px-2.5 py-1.5 text-sm ${isMarkedForRemoval ? 'bg-red-50 line-through text-gray-400' : 'hover:bg-gray-50'
-                              }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className={isMarkedForRemoval ? 'text-gray-400' : 'text-gray-800'}>
-                                {student.name}
-                              </span>
-                              <span className="text-[10px] text-gray-400">{student.school}{student.grade}</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => toggleRemoveStudent(student.id)}
-                              className={`p-1 rounded transition-colors ${isMarkedForRemoval
-                                  ? 'text-blue-600 hover:bg-blue-100'
-                                  : 'text-red-500 hover:bg-red-100'
-                                }`}
-                              title={isMarkedForRemoval ? '제거 취소' : '수업에서 제외'}
+                          <div key={student.id} className={isMarkedForRemoval ? 'bg-red-50' : ''}>
+                            <div
+                              className={`flex items-center justify-between px-2.5 py-1.5 text-sm ${isMarkedForRemoval ? 'line-through text-gray-400' : 'hover:bg-gray-50'} ${classDays.length > 1 && !isMarkedForRemoval ? 'cursor-pointer' : ''}`}
+                              onClick={() => {
+                                if (classDays.length > 1 && !isMarkedForRemoval) {
+                                  setExpandedStudentId(isExpanded ? null : student.id);
+                                }
+                              }}
                             >
-                              {isMarkedForRemoval ? (
-                                <span className="text-xs font-medium">취소</span>
-                              ) : (
-                                <UserMinus size={14} />
-                              )}
-                            </button>
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {classDays.length > 1 && !isMarkedForRemoval && (
+                                  <Calendar size={12} className="text-gray-400 flex-shrink-0" />
+                                )}
+                                <span className={`truncate ${isMarkedForRemoval ? 'text-gray-400' : 'text-gray-800'}`}>
+                                  {student.name}
+                                </span>
+                                <span className="text-[10px] text-gray-400 flex-shrink-0">{student.school}{student.grade}</span>
+                                {attendanceDaysText && !isMarkedForRemoval && (
+                                  <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
+                                    {attendanceDaysText}만
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRemoveStudent(student.id);
+                                }}
+                                className={`p-1 rounded transition-colors flex-shrink-0 ${isMarkedForRemoval
+                                    ? 'text-blue-600 hover:bg-blue-100'
+                                    : 'text-red-500 hover:bg-red-100'
+                                  }`}
+                                title={isMarkedForRemoval ? '제거 취소' : '수업에서 제외'}
+                              >
+                                {isMarkedForRemoval ? (
+                                  <span className="text-xs font-medium">취소</span>
+                                ) : (
+                                  <UserMinus size={14} />
+                                )}
+                              </button>
+                            </div>
+                            {/* 요일 선택 UI (펼쳐졌을 때) */}
+                            {isExpanded && classDays.length > 1 && (
+                              <div className="px-2.5 py-2 bg-gray-50 border-t border-gray-100">
+                                <div className="text-[10px] text-gray-500 mb-1.5">등원 요일 선택 (체크 해제하면 해당 요일 미등원)</div>
+                                <div className="flex gap-1 flex-wrap">
+                                  {classDays.map(day => {
+                                    const isAttending = isStudentAttendingDay(student.id, day);
+                                    return (
+                                      <button
+                                        key={day}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleStudentDay(student.id, day);
+                                        }}
+                                        className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                                          isAttending
+                                            ? 'bg-[#fdb813] text-[#081429]'
+                                            : 'bg-gray-200 text-gray-400 line-through'
+                                        }`}
+                                      >
+                                        {day}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })

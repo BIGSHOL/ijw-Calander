@@ -334,6 +334,7 @@ export interface ManageClassStudentsData {
   schedule?: string[];
   addStudentIds?: string[];     // 추가할 학생 IDs
   removeStudentIds?: string[];  // 제거할 학생 IDs
+  studentAttendanceDays?: Record<string, string[]>;  // { studentId: ['월', '목'] } 학생별 등원 요일
 }
 
 export const useManageClassStudents = () => {
@@ -341,23 +342,28 @@ export const useManageClassStudents = () => {
 
   return useMutation({
     mutationFn: async (data: ManageClassStudentsData) => {
-      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [] } = data;
+      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {} } = data;
 
       console.log(`[useManageClassStudents] Managing students for class: ${className}`);
-      console.log(`[useManageClassStudents] Adding: ${addStudentIds.length}, Removing: ${removeStudentIds.length}`);
+      console.log(`[useManageClassStudents] Adding: ${addStudentIds.length}, Removing: ${removeStudentIds.length}, AttendanceDays updates: ${Object.keys(studentAttendanceDays).length}`);
 
       // 학생 추가
       if (addStudentIds.length > 0) {
         const addPromises = addStudentIds.map(async (studentId) => {
           const enrollmentsRef = collection(db, COL_STUDENTS, studentId, 'enrollments');
-          await addDoc(enrollmentsRef, {
+          const enrollmentData: any = {
             className,
             teacherId: teacher,
             teacher: teacher,
             subject,
             schedule,
             createdAt: new Date().toISOString(),
-          });
+          };
+          // 신규 학생에게 attendanceDays가 설정되어 있으면 추가
+          if (studentAttendanceDays[studentId] && studentAttendanceDays[studentId].length > 0) {
+            enrollmentData.attendanceDays = studentAttendanceDays[studentId];
+          }
+          await addDoc(enrollmentsRef, enrollmentData);
         });
         await Promise.all(addPromises);
       }
@@ -380,6 +386,35 @@ export const useManageClassStudents = () => {
           await Promise.all(deletionPromises);
         });
         await Promise.all(removePromises);
+      }
+
+      // 기존 학생 attendanceDays 업데이트 (추가/제거 대상이 아닌 학생들)
+      const updateStudentIds = Object.keys(studentAttendanceDays).filter(
+        id => !addStudentIds.includes(id) && !removeStudentIds.includes(id)
+      );
+
+      if (updateStudentIds.length > 0) {
+        const updatePromises = updateStudentIds.map(async (studentId) => {
+          const enrollmentsQuery = query(
+            collection(db, COL_STUDENTS, studentId, 'enrollments'),
+            where('subject', '==', subject),
+            where('className', '==', className)
+          );
+          const snapshot = await getDocs(enrollmentsQuery);
+
+          const updateOps = snapshot.docs.map(async (docSnap) => {
+            const newDays = studentAttendanceDays[studentId];
+            if (newDays && newDays.length > 0) {
+              await updateDoc(docSnap.ref, { attendanceDays: newDays });
+            } else {
+              // 빈 배열이면 필드 삭제 (모든 요일 등원)
+              await updateDoc(docSnap.ref, { attendanceDays: [] });
+            }
+          });
+
+          await Promise.all(updateOps);
+        });
+        await Promise.all(updatePromises);
       }
 
       console.log(`[useManageClassStudents] Successfully managed students for class ${className}`);

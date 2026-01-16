@@ -482,7 +482,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 classStudentData={classDataMap[cls.name]}
                                                 hideTime={true}
                                                 useInjaePeriod={group.useInjaePeriod}
-                                                onClassClick={() => {
+                                                // 수정 모드에서만 수업 상세 모달 열기
+                                                onClassClick={mode === 'edit' ? () => {
                                                     // ClassInfo (from englishClasses hook) -> ClassInfoFromHook 변환
                                                     const classDetail: ClassInfoFromHook = {
                                                         className: cls.name,
@@ -492,7 +493,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                         studentCount: classDataMap[cls.name]?.studentList?.filter((s: any) => !s.withdrawalDate && !s.onHold).length || 0,
                                                     };
                                                     setSelectedClassDetail(classDetail);
-                                                }}
+                                                } : undefined}
                                                 onStudentClick={(studentId) => {
                                                     const student = studentMap[studentId];
                                                     if (student) {

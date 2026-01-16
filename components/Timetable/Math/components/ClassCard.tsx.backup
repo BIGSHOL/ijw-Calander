@@ -283,8 +283,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {/* Student List */}
             {showStudents && (
                 isMergedCell ? (
+                    // 병합 셀: 공통 학생(상단) + 요일별 부분 학생(하단) 분리 표시
                     <div className="flex-1 flex flex-col overflow-hidden">
-                            <div className="px-1 py-0 border-b border-gray-200">
+                        {/* 재원생 + 부분등원 학생 */}
+                            {/* 공통 재원생 (모든 병합 요일에 등원하는 학생) - span에 따라 높이 조정 */}
+                            <div className="px-1 py-0 border-b border-gray-200 overflow-y-auto" style={{ maxHeight: `${maxStudentHeight}px` }}>
                                 <div className="text-[10px] font-bold text-indigo-600 mb-0">재원생 ({commonStudents.active.length})</div>
                                 <ul className="flex flex-col gap-0">
                                 {commonStudents.active.map(s => {
@@ -314,21 +317,22 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             </ul>
                         </div>
 
-                        <div className="flex-1"></div>
-
+                        {/* 중간: 부분 등원 학생 - 요일별 컬럼 분리 (스프레드시트처럼) */}
                         {hasPartialStudents && (
-                            <div className="flex-shrink-0 flex">
+                            <div className="flex-shrink-0 flex border-b border-gray-200" style={{ minHeight: '60px' }}>
                                 {mergedDays.map((day, idx) => {
                                     const isLastDay = idx === mergedDays.length - 1;
                                     const dayStudents = partialStudentsByDay?.[day];
                                     const dayActiveStudents = dayStudents?.active || [];
 
                                     return (
-                                        <div key={day} className={`flex-1 flex flex-col ${!isLastDay ? 'border-r-2 border-amber-300' : ''}`}>
+                                        <div key={day} className={`flex-1 flex flex-col overflow-hidden ${!isLastDay ? 'border-r-2 border-amber-300' : ''}`}>
+                                            {/* 요일 헤더 */}
                                             <div className="text-center text-[11px] font-bold bg-amber-100 text-amber-800 py-0.5 border-b-2 border-amber-300">
                                                 {day}만
                                             </div>
-                                            <div className="px-0.5 py-0 bg-amber-50">
+                                            {/* 해당 요일만 오는 학생 */}
+                                            <div className="flex-1 px-0.5 py-0 overflow-y-auto bg-amber-50">
                                                 <ul className="flex flex-col gap-0">
                                                     {dayActiveStudents.map(s => {
                                                         const isHighlighted = searchQuery && s.name.includes(searchQuery);
@@ -361,8 +365,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 })}
                             </div>
                         )}
+                        </div>
+                        {/* 상단 영역 끝 */}
 
-                        {/* 대기 + 퇴원 */}
+                        {/* 하단: 대기 + 퇴원 */}
+
+                        {/* 하단: 대기 + 퇴원 */}
                         <div className="flex-shrink-0">
                             <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
                                 <div className="text-[10px] font-bold text-violet-600">대기 ({commonStudents.hold.length}명)</div>
@@ -391,8 +399,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         </div>
                     </div>
                 ) : (
+                    // 단일 셀: 기존 레이아웃
                     <div className="flex-1 flex flex-col overflow-hidden">
-                        <div className="px-0.5 py-0.5 border-b border-gray-200">
+                        {/* 재원생 Section - span에 따라 높이 조정 */}
+                        <div className="px-0.5 py-0.5 border-b border-gray-200 overflow-y-auto" style={{ maxHeight: `${maxStudentHeight}px` }}>
                             <div className="text-[10px] font-bold text-indigo-600 mb-0.5">재원생 ({activeStudents.length}명)</div>
                             <ul className="flex flex-col">
                                 {activeStudents.map(s => {

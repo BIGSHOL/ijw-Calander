@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, TrendingUp, ArrowUpCircle, AlertTriangle, Loader } from 'lucide-react';
-import { collection, getDocs, getDoc, writeBatch, doc } from 'firebase/firestore';
+import { collection, getDocs, getDoc, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { EN_COLLECTION } from './englishUtils';
 
@@ -60,7 +60,7 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                 }
             });
 
-            // 2. Update 수업목록 (className field)
+            // 2. Update 수업목록 (className field) - 레거시
             const classListRef = collection(db, '수업목록');
             const classSnapshot = await getDocs(classListRef);
 
@@ -72,6 +72,37 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                     classListCount++;
                 }
             });
+
+            // 2-1. Update classes 컬렉션 (새 구조)
+            const classesRef = collection(db, 'classes');
+            const classesSnapshot = await getDocs(classesRef);
+            let classesCount = 0;
+
+            classesSnapshot.docs.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data.className === oldClassName && data.subject === 'english') {
+                    console.log('[LevelUp] Classes collection match:', docSnap.id);
+                    batch.update(doc(db, 'classes', docSnap.id), { className: newClassName });
+                    classesCount++;
+                }
+            });
+
+            // 2-2. Update student enrollments (className 필드)
+            const enrollmentsQuery = query(
+                collectionGroup(db, 'enrollments'),
+                where('className', '==', oldClassName),
+                where('subject', '==', 'english')
+            );
+            const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+            let enrollmentsCount = 0;
+
+            enrollmentsSnapshot.docs.forEach(docSnap => {
+                console.log('[LevelUp] Enrollment match:', docSnap.ref.path);
+                batch.update(docSnap.ref, { className: newClassName });
+                enrollmentsCount++;
+            });
+
+            console.log('[LevelUp] Classes updated:', classesCount, 'Enrollments updated:', enrollmentsCount);
 
             // 3. Update integration_settings customGroups (CORRECT PATH)
             const settingsRef = doc(db, 'settings', 'english_class_integration');
@@ -98,8 +129,8 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                 console.log('[LevelUp] Integration settings document not found');
             }
 
-            const totalUpdates = scheduleCount + classListCount + (groupsUpdated ? 1 : 0);
-            console.log('[LevelUp] Total updates:', { scheduleCount, classListCount, groupsUpdated });
+            const totalUpdates = scheduleCount + classListCount + classesCount + enrollmentsCount + (groupsUpdated ? 1 : 0);
+            console.log('[LevelUp] Total updates:', { scheduleCount, classListCount, classesCount, enrollmentsCount, groupsUpdated });
 
             if (totalUpdates === 0) {
                 setError('업데이트할 데이터가 없습니다.');
@@ -109,7 +140,7 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
 
             await batch.commit();
             console.log('[LevelUp] Batch commit successful');
-            setUpdateCount(scheduleCount);
+            setUpdateCount(totalUpdates);
 
             // Wait to show success message
             setTimeout(() => {
@@ -176,7 +207,7 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                     {/* Success */}
                     {updateCount !== null && (
                         <div className="p-3 bg-green-50 border border-green-200 rounded-lg mb-4 text-xs text-green-600">
-                            ✅ {updateCount}개의 시간표 셀이 업데이트되었습니다!
+                            ✅ 레벨업 완료! ({updateCount}개 항목 업데이트)
                         </div>
                     )}
                 </div>

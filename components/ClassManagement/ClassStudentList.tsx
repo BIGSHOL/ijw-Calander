@@ -5,16 +5,35 @@ import { ClassStudent } from '../../hooks/useClassDetail';
 interface ClassStudentListProps {
   students: ClassStudent[];
   onStudentClick?: (studentId: string) => void;
+  classDays?: string[];  // 수업 요일 목록 (등원 요일 표시 여부 결정에 사용)
 }
 
 const ClassStudentList: React.FC<ClassStudentListProps> = ({
   students,
   onStudentClick,
+  classDays = [],
 }) => {
   const handleStudentClick = (studentId: string) => {
     if (onStudentClick) {
       onStudentClick(studentId);
     }
+  };
+
+  // 학생의 등원 요일이 수업 요일과 다른 경우에만 표시
+  // (모든 수업 요일에 등원하면 표시하지 않음)
+  const shouldShowAttendanceDays = (studentAttendanceDays?: string[]): boolean => {
+    if (!studentAttendanceDays || studentAttendanceDays.length === 0) return false;
+    if (classDays.length === 0) return true;  // 수업 요일 정보 없으면 그냥 표시
+
+    // 수업 요일과 등원 요일이 동일하면 표시하지 않음
+    if (studentAttendanceDays.length === classDays.length) {
+      const sorted1 = [...studentAttendanceDays].sort();
+      const sorted2 = [...classDays].sort();
+      if (sorted1.every((day, i) => day === sorted2[i])) {
+        return false;
+      }
+    }
+    return true;
   };
 
   if (students.length === 0) {
@@ -32,16 +51,22 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
         <div
           key={student.id}
           onClick={() => handleStudentClick(student.id)}
-          className={`flex items-center gap-3 ${
+          className={`flex items-center gap-2 ${
             onStudentClick ? 'cursor-pointer hover:text-[#fdb813]' : ''
           }`}
         >
           <span className="font-medium text-[#081429]">
             {student.name}
           </span>
-          <span className="text-[#373d41]">
+          <span className="text-[#373d41] text-sm">
             {student.school}{student.grade}
           </span>
+          {/* 등원 요일이 수업 요일과 다른 경우에만 표시 */}
+          {shouldShowAttendanceDays(student.attendanceDays) && (
+            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+              {student.attendanceDays!.join(', ')}만
+            </span>
+          )}
         </div>
       ))}
     </div>

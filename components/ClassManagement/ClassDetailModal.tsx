@@ -44,6 +44,19 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
   const subjectForSchedule: SubjectForSchedule = subject === 'english' ? 'english' : 'math';
   const formattedSchedule = formatScheduleCompact(schedule, subjectForSchedule, false);
 
+  // 수업 요일 추출 (등원 요일 표시에 사용)
+  const classDays = React.useMemo(() => {
+    const days = new Set<string>();
+    (schedule || []).forEach(item => {
+      const parts = item.split(' ');
+      if (parts.length >= 1) {
+        days.add(parts[0]);
+      }
+    });
+    const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+    return Array.from(days).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+  }, [schedule]);
+
   // 수업 삭제
   const handleDelete = async () => {
     const warningMsg = `정말로 "${className}" 수업을 삭제하시겠습니까?\n\n` +
@@ -268,6 +281,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                 <ClassStudentList
                   students={classDetail.students}
                   onStudentClick={onStudentClick}
+                  classDays={classDays}
                 />
               ) : (
                 <div className="bg-gray-50 rounded-lg p-4 text-center">

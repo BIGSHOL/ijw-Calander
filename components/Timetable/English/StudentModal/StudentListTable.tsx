@@ -10,6 +10,7 @@ interface StudentListTableProps {
     canEdit: boolean;
     onUpdate: (id: string, updates: Partial<TimetableStudent>) => void;
     onRemove: (id: string) => void;
+    useEnrollmentsMode?: boolean;  // NEW: enrollments 모드 사용 여부
 }
 
 const StudentListTable: React.FC<StudentListTableProps> = ({
@@ -19,7 +20,8 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
     className,
     canEdit,
     onUpdate,
-    onRemove
+    onRemove,
+    useEnrollmentsMode = false
 }) => {
     const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({ name: '', englishName: '', school: '', grade: '' });
@@ -54,7 +56,8 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
         return <div className="text-center py-8 text-gray-400 text-sm">불러오는 중...</div>;
     }
 
-    if (!classDocId) {
+    // enrollments 모드가 아닐 때만 classDocId 체크
+    if (!useEnrollmentsMode && !classDocId) {
         return (
             <div className="text-center py-8 text-gray-400 text-sm">
                 <p>수업 정보를 찾을 수 없습니다.</p>

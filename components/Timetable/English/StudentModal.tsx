@@ -2,12 +2,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Users, Save } from 'lucide-react';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, getDoc, collectionGroup, writeBatch, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
-import { TimetableStudent, EnglishLevel } from '../../../types';
+import { TimetableStudent, EnglishLevel, UnifiedStudent } from '../../../types';
 import { DEFAULT_ENGLISH_LEVELS, parseClassName, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
-import AddStudentForm from './StudentModal/AddStudentForm';
 import StudentListTable from './StudentModal/StudentListTable';
 import StudentBatchActions from './StudentModal/StudentBatchActions';
 
@@ -19,9 +18,22 @@ interface StudentModalProps {
     currentUser: any;
     readOnly?: boolean;
     isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
+    // NEW: Props for enrollments-based data
+    studentMap?: Record<string, UnifiedStudent>;  // 전체 학생 맵
+    initialStudents?: TimetableStudent[];  // 초기 학생 목록 (enrollments에서)
 }
 
-const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className, teacher, currentUser, readOnly = false, isSimulationMode = false }) => {
+const StudentModal: React.FC<StudentModalProps> = ({
+    isOpen,
+    onClose,
+    className,
+    teacher,
+    currentUser,
+    readOnly = false,
+    isSimulationMode = false,
+    studentMap = {},
+    initialStudents = []
+}) => {
     // State
     const [students, setStudents] = useState<TimetableStudent[]>([]);
     const [classDocId, setClassDocId] = useState<string | null>(null);
@@ -29,6 +41,9 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
     const [loading, setLoading] = useState(true);
     const [englishLevels, setEnglishLevels] = useState<EnglishLevel[]>(DEFAULT_ENGLISH_LEVELS);
     const [isDirty, setIsDirty] = useState(false); // 변경사항 유무
+
+    // NEW: enrollments 기반 데이터 사용 여부
+    const useEnrollmentsMode = initialStudents.length > 0 || Object.keys(studentMap).length > 0;
 
     // Get full class name (e.g., PL5 -> Pre Let's 5)
     const fullClassName = useMemo(() => {
@@ -51,20 +66,29 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
 
     // (Removed local state for adding/editing students as they are moved to sub-components)
 
-    // Find class document by className, auto-create if not found
+    // NEW: Enrollments 모드 - initialStudents가 있으면 그것을 사용
     useEffect(() => {
         if (!isOpen || !className) {
-            // Reset state when closing
-            setClassDocId(null);
             setStudents([]);
             setClassTeacher('');
             setIsDirty(false);
+            setLoading(false);
             return;
         }
 
         // Reset dirty state when opening
         setIsDirty(false);
 
+        if (useEnrollmentsMode) {
+            // Enrollments 모드: props에서 받은 학생 데이터 사용
+            console.log('[StudentModal] Using enrollments mode with', initialStudents.length, 'students');
+            setStudents(initialStudents);
+            setClassTeacher(teacher || '');
+            setLoading(false);
+            return;
+        }
+
+        // Legacy 모드: 수업목록에서 직접 로드 (fallback)
         const findOrCreateClass = async () => {
             setLoading(true);
             try {
@@ -132,7 +156,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
         };
 
         findOrCreateClass();
-    }, [isOpen, className, isSimulationMode]);
+    }, [isOpen, className, isSimulationMode, useEnrollmentsMode, initialStudents]);
 
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -232,41 +256,90 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
         }
     };
 
-
-    // Add student (Local)
-    const handleAddStudent = async (name: string, engName: string, grade: string, school: string) => {
-        if (!classDocId || !name.trim()) return;
-
-        // Auto-mark as new student (today)
-        const today = new Date().toISOString().split('T')[0];
-
-        const newStudent: TimetableStudent = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            name: name.trim(),
-            englishName: engName.trim(),
-            grade: grade.trim(),
-            school: school.trim(),
-            enrollmentDate: today // Default to today
-        };
-
-        setStudents(prev => [...prev, newStudent]);
-        setIsDirty(true);
-    };
-
-    // Generic update (Local)
-    const handleUpdateStudent = (id: string, updates: Partial<TimetableStudent>) => {
+    // Update student - enrollments 모드에서는 바로 Firebase 업데이트
+    const handleUpdateStudent = async (id: string, updates: Partial<TimetableStudent>) => {
+        // 로컬 상태 먼저 업데이트 (UI 반응성)
         setStudents(prev => prev.map(s =>
             s.id === id ? { ...s, ...updates } : s
         ));
-        setIsDirty(true);
+
+        if (useEnrollmentsMode) {
+            // Enrollments 모드: Firebase에 바로 저장
+            try {
+                // 해당 학생의 영어 enrollment 문서 찾기
+                const enrollmentsQuery = query(
+                    collectionGroup(db, 'enrollments'),
+                    where('className', '==', className),
+                    where('subject', '==', 'english')
+                );
+                const snapshot = await getDocs(enrollmentsQuery);
+
+                // 학생 ID로 해당 enrollment 찾기
+                const enrollmentDoc = snapshot.docs.find(doc => {
+                    const studentId = doc.ref.parent.parent?.id;
+                    return studentId === id;
+                });
+
+                if (enrollmentDoc) {
+                    // undefined 값 제거
+                    const cleanUpdates: Record<string, any> = {};
+                    Object.entries(updates).forEach(([key, value]) => {
+                        if (value !== undefined) {
+                            cleanUpdates[key] = value;
+                        } else {
+                            // undefined는 삭제로 처리
+                            cleanUpdates[key] = null;
+                        }
+                    });
+
+                    await updateDoc(enrollmentDoc.ref, cleanUpdates);
+                    console.log('[StudentModal] Enrollment updated:', id, cleanUpdates);
+                } else {
+                    console.warn('[StudentModal] Enrollment not found for student:', id);
+                }
+            } catch (error) {
+                console.error('[StudentModal] Error updating enrollment:', error);
+                alert('학생 정보 업데이트 중 오류가 발생했습니다.');
+            }
+        } else {
+            // Legacy 모드: isDirty 플래그 설정
+            setIsDirty(true);
+        }
     };
 
-    // Add student (Local)
-
-    // Remove student (Local)
-    const handleRemoveStudent = (id: string) => {
+    // Remove student - enrollments 모드에서는 enrollment 삭제
+    const handleRemoveStudent = async (id: string) => {
+        // 로컬 상태 먼저 업데이트
         setStudents(prev => prev.filter(s => s.id !== id));
-        setIsDirty(true);
+
+        if (useEnrollmentsMode) {
+            // Enrollments 모드: Firebase에서 enrollment 삭제
+            try {
+                const enrollmentsQuery = query(
+                    collectionGroup(db, 'enrollments'),
+                    where('className', '==', className),
+                    where('subject', '==', 'english')
+                );
+                const snapshot = await getDocs(enrollmentsQuery);
+
+                const enrollmentDoc = snapshot.docs.find(doc => {
+                    const studentId = doc.ref.parent.parent?.id;
+                    return studentId === id;
+                });
+
+                if (enrollmentDoc) {
+                    await deleteDoc(enrollmentDoc.ref);
+                    console.log('[StudentModal] Enrollment deleted:', id);
+                } else {
+                    console.warn('[StudentModal] Enrollment not found for deletion:', id);
+                }
+            } catch (error) {
+                console.error('[StudentModal] Error deleting enrollment:', error);
+                alert('수강 정보 삭제 중 오류가 발생했습니다.');
+            }
+        } else {
+            setIsDirty(true);
+        }
     };
 
     // Sorting Logic (Same as EnglishClassTab)
@@ -424,15 +497,6 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                     </span>
                 </div>
 
-                {/* Add Student Section */}
-                {canEditEnglish && (
-                    <AddStudentForm
-                        onAdd={({ name, englishName, school, grade }) =>
-                            handleAddStudent(name, englishName, grade, school)
-                        }
-                    />
-                )}
-
                 {/* Student List */}
                 <div className="flex-1 overflow-y-auto px-5 py-4 min-h-[150px] max-h-[300px]">
                     <StudentListTable
@@ -443,6 +507,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, className,
                         canEdit={canEditEnglish}
                         onUpdate={handleUpdateStudent}
                         onRemove={handleRemoveStudent}
+                        useEnrollmentsMode={useEnrollmentsMode}
                     />
                 </div>
 

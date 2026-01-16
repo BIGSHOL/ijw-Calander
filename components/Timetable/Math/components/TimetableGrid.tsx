@@ -377,6 +377,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                             // 수평 병합 (수요일 테이블에서는 비활성화)
                                             let colSpan = 1;
+                                            const mergedDaysForCell: string[] = [day];  // 병합된 요일 목록
                                             if (!isWednesdayTable && cellClasses.length === 1) {
                                                 const cls = cellClasses[0];
                                                 for (let nextIdx = dayIndex + 1; nextIdx < daysForResource.length; nextIdx++) {
@@ -387,6 +388,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         const nextRowSpan = getConsecutiveSpan(nextDayClasses[0], nextDay, periodIndex, currentPeriods, filteredClasses, viewType);
                                                         if (nextRowSpan === maxRowSpan) {
                                                             colSpan++;
+                                                            mergedDaysForCell.push(nextDay);  // 병합된 요일 추가
                                                         } else {
                                                             break;
                                                         }
@@ -440,6 +442,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 studentMap={studentMap}
                                                                 classKeywords={classKeywords}
                                                                 onStudentClick={onStudentClick}
+                                                                currentDay={colSpan === 1 ? day : undefined}
+                                                                mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                             />
                                                         ))
                                                     )}
@@ -656,6 +660,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 studentMap={studentMap}
                                                                 classKeywords={classKeywords}
                                                                 onStudentClick={onStudentClick}
+                                                                currentDay={day}
                                                             />
                                                         ))
                                                     )}
