@@ -284,7 +284,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {showStudents && (
                 isMergedCell ? (
                     <div className="flex-1 flex flex-col overflow-hidden">
-                            <div className="px-1 py-0 border-b border-gray-200">
+                            <div className="px-1 py-0">
                                 <div className="text-[10px] font-bold text-indigo-600 mb-0">재원생 ({commonStudents.active.length})</div>
                                 <ul className="flex flex-col gap-0">
                                 {commonStudents.active.map(s => {
@@ -392,7 +392,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden">
-                        <div className="px-0.5 py-0.5 border-b border-gray-200">
+                        <div className="px-0.5 py-0.5">
                             <div className="text-[10px] font-bold text-indigo-600 mb-0.5">재원생 ({activeStudents.length}명)</div>
                             <ul className="flex flex-col">
                                 {activeStudents.map(s => {
