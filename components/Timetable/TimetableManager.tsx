@@ -240,9 +240,9 @@ const TimetableManager = ({
     // Search State
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Reset viewType when switching to math if it's 'class' (통합 뷰는 영어만 지원)
+    // Reset viewType when switching to math - math only supports 'teacher' view
     useEffect(() => {
-        if (subjectTab === 'math' && viewType === 'class') {
+        if (subjectTab === 'math' && (viewType === 'class' || viewType === 'room')) {
             setViewType('teacher');
         }
     }, [subjectTab, viewType, setViewType]);

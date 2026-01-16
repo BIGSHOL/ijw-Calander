@@ -255,6 +255,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     onMouseLeave={() => setShowScheduleTooltip(false)}
                 >
                     {cls.className}
+                    {cls.room && (
+                        <span className="ml-1 text-xs font-normal text-gray-500">
+                            ({cls.room})
+                        </span>
+                    )}
 
                     {/* Schedule Tooltip (마우스 오버 시 실제 스케줄 표시) */}
                     {showScheduleTooltip && scheduleInfo.length > 0 && (
