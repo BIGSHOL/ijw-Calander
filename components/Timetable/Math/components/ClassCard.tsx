@@ -246,7 +246,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {/* Class Name Header - 키워드 색상 적용, 마우스 오버시 스케줄 툴팁 */}
             {showClassName && (
                 <div
-                    className={`text-center font-bold py-1 px-1 ${isMergedCell ? 'text-base' : 'text-sm'} border-b border-gray-300 relative cursor-help`}
+                    className={`text-center font-bold py-1 px-1 ${isMergedCell ? 'text-base' : 'text-xs'} border-b border-gray-300 relative cursor-help`}
                     style={matchedKeyword
                         ? { color: matchedKeyword.textColor }
                         : { color: '#1f2937' }
@@ -256,7 +256,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 >
                     {cls.className}
                     {cls.room && (
-                        <span className={`ml-1 ${isMergedCell ? 'text-xs' : 'text-[10px]'} font-normal text-gray-500`}>
+                        <span className={`ml-1 ${isMergedCell ? 'text-xs' : 'text-[9px]'} font-normal text-gray-500`}>
                             ({cls.room})
                         </span>
                     )}
