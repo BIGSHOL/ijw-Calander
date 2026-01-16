@@ -370,6 +370,41 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 continue;
                                             }
 
+                                            // 수평 병합 확인: 이전 요일에서 이미 이 수업이 병합되어 렌더링되었는지 체크
+                                            let shouldSkipHorizontalMerge = false;
+                                            if (!isWednesdayTable && cellClasses.length === 1 && dayIndex > 0) {
+                                                const cls = cellClasses[0];
+                                                // 이전 요일들을 역순으로 확인
+                                                for (let prevIdx = dayIndex - 1; prevIdx >= 0; prevIdx--) {
+                                                    const prevDay = daysForResource[prevIdx];
+                                                    const prevDayClasses = getClassesForCell(filteredClasses, prevDay, period, resource, viewType);
+
+                                                    // 이전 요일에 같은 수업이 있고, 단일 수업이면 (병합 가능한 조건)
+                                                    if (prevDayClasses.length === 1 && prevDayClasses[0].className === cls.className) {
+                                                        // 이전 요일과 현재 요일의 rowSpan이 같은지 확인
+                                                        const prevRowSpan = getConsecutiveSpan(prevDayClasses[0], prevDay, periodIndex, currentPeriods, filteredClasses, viewType);
+                                                        const currentRowSpan = getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType);
+
+                                                        if (prevRowSpan === currentRowSpan) {
+                                                            // 연속된 병합이므로 현재 셀은 스킵
+                                                            shouldSkipHorizontalMerge = true;
+                                                            break;
+                                                        } else {
+                                                            // rowSpan이 다르면 병합 불가, 체크 중단
+                                                            break;
+                                                        }
+                                                    } else {
+                                                        // 다른 수업이거나 복수 수업이면 병합 불가, 체크 중단
+                                                        break;
+                                                    }
+                                                }
+                                            }
+
+                                            if (shouldSkipHorizontalMerge) {
+                                                dayIndex++;
+                                                continue;
+                                            }
+
                                             // 수직 병합 span 계산
                                             const maxRowSpan = Math.max(1, ...cellClasses.map((cls: TimetableClass) =>
                                                 getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
