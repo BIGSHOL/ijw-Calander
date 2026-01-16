@@ -201,7 +201,7 @@ const TimetableManager = ({
     const [columnWidth, setColumnWidth] = useState<'narrow' | 'normal' | 'wide'>(
         savedSettings?.columnWidth || 'normal'
     );
-    const [rowHeight, setRowHeight] = useState<'short' | 'normal' | 'tall' | 'very-tall'>(
+    const [rowHeight, setRowHeight] = useState<'compact' | 'short' | 'normal' | 'tall' | 'very-tall'>(
         savedSettings?.rowHeight || 'normal'
     );
     const [fontSize, setFontSize] = useState<'small' | 'normal' | 'large' | 'very-large'>(

@@ -103,6 +103,9 @@ const StaffList: React.FC<StaffListProps> = ({
                 담당과목
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                시간표 정보
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 입사일
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -170,6 +173,55 @@ const StaffList: React.FC<StaffListProps> = ({
                       <span className="text-xs text-gray-400">-</span>
                     )}
                   </div>
+                </td>
+                <td className="px-4 py-3">
+                  {member.role === 'teacher' ? (
+                    <div className="flex flex-col gap-1">
+                      {/* 색상 미리보기 */}
+                      {member.bgColor && (
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-6 h-6 rounded border border-gray-300"
+                            style={{
+                              backgroundColor: member.bgColor,
+                              color: member.textColor || '#ffffff'
+                            }}
+                            title={`배경: ${member.bgColor}, 글자: ${member.textColor || '#ffffff'}`}
+                          >
+                            <div className="w-full h-full flex items-center justify-center text-xs font-bold">
+                              A
+                            </div>
+                          </div>
+                          <span className="text-xs text-gray-500">{member.bgColor}</span>
+                        </div>
+                      )}
+                      {/* 기본 강의실 */}
+                      {member.defaultRoom && (
+                        <span className="text-xs text-gray-600">
+                          강의실: <span className="font-medium">{member.defaultRoom}</span>
+                        </span>
+                      )}
+                      {/* 원어민 / 숨김 표시 */}
+                      <div className="flex gap-1">
+                        {member.isNative && (
+                          <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
+                            원어민
+                          </span>
+                        )}
+                        {member.isHiddenInTimetable && (
+                          <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                            숨김
+                          </span>
+                        )}
+                      </div>
+                      {/* 아무것도 없으면 - 표시 */}
+                      {!member.bgColor && !member.defaultRoom && !member.isNative && !member.isHiddenInTimetable && (
+                        <span className="text-xs text-gray-400">-</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400">-</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {member.hireDate}

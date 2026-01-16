@@ -22,9 +22,10 @@ interface ClassCardProps {
     studentMap: Record<string, any>;
     classKeywords?: ClassKeywordColor[];
     onStudentClick?: (studentId: string) => void;
-    currentDay?: string;  // 현재 요일 (단일 요일 셀용)
-    mergedDays?: string[];  // 병합된 요일 목록 (예: ['월', '목']) - 병합 셀에서 요일별 학생 분리 표시용
-    teachers?: Teacher[];  // 강사 목록 (defaultRoom 조회용)
+    currentDay?: string;
+    mergedDays?: string[];
+    teachers?: Teacher[];
+    fontSize?: 'small' | 'normal' | 'large' | 'very-large';  // 글자 크기 설정
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -46,8 +47,23 @@ const ClassCard: React.FC<ClassCardProps> = ({
     classKeywords = [],
     onStudentClick,
     currentDay,
-    mergedDays = []
+    mergedDays = [],
+    fontSize = 'normal'
 }) => {
+    // 글자 크기 CSS 클래스 매핑
+    const fontSizeClass = {
+        'small': 'text-[9px]',
+        'normal': 'text-[10px]',
+        'large': 'text-[11px]',
+        'very-large': 'text-xs'
+    }[fontSize];
+
+    const titleFontSizeClass = {
+        'small': 'text-[10px]',
+        'normal': 'text-xs',
+        'large': 'text-sm',
+        'very-large': 'text-base'
+    }[fontSize];
     const theme = getSubjectTheme(cls.subject);
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
 
@@ -247,7 +263,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {/* Class Name Header - 키워드 색상 적용, 마우스 오버시 스케줄 툴팁 */}
             {showClassName && (
                 <div
-                    className={`text-center font-bold py-1 px-1 ${isMergedCell ? 'text-base' : 'text-[12px]'} border-b border-gray-300 relative cursor-help`}
+                    className={`text-center font-bold py-1 px-1 ${titleFontSizeClass} border-b border-gray-300 relative cursor-help`}
                     style={matchedKeyword
                         ? { color: matchedKeyword.textColor }
                         : { color: '#1f2937' }
@@ -257,7 +273,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 >
                     <div>{cls.className}</div>
                     {cls.room && (
-                        <div className={`${isMergedCell ? 'text-xs' : 'text-[10px]'} font-normal text-gray-500 mt-0.5`}>
+                        <div className={`${fontSizeClass} font-normal text-gray-500 mt-0.5`}>
                             {cls.room}
                         </div>
                     )}
@@ -291,7 +307,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 isMergedCell ? (
                     <div className="flex-1 flex flex-col overflow-hidden">
                         <div className="px-1 py-0">
-                            <div className="text-[10px] font-bold text-indigo-600 mb-0">({commonStudents.active.length})</div>
+                            <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0`}>({commonStudents.active.length})</div>
                             <ul className="flex flex-col gap-0">
                                 {commonStudents.active.map(s => {
                                     const isHighlighted = searchQuery && s.name.includes(searchQuery);
@@ -309,7 +325,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     onStudentClick(s.id);
                                                 }
                                             }}
-                                            className={`py-0 px-0.5 text-sm leading-[1.3] truncate font-medium
+                                            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] truncate font-medium
                                             ${canEdit ? 'cursor-grab hover:bg-white/80' : onStudentClick ? 'cursor-pointer hover:bg-white/80' : ''}
                                             ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : theme.text}`}
                                         >
@@ -359,7 +375,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                             onStudentClick(s.id);
                                                                         }
                                                                     }}
-                                                                    className={`py-0 px-1 text-sm leading-[1.3] truncate
+                                                                    className={`py-0 px-1 ${fontSizeClass} leading-[1.3] truncate
                                                                     ${canEdit ? 'cursor-grab hover:bg-white/80' : onStudentClick ? 'cursor-pointer hover:bg-white/80' : ''}
                                                                     ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : 'text-amber-900 font-medium'}`}
                                                                 >
@@ -435,7 +451,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     onStudentClick(s.id);
                                                 }
                                             }}
-                                            className={`py-0 px-0.5 text-xs leading-tight truncate
+                                            className={`py-0 px-0.5 ${fontSizeClass} leading-tight truncate
                                             ${canEdit ? 'cursor-grab hover:bg-white/80' : onStudentClick ? 'cursor-pointer hover:bg-white/80' : ''}
                                             ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : theme.text}`}
                                         >

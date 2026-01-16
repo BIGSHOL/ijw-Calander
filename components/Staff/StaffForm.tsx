@@ -19,6 +19,13 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
     hireDate: new Date().toISOString().split('T')[0],
     status: 'active' as StaffMember['status'],
     memo: '',
+    // 강사 전용 필드
+    isHiddenInTimetable: false,
+    isNative: false,
+    bgColor: '#3b82f6',
+    textColor: '#ffffff',
+    defaultRoom: '',
+    timetableOrder: 0,
   });
 
   // Initialize form with staff data if editing
@@ -33,6 +40,13 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
         hireDate: staff.hireDate || new Date().toISOString().split('T')[0],
         status: staff.status || 'active',
         memo: staff.memo || '',
+        // 강사 전용 필드
+        isHiddenInTimetable: staff.isHiddenInTimetable || false,
+        isNative: staff.isNative || false,
+        bgColor: staff.bgColor || '#3b82f6',
+        textColor: staff.textColor || '#ffffff',
+        defaultRoom: staff.defaultRoom || '',
+        timetableOrder: staff.timetableOrder || 0,
       });
     }
   }, [staff]);
@@ -162,35 +176,127 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
 
           {/* Subjects (only for teachers) */}
           {formData.role === 'teacher' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                담당 과목
-              </label>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleSubjectToggle('math')}
-                  className={`flex-1 py-2 px-4 rounded-lg border-2 transition-colors ${
-                    formData.subjects.includes('math')
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                  }`}
-                >
-                  수학
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSubjectToggle('english')}
-                  className={`flex-1 py-2 px-4 rounded-lg border-2 transition-colors ${
-                    formData.subjects.includes('english')
-                      ? 'border-pink-500 bg-pink-50 text-pink-700'
-                      : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                  }`}
-                >
-                  영어
-                </button>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  담당 과목
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSubjectToggle('math')}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 transition-colors ${
+                      formData.subjects.includes('math')
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    수학
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSubjectToggle('english')}
+                    className={`flex-1 py-2 px-4 rounded-lg border-2 transition-colors ${
+                      formData.subjects.includes('english')
+                        ? 'border-pink-500 bg-pink-50 text-pink-700'
+                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    영어
+                  </button>
+                </div>
               </div>
-            </div>
+
+              {/* 시간표 설정 섹션 */}
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <h3 className="text-sm font-bold text-gray-700 mb-3">시간표 설정</h3>
+
+                {/* 색상 설정 */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      배경색
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        name="bgColor"
+                        value={formData.bgColor}
+                        onChange={handleChange}
+                        className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        name="bgColor"
+                        value={formData.bgColor}
+                        onChange={handleChange}
+                        placeholder="#3b82f6"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      글자색
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="color"
+                        name="textColor"
+                        value={formData.textColor}
+                        onChange={handleChange}
+                        className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        name="textColor"
+                        value={formData.textColor}
+                        onChange={handleChange}
+                        placeholder="#ffffff"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 기본 강의실 */}
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    기본 강의실
+                  </label>
+                  <input
+                    type="text"
+                    name="defaultRoom"
+                    value={formData.defaultRoom}
+                    onChange={handleChange}
+                    placeholder="예: 301호"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                  />
+                </div>
+
+                {/* 체크박스 옵션들 */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isNative}
+                      onChange={(e) => setFormData(prev => ({ ...prev, isNative: e.target.checked }))}
+                      className="w-4 h-4 text-[#081429] border-gray-300 rounded focus:ring-[#fdb813]"
+                    />
+                    <span className="text-sm text-gray-700">원어민 강사</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isHiddenInTimetable}
+                      onChange={(e) => setFormData(prev => ({ ...prev, isHiddenInTimetable: e.target.checked }))}
+                      className="w-4 h-4 text-[#081429] border-gray-300 rounded focus:ring-[#fdb813]"
+                    />
+                    <span className="text-sm text-gray-700">시간표에서 숨김</span>
+                  </label>
+                </div>
+              </div>
+            </>
           )}
 
           {/* Hire Date */}

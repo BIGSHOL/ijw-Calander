@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { BookOpen, Search, Plus, Filter, Calculator } from 'lucide-react';
+import { BookOpen, Search, Plus, Filter, Calculator, Settings } from 'lucide-react';
 import { useClasses, ClassInfo } from '../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import ClassList from './ClassList';
 import ClassDetailModal from './ClassDetailModal';
 import AddClassModal from './AddClassModal';
+import ClassSettingsModal from './ClassSettingsModal';
 
 export interface ClassFilters {
   subject: 'all' | 'math' | 'english';
@@ -32,6 +33,9 @@ const ClassManagementTab: React.FC = () => {
 
   // 새 수업 추가 모달
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // 수업 설정 모달
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // 데이터 조회 (subject 필터 적용)
   const subjectFilter = filters.subject === 'all' ? undefined : filters.subject;
@@ -221,6 +225,16 @@ const ClassManagementTab: React.FC = () => {
               총 <span className="text-[#fdb813] font-bold">{filteredClasses.length}</span>개 수업
             </span>
 
+            {/* 설정 버튼 */}
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gray-700 text-white hover:bg-gray-600 transition-colors shadow-sm font-bold"
+              title="수업 설정"
+            >
+              <Settings size={14} />
+              <span>설정</span>
+            </button>
+
             {/* 새 수업 추가 버튼 */}
             <button
               onClick={() => setShowAddModal(true)}
@@ -283,6 +297,15 @@ const ClassManagementTab: React.FC = () => {
         <AddClassModal
           onClose={() => setShowAddModal(false)}
           defaultSubject={filters.subject === 'all' ? 'math' : filters.subject}
+        />
+      )}
+
+      {/* 수업 설정 모달 */}
+      {showSettingsModal && (
+        <ClassSettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          canEdit={true}
         />
       )}
     </div>

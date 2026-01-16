@@ -1312,6 +1312,19 @@ export interface StaffMember {
   memo?: string;
   createdAt: string;
   updatedAt: string;
+
+  // === 선생님 전용 필드 (role === 'teacher'일 때만 사용) ===
+  // 시간표 표시 설정
+  isHiddenInTimetable?: boolean;  // 시간표에서 숨김
+  isNative?: boolean;             // 원어민 강사 여부
+
+  // 퍼스널 색상 (시간표, 출석부 등에서 사용)
+  bgColor?: string;               // 배경색
+  textColor?: string;             // 글자색
+
+  // 시간표 관련
+  defaultRoom?: string;           // 기본 강의실
+  timetableOrder?: number;        // 시간표 정렬 순서
 }
 
 /**
