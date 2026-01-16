@@ -44,6 +44,8 @@ interface ClassCardProps {
     isTimeColumnOnly?: boolean;
     hideTime?: boolean;
     useInjaePeriod?: boolean; // 뷰 설정에서 인재원 시간표 사용 여부
+    onClassClick?: () => void; // 수업 상세 모달 열기
+    onStudentClick?: (studentId: string) => void; // 학생 상세 모달 열기
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -66,7 +68,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
     classStudentData, // Cost Optimization: Centralized fetch
     isTimeColumnOnly = false,
     hideTime = false,
-    useInjaePeriod = false
+    useInjaePeriod = false,
+    onClassClick,
+    onStudentClick
 }) => {
     // Width Logic:
     // Normal: 190px (includes 48px time + 142px days) -> Update logic if needed, but for now only changing hideTime width
@@ -253,10 +257,16 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
                     return (
                         <div
-                            className="p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group cursor-help"
+                            className={`p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group ${onClassClick ? 'cursor-pointer hover:brightness-95' : 'cursor-help'}`}
                             style={matchedKw ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor } : { backgroundColor: '#EFF6FF', color: '#1F2937' }}
                             onMouseEnter={() => setShowScheduleTooltip(true)}
                             onMouseLeave={() => setShowScheduleTooltip(false)}
+                            onClick={(e) => {
+                                if (onClassClick) {
+                                    e.stopPropagation();
+                                    onClassClick();
+                                }
+                            }}
                         >
                             {classInfo.name}
 
@@ -507,7 +517,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                             key={student.id}
                                                             draggable={mode === 'edit' && !student.isTempMoved}
                                                             onDragStart={(e) => handleDragStart(e, student)}
-                                                            className={`flex items-center justify-between text-[12px] py-0.5 px-1 rounded ${style.className} ${mode === 'edit' ? 'cursor-grab active:cursor-grabbing hover:brightness-95' : ''}`}
+                                                            onClick={(e) => {
+                                                                if (onStudentClick && mode !== 'edit') {
+                                                                    e.stopPropagation();
+                                                                    onStudentClick(student.id);
+                                                                }
+                                                            }}
+                                                            className={`flex items-center justify-between text-[12px] py-0.5 px-1 rounded ${style.className} ${mode === 'edit' ? 'cursor-grab active:cursor-grabbing hover:brightness-95' : onStudentClick ? 'cursor-pointer hover:brightness-95' : ''}`}
                                                             title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}` : undefined}
                                                         >
                                                             <span className={`font-medium truncate ${style.textClass} max-w-[90px]`}>

@@ -108,7 +108,11 @@ const EnglishTimetable: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchTo
 
                         cls.schedule.forEach((slot: any) => {
                             const slotKey = `${slot.day}-${slot.periodId}`;
-                            const slotTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
+                            // 숨김 강사인 경우 담임으로 대체
+                            const rawSlotTeacher = cls.slotTeachers?.[slotKey];
+                            const slotTeacherInfo = rawSlotTeacher ? propsTeachers.find(t => t.name === rawSlotTeacher) : null;
+                            const isSlotTeacherHidden = slotTeacherInfo?.isHidden;
+                            const slotTeacher = (rawSlotTeacher && !isSlotTeacherHidden) ? rawSlotTeacher : cls.teacher;
                             const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room;
 
                             const key = `${slotTeacher}-${slot.periodId}-${slot.day}`;

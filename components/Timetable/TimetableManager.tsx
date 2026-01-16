@@ -1,26 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc, writeBatch, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import { TimetableClass, Teacher, TimetableStudent, ClassKeywordColor } from '../../types';
-import { Plus, Trash2, Users, Clock, BookOpen, X, UserPlus, GripVertical, ChevronLeft, ChevronRight, Search, Settings, Filter, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { TimetableClass, Teacher, ClassKeywordColor } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
-import { format, addDays, startOfWeek, addWeeks, subWeeks, getWeek, getMonth, getYear } from 'date-fns';
+import { format, addDays, startOfWeek, addWeeks, subWeeks, getMonth, getYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import EnglishTimetable from './English/EnglishTimetable';
 import TeacherOrderModal from './English/TeacherOrderModal';
-import MathStudentModal from './Math/MathStudentModal';
 import { useMathConfig } from './Math/hooks/useMathConfig';
 import { useTimetableClasses } from './Math/hooks/useTimetableClasses';
 import { useClassOperations } from './Math/hooks/useClassOperations';
 import { useStudentDragDrop } from './Math/hooks/useStudentDragDrop';
-import { useStudents } from '../../hooks/useStudents'; // Unified Student Hook
+import { useMathClassStudents } from './Math/hooks/useMathClassStudents';
+import { useStudents } from '../../hooks/useStudents';
 import { UnifiedStudent } from '../../types';
 import TimetableHeader from './Math/components/TimetableHeader';
 import AddClassModal from './Math/components/Modals/AddClassModal';
-import ClassDetailModal from './Math/components/Modals/ClassDetailModal';
 import ViewSettingsModal from './Math/components/Modals/ViewSettingsModal';
 import TimetableGrid from './Math/components/TimetableGrid';
-import { ALL_WEEKDAYS, MATH_PERIODS, MATH_PERIOD_TIMES, ENGLISH_PERIODS } from './constants';
+import ClassDetailModal from '../ClassManagement/ClassDetailModal';
+import StudentDetailModal from '../StudentManagement/StudentDetailModal';
+import { ClassInfo } from '../../hooks/useClasses';
+import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 
 
 
@@ -167,6 +166,8 @@ const TimetableManager = ({
 
     const [isAddClassOpen, setIsAddClassOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<TimetableClass | null>(null);
+    const [selectedClassInfo, setSelectedClassInfo] = useState<ClassInfo | null>(null);
+    const [selectedStudentForModal, setSelectedStudentForModal] = useState<UnifiedStudent | null>(null);
 
     const [internalShowStudents, setInternalShowStudents] = useState(savedSettings?.showStudents ?? true);
     const showStudents = externalShowStudents ?? internalShowStudents;
@@ -178,56 +179,6 @@ const TimetableManager = ({
     const [newRoom, setNewRoom] = useState('');
     const [newSubject, setNewSubject] = useState('수학');
     const [newSchedule, setNewSchedule] = useState<string[]>([]);
-
-    // Edit Class States
-    const [isEditingClass, setIsEditingClass] = useState(false);
-    const [editRoom, setEditRoom] = useState('');
-    const [editSchedule, setEditSchedule] = useState<string[]>([]);
-
-    // Reset edit state when selected class changes
-    useEffect(() => {
-        if (selectedClass) {
-            setEditRoom(selectedClass.room);
-            setEditSchedule(selectedClass.schedule || []);
-            setIsEditingClass(false);
-        }
-    }, [selectedClass]);
-
-    const toggleEditScheduleSlot = (day: string, period: string) => {
-        const slot = `${day} ${period}`;
-        setEditSchedule(prev =>
-            prev.includes(slot)
-                ? prev.filter(s => s !== slot)
-                : [...prev, slot]
-        );
-    };
-
-    const handleUpdateClass = async () => {
-        if (!selectedClass) return;
-
-        try {
-            await updateClass(selectedClass.id, {
-                room: editRoom,
-                schedule: editSchedule
-            }, currentPeriods);
-
-            // Update local state immediately for better UX
-            setSelectedClass({
-                ...selectedClass,
-                room: editRoom,
-                schedule: editSchedule
-            });
-            setIsEditingClass(false);
-        } catch (error: any) {
-            console.error('Error updating class:', error);
-            alert(error.message || '수업 수정 중 오류가 발생했습니다.');
-        }
-    };
-
-    // New Student Form
-    const [newStudentName, setNewStudentName] = useState('');
-    const [newStudentGrade, setNewStudentGrade] = useState('');
-    const [newStudentSchool, setNewStudentSchool] = useState('');
 
     // View Settings State
     const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
@@ -347,9 +298,35 @@ const TimetableManager = ({
     // NOTE: Teachers list is now passed as props from App.tsx (centralized subscription)
 
     // Filter classes by current subject (use localClasses for pending moves)
+    const mathClasses = useMemo(() => {
+        return localClasses.filter(c => c.subject === '수학');
+    }, [localClasses]);
+
+    // Get class names for math classes (for useMathClassStudents)
+    const mathClassNames = useMemo(() => {
+        return mathClasses.map(c => c.className);
+    }, [mathClasses]);
+
+    // Fetch student data from enrollments for math classes
+    const { classDataMap: mathClassDataMap } = useMathClassStudents(mathClassNames, studentMap);
+
+    // Merge enrollment-based student data into math classes
     const filteredClasses = useMemo(() => {
+        if (currentSubjectFilter === '수학') {
+            return mathClasses.map(cls => {
+                const enrollmentData = mathClassDataMap[cls.className];
+                if (enrollmentData) {
+                    return {
+                        ...cls,
+                        studentList: enrollmentData.studentList,
+                        studentIds: enrollmentData.studentIds,
+                    };
+                }
+                return cls;
+            });
+        }
         return localClasses.filter(c => c.subject === currentSubjectFilter);
-    }, [localClasses, currentSubjectFilter]);
+    }, [localClasses, currentSubjectFilter, mathClasses, mathClassDataMap]);
 
     // Compute resources (all teachers from state, filtered by hidden)
     const allResources = useMemo(() => {
@@ -384,76 +361,6 @@ const TimetableManager = ({
         } catch (e: any) {
             console.error(e);
             alert(e.message || '수업 추가 실패');
-        }
-    };
-
-    // Delete class
-    const handleDeleteClass = async (classId: string) => {
-        if (!confirm('이 수업을 삭제하시겠습니까?')) return;
-        try {
-            await deleteClass(classId);
-            setSelectedClass(null);
-        } catch (e) {
-            console.error(e);
-            alert('삭제 실패');
-        }
-    };
-
-    // Add student to class
-    const handleAddStudent = async () => {
-        if (!selectedClass) return;
-        try {
-            // Note: addStudent returns updated IDs
-            const updatedIds = await addStudent(selectedClass.id, selectedClass.studentIds || [], {
-                name: newStudentName,
-                grade: newStudentGrade,
-                school: newStudentSchool
-            });
-            setNewStudentName('');
-            setNewStudentGrade('');
-            setNewStudentSchool('');
-            setSelectedClass({ ...selectedClass, studentIds: updatedIds });
-        } catch (e: any) {
-            console.error(e);
-            alert(e.message || '학생 추가 실패');
-        }
-    };
-
-    // 학생 퇴원
-    const handleWithdrawal = async (studentId: string) => {
-        if (!selectedClass || !window.confirm("퇴원 처리 하시겠습니까?")) return;
-        try {
-            // Returns current IDs (no change in list, but student status updated)
-            await withdrawStudent(selectedClass.id, selectedClass.studentIds, studentId);
-            // Trigger UI update if needed (listener might handle this, but force update logic ok)
-            // Ideally useTimetableClasses updates classes, and globalStudents updates status
-        } catch (e) {
-            console.error(e);
-            alert('퇴원 처리 실패');
-        }
-    };
-
-    // 학생 퇴원 취소 (복구)
-    const handleRestoreStudent = async (studentId: string) => {
-        if (!selectedClass) return;
-        try {
-            await restoreStudent(selectedClass.id, selectedClass.studentIds, studentId);
-        } catch (e) {
-            console.error(e);
-            alert('복구 실패');
-        }
-    };
-
-    // 학생 삭제 (완전 삭제)
-    const handleRemoveStudent = async (studentId: string) => {
-        if (!selectedClass) return;
-        if (!confirm('이 학생을 수업에서 제거하시겠습니까?')) return;
-        try {
-            const updatedIds = await removeStudent(selectedClass.id, selectedClass.studentIds, studentId);
-            setSelectedClass({ ...selectedClass, studentIds: updatedIds as string[] });
-        } catch (e) {
-            console.error(e);
-            alert('학생 제거 실패');
         }
     };
 
@@ -508,8 +415,8 @@ const TimetableManager = ({
                 isSaving={isSaving}
             />
 
-            {/* Timetable Grid */}
-            <div className="flex-1 overflow-auto border-t border-gray-200 p-4">
+            {/* Timetable Grid - 외부 스크롤 제거, 내부 그리드 스크롤만 사용 */}
+            <div className="flex-1 overflow-hidden border-t border-gray-200 p-4">
                 <TimetableGrid
                     filteredClasses={filteredClasses}
                     allResources={allResources}
@@ -529,7 +436,19 @@ const TimetableManager = ({
                     showEmptyRooms={showEmptyRooms}
                     showStudents={showStudents}
                     dragOverClassId={dragOverClassId}
-                    onClassClick={(cls) => canEditMath && setSelectedClass(cls)}
+                    onClassClick={(cls) => {
+                        if (!canEditMath) return;
+                        // TimetableClass -> ClassInfo 변환
+                        const classInfo: ClassInfo = {
+                            className: cls.className,
+                            subject: cls.subject === '수학' ? 'math' : 'english',
+                            teacher: cls.teacher,
+                            room: cls.room,
+                            schedule: cls.schedule,
+                            studentCount: cls.studentIds?.length || cls.studentList?.length || 0,
+                        };
+                        setSelectedClassInfo(classInfo);
+                    }}
                     onDragStart={(e, sId, cId) => canEditMath && handleDragStart(e, sId, cId)}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -538,6 +457,12 @@ const TimetableManager = ({
                     studentMap={studentMap}
                     timetableViewMode={timetableViewMode}
                     classKeywords={classKeywords}
+                    onStudentClick={(studentId) => {
+                        const student = studentMap[studentId];
+                        if (student) {
+                            setSelectedStudentForModal(student);
+                        }
+                    }}
                 />
             </div>
 
@@ -559,31 +484,21 @@ const TimetableManager = ({
                 teacherNames={sortedTeachers}
             />
 
-            {/* Class Detail Modal */}
-            <ClassDetailModal
-                selectedClass={selectedClass}
-                onClose={() => setSelectedClass(null)}
-                isEditingClass={isEditingClass}
-                setIsEditingClass={setIsEditingClass}
-                editRoom={editRoom}
-                setEditRoom={setEditRoom}
-                editSchedule={editSchedule}
-                toggleEditScheduleSlot={toggleEditScheduleSlot}
-                handleUpdateClass={handleUpdateClass}
-                handleDeleteClass={handleDeleteClass}
-                newStudentName={newStudentName}
-                setNewStudentName={setNewStudentName}
-                newStudentSchool={newStudentSchool}
-                setNewStudentSchool={setNewStudentSchool}
-                newStudentGrade={newStudentGrade}
-                setNewStudentGrade={setNewStudentGrade}
-                handleAddStudent={handleAddStudent}
-                handleRemoveStudent={handleRemoveStudent}
-                handleWithdrawal={handleWithdrawal}
-                handleRestoreStudent={handleRestoreStudent}
-                handleDragStart={handleDragStart}
-                studentMap={studentMap}
-            />
+            {/* Class Detail Modal - 수업 관리와 동일한 상세 모달 사용 */}
+            {selectedClassInfo && (
+                <ClassDetailModal
+                    classInfo={selectedClassInfo}
+                    onClose={() => setSelectedClassInfo(null)}
+                />
+            )}
+
+            {/* Student Detail Modal - 학생 클릭 시 표시 */}
+            {selectedStudentForModal && (
+                <StudentDetailModal
+                    student={selectedStudentForModal}
+                    onClose={() => setSelectedStudentForModal(null)}
+                />
+            )}
 
             {/* View Settings Modal (통합 설정) */}
             <ViewSettingsModal

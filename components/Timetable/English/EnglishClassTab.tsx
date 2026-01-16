@@ -22,6 +22,9 @@ import { useEnglishClasses, ScheduleCell, ClassInfo } from './hooks/useEnglishCl
 import { useClassStudents } from './hooks/useClassStudents';
 import ClassCard from './ClassCard';
 import { ClassInfo as ClassInfoFromHook } from '../../../hooks/useClasses';
+import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
+import StudentDetailModal from '../../StudentManagement/StudentDetailModal';
+import { UnifiedStudent } from '../../../types';
 
 
 // ScheduleCell, ScheduleData, ClassInfo definitions removed (imported from hooks)
@@ -65,13 +68,15 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [isLevelSettingsOpen, setIsLevelSettingsOpen] = useState(false);
     const [openMenuClass, setOpenMenuClass] = useState<string | null>(null);
     const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
+    const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
+    const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
 
     // --- Hook Integration ---
     // 1. Settings & Levels
     const { settings, settingsLoading, englishLevels, updateSettings } = useEnglishSettings();
 
-    // 2. Student Statistics
-    const studentStats = useEnglishStats(scheduleData, isSimulationMode);
+    // 2. Student Statistics (now uses enrollments + studentMap)
+    const studentStats = useEnglishStats(scheduleData, isSimulationMode, studentMap);
 
     // 3. Move Changes
     const { moveChanges, isSaving, handleMoveStudent, handleCancelChanges, handleSaveChanges } = useEnglishChanges(isSimulationMode);
@@ -477,6 +482,23 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 classStudentData={classDataMap[cls.name]}
                                                 hideTime={true}
                                                 useInjaePeriod={group.useInjaePeriod}
+                                                onClassClick={() => {
+                                                    // ClassInfo (from englishClasses hook) -> ClassInfoFromHook 변환
+                                                    const classDetail: ClassInfoFromHook = {
+                                                        className: cls.name,
+                                                        subject: 'english',
+                                                        teacher: cls.mainTeacher,
+                                                        room: cls.mainRoom,
+                                                        studentCount: classDataMap[cls.name]?.studentList?.filter((s: any) => !s.withdrawalDate && !s.onHold).length || 0,
+                                                    };
+                                                    setSelectedClassDetail(classDetail);
+                                                }}
+                                                onStudentClick={(studentId) => {
+                                                    const student = studentMap[studentId];
+                                                    if (student) {
+                                                        setSelectedStudent(student as UnifiedStudent);
+                                                    }
+                                                }}
                                             />
                                         ))}
                                     </div>
@@ -499,6 +521,22 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 isOpen={isLevelSettingsOpen}
                 onClose={() => setIsLevelSettingsOpen(false)}
             />
+
+            {/* 수업 상세 모달 */}
+            {selectedClassDetail && (
+                <ClassDetailModal
+                    classInfo={selectedClassDetail}
+                    onClose={() => setSelectedClassDetail(null)}
+                />
+            )}
+
+            {/* 학생 상세 모달 */}
+            {selectedStudent && (
+                <StudentDetailModal
+                    student={selectedStudent}
+                    onClose={() => setSelectedStudent(null)}
+                />
+            )}
         </div>
     );
 };

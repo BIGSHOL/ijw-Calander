@@ -2187,7 +2187,7 @@ const App: React.FC = () => {
           ) : appMode === 'timetable' ? (
             /* Timetable View */
             <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 p-4 md:p-6">
+              <div className="w-full flex-1 p-4 md:p-6 overflow-hidden">
                 <TimetableManager
                   subjectTab={timetableSubject}
                   onSubjectChange={setTimetableSubject}

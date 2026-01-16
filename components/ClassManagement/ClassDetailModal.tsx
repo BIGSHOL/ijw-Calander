@@ -68,79 +68,76 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          {/* 헤더 */}
-          <div className="bg-[#081429] text-white p-6 flex items-center justify-between sticky top-0 z-10">
-            <div className="flex items-center gap-3">
-              <BookOpen className="w-6 h-6" />
-              <h2 className="text-xl font-bold">수업 상세</h2>
-            </div>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+        <div className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          {/* 컴팩트 헤더 */}
+          <div className="bg-[#081429] text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5" />
+              <h2 className="text-base font-bold">수업 상세</h2>
+            </div>
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setShowEditModal(true)}
                 disabled={deleteClassMutation.isPending}
-                className="bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-3 py-1.5 rounded font-semibold flex items-center gap-1 transition-colors text-xs disabled:opacity-50"
               >
-                <Edit className="w-4 h-4" />
+                <Edit className="w-3.5 h-3.5" />
                 편집
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleteClassMutation.isPending}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded font-semibold flex items-center gap-1 transition-colors text-xs disabled:opacity-50"
               >
-                <Trash2 className="w-4 h-4" />
-                {deleteClassMutation.isPending ? '삭제 중...' : '삭제'}
+                <Trash2 className="w-3.5 h-3.5" />
+                삭제
               </button>
               <button
                 onClick={onClose}
                 disabled={deleteClassMutation.isPending}
-                className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="text-white hover:bg-white/20 p-1.5 rounded transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {/* 수업 정보 섹션 */}
-          <div className="p-6">
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <BookOpen className="w-5 h-5 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-lg">수업 정보</h3>
+          {/* 수업 정보 섹션 - 컴팩트 */}
+          <div className="p-4">
+            <div className="mb-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <BookOpen className="w-4 h-4 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-sm">수업 정보</h3>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                {/* 수업명 */}
-                <div className="flex items-start gap-3">
-                  <span className="text-[#373d41] text-sm font-medium min-w-[80px]">수업명:</span>
-                  <span className="text-[#081429] font-bold text-base">{className}</span>
-                </div>
-
-                {/* 과목 */}
-                <div className="flex items-start gap-3">
-                  <span className="text-[#373d41] text-sm font-medium min-w-[80px]">과목:</span>
-                  <span className="text-[#373d41]">
+              <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+                {/* 수업명 & 과목 */}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 min-w-[50px]">수업명:</span>
+                  <span className="text-[#081429] font-bold">{className}</span>
+                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
                     {SUBJECT_LABELS[subject as SubjectType] || subject}
                   </span>
                 </div>
 
-                {/* 담임 */}
-                <div className="flex items-start gap-3">
-                  <span className="text-[#373d41] text-sm font-medium min-w-[80px]">담임:</span>
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-[#373d41]" />
-                    <span className="text-[#373d41]">{teacher || '미정'}</span>
+                {/* 담임 & 강의실 */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-gray-600">{teacher || '미정'}</span>
                   </div>
+                  {room && (
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="text-gray-600">{room}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* 스케줄 텍스트 */}
-                <div className="flex items-start gap-3">
-                  <span className="text-[#373d41] text-sm font-medium min-w-[80px]">스케줄:</span>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-[#373d41]" />
-                    <span className="text-[#081429] font-semibold">{formattedSchedule}</span>
-                  </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-[#081429] font-medium">{formattedSchedule}</span>
                 </div>
 
                 {/* 스케줄 그리드 (선택된 교시만) */}
@@ -192,7 +189,10 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                             const key = `${day}-${periodId}`;
                             const isSelected = selectedSlots.has(key);
                             const slotTeacher = slotTeachers?.[key];
-                            const displayTeacher = slotTeacher || teacher;
+                            // 숨김 강사인 경우 담임으로 대체
+                            const slotTeacherInfo = slotTeacher ? teachersData?.find(t => t.name === slotTeacher) : null;
+                            const isSlotTeacherHidden = slotTeacherInfo?.isHidden;
+                            const displayTeacher = (slotTeacher && !isSlotTeacherHidden) ? slotTeacher : teacher;
                             const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
 
                             return (
@@ -205,7 +205,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                                   color: colors.textColor
                                 } : undefined}
                               >
-                                {isSelected ? (slotTeacher || teacher || '').slice(0, 4) : ''}
+                                {isSelected ? (displayTeacher || '').slice(0, 4) : ''}
                               </div>
                             );
                           })}
@@ -215,62 +215,54 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                   );
                 })()}
 
-                {/* 강의실 */}
-                {room && (
-                  <div className="flex items-start gap-3">
-                    <span className="text-[#373d41] text-sm font-medium min-w-[80px]">강의실:</span>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-[#373d41]" />
-                      <span className="text-[#373d41]">{room}</span>
+                {/* 부담임 (교시별 강사) - 이름만 표시 (숨김 강사 제외) */}
+                {slotTeachers && Object.keys(slotTeachers).length > 0 && (() => {
+                  const visibleSlotTeachers = [...new Set(Object.values(slotTeachers))].filter(name => {
+                    const teacherInfo = teachersData?.find(t => t.name === name);
+                    return !teacherInfo?.isHidden;
+                  });
+                  if (visibleSlotTeachers.length === 0) return null;
+                  return (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-500">부담임:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {visibleSlotTeachers.map((name) => (
+                          <span key={name} className="bg-gray-200 px-1.5 py-0.5 rounded text-xs text-gray-600">
+                            {name}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* 부담임 (교시별 강사) - 이름만 표시 */}
-                {slotTeachers && Object.keys(slotTeachers).length > 0 && (
-                  <div className="flex items-start gap-3">
-                    <span className="text-[#373d41] text-sm font-medium min-w-[80px]">부담임:</span>
-                    <div className="flex flex-wrap gap-1">
-                      {/* 중복 제거하여 이름만 표시 */}
-                      {[...new Set(Object.values(slotTeachers))].map((name) => (
-                        <span key={name} className="bg-gray-200 px-2 py-0.5 rounded text-xs text-[#373d41]">
-                          {name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
 
-            {/* 메모 섹션 */}
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <FileText className="w-5 h-5 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-lg">메모</h3>
+            {/* 메모 섹션 - 컴팩트 */}
+            {classDetail?.memo && (
+              <div className="mb-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <FileText className="w-4 h-4 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-sm">메모</h3>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-gray-600 text-sm whitespace-pre-wrap">{classDetail.memo}</p>
+                </div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                {classDetail?.memo ? (
-                  <p className="text-[#373d41] text-sm whitespace-pre-wrap">{classDetail.memo}</p>
-                ) : (
-                  <p className="text-gray-400 text-sm italic">메모가 없습니다. 편집 버튼을 눌러 메모를 추가하세요.</p>
-                )}
-              </div>
-            </div>
+            )}
 
-            {/* 수강 학생 섹션 */}
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Users className="w-5 h-5 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-lg">
-                  현재 등록된 학생 ({classDetail?.studentCount || studentCount || 0}명)
+            {/* 수강 학생 섹션 - 컴팩트 */}
+            <div className="mb-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Users className="w-4 h-4 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-sm">
+                  등록 학생 ({classDetail?.studentCount || studentCount || 0}명)
                 </h3>
               </div>
 
-              {/* 학생 목록 */}
               {detailLoading ? (
-                <div className="bg-gray-50 rounded-lg p-6 text-center">
-                  <p className="text-[#373d41]">학생 목록을 불러오는 중...</p>
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <p className="text-gray-500 text-sm">불러오는 중...</p>
                 </div>
               ) : classDetail ? (
                 <ClassStudentList
@@ -278,42 +270,42 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                   onStudentClick={onStudentClick}
                 />
               ) : (
-                <div className="bg-gray-50 rounded-lg p-6 text-center">
-                  <Users className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#373d41]" />
-                  <p className="text-[#373d41]">학생 정보를 불러올 수 없습니다.</p>
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <Users className="w-8 h-8 mx-auto mb-2 opacity-30 text-gray-400" />
+                  <p className="text-gray-500 text-sm">학생 정보를 불러올 수 없습니다.</p>
                 </div>
               )}
             </div>
 
-            {/* 통계 섹션 (Phase 3 예정) */}
+            {/* 통계 섹션 - 컴팩트 */}
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Calendar className="w-5 h-5 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-lg">통계</h3>
+              <div className="flex items-center gap-1.5 mb-2">
+                <Calendar className="w-4 h-4 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-sm">통계</h3>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="text-center">
-                    <p className="text-[#373d41] text-sm mb-1">평균 출석률</p>
-                    <p className="text-[#fdb813] font-bold text-2xl">--%</p>
-                    <p className="text-xs text-[#373d41] mt-1">Phase 3 예정</p>
+                    <p className="text-gray-500 text-xs mb-0.5">평균 출석률</p>
+                    <p className="text-[#fdb813] font-bold text-lg">--%</p>
+                    <p className="text-[10px] text-gray-400">Phase 3 예정</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-[#373d41] text-sm mb-1">이번 달 수업 횟수</p>
-                    <p className="text-[#fdb813] font-bold text-2xl">--회</p>
-                    <p className="text-xs text-[#373d41] mt-1">Phase 3 예정</p>
+                    <p className="text-gray-500 text-xs mb-0.5">이번 달 수업</p>
+                    <p className="text-[#fdb813] font-bold text-lg">--회</p>
+                    <p className="text-[10px] text-gray-400">Phase 3 예정</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 푸터 */}
-          <div className="bg-gray-50 p-4 flex items-center justify-end gap-3 border-t border-[#081429] border-opacity-10">
+          {/* 푸터 - 컴팩트 */}
+          <div className="bg-gray-50 px-4 py-3 flex items-center justify-end border-t border-gray-200">
             <button
               onClick={onClose}
               disabled={deleteClassMutation.isPending}
-              className="px-6 py-2 border border-[#081429] text-[#081429] rounded-lg font-semibold hover:bg-[#081429] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 bg-[#081429] text-white rounded font-semibold text-sm hover:bg-[#1e293b] transition-colors"
             >
               닫기
             </button>

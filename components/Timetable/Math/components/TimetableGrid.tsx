@@ -38,6 +38,8 @@ interface TimetableGridProps {
     timetableViewMode: 'day-based' | 'teacher-based';
     // Keyword Colors
     classKeywords?: ClassKeywordColor[];
+    // Student Click
+    onStudentClick?: (studentId: string) => void;
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -68,7 +70,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     currentSubjectFilter,
     studentMap,
     timetableViewMode,
-    classKeywords = []
+    classKeywords = [],
+    onStudentClick
 }) => {
     // Helper to get column width style
     const getColumnWidthStyle = (colspan: number) => {
@@ -81,19 +84,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 
-    // 교시당 기본 높이 계산 - 창 크기에 맞게 자동 조절
+    // 교시당 기본 높이 계산 - 학생 8명 + 대기 3명 + 퇴원 3명을 수용하는 고정 높이
     const getRowHeight = () => {
-        // 기본 높이 설정값
-        const baseHeight = rowHeight === 'short' ? 50 : rowHeight === 'tall' ? 80 : rowHeight === 'very-tall' ? 100 : 65;
-
-        // 창 높이에 따른 동적 조절 (8교시 기준으로 화면에 맞춤)
-        if (typeof window !== 'undefined') {
-            const availableHeight = window.innerHeight - 200; // 헤더 등 제외
-            const periodsCount = currentPeriods.length || 8;
-            const dynamicHeight = Math.floor(availableHeight / periodsCount * 0.65); // 2/3 크기로 조절
-            // 기본 높이와 동적 높이 중 큰 값 사용 (최소 높이 보장)
-            return Math.max(baseHeight, Math.min(dynamicHeight, 120));
-        }
+        // 수업명(24px) + 재원생 8명(140px) + 대기 3명(52px) + 퇴원 3명(52px) = 약 268px
+        // rowHeight 설정에 따라 조절
+        const baseHeight = rowHeight === 'short' ? 220 : rowHeight === 'tall' ? 300 : rowHeight === 'very-tall' ? 340 : 268;
         return baseHeight;
     };
 
@@ -237,7 +232,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
         return (
             <div className="flex-shrink-0">
-                <div className="relative" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                <div className="relative">
                     <table className="border-collapse bg-gray-300" style={{ tableLayout: 'fixed' }}>
                         <thead className="sticky top-0 z-20">
                             {/* Group Title Row */}
@@ -415,13 +410,13 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             cells.push(
                                                 <td
                                                     key={`${resource}-${day}-${period}`}
-                                                    className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass}`}
+                                                    className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                     style={cellStyle}
                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                     colSpan={colSpan > 1 ? colSpan : undefined}
                                                 >
                                                     {isEmpty && showEmptyRooms ? (
-                                                        <div className="text-xxs text-gray-400 text-center py-1">
+                                                        <div className="text-xxs text-gray-500 text-center py-1">
                                                             {viewType === 'room' ? resource : '빈 강의실'}
                                                         </div>
                                                     ) : (
@@ -444,6 +439,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 onDrop={onDrop}
                                                                 studentMap={studentMap}
                                                                 classKeywords={classKeywords}
+                                                                onStudentClick={onStudentClick}
                                                             />
                                                         ))
                                                     )}
@@ -631,12 +627,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             return (
                                                 <td
                                                     key={`${resource}-${period}`}
-                                                    className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass}`}
+                                                    className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                     style={cellStyle}
                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                 >
                                                     {isEmpty && showEmptyRooms ? (
-                                                        <div className="text-xxs text-gray-400 text-center py-1">
+                                                        <div className="text-xxs text-gray-500 text-center py-1">
                                                             {viewType === 'room' ? resource : '빈 강의실'}
                                                         </div>
                                                     ) : (
@@ -659,6 +655,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 onDrop={onDrop}
                                                                 studentMap={studentMap}
                                                                 classKeywords={classKeywords}
+                                                                onStudentClick={onStudentClick}
                                                             />
                                                         ))
                                                     )}
@@ -678,7 +675,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     // 뷰 모드에 따라 다른 레이아웃 렌더링
     if (timetableViewMode === 'day-based') {
         return (
-            <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+            <div className="overflow-x-auto overflow-y-auto" style={{ height: 'calc(100vh - 240px)' }}>
                 <div className="flex gap-4">
                     {dayBasedData.map(({ day, resources }) => renderDayBasedTable(day, resources))}
                 </div>
@@ -688,7 +685,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
     // teacher-based 뷰 (기존)
     return (
-        <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+        <div className="overflow-x-auto overflow-y-auto" style={{ height: 'calc(100vh - 240px)' }}>
             <div className="flex gap-4">
                 {/* 월/목 테이블 */}
                 {monThuActiveResources.length > 0 && renderTable(monThuActiveResources, monThuResourceDaysMap, '월/목')}
