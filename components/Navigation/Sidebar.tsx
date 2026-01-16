@@ -85,8 +85,8 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
             <div>
-              <h1 className="text-xs font-bold leading-tight">InjaeWon</h1>
-              <p className="text-[10px] text-gray-400 leading-tight">Calendar</p>
+              <h1 className="text-xs font-bold leading-tight">Injaewon</h1>
+              <p className="text-[10px] text-gray-400 leading-tight">Eywa</p>
             </div>
           </div>
         )}
@@ -147,8 +147,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                       key={tab}
                       onClick={() => onTabSelect(tab)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-all ${isActive
-                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                          : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                         } ${isCollapsed ? 'justify-center' : ''}`}
                       aria-label={`${meta.label} 탭으로 이동`}
                       aria-current={isActive ? 'page' : undefined}
@@ -171,7 +171,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {!isCollapsed && (
         <div className="border-t border-gray-200 p-2">
           <p className="text-[10px] text-gray-400 text-center">
-            © 2026 InjaeWon
+            © 2026 Injaewon Eywa
           </p>
         </div>
       )}

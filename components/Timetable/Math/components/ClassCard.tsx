@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { TimetableClass, ClassKeywordColor } from '../../../../types';
+import { TimetableClass, ClassKeywordColor, Teacher } from '../../../../types';
 import { getSubjectTheme } from '../utils/gridUtils';
 import { Clock } from 'lucide-react';
 import { MATH_PERIOD_INFO, MATH_PERIOD_TIMES, WEEKEND_PERIOD_INFO, WEEKEND_PERIOD_TIMES } from '../../constants';
@@ -24,6 +24,7 @@ interface ClassCardProps {
     onStudentClick?: (studentId: string) => void;
     currentDay?: string;  // 현재 요일 (단일 요일 셀용)
     mergedDays?: string[];  // 병합된 요일 목록 (예: ['월', '목']) - 병합 셀에서 요일별 학생 분리 표시용
+    teachers?: Teacher[];  // 강사 목록 (defaultRoom 조회용)
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -246,7 +247,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {/* Class Name Header - 키워드 색상 적용, 마우스 오버시 스케줄 툴팁 */}
             {showClassName && (
                 <div
-                    className={`text-center font-bold py-1 px-1 ${isMergedCell ? 'text-base' : 'text-xs'} border-b border-gray-300 relative cursor-help`}
+                    className={`text-center font-bold py-1 px-1 ${isMergedCell ? 'text-base' : 'text-[12px]'} border-b border-gray-300 relative cursor-help`}
                     style={matchedKeyword
                         ? { color: matchedKeyword.textColor }
                         : { color: '#1f2937' }
@@ -254,11 +255,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     onMouseEnter={() => setShowScheduleTooltip(true)}
                     onMouseLeave={() => setShowScheduleTooltip(false)}
                 >
-                    {cls.className}
+                    <div>{cls.className}</div>
                     {cls.room && (
-                        <span className={`ml-1 ${isMergedCell ? 'text-xs' : 'text-[9px]'} font-normal text-gray-500`}>
-                            ({cls.room})
-                        </span>
+                        <div className={`${isMergedCell ? 'text-xs' : 'text-[10px]'} font-normal text-gray-500 mt-0.5`}>
+                            {cls.room}
+                        </div>
                     )}
 
                     {/* Schedule Tooltip (마우스 오버 시 실제 스케줄 표시) */}
@@ -289,9 +290,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {showStudents && (
                 isMergedCell ? (
                     <div className="flex-1 flex flex-col overflow-hidden">
-                            <div className="px-1 py-0">
-                                <div className="text-[10px] font-bold text-indigo-600 mb-0">재원생 ({commonStudents.active.length})</div>
-                                <ul className="flex flex-col gap-0">
+                        <div className="px-1 py-0">
+                            <div className="text-[10px] font-bold text-indigo-600 mb-0">({commonStudents.active.length})</div>
+                            <ul className="flex flex-col gap-0">
                                 {commonStudents.active.map(s => {
                                     const isHighlighted = searchQuery && s.name.includes(searchQuery);
                                     let displayText = s.name;
@@ -321,51 +322,65 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
                         <div className="flex-1"></div>
 
-                        {hasPartialStudents && (
-                            <div className="flex-shrink-0 flex">
-                                {mergedDays.map((day, idx) => {
-                                    const isLastDay = idx === mergedDays.length - 1;
-                                    const dayStudents = partialStudentsByDay?.[day];
-                                    const dayActiveStudents = dayStudents?.active || [];
+                        {hasPartialStudents && (() => {
+                            // 각 요일의 학생 수 중 최대값 계산
+                            const maxStudentCount = Math.max(
+                                ...mergedDays.map(day => partialStudentsByDay?.[day]?.active.length || 0)
+                            );
 
-                                    return (
-                                        <div key={day} className={`flex-1 flex flex-col ${!isLastDay ? 'border-r-2 border-amber-300' : ''}`}>
-                                            <div className="text-center text-[11px] font-bold bg-amber-100 text-amber-800 py-0.5 border-b-2 border-amber-300">
-                                                {day}만
-                                            </div>
-                                            <div className="px-0.5 py-0 bg-amber-50">
-                                                <ul className="flex flex-col gap-0">
-                                                    {dayActiveStudents.map(s => {
-                                                        const isHighlighted = searchQuery && s.name.includes(searchQuery);
-                                                        let displayText = s.name;
-                                                        if (showSchool && s.school) displayText += `/${s.school}`;
-                                                        if (showGrade && s.grade) displayText += showSchool ? s.grade : `/${s.grade}`;
-                                                        return (
-                                                            <li
-                                                                key={s.id}
-                                                                draggable={canEdit}
-                                                                onDragStart={(e) => canEdit && onDragStart(e, s.id, cls.id)}
-                                                                onClick={(e) => {
-                                                                    if (onStudentClick && !canEdit) {
-                                                                        e.stopPropagation();
-                                                                        onStudentClick(s.id);
-                                                                    }
-                                                                }}
-                                                                className={`py-0 px-1 text-sm leading-[1.3] truncate
-                                                                ${canEdit ? 'cursor-grab hover:bg-white/80' : onStudentClick ? 'cursor-pointer hover:bg-white/80' : ''}
-                                                                ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : 'text-amber-900 font-medium'}`}
-                                                            >
-                                                                {displayText}
+                            return (
+                                <div className="flex-shrink-0 flex border-t-2 border-amber-300 bg-white">
+                                    {mergedDays.map((day, idx) => {
+                                        const isLastDay = idx === mergedDays.length - 1;
+                                        const dayStudents = partialStudentsByDay?.[day];
+                                        const dayActiveStudents = dayStudents?.active || [];
+                                        const emptySlots = maxStudentCount - dayActiveStudents.length;
+
+                                        return (
+                                            <div key={day} className={`flex-1 flex flex-col ${!isLastDay ? 'border-r-2 border-amber-300' : ''}`}>
+                                                <div className="text-center text-[11px] font-bold bg-amber-100 text-amber-800 py-0.5 border-b-2 border-amber-300">
+                                                    {day}만 ({dayActiveStudents.length})
+                                                </div>
+                                                <div className="px-0.5 py-0 bg-amber-50 flex-1">
+                                                    <ul className="flex flex-col gap-0">
+                                                        {dayActiveStudents.map(s => {
+                                                            const isHighlighted = searchQuery && s.name.includes(searchQuery);
+                                                            let displayText = s.name;
+                                                            if (showSchool && s.school) displayText += `/${s.school}`;
+                                                            if (showGrade && s.grade) displayText += showSchool ? s.grade : `/${s.grade}`;
+                                                            return (
+                                                                <li
+                                                                    key={s.id}
+                                                                    draggable={canEdit}
+                                                                    onDragStart={(e) => canEdit && onDragStart(e, s.id, cls.id)}
+                                                                    onClick={(e) => {
+                                                                        if (onStudentClick && !canEdit) {
+                                                                            e.stopPropagation();
+                                                                            onStudentClick(s.id);
+                                                                        }
+                                                                    }}
+                                                                    className={`py-0 px-1 text-sm leading-[1.3] truncate
+                                                                    ${canEdit ? 'cursor-grab hover:bg-white/80' : onStudentClick ? 'cursor-pointer hover:bg-white/80' : ''}
+                                                                    ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : 'text-amber-900 font-medium'}`}
+                                                                >
+                                                                    {displayText}
+                                                                </li>
+                                                            );
+                                                        })}
+                                                        {/* 빈 슬롯 추가 - 다른 요일과 높이 맞춤 */}
+                                                        {Array.from({ length: emptySlots }).map((_, i) => (
+                                                            <li key={`empty-${i}`} className="py-0 px-1 text-sm leading-[1.3] text-transparent select-none">
+                                                                &nbsp;
                                                             </li>
-                                                        );
-                                                    })}
-                                                </ul>
+                                                        ))}
+                                                    </ul>
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
 
                         {/* 대기 + 퇴원 */}
                         <div className="flex-shrink-0">
@@ -431,47 +446,47 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             </ul>
                         </div>
 
-                    {/* Spacer: 대기/퇴원을 하단으로 밀기 */}
-                    <div className="flex-1"></div>
+                        {/* Spacer: 대기/퇴원을 하단으로 밀기 */}
+                        <div className="flex-1"></div>
 
-                    {/* 하단 고정 영역: 대기 + 퇴원 */}
-                    <div className="flex-shrink-0">
-                        {/* 대기생 Section - 컴팩트 */}
-                        <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                            <div className="text-[10px] font-bold text-violet-600">대기 ({holdStudents.length}명)</div>
-                            {holdStudents.length > 0 ? (
-                                <ul className="flex flex-col">
-                                    {holdStudents.map(s => (
-                                        <li key={s.id} className="text-[10px] leading-tight text-violet-800 truncate" title={s.name}>
-                                            {s.name}
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <span className="text-[10px] text-violet-300">-</span>
-                            )}
-                        </div>
+                        {/* 하단 고정 영역: 대기 + 퇴원 */}
+                        <div className="flex-shrink-0">
+                            {/* 대기생 Section - 컴팩트 */}
+                            <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                <div className="text-[10px] font-bold text-violet-600">대기 ({holdStudents.length}명)</div>
+                                {holdStudents.length > 0 ? (
+                                    <ul className="flex flex-col">
+                                        {holdStudents.map(s => (
+                                            <li key={s.id} className="text-[10px] leading-tight text-violet-800 truncate" title={s.name}>
+                                                {s.name}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <span className="text-[10px] text-violet-300">-</span>
+                                )}
+                            </div>
 
-                        {/* 퇴원생 Section - 컴팩트 */}
-                        <div className="px-0.5 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                            <div className="text-[10px] font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
-                            {withdrawnStudents.length > 0 ? (
-                                <ul className="flex flex-col">
-                                    {withdrawnStudents.map(s => (
-                                        <li
-                                            key={s.id}
-                                            className="text-[10px] leading-tight text-gray-700 truncate"
-                                            title={s.withdrawalDate ? `${s.name} (퇴원: ${s.withdrawalDate})` : s.name}
-                                        >
-                                            {s.name}
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <span className="text-[10px] text-gray-400">-</span>
-                            )}
+                            {/* 퇴원생 Section - 컴팩트 */}
+                            <div className="px-0.5 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                <div className="text-[10px] font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
+                                {withdrawnStudents.length > 0 ? (
+                                    <ul className="flex flex-col">
+                                        {withdrawnStudents.map(s => (
+                                            <li
+                                                key={s.id}
+                                                className="text-[10px] leading-tight text-gray-700 truncate"
+                                                title={s.withdrawalDate ? `${s.name} (퇴원: ${s.withdrawalDate})` : s.name}
+                                            >
+                                                {s.name}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <span className="text-[10px] text-gray-400">-</span>
+                                )}
+                            </div>
                         </div>
-                    </div>
                     </div>
                 )
             )}

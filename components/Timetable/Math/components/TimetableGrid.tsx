@@ -84,6 +84,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 
+    // 날짜별 뷰용 - 더 넓은 너비로 강의명이 한줄에 표시되도록
+    const getDayBasedCellWidthStyle = () => {
+        const baseWidth = columnWidth === 'narrow' ? 130 : columnWidth === 'wide' ? 190 : 160;
+        return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
+    };
+
     // 교시당 기본 높이 계산 - 학생 8명 + 대기 3명 + 퇴원 3명을 수용하는 고정 높이
     const getRowHeight = () => {
         // 수업명(24px) + 재원생 8명(140px) + 대기 3명(52px) + 퇴원 3명(52px) = 약 268px
@@ -262,8 +268,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         minWidth: '90px',
                                         backgroundColor: groupColors.light === 'bg-blue-50' ? '#eff6ff' :
                                             groupColors.light === 'bg-amber-50' ? '#fffbeb' :
-                                            groupColors.light === 'bg-orange-50' ? '#fff7ed' :
-                                            groupColors.light === 'bg-green-50' ? '#f0fdf4' : '#f3f4f6'
+                                                groupColors.light === 'bg-orange-50' ? '#fff7ed' :
+                                                    groupColors.light === 'bg-green-50' ? '#f0fdf4' : '#f3f4f6'
                                     }}
                                 >
                                     교시
@@ -337,160 +343,160 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 const bgHex = bgColorMap[groupColors.light] || '#f3f4f6';
 
                                 return (
-                                <tr key={period}>
-                                    <td
-                                        className={`p-1.5 text-xxs font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
-                                        style={{
-                                            width: '90px',
-                                            minWidth: '90px',
-                                            backgroundColor: bgHex
-                                        }}
-                                    >
-                                        <div className="font-bold text-[10px] text-gray-500">{period}</div>
-                                        <div>{periodTimeDisplay}</div>
-                                    </td>
-                                    {resources.map(resource => {
-                                        const daysForResource = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
-                                        const periodIndex = currentPeriods.indexOf(period);
+                                    <tr key={period}>
+                                        <td
+                                            className={`p-1.5 text-xxs font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                            style={{
+                                                width: '90px',
+                                                minWidth: '90px',
+                                                backgroundColor: bgHex
+                                            }}
+                                        >
+                                            <div className="font-bold text-[10px] text-gray-500">{period}</div>
+                                            <div>{periodTimeDisplay}</div>
+                                        </td>
+                                        {resources.map(resource => {
+                                            const daysForResource = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
+                                            const periodIndex = currentPeriods.indexOf(period);
 
-                                        const cells: React.ReactNode[] = [];
-                                        let dayIndex = 0;
+                                            const cells: React.ReactNode[] = [];
+                                            let dayIndex = 0;
 
-                                        while (dayIndex < daysForResource.length) {
-                                            const day = daysForResource[dayIndex];
-                                            const cellClasses = getClassesForCell(filteredClasses, day, period, resource, viewType);
+                                            while (dayIndex < daysForResource.length) {
+                                                const day = daysForResource[dayIndex];
+                                                const cellClasses = getClassesForCell(filteredClasses, day, period, resource, viewType);
 
-                                            // 수직 병합 확인
-                                            const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) =>
-                                                shouldSkipCell(cls, day, periodIndex, cellClasses, currentPeriods, filteredClasses, viewType)
-                                            );
+                                                // 수직 병합 확인
+                                                const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) =>
+                                                    shouldSkipCell(cls, day, periodIndex, cellClasses, currentPeriods, filteredClasses, viewType)
+                                                );
 
-                                            if (shouldSkipThisCell) {
-                                                dayIndex++;
-                                                continue;
-                                            }
+                                                if (shouldSkipThisCell) {
+                                                    dayIndex++;
+                                                    continue;
+                                                }
 
-                                            // 수평 병합 확인: 이전 요일에서 이미 이 수업이 병합되어 렌더링되었는지 체크
-                                            let shouldSkipHorizontalMerge = false;
-                                            if (!isWednesdayTable && cellClasses.length === 1 && dayIndex > 0) {
-                                                const cls = cellClasses[0];
-                                                // 이전 요일들을 역순으로 확인
-                                                for (let prevIdx = dayIndex - 1; prevIdx >= 0; prevIdx--) {
-                                                    const prevDay = daysForResource[prevIdx];
-                                                    const prevDayClasses = getClassesForCell(filteredClasses, prevDay, period, resource, viewType);
+                                                // 수평 병합 확인: 이전 요일에서 이미 이 수업이 병합되어 렌더링되었는지 체크
+                                                let shouldSkipHorizontalMerge = false;
+                                                if (!isWednesdayTable && cellClasses.length === 1 && dayIndex > 0) {
+                                                    const cls = cellClasses[0];
+                                                    // 이전 요일들을 역순으로 확인
+                                                    for (let prevIdx = dayIndex - 1; prevIdx >= 0; prevIdx--) {
+                                                        const prevDay = daysForResource[prevIdx];
+                                                        const prevDayClasses = getClassesForCell(filteredClasses, prevDay, period, resource, viewType);
 
-                                                    // 이전 요일에 같은 수업이 있고, 단일 수업이면 (병합 가능한 조건)
-                                                    if (prevDayClasses.length === 1 && prevDayClasses[0].className === cls.className) {
-                                                        // 이전 요일과 현재 요일의 rowSpan이 같은지 확인
-                                                        const prevRowSpan = getConsecutiveSpan(prevDayClasses[0], prevDay, periodIndex, currentPeriods, filteredClasses, viewType);
-                                                        const currentRowSpan = getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType);
+                                                        // 이전 요일에 같은 수업이 있고, 단일 수업이면 (병합 가능한 조건)
+                                                        if (prevDayClasses.length === 1 && prevDayClasses[0].className === cls.className) {
+                                                            // 이전 요일과 현재 요일의 rowSpan이 같은지 확인
+                                                            const prevRowSpan = getConsecutiveSpan(prevDayClasses[0], prevDay, periodIndex, currentPeriods, filteredClasses, viewType);
+                                                            const currentRowSpan = getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType);
 
-                                                        if (prevRowSpan === currentRowSpan) {
-                                                            // 연속된 병합이므로 현재 셀은 스킵
-                                                            shouldSkipHorizontalMerge = true;
-                                                            break;
+                                                            if (prevRowSpan === currentRowSpan) {
+                                                                // 연속된 병합이므로 현재 셀은 스킵
+                                                                shouldSkipHorizontalMerge = true;
+                                                                break;
+                                                            } else {
+                                                                // rowSpan이 다르면 병합 불가, 체크 중단
+                                                                break;
+                                                            }
                                                         } else {
-                                                            // rowSpan이 다르면 병합 불가, 체크 중단
+                                                            // 다른 수업이거나 복수 수업이면 병합 불가, 체크 중단
                                                             break;
                                                         }
-                                                    } else {
-                                                        // 다른 수업이거나 복수 수업이면 병합 불가, 체크 중단
-                                                        break;
                                                     }
                                                 }
-                                            }
 
-                                            if (shouldSkipHorizontalMerge) {
-                                                dayIndex++;
-                                                continue;
-                                            }
+                                                if (shouldSkipHorizontalMerge) {
+                                                    dayIndex++;
+                                                    continue;
+                                                }
 
-                                            // 수직 병합 span 계산
-                                            const maxRowSpan = Math.max(1, ...cellClasses.map((cls: TimetableClass) =>
-                                                getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
-                                            ));
+                                                // 수직 병합 span 계산
+                                                const maxRowSpan = Math.max(1, ...cellClasses.map((cls: TimetableClass) =>
+                                                    getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
+                                                ));
 
-                                            // 수평 병합 (수요일 테이블에서는 비활성화)
-                                            let colSpan = 1;
-                                            const mergedDaysForCell: string[] = [day];  // 병합된 요일 목록
-                                            if (!isWednesdayTable && cellClasses.length === 1) {
-                                                const cls = cellClasses[0];
-                                                for (let nextIdx = dayIndex + 1; nextIdx < daysForResource.length; nextIdx++) {
-                                                    const nextDay = daysForResource[nextIdx];
-                                                    const nextDayClasses = getClassesForCell(filteredClasses, nextDay, period, resource, viewType);
+                                                // 수평 병합 (수요일 테이블에서는 비활성화)
+                                                let colSpan = 1;
+                                                const mergedDaysForCell: string[] = [day];  // 병합된 요일 목록
+                                                if (!isWednesdayTable && cellClasses.length === 1) {
+                                                    const cls = cellClasses[0];
+                                                    for (let nextIdx = dayIndex + 1; nextIdx < daysForResource.length; nextIdx++) {
+                                                        const nextDay = daysForResource[nextIdx];
+                                                        const nextDayClasses = getClassesForCell(filteredClasses, nextDay, period, resource, viewType);
 
-                                                    if (nextDayClasses.length === 1 && nextDayClasses[0].className === cls.className) {
-                                                        const nextRowSpan = getConsecutiveSpan(nextDayClasses[0], nextDay, periodIndex, currentPeriods, filteredClasses, viewType);
-                                                        if (nextRowSpan === maxRowSpan) {
-                                                            colSpan++;
-                                                            mergedDaysForCell.push(nextDay);  // 병합된 요일 추가
+                                                        if (nextDayClasses.length === 1 && nextDayClasses[0].className === cls.className) {
+                                                            const nextRowSpan = getConsecutiveSpan(nextDayClasses[0], nextDay, periodIndex, currentPeriods, filteredClasses, viewType);
+                                                            if (nextRowSpan === maxRowSpan) {
+                                                                colSpan++;
+                                                                mergedDaysForCell.push(nextDay);  // 병합된 요일 추가
+                                                            } else {
+                                                                break;
+                                                            }
                                                         } else {
                                                             break;
                                                         }
-                                                    } else {
-                                                        break;
                                                     }
                                                 }
+
+                                                const baseWidthStyle = colSpan > 1 ? getColumnWidthStyle(colSpan) : getCellWidthStyle();
+                                                const cellHeight = getRowHeight() * maxRowSpan;
+                                                const cellStyle = { ...baseWidthStyle, height: `${cellHeight}px` };
+
+                                                // 빈 셀 여부 확인 (수업이 없는 교시)
+                                                const isEmpty = cellClasses.length === 0;
+
+                                                // 마지막 요일인지 확인 (강사 간 세로 구분선용)
+                                                const isLastDayForResource = (dayIndex + colSpan - 1) === daysForResource.length - 1;
+                                                const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-gray-400' : '';
+
+                                                cells.push(
+                                                    <td
+                                                        key={`${resource}-${day}-${period}`}
+                                                        className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                        style={cellStyle}
+                                                        rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
+                                                        colSpan={colSpan > 1 ? colSpan : undefined}
+                                                    >
+                                                        {isEmpty && showEmptyRooms ? (
+                                                            <div className="text-xxs text-gray-500 text-center py-1">
+                                                                {viewType === 'room' ? resource : '빈 강의실'}
+                                                            </div>
+                                                        ) : (
+                                                            cellClasses.map((cls: TimetableClass) => (
+                                                                <ClassCard
+                                                                    key={cls.id}
+                                                                    cls={cls}
+                                                                    span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
+                                                                    searchQuery={searchQuery}
+                                                                    showStudents={showStudents}
+                                                                    showClassName={showClassName}
+                                                                    showSchool={showSchool}
+                                                                    showGrade={showGrade}
+                                                                    canEdit={canEdit}
+                                                                    dragOverClassId={dragOverClassId}
+                                                                    onClick={onClassClick}
+                                                                    onDragStart={onDragStart}
+                                                                    onDragOver={onDragOver}
+                                                                    onDragLeave={onDragLeave}
+                                                                    onDrop={onDrop}
+                                                                    studentMap={studentMap}
+                                                                    classKeywords={classKeywords}
+                                                                    onStudentClick={onStudentClick}
+                                                                    currentDay={colSpan === 1 ? day : undefined}
+                                                                    mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
+                                                                />
+                                                            ))
+                                                        )}
+                                                    </td>
+                                                );
+
+                                                dayIndex += colSpan;
                                             }
 
-                                            const baseWidthStyle = colSpan > 1 ? getColumnWidthStyle(colSpan) : getCellWidthStyle();
-                                            const cellHeight = getRowHeight() * maxRowSpan;
-                                            const cellStyle = { ...baseWidthStyle, height: `${cellHeight}px` };
-
-                                            // 빈 셀 여부 확인 (수업이 없는 교시)
-                                            const isEmpty = cellClasses.length === 0;
-
-                                            // 마지막 요일인지 확인 (강사 간 세로 구분선용)
-                                            const isLastDayForResource = (dayIndex + colSpan - 1) === daysForResource.length - 1;
-                                            const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-gray-400' : '';
-
-                                            cells.push(
-                                                <td
-                                                    key={`${resource}-${day}-${period}`}
-                                                    className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
-                                                    style={cellStyle}
-                                                    rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
-                                                    colSpan={colSpan > 1 ? colSpan : undefined}
-                                                >
-                                                    {isEmpty && showEmptyRooms ? (
-                                                        <div className="text-xxs text-gray-500 text-center py-1">
-                                                            {viewType === 'room' ? resource : '빈 강의실'}
-                                                        </div>
-                                                    ) : (
-                                                        cellClasses.map((cls: TimetableClass) => (
-                                                            <ClassCard
-                                                                key={cls.id}
-                                                                cls={cls}
-                                                                span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
-                                                                searchQuery={searchQuery}
-                                                                showStudents={showStudents}
-                                                                showClassName={showClassName}
-                                                                showSchool={showSchool}
-                                                                showGrade={showGrade}
-                                                                canEdit={canEdit}
-                                                                dragOverClassId={dragOverClassId}
-                                                                onClick={onClassClick}
-                                                                onDragStart={onDragStart}
-                                                                onDragOver={onDragOver}
-                                                                onDragLeave={onDragLeave}
-                                                                onDrop={onDrop}
-                                                                studentMap={studentMap}
-                                                                classKeywords={classKeywords}
-                                                                onStudentClick={onStudentClick}
-                                                                currentDay={colSpan === 1 ? day : undefined}
-                                                                mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
-                                                            />
-                                                        ))
-                                                    )}
-                                                </td>
-                                            );
-
-                                            dayIndex += colSpan;
-                                        }
-
-                                        return cells;
-                                    })}
-                                </tr>
+                                            return cells;
+                                        })}
+                                    </tr>
                                 );
                             })}
                         </tbody>
@@ -573,9 +579,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         minWidth: '90px',
                                         backgroundColor: dayColors.light === 'bg-blue-50' ? '#eff6ff' :
                                             dayColors.light === 'bg-amber-50' ? '#fffbeb' :
-                                            dayColors.light === 'bg-orange-50' ? '#fff7ed' :
-                                            dayColors.light === 'bg-green-50' ? '#f0fdf4' :
-                                            dayColors.light === 'bg-gray-50' ? '#f9fafb' : '#f3f4f6'
+                                                dayColors.light === 'bg-orange-50' ? '#fff7ed' :
+                                                    dayColors.light === 'bg-green-50' ? '#f0fdf4' :
+                                                        dayColors.light === 'bg-gray-50' ? '#f9fafb' : '#f3f4f6'
                                     }}
                                 >
                                     교시
@@ -585,15 +591,15 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     const bgColor = teacherData?.bgColor || '#3b82f6';
                                     const textColor = teacherData?.textColor || '#ffffff';
                                     const isLast = idx === resources.length - 1;
-                                    // 강사별 구분만 굵은선
-                                    const borderRightClass = isLast ? 'border-r-2 border-r-gray-400' : '';
+                                    // 모든 선생님 사이에 세로 구분선 추가
+                                    const borderRightClass = isLast ? 'border-r-2 border-r-gray-400' : 'border-r-2 border-r-gray-300';
 
                                     return (
                                         <th
                                             key={resource}
                                             className={`p-1.5 text-xs font-bold truncate ${borderRightClass}`}
                                             style={{
-                                                ...getCellWidthStyle(),
+                                                ...getDayBasedCellWidthStyle(),
                                                 backgroundColor: bgColor,
                                                 color: textColor
                                             }}
@@ -654,14 +660,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             ));
 
                                             const cellHeight = getRowHeight() * maxRowSpan;
-                                            const cellStyle = { ...getCellWidthStyle(), height: `${cellHeight}px` };
+                                            const cellStyle = { ...getDayBasedCellWidthStyle(), height: `${cellHeight}px` };
 
                                             // 빈 셀 여부 확인 (수업이 없는 교시)
                                             const isEmpty = cellClasses.length === 0;
 
-                                            // 강사 간 세로 구분선
+                                            // 모든 선생님 사이에 세로 구분선 추가
                                             const isLastResource = resourceIdx === resources.length - 1;
-                                            const borderRightClass = isLastResource ? 'border-r-2 border-r-gray-400' : '';
+                                            const borderRightClass = isLastResource ? 'border-r-2 border-r-gray-400' : 'border-r-2 border-r-gray-300';
 
                                             return (
                                                 <td
