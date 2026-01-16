@@ -208,11 +208,15 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       schedule.push(`${day} ${periodId}`);
     });
 
-    // 빈 문자열인 slotTeachers 및 slotRooms 항목 제거
+    // 빈 문자열 및 숨김 강사(LAB 등)인 slotTeachers 항목 제거
     const filteredSlotTeachers: Record<string, string> = {};
     Object.entries(slotTeachers).forEach(([key, value]) => {
       if (value && value.trim()) {
-        filteredSlotTeachers[key] = value.trim();
+        // 숨김 강사인 경우 제외
+        const teacherInfo = teachersData?.find(t => t.name === value.trim());
+        if (!teacherInfo?.isHidden) {
+          filteredSlotTeachers[key] = value.trim();
+        }
       }
     });
 
@@ -364,7 +368,10 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                       const key = `${day}-${periodId}`;
                       const isSelected = selectedSlots.has(key);
                       const slotTeacher = slotTeachers[key];
-                      const displayTeacher = slotTeacher || teacher;
+                      // 숨김 강사인 경우 담임으로 대체 (스케줄 그리드 표시용)
+                      const slotTeacherInfo = slotTeacher ? teachersData?.find(t => t.name === slotTeacher) : null;
+                      const isSlotTeacherHidden = slotTeacherInfo?.isHidden;
+                      const displayTeacher = (slotTeacher && !isSlotTeacherHidden) ? slotTeacher : teacher;
                       const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
 
                       return (
@@ -381,7 +388,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                             color: colors.textColor
                           } : undefined}
                         >
-                          {isSelected ? (slotTeacher || teacher || '✓') : ''}
+                          {isSelected ? (displayTeacher || '✓') : ''}
                         </button>
                       );
                     })}
