@@ -1,8 +1,8 @@
 // hooks/useFirebaseQueries.ts - React Query hooks for Firebase data
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, orderBy, query, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, doc, getDoc, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { Department, Teacher, Holiday, ClassKeywordColor, SystemConfig } from '../types';
+import { Department, Teacher, Holiday, ClassKeywordColor, SystemConfig, StaffMember } from '../types';
 import { departmentConverter } from '../converters';
 
 // 부서목록 - 30분 캐시 (거의 변경 안됨)
@@ -28,9 +28,29 @@ export const useTeachers = (enabled: boolean = true) => {
     return useQuery({
         queryKey: ['teachers'],
         queryFn: async () => {
-            const snapshot = await getDocs(collection(db, '강사목록'));
+            // Read from staff collection where role = 'teacher'
+            const q = query(
+                collection(db, 'staff'),
+                where('role', '==', 'teacher')
+            );
+            const snapshot = await getDocs(q);
+
+            // Map StaffMember back to Teacher format for backward compatibility
             return snapshot.docs
-                .map(d => ({ id: d.id, ...d.data() } as Teacher))
+                .map(d => {
+                    const staff = d.data() as StaffMember;
+                    return {
+                        id: d.id,
+                        name: staff.name,
+                        subjects: staff.subjects,
+                        isHidden: staff.isHiddenInTimetable || false,
+                        isNative: staff.isNative || false,
+                        bgColor: staff.bgColor,
+                        textColor: staff.textColor,
+                        order: staff.timetableOrder,
+                        defaultRoom: staff.defaultRoom,
+                    } as Teacher;
+                })
                 .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
         },
         staleTime: 1000 * 60 * 30, // 30분

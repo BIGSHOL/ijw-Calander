@@ -9,7 +9,7 @@ import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, 
 
 import { Holiday } from '../../types';
 import MyEventsModal from '../Calendar/MyEventsModal';
-import { TeachersTab, ClassesTab, HolidaysTab, DepartmentsTab, GanttCategoriesTab, MigrationTab } from './';
+import { TeachersTab, HolidaysTab, DepartmentsTab, GanttCategoriesTab, MigrationTab } from './';
 import HashtagsTab from './HashtagsTab';
 import { useTabPermissions } from '../../hooks/useTabPermissions';
 import SalarySettingsTab from '../Attendance/components/SalarySettingsTab';
@@ -648,11 +648,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           강사 관리
                         </button>
                       )}
-                      {(isMaster || canViewClasses) && (
-                        <button onClick={() => setActiveTab('classes')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'classes' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          수업 관리
-                        </button>
-                      )}
                     </>
                   )}
                   {mainTab === 'permissions' && (
@@ -750,20 +745,65 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
 
 
-            {/* TEACHERS TAB */}
+            {/* TEACHERS TAB - 직원 관리 안내 */}
             {activeTab === 'teachers' && (isMaster || canViewTeachers) && (
-              <TeachersTab
-                teachers={teachers}
-                isMaster={isMaster}
-                canEdit={isMaster || hasPermission('system.teachers.edit')}
-                canViewMath={isMaster || hasPermission('timetable.math.view')}
-                canViewEnglish={isMaster || hasPermission('timetable.english.view')}
-              />
+              <div className="max-w-2xl mx-auto">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center shrink-0">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-blue-900 mb-2">강사 관리가 이동되었습니다</h3>
+                      <p className="text-sm text-blue-800 mb-4">
+                        강사 관리 기능이 <strong>직원 관리 탭</strong>으로 통합되었습니다.
+                        이제 강사, 관리자, 직원을 한 곳에서 통합 관리할 수 있습니다.
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-blue-700">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span>상단 메인 탭에서 <strong>👔 직원 관리</strong> 탭을 확인하세요</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 기존 강사 목록 표시 (읽기 전용) */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-gray-900">기존 강사 목록 (읽기 전용)</h3>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      총 {teachers.length}명
+                    </span>
+                  </div>
+                  <TeachersTab
+                    teachers={teachers}
+                    isMaster={isMaster}
+                    canEdit={false}
+                    canViewMath={isMaster || hasPermission('timetable.math.view')}
+                    canViewEnglish={isMaster || hasPermission('timetable.english.view')}
+                  />
+                </div>
+              </div>
             )}
 
-            {/* CLASSES MANAGEMENT TAB - 수업 키워드 색상 관리 */}
+            {/* CLASSES MANAGEMENT TAB - 수업 관리 탭으로 이동됨 */}
             {activeTab === 'classes' && (isMaster || canViewClasses) && (
-              <ClassesTab isMaster={isMaster} canEdit={isMaster || hasPermission('system.classes.edit')} />
+              <div className="max-w-2xl mx-auto mt-20 text-center">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-8">
+                  <div className="text-6xl mb-4">📚</div>
+                  <h3 className="text-xl font-bold text-gray-700 mb-2">수업 설정이 이동되었습니다</h3>
+                  <p className="text-gray-600 mb-4">
+                    수업 관련 설정은 이제 <span className="font-bold text-blue-600">수업 관리</span> 탭에서 관리할 수 있습니다.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    수업 관리 탭 → 우측 상단 <span className="font-bold">⚙️ 설정</span> 버튼을 클릭하세요.
+                  </p>
+                </div>
+              </div>
             )}
 
 

@@ -11,8 +11,8 @@ interface ViewSettingsModalProps {
     // 표시 설정
     columnWidth: 'narrow' | 'normal' | 'wide';
     setColumnWidth: (width: 'narrow' | 'normal' | 'wide') => void;
-    rowHeight: 'short' | 'normal' | 'tall' | 'very-tall';
-    setRowHeight: (height: 'short' | 'normal' | 'tall' | 'very-tall') => void;
+    rowHeight: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';
+    setRowHeight: (height: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall') => void;
     fontSize: 'small' | 'normal' | 'large' | 'very-large';
     setFontSize: (size: 'small' | 'normal' | 'large' | 'very-large') => void;
     showClassName: boolean;
@@ -173,13 +173,13 @@ const ViewSettingsModal: React.FC<ViewSettingsModalProps> = ({
                         <div>
                             <div className="text-xs font-bold text-gray-500 mb-2">세로 높이</div>
                             <div className="flex gap-1">
-                                {(['short', 'normal', 'tall', 'very-tall'] as const).map(h => (
+                                {(['compact', 'short', 'normal', 'tall', 'very-tall'] as const).map(h => (
                                     <button
                                         key={h}
                                         onClick={() => setRowHeight(h)}
                                         className={`flex-1 py-1.5 text-xxs rounded border ${rowHeight === h ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500 hover:bg-gray-50'}`}
                                     >
-                                        {h === 'short' ? '좁게' : h === 'normal' ? '보통' : h === 'tall' ? '넓게' : '아주넓게'}
+                                        {h === 'compact' ? '컴팩트' : h === 'short' ? '좁게' : h === 'normal' ? '보통' : h === 'tall' ? '넓게' : '아주넓게'}
                                     </button>
                                 ))}
                             </div>

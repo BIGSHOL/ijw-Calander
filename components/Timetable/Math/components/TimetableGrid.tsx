@@ -17,7 +17,7 @@ interface TimetableGridProps {
     canEdit: boolean;
     // View Settings
     columnWidth: 'narrow' | 'normal' | 'wide';
-    rowHeight: 'short' | 'normal' | 'tall' | 'very-tall';
+    rowHeight: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';
     fontSize: 'small' | 'normal' | 'large' | 'very-large';
     showClassName: boolean;
     showSchool: boolean;
@@ -90,12 +90,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 
-    // 교시당 기본 높이 계산 - 학생 8명 + 대기 3명 + 퇴원 3명을 수용하는 고정 높이
+    // 교시당 기본 높이 계산
     const getRowHeight = () => {
-        // 수업명(24px) + 재원생 8명(140px) + 대기 3명(52px) + 퇴원 3명(52px) = 약 268px
-        // rowHeight 설정에 따라 조절
-        const baseHeight = rowHeight === 'short' ? 220 : rowHeight === 'tall' ? 300 : rowHeight === 'very-tall' ? 340 : 268;
-        return baseHeight;
+        // rowHeight 설정에 따라 조절 - 더 극적인 차이로 변경
+        if (rowHeight === 'compact') return 80;     // 컴팩트 (수업명만)
+        if (rowHeight === 'short') return 120;      // 좁게 (수업명 + 학생 2~3명)
+        if (rowHeight === 'tall') return 280;       // 큰 높이
+        if (rowHeight === 'very-tall') return 340;  // 아주 큰 높이
+        return 200; // normal - 기본값
     };
 
     // 수요일만
@@ -485,6 +487,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     onStudentClick={onStudentClick}
                                                                     currentDay={colSpan === 1 ? day : undefined}
                                                                     mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
+                                                                    fontSize={fontSize}
                                                                 />
                                                             ))
                                                         )}
@@ -702,6 +705,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 classKeywords={classKeywords}
                                                                 onStudentClick={onStudentClick}
                                                                 currentDay={day}
+                                                                fontSize={fontSize}
                                                             />
                                                         ))
                                                     )}

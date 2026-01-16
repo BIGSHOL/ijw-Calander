@@ -10,6 +10,7 @@ import { db } from '../../firebaseConfig';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { listenerRegistry } from '../../utils/firebaseCleanup';
 import SeminarPanel from './SeminarPanel';
+import HashtagCombobox from './HashtagCombobox';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -88,7 +89,6 @@ const EventModal: React.FC<EventModalProps> = ({
   const [availableTags, setAvailableTags] = useState<EventTag[]>(DEFAULT_EVENT_TAGS);
   const [seminarTags, setSeminarTags] = useState<string[]>(['seminar', 'workshop', 'meeting']);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [isHashtagDropdownOpen, setIsHashtagDropdownOpen] = useState(false);
 
   // Seminar Data State
   const [seminarData, setSeminarData] = useState<SeminarEventData>({});
@@ -880,60 +880,17 @@ const EventModal: React.FC<EventModalProps> = ({
               </div>
             )}
 
-            {/* Hashtags Dropdown with Checkboxes */}
+            {/* Hashtags Combobox */}
             <div className="flex-1 min-w-[200px]">
               <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2 flex items-center gap-1">
                 <Hash size={14} className="text-[#fdb813]" /> 해시태그
               </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  disabled={isViewMode || !canEditCurrent}
-                  onClick={() => setIsHashtagDropdownOpen(!isHashtagDropdownOpen)}
-                  className={`w-full appearance-none bg-white border border-gray-300 text-gray-700 text-sm font-bold py-2.5 px-4 rounded-xl outline-none focus:border-[#fdb813] cursor-pointer focus:ring-2 focus:ring-[#fdb813] flex items-center justify-between ${
-                    isViewMode || !canEditCurrent ? 'bg-gray-100 cursor-not-allowed' : ''
-                  }`}
-                >
-                  <span className="truncate">
-                    {selectedTags.length > 0
-                      ? `${availableTags.find(t => t.id === selectedTags[0])?.name || ''}${selectedTags.length > 1 ? ` 외 ${selectedTags.length - 1}개` : ''}`
-                      : '해시태그 선택'
-                    }
-                  </span>
-                  <ChevronDown size={16} className={`transition-transform ${isHashtagDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isHashtagDropdownOpen && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-                    {availableTags.map((tag) => {
-                      const isSelected = selectedTags.includes(tag.id);
-                      return (
-                        <label
-                          key={tag.id}
-                          className={`flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-pointer ${
-                            isSelected ? 'bg-blue-50' : ''
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedTags([...selectedTags, tag.id]);
-                              } else {
-                                setSelectedTags(selectedTags.filter(id => id !== tag.id));
-                              }
-                            }}
-                            className="w-4 h-4 text-[#fdb813] border-gray-300 rounded focus:ring-[#fdb813]"
-                          />
-                          <span className="text-sm font-medium text-gray-700">
-                            # {tag.name}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <HashtagCombobox
+                availableTags={availableTags}
+                selectedTags={selectedTags}
+                onTagsChange={setSelectedTags}
+                disabled={isViewMode || !canEditCurrent}
+              />
               {selectedTags.some(tagId => seminarTags.includes(tagId)) && (
                 <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                   <Users size={10} />
