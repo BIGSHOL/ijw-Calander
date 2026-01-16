@@ -73,29 +73,29 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const sidebarContent = (
     <>
-      {/* Sidebar Header */}
-      <div className="bg-[#081429] text-white border-b border-white/10 p-4 flex items-center justify-between">
+      {/* Sidebar Header - 컴팩트 */}
+      <div className="bg-[#081429] text-white border-b border-white/10 px-2 py-2 flex items-center justify-between">
         {!isCollapsed && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="w-10 h-10 rounded-md object-contain" />
+              <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded object-contain" />
             ) : (
-              <div className="w-10 h-10 bg-[#fdb813] rounded-md flex items-center justify-center font-bold text-[#081429] text-xl">
+              <div className="w-8 h-8 bg-[#fdb813] rounded flex items-center justify-center font-bold text-[#081429] text-sm">
                 IW
               </div>
             )}
             <div>
-              <h1 className="text-sm font-bold">InjaeWon</h1>
-              <p className="text-xs text-gray-400">Calendar</p>
+              <h1 className="text-xs font-bold leading-tight">InjaeWon</h1>
+              <p className="text-[10px] text-gray-400 leading-tight">Calendar</p>
             </div>
           </div>
         )}
         {isCollapsed && (
           <div className="w-full flex justify-center">
             {logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="w-10 h-10 rounded-md object-contain" />
+              <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded object-contain" />
             ) : (
-              <div className="w-10 h-10 bg-[#fdb813] rounded-md flex items-center justify-center font-bold text-[#081429] text-xl">
+              <div className="w-8 h-8 bg-[#fdb813] rounded flex items-center justify-center font-bold text-[#081429] text-sm">
                 IW
               </div>
             )}
@@ -104,17 +104,17 @@ const Sidebar: React.FC<SidebarProps> = ({
         {!isMobile && (
           <button
             onClick={toggleCollapse}
-            className="p-1.5 hover:bg-white/10 rounded transition-colors"
+            className="p-1 hover:bg-white/10 rounded transition-colors"
             aria-label={isCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
           >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
         )}
       </div>
 
-      {/* Navigation Groups */}
+      {/* Navigation Groups - 컴팩트 */}
       <nav
-        className="flex-1 overflow-y-auto p-3"
+        className="flex-1 overflow-y-auto p-2"
         role="navigation"
         aria-label="주 메뉴 탐색"
       >
@@ -124,20 +124,20 @@ const Sidebar: React.FC<SidebarProps> = ({
           );
 
           return (
-            <div key={group.id} className="mb-6">
+            <div key={group.id} className="mb-4">
               {/* Group Title */}
               {!isCollapsed && (
-                <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <div className="px-2 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                   {group.label}
                 </div>
               )}
 
               {isCollapsed && (
-                <div className="w-full h-px bg-gray-200 mb-2" aria-hidden="true" />
+                <div className="w-full h-px bg-gray-200 mb-1" aria-hidden="true" />
               )}
 
               {/* Group Items */}
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {accessibleTabsInGroup.map(tab => {
                   const meta = TAB_META[tab];
                   const isActive = currentTab === tab;
@@ -146,7 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       key={tab}
                       onClick={() => onTabSelect(tab)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-all ${isActive
                           ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                           : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                         } ${isCollapsed ? 'justify-center' : ''}`}
@@ -154,7 +154,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       aria-current={isActive ? 'page' : undefined}
                       title={isCollapsed ? meta.label : undefined}
                     >
-                      <span className="text-lg flex-shrink-0" aria-hidden="true">
+                      <span className="text-sm flex-shrink-0" aria-hidden="true">
                         {meta.icon}
                       </span>
                       {!isCollapsed && <span>{meta.label}</span>}
@@ -169,8 +169,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Footer - Optional */}
       {!isCollapsed && (
-        <div className="border-t border-gray-200 p-4">
-          <p className="text-xs text-gray-500 text-center">
+        <div className="border-t border-gray-200 p-2">
+          <p className="text-[10px] text-gray-400 text-center">
             © 2026 InjaeWon
           </p>
         </div>
@@ -182,9 +182,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     <>
       <MobileMenuButton />
 
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - 컴팩트 너비 */}
       <aside
-        className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 sticky top-0 h-screen ${isCollapsed ? 'w-[72px]' : 'w-[280px]'
+        className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 sticky top-0 h-screen ${isCollapsed ? 'w-[56px]' : 'w-[160px]'
           }`}
         aria-label="사이드바 메뉴"
       >
@@ -202,7 +202,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Mobile Sidebar */}
       <aside
-        className={`md:hidden fixed left-0 top-0 bottom-0 w-[280px] bg-white z-40 flex flex-col transform transition-transform duration-300 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`md:hidden fixed left-0 top-0 bottom-0 w-[200px] bg-white z-40 flex flex-col transform transition-transform duration-300 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         aria-label="모바일 사이드바 메뉴"
       >

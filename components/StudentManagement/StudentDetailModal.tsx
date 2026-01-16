@@ -1,0 +1,40 @@
+import React from 'react';
+import { X } from 'lucide-react';
+import { UnifiedStudent } from '../../types';
+import StudentDetail from './StudentDetail';
+
+interface StudentDetailModalProps {
+  student: UnifiedStudent;
+  onClose: () => void;
+}
+
+const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClose }) => {
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl w-full max-w-lg h-[600px] flex flex-col overflow-hidden relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 닫기 버튼 */}
+        <div className="absolute top-2 right-2 z-10">
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* StudentDetail 컴포넌트 */}
+        <div className="flex-1 overflow-hidden">
+          <StudentDetail student={student} compact />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default StudentDetailModal;

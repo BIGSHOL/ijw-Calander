@@ -21,6 +21,7 @@ interface ClassCardProps {
     onDrop: (e: React.DragEvent, toClassId: string) => void;
     studentMap: Record<string, any>;
     classKeywords?: ClassKeywordColor[];
+    onStudentClick?: (studentId: string) => void;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -39,7 +40,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onDragLeave,
     onDrop,
     studentMap,
-    classKeywords = []
+    classKeywords = [],
+    onStudentClick
 }) => {
     const theme = getSubjectTheme(cls.subject);
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
@@ -205,8 +207,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {/* Student List - 3 Sections */}
             {showStudents && (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* 재원생 Section */}
-                    <div className="flex-1 p-1 overflow-y-auto border-b border-gray-200">
+                    {/* 재원생 Section - flex-1로 남은 공간 채움, 8명 이상 시 스크롤 */}
+                    <div className="flex-1 p-1 border-b border-gray-200 overflow-y-auto" style={{ minHeight: '140px' }}>
                         <div className="text-micro font-bold text-indigo-600 mb-0.5 px-1">재원생 ({activeStudents.length}명)</div>
                         <ul className="flex flex-col gap-0.5">
                             {activeStudents.map(s => {
@@ -223,8 +225,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         key={s.id}
                                         draggable={canEdit}
                                         onDragStart={(e) => canEdit && onDragStart(e, s.id, cls.id)}
+                                        onClick={(e) => {
+                                            if (onStudentClick && !canEdit) {
+                                                e.stopPropagation();
+                                                onStudentClick(s.id);
+                                            }
+                                        }}
                                         className={`py-0.5 px-1 rounded text-center text-xxs transition-colors truncate flex items-center justify-between group
-                                        ${canEdit ? 'cursor-grab' : ''}
+                                        ${canEdit ? 'cursor-grab' : onStudentClick ? 'cursor-pointer' : ''}
                                         ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : `hover:bg-white/80 ${theme.text}`}`}
                                     >
                                         <span className="truncate flex-1">{displayText}</span>
@@ -235,50 +243,47 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         </ul>
                     </div>
 
-                    {/* 대기생 Section */}
-                    <div className="px-1 py-0.5 bg-violet-50 border-b border-violet-200">
-                        <div className="text-micro font-bold text-violet-600">대기 ({holdStudents.length}명)</div>
-                        {holdStudents.length > 0 ? (
-                            <div className="flex flex-wrap gap-0.5 mt-0.5">
-                                {holdStudents.slice(0, 3).map(s => (
-                                    <span key={s.id} className="text-micro bg-violet-100 text-violet-800 px-1 rounded truncate max-w-[60px]" title={s.name}>
-                                        {s.name}
-                                    </span>
-                                ))}
-                                {holdStudents.length > 3 && <span className="text-micro text-violet-600">+{holdStudents.length - 3}</span>}
-                            </div>
-                        ) : (
-                            <span className="text-micro text-violet-300">-</span>
-                        )}
-                    </div>
+                    {/* 하단 고정 영역: 대기 + 퇴원 + 총인원 */}
+                    <div className="flex-shrink-0">
+                        {/* 대기생 Section - 3명 고정 높이, 초과 시 스크롤 */}
+                        <div className="px-1 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '52px', maxHeight: '52px' }}>
+                            <div className="text-micro font-bold text-violet-600">대기 ({holdStudents.length}명)</div>
+                            {holdStudents.length > 0 ? (
+                                <ul className="flex flex-col gap-0.5 mt-0.5">
+                                    {holdStudents.map(s => (
+                                        <li key={s.id} className="text-micro bg-violet-100 text-violet-800 px-1 rounded truncate" title={s.name}>
+                                            {s.name}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <span className="text-micro text-violet-300">-</span>
+                            )}
+                        </div>
 
-                    {/* 퇴원생 Section */}
-                    <div className="px-1 py-0.5 bg-gray-100">
-                        <div className="text-micro font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
-                        {withdrawnStudents.length > 0 ? (
-                            <div className="flex flex-wrap gap-0.5 mt-0.5">
-                                {withdrawnStudents.slice(0, 3).map(s => (
-                                    <span
-                                        key={s.id}
-                                        className="text-micro bg-black text-white px-1 rounded truncate max-w-[60px]"
-                                        title={s.withdrawalDate ? `${s.name} (퇴원: ${s.withdrawalDate})` : s.name}
-                                    >
-                                        {s.name}
-                                    </span>
-                                ))}
-                                {withdrawnStudents.length > 3 && <span className="text-micro text-gray-500">+{withdrawnStudents.length - 3}</span>}
-                            </div>
-                        ) : (
-                            <span className="text-micro text-gray-400">-</span>
-                        )}
+                        {/* 퇴원생 Section - 3명 고정 높이, 초과 시 스크롤 */}
+                        <div className="px-1 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '52px', maxHeight: '52px' }}>
+                            <div className="text-micro font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
+                            {withdrawnStudents.length > 0 ? (
+                                <ul className="flex flex-col gap-0.5 mt-0.5">
+                                    {withdrawnStudents.map(s => (
+                                        <li
+                                            key={s.id}
+                                            className="text-micro bg-black text-white px-1 rounded truncate"
+                                            title={s.withdrawalDate ? `${s.name} (퇴원: ${s.withdrawalDate})` : s.name}
+                                        >
+                                            {s.name}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <span className="text-micro text-gray-400">-</span>
+                            )}
+                        </div>
+
                     </div>
                 </div>
             )}
-
-            {/* Footer with Student Count (재원생 수만 표시) */}
-            <div className="text-center py-1 font-bold bg-gray-50 text-micro text-gray-700 mt-auto">
-                총 {activeStudents.length}명
-            </div>
         </div>
     );
 };

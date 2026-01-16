@@ -1,16 +1,16 @@
 /**
- * useClassStudents - Centralized hook for fetching class student data
+ * useMathClassStudents - Centralized hook for fetching math class student data
  *
  * PURPOSE: Fetch student data from students/enrollments structure
- * instead of the legacy 수업목록 collection.
+ * instead of the legacy "이름_학교_학년" format in classes collection.
  *
  * DATA FLOW:
- * 1. Query enrollments collection group for subject='english'
+ * 1. Query enrollments collection group for subject='math'
  * 2. Get student IDs from enrollment document paths
  * 3. Map student data from studentMap (unified student DB)
  *
  * USAGE:
- * const { classDataMap, isLoading } = useClassStudents(classNames, isSimulationMode, studentMap);
+ * const { classDataMap, isLoading } = useMathClassStudents(classNames, studentMap);
  * // classDataMap[className] = { studentList: [...], studentIds: [...] }
  */
 
@@ -24,9 +24,8 @@ export interface ClassStudentData {
     studentIds: string[];
 }
 
-export const useClassStudents = (
+export const useMathClassStudents = (
     classNames: string[],
-    isSimulationMode: boolean = false,
     studentMap: Record<string, any> = {}
 ) => {
     const [classDataMap, setClassDataMap] = useState<Record<string, ClassStudentData>>({});
@@ -48,11 +47,11 @@ export const useClassStudents = (
             return;
         }
 
-        // Query enrollments collection group for english subject
+        // Query enrollments collection group for math subject
         // This gets students from students/{studentId}/enrollments
         const enrollmentsQuery = query(
             collectionGroup(db, 'enrollments'),
-            where('subject', '==', 'english')
+            where('subject', '==', 'math')
         );
 
         const unsub = onSnapshot(enrollmentsQuery, (snapshot) => {
@@ -77,12 +76,8 @@ export const useClassStudents = (
                 const studentId = doc.ref.parent.parent?.id;
                 if (!studentId) return;
 
-                // Skip if student is withdrawn or on hold (based on enrollment data)
-                if (data.withdrawalDate || data.onHold) return;
-
                 classStudentMap[className].add(studentId);
                 enrollmentDataMap[className][studentId] = {
-                    underline: data.underline,
                     enrollmentDate: data.enrollmentDate || data.startDate,
                     withdrawalDate: data.withdrawalDate,
                     onHold: data.onHold,
@@ -104,9 +99,6 @@ export const useClassStudents = (
                             return null;
                         }
 
-                        // Skip if student is not active
-                        if (baseStudent.status !== 'active') return null;
-
                         return {
                             id,
                             name: baseStudent.name || '',
@@ -114,7 +106,6 @@ export const useClassStudents = (
                             school: baseStudent.school || '',
                             grade: baseStudent.grade || '',
                             // Merge enrollment-specific data
-                            underline: enrollmentData.underline ?? baseStudent.underline ?? false,
                             enrollmentDate: enrollmentData.enrollmentDate,
                             withdrawalDate: enrollmentData.withdrawalDate,
                             onHold: enrollmentData.onHold,
@@ -135,7 +126,7 @@ export const useClassStudents = (
             setClassDataMap(result);
             setIsLoading(false);
         }, (error) => {
-            console.error('[useClassStudents] Error:', error);
+            console.error('[useMathClassStudents] Error:', error);
             setIsLoading(false);
         });
 
