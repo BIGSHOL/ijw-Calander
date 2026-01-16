@@ -364,11 +364,11 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
       <div className="bg-white border-b px-4 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-none">
             <Shield size={20} />
           </div>
           <div>
@@ -379,17 +379,17 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
 
         <div className="flex items-center gap-2">
           {/* Section Toggle */}
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
+          <div className="flex bg-gray-100 rounded-none p-0.5">
             <button
               onClick={() => setActiveSection('permissions')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${activeSection === 'permissions' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-3 py-1.5 text-xs font-bold rounded-none transition-colors ${activeSection === 'permissions' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
               <Shield size={14} className="inline mr-1" />
               권한
             </button>
             <button
               onClick={() => setActiveSection('tabs')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${activeSection === 'tabs' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`px-3 py-1.5 text-xs font-bold rounded-none transition-colors ${activeSection === 'tabs' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             >
               <Layout size={14} className="inline mr-1" />
               탭 접근
@@ -397,14 +397,14 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
           </div>
 
           {!canEdit && (
-            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold">읽기 전용</span>
+            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-none font-bold">읽기 전용</span>
           )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-4">
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="flex-1 overflow-auto">
+        <div className="bg-white min-h-full">
           {/* Role Headers */}
           <div className="sticky top-0 z-20 bg-gray-50 border-b">
             <div className="flex">
@@ -413,7 +413,7 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
               </div>
               {ROLES_TO_SHOW.map(role => (
                 <div key={role} className="flex-1 min-w-[80px] px-2 py-2 text-center border-r last:border-r-0">
-                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black ${getRoleBadgeStyle(role)}`}>
+                  <span className={`inline-block px-2 py-0.5 rounded-none text-[10px] font-black ${getRoleBadgeStyle(role)}`}>
                     {ROLE_LABELS[role]}
                   </span>
                 </div>
@@ -473,9 +473,9 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
                               <button
                                 onClick={() => handlePermissionChange(role, perm.id, !rolePermissions[role]?.[perm.id])}
                                 disabled={!canEdit}
-                                className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${rolePermissions[role]?.[perm.id]
-                                    ? 'bg-green-500 text-white'
-                                    : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
+                                className={`w-5 h-5 rounded-none flex items-center justify-center transition-colors ${rolePermissions[role]?.[perm.id]
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
                                   } ${!canEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                               >
                                 {rolePermissions[role]?.[perm.id] ? <Check size={12} /> : null}
@@ -505,9 +505,9 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
                       <button
                         onClick={() => handleTabToggle(role, tab.id, !tabPermissions[role]?.includes(tab.id))}
                         disabled={!canEdit}
-                        className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${tabPermissions[role]?.includes(tab.id)
-                            ? 'bg-indigo-500 text-white'
-                            : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
+                        className={`w-5 h-5 rounded-none flex items-center justify-center transition-colors ${tabPermissions[role]?.includes(tab.id)
+                          ? 'bg-indigo-500 text-white'
+                          : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
                           } ${!canEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                       >
                         {tabPermissions[role]?.includes(tab.id) ? <Check size={12} /> : null}
@@ -526,7 +526,7 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
         <div className="bg-white border-t px-4 py-3 flex justify-between items-center shrink-0">
           <button
             onClick={handleReset}
-            className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1 transition-colors"
+            className="px-3 py-1.5 text-xs font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-none flex items-center gap-1 transition-colors"
           >
             <RotateCcw size={12} /> 기본값 초기화
           </button>
@@ -537,9 +537,9 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
             <button
               onClick={handleSave}
               disabled={!hasChanges}
-              className={`px-4 py-1.5 text-xs font-bold rounded-lg flex items-center gap-1 transition-colors ${hasChanges
-                  ? 'bg-[#081429] text-white hover:bg-[#0a1a35]'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              className={`px-4 py-1.5 text-xs font-bold rounded-none flex items-center gap-1 transition-colors ${hasChanges
+                ? 'bg-[#081429] text-white hover:bg-[#0a1a35]'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
             >
               <Save size={12} /> 저장
