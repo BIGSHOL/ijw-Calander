@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { BookOpen, Search, Plus, Filter, Calculator, Settings } from 'lucide-react';
+import { BookOpen, Search, Plus, Filter, Calculator, Settings, Stethoscope } from 'lucide-react';
 import { useClasses, ClassInfo } from '../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import ClassList from './ClassList';
 import ClassDetailModal from './ClassDetailModal';
 import AddClassModal from './AddClassModal';
 import ClassSettingsModal from './ClassSettingsModal';
+import EnrollmentDiagnosticModal from './EnrollmentDiagnosticModal';
 
 export interface ClassFilters {
   subject: 'all' | 'math' | 'english';
@@ -36,6 +37,9 @@ const ClassManagementTab: React.FC = () => {
 
   // 수업 설정 모달
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // 진단 모달
+  const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
 
   // 데이터 조회 (subject 필터 적용)
   const subjectFilter = filters.subject === 'all' ? undefined : filters.subject;
@@ -170,8 +174,8 @@ const ClassManagementTab: React.FC = () => {
                     key={day}
                     onClick={toggleDay}
                     className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${isSelected
-                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
                       }`}
                   >
                     {day}
@@ -224,6 +228,16 @@ const ClassManagementTab: React.FC = () => {
             <span className="text-gray-400 text-xs">
               총 <span className="text-[#fdb813] font-bold">{filteredClasses.length}</span>개 수업
             </span>
+
+            {/* 진단 버튼 */}
+            <button
+              onClick={() => setShowDiagnosticModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-amber-500 text-white hover:bg-amber-600 transition-colors shadow-sm font-bold"
+              title="수업 매칭 진단"
+            >
+              <Stethoscope size={14} />
+              <span>진단</span>
+            </button>
 
             {/* 설정 버튼 */}
             <button
@@ -306,6 +320,13 @@ const ClassManagementTab: React.FC = () => {
           isOpen={showSettingsModal}
           onClose={() => setShowSettingsModal(false)}
           canEdit={true}
+        />
+      )}
+
+      {/* 진단 모달 */}
+      {showDiagnosticModal && (
+        <EnrollmentDiagnosticModal
+          onClose={() => setShowDiagnosticModal(false)}
         />
       )}
     </div>

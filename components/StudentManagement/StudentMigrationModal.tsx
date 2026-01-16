@@ -16,24 +16,6 @@ interface StudentMigrationModalProps {
   onClose: () => void;
 }
 
-// 영어 레벨 매핑
-const ENGLISH_LEVEL_MAP: Record<string, string> = {
-  'Dr. Phonics': 'DP',
-  'Dr.Phonics': 'DP',
-  "Pre Let's": 'PL',
-  'Ready To Talk': 'RTT',
-  "Let's Talk": 'LT',
-  'Ready To Speak': 'RTS',
-  "Let's Speak": 'LS',
-  "Let's Express": 'LE',
-  'Kopi Wang': 'KW',
-  'Pre Junior': 'PJ',
-  'Junior Plus': 'JP',
-  'Middle School English Course': 'MEC',
-  'PHONICS&ROOKIES': 'DP',
-  'ROOKIES&LEADERS': 'PL',
-};
-
 // Excel 데이터 타입
 interface ExcelStudentData {
   이름: string;
@@ -68,49 +50,6 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
   const [totalCount, setTotalCount] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // 영어 수업명 변환
-  const convertEnglishClass = (fullName: string): string => {
-    const match = fullName.match(/(\d+)([a-z]?)$/i);
-    const number = match ? match[1] : '';
-    const suffix = match ? match[2] : '';
-
-    for (const [levelName, abbr] of Object.entries(ENGLISH_LEVEL_MAP)) {
-      if (fullName.includes(levelName)) {
-        return `${abbr}${number}${suffix}`;
-      }
-    }
-    return fullName;
-  };
-
-  // 영어 수업 추출
-  const extractEnglishClasses = (수업?: string): string[] => {
-    if (!수업) return [];
-
-    const classNames: string[] = [];
-    const parts = 수업.split(',');
-
-    parts.forEach(part => {
-      const trimmed = part.trim();
-      const englishMatch = trimmed.match(/\[EiE\]\s*(.+)/);
-
-      if (englishMatch) {
-        let className = englishMatch[1].trim();
-
-        if (className.includes('교재')) {
-          const bookMatch = className.match(/교재\s+([A-Z&]+)/);
-          if (bookMatch) {
-            className = bookMatch[1];
-          }
-        }
-
-        const abbrClassName = convertEnglishClass(className);
-        classNames.push(abbrClassName);
-      }
-    });
-
-    return [...new Set(classNames)];
-  };
 
   // 1단계: 파일 업로드 핸들러
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,11 +152,15 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
       // 기존 학생 데이터 로드
       const studentsRef = collection(db, 'students');
       const existingSnapshot = await getDocs(studentsRef);
-      const existingStudentsMap = new Map<string, UnifiedStudent>();
+      const existingStudentsMap = new Map<string, any>();
 
-      existingSnapshot.forEach(doc => {
-        const student = doc.data() as UnifiedStudent;
-        existingStudentsMap.set(student.name, student);
+      existingSnapshot.forEach(docSnap => {
+        const student = docSnap.data() as UnifiedStudent;
+        // 이름으로 매핑하되, Firebase 문서 ID도 함께 저장
+        existingStudentsMap.set(student.name, {
+          ...student,
+          _firestoreDocId: docSnap.id  // Firebase 문서 ID 저장
+        });
       });
 
       // 데이터 변환 및 배치 저장
@@ -231,13 +174,13 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
         const batchData = rawData.slice(start, end);
 
         batchData.forEach(excelData => {
-          const existingStudent = existingStudentsMap.get(excelData.이름);
+          const existingStudent = existingStudentsMap.get(excelData.이름) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
           const now = new Date().toISOString();
 
-          // ID 생성
-          const id = existingStudent?.id ||
-                     excelData.원생고유번호 ||
-                     `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          // ID 생성: Firebase 문서 ID 우선 사용
+          const id = existingStudent?._firestoreDocId ||  // 기존 Firebase 문서 ID 사용
+            existingStudent?.id ||
+            `${excelData.이름}_${excelData.학교 || '미정'}_${excelData.학년 || '0'}`;  // 새 문서는 이름_학교_학년 형식
 
           // 주소 통합
           const address = [excelData.주소1, excelData.주소2]
@@ -269,9 +212,6 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             const day = excelData.입학일.substring(6, 8);
             enrollmentDate = `${year}-${month}-${day}`;
           }
-
-          // 영어 수업 추출
-          const englishClasses = extractEnglishClasses(excelData.수업);
 
           // UnifiedStudent 객체 생성 (완전한 매핑)
           const student: any = {
@@ -309,8 +249,8 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             // 수납 정보
             cashReceiptNumber: excelData.현금영수증발급번호 || existingStudent?.cashReceiptNumber,
             cashReceiptType: excelData.현금영수증발급구분 === '소득공제용' ? 'income' :
-                            excelData.현금영수증발급구분 === '지출증빙용' ? 'expense' :
-                            existingStudent?.cashReceiptType,
+              excelData.현금영수증발급구분 === '지출증빙용' ? 'expense' :
+                existingStudent?.cashReceiptType,
             billingDay: excelData.수납기준청구일 ? parseInt(excelData.수납기준청구일) : existingStudent?.billingDay,
             billingDiscount: excelData.할인액 ? parseInt(excelData.할인액) : existingStudent?.billingDiscount,
 
@@ -333,8 +273,8 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
             // 상태 관리
             status: excelData.재원여부 === 'N' ? 'withdrawn' :
-                   excelData.휴원여부 === 'Y' ? 'on_hold' :
-                   existingStudent?.status || 'active',
+              excelData.휴원여부 === 'Y' ? 'on_hold' :
+                existingStudent?.status || 'active',
             startDate: enrollmentDate || excelData.등록일 || existingStudent?.startDate || now.split('T')[0],
             endDate: excelData.퇴원일 || existingStudent?.endDate,
             withdrawalDate: excelData.퇴원일 || existingStudent?.withdrawalDate,
@@ -345,11 +285,6 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             // 메타데이터
             createdAt: existingStudent?.createdAt || now,
             updatedAt: now,
-
-            // 마이그레이션 추적용 (임시)
-            _excelEnglishClasses: englishClasses.length > 0 ? englishClasses : undefined,
-            _excelLegacyId: excelData.출결번호,
-            _excelStudentId: excelData.원생고유번호,
           };
 
           // undefined 값 제거 (Firebase는 undefined를 허용하지 않음)
