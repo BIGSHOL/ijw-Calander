@@ -189,10 +189,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                             const key = `${day}-${periodId}`;
                             const isSelected = selectedSlots.has(key);
                             const slotTeacher = slotTeachers?.[key];
-                            // 숨김 강사인 경우 담임으로 대체
-                            const slotTeacherInfo = slotTeacher ? teachersData?.find(t => t.name === slotTeacher) : null;
-                            const isSlotTeacherHidden = slotTeacherInfo?.isHidden;
-                            const displayTeacher = (slotTeacher && !isSlotTeacherHidden) ? slotTeacher : teacher;
+                            const displayTeacher = slotTeacher || teacher;
                             const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
 
                             return (
