@@ -38,7 +38,7 @@ export function useStudents(includeWithdrawn = false) {
                 // 두 쿼리 병렬 실행
                 const activeQuery = query(
                     collection(db, COL_STUDENTS),
-                    where('status', 'in', ['active', 'on_hold', 'prospect'])
+                    where('status', 'in', ['active', 'on_hold'])
                 );
                 // withdrawalDate가 없는 퇴원생도 포함하기 위해 단순 withdrawn 쿼리
                 const withdrawnQuery = query(

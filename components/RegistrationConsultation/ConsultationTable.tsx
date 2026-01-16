@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
-import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, Settings2, X, ClipboardList, UserPlus, ExternalLink } from 'lucide-react';
+import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, Settings2, X, ClipboardList } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -8,7 +8,6 @@ interface ConsultationTableProps {
     data: ConsultationRecord[];
     onEdit: (record: ConsultationRecord) => void;
     onDelete: (id: string) => void;
-    onRegisterProspect?: (record: ConsultationRecord) => void;
 }
 
 // 색상 테마
@@ -20,7 +19,7 @@ const COLORS = {
 
 // 컬럼 정의
 type ColumnKey =
-    | 'createdAt' | 'receiver' | 'studentName' | 'schoolGrade' | 'parentPhone'
+    | 'createdAt' | 'receiver' | 'studentName' | 'schoolGrade' | 'parentPhone' | 'address'
     | 'consultationDate' | 'subject' | 'counselor' | 'status' | 'registrar'
     | 'paymentAmount' | 'paymentDate' | 'notes' | 'nonRegistrationReason'
     | 'followUpDate' | 'followUpContent' | 'consultationPath';
@@ -38,6 +37,7 @@ const COLUMNS: ColumnConfig[] = [
     { key: 'studentName', label: '이름', defaultVisible: true, minWidth: '80px' },
     { key: 'schoolGrade', label: '학교학년', defaultVisible: true, minWidth: '100px' },
     { key: 'parentPhone', label: '연락처', defaultVisible: true, minWidth: '120px' },
+    { key: 'address', label: '주소', defaultVisible: false, minWidth: '150px' },
     { key: 'consultationDate', label: '상담일', defaultVisible: true, minWidth: '110px' },
     { key: 'subject', label: '상담과목', defaultVisible: true, minWidth: '80px' },
     { key: 'counselor', label: '상담자', defaultVisible: true, minWidth: '80px' },
@@ -51,15 +51,42 @@ const COLUMNS: ColumnConfig[] = [
     { key: 'followUpContent', label: '후속조치 내용', defaultVisible: true, minWidth: '150px' },
     { key: 'consultationPath', label: '상담경로', defaultVisible: true, minWidth: '100px' },
 ];
+const STORAGE_KEY = 'consultation_table_columns';
 
-export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEdit, onDelete, onRegisterProspect }) => {
+// localStorage에서 저장된 컬럼 설정 로드
+const loadSavedColumns = (): Set<ColumnKey> => {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved) as ColumnKey[];
+            // 유효한 컬럼만 필터링
+            const validKeys = parsed.filter(key => COLUMNS.some(c => c.key === key));
+            if (validKeys.length > 0) {
+                return new Set(validKeys);
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to load column settings:', e);
+    }
+    return new Set(COLUMNS.filter(c => c.defaultVisible).map(c => c.key));
+};
+
+export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEdit, onDelete }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [showSettings, setShowSettings] = useState(false);
-    const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(
-        new Set(COLUMNS.filter(c => c.defaultVisible).map(c => c.key))
-    );
+    const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(loadSavedColumns);
     const itemsPerPage = 15;
+
+    // visibleColumns 변경 시 localStorage에 저장
+    const updateVisibleColumns = (newColumns: Set<ColumnKey>) => {
+        setVisibleColumns(newColumns);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([...newColumns]));
+        } catch (e) {
+            console.warn('Failed to save column settings:', e);
+        }
+    };
 
     const filteredData = useMemo(() => {
         return data.filter(r =>
@@ -87,15 +114,15 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
         } else {
             newSet.add(key);
         }
-        setVisibleColumns(newSet);
+        updateVisibleColumns(newSet);
     };
 
     const selectAllColumns = () => {
-        setVisibleColumns(new Set(COLUMNS.map(c => c.key)));
+        updateVisibleColumns(new Set(COLUMNS.map(c => c.key)));
     };
 
     const resetColumns = () => {
-        setVisibleColumns(new Set(COLUMNS.filter(c => c.defaultVisible).map(c => c.key)));
+        updateVisibleColumns(new Set(COLUMNS.filter(c => c.defaultVisible).map(c => c.key)));
     };
 
     const formatDate = (dateStr: string | undefined) => {
@@ -130,6 +157,8 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                 return <span className="text-slate-700">{record.schoolName}{gradeNum}</span>;
             case 'parentPhone':
                 return <span className="text-slate-600">{record.parentPhone}</span>;
+            case 'address':
+                return <span className="text-slate-500 text-xs truncate max-w-[140px] block">{record.address || '-'}</span>;
             case 'consultationDate':
                 return <span style={{ color: COLORS.navy }}>{formatDateWithDay(record.consultationDate)}</span>;
             case 'subject':
@@ -313,26 +342,6 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                         ))}
                                         <td className="px-3 py-3 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-inherit" style={{ minWidth: '70px' }}>
                                             <div className="flex justify-end space-x-1">
-                                                {/* 예비원생 등록 버튼 */}
-                                                {onRegisterProspect && !record.registeredStudentId && (
-                                                    <button
-                                                        onClick={() => onRegisterProspect(record)}
-                                                        className="p-1.5 rounded-md transition-colors hover:bg-orange-50"
-                                                        style={{ color: '#f97316' }}
-                                                        title="예비원생으로 등록"
-                                                    >
-                                                        <UserPlus size={14} />
-                                                    </button>
-                                                )}
-                                                {/* 이미 등록된 경우 표시 */}
-                                                {record.registeredStudentId && (
-                                                    <span
-                                                        className="p-1.5 text-green-600"
-                                                        title="예비원생 등록됨"
-                                                    >
-                                                        <ExternalLink size={14} />
-                                                    </span>
-                                                )}
                                                 <button
                                                     onClick={() => onEdit(record)}
                                                     className="p-1.5 rounded-md transition-colors"

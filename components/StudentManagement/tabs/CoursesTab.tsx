@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { UnifiedStudent } from '../../../types';
-import { BookOpen, Plus, User } from 'lucide-react';
+import { BookOpen, Plus, User, X, Loader2 } from 'lucide-react';
 import AssignClassModal from '../AssignClassModal';
 import { useStudents } from '../../../hooks/useStudents';
 import { useTeachers } from '../../../hooks/useFirebaseQueries';
 import { ClassInfo } from '../../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../../utils/styleUtils';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
+import { doc, deleteDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import { db } from '../../../firebaseConfig';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface CoursesTabProps {
   student: UnifiedStudent;
@@ -15,15 +18,18 @@ interface CoursesTabProps {
 interface GroupedEnrollment {
   className: string;
   subject: 'math' | 'english';
-  teachers: string[];  // 담당 강사 배열
-  days: string[];      // 모든 수업 요일 합침 (중복 제거)
+  teachers: string[];
+  days: string[];
+  enrollmentIds: string[]; // 삭제를 위해 enrollment ID 저장
 }
 
 const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
+  const [deletingClass, setDeletingClass] = useState<string | null>(null);
   const { refreshStudents } = useStudents();
   const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
+  const queryClient = useQueryClient();
 
   // 같은 수업(className)끼리 그룹화
   const groupedEnrollments = useMemo(() => {
@@ -42,12 +48,17 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
             existing.days.push(day);
           }
         });
+        // enrollment ID 추가
+        if ((enrollment as any).id && !existing.enrollmentIds.includes((enrollment as any).id)) {
+          existing.enrollmentIds.push((enrollment as any).id);
+        }
       } else {
         groups.set(key, {
           className: enrollment.className,
           subject: enrollment.subject,
           teachers: [enrollment.teacherId],
-          days: [...(enrollment.days || [])]
+          days: [...(enrollment.days || [])],
+          enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : []
         });
       }
     });
@@ -55,7 +66,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
     return Array.from(groups.values());
   }, [student.enrollments]);
 
-  // 수업의 대표 강사 결정 (가장 많은 요일을 가르치는 강사, 원어민 제외)
+  // 수업의 대표 강사 결정
   const getMainTeacher = (group: GroupedEnrollment): string | null => {
     const teacherCounts: Record<string, number> = {};
 
@@ -78,7 +89,6 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
 
     if (topTeachers.length === 1) return topTeachers[0][0];
 
-    // 동점이면 원어민이 아닌 강사 우선
     const nonNativeTeachers = topTeachers.filter(([name]) => {
       const teacherData = teachers.find(t => t.name === name);
       return !teacherData?.isNative;
@@ -96,9 +106,53 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
       subject: group.subject,
       teacher: mainTeacher || group.teachers[0] || '',
       schedule: group.days.map(day => `${day}`),
-      studentCount: 0, // ClassDetailModal에서 조회
+      studentCount: 0,
     };
     setSelectedClass(classInfo);
+  };
+
+  // 수업 배정 취소 (해당 학생의 enrollment만 삭제)
+  const handleRemoveEnrollment = async (group: GroupedEnrollment, e: React.MouseEvent) => {
+    e.stopPropagation(); // 행 클릭 이벤트 전파 방지
+
+    const confirmMsg = `"${group.className}" 수업에서 ${student.name} 학생을 제외하시겠습니까?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    const key = `${group.subject}_${group.className}`;
+    setDeletingClass(key);
+
+    try {
+      // 1. 저장된 enrollmentIds가 있으면 사용
+      if (group.enrollmentIds.length > 0) {
+        for (const enrollmentId of group.enrollmentIds) {
+          await deleteDoc(doc(db, `students/${student.id}/enrollments`, enrollmentId));
+        }
+      } else {
+        // 2. enrollmentIds가 없으면 쿼리로 찾아서 삭제
+        const enrollmentsRef = collection(db, `students/${student.id}/enrollments`);
+        const q = query(
+          enrollmentsRef,
+          where('subject', '==', group.subject),
+          where('className', '==', group.className)
+        );
+        const snapshot = await getDocs(q);
+
+        for (const docSnap of snapshot.docs) {
+          await deleteDoc(docSnap.ref);
+        }
+      }
+
+      // 캐시 무효화 및 새로고침
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      refreshStudents();
+
+    } catch (err) {
+      console.error('수업 배정 취소 오류:', err);
+      alert('수업 배정 취소에 실패했습니다.');
+    } finally {
+      setDeletingClass(null);
+    }
   };
 
   const handleAssignSuccess = () => {
@@ -132,14 +186,16 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
       return !teacher?.isHidden;
     });
     const subjectColor = SUBJECT_COLORS[group.subject];
+    const key = `${group.subject}_${group.className}`;
+    const isDeleting = deletingClass === key;
 
     return (
       <div
         key={`${group.subject}-${index}`}
-        onClick={() => handleClassClick(group)}
-        className="flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors cursor-pointer"
+        onClick={() => !isDeleting && handleClassClick(group)}
+        className={`flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors ${isDeleting ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
       >
-        {/* 과목 뱃지 - 진한 색상 사용 */}
+        {/* 과목 뱃지 */}
         <span
           className="w-12 shrink-0 text-xs px-2 py-1 rounded font-semibold text-center"
           style={{
@@ -164,9 +220,23 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
         </div>
 
         {/* 요일 */}
-        <div className="w-20 shrink-0 text-sm text-[#373d41] text-right">
+        <div className="w-16 shrink-0 text-sm text-[#373d41] text-right">
           {sortDays(group.days).join(' ')}
         </div>
+
+        {/* 삭제 버튼 */}
+        <button
+          onClick={(e) => handleRemoveEnrollment(group, e)}
+          disabled={isDeleting}
+          className="w-8 h-8 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+          title="수업 배정 취소"
+        >
+          {isDeleting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <X className="w-4 h-4" />
+          )}
+        </button>
       </div>
     );
   };
@@ -197,7 +267,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
           <span className="w-12 shrink-0">과목</span>
           <span className="flex-1">수업명</span>
           <span className="w-24 shrink-0">강사</span>
-          <span className="w-20 shrink-0 text-right">요일</span>
+          <span className="w-16 shrink-0 text-right">요일</span>
+          <span className="w-8 shrink-0"></span>
         </div>
 
         {groupedEnrollments.length === 0 ? (
