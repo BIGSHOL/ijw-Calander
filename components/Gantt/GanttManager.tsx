@@ -8,7 +8,8 @@ import GanttTaskList from './GanttTaskList';
 import GanttProgressBar from './GanttProgressBar';
 import GanttTemplateSelector from './GanttTemplateSelector';
 import TabSubNavigation from '../Common/TabSubNavigation';
-import { FolderKanban, Plus, Edit2, Trash2, BookmarkPlus, BarChart3 } from 'lucide-react';
+import { FolderKanban, Plus, Edit2, Trash2, BookmarkPlus, BarChart3, Settings } from 'lucide-react';
+import GanttSettingsModal from './GanttSettingsModal';
 
 interface GanttManagerProps {
     userProfile: UserProfile | null;
@@ -24,6 +25,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
     const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
     const [activeStartDate, setActiveStartDate] = useState<string | undefined>(undefined);
     const [editingTemplate, setEditingTemplate] = useState<GanttTemplate | null>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     // Permission checks
     const canView = hasPermission('gantt.view');
@@ -314,6 +316,17 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                             새 프로젝트
                         </button>
                     )}
+
+                    {/* Settings Button */}
+                    {(userProfile?.role === 'master' || hasPermission('gantt.edit')) && (
+                        <button
+                            onClick={() => setIsSettingsOpen(true)}
+                            className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                            title="간트 차트 설정"
+                        >
+                            <Settings size={16} />
+                        </button>
+                    )}
                 </div>
             </TabSubNavigation>
 
@@ -360,6 +373,13 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                     </div>
                 )}
             </div>
+
+            {/* Settings Modal */}
+            <GanttSettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                currentUser={userProfile}
+            />
         </div>
     );
 };

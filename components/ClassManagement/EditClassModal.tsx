@@ -8,6 +8,7 @@ import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
+import { formatSchoolGrade } from '../../utils/studentUtils';
 
 interface EditClassModalProps {
   classInfo: ClassInfo;
@@ -724,7 +725,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                 <span className={`truncate ${isMarkedForRemoval ? 'text-gray-400' : 'text-gray-800'}`}>
                                   {student.name}
                                 </span>
-                                <span className="text-[10px] text-gray-400 flex-shrink-0">{student.school}{student.grade}</span>
+                                <span className="text-[10px] text-gray-400 flex-shrink-0">{formatSchoolGrade(student.school, student.grade)}</span>
                                 {attendanceDaysText && !isMarkedForRemoval && (
                                   <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
                                     {attendanceDaysText}만
@@ -799,7 +800,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-green-800">{student.name}</span>
-                            <span className="text-[10px] text-gray-400">{student.school}{student.grade}</span>
+                            <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
                           </div>
                           <button
                             type="button"
@@ -846,7 +847,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                           className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813]"
                         />
                         <span className="text-gray-800">{student.name}</span>
-                        <span className="text-[10px] text-gray-400">{student.school}{student.grade}</span>
+                        <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
                       </label>
                     ))
                   )}

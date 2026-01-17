@@ -241,10 +241,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
     const yearMonth = dateKey.substring(0, 7);
     updateAttendanceMutation.mutate({ studentId, yearMonth, dateKey, value }, {
-      onSuccess: async () => {
-        // 2. Refetch and wait for completion, THEN clear pending
-        await refetch();
-        // 3. Clear AFTER refetch completes (no flicker)
+      onSuccess: () => {
+        // 2. Clear pending immediately - no need to refetch since we have optimistic update
+        // React Query's onSettled in useUpdateAttendance will invalidate cache in background
         setPendingUpdates(prev => {
           const next = { ...prev };
           delete next[key];
@@ -269,8 +268,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
     const yearMonth = dateKey.substring(0, 7);
     updateMemoMutation.mutate({ studentId, yearMonth, dateKey, memo }, {
-      onSuccess: async () => {
-        await refetch();
+      onSuccess: () => {
         setPendingMemos(prev => {
           const next = { ...prev };
           delete next[key];
@@ -291,8 +289,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const handleHomeworkChange = async (studentId: string, dateKey: string, completed: boolean) => {
     const yearMonth = dateKey.substring(0, 7);
     updateHomeworkMutation.mutate({ studentId, yearMonth, dateKey, completed }, {
-      onSuccess: async () => {
-        await refetch();
+      onSuccess: () => {
+        // No need to refetch - optimistic update handled in mutation
       },
       onError: () => {
         alert('과제 상태 저장에 실패했습니다.');

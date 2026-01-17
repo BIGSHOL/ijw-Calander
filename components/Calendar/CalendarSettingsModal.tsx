@@ -1,13 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { X, Building2, Hash } from 'lucide-react';
-import { Department, UserProfile } from '../../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Building2, Hash, Shield } from 'lucide-react';
+import { Department, UserProfile, StaffMember } from '../../types';
 import { NewDepartmentForm, CategoryManagementState, DepartmentFilterState, INITIAL_DEPARTMENT_FORM } from '../../types/departmentForm';
-import DepartmentsManagementTab from '../Settings/tabs/DepartmentsManagementTab';
-import HashtagsTab from '../Settings/HashtagsTab';
+import DepartmentsManagementTab from '../settings/tabs/DepartmentsManagementTab';
+import DepartmentPermissionsTab from '../settings/tabs/DepartmentPermissionsTab';
+import HashtagsTab from '../settings/HashtagsTab';
 import { usePermissions } from '../../hooks/usePermissions';
-import { useDepartments, useSystemConfig } from '../../hooks/useFirebaseQueries';
+import { useDepartments, useSystemConfig, useStaffWithAccounts } from '../../hooks/useFirebaseQueries';
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+
+// StaffMember를 UserProfile처럼 사용하기 위한 변환 헬퍼
+const staffToUserLike = (staff: StaffMember): UserProfile => ({
+  uid: staff.uid || staff.id,
+  email: staff.email || '',
+  displayName: staff.name,
+  role: staff.systemRole || 'user',
+  status: staff.approvalStatus || 'pending',
+  departmentPermissions: staff.departmentPermissions || {},
+  favoriteDepartments: staff.favoriteDepartments || [],
+  jobTitle: staff.jobTitle,
+});
 
 interface CalendarSettingsModalProps {
   isOpen: boolean;
@@ -15,7 +28,7 @@ interface CalendarSettingsModalProps {
   currentUser: UserProfile | null;
 }
 
-type TabType = 'departments' | 'hashtags';
+type TabType = 'departments' | 'permissions' | 'hashtags';
 
 const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
   isOpen,
@@ -37,7 +50,14 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
   // Firebase Data
   const { data: departments = [] } = useDepartments(!!currentUser);
   const { data: systemConfig } = useSystemConfig(!!currentUser);
+  const { data: staffWithAccounts = [] } = useStaffWithAccounts(isMaster || isAdmin);
   const sysCategories = systemConfig?.categories || [];
+
+  // staff 데이터를 UserProfile 형태로 변환
+  const users = useMemo(() =>
+    staffWithAccounts.map(staffToUserLike),
+    [staffWithAccounts]
+  );
 
   // Local State
   const [localDepartments, setLocalDepartments] = useState<Department[]>([]);
@@ -164,64 +184,80 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-[#081429] p-5 flex justify-between items-center text-white shrink-0">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            ⚙️ 연간 일정 설정
+        <div className="bg-[#081429] px-4 py-2.5 flex justify-between items-center text-white shrink-0">
+          <h2 className="text-sm font-bold flex items-center gap-1.5">
+            <span className="text-[#fdb813]">📅</span>
+            연간 일정 설정
           </h2>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {hasChanges && (
               <button
                 onClick={handleSaveChanges}
-                className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg font-bold text-sm hover:bg-[#e5a610] transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-md font-bold text-xs hover:bg-[#e5a610] transition-colors"
               >
-                변경사항 저장
+                저장
               </button>
             )}
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-white transition-colors"
             >
-              <X size={24} />
+              <X size={18} />
             </button>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 bg-gray-50 px-5 shrink-0">
+        <div className="flex border-b border-gray-200 bg-gray-50 px-3 shrink-0">
           <button
             onClick={() => setActiveTab('departments')}
-            className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${
+            className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
               activeTab === 'departments'
                 ? 'border-[#fdb813] text-[#081429]'
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}
           >
-            <div className="flex items-center gap-2">
-              <Building2 size={16} />
+            <div className="flex items-center gap-1.5">
+              <Building2 size={14} />
               부서 관리
             </div>
           </button>
+          {(isMaster || isAdmin) && (
+            <button
+              onClick={() => setActiveTab('permissions')}
+              className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
+                activeTab === 'permissions'
+                  ? 'border-[#fdb813] text-[#081429]'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <Shield size={14} />
+                부서 권한
+              </div>
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('hashtags')}
-            className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${
+            className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
               activeTab === 'hashtags'
                 ? 'border-[#fdb813] text-[#081429]'
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}
           >
-            <div className="flex items-center gap-2">
-              <Hash size={16} />
+            <div className="flex items-center gap-1.5">
+              <Hash size={14} />
               해시태그 관리
             </div>
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3">
           {activeTab === 'departments' && (
             <DepartmentsManagementTab
               localDepartments={localDepartments}
@@ -246,6 +282,15 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
               handleDelete={handleDelete}
               handleLocalDeptUpdate={handleLocalDeptUpdate}
               markChanged={markChanged}
+            />
+          )}
+          {activeTab === 'permissions' && (isMaster || isAdmin) && (
+            <DepartmentPermissionsTab
+              departments={departments}
+              users={users}
+              currentUser={currentUser}
+              isMaster={isMaster}
+              isAdmin={isAdmin}
             />
           )}
           {activeTab === 'hashtags' && (

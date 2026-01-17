@@ -196,12 +196,39 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             if (upper.includes('E')) subjects.push('english');
           }
 
-          // 학년 정규화 (숫자만 추출)
+          // 학년 정규화 (초/중/고 + 숫자 형식으로 변환)
           let grade = excelData.학년;
           if (grade) {
-            // "초3", "3학년", "초등3" 등에서 숫자만 추출
-            const gradeMatch = grade.match(/\d+/);
-            grade = gradeMatch ? gradeMatch[0] : grade;
+            const gradeNum = grade.match(/\d+/)?.[0];
+            if (gradeNum) {
+              const num = parseInt(gradeNum);
+              // 학교명에서 레벨 추론
+              const schoolName = excelData.학교?.toLowerCase() || '';
+              if (schoolName.includes('초') || schoolName.includes('elementary')) {
+                grade = `초${num}`;
+              } else if (schoolName.includes('중') || schoolName.includes('middle')) {
+                grade = `중${num}`;
+              } else if (schoolName.includes('고') || schoolName.includes('high')) {
+                grade = `고${num}`;
+              } else if (grade.includes('초') || grade.toLowerCase().includes('elementary')) {
+                grade = `초${num}`;
+              } else if (grade.includes('중') || grade.toLowerCase().includes('middle')) {
+                grade = `중${num}`;
+              } else if (grade.includes('고') || grade.toLowerCase().includes('high')) {
+                grade = `고${num}`;
+              } else {
+                // 학교명이나 학년에서 레벨을 추론할 수 없으면 숫자로 추론
+                // 1~6: 초등, 7~9(또는 1~3 중학): 중등, 10~12(또는 1~3 고등): 고등
+                if (num >= 1 && num <= 6) {
+                  grade = `초${num}`;
+                } else if (num >= 7 && num <= 9) {
+                  grade = `중${num - 6}`;
+                } else {
+                  // 기본적으로 원본 유지
+                  grade = gradeNum;
+                }
+              }
+            }
           }
 
           // 날짜 변환

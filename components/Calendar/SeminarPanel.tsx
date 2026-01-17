@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Users, Search, Edit2, Trash2, Save, XCircle } from 'lucide-react';
 import { SeminarAttendee, SeminarEventData, UnifiedStudent } from '../../types';
+import { formatSchoolGrade } from '../../utils/studentUtils';
 
 interface SeminarPanelProps {
   isOpen: boolean;
@@ -308,7 +309,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                                 className="w-full text-left px-3 py-2 hover:bg-purple-50 text-sm border-b border-gray-100 last:border-0"
                               >
                                 <div className="font-bold text-gray-900">{student.name}</div>
-                                <div className="text-xs text-gray-500">{student.school && student.grade ? `${student.school} ${student.grade}` : student.id}</div>
+                                <div className="text-xs text-gray-500">{student.school || student.grade ? formatSchoolGrade(student.school, student.grade) : student.id}</div>
                               </button>
                             ))
                           ) : (

@@ -558,15 +558,11 @@ const TimetableManager = ({
                 onSave={handleSaveTeacherOrder}
             />
 
-            {/* Timetable Settings Modal (수업 설정 + 강사 관리) */}
+            {/* Timetable Settings Modal (수업 설정) - 강사 관리는 직원 관리로 이동됨 */}
             <TimetableSettingsModal
                 isOpen={isTimetableSettingsOpen}
                 onClose={() => setIsTimetableSettingsOpen(false)}
                 canEdit={canEditMath}
-                isMaster={isMaster}
-                teachers={propsTeachers}
-                canViewMath={isMaster || hasPermission('timetable.math.view')}
-                canViewEnglish={isMaster || hasPermission('timetable.english.view')}
             />
         </div >
     );

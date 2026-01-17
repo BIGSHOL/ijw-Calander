@@ -306,41 +306,41 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
             <div className="hidden md:block rounded-xl shadow-sm border overflow-hidden flex-1" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
                 <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)]">
                     <table className="w-full" style={{ minWidth: visibleColumnsList.length * 100 + 80 }}>
-                        <thead className="sticky top-0 z-10" style={{ backgroundColor: COLORS.navy }}>
+                        <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                             <tr>
                                 {visibleColumnsList.map(col => (
                                     <th
                                         key={col.key}
                                         scope="col"
-                                        className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap"
-                                        style={{ color: 'white', minWidth: col.minWidth }}
+                                        className="px-3 py-2.5 text-left text-xs font-medium whitespace-nowrap"
+                                        style={{ color: COLORS.gray, minWidth: col.minWidth }}
                                     >
                                         {col.label}
                                     </th>
                                 ))}
                                 <th
                                     scope="col"
-                                    className="px-3 py-3 text-right text-xs font-medium uppercase tracking-wider sticky right-0"
-                                    style={{ color: 'white', backgroundColor: COLORS.navy, minWidth: '70px' }}
+                                    className="px-3 py-2.5 text-right text-xs font-medium sticky right-0 bg-gray-50"
+                                    style={{ color: COLORS.gray, minWidth: '70px' }}
                                 >
                                     관리
                                 </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y" style={{ borderColor: `${COLORS.navy}10` }}>
+                        <tbody className="divide-y divide-gray-100">
                             {currentData.length > 0 ? (
                                 currentData.map((record, idx) => (
                                     <tr
                                         key={record.id}
-                                        className="hover:bg-slate-50 transition-colors"
-                                        style={{ backgroundColor: idx % 2 === 0 ? 'white' : `${COLORS.navy}02` }}
+                                        className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                                        style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa' }}
                                     >
                                         {visibleColumnsList.map(col => (
-                                            <td key={col.key} className="px-3 py-3 whitespace-nowrap text-sm" style={{ minWidth: col.minWidth }}>
+                                            <td key={col.key} className="px-3 py-2.5 whitespace-nowrap text-sm" style={{ minWidth: col.minWidth }}>
                                                 {getCellValue(record, col.key)}
                                             </td>
                                         ))}
-                                        <td className="px-3 py-3 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-inherit" style={{ minWidth: '70px' }}>
+                                        <td className="px-3 py-2.5 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-inherit" style={{ minWidth: '70px' }}>
                                             <div className="flex justify-end space-x-1">
                                                 <button
                                                     onClick={() => onEdit(record)}

@@ -2,6 +2,7 @@ import React from 'react';
 import { Users, Settings, X, Trash2 } from 'lucide-react';
 import { TimetableClass, TimetableStudent } from '../../../../../types';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS, MATH_PERIOD_TIMES } from '../../../constants';
+import { formatSchoolGrade } from '../../../../../utils/studentUtils';
 
 interface ClassDetailModalProps {
     selectedClass: TimetableClass | null;
@@ -233,7 +234,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                                             </span>
                                                             {(student.school || student.grade) && (
                                                                 <span className="text-xs text-gray-400">
-                                                                    {student.school}{student.grade}
+                                                                    {formatSchoolGrade(student.school, student.grade)}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -274,7 +275,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                                                         </span>
                                                                         {(student.school || student.grade) && (
                                                                             <span className="text-xs text-gray-400">
-                                                                                {student.school}{student.grade}
+                                                                                {formatSchoolGrade(student.school, student.grade)}
                                                                             </span>
                                                                         )}
                                                                     </div>
