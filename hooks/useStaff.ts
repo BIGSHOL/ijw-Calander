@@ -202,12 +202,15 @@ export function useStaff() {
         await cascadeNameUpdate(oldName, oldEnglishName, newName, newEnglishName);
       }
 
+      // users 컬렉션 동기화 제거됨 - staff 컬렉션이 유일한 데이터 소스
+
       return { id, updates };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
       queryClient.invalidateQueries({ queryKey: ['unifiedClasses'] });
       queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
     },
   });
 

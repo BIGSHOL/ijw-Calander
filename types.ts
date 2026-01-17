@@ -8,6 +8,7 @@ export interface Department {
   defaultColor?: string;
   defaultTextColor?: string;
   defaultBorderColor?: string;
+  defaultPermission?: 'view' | 'edit' | 'none'; // 신규 부서 생성 시 기본 권한
 }
 
 // Subject Type for unified structure
@@ -122,6 +123,8 @@ export interface UnifiedStudent {
   startDate: string;             // 등록일 (YYYY-MM-DD)
   endDate?: string;              // 퇴원일
   withdrawalDate?: string;       // 퇴원일 (YYYY-MM-DD) - 영어 시간표와 호환
+  withdrawalReason?: string;     // 퇴원 사유
+  withdrawalMemo?: string;       // 퇴원 관련 메모
   isOldWithdrawn?: boolean;      // 90일 이상 경과한 퇴원생 표시 (검색용)
 
   // 출석부 연동
@@ -637,7 +640,7 @@ export interface UserProfile {
   jobTitle?: string; // 호칭
 
   // Attendance: Link to Teacher Profile (for view_own filtering)
-  teacherId?: string; // ID from 강사목록 collection (allows any role to be linked to a teacher)
+  teacherId?: string; // ID from staff collection where role='teacher' (allows any role to be linked to a teacher)
 }
 
 export interface Holiday {

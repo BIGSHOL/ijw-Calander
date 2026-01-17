@@ -6,6 +6,7 @@
 export { default as StaffManager } from './StaffManager';
 export { default as StaffList } from './StaffList';
 export { default as StaffForm } from './StaffForm';
+export { default as StaffViewModal } from './StaffViewModal';
 export { default as StaffSchedule } from './StaffSchedule';
 export { default as LeaveManagement } from './LeaveManagement';
-export { default as UsersManagement } from './UsersManagement';
+export { default as StaffLinkModal } from './StaffLinkModal';

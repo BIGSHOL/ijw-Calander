@@ -1,25 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { Edit, Trash2, Mail, Phone, ChevronLeft, ChevronRight, User, MoreVertical } from 'lucide-react';
-import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS } from '../../types';
+import { Phone, ChevronLeft, ChevronRight, User, Shield, ShieldCheck, CheckCircle, XCircle } from 'lucide-react';
+import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserRole } from '../../types';
 
 interface StaffListProps {
   staff: StaffMember[];
   selectedStaff: StaffMember | null;
   onSelectStaff: (staff: StaffMember) => void;
-  onEdit: (staff: StaffMember) => void;
-  onDelete: (id: string) => void;
 }
 
 const StaffList: React.FC<StaffListProps> = ({
   staff,
   selectedStaff,
   onSelectStaff,
-  onEdit,
-  onDelete,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [menuOpen, setMenuOpen] = useState<string | null>(null);
 
   // Pagination
   const totalPages = Math.ceil(staff.length / pageSize);
@@ -59,19 +54,21 @@ const StaffList: React.FC<StaffListProps> = ({
     );
   };
 
-  const handleMenuToggle = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setMenuOpen(menuOpen === id ? null : id);
+  // 시스템 역할 스타일
+  const getSystemRoleStyle = (role?: UserRole) => {
+    if (!role) return null;
+    const styles: Record<UserRole, { icon: React.ReactNode; color: string }> = {
+      master: { icon: <ShieldCheck className="w-3 h-3" />, color: 'text-amber-600' },
+      admin: { icon: <Shield className="w-3 h-3" />, color: 'text-purple-600' },
+      manager: { icon: <Shield className="w-3 h-3" />, color: 'text-blue-600' },
+      math_lead: { icon: <User className="w-3 h-3" />, color: 'text-blue-600' },
+      english_lead: { icon: <User className="w-3 h-3" />, color: 'text-pink-600' },
+      math_teacher: { icon: <User className="w-3 h-3" />, color: 'text-blue-500' },
+      english_teacher: { icon: <User className="w-3 h-3" />, color: 'text-pink-500' },
+      user: { icon: <User className="w-3 h-3" />, color: 'text-gray-600' },
+    };
+    return styles[role];
   };
-
-  // Close menu when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = () => setMenuOpen(null);
-    if (menuOpen) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [menuOpen]);
 
   if (staff.length === 0) {
     return (
@@ -133,29 +130,29 @@ const StaffList: React.FC<StaffListProps> = ({
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
                 이름
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
                 직책
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                연락처
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
+                전화번호
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
                 담당과목
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
                 시간표 정보
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
                 입사일
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
                 상태
               </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                작업
+              <th className="px-4 py-2.5 text-center text-xs font-medium text-[#373d41]">
+                시스템 계정
               </th>
             </tr>
           </thead>
@@ -164,11 +161,10 @@ const StaffList: React.FC<StaffListProps> = ({
               <tr
                 key={member.id}
                 onClick={() => onSelectStaff(member)}
-                className={`hover:bg-gray-50 transition-colors ${
-                  selectedStaff?.id === member.id ? 'bg-[#fdb813]/10' : ''
-                }`}
+                className={`hover:bg-gray-50 transition-colors cursor-pointer group ${selectedStaff?.id === member.id ? 'bg-[#fdb813]/10' : ''
+                  }`}
               >
-                <td className="px-4 py-3">
+                <td className="px-4 py-2.5">
                   <div className="flex items-center gap-3">
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
@@ -192,35 +188,28 @@ const StaffList: React.FC<StaffListProps> = ({
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2.5">
                   {getRoleBadge(member.role)}
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-col gap-1">
-                    {member.email && (
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Mail className="w-3 h-3" />
-                        <span className="truncate max-w-[150px]">{member.email}</span>
-                      </div>
-                    )}
-                    {member.phone && (
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Phone className="w-3 h-3" />
-                        <span>{member.phone}</span>
-                      </div>
-                    )}
-                  </div>
+                <td className="px-4 py-2.5">
+                  {member.phone ? (
+                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                      <Phone className="w-3 h-3" />
+                      <span>{member.phone}</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400">-</span>
+                  )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2.5">
                   <div className="flex gap-1">
                     {member.subjects?.map((subject) => (
                       <span
                         key={subject}
-                        className={`text-xs px-2 py-0.5 rounded ${
-                          subject === 'math'
+                        className={`text-xs px-2 py-0.5 rounded ${subject === 'math'
                             ? 'bg-blue-100 text-blue-700'
                             : 'bg-pink-100 text-pink-700'
-                        }`}
+                          }`}
                       >
                         {subject === 'math' ? '수학' : '영어'}
                       </span>
@@ -230,7 +219,7 @@ const StaffList: React.FC<StaffListProps> = ({
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2.5">
                   {member.role === 'teacher' ? (
                     <div className="flex flex-col gap-1">
                       {/* 색상 미리보기 */}
@@ -282,44 +271,42 @@ const StaffList: React.FC<StaffListProps> = ({
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {member.hireDate}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2.5">
                   {getStatusBadge(member.status)}
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="relative">
-                    <button
-                      onClick={(e) => handleMenuToggle(member.id, e)}
-                      className="p-1 hover:bg-gray-100 rounded transition-colors"
-                    >
-                      <MoreVertical className="w-4 h-4 text-gray-500" />
-                    </button>
-                    {menuOpen === member.id && (
-                      <div className="absolute right-0 mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(member);
-                            setMenuOpen(null);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                        >
-                          <Edit className="w-4 h-4" />
-                          수정
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(member.id);
-                            setMenuOpen(null);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          삭제
-                        </button>
+                {/* 시스템 계정 - staff 데이터 기반 */}
+                <td className="px-4 py-2.5 text-center">
+                  {member.uid ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-1">
+                        {(() => {
+                          const style = getSystemRoleStyle(member.systemRole);
+                          if (!style) return <CheckCircle className="w-3 h-3 text-emerald-600" />;
+                          return (
+                            <>
+                              <span className={style.color}>{style.icon}</span>
+                              <span className={`text-xs font-medium ${style.color}`}>
+                                {ROLE_LABELS[member.systemRole as keyof typeof ROLE_LABELS] || member.systemRole}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </div>
-                    )}
-                  </div>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        member.approvalStatus === 'approved' ? 'bg-emerald-100 text-emerald-700' :
+                        member.approvalStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {member.approvalStatus === 'approved' ? '승인됨' :
+                         member.approvalStatus === 'pending' ? '대기중' : '차단됨'}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400 flex items-center justify-center gap-1">
+                      <XCircle className="w-3 h-3" />
+                      미연동
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}

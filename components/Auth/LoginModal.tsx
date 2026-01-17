@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { X, Lock as LockIcon, LogIn, UserPlus } from 'lucide-react';
 import { auth, db } from '../../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { UserProfile } from '../../types';
+import { doc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { StaffMember } from '../../types';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -47,24 +47,50 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                     .map((e: string) => e.trim().toLowerCase());
                 const isMaster = masterEmails.includes(email.toLowerCase());
 
-                const newProfile: UserProfile = {
-                    uid: user.uid,
-                    email: user.email || '',
-                    displayName: displayName.trim() || email.split('@')[0], // 이름(한글)
-                    jobTitle: jobTitle.trim() || '', // 닉네임(영어이름) (선택)
-                    role: isMaster ? 'master' : 'user',
-                    status: isMaster ? 'approved' : 'pending',
-                    allowedDepartments: [], // Default none until approved/assigned
-                    canEdit: isMaster // Master can edit by default
-                };
+                // 이메일로 기존 staff 검색 (기존 직원이 계정 연동하는 경우)
+                const emailQuery = query(
+                    collection(db, 'staff'),
+                    where('email', '==', user.email)
+                );
+                const emailSnapshot = await getDocs(emailQuery);
 
-                // Create User Document
-                await setDoc(doc(db, 'users', user.uid), newProfile);
+                if (!emailSnapshot.empty) {
+                    // 기존 staff에 uid 연동
+                    const existingStaff = emailSnapshot.docs[0];
+                    await updateDoc(existingStaff.ref, {
+                        uid: user.uid,
+                        name: displayName.trim() || existingStaff.data().name,
+                        englishName: jobTitle.trim() || existingStaff.data().englishName || '',
+                        systemRole: isMaster ? 'master' : (existingStaff.data().systemRole || 'user'),
+                        approvalStatus: isMaster ? 'approved' : (existingStaff.data().approvalStatus || 'pending'),
+                        updatedAt: new Date().toISOString(),
+                    });
+                    console.log('✅ Existing staff linked with new account:', existingStaff.id);
+                } else {
+                    // 신규 staff 생성 (staff 컬렉션만 사용)
+                    const newStaffRef = doc(collection(db, 'staff'));
+                    const newStaff: Partial<StaffMember> = {
+                        id: newStaffRef.id,
+                        uid: user.uid,
+                        name: displayName.trim() || email.split('@')[0],
+                        englishName: jobTitle.trim() || '',
+                        email: user.email || '',
+                        role: 'staff',
+                        systemRole: isMaster ? 'master' : 'user',
+                        approvalStatus: isMaster ? 'approved' : 'pending',
+                        departmentPermissions: {},
+                        favoriteDepartments: [],
+                        hireDate: new Date().toISOString().split('T')[0],
+                        status: 'active',
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                    };
+                    await setDoc(newStaffRef, newStaff);
+                    console.log('✅ New staff created from signup:', newStaffRef.id);
+                }
 
                 if (!isMaster) {
                     setError('계정이 생성되었습니다. 관리자 승인 후 로그인이 가능합니다.');
-                    // Optionally sign out immediately if we want to enforce approval before ANY access
-                    // But App.tsx handles the "pending" state check.
                 } else {
                     onClose();
                 }

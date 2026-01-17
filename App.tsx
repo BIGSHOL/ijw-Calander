@@ -3,7 +3,7 @@ import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startO
 import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor, AppTab, TAB_META, TAB_GROUPS } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
-import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig } from './hooks/useFirebaseQueries';
+import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig, useStaffWithAccounts, useAllStaff } from './hooks/useFirebaseQueries';
 import { useGanttProjects } from './hooks/useGanttProjects';
 import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
 import { useTabPermissions } from './hooks/useTabPermissions';
@@ -37,6 +37,8 @@ const BillingManager = lazy(() => import('./components/Billing').then(m => ({ de
 const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
 const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
 const RoleManagementPage = lazy(() => import('./components/RoleManagement/RoleManagementPage'));
+const TimetableSettingsModal = lazy(() => import('./components/Timetable/TimetableSettingsModal'));
+const CalendarSettingsModal = lazy(() => import('./components/Calendar/CalendarSettingsModal'));
 // ProspectManagementTab removed - merged into ConsultationManager
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit, Calculator, BookOpen, Library, Building, ClipboardList, MessageCircle, BarChart3, Check, DollarSign } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
@@ -66,61 +68,68 @@ const TabLoadingFallback = () => (
 );
 
 // Helper to format user display: Name (JobTitle) or Email (JobTitle)
-const formatUserDisplay = (u: UserProfile) => {
-  const name = u.displayName || u.email.split('@')[0];
-  return u.jobTitle ? `${name} (${u.jobTitle})` : name;
+// 지원 타입: UserProfile 또는 StaffMember
+const formatUserDisplay = (u: UserProfile | StaffMember) => {
+  // StaffMember인 경우
+  if ('name' in u && !('displayName' in u)) {
+    const staff = u as StaffMember;
+    return staff.jobTitle ? `${staff.name} (${staff.jobTitle})` : staff.name;
+  }
+  // UserProfile인 경우
+  const user = u as UserProfile;
+  const name = user.displayName || user.email.split('@')[0];
+  return user.jobTitle ? `${name} (${user.jobTitle})` : name;
 };
 
-// Helper to create staff record when user signs up
-const createStaffFromUser = async (user: User, userProfile: UserProfile) => {
-  try {
-    // Check if staff with this email already exists
-    const staffQuery = query(
-      collection(db, 'staff'),
-      where('email', '==', user.email)
-    );
-    const staffSnapshot = await getDocs(staffQuery);
+// StaffMember를 UserProfile처럼 사용하기 위한 변환 헬퍼
+const staffToUserLike = (staff: StaffMember): UserProfile => ({
+  uid: staff.uid || staff.id,
+  email: staff.email || '',
+  displayName: staff.name,
+  role: staff.systemRole || 'user',
+  status: staff.approvalStatus || 'pending',
+  departmentPermissions: staff.departmentPermissions || {},
+  favoriteDepartments: staff.favoriteDepartments || [],
+  jobTitle: staff.jobTitle,
+});
 
-    if (!staffSnapshot.empty) {
-      // Staff already exists - update with uid
-      const existingStaff = staffSnapshot.docs[0];
-      await updateDoc(existingStaff.ref, {
-        uid: user.uid,
-        englishName: userProfile.jobTitle || '', // jobTitle → englishName
-        systemRole: userProfile.role,
-        approvalStatus: userProfile.status,
-        departmentPermissions: userProfile.departmentPermissions || {},
-        primaryDepartmentId: userProfile.departmentId,
-        teacherId: userProfile.teacherId,
-        updatedAt: new Date().toISOString(),
-      });
-      console.log('✅ Staff updated with user profile:', existingStaff.id);
-    } else {
-      // Create new staff record
-      const newStaffRef = doc(collection(db, 'staff'));
-      const newStaff: StaffMember = {
-        id: newStaffRef.id,
-        uid: user.uid,
-        name: userProfile.displayName || user.email!.split('@')[0],
-        englishName: userProfile.jobTitle || '', // jobTitle → englishName
-        email: user.email!,
-        role: 'staff', // Default to 'staff' role
-        systemRole: userProfile.role,
-        approvalStatus: userProfile.status,
-        departmentPermissions: userProfile.departmentPermissions || {},
-        primaryDepartmentId: userProfile.departmentId,
-        teacherId: userProfile.teacherId,
-        hireDate: new Date().toISOString().split('T')[0],
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      await setDoc(newStaffRef, newStaff);
-      console.log('✅ New staff created from user:', newStaffRef.id);
-    }
-  } catch (error) {
-    console.error('❌ Failed to create/update staff from user:', error);
-  }
+// Helper: staff 데이터를 UserProfile 형태로 변환
+const staffToUserProfile = (staff: StaffMember): UserProfile => ({
+  uid: staff.uid || staff.id,
+  email: staff.email || '',
+  displayName: staff.name,
+  role: staff.systemRole || 'user',
+  status: staff.approvalStatus || 'pending',
+  jobTitle: staff.jobTitle,
+  departmentPermissions: staff.departmentPermissions || {},
+  favoriteDepartments: staff.favoriteDepartments || [],
+  departmentId: staff.primaryDepartmentId,
+  teacherId: staff.teacherId,
+  allowedDepartments: [], // deprecated
+  canEdit: staff.approvalStatus === 'approved',
+});
+
+// Helper: 신규 사용자를 staff 컬렉션에 생성
+const createNewStaffMember = async (user: User, isMaster: boolean): Promise<StaffMember> => {
+  const newStaffRef = doc(collection(db, 'staff'));
+  const newStaff: StaffMember = {
+    id: newStaffRef.id,
+    uid: user.uid,
+    name: user.displayName || user.email!.split('@')[0],
+    email: user.email!,
+    role: 'staff',
+    systemRole: isMaster ? 'master' : 'user',
+    approvalStatus: isMaster ? 'approved' : 'pending',
+    departmentPermissions: {},
+    favoriteDepartments: [],
+    hireDate: new Date().toISOString().split('T')[0],
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  await setDoc(newStaffRef, newStaff);
+  console.log('✅ New staff created:', newStaffRef.id);
+  return newStaff;
 };
 
 const App: React.FC = () => {
@@ -144,8 +153,15 @@ const App: React.FC = () => {
   const { data: holidays = [] } = useHolidays(!!currentUser);
   const { data: classKeywords = [] } = useClassKeywords(!!currentUser);
   const { data: systemConfig } = useSystemConfig(!!currentUser);
+  const { data: staffWithAccounts = [] } = useStaffWithAccounts(!!currentUser);
   const lookbackYears = systemConfig?.eventLookbackYears || 2;
   const sysCategories = systemConfig?.categories || [];
+
+  // staff 데이터를 UserProfile 형태로 변환 (기존 users 대체)
+  const usersFromStaff = useMemo(() =>
+    staffWithAccounts.map(staffToUserLike),
+    [staffWithAccounts]
+  );
 
   // Students and Classes for Global Search
   const { students: globalStudents = [] } = useStudents(false);
@@ -157,7 +173,6 @@ const App: React.FC = () => {
   // Real-time data (still uses onSnapshot for events)
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
-  const [users, setUsers] = useState<UserProfile[]>([]);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); // New State
   const [isPermissionViewOpen, setIsPermissionViewOpen] = useState(false); // Permission View Toggle
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false); // Global Search Modal
@@ -186,6 +201,8 @@ const App: React.FC = () => {
 
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTimetableSettingsOpen, setIsTimetableSettingsOpen] = useState(false);
+  const [isCalendarSettingsOpen, setIsCalendarSettingsOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false); // Phase 9: Global Archive State
 
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -387,76 +404,66 @@ const App: React.FC = () => {
       }
 
       if (user) {
-        // Real-time listener for User Profile
-        const userDocRef = doc(db, 'users', user.uid);
+        // staff 컬렉션에서 uid로 사용자 조회
+        const staffQuery = query(
+          collection(db, 'staff'),
+          where('uid', '==', user.uid)
+        );
 
-        profileUnsubscribe = onSnapshot(userDocRef, async (docSnapshot) => {
-          if (docSnapshot.exists()) {
-            const userData = docSnapshot.data() as UserProfile;
+        profileUnsubscribe = onSnapshot(staffQuery, async (snapshot) => {
+          const masterEmails = systemConfig?.masterEmails || ['st2000423@gmail.com'];
+          const isMasterEmail = user.email && masterEmails.includes(user.email);
 
-            // Get master emails from systemConfig (fallback to hardcoded for backward compatibility)
-            const masterEmails = systemConfig?.masterEmails || ['st2000423@gmail.com'];
-            const isMasterEmail = user.email && masterEmails.includes(user.email);
+          if (!snapshot.empty) {
+            // staff 문서가 존재함
+            const staffDoc = snapshot.docs[0];
+            const staffData = { id: staffDoc.id, ...staffDoc.data() } as StaffMember;
 
-            // Critical Fix: Force Master Role for master emails if not set
-            if (isMasterEmail && userData.role !== 'master') {
-              const updatedProfile: UserProfile = {
-                ...userData,
-                role: 'master',
-                status: 'approved',
-                canEdit: true
-              };
-              await setDoc(userDocRef, updatedProfile);
-              // The snapshot will fire again, so we don't need to set state here necessarily, 
-              // but for immediate feedback:
-              setUserProfile(updatedProfile);
+            // 마스터 이메일인데 역할이 master가 아니면 업데이트
+            if (isMasterEmail && staffData.systemRole !== 'master') {
+              await updateDoc(staffDoc.ref, {
+                systemRole: 'master',
+                approvalStatus: 'approved',
+                updatedAt: new Date().toISOString(),
+              });
+              // snapshot이 다시 trigger됨
             } else {
-              // Only update state if content actually changed (prevent infinite re-renders)
+              // staff → UserProfile 변환
+              const userProfile = staffToUserProfile(staffData);
               setUserProfile(prev => {
-                if (JSON.stringify(prev) === JSON.stringify(userData)) return prev;
-                return userData;
+                if (JSON.stringify(prev) === JSON.stringify(userProfile)) return prev;
+                return userProfile;
               });
             }
           } else {
-            // Document doesn't exist - Create it
-            // Get master emails from systemConfig (fallback to hardcoded for backward compatibility)
-            const masterEmails = systemConfig?.masterEmails || ['st2000423@gmail.com'];
-            const isMasterEmail = user.email && masterEmails.includes(user.email);
+            // staff 문서가 없음 - 이메일로 한 번 더 검색 (기존 직원 연동)
+            const emailQuery = query(
+              collection(db, 'staff'),
+              where('email', '==', user.email)
+            );
+            const emailSnapshot = await getDocs(emailQuery);
 
-            if (isMasterEmail) {
-              const newMasterProfile: UserProfile = {
+            if (!emailSnapshot.empty) {
+              // 이메일로 매칭된 staff 있음 - uid 연동
+              const existingStaff = emailSnapshot.docs[0];
+              await updateDoc(existingStaff.ref, {
                 uid: user.uid,
-                email: user.email!,
-                role: 'master',
-                status: 'approved',
-                allowedDepartments: [],
-                canEdit: true
-              };
-              await setDoc(userDocRef, newMasterProfile);
-              setUserProfile(newMasterProfile);
-
-              // 마스터는 자동으로 staff 생성
-              await createStaffFromUser(user, newMasterProfile);
+                systemRole: isMasterEmail ? 'master' : (existingStaff.data().systemRole || 'user'),
+                approvalStatus: isMasterEmail ? 'approved' : (existingStaff.data().approvalStatus || 'pending'),
+                updatedAt: new Date().toISOString(),
+              });
+              console.log('✅ Existing staff linked with uid:', existingStaff.id);
+              // snapshot이 다시 trigger됨
             } else {
-              // Initial user creation handled here
-              const newUserProfile: UserProfile = {
-                uid: user.uid,
-                email: user.email!,
-                role: 'user',
-                status: 'pending', // Default to pending
-                allowedDepartments: [],
-                departmentPermissions: {}
-              };
-              await setDoc(userDocRef, newUserProfile);
-              setUserProfile(newUserProfile);
-
-              // 일반 사용자도 자동으로 staff 생성
-              await createStaffFromUser(user, newUserProfile);
+              // 완전 신규 사용자 - staff 생성
+              const newStaff = await createNewStaffMember(user, isMasterEmail);
+              const userProfile = staffToUserProfile(newStaff);
+              setUserProfile(userProfile);
             }
           }
           setAuthLoading(false);
         }, (error) => {
-          console.error("Error listening to user profile:", error);
+          console.error("Error listening to staff profile:", error);
           setAuthLoading(false);
         });
 
@@ -473,16 +480,8 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Fetch Users (for Participants & Admin)
-  useEffect(() => {
-    // Optimization: In a real app, might want to restrict this or use cloud functions
-    // For now, we fetch all users to support the Participant Selector
-    const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const loadUsers = snapshot.docs.map(doc => doc.data() as UserProfile);
-      setUsers(loadUsers);
-    });
-    return () => unsubscribe();
-  }, []);
+  // Users 데이터는 이제 useStaffWithAccounts 훅을 통해 staff 컬렉션에서 가져옴
+  // usersFromStaff = staffWithAccounts.map(staffToUserLike)
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -696,7 +695,7 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [lookbackYears]);
 
-  // Note: 부서목록, 강사목록, 휴일, classKeywords, systemConfig are now handled by React Query hooks
+  // Note: 부서목록, 강사(staff 컬렉션), 휴일, classKeywords, systemConfig are now handled by React Query hooks
 
 
   useEffect(() => {
@@ -778,7 +777,7 @@ const App: React.FC = () => {
     const now = new Date().toISOString();
 
     memoRecipients.forEach(recipientId => {
-      const recipient = users.find(u => u.uid === recipientId);
+      const recipient = usersFromStaff.find(u => u.uid === recipientId);
       if (recipient) {
         const newDocRef = doc(collection(db, "taskMemos"));
         const newMemo: TaskMemo = {
@@ -885,8 +884,8 @@ const App: React.FC = () => {
   // Helper: Check if user's role is higher than author's role
   const isHigherRole = (authorId: string | undefined): boolean => {
     if (!userProfile || !authorId) return false;
-    const hierarchy = ['master', 'admin', 'manager', 'editor', 'user', 'viewer', 'guest'];
-    const author = users.find(u => u.uid === authorId);
+    const hierarchy = ['master', 'admin', 'manager', 'math_lead', 'english_lead', 'math_teacher', 'english_teacher', 'user'];
+    const author = usersFromStaff.find(u => u.uid === authorId);
     if (!author) return false;
     const myIndex = hierarchy.indexOf(userProfile.role);
     const authorIndex = hierarchy.indexOf(author.role);
@@ -1330,9 +1329,17 @@ const App: React.FC = () => {
       : [...current, deptId];
 
     try {
-      await updateDoc(doc(db, 'users', userProfile.uid), {
-        favoriteDepartments: updated
-      });
+      // staff 컬렉션에서 uid로 문서 찾기
+      const staffQuery = query(
+        collection(db, 'staff'),
+        where('uid', '==', userProfile.uid)
+      );
+      const staffSnapshot = await getDocs(staffQuery);
+      if (!staffSnapshot.empty) {
+        await updateDoc(staffSnapshot.docs[0].ref, {
+          favoriteDepartments: updated
+        });
+      }
     } catch (e) {
       console.error('Error updating favorites:', e);
     }
@@ -1490,17 +1497,15 @@ const App: React.FC = () => {
               {currentUser && (
                 <div className="hidden lg:flex flex-row items-center gap-1.5 ml-4 pl-4 border-l border-white/10">
                   {/* Role Badge */}
-                  {userProfile?.role && userProfile.role !== 'guest' && (
+                  {userProfile?.role && (
                     <span className={`text-white text-micro px-1 py-0.5 rounded font-black tracking-tighter shadow-sm ${userProfile.role === 'master' ? 'bg-red-600' :
                       userProfile.role === 'admin' ? 'bg-indigo-600' :
                         userProfile.role === 'manager' ? 'bg-purple-600' :
-                          userProfile.role === 'editor' ? 'bg-blue-600' :
-                            userProfile.role === 'math_lead' ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
-                              userProfile.role === 'english_lead' ? 'bg-gradient-to-r from-orange-500 to-red-500' :
-                                userProfile.role === 'math_teacher' ? 'bg-green-500' :
-                                  userProfile.role === 'english_teacher' ? 'bg-orange-500' :
-                                    userProfile.role === 'user' ? 'bg-gray-500' :
-                                      userProfile.role === 'viewer' ? 'bg-yellow-600' : 'bg-gray-400'
+                          userProfile.role === 'math_lead' ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
+                            userProfile.role === 'english_lead' ? 'bg-gradient-to-r from-orange-500 to-red-500' :
+                              userProfile.role === 'math_teacher' ? 'bg-green-500' :
+                                userProfile.role === 'english_teacher' ? 'bg-orange-500' :
+                                  'bg-gray-500'
                       }`}>
                       {ROLE_LABELS[userProfile.role] || userProfile.role.toUpperCase()}
                     </span>
@@ -1697,6 +1702,14 @@ const App: React.FC = () => {
                       ))}
                   </div>
 
+                  {/* Settings Button - 우측 끝 */}
+                  <button
+                    onClick={() => setIsCalendarSettingsOpen(true)}
+                    className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-colors ml-2"
+                    title="연간 일정 설정"
+                  >
+                    <Settings size={16} />
+                  </button>
                 </div>
               </div>
             )
@@ -2134,8 +2147,16 @@ const App: React.FC = () => {
 
                   {/* Removed Summary Indicators */}
 
-
                 </div>
+
+                {/* Settings Button - 우측 끝 */}
+                <button
+                  onClick={() => setIsTimetableSettingsOpen(true)}
+                  className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                  title="시간표 설정"
+                >
+                  <Settings size={16} />
+                </button>
               </div>
             )
           }
@@ -2282,7 +2303,7 @@ const App: React.FC = () => {
             /* Gantt Chart View */
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
-                <GanttManager userProfile={userProfile} allUsers={users} />
+                <GanttManager userProfile={userProfile} allUsers={usersFromStaff} />
               </div>
             </Suspense>
           ) : appMode === 'consultation' ? (
@@ -2364,7 +2385,6 @@ const App: React.FC = () => {
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto">
                 <StaffManager
-                  users={users}
                   currentUserProfile={userProfile}
                 />
               </div>
@@ -2586,7 +2606,7 @@ const App: React.FC = () => {
         // We do NOT forcefully set readOnly based on global edit anymore.
         // EventModal will check `userProfile.departmentPermissions` vs `selectedDeptId`.
         readOnly={false}
-        users={users}
+        users={usersFromStaff}
         currentUser={userProfile}
         allEvents={events}
         onBatchUpdateAttendance={handleBatchUpdateAttendance}
@@ -2605,7 +2625,7 @@ const App: React.FC = () => {
         onClose={() => setIsSettingsOpen(false)}
         departments={departments}
         currentUserProfile={userProfile}
-        users={users} // Pass users
+        users={usersFromStaff}
         holidays={holidays}
         events={events}
         sysCategories={sysCategories}
@@ -2613,6 +2633,28 @@ const App: React.FC = () => {
         showArchived={showArchived}
         onToggleArchived={() => setShowArchived(!showArchived)}
       />
+
+      {/* Timetable Settings Modal - 시간표 네비게이션에서 열림 */}
+      {isTimetableSettingsOpen && (
+        <Suspense fallback={null}>
+          <TimetableSettingsModal
+            isOpen={isTimetableSettingsOpen}
+            onClose={() => setIsTimetableSettingsOpen(false)}
+            canEdit={isMaster || hasPermission('timetable.math.edit')}
+          />
+        </Suspense>
+      )}
+
+      {/* Calendar Settings Modal - 연간 일정 네비게이션에서 열림 */}
+      {isCalendarSettingsOpen && (
+        <Suspense fallback={null}>
+          <CalendarSettingsModal
+            isOpen={isCalendarSettingsOpen}
+            onClose={() => setIsCalendarSettingsOpen(false)}
+            currentUser={userProfile}
+          />
+        </Suspense>
+      )}
 
       {/* Access Denied / Pending Approval Overlay */}
       {
@@ -2654,7 +2696,7 @@ const App: React.FC = () => {
                 <div>
                   <label className="text-xs font-bold text-gray-600 block mb-1">받는 사람</label>
                   <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
-                    {users
+                    {usersFromStaff
                       .filter(u => u.uid !== currentUser?.uid)
                       .sort((a, b) => {
                         const isASel = memoRecipients.includes(a.uid);
