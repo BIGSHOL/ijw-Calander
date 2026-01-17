@@ -211,6 +211,8 @@ const TimetableManager = ({
     const [fontSize, setFontSize] = useState<'small' | 'normal' | 'large' | 'very-large'>(
         savedSettings?.fontSize || 'normal'
     );
+    const [showHoldStudents, setShowHoldStudents] = useState(savedSettings?.showHoldStudents ?? true);
+    const [showWithdrawnStudents, setShowWithdrawnStudents] = useState(savedSettings?.showWithdrawnStudents ?? true);
 
     // 뷰 설정이 변경될 때마다 로컬 스토리지에 저장
     useEffect(() => {
@@ -224,14 +226,16 @@ const TimetableManager = ({
             rowHeight,
             fontSize,
             showStudents: internalShowStudents,
-            selectedDays: internalSelectedDays
+            selectedDays: internalSelectedDays,
+            showHoldStudents,
+            showWithdrawnStudents
         };
         try {
             localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(settings));
         } catch (e) {
             console.warn('Failed to save view settings to localStorage:', e);
         }
-    }, [timetableViewMode, showClassName, showSchool, showGrade, showEmptyRooms, columnWidth, rowHeight, fontSize, internalShowStudents, internalSelectedDays]);
+    }, [timetableViewMode, showClassName, showSchool, showGrade, showEmptyRooms, columnWidth, rowHeight, fontSize, internalShowStudents, internalSelectedDays, showHoldStudents, showWithdrawnStudents]);
 
     // Hook Integration: Drag & Drop
     const {
@@ -447,6 +451,8 @@ const TimetableManager = ({
                     showGrade={showGrade}
                     showEmptyRooms={showEmptyRooms}
                     showStudents={showStudents}
+                    showHoldStudents={showHoldStudents}
+                    showWithdrawnStudents={showWithdrawnStudents}
                     dragOverClassId={dragOverClassId}
                     onClassClick={(cls) => {
                         if (!canEditMath) return;
@@ -532,6 +538,10 @@ const TimetableManager = ({
                 setShowEmptyRooms={setShowEmptyRooms}
                 showStudents={showStudents}
                 setShowStudents={setShowStudents}
+                showHoldStudents={showHoldStudents}
+                setShowHoldStudents={setShowHoldStudents}
+                showWithdrawnStudents={showWithdrawnStudents}
+                setShowWithdrawnStudents={setShowWithdrawnStudents}
                 selectedDays={selectedDays}
                 setSelectedDays={setSelectedDays}
                 timetableViewMode={timetableViewMode}

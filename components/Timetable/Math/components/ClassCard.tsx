@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { TimetableClass, ClassKeywordColor, Teacher } from '../../../../types';
 import { getSubjectTheme } from '../utils/gridUtils';
 import { Clock } from 'lucide-react';
@@ -26,6 +27,9 @@ interface ClassCardProps {
     mergedDays?: string[];
     teachers?: Teacher[];
     fontSize?: 'small' | 'normal' | 'large' | 'very-large';  // 글자 크기 설정
+    rowHeight?: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';  // 세로 높이 설정
+    showHoldStudents?: boolean;  // 대기 학생 표시 여부
+    showWithdrawnStudents?: boolean;  // 퇴원 학생 표시 여부
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -48,8 +52,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onStudentClick,
     currentDay,
     mergedDays = [],
-    fontSize = 'normal'
+    fontSize = 'normal',
+    rowHeight = 'normal',
+    showHoldStudents = true,
+    showWithdrawnStudents = true
 }) => {
+    // 컴팩트 모드 여부
+    const isCompact = rowHeight === 'compact';
     // 글자 크기 CSS 클래스 매핑
     const fontSizeClass = {
         'small': 'text-[9px]',
@@ -66,6 +75,30 @@ const ClassCard: React.FC<ClassCardProps> = ({
     }[fontSize];
     const theme = getSubjectTheme(cls.subject);
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
+    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+    const headerRef = useRef<HTMLDivElement>(null);
+
+    // 툴팁 위치 업데이트
+    useEffect(() => {
+        if (showScheduleTooltip && headerRef.current) {
+            const rect = headerRef.current.getBoundingClientRect();
+            const tooltipWidth = 160; // 대략적인 툴팁 너비
+            const viewportWidth = window.innerWidth;
+
+            // 기본 위치: 요소 중앙 하단
+            let x = rect.left + rect.width / 2 - tooltipWidth / 2;
+            const y = rect.bottom + 4;
+
+            // 왼쪽 경계 체크
+            if (x < 8) x = 8;
+            // 오른쪽 경계 체크
+            if (x + tooltipWidth > viewportWidth - 8) {
+                x = viewportWidth - tooltipWidth - 8;
+            }
+
+            setTooltipPosition({ x, y });
+        }
+    }, [showScheduleTooltip]);
 
     // 수업 스케줄 정보 생성 (마우스 오버 툴팁용)
     const scheduleInfo = useMemo(() => {
@@ -263,7 +296,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {/* Class Name Header - 키워드 색상 적용, 마우스 오버시 스케줄 툴팁 */}
             {showClassName && (
                 <div
-                    className={`text-center font-bold py-1 px-1 ${titleFontSizeClass} border-b border-gray-300 relative cursor-help`}
+                    ref={headerRef}
+                    className={`text-center font-bold py-1 px-1 ${titleFontSizeClass} cursor-help ${showStudents ? 'border-b border-gray-300' : 'flex-1 flex flex-col justify-center'}`}
                     style={matchedKeyword
                         ? { color: matchedKeyword.textColor }
                         : { color: '#1f2937' }
@@ -272,15 +306,46 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     onMouseLeave={() => setShowScheduleTooltip(false)}
                 >
                     <div>{cls.className}</div>
-                    {cls.room && (
+                    {/* 강의실 + 재원생 수 (학생 목록 숨김 시) */}
+                    {(cls.room || !showStudents) && (
                         <div className={`${fontSizeClass} font-normal text-gray-500 mt-0.5`}>
                             {cls.room}
+                            {!showStudents && (
+                                <>
+                                    {cls.room && ' · '}
+                                    {isMergedCell ? (
+                                        // 병합 셀: 요일별 인원 표시 (예: 월3 목4)
+                                        <span className="text-indigo-600 font-bold">
+                                            {mergedDays.map((day, idx) => {
+                                                const dayCount = commonStudents.active.length +
+                                                    (partialStudentsByDay?.[day]?.active.length || 0);
+                                                return (
+                                                    <span key={day}>
+                                                        {idx > 0 && ' '}
+                                                        {day}{dayCount}
+                                                    </span>
+                                                );
+                                            })}
+                                        </span>
+                                    ) : (
+                                        // 단일 셀: 총 인원만 표시
+                                        <span className="text-indigo-600 font-bold">{activeStudents.length}명</span>
+                                    )}
+                                </>
+                            )}
                         </div>
                     )}
 
-                    {/* Schedule Tooltip (마우스 오버 시 실제 스케줄 표시) */}
-                    {showScheduleTooltip && scheduleInfo.length > 0 && (
-                        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 p-2 min-w-[140px] whitespace-nowrap">
+                    {/* Schedule Tooltip - Portal을 사용하여 DOM 최상위에 렌더링 */}
+                    {showScheduleTooltip && scheduleInfo.length > 0 && createPortal(
+                        <div
+                            className="fixed bg-gray-900 text-white text-xs rounded-lg shadow-xl p-2 min-w-[140px] whitespace-nowrap pointer-events-none"
+                            style={{
+                                left: tooltipPosition.x,
+                                top: tooltipPosition.y,
+                                zIndex: 9999
+                            }}
+                        >
                             <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-700">
                                 <Clock size={12} className="text-yellow-400" />
                                 <span className="font-bold">수업 시간</span>
@@ -295,9 +360,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                     </div>
                                 ))}
                             </div>
-                            {/* 툴팁 화살표 */}
-                            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
-                        </div>
+                        </div>,
+                        document.body
                     )}
                 </div>
             )}
@@ -336,8 +400,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             </ul>
                         </div>
 
+                        {/* Spacer - 대기/퇴원을 하단으로 밀기 */}
                         <div className="flex-1"></div>
 
+                        {/* 부분 등원 학생 (월만, 목만 등) */}
                         {hasPartialStudents && (() => {
                             // 각 요일의 학생 수 중 최대값 계산
                             const maxStudentCount = Math.max(
@@ -398,33 +464,39 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             );
                         })()}
 
-                        {/* 대기 + 퇴원 */}
-                        <div className="flex-shrink-0">
-                            <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                                <div className="text-[10px] font-bold text-violet-600">대기 ({commonStudents.hold.length}명)</div>
-                                {commonStudents.hold.length > 0 ? (
-                                    <ul className="flex flex-col">
-                                        {commonStudents.hold.map(s => (
-                                            <li key={s.id} className="text-[10px] leading-tight text-violet-800 truncate">{s.name}</li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <span className="text-[10px] text-violet-300">-</span>
+                        {/* 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
+                        {(showHoldStudents || showWithdrawnStudents) && (
+                            <div className="flex-shrink-0">
+                                {showHoldStudents && (
+                                    <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                        <div className="text-[10px] font-bold text-violet-600">대기 ({commonStudents.hold.length}명)</div>
+                                        {commonStudents.hold.length > 0 ? (
+                                            <ul className="flex flex-col">
+                                                {commonStudents.hold.map(s => (
+                                                    <li key={s.id} className="text-[10px] leading-tight text-violet-800 truncate">{s.name}</li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <span className="text-[10px] text-violet-300">-</span>
+                                        )}
+                                    </div>
+                                )}
+                                {showWithdrawnStudents && (
+                                    <div className="px-0.5 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                        <div className="text-[10px] font-bold text-gray-600">퇴원 ({commonStudents.withdrawn.length}명)</div>
+                                        {commonStudents.withdrawn.length > 0 ? (
+                                            <ul className="flex flex-col">
+                                                {commonStudents.withdrawn.map(s => (
+                                                    <li key={s.id} className="text-[10px] leading-tight text-gray-700 truncate">{s.name}</li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <span className="text-[10px] text-gray-400">-</span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                            <div className="px-0.5 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                                <div className="text-[10px] font-bold text-gray-600">퇴원 ({commonStudents.withdrawn.length}명)</div>
-                                {commonStudents.withdrawn.length > 0 ? (
-                                    <ul className="flex flex-col">
-                                        {commonStudents.withdrawn.map(s => (
-                                            <li key={s.id} className="text-[10px] leading-tight text-gray-700 truncate">{s.name}</li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <span className="text-[10px] text-gray-400">-</span>
-                                )}
-                            </div>
-                        </div>
+                        )}
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden">
@@ -465,44 +537,50 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         {/* Spacer: 대기/퇴원을 하단으로 밀기 */}
                         <div className="flex-1"></div>
 
-                        {/* 하단 고정 영역: 대기 + 퇴원 */}
-                        <div className="flex-shrink-0">
-                            {/* 대기생 Section - 컴팩트 */}
-                            <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                                <div className="text-[10px] font-bold text-violet-600">대기 ({holdStudents.length}명)</div>
-                                {holdStudents.length > 0 ? (
-                                    <ul className="flex flex-col">
-                                        {holdStudents.map(s => (
-                                            <li key={s.id} className="text-[10px] leading-tight text-violet-800 truncate" title={s.name}>
-                                                {s.name}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <span className="text-[10px] text-violet-300">-</span>
+                        {/* 하단 고정 영역: 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
+                        {(showHoldStudents || showWithdrawnStudents) && (
+                            <div className="flex-shrink-0">
+                                {/* 대기생 Section */}
+                                {showHoldStudents && (
+                                    <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                        <div className="text-[10px] font-bold text-violet-600">대기 ({holdStudents.length}명)</div>
+                                        {holdStudents.length > 0 ? (
+                                            <ul className="flex flex-col">
+                                                {holdStudents.map(s => (
+                                                    <li key={s.id} className="text-[10px] leading-tight text-violet-800 truncate" title={s.name}>
+                                                        {s.name}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <span className="text-[10px] text-violet-300">-</span>
+                                        )}
+                                    </div>
                                 )}
-                            </div>
 
-                            {/* 퇴원생 Section - 컴팩트 */}
-                            <div className="px-0.5 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                                <div className="text-[10px] font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
-                                {withdrawnStudents.length > 0 ? (
-                                    <ul className="flex flex-col">
-                                        {withdrawnStudents.map(s => (
-                                            <li
-                                                key={s.id}
-                                                className="text-[10px] leading-tight text-gray-700 truncate"
-                                                title={s.withdrawalDate ? `${s.name} (퇴원: ${s.withdrawalDate})` : s.name}
-                                            >
-                                                {s.name}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <span className="text-[10px] text-gray-400">-</span>
+                                {/* 퇴원생 Section */}
+                                {showWithdrawnStudents && (
+                                    <div className="px-0.5 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                        <div className="text-[10px] font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
+                                        {withdrawnStudents.length > 0 ? (
+                                            <ul className="flex flex-col">
+                                                {withdrawnStudents.map(s => (
+                                                    <li
+                                                        key={s.id}
+                                                        className="text-[10px] leading-tight text-gray-700 truncate"
+                                                        title={s.withdrawalDate ? `${s.name} (퇴원: ${s.withdrawalDate})` : s.name}
+                                                    >
+                                                        {s.name}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <span className="text-[10px] text-gray-400">-</span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                        </div>
+                        )}
                     </div>
                 )
             )}

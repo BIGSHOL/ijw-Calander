@@ -3,6 +3,94 @@ import { TimetableClass, Teacher, ClassKeywordColor } from '../../../../types';
 import { getClassesForCell, getConsecutiveSpan, shouldSkipCell } from '../utils/gridUtils';
 import ClassCard from './ClassCard';
 import { MATH_PERIOD_TIMES, WEEKEND_PERIOD_TIMES, ENGLISH_PERIODS, ALL_WEEKDAYS } from '../../constants';
+
+// Helper: 특정 요일에 강사가 수업이 있는지 확인 (메인 teacher 또는 slotTeachers)
+const hasClassOnDay = (
+    cls: TimetableClass,
+    day: string,
+    resource: string,
+    viewType: 'teacher' | 'room' | 'class'
+): boolean => {
+    // 해당 요일에 스케줄이 있는지 먼저 확인
+    const hasScheduleOnDay = cls.schedule?.some(s => s.includes(day));
+    if (!hasScheduleOnDay) return false;
+
+    if (viewType === 'teacher') {
+        // 메인 teacher인 경우
+        if (cls.teacher?.trim() === resource?.trim()) {
+            // slotTeachers에서 다른 사람이 모든 슬롯을 담당하는지 확인
+            // 해당 요일의 모든 슬롯에 slotTeacher가 지정되어 있으면 메인 teacher는 해당 요일 수업 없음
+            const daySlots = cls.schedule?.filter(s => s.includes(day)) || [];
+            const allSlotsOverridden = daySlots.every(slot => {
+                // slot 형식: "월 1-2" -> slotTeachers 키: "월-2"
+                const parts = slot.trim().split(/\s+/);
+                if (parts.length >= 2) {
+                    const slotDay = parts[0];
+                    const periodPart = parts[1];
+                    // 레거시 periodId를 새 periodId로 변환 (1-2 -> 2)
+                    const periodMap: Record<string, string> = {
+                        '1-1': '1', '1-2': '2', '2-1': '3', '2-2': '4',
+                        '3-1': '5', '3-2': '6', '4-1': '7', '4-2': '8',
+                        '1': '1', '2': '2', '3': '3', '4': '4',
+                        '5': '5', '6': '6', '7': '7', '8': '8'
+                    };
+                    const normalizedPeriod = periodMap[periodPart] || periodPart;
+                    const slotKey = `${slotDay}-${normalizedPeriod}`;
+                    const slotTeacher = cls.slotTeachers?.[slotKey];
+                    // slotTeacher가 있고 메인 teacher와 다르면 override
+                    return slotTeacher && slotTeacher.trim() !== resource?.trim();
+                }
+                return false;
+            });
+            // 모든 슬롯이 다른 강사로 override되지 않았으면 해당 요일 수업 있음
+            return !allSlotsOverridden;
+        }
+
+        // slotTeachers에 해당 강사가 있는지 확인
+        if (cls.slotTeachers) {
+            return Object.entries(cls.slotTeachers).some(([key, teacher]) => {
+                // key 형식: "월-2" (요일-periodId)
+                const keyDay = key.split('-')[0];
+                return keyDay === day && teacher?.trim() === resource?.trim();
+            });
+        }
+
+        return false;
+    } else {
+        // Room 뷰
+        if (cls.room?.trim() === resource?.trim()) {
+            const daySlots = cls.schedule?.filter(s => s.includes(day)) || [];
+            const allSlotsOverridden = daySlots.every(slot => {
+                const parts = slot.trim().split(/\s+/);
+                if (parts.length >= 2) {
+                    const slotDay = parts[0];
+                    const periodPart = parts[1];
+                    const periodMap: Record<string, string> = {
+                        '1-1': '1', '1-2': '2', '2-1': '3', '2-2': '4',
+                        '3-1': '5', '3-2': '6', '4-1': '7', '4-2': '8',
+                        '1': '1', '2': '2', '3': '3', '4': '4',
+                        '5': '5', '6': '6', '7': '7', '8': '8'
+                    };
+                    const normalizedPeriod = periodMap[periodPart] || periodPart;
+                    const slotKey = `${slotDay}-${normalizedPeriod}`;
+                    const slotRoom = cls.slotRooms?.[slotKey];
+                    return slotRoom && slotRoom.trim() !== resource?.trim();
+                }
+                return false;
+            });
+            return !allSlotsOverridden;
+        }
+
+        if (cls.slotRooms) {
+            return Object.entries(cls.slotRooms).some(([key, room]) => {
+                const keyDay = key.split('-')[0];
+                return keyDay === day && room?.trim() === resource?.trim();
+            });
+        }
+
+        return false;
+    }
+};
 import { BookOpen } from 'lucide-react';
 
 interface TimetableGridProps {
@@ -24,6 +112,8 @@ interface TimetableGridProps {
     showGrade: boolean;
     showEmptyRooms: boolean;
     showStudents: boolean;
+    showHoldStudents: boolean;
+    showWithdrawnStudents: boolean;
     // DnD
     dragOverClassId: string | null;
     onClassClick: (cls: TimetableClass) => void;
@@ -60,6 +150,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     showGrade,
     showEmptyRooms,
     showStudents,
+    showHoldStudents,
+    showWithdrawnStudents,
     dragOverClassId,
     onClassClick,
     onDragStart,
@@ -74,31 +166,38 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     onStudentClick
 }) => {
     // Helper to get column width style
-    const getColumnWidthStyle = (colspan: number) => {
-        const baseWidth = columnWidth === 'narrow' ? 100 : columnWidth === 'wide' ? 160 : 130;
-        return { width: `${colspan * baseWidth}px`, minWidth: `${colspan * baseWidth}px` };
+    // 병합 셀용 (월/목 같이 여러 요일 병합) - 각 요일당 좁은 너비
+    const getMergedCellWidthStyle = (colspan: number) => {
+        const perDayWidth = columnWidth === 'narrow' ? 80 : columnWidth === 'wide' ? 120 : 100;
+        return { width: `${colspan * perDayWidth}px`, minWidth: `${colspan * perDayWidth}px` };
     };
 
-    const getCellWidthStyle = () => {
-        const baseWidth = columnWidth === 'narrow' ? 100 : columnWidth === 'wide' ? 160 : 130;
+    // 단일 셀용 (수, 토, 일 등 병합 안 된 셀) - 수업명이 한 줄에 보이도록 넓게
+    const getSingleCellWidthStyle = () => {
+        const baseWidth = columnWidth === 'narrow' ? 140 : columnWidth === 'wide' ? 200 : 170;
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 
     // 날짜별 뷰용 - 더 넓은 너비로 강의명이 한줄에 표시되도록
     const getDayBasedCellWidthStyle = () => {
-        const baseWidth = columnWidth === 'narrow' ? 130 : columnWidth === 'wide' ? 190 : 160;
+        const baseWidth = columnWidth === 'narrow' ? 140 : columnWidth === 'wide' ? 200 : 170;
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 
     // 교시당 기본 높이 계산
-    const getRowHeight = () => {
+    const getRowHeight = (): number | 'auto' => {
+        // 학생 목록 숨기면 항상 auto (콘텐츠에 맞게 압축)
+        if (!showStudents) return 'auto';
         // rowHeight 설정에 따라 조절 - 더 극적인 차이로 변경
-        if (rowHeight === 'compact') return 80;     // 컴팩트 (수업명만)
+        if (rowHeight === 'compact') return 'auto'; // 컴팩트: 콘텐츠에 맞게 자동 축소
         if (rowHeight === 'short') return 120;      // 좁게 (수업명 + 학생 2~3명)
         if (rowHeight === 'tall') return 280;       // 큰 높이
         if (rowHeight === 'very-tall') return 340;  // 아주 큰 높이
         return 200; // normal - 기본값
     };
+
+    // 학생 목록 숨기기도 컴팩트 모드처럼 동작
+    const isCompactMode = rowHeight === 'compact' || !showStudents;
 
     // 수요일만
     const hasWednesday = orderedSelectedDays.includes('수');
@@ -118,16 +217,13 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return orderedSelectedDays.filter(day => day === '토' || day === '일');
     }, [orderedSelectedDays]);
 
-    // 월/목 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산
+    // 월/목 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산 (slotTeachers 포함)
     const monThuResourceDaysMap = useMemo(() => {
         const map = new Map<string, string[]>();
 
         allResources.forEach(resource => {
             const daysForResource = monThuDays.filter(day =>
-                filteredClasses.some(c =>
-                    (viewType === 'teacher' ? c.teacher === resource : c.room === resource) &&
-                    c.schedule?.some(s => s.includes(day))
-                )
+                filteredClasses.some(c => hasClassOnDay(c, day, resource, viewType))
             );
             if (daysForResource.length > 0) {
                 map.set(resource, daysForResource);
@@ -137,16 +233,13 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return map;
     }, [allResources, monThuDays, filteredClasses, viewType]);
 
-    // 화/금 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산
+    // 화/금 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산 (slotTeachers 포함)
     const tueFriResourceDaysMap = useMemo(() => {
         const map = new Map<string, string[]>();
 
         allResources.forEach(resource => {
             const daysForResource = tueFriDays.filter(day =>
-                filteredClasses.some(c =>
-                    (viewType === 'teacher' ? c.teacher === resource : c.room === resource) &&
-                    c.schedule?.some(s => s.includes(day))
-                )
+                filteredClasses.some(c => hasClassOnDay(c, day, resource, viewType))
             );
             if (daysForResource.length > 0) {
                 map.set(resource, daysForResource);
@@ -156,16 +249,13 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return map;
     }, [allResources, tueFriDays, filteredClasses, viewType]);
 
-    // 토/일 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산
+    // 토/일 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산 (slotTeachers 포함)
     const weekendResourceDaysMap = useMemo(() => {
         const map = new Map<string, string[]>();
 
         allResources.forEach(resource => {
             const daysForResource = weekendDays.filter(day =>
-                filteredClasses.some(c =>
-                    (viewType === 'teacher' ? c.teacher === resource : c.room === resource) &&
-                    c.schedule?.some(s => s.includes(day))
-                )
+                filteredClasses.some(c => hasClassOnDay(c, day, resource, viewType))
             );
             if (daysForResource.length > 0) {
                 map.set(resource, daysForResource);
@@ -175,14 +265,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return map;
     }, [allResources, weekendDays, filteredClasses, viewType]);
 
-    // 수요일 수업이 있는 선생님 (수요일 전용)
+    // 수요일 수업이 있는 선생님 (수요일 전용, slotTeachers 포함)
     const wednesdayResources = useMemo(() => {
         if (!hasWednesday) return [];
         return allResources.filter(resource =>
-            filteredClasses.some(c =>
-                (viewType === 'teacher' ? c.teacher === resource : c.room === resource) &&
-                c.schedule?.some(s => s.includes('수'))
-            )
+            filteredClasses.some(c => hasClassOnDay(c, '수', resource, viewType))
         );
     }, [allResources, filteredClasses, viewType, hasWednesday]);
 
@@ -283,13 +370,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     const bgColor = teacherData?.bgColor || '#3b82f6';
                                     const textColor = teacherData?.textColor || '#ffffff';
 
+                                    // 병합 요일(colspan > 1)이면 병합 너비, 아니면 단일 너비
+                                    const headerWidthStyle = colspan > 1
+                                        ? getMergedCellWidthStyle(colspan)
+                                        : getSingleCellWidthStyle();
+
                                     return (
                                         <th
                                             key={resource}
                                             colSpan={colspan}
                                             className="p-1.5 text-xs font-bold border-b border-r-2 border-r-gray-300 truncate"
                                             style={{
-                                                ...getColumnWidthStyle(colspan),
+                                                ...headerWidthStyle,
                                                 backgroundColor: bgColor,
                                                 color: textColor,
                                                 borderBottomColor: bgColor
@@ -312,12 +404,17 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         const dateInfo = weekDates[day];
                                         // 강사 구분만 굵은선, 나머지는 테두리 없음
                                         const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-gray-400' : '';
+                                        // 병합 요일(월/목 등)은 좁게, 단독 요일(수)은 넓게
+                                        const isMergedDay = daysForResource.length > 1;
+                                        const dayHeaderWidth = isMergedDay
+                                            ? getMergedCellWidthStyle(1)  // 병합 셀의 1요일 너비
+                                            : getSingleCellWidthStyle();  // 단독 셀 너비
 
                                         return (
                                             <th
                                                 key={`${resource}-${day}`}
                                                 className={`p-1.5 text-xxs font-bold text-center ${borderRightClass} ${isWeekend ? 'bg-orange-50 text-orange-700' : day === '수' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}
-                                                style={getCellWidthStyle()}
+                                                style={dayHeaderWidth}
                                             >
                                                 <div>{day}</div>
                                                 {dateInfo && <div className="text-[10px] opacity-70">{dateInfo.formatted}</div>}
@@ -441,9 +538,17 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                     }
                                                 }
 
-                                                const baseWidthStyle = colSpan > 1 ? getColumnWidthStyle(colSpan) : getCellWidthStyle();
-                                                const cellHeight = getRowHeight() * maxRowSpan;
-                                                const cellStyle = { ...baseWidthStyle, height: `${cellHeight}px` };
+                                                // 병합 셀(월/목)은 좁게, 단일 셀(수)은 넓게
+                                                const baseWidthStyle = colSpan > 1
+                                                    ? getMergedCellWidthStyle(colSpan)
+                                                    : getSingleCellWidthStyle();
+                                                const heightValue = getRowHeight();
+                                                // 컴팩트 모드: 수업이 있으면 최소 높이 적용 (빈 셀은 auto)
+                                                const compactRowHeight = 45; // 수업명 + 강의실만 표시할 때의 높이
+                                                const hasClass = cellClasses.length > 0;
+                                                const cellStyle = isCompactMode
+                                                    ? { ...baseWidthStyle, height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
+                                                    : { ...baseWidthStyle, height: `${(heightValue as number) * maxRowSpan}px` };
 
                                                 // 빈 셀 여부 확인 (수업이 없는 교시)
                                                 const isEmpty = cellClasses.length === 0;
@@ -488,6 +593,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     currentDay={colSpan === 1 ? day : undefined}
                                                                     mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                     fontSize={fontSize}
+                                                                    rowHeight={rowHeight}
+                                                                    showHoldStudents={showHoldStudents}
+                                                                    showWithdrawnStudents={showWithdrawnStudents}
                                                                 />
                                                             ))
                                                         )}
@@ -509,7 +617,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         );
     };
 
-    // 날짜 기반 뷰: 요일별로 해당 요일에 수업이 있는 선생님 목록
+    // 날짜 기반 뷰: 요일별로 해당 요일에 수업이 있는 선생님 목록 (slotTeachers 포함)
     // 날짜 뷰에서는 기본 요일 순서(월화수목금토일)를 사용
     const dayBasedData = useMemo(() => {
         const data: { day: string; resources: string[] }[] = [];
@@ -520,10 +628,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
         selectedDaysInOrder.forEach(day => {
             const resourcesForDay = allResources.filter(resource =>
-                filteredClasses.some(c =>
-                    (viewType === 'teacher' ? c.teacher === resource : c.room === resource) &&
-                    c.schedule?.some(s => s.includes(day))
-                )
+                filteredClasses.some(c => hasClassOnDay(c, day, resource, viewType))
             );
             if (resourcesForDay.length > 0) {
                 data.push({ day, resources: resourcesForDay });
@@ -662,8 +767,13 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
                                             ));
 
-                                            const cellHeight = getRowHeight() * maxRowSpan;
-                                            const cellStyle = { ...getDayBasedCellWidthStyle(), height: `${cellHeight}px` };
+                                            const heightValue = getRowHeight();
+                                            // 컴팩트 모드: 수업이 있으면 최소 높이 적용 (빈 셀은 auto)
+                                            const compactRowHeight = 45;
+                                            const hasClass = cellClasses.length > 0;
+                                            const cellStyle = isCompactMode
+                                                ? { ...getDayBasedCellWidthStyle(), height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
+                                                : { ...getDayBasedCellWidthStyle(), height: `${(heightValue as number) * maxRowSpan}px` };
 
                                             // 빈 셀 여부 확인 (수업이 없는 교시)
                                             const isEmpty = cellClasses.length === 0;
@@ -706,6 +816,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 onStudentClick={onStudentClick}
                                                                 currentDay={day}
                                                                 fontSize={fontSize}
+                                                                rowHeight={rowHeight}
+                                                                showHoldStudents={showHoldStudents}
+                                                                showWithdrawnStudents={showWithdrawnStudents}
                                                             />
                                                         ))
                                                     )}
