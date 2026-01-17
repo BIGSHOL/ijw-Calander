@@ -675,6 +675,8 @@ export interface TimetableClass {
   studentIds?: string[];            // Link to students collection
   color?: string;
   order?: number;
+  slotTeachers?: Record<string, string>;  // 교시별 담당강사 (key: "월-1-1", value: 강사명)
+  slotRooms?: Record<string, string>;     // 교시별 강의실 (key: "월-1-1", value: 강의실)
 }
 
 export interface Teacher {

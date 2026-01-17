@@ -99,6 +99,8 @@ export const useTimetableClasses = () => {
                         schedule: scheduleStrings,
                         room: data.room || '',
                         color: data.color,
+                        slotTeachers: data.slotTeachers || {},
+                        slotRooms: data.slotRooms || {},
                     };
                 });
 

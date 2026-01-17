@@ -1,4 +1,5 @@
 import { TimetableClass } from '../../../../types';
+import { convertLegacyPeriodId } from '../../constants';
 
 // Subject Theme Colors
 export const getSubjectTheme = (subject: string) => {
@@ -25,19 +26,55 @@ export const getClassesForCell = (
     viewType: 'teacher' | 'room' | 'class'
 ) => {
     return filteredClasses.filter(cls => {
-        const resourceMatch = viewType === 'teacher' ? (cls.teacher?.trim() === resource?.trim()) : (cls.room?.trim() === resource?.trim());
-
         // Remove spaces for robust comparison
         const targetSlot = `${day}${period}`.replace(/\s+/g, '');
 
+        // Schedule 매칭 먼저 확인
         const scheduleMatch = cls.schedule?.some(s => {
             const normalizedS = s.replace(/\s+/g, '');
             // Check exact match or sub-period matching
             return normalizedS === targetSlot || normalizedS.startsWith(`${targetSlot}-`);
         });
 
-        return resourceMatch && scheduleMatch;
+        if (!scheduleMatch) return false;
+
+        // 리소스 매칭 (Teacher/Room) - slotTeachers/slotRooms 지원
+        if (viewType === 'teacher') {
+            // slotTeachers 키 생성: 레거시 periodId (1-2)를 새 periodId (2)로 변환
+            // period가 "1-2" 형식이면 "2"로, 이미 "2" 형식이면 그대로 사용
+            const normalizedPeriod = convertLegacyPeriodId(period);
+            const slotKey = `${day}-${normalizedPeriod}`;
+            const slotTeacher = cls.slotTeachers?.[slotKey];
+
+            // slotTeacher가 있으면 그것 사용, 없으면 메인 teacher
+            const effectiveTeacher = slotTeacher || cls.teacher;
+            return effectiveTeacher?.trim() === resource?.trim();
+        } else {
+            // Room 뷰는 slotRooms 또는 기본 room
+            const normalizedPeriod = convertLegacyPeriodId(period);
+            const slotKey = `${day}-${normalizedPeriod}`;
+            const slotRoom = cls.slotRooms?.[slotKey];
+            const effectiveRoom = slotRoom || cls.room;
+            return effectiveRoom?.trim() === resource?.trim();
+        }
     });
+};
+
+// Helper: 특정 슬롯의 effective teacher/room 가져오기
+const getEffectiveResource = (
+    cls: TimetableClass,
+    day: string,
+    period: string,
+    viewType: 'teacher' | 'room' | 'class'
+): string => {
+    const normalizedPeriod = convertLegacyPeriodId(period);
+    const slotKey = `${day}-${normalizedPeriod}`;
+
+    if (viewType === 'teacher') {
+        return cls.slotTeachers?.[slotKey] || cls.teacher || '';
+    } else {
+        return cls.slotRooms?.[slotKey] || cls.room || '';
+    }
 };
 
 // Calculate how many consecutive periods a class spans starting from given period
@@ -50,18 +87,26 @@ export const getConsecutiveSpan = (
     viewType: 'teacher' | 'room' | 'class'
 ): number => {
     let span = 1;
+    const startPeriod = periods[startPeriodIndex];
+    const startResource = getEffectiveResource(cls, day, startPeriod, viewType);
+
     for (let i = startPeriodIndex + 1; i < periods.length; i++) {
         const nextPeriod = periods[i];
         const targetSlot = `${day} ${nextPeriod}`;
         const hasNextSlot = cls.schedule?.some(s => s === targetSlot);
 
+        if (!hasNextSlot) break;
+
+        // slotTeacher가 다르면 병합 불가 (다른 선생님 담당 교시)
+        const nextResource = getEffectiveResource(cls, day, nextPeriod, viewType);
+        if (nextResource !== startResource) break;
+
         // Check if next slot is "pure" (only contains this class)
         // If next slot has other classes, we must break the span to allow displaying them
-        const resource = viewType === 'teacher' ? cls.teacher : cls.room;
-        const classesInNextSlot = getClassesForCell(filteredClasses, day, nextPeriod, resource, viewType);
+        const classesInNextSlot = getClassesForCell(filteredClasses, day, nextPeriod, startResource, viewType);
         const isNextSlotDirty = classesInNextSlot.some(c => c.id !== cls.id);
 
-        if (hasNextSlot && !isNextSlotDirty) {
+        if (!isNextSlotDirty) {
             span++;
         } else {
             break;
@@ -83,6 +128,9 @@ export const shouldSkipCell = (
     // If current cell has multiple classes (conflict), NEVER skip. Show all.
     if (currentCellClasses.length > 1) return false;
 
+    const currentPeriod = periods[periodIndex];
+    const currentResource = getEffectiveResource(cls, day, currentPeriod, viewType);
+
     // Look backwards to see if any previous consecutive period started a rowspan that covers this cell
     for (let i = periodIndex - 1; i >= 0; i--) {
         const prevPeriod = periods[i];
@@ -90,9 +138,14 @@ export const shouldSkipCell = (
         const hasPrevSlot = cls.schedule?.some(s => s === targetSlot);
 
         if (hasPrevSlot) {
+            // slotTeacher가 다르면 병합 불가 (이 셀은 새로운 시작점)
+            const prevResource = getEffectiveResource(cls, day, prevPeriod, viewType);
+            if (prevResource !== currentResource) {
+                return false;
+            }
+
             // Check if the PREVIOUS cell was "dirty". If it was dirty, it couldn't have spanned to here.
-            const resource = viewType === 'teacher' ? cls.teacher : cls.room;
-            const classesInPrevSlot = getClassesForCell(filteredClasses, day, prevPeriod, resource, viewType);
+            const classesInPrevSlot = getClassesForCell(filteredClasses, day, prevPeriod, currentResource, viewType);
             const isPrevSlotDirty = classesInPrevSlot.some(c => c.id !== cls.id);
 
             if (isPrevSlotDirty) {

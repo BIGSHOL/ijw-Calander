@@ -26,6 +26,10 @@ interface ViewSettingsModalProps {
     // 보기 옵션 설정 (통합)
     showStudents: boolean;
     setShowStudents: (show: boolean) => void;
+    showHoldStudents: boolean;
+    setShowHoldStudents: (show: boolean) => void;
+    showWithdrawnStudents: boolean;
+    setShowWithdrawnStudents: (show: boolean) => void;
     selectedDays: string[];
     setSelectedDays: (days: string[]) => void;
     // 뷰 모드
@@ -53,6 +57,10 @@ const ViewSettingsModal: React.FC<ViewSettingsModalProps> = ({
     setShowEmptyRooms,
     showStudents,
     setShowStudents,
+    showHoldStudents,
+    setShowHoldStudents,
+    showWithdrawnStudents,
+    setShowWithdrawnStudents,
     selectedDays,
     setSelectedDays,
     timetableViewMode,
@@ -101,6 +109,32 @@ const ViewSettingsModal: React.FC<ViewSettingsModalProps> = ({
                                     <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform`} style={{ left: showStudents ? '18px' : '2px' }}></div>
                                 </div>
                             </button>
+
+                            {/* 대기/퇴원 표시 토글 (학생 목록 보일 때만 활성화) */}
+                            {showStudents && (
+                                <div className="flex gap-2 mt-2">
+                                    <button
+                                        onClick={() => setShowHoldStudents(!showHoldStudents)}
+                                        className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showHoldStudents
+                                            ? 'bg-violet-100 text-violet-700 border-violet-300'
+                                            : 'bg-gray-50 text-gray-400 border-gray-200'
+                                            }`}
+                                    >
+                                        {showHoldStudents ? <Eye size={12} className="inline mr-1" /> : <EyeOff size={12} className="inline mr-1" />}
+                                        대기
+                                    </button>
+                                    <button
+                                        onClick={() => setShowWithdrawnStudents(!showWithdrawnStudents)}
+                                        className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showWithdrawnStudents
+                                            ? 'bg-gray-200 text-gray-700 border-gray-300'
+                                            : 'bg-gray-50 text-gray-400 border-gray-200'
+                                            }`}
+                                    >
+                                        {showWithdrawnStudents ? <Eye size={12} className="inline mr-1" /> : <EyeOff size={12} className="inline mr-1" />}
+                                        퇴원
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Days Selection */}
