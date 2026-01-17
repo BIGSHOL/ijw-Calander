@@ -23,7 +23,7 @@ export const useDepartments = (enabled: boolean = true) => {
     });
 };
 
-// 강사목록 - 30분 캐시 (거의 변경 안됨)
+// 강사 (staff 컬렉션에서 role='teacher' 조회) - 30분 캐시
 export const useTeachers = (enabled: boolean = true) => {
     return useQuery({
         queryKey: ['teachers'],
@@ -86,6 +86,37 @@ export const useClassKeywords = (enabled: boolean = true) => {
         },
         staleTime: 1000 * 60 * 30, // 30분
         gcTime: 1000 * 60 * 60, // 1시간
+        enabled,
+    });
+};
+
+// 직원 목록 (시스템 계정 연동 포함) - 5분 캐시
+// staff 컬렉션에서 계정 연동된 직원(uid가 있는) 조회
+export const useStaffWithAccounts = (enabled: boolean = true) => {
+    return useQuery({
+        queryKey: ['staffWithAccounts'],
+        queryFn: async () => {
+            const snapshot = await getDocs(collection(db, 'staff'));
+            return snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as StaffMember))
+                .filter(s => s.uid); // uid가 있는 직원만 (계정 연동된)
+        },
+        staleTime: 1000 * 60 * 5, // 5분
+        gcTime: 1000 * 60 * 15, // 15분
+        enabled,
+    });
+};
+
+// 전체 직원 목록 - 5분 캐시
+export const useAllStaff = (enabled: boolean = true) => {
+    return useQuery({
+        queryKey: ['allStaff'],
+        queryFn: async () => {
+            const snapshot = await getDocs(collection(db, 'staff'));
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StaffMember));
+        },
+        staleTime: 1000 * 60 * 5, // 5분
+        gcTime: 1000 * 60 * 15, // 15분
         enabled,
     });
 };

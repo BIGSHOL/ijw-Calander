@@ -1,14 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, User } from 'lucide-react';
-import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS } from '../../types';
+import { X, Save, User, Shield } from 'lucide-react';
+import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserRole } from '../../types';
 
 interface StaffFormProps {
   staff: StaffMember | null;
   onClose: () => void;
   onSubmit: (data: Omit<StaffMember, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  showSystemFields?: boolean; // 시스템 권한 필드 표시 여부 (MASTER/ADMIN만)
 }
 
-const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
+// 시스템 역할 옵션 (MASTER/ADMIN만 변경 가능)
+const SYSTEM_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
+  { value: 'master', label: 'MASTER (최고 관리자)' },
+  { value: 'admin', label: 'ADMIN (관리자)' },
+  { value: 'manager', label: 'MANAGER (매니저)' },
+  { value: 'math_lead', label: '수학 리드' },
+  { value: 'english_lead', label: '영어 리드' },
+  { value: 'math_teacher', label: '수학 강사' },
+  { value: 'english_teacher', label: '영어 강사' },
+  { value: 'user', label: 'USER (일반 사용자)' },
+];
+
+// 승인 상태 옵션
+const APPROVAL_STATUS_OPTIONS = [
+  { value: 'approved', label: '승인됨' },
+  { value: 'pending', label: '대기중' },
+  { value: 'rejected', label: '거부됨' },
+];
+
+const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSystemFields = false }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -16,6 +36,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
     email: '',
     phone: '',
     role: 'teacher' as StaffMember['role'],
+    jobTitle: '', // 호칭 (예: 대표, 팀장, 선생님)
     subjects: [] as ('math' | 'english')[],
     hireDate: new Date().toISOString().split('T')[0],
     status: 'active' as StaffMember['status'],
@@ -27,6 +48,9 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
     textColor: '#ffffff',
     defaultRoom: '',
     timetableOrder: 0,
+    // 시스템 권한 필드
+    systemRole: 'user' as UserRole,
+    approvalStatus: 'pending' as 'approved' | 'pending' | 'rejected',
   });
 
   // Initialize form with staff data if editing
@@ -38,6 +62,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
         email: staff.email || '',
         phone: staff.phone || '',
         role: staff.role || 'teacher',
+        jobTitle: staff.jobTitle || '',
         subjects: staff.subjects || [],
         hireDate: staff.hireDate || new Date().toISOString().split('T')[0],
         status: staff.status || 'active',
@@ -49,6 +74,9 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
         textColor: staff.textColor || '#ffffff',
         defaultRoom: staff.defaultRoom || '',
         timetableOrder: staff.timetableOrder || 0,
+        // 시스템 권한 필드
+        systemRole: staff.systemRole || 'user',
+        approvalStatus: staff.approvalStatus || 'pending',
       });
     }
   }, [staff]);
@@ -144,7 +172,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
             {/* Email */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                이메일
+                이메일 {staff && <span className="text-gray-400 font-normal">(수정 불가)</span>}
               </label>
               <input
                 type="email"
@@ -152,8 +180,16 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="example@email.com"
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                disabled={!!staff}
+                className={`w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent ${
+                  staff ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                }`}
               />
+              {staff && formData.email && (
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  시스템 계정과 연동된 이메일은 변경할 수 없습니다.
+                </p>
+              )}
             </div>
 
             {/* Phone */}
@@ -217,6 +253,21 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Job Title (호칭) */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                호칭
+              </label>
+              <input
+                type="text"
+                name="jobTitle"
+                value={formData.jobTitle}
+                onChange={handleChange}
+                placeholder="예: 대표, 원장, 팀장, 선생님"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+              />
             </div>
 
             {/* Default Room (teacher only) */}
@@ -345,6 +396,56 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit }) => {
                 </div>
               </div>
             </>
+          )}
+
+          {/* 시스템 권한 설정 섹션 (MASTER/ADMIN만 표시) */}
+          {showSystemFields && staff?.uid && (
+            <div className="border-t border-gray-200 pt-3 mt-3">
+              <h3 className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-purple-600" />
+                시스템 권한 설정
+              </h3>
+              <div className="bg-purple-50/50 rounded-lg p-3 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {/* 시스템 역할 */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      시스템 역할
+                    </label>
+                    <select
+                      name="systemRole"
+                      value={formData.systemRole}
+                      onChange={handleChange}
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                    >
+                      {SYSTEM_ROLE_OPTIONS.map(({ value, label }) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 승인 상태 */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      승인 상태
+                    </label>
+                    <select
+                      name="approvalStatus"
+                      value={formData.approvalStatus}
+                      onChange={handleChange}
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                    >
+                      {APPROVAL_STATUS_OPTIONS.map(({ value, label }) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <p className="text-[10px] text-gray-500">
+                  시스템 역할은 앱 내 기능 접근 권한을 결정합니다. 승인 상태가 '승인됨'이어야 로그인이 가능합니다.
+                </p>
+              </div>
+            </div>
           )}
 
           {/* Memo */}

@@ -219,21 +219,31 @@ exports.testSync = functions.region("asia-northeast3").https.onRequest((req, res
 
 /**
  * =========================================================
- * Cloud Function: Teacher Cascade Delete
+ * Cloud Function: Teacher Cascade Delete (Staff Collection)
  * =========================================================
- * Triggered when a teacher document is deleted from '강사목록'.
+ * Triggered when a staff document is deleted.
+ * Only processes if role was 'teacher'.
  * Cleans up related data:
  * 1. Updates all classes that reference this teacher
  * 2. Updates student enrollments to remove this teacher's classes
+ *
+ * NOTE: 강사목록 컬렉션에서 staff 컬렉션으로 마이그레이션됨 (2026-01-17)
  */
 exports.onTeacherDeleted = functions
     .region("asia-northeast3")
     .firestore
-    .document("%EA%B0%95%EC%82%AC%EB%AA%A9%EB%A1%9D/{teacherId}")
+    .document("staff/{staffId}")
     .onDelete(async (snap, context) => {
-        const teacherId = context.params.teacherId;
-        const deletedTeacher = snap.data();
-        const teacherName = deletedTeacher?.name || teacherId;
+        const staffId = context.params.staffId;
+        const deletedStaff = snap.data();
+
+        // 강사(teacher)가 아니면 무시
+        if (deletedStaff?.role !== 'teacher') {
+            logger.info(`[onTeacherDeleted] Skipping non-teacher staff: ${staffId}`);
+            return null;
+        }
+
+        const teacherName = deletedStaff?.name || staffId;
 
         logger.info(`[onTeacherDeleted] Teacher deleted: ${teacherName}`);
 

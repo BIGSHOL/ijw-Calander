@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Department, UserProfile, CalendarEvent, ROLE_LABELS, Teacher, ClassKeywordColor } from '../../types';
+import { Department, UserProfile, CalendarEvent, Teacher } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
-import { X, FolderKanban, Users, Shield, ShieldAlert, ShieldCheck, Database, Search, Save, UserCog, CalendarClock, Calendar, Archive, Clock, BarChart3, FileText } from 'lucide-react';
+import { X, FolderKanban, CalendarClock, Archive, Database } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { STANDARD_HOLIDAYS } from '../../constants_holidays';
 import { db, auth } from '../../firebaseConfig';
-import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
+import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, getDoc, getDocs, query, where } from 'firebase/firestore';
 
 import { Holiday } from '../../types';
-import MyEventsModal from '../Calendar/MyEventsModal';
-import { TeachersTab, HolidaysTab, DepartmentsTab, GanttCategoriesTab, MigrationTab } from './';
-import HashtagsTab from './HashtagsTab';
+// MyEventsModal 제거됨 - 직원 관리로 통합
+import { HolidaysTab, MigrationTab } from './';
+// DepartmentsTab, GanttCategoriesTab 제거됨 - 간트 차트 페이지(GanttSettingsModal)에서 관리
+// HashtagsTab 제거됨 - 캘린더 페이지(CalendarSettingsModal)에서 관리
 import { useTabPermissions } from '../../hooks/useTabPermissions';
-import SalarySettingsTab from '../Attendance/components/SalarySettingsTab';
-import { useAttendanceConfig, useSaveAttendanceConfig } from '../../hooks/useAttendance';
-import UserDetailModal from './modals/UserDetailModal';
-import DepartmentsManagementTab from './tabs/DepartmentsManagementTab';
-import UsersTab from './tabs/UsersTab';
+// SalarySettingsTab 제거됨 - 출석부 페이지(AttendanceSettingsModal)에서 관리
+// UserDetailModal 제거됨 - 직원 관리 페이지의 UsersManagement에서 처리
+// DepartmentsManagementTab 제거됨 - 캘린더 페이지(CalendarSettingsModal)에서 관리
+// UsersTab 제거됨 - 직원 관리 페이지의 "시스템 사용자" 탭(UsersManagement)으로 통합
 import { NewDepartmentForm, CategoryManagementState, DepartmentFilterState, INITIAL_DEPARTMENT_FORM } from '../../types/departmentForm';
 
 interface SettingsModalProps {
@@ -33,8 +33,9 @@ interface SettingsModalProps {
   onToggleArchived?: () => void;
 }
 
-type MainTabMode = 'calendar' | 'timetable' | 'permissions' | 'gantt' | 'attendance';
-type TabMode = 'departments' | 'users' | 'teachers' | 'classes' | 'system' | 'calendar_manage' | 'role_permissions' | 'tab_access' | 'migration' | 'gantt_departments' | 'gantt_categories' | 'salary_settings' | 'calendar_hashtags';
+type MainTabMode = 'permissions';
+// 'users' 탭 제거됨 - 직원 관리 페이지의 "시스템 사용자" 탭으로 통합
+type TabMode = 'system' | 'migration';
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -69,9 +70,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const isAdmin = currentUserProfile?.role === 'admin';
   // Legacy helpers mapped to permissions
   const canManageMenus = canViewDepartments;
-  const canManageUsers = canViewUsers;
-  const canViewTeachers = hasPermission('system.teachers.view');
-  const canViewClasses = hasPermission('system.classes.view');
+  // canManageUsers, canViewTeachers, canViewClasses 제거됨 - 각 페이지에서 관리
 
   // Get accessible tabs for current user
   const { accessibleTabs } = useTabPermissions(currentUserProfile || null);
@@ -98,14 +97,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // --- Local Buffered State ---
   const [localDepartments, setLocalDepartments] = useState<Department[]>([]);
-  const [localUsers, setLocalUsers] = useState<UserProfile[]>([]);
   const [localHolidays, setLocalHolidays] = useState<Holiday[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
-
-  // --- User Detail Modal State ---
-  const [selectedUserForEdit, setSelectedUserForEdit] = useState<string | null>(null); // UID
-  const [targetUserForEvents, setTargetUserForEvents] = useState<UserProfile | null>(null); // Admin Event View
-  const [initialPermissions, setInitialPermissions] = useState<Record<string, 'view' | 'edit'> | null>(null);
 
   // Sync Props to Local State (Smart Merge)
   useEffect(() => {
@@ -116,42 +109,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     });
   }, [departments, isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    setLocalUsers(prev => {
-      const prevMap = new Map(prev.map(u => [u.uid, u]));
-      return users.map(u => {
-        // Migration Logic on load: Ensure departmentPermissions object exists if missing
-        const local = prevMap.get(u.uid);
-        const base = local || u;
-        if (!base.departmentPermissions) {
-          // Copy legacy allowedDepartments to view permissions
-          const perms: Record<string, 'view' | 'edit'> = {};
-          base.allowedDepartments?.forEach(deptId => {
-            perms[deptId] = 'view';
-          });
-          return { ...base, departmentPermissions: perms };
-        }
-        return base;
-      });
-    });
-  }, [users, isOpen]);
-
   // Reset on open
   useEffect(() => {
     if (isOpen) {
       setLocalDepartments(departments);
-      // Initialize with basic migration for display
-      setLocalUsers(users.map(u => ({
-        ...u,
-        departmentPermissions: u.departmentPermissions ||
-          (u.allowedDepartments ? Object.fromEntries(u.allowedDepartments.map(id => [id, 'view'])) : {})
-      })));
-      setLocalHolidays(holidays); // Sync holidays
+      setLocalHolidays(holidays);
       setHasChanges(false);
-      setSelectedUserForEdit(null);
     }
-  }, [isOpen, holidays, departments, users]); // Added dependencies for completeness
+  }, [isOpen, holidays, departments]);
 
   const [lookbackYears, setLookbackYears] = useState<number>(2);
 
@@ -177,11 +142,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [selectedTeacherForRoom, setSelectedTeacherForRoom] = useState<string>(''); // 강의실 설정용 강사 선택
   const [teacherDefaultRoom, setTeacherDefaultRoom] = useState<string>(''); // 강의실 입력값
 
-  // --- Class Keyword Color State ---
-  const [classKeywords, setClassKeywords] = useState<ClassKeywordColor[]>([]);
-  const [newKeyword, setNewKeyword] = useState('');
-  const [newKeywordBgColor, setNewKeywordBgColor] = useState('#fee2e2');
-  const [newKeywordTextColor, setNewKeywordTextColor] = useState('#dc2626');
+  // Class Keyword Color State 제거됨 - 시간표 페이지(ClassSettingsModal)에서 관리
 
   const handleAddCategory = async () => {
     if (!categoryManagement.newCategoryName.trim()) return alert('카테고리 이름을 입력해주세요.');
@@ -211,21 +172,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // --- Category Management State ---
   // ... (Category handlers remain here if any, but adding Teacher handlers below)
 
-  // --- Teacher Management Handlers ---
+  // --- Teacher Management Handlers (Legacy - TeachersTab uses staff collection directly) ---
+  // NOTE: 강사 관리 기능은 TeachersTab 컴포넌트로 분리되어 staff 컬렉션 사용
   const handleAddTeacher = async () => {
     if (!newTeacherName.trim()) return alert("강사 이름을 입력해주세요.");
     const name = newTeacherName.trim();
     try {
-      const docRef = doc(db, '강사목록', name);
-      // Check for duplicates
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        return alert("이미 존재하는 강사 이름입니다.");
-      }
-
-      await setDoc(docRef, { name: name, subjects: newTeacherSubjects, isHidden: false });
+      const newDocRef = doc(collection(db, 'staff'));
+      await setDoc(newDocRef, {
+        name: name,
+        role: 'teacher',
+        subjects: newTeacherSubjects,
+        isHiddenInTimetable: false,
+        timetableOrder: teachers.length,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
       setNewTeacherName('');
-      setNewTeacherSubjects(['math', 'english']); // Reset to default
+      setNewTeacherSubjects(['math', 'english']);
     } catch (e) {
       console.error(e);
       alert("강사 추가 실패");
@@ -235,12 +199,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleUpdateTeacher = async (id: string) => {
     if (!editTeacherName.trim()) return;
     try {
-      await updateDoc(doc(db, '강사목록', id), {
+      await updateDoc(doc(db, 'staff', id), {
         name: editTeacherName.trim(),
         subjects: editTeacherSubjects,
         bgColor: editTeacherBgColor,
         textColor: editTeacherTextColor,
-        defaultRoom: editTeacherDefaultRoom.trim()
+        defaultRoom: editTeacherDefaultRoom.trim(),
+        updatedAt: new Date().toISOString(),
       });
       setEditingTeacherId(null);
     } catch (e) {
@@ -251,7 +216,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleToggleVisibility = async (id: string, currentHidden: boolean) => {
     try {
-      await updateDoc(doc(db, '강사목록', id), { isHidden: !currentHidden });
+      await updateDoc(doc(db, 'staff', id), {
+        isHiddenInTimetable: !currentHidden,
+        updatedAt: new Date().toISOString(),
+      });
     } catch (e) {
       console.error(e);
       alert("상태 변경 실패");
@@ -261,7 +229,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleDeleteTeacher = async (id: string, name: string) => {
     if (!confirm(`'${name}' 강사를 삭제하시겠습니까?`)) return;
     try {
-      await deleteDoc(doc(db, '강사목록', id));
+      await deleteDoc(doc(db, 'staff', id));
     } catch (e) {
       console.error(e);
       alert("강사 삭제 실패");
@@ -300,11 +268,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const [draggedItem] = newOrder.splice(draggedIndex, 1);
     newOrder.splice(targetIndex, 0, draggedItem);
 
-    // Update order values in Firebase
+    // Update order values in Firebase (staff collection)
     try {
       const batch = writeBatch(db);
       newOrder.forEach((teacher, index) => {
-        batch.update(doc(db, '강사목록', teacher.id), { order: index });
+        batch.update(doc(db, 'staff', teacher.id), { timetableOrder: index });
       });
       await batch.commit();
     } catch (e) {
@@ -327,19 +295,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }, [activeTab, isMaster]);
 
-  // Class Keywords subscription
-  const canEditClassKeywords = hasPermission('system.classes.edit');
-  const canViewClassKeywords = hasPermission('system.classes.view') || canEditClassKeywords;
-
-  useEffect(() => {
-    if (activeTab === 'classes' && canViewClassKeywords) {
-      const unsubscribe = onSnapshot(collection(db, 'classKeywords'), (snapshot) => {
-        const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ClassKeywordColor));
-        setClassKeywords(data.sort((a, b) => (a.order || 0) - (b.order || 0)));
-      });
-      return () => unsubscribe();
-    }
-  }, [activeTab, canViewClassKeywords]);
+  // Class Keywords subscription 제거됨 - 시간표 페이지(ClassSettingsModal)에서 관리
 
   // NOTE: Role permissions moved to RoleManagementPage
 
@@ -382,46 +338,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       }
     });
 
-    // 2. Users
-    // Need to handle User Detail Edit merging back into localUsers first? 
-    // Actually, localUsers IS the source of truth for the save. 
-    // The User Detail Modal should update `localUsers`.
-    const originalUserMap = new Map(users.map(u => [u.uid, u]));
-    localUsers.forEach(user => {
-      const original = originalUserMap.get(user.uid) as UserProfile | undefined;
-      // We need to compare carefully including the new permission object
-      // For simplicity, strict JSON stringify might be okay if order doesn't matter much or we normalize.
-      // Better: check specific fields.
-
-      const hasDiff =
-        user.status !== original?.status ||
-        user.jobTitle !== original?.jobTitle ||
-        user.role !== original?.role ||
-        user.teacherId !== original?.teacherId ||  // NEW: Teacher Linking
-        user.canManageMenus !== original?.canManageMenus ||
-        user.canManageEventAuthors !== original?.canManageEventAuthors ||
-        JSON.stringify(user.departmentPermissions) !== JSON.stringify(original?.departmentPermissions);
-
-      if (hasDiff) {
-        const ref = doc(db, 'users', user.uid);
-        // Save both legacy and new permissions for compatibility if needed? 
-        // Let's rely on new. But maybe update legacy `allowedDepartments` derived from `departmentPermissions` for older clients?
-        // Let's update `allowedDepartments` too just in case.
-        const derivedAllowed = Object.keys(user.departmentPermissions || {});
-
-        batch.update(ref, {
-          status: user.status,
-          jobTitle: user.jobTitle || '',
-          role: user.role, // Admin role update
-          teacherId: user.teacherId || null, // NEW: Teacher Linking
-          canManageMenus: user.canManageMenus || false,
-          canManageEventAuthors: user.canManageEventAuthors || false,
-          departmentPermissions: user.departmentPermissions,
-          allowedDepartments: derivedAllowed
-        });
-        changesCount++;
-      }
-    });
+    // 2. Users - 사용자 관리는 직원 관리(StaffManager)로 이전됨
+    // 이 코드는 더 이상 사용되지 않지만, 혹시 호출되면 staff 컬렉션에 저장
+    // (실제로 사용자 관리 UI가 제거되어 호출되지 않음)
 
     if (changesCount === 0) {
       setHasChanges(false);
@@ -475,34 +394,36 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         설명: ''
       });
 
-      // Apply default permission to all users
+      // Apply default permission to all staff with accounts
       const batch = writeBatch(db);
 
-      // Get all users and apply default permission
-      for (const user of users) {
-        const userRef = doc(db, 'users', user.uid);
-        const currentPerms = user.departmentPermissions || {};
-        const currentAllowed = user.allowedDepartments || [];
+      // Get all staff with uid (계정 연동된 직원)
+      const staffSnapshot = await getDocs(query(
+        collection(db, 'staff'),
+        where('uid', '!=', null)
+      ));
+
+      staffSnapshot.docs.forEach(staffDoc => {
+        const staff = staffDoc.data();
+        const currentPerms = staff.departmentPermissions || {};
 
         // Master always gets edit permission
-        const permissionToApply = user.role === 'master' ? 'edit' : newDepartmentForm.defaultPermission;
+        const permissionToApply = staff.systemRole === 'master' ? 'edit' : newDepartmentForm.defaultPermission;
 
-        // Skip none permission (don't add to departmentPermissions, and don't add to allowedDepartments)
+        // Skip none permission
         // @ts-ignore - 'block' is legacy value for backwards compatibility
         if (permissionToApply === 'none' || permissionToApply === 'block') {
-          // Block: remove from allowedDepartments if exists, don't add to permissions
-          batch.update(userRef, {
-            allowedDepartments: currentAllowed.filter((id: string) => id !== newDept.id),
-            departmentPermissions: { ...currentPerms } // No change for block (or explicitly no access)
+          // Block: don't add to permissions
+          batch.update(staffDoc.ref, {
+            departmentPermissions: { ...currentPerms }
           });
         } else {
           // View or Edit: add to permissions
-          batch.update(userRef, {
-            allowedDepartments: currentAllowed.includes(newDept.id) ? currentAllowed : [...currentAllowed, newDept.id],
+          batch.update(staffDoc.ref, {
             departmentPermissions: { ...currentPerms, [newDept.id]: permissionToApply }
           });
         }
-      }
+      });
 
       await batch.commit();
 
@@ -524,41 +445,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   // --- User Detail Modal Handlers ---
-  const handleUserUpdate = (uid: string, updates: Partial<UserProfile>) => {
-    setLocalUsers(prev => prev.map(u => u.uid === uid ? { ...u, ...updates } : u));
-    markChanged();
-  };
-
-  const handleDeptPermissionChange = (uid: string, deptId: string, level: 'none' | 'view' | 'edit') => {
-    setLocalUsers(prev => prev.map(u => {
-      if (u.uid !== uid) return u;
-      const newPerms = { ...(u.departmentPermissions || {}) };
-      if (level === 'none') {
-        delete newPerms[deptId];
-      } else {
-        newPerms[deptId] = level;
-      }
-      return { ...u, departmentPermissions: newPerms };
-    }));
-    markChanged();
-  };
-
-  const handleDeleteUser = async (targetUid: string) => {
-    if (!confirm("정말로 이 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
-    try {
-      await deleteDoc(doc(db, "users", targetUid));
-      setSelectedUserForEdit(null); // Close modal
-      alert("사용자가 삭제되었습니다.");
-      // Local state will update via onSnapshot in App.tsx -> props update -> useEffect
-    } catch (e) {
-      console.error("Failed to delete user:", e);
-      alert("사용자 삭제 중 오류가 발생했습니다.");
-    }
-  };
-
-  // Render User Detail Modal (Nested or Overlay)
-  // UserDetailModal is now extracted to a separate component
-
+  // 사용자 관리 함수들 제거됨 - 직원 관리(StaffManager)로 이전
 
   return (
     <>
@@ -579,77 +466,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 시스템 관리
               </h2>
               <div className="flex flex-col gap-2">
-                {/* Main Tab Selector */}
-                <div className="flex bg-white/10 rounded-lg p-1 gap-1">
-                  {canManageMenus && (
-                    <button
-                      onClick={() => { setMainTab('calendar'); setActiveTab('departments'); }}
-                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'calendar' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
-                    >
-                      <Calendar className="inline-block w-4 h-4 mr-1" />
-                      연간 일정
-                    </button>
-                  )}
-                  {(isMaster || canViewTeachers || canViewClassKeywords) && (
-                    <button
-                      onClick={() => { setMainTab('timetable'); setActiveTab('teachers'); }}
-                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'timetable' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
-                    >
-                      <Clock className="inline-block w-4 h-4 mr-1" />
-                      시간표
-                    </button>
-                  )}
-                  {(isMaster || hasPermission('gantt.view')) && (
-                    <button
-                      onClick={() => { setMainTab('gantt'); setActiveTab('gantt_departments'); }}
-                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'gantt' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
-                    >
-                      <BarChart3 className="inline-block w-4 h-4 mr-1" />
-                      간트 차트
-                    </button>
-                  )}
-                  {(isMaster || isAdmin) && (
-                    <button
-                      onClick={() => { setMainTab('attendance'); setActiveTab('salary_settings'); }}
-                      className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'attendance' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
-                    >
-                      <FileText className="inline-block w-4 h-4 mr-1" />
-                      출석부
-                    </button>
-                  )}
-                  {/* 시스템 설정 is always visible for all users */}
-                  <button
-                    onClick={() => { setMainTab('permissions'); setActiveTab('system'); }}
-                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${mainTab === 'permissions' ? 'bg-[#fdb813] text-[#081429]' : 'text-gray-300 hover:text-white'}`}
-                  >
-                    ⚙️ 시스템 설정
-                  </button>
-                </div>
-                {/* Sub Tab Selector */}
+                {/* 연간 일정 탭 제거됨 - 캘린더 페이지(CalendarSettingsModal)에서 관리 */}
+                {/* 시간표 탭 제거됨 - 강사 관리가 직원 관리(staff)로 통합됨 */}
+                {/* 간트 차트 탭 제거됨 - 간트 차트 페이지(GanttSettingsModal)에서 관리 */}
+                {/* 출석부 탭 제거됨 - 출석부 페이지(AttendanceSettingsModal)에서 급여 설정 관리 */}
+
+                {/* Sub Tab Selector - 시스템 설정만 남음 */}
+                {/* 사용자 관리 탭 제거됨 - 직원 관리 페이지의 "시스템 사용자" 탭으로 통합 */}
                 <div className="flex gap-1 pl-2">
-                  {mainTab === 'calendar' && (
-                    <>
-                      {canManageMenus && (
-                        <button onClick={() => setActiveTab('departments')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          부서 관리
-                        </button>
-                      )}
-                      {(isMaster || isAdmin) && (
-                        <button onClick={() => setActiveTab('calendar_hashtags')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'calendar_hashtags' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          # 해시태그
-                        </button>
-                      )}
-                    </>
-                  )}
-                  {mainTab === 'timetable' && (
-                    <>
-                      {(isMaster || canViewTeachers) && (
-                        <button onClick={() => setActiveTab('teachers')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'teachers' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          강사 관리
-                        </button>
-                      )}
-                    </>
-                  )}
                   {mainTab === 'permissions' && (
                     <>
                       {isMaster && (
@@ -657,36 +481,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           데이터 마이그레이션
                         </button>
                       )}
-
-                      {canManageUsers && (
-                        <button onClick={() => setActiveTab('users')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'users' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          사용자 관리
-                        </button>
-                      )}
                       {/* 기타 설정 is always visible */}
                       <button onClick={() => setActiveTab('system')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'system' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
                         기타 설정
-                      </button>
-                    </>
-                  )}
-                  {mainTab === 'gantt' && (
-                    <>
-                      {(isMaster || hasPermission('gantt.view')) && (
-                        <button onClick={() => setActiveTab('gantt_departments')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'gantt_departments' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          부서 관리
-                        </button>
-                      )}
-                      {(isMaster || hasPermission('settings.manage_categories')) && (
-                        <button onClick={() => setActiveTab('gantt_categories')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'gantt_categories' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          카테고리 관리
-                        </button>
-                      )}
-                    </>
-                  )}
-                  {mainTab === 'attendance' && (
-                    <>
-                      <button onClick={() => setActiveTab('salary_settings')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'salary_settings' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                        급여 설정
                       </button>
                     </>
                   )}
@@ -701,118 +498,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Content Area */}
           <div className="p-6 overflow-y-auto flex-1 bg-gray-50 pb-20">
 
-            {/* DEPARTMENT TAB */}
-            {activeTab === 'departments' && canManageMenus && (
-              <DepartmentsManagementTab
-                localDepartments={localDepartments}
-                sysCategories={sysCategories}
-                currentUserProfile={currentUserProfile}
-                newDepartmentForm={newDepartmentForm}
-                categoryManagement={categoryManagement}
-                departmentFilterState={departmentFilterState}
-                canManageCategories={canManageCategories}
-                canCreateDept={canCreateDept}
-                canEditDept={canEditDept}
-                canDeleteDept={canDeleteDept}
-                isMaster={isMaster}
-                isAdmin={isAdmin}
-                setNewDepartmentForm={setNewDepartmentForm}
-                setCategoryManagement={setCategoryManagement}
-                setDepartmentFilterState={setDepartmentFilterState}
-                setLocalDepartments={setLocalDepartments}
-                handleAddCategory={handleAddCategory}
-                handleDeleteCategory={handleDeleteCategory}
-                handleAdd={handleAdd}
-                handleDelete={handleDelete}
-                handleLocalDeptUpdate={handleLocalDeptUpdate}
-                markChanged={markChanged}
-              />
-            )}
+            {/* DEPARTMENT TAB 제거됨 - 캘린더 페이지(CalendarSettingsModal)에서 관리 */}
 
-            {/* USERS TAB - NEW CONFIGURATION */}
-            {activeTab === 'users' && canManageUsers && (
-              <UsersTab
-                localUsers={localUsers}
-                currentUserProfile={currentUserProfile}
-                isMaster={isMaster}
-                isAdmin={isAdmin}
-                canManageUsers={canManageUsers}
-                setSelectedUserForEdit={setSelectedUserForEdit}
-                setTargetUserForEvents={setTargetUserForEvents}
-                setInitialPermissions={setInitialPermissions}
-              />
-            )}
+            {/* USERS TAB 제거됨 - 직원 관리 페이지의 "시스템 사용자" 탭(UsersManagement)으로 통합 */}
 
 
 
-            {/* TEACHERS TAB - 시간표 설정 안내 */}
-            {activeTab === 'teachers' && (isMaster || canViewTeachers) && (
-              <div className="max-w-2xl mx-auto">
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center shrink-0">
-                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-blue-900 mb-2">강사 관리가 이동되었습니다</h3>
-                      <p className="text-sm text-blue-800 mb-4">
-                        강사 관리 기능이 <strong>시간표 탭의 설정</strong>으로 이동되었습니다.
-                        시간표와 관련된 강사 정보를 한 곳에서 관리할 수 있습니다.
-                      </p>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-xs text-blue-700">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                          <span>상단 메인 탭에서 <strong>📚 시간표</strong> 탭으로 이동</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-blue-700">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                          <span>시간표 화면의 <strong>⚙️ 설정 버튼</strong>에서 강사 관리 탭 확인</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {/* TEACHERS TAB 제거됨 - staff 컬렉션으로 통합 (2026-01-17) */}
 
-                {/* 기존 강사 목록 표시 (읽기 전용) */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-900">기존 강사 목록 (읽기 전용)</h3>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      총 {teachers.length}명
-                    </span>
-                  </div>
-                  <TeachersTab
-                    teachers={teachers}
-                    isMaster={isMaster}
-                    canEdit={false}
-                    canViewMath={isMaster || hasPermission('timetable.math.view')}
-                    canViewEnglish={isMaster || hasPermission('timetable.english.view')}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* CLASSES MANAGEMENT TAB - 수업 관리 탭으로 이동됨 */}
-            {activeTab === 'classes' && (isMaster || canViewClasses) && (
-              <div className="max-w-2xl mx-auto mt-20 text-center">
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-8">
-                  <div className="text-6xl mb-4">📚</div>
-                  <h3 className="text-xl font-bold text-gray-700 mb-2">수업 설정이 이동되었습니다</h3>
-                  <p className="text-gray-600 mb-4">
-                    수업 관련 설정은 이제 <span className="font-bold text-blue-600">수업 관리</span> 탭에서 관리할 수 있습니다.
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    수업 관리 탭 → 우측 상단 <span className="font-bold">⚙️ 설정</span> 버튼을 클릭하세요.
-                  </p>
-                </div>
-              </div>
-            )}
+            {/* CLASSES MANAGEMENT TAB 제거됨 - 시간표 페이지(TimetableSettingsModal)에서 관리 */}
 
 
             {/* MIGRATION TAB */}
@@ -946,93 +640,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             )}
 
 
-            {/* GANTT DEPARTMENTS TAB */}
-            {activeTab === 'gantt_departments' && isMaster && (
-              <DepartmentsTab isMaster={isMaster} />
-            )}
+            {/* GANTT DEPARTMENTS/CATEGORIES TAB 제거됨 - 간트 차트 페이지(GanttSettingsModal)에서 관리 */}
 
-            {/* GANTT CATEGORIES TAB */}
-            {activeTab === 'gantt_categories' && isMaster && (
-              <GanttCategoriesTab isMaster={isMaster} />
-            )}
+            {/* ATTENDANCE SALARY SETTINGS TAB 제거됨 - 출석부 페이지에서 관리 */}
 
-            {/* ATTENDANCE SALARY SETTINGS TAB */}
-            {activeTab === 'salary_settings' && (isMaster || isAdmin) && (
-              <SalarySettingsTab teachers={teachers} />
-            )}
-
-            {/* CALENDAR HASHTAGS TAB */}
-            {activeTab === 'calendar_hashtags' && (isMaster || isAdmin) && (
-              <HashtagsTab isMaster={isMaster} />
-            )}
+            {/* CALENDAR HASHTAGS TAB 제거됨 - 캘린더 페이지(CalendarSettingsModal)에서 관리 */}
 
             {/* MIGRATION TAB */}
 
           </div>
 
-          {/* Footer (Save Button) */}
-          {(activeTab === 'departments' || activeTab === 'users') && (
-            <div className="absolute bottom-0 left-0 w-full p-4 bg-white/95 border-t border-gray-200 backdrop-blur-sm flex justify-between items-center z-10">
-              <div className="text-xs text-gray-500 font-medium">
-                {hasChanges ? <span className="text-amber-600 flex items-center gap-1"><ShieldAlert size={14} /> 저장되지 않은 변경사항이 있습니다.</span> : <span>모든 변경사항이 저장되었습니다.</span>}
-              </div>
-              <button
-                onClick={handleSaveChanges}
-                disabled={!hasChanges}
-                className={`px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all
-                  ${hasChanges
-                    ? 'bg-[#081429] text-white hover:brightness-110 active:scale-95'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
-                  }
-                `}
-              >
-                <Save size={18} /> 변경사항 저장
-              </button>
-            </div>
-          )}
+          {/* Footer (Save Button) 제거됨 - users 탭이 직원 관리로 이동되어 불필요 */}
         </div>
 
-        {/* Render Nested User Detail Modal */}
-        {selectedUserForEdit && (() => {
-          const user = localUsers.find(u => u.uid === selectedUserForEdit);
-          if (!user) return null;
-          return (
-            <UserDetailModal
-              user={user}
-              departments={localDepartments}
-              teachers={teachers}
-              currentUserProfile={currentUserProfile}
-              initialPermissions={initialPermissions}
-              canApproveUser={canApproveUser}
-              canChangeRole={canChangeRole}
-              canChangePermissions={canChangePermissions}
-              isMaster={isMaster}
-              isAdmin={isAdmin}
-              onClose={() => setSelectedUserForEdit(null)}
-              onUserUpdate={handleUserUpdate}
-              onDeptPermissionChange={handleDeptPermissionChange}
-              onDeleteUser={handleDeleteUser}
-            />
-          );
-        })()}
-
-        {/* Render MyEventsModal for selected user */}
-        <MyEventsModal
-          isOpen={!!targetUserForEvents}
-          onClose={() => setTargetUserForEvents(null)}
-          events={events}
-          currentUser={targetUserForEvents} // Pass selected user as 'current' context
-          onEventClick={() => { }} // Read-only view mainly, or let them click? Maybe just close modal?
-          // Actually, if we want them to edit, we need to handle onEventClick properly.
-          // But for now, let's keep it simple. If they click, it does nothing or closes.
-          // User asked for "View", so maybe just viewing the list is enough.
-          // Let's allow closing only for now unless we want to trigger the main EventModal which is outside SettingsModal.
-          // Stacked modals? Yes.
-          // But let's pass an empty function for now to prevent errors, effectively making it "List View Only".
-          // Or better, let's allow it to be truly read-only list.
-          readOnly={true}
-          customTitle={`${targetUserForEvents?.email.split('@')[0]}님의 일정`}
-        />
+        {/* UserDetailModal 및 MyEventsModal 제거됨 - 직원 관리 페이지의 UsersManagement에서 처리 */}
       </div>
     </>
   );

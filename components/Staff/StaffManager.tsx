@@ -1,27 +1,26 @@
 import React, { useState, useMemo } from 'react';
-import { Users, Plus, Search, Filter, RefreshCw, Calendar, Briefcase, Shield } from 'lucide-react';
+import { Plus, Search, Filter, RefreshCw, Calendar, Briefcase, AlertCircle, Database } from 'lucide-react';
 import { useStaff } from '../../hooks/useStaff';
 import { useStaffLeaves } from '../../hooks/useStaffLeaves';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, UserProfile } from '../../types';
 import StaffList from './StaffList';
 import StaffForm from './StaffForm';
+import StaffViewModal from './StaffViewModal';
 import StaffSchedule from './StaffSchedule';
 import LeaveManagement from './LeaveManagement';
-import UsersManagement from './UsersManagement';
+import UserStaffMigrationModal from './UserStaffMigrationModal';
 
-type ViewMode = 'list' | 'schedule' | 'leave' | 'users';
+type ViewMode = 'list' | 'schedule' | 'leave';
 
 interface StaffManagerProps {
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
-  users?: UserProfile[];
   currentUserProfile?: UserProfile | null;
 }
 
 const StaffManager: React.FC<StaffManagerProps> = ({
   searchQuery: externalSearchQuery,
   onSearchChange: externalOnSearchChange,
-  users = [],
   currentUserProfile,
 }) => {
   // State
@@ -32,10 +31,15 @@ const StaffManager: React.FC<StaffManagerProps> = ({
   const [showForm, setShowForm] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
+  const [viewingStaff, setViewingStaff] = useState<StaffMember | null>(null); // 조회 모달용
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
 
   // Hooks
   const { staff, loading, error, refreshStaff, addStaff, updateStaff, deleteStaff } = useStaff();
   const { leaves, pendingCount } = useStaffLeaves();
+
+  const isMaster = currentUserProfile?.role === 'master';
+  const isAdmin = currentUserProfile?.role === 'admin';
 
   // Search handling (support both internal and external)
   const searchQuery = externalSearchQuery ?? internalSearchQuery;
@@ -50,7 +54,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
       const q = searchQuery.toLowerCase();
       result = result.filter(s =>
         s.name.toLowerCase().includes(q) ||
-        s.email.toLowerCase().includes(q) ||
+        (s.email && s.email.toLowerCase().includes(q)) ||
         (s.phone && s.phone.includes(q))
       );
     }
@@ -68,14 +72,17 @@ const StaffManager: React.FC<StaffManagerProps> = ({
     return result.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   }, [staff, searchQuery, roleFilter, statusFilter]);
 
-  // Stats
-  const stats = useMemo(() => ({
-    total: staff.length,
-    active: staff.filter(s => s.status === 'active').length,
-    teachers: staff.filter(s => s.role === 'teacher').length,
-    pendingLeaves: pendingCount,
-    pendingUsers: users.filter(u => u.status === 'pending').length,
-  }), [staff, pendingCount, users]);
+  // Stats - staff 기반으로 계산
+  const stats = useMemo(() => {
+    const pendingApprovals = staff.filter(s => s.uid && s.approvalStatus === 'pending').length;
+    return {
+      total: staff.length,
+      active: staff.filter(s => s.status === 'active').length,
+      teachers: staff.filter(s => s.role === 'teacher').length,
+      pendingLeaves: pendingCount,
+      pendingApprovals, // 가입 승인 대기 (staff 기반)
+    };
+  }, [staff, pendingCount]);
 
   // Handlers
   const handleAddNew = () => {
@@ -83,9 +90,19 @@ const StaffManager: React.FC<StaffManagerProps> = ({
     setShowForm(true);
   };
 
-  const handleEdit = (staffMember: StaffMember) => {
-    setEditingStaff(staffMember);
-    setShowForm(true);
+  // 직원 클릭 시 조회 모달 열기
+  const handleViewStaff = (staffMember: StaffMember) => {
+    setViewingStaff(staffMember);
+    setSelectedStaff(staffMember);
+  };
+
+  // 조회 모달에서 수정 버튼 클릭 시
+  const handleEditFromView = () => {
+    if (viewingStaff) {
+      setEditingStaff(viewingStaff);
+      setViewingStaff(null);
+      setShowForm(true);
+    }
   };
 
   const handleFormClose = () => {
@@ -107,13 +124,15 @@ const StaffManager: React.FC<StaffManagerProps> = ({
     }
   };
 
+  // 직원 삭제 (StaffViewModal에서 confirm 처리됨)
   const handleDelete = async (id: string) => {
-    if (!window.confirm('정말 삭제하시겠습니까?')) return;
     try {
       await deleteStaff(id);
+      setViewingStaff(null); // 조회 모달 닫기
+      setSelectedStaff(null);
     } catch (err) {
       console.error('직원 삭제 실패:', err);
-      alert('삭제에 실패했습니다.');
+      throw err; // StaffViewModal에서 에러 처리
     }
   };
 
@@ -133,6 +152,16 @@ const StaffManager: React.FC<StaffManagerProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {isMaster && (
+              <button
+                onClick={() => setShowMigrationModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors text-sm"
+                title="Users → Staff 마이그레이션"
+              >
+                <Database className="w-4 h-4" />
+                <span>데이터 동기화</span>
+              </button>
+            )}
             <button
               onClick={refreshStaff}
               className="p-2 text-gray-500 hover:text-[#081429] hover:bg-gray-100 rounded-lg transition-colors"
@@ -151,7 +180,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-5 gap-4 mb-4">
           <div className="bg-gray-50 rounded-lg p-3">
             <div className="text-2xl font-bold text-[#081429]">{stats.total}</div>
             <div className="text-xs text-gray-500">전체 직원</div>
@@ -168,7 +197,22 @@ const StaffManager: React.FC<StaffManagerProps> = ({
             <div className="text-2xl font-bold text-amber-600">{stats.pendingLeaves}</div>
             <div className="text-xs text-gray-500">휴가 승인 대기</div>
           </div>
+          <div className={`rounded-lg p-3 ${stats.pendingApprovals > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+            <div className={`text-2xl font-bold ${stats.pendingApprovals > 0 ? 'text-red-600' : 'text-gray-400'}`}>{stats.pendingApprovals}</div>
+            <div className="text-xs text-gray-500">가입 승인 대기</div>
+          </div>
         </div>
+
+        {/* 승인 대기 알림 */}
+        {stats.pendingApprovals > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+            <div className="flex-1">
+              <span className="text-sm font-bold text-red-900">{stats.pendingApprovals}명의 가입 승인 대기</span>
+              <span className="text-xs text-red-700 ml-2">직원을 클릭하여 시스템 권한을 설정해주세요.</span>
+            </div>
+          </div>
+        )}
 
         {/* View Mode Tabs */}
         <div className="flex items-center gap-4 border-b border-gray-200">
@@ -182,22 +226,6 @@ const StaffManager: React.FC<StaffManagerProps> = ({
           >
             <Briefcase className="w-4 h-4" />
             <span>직원 목록</span>
-          </button>
-          <button
-            onClick={() => setViewMode('users')}
-            className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
-              viewMode === 'users'
-                ? 'border-[#fdb813] text-[#081429] font-semibold'
-                : 'border-transparent text-gray-500 hover:text-[#081429]'
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-            <span>시스템 사용자</span>
-            {stats.pendingUsers > 0 && (
-              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
-                {stats.pendingUsers}
-              </span>
-            )}
           </button>
           <button
             onClick={() => setViewMode('schedule')}
@@ -294,17 +322,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
               <StaffList
                 staff={filteredStaff}
                 selectedStaff={selectedStaff}
-                onSelectStaff={setSelectedStaff}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            )}
-            {viewMode === 'users' && (
-              <UsersManagement
-                users={users}
-                staff={staff}
-                currentUserProfile={currentUserProfile}
-                isMaster={currentUserProfile?.role === 'master'}
+                onSelectStaff={handleViewStaff}
               />
             )}
             {viewMode === 'schedule' && (
@@ -317,12 +335,32 @@ const StaffManager: React.FC<StaffManagerProps> = ({
         )}
       </div>
 
-      {/* Staff Form Modal */}
+      {/* Staff View Modal (조회) */}
+      {viewingStaff && (
+        <StaffViewModal
+          staff={viewingStaff}
+          onClose={() => setViewingStaff(null)}
+          onEdit={handleEditFromView}
+          onDelete={handleDelete}
+          canEdit={isMaster || isAdmin}
+          canDelete={isMaster || isAdmin}
+        />
+      )}
+
+      {/* Staff Form Modal (수정/등록) */}
       {showForm && (
         <StaffForm
           staff={editingStaff}
           onClose={handleFormClose}
           onSubmit={handleFormSubmit}
+          showSystemFields={isMaster || isAdmin}
+        />
+      )}
+
+      {/* User-Staff Migration Modal */}
+      {showMigrationModal && (
+        <UserStaffMigrationModal
+          onClose={() => setShowMigrationModal(false)}
         />
       )}
     </div>

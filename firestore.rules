@@ -95,11 +95,12 @@ service cloud.firestore {
                      (hasRole(['master']) || hasPermission('timetable.english.simulation'));
     }
 
-    // Teacher List (강사목록)
+    // Teacher List (강사목록) - DEPRECATED: Migrated to 'staff' collection
+    // NOTE: 강사 데이터가 staff 컬렉션으로 마이그레이션되었습니다.
+    // 이 규칙은 삭제 예정이며, 기존 데이터 보호를 위해 읽기 전용으로 유지합니다.
     match /{collection}/{teacherId} {
       allow read: if collection == '\uAC15\uC0AC\uBAA9\uB85D' && isAuthenticated();
-      allow write: if collection == '\uAC15\uC0AC\uBAA9\uB85D' && 
-                      (hasRole(['master']) || hasPermission('system.teachers.edit'));
+      allow write: if false; // 쓰기 비활성화 - staff 컬렉션 사용
     }
 
     // === Calendar Events (일정) ===
@@ -325,11 +326,11 @@ service cloud.firestore {
       allow delete: if hasRole(['master']);
     }
 
-    // === Class & Teacher Management (Korean collection names) ===
+    // === Class Management (Korean collection names) ===
     // Using wildcard match for Korean collection names
 
-    // Note: 수업목록 and 강사목록 are handled by specific match groups above
-    // This wildcard match is for fallback only
+    // Note: 수업목록 is handled by specific match groups above
+    // 강사목록 is DEPRECATED - use staff collection instead
 
     // === Class Keywords ===
     match /classKeywords/{keywordId} {
