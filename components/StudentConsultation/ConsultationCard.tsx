@@ -120,11 +120,8 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                     {matchedStudent?.studentPhone || '-'}
                 </span>
 
-                {/* 제목 (이전과 동일하게 확장) */}
+                {/* 제목 (카테고리 뱃지를 앞으로) */}
                 <div className="flex-1 min-w-0 flex items-center gap-2">
-                    <span className="truncate text-[#081429]">
-                        {consultation.title}
-                    </span>
                     {/* 카테고리 뱃지 */}
                     <span
                         className="px-1.5 py-0.5 rounded text-[10px] shrink-0"
@@ -146,6 +143,9 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                             {urgency === 'done' && '✓'}
                         </span>
                     )}
+                    <span className="truncate text-[#081429]">
+                        {consultation.title}
+                    </span>
                 </div>
 
                 {/* 등록자 */}

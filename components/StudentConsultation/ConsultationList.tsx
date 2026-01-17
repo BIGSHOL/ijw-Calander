@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import React from 'react';
+import { FileText, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from 'lucide-react';
 import { Consultation, UnifiedStudent, StaffMember } from '../../types';
 import ConsultationCard from './ConsultationCard';
 
@@ -9,6 +9,15 @@ interface ConsultationListProps {
     onRefresh: () => void;
     students: UnifiedStudent[];
     staff: StaffMember[];
+    // 서버 측 페이지네이션 props
+    totalCount: number;
+    currentPage: number;
+    totalPages: number;
+    pageSize: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (size: number) => void;
 }
 
 /**
@@ -16,7 +25,7 @@ interface ConsultationListProps {
  * - 카드 형태로 표시
  * - 로딩/빈 상태 처리
  * - Skeleton UI
- * - 페이지네이션 (10/20/50/100개씩 보기) + 로컬 스토리지 저장
+ * - 서버 측 페이지네이션 (10/20/50/100개씩 보기)
  */
 const ConsultationList: React.FC<ConsultationListProps> = ({
     consultations,
@@ -24,42 +33,24 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
     onRefresh,
     students,
     staff,
+    totalCount,
+    currentPage,
+    totalPages,
+    pageSize,
+    hasNextPage,
+    hasPrevPage,
+    onPageChange,
+    onPageSizeChange,
 }) => {
-    // 페이지네이션 상태
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(20);
-
-    // 초기 로드 시 로컬 스토리지에서 페이지 사이즈 불러오기
-    useEffect(() => {
-        const savedSize = localStorage.getItem('consultation_pageSize');
-        if (savedSize) {
-            setItemsPerPage(Number(savedSize));
-        }
-    }, []);
-
-    // 데이터 변경 시 첫 페이지로 리셋
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [consultations.length]); // 데이터 개수가 바뀌면 리셋 (필터링 등)
-
-    // 페이지 사이즈 변경 시 저장
+    // 페이지 사이즈 변경 핸들러
     const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newSize = Number(e.target.value);
-        setItemsPerPage(newSize);
-        setCurrentPage(1);
-        localStorage.setItem('consultation_pageSize', String(newSize));
+        onPageSizeChange(Number(e.target.value));
     };
-
-    // 현재 페이지 데이터 계산
-    const indexOfLastItem = currentPage * itemsPerPage;
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-    const currentItems = consultations.slice(indexOfFirstItem, indexOfLastItem);
-    const totalPages = Math.ceil(consultations.length / itemsPerPage);
 
     // 페이지 이동 핸들러
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
+            onPageChange(page);
         }
     };
 
@@ -83,7 +74,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
     }
 
     // 빈 상태 (전체 데이터가 없을 때)
-    if (consultations.length === 0) {
+    if (totalCount === 0 && !loading) {
         return (
             <div className="bg-white border border-[#081429] border-opacity-20 rounded-lg p-12 text-center">
                 <div className="mb-4">
@@ -105,17 +96,21 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
         );
     }
 
+    // 현재 페이지의 시작 인덱스 계산 (전체 기준)
+    const startIndex = (currentPage - 1) * pageSize;
+
     // 상담 목록 표시
     return (
         <div className="overflow-x-auto">
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
                     <p className="text-sm text-[#373d41]">
-                        총 <span className="font-semibold text-[#081429]">{consultations.length}</span>개의 상담 기록
+                        총 <span className="font-semibold text-[#081429]">{totalCount}</span>개의 상담 기록
+                        {loading && <Loader2 className="inline-block w-3 h-3 ml-1 animate-spin text-[#fdb813]" />}
                     </p>
                     <span className="text-gray-300">|</span>
                     <select
-                        value={itemsPerPage}
+                        value={pageSize}
                         onChange={handlePageSizeChange}
                         className="bg-white border border-gray-300 text-gray-700 text-xs rounded px-2 py-1 focus:outline-none focus:border-[#fdb813]"
                     >
@@ -131,7 +126,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
                     <div className="flex items-center bg-white rounded-md border border-gray-200">
                         <button
                             onClick={() => goToPage(1)}
-                            disabled={currentPage === 1}
+                            disabled={!hasPrevPage || loading}
                             className="p-1 text-gray-500 hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed"
                             title="첫 페이지"
                         >
@@ -139,18 +134,18 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
                         </button>
                         <button
                             onClick={() => goToPage(currentPage - 1)}
-                            disabled={currentPage === 1}
+                            disabled={!hasPrevPage || loading}
                             className="p-1 text-gray-500 hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed border-l border-gray-100"
                             title="이전 페이지"
                         >
                             <ChevronLeft size={16} />
                         </button>
                         <span className="px-3 text-xs font-medium text-[#373d41]">
-                            {currentPage} / {totalPages}
+                            {currentPage} / {totalPages || 1}
                         </span>
                         <button
                             onClick={() => goToPage(currentPage + 1)}
-                            disabled={currentPage === totalPages}
+                            disabled={!hasNextPage || loading}
                             className="p-1 text-gray-500 hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed border-l border-gray-100"
                             title="다음 페이지"
                         >
@@ -158,7 +153,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
                         </button>
                         <button
                             onClick={() => goToPage(totalPages)}
-                            disabled={currentPage === totalPages}
+                            disabled={!hasNextPage || loading}
                             className="p-1 text-gray-500 hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed border-l border-gray-100"
                             title="마지막 페이지"
                         >
@@ -168,7 +163,8 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
 
                     <button
                         onClick={onRefresh}
-                        className="text-sm text-[#081429] hover:text-[#fdb813] transition-colors ml-2"
+                        disabled={loading}
+                        className="text-sm text-[#081429] hover:text-[#fdb813] transition-colors ml-2 disabled:opacity-50"
                     >
                         새로고침
                     </button>
@@ -191,10 +187,10 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
                     <span className="w-20 shrink-0 text-center">상담자</span>
                     <span className="w-20 shrink-0 text-center">담임선생님</span>
                 </div>
-                {currentItems.map((consultation, index) => (
+                {consultations.map((consultation, index) => (
                     <ConsultationCard
                         key={consultation.id}
-                        index={consultations.length - ((currentPage - 1) * itemsPerPage + index)}
+                        index={totalCount - (startIndex + index)}
                         consultation={consultation}
                         students={students}
                         staff={staff}

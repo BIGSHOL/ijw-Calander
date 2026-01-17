@@ -10,6 +10,7 @@ import MiniGridRow from './MiniGridRow';
 import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, EN_PERIODS, INJAE_PERIODS } from './englishUtils';
 import StudentModal from './StudentModal';
 import LevelUpConfirmModal from './LevelUpConfirmModal';
+import { formatSchoolGrade } from '../../../utils/studentUtils';
 
 // 주말 실제 시간대 (09:00~17:00, 1시간 단위)
 const WEEKEND_PERIOD_TIMES: Record<string, string> = {
@@ -536,7 +537,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 {student.englishName && <span className={`font-normal ml-0.5 ${style.englishTextClass || 'text-gray-500'}`}>({student.englishName})</span>}
                                                             </span>
                                                             <span className={`text-micro ml-1 shrink-0 ${style.subTextClass || 'text-gray-500'} text-right leading-none`}>
-                                                                {student.school?.replace(/초등학교|중학교/g, '') || ''}{student.grade}
+                                                                {formatSchoolGrade(student.school, student.grade)}
                                                             </span>
                                                         </div>
                                                     );
@@ -593,7 +594,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                         {student.englishName && <span className="ml-1 text-gray-400">({student.englishName})</span>}
                                                     </div>
                                                     <span className="text-xxs ml-1 shrink-0 text-gray-300 text-right leading-none">
-                                                        {student.school?.replace(/초등학교|중학교/g, '') || ''}{student.grade}
+                                                        {formatSchoolGrade(student.school, student.grade)}
                                                     </span>
                                                 </div>
                                             ))}

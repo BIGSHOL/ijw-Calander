@@ -6,7 +6,7 @@ import GradesTab from './tabs/GradesTab';
 import ConsultationsTab from './tabs/ConsultationsTab';
 import WithdrawalModal from './WithdrawalModal';
 import { useStudents } from '../../hooks/useStudents';
-import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck } from 'lucide-react';
+import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2 } from 'lucide-react';
 
 interface StudentDetailProps {
   student: UnifiedStudent;
@@ -17,7 +17,7 @@ type TabType = 'basic' | 'courses' | 'grades' | 'consultations';
 const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
-  const { updateStudent } = useStudents();
+  const { updateStudent, deleteStudent } = useStudents();
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'basic', label: '기본정보', icon: <User className="w-4 h-4" /> },
@@ -56,6 +56,14 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
     });
   };
 
+  // 학생 삭제 (완전 삭제)
+  const handleDelete = async () => {
+    if (!window.confirm(`⚠️ ${student.name} 학생을 완전히 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) return;
+    if (!window.confirm(`정말로 삭제하시겠습니까? 모든 데이터가 영구적으로 삭제됩니다.`)) return;
+
+    await deleteStudent(student.id, true); // hardDelete = true
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* 헤더: 학생 이름 + 퇴원/재원 버튼 */}
@@ -68,24 +76,33 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
             )}
           </div>
 
-          {/* 퇴원/재원 버튼 */}
-          {isWithdrawn ? (
+          {/* 퇴원/재원/삭제 버튼 */}
+          <div className="flex items-center gap-2">
+            {isWithdrawn ? (
+              <button
+                onClick={handleReactivate}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>재원 복구</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowWithdrawalModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+              >
+                <UserMinus className="w-4 h-4" />
+                <span>퇴원 처리</span>
+              </button>
+            )}
             <button
-              onClick={handleReactivate}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              onClick={handleDelete}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors"
+              title="학생 삭제"
             >
-              <UserCheck className="w-4 h-4" />
-              <span>재원 복구</span>
+              <Trash2 className="w-4 h-4" />
             </button>
-          ) : (
-            <button
-              onClick={() => setShowWithdrawalModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-            >
-              <UserMinus className="w-4 h-4" />
-              <span>퇴원 처리</span>
-            </button>
-          )}
+          </div>
         </div>
       </div>
 
