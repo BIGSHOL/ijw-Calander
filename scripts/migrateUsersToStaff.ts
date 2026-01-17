@@ -287,6 +287,7 @@ export async function runFullMigration(): Promise<void> {
 }
 
 // 개발자 콘솔에서 사용할 수 있도록 window 객체에 추가
+// window.migration.phase1() / phase2() / phase3() / runFull()
 if (typeof window !== 'undefined') {
   (window as any).migration = {
     phase1: migratePhase1_ExtendStaffSchema,
@@ -294,10 +295,4 @@ if (typeof window !== 'undefined') {
     phase3: migratePhase3_Verify,
     runFull: runFullMigration,
   };
-
-  console.log('✅ 마이그레이션 스크립트 로드됨. 다음 명령으로 실행:');
-  console.log('  - window.migration.phase1()  // 스키마 확장');
-  console.log('  - window.migration.phase2()  // 데이터 병합');
-  console.log('  - window.migration.phase3()  // 검증');
-  console.log('  - window.migration.runFull() // 전체 실행');
 }

@@ -12,12 +12,7 @@ import CryptoJS from 'crypto-js';
 // 암호화 키 (환경변수에서 로드)
 const ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY;
 
-if (!ENCRYPTION_KEY) {
-  console.warn(
-    'VITE_ENCRYPTION_KEY가 설정되지 않았습니다. ' +
-    '개인정보 암호화를 위해 .env.local에 VITE_ENCRYPTION_KEY를 설정하세요.'
-  );
-}
+// 암호화 키 누락 경고는 개발 환경에서만 (validateEncryptionKey에서 처리)
 
 /**
  * 데이터 암호화
@@ -148,14 +143,4 @@ export function validateEncryptionKey(): {
   };
 }
 
-/**
- * 개발 환경에서만 암호화 키 검증 실행
- */
-if (import.meta.env.DEV) {
-  const validation = validateEncryptionKey();
-  if (!validation.isValid) {
-    console.warn('[Encryption]', validation.message);
-  } else {
-    console.info('[Encryption]', validation.message);
-  }
-}
+// 암호화 키 검증은 validateEncryptionKey() 함수를 명시적으로 호출하여 확인

@@ -44,7 +44,6 @@ export const useCreateClass = () => {
     mutationFn: async (classData: CreateClassData) => {
       const { className, teacher, subject, schedule = [], room, studentIds, slotTeachers, slotRooms } = classData;
 
-      console.log(`[useCreateClass] Creating class: ${className} for ${studentIds.length} students`);
 
       // 1. classes 컬렉션에 수업 추가
       const scheduleSlots = schedule.map(s => {
@@ -83,17 +82,11 @@ export const useCreateClass = () => {
       });
 
       await Promise.all(promises);
-
-      console.log(`[useCreateClass] Successfully created class ${className} for ${studentIds.length} students`);
     },
     onSuccess: () => {
-      // 수업 목록 및 학생 목록 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-    },
-    onError: (error) => {
-      console.error('[useCreateClass] Error creating class:', error);
     },
   });
 };
@@ -126,8 +119,6 @@ export const useUpdateClass = () => {
     mutationFn: async (updateData: UpdateClassData) => {
       const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [], newRoom, slotTeachers, slotRooms, memo } = updateData;
 
-      console.log(`[useUpdateClass] Updating class: ${originalClassName} (${originalSubject}) -> ${newClassName}`);
-
       let classesUpdated = 0;
       let enrollmentsUpdated = 0;
 
@@ -146,9 +137,7 @@ export const useUpdateClass = () => {
         );
 
         const classesSnapshot = await getDocs(classesQuery);
-        console.log(`[useUpdateClass] Found ${classesSnapshot.docs.length} classes in unified collection`);
 
-        // classes 컬렉션 업데이트
         const classUpdatePromises = classesSnapshot.docs.map(async (docSnap) => {
           const updatePayload: Record<string, any> = {
             className: newClassName,
@@ -172,14 +161,13 @@ export const useUpdateClass = () => {
           if (memo !== undefined) {
             updatePayload.memo = memo;
           }
-          console.log('[useUpdateClass] Updating doc:', docSnap.id, 'with:', updatePayload);
           await updateDoc(docSnap.ref, updatePayload);
         });
 
         await Promise.all(classUpdatePromises);
         classesUpdated = classesSnapshot.docs.length;
-      } catch (err) {
-        console.error('[useUpdateClass] Error updating classes collection:', err);
+      } catch {
+        // classes 컬렉션 업데이트 실패 시 무시
       }
 
       // 2. enrollments도 업데이트 (레거시 호환 - 인덱스 없으면 스킵)
@@ -191,7 +179,6 @@ export const useUpdateClass = () => {
         );
 
         const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-        console.log(`[useUpdateClass] Found ${enrollmentsSnapshot.docs.length} enrollments to update`);
 
         // 각 enrollment 업데이트
         const enrollmentPromises = enrollmentsSnapshot.docs.map(async (docSnap) => {
@@ -206,18 +193,12 @@ export const useUpdateClass = () => {
 
         await Promise.all(enrollmentPromises);
         enrollmentsUpdated = enrollmentsSnapshot.docs.length;
-      } catch (err: any) {
-        // 인덱스 에러는 경고만 표시 (classes가 업데이트되면 괜찮음)
-        if (err?.message?.includes('index')) {
-          console.warn('[useUpdateClass] Enrollments index not available, skipping enrollment update');
-        } else {
-          console.error('[useUpdateClass] Error updating enrollments:', err);
-        }
+      } catch {
+        // enrollments 업데이트 실패 시 무시 (classes가 업데이트되면 괜찮음)
       }
 
       // classes가 업데이트되었으면 성공
       if (classesUpdated > 0) {
-        console.log(`[useUpdateClass] Successfully updated ${classesUpdated} classes and ${enrollmentsUpdated} enrollments`);
         return;
       }
 
@@ -225,17 +206,11 @@ export const useUpdateClass = () => {
       if (enrollmentsUpdated === 0) {
         throw new Error(`수업을 찾을 수 없습니다: ${originalClassName} (${originalSubject})`);
       }
-
-      console.log(`[useUpdateClass] Successfully updated ${classesUpdated} classes and ${enrollmentsUpdated} enrollments`);
     },
     onSuccess: () => {
-      // 수업 목록 및 관련 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-    },
-    onError: (error) => {
-      console.error('[useUpdateClass] Error updating class:', error);
     },
   });
 };
@@ -258,11 +233,6 @@ export const useDeleteClass = () => {
     mutationFn: async (deleteData: DeleteClassData) => {
       const { className, subject } = deleteData;
 
-      console.log(`[useDeleteClass] Deleting class: ${className} (${subject})`);
-
-      let classesDeleted = 0;
-      let enrollmentsDeleted = 0;
-
       // 1. classes 컬렉션에서 수업 문서 삭제
       try {
         const classesQuery = query(
@@ -272,16 +242,14 @@ export const useDeleteClass = () => {
         );
 
         const classesSnapshot = await getDocs(classesQuery);
-        console.log(`[useDeleteClass] Found ${classesSnapshot.docs.length} classes to delete`);
 
         const classDeletePromises = classesSnapshot.docs.map(async (docSnap) => {
           await deleteDoc(docSnap.ref);
         });
 
         await Promise.all(classDeletePromises);
-        classesDeleted = classesSnapshot.docs.length;
-      } catch (err) {
-        console.error('[useDeleteClass] Error deleting from classes collection:', err);
+      } catch {
+        // classes 컬렉션 삭제 실패 시 무시
       }
 
       // 2. 해당 className + subject와 일치하는 모든 enrollments 조회 및 삭제
@@ -293,33 +261,20 @@ export const useDeleteClass = () => {
         );
 
         const snapshot = await getDocs(enrollmentsQuery);
-        console.log(`[useDeleteClass] Found ${snapshot.docs.length} enrollments to delete`);
 
         const promises = snapshot.docs.map(async (docSnap) => {
           await deleteDoc(docSnap.ref);
         });
 
         await Promise.all(promises);
-        enrollmentsDeleted = snapshot.docs.length;
-      } catch (err: any) {
-        // 인덱스 에러는 경고만 표시
-        if (err?.message?.includes('index')) {
-          console.warn('[useDeleteClass] Enrollments index not available, skipping enrollment deletion');
-        } else {
-          console.error('[useDeleteClass] Error deleting enrollments:', err);
-        }
+      } catch {
+        // enrollments 삭제 실패 시 무시
       }
-
-      console.log(`[useDeleteClass] Successfully deleted ${classesDeleted} classes and ${enrollmentsDeleted} enrollments`);
     },
     onSuccess: () => {
-      // 수업 목록 및 관련 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-    },
-    onError: (error) => {
-      console.error('[useDeleteClass] Error deleting class:', error);
     },
   });
 };
@@ -343,9 +298,6 @@ export const useManageClassStudents = () => {
   return useMutation({
     mutationFn: async (data: ManageClassStudentsData) => {
       const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {} } = data;
-
-      console.log(`[useManageClassStudents] Managing students for class: ${className}`);
-      console.log(`[useManageClassStudents] Adding: ${addStudentIds.length}, Removing: ${removeStudentIds.length}, AttendanceDays updates: ${Object.keys(studentAttendanceDays).length}`);
 
       // 학생 추가
       if (addStudentIds.length > 0) {
@@ -416,17 +368,11 @@ export const useManageClassStudents = () => {
         });
         await Promise.all(updatePromises);
       }
-
-      console.log(`[useManageClassStudents] Successfully managed students for class ${className}`);
     },
     onSuccess: () => {
-      // 수업 목록 및 관련 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-    },
-    onError: (error) => {
-      console.error('[useManageClassStudents] Error managing class students:', error);
     },
   });
 };
