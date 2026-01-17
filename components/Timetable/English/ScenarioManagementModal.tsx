@@ -115,6 +115,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                 setIsSaveDialogOpen(false);
                 setNewScenarioName('');
                 setNewScenarioDesc('');
+                setActiveOperation(null);
                 return;
             }
 
@@ -208,6 +209,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                 await simulation.loadFromScenario(scenario.id);
                 alert(`✅ 시나리오 "${scenario.name}"를 불러왔습니다.`);
                 onLoadScenario?.(scenario.name);
+                setActiveOperation(null);
                 onClose();
                 return;
             }
