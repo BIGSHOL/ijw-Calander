@@ -38,23 +38,16 @@ export const useClasses = (subject?: SubjectType) => {
             // 1. 먼저 새로운 classes 컬렉션 확인
             const unifiedClasses = await fetchClassesFromUnifiedCollection(subject);
             if (unifiedClasses.length > 0) {
-                console.log(`[useClasses] Fetched ${unifiedClasses.length} classes from unified 'classes' collection`);
                 return unifiedClasses;
             }
 
             // 2. classes 컬렉션이 비어있으면 레거시 방식 사용
             const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, true);
 
-            console.log(`[useClasses] Unified collection empty, falling back. subject: ${subject}, useNewStructure: ${useNewStructure}`);
-
             if (useNewStructure) {
-                const classes = await fetchClassesFromEnrollments(subject);
-                console.log(`[useClasses] Fetched ${classes.length} classes from enrollments`);
-                return classes;
+                return await fetchClassesFromEnrollments(subject);
             } else {
-                const classes = await fetchClassesFromOldStructure(subject);
-                console.log(`[useClasses] Fetched ${classes.length} classes from old structure`);
-                return classes;
+                return await fetchClassesFromOldStructure(subject);
             }
         },
         staleTime: 1000 * 60 * 5,
@@ -207,14 +200,9 @@ async function fetchClassesFromEnrollments(subject?: SubjectType): Promise<Class
         studentCount: classData.studentIds.size,
     }));
 
-    console.log(`[fetchClassesFromEnrollments] Before filtering: ${classes.length} classes`);
-    console.log(`[fetchClassesFromEnrollments] Subjects in data:`, [...new Set(classes.map(c => c.subject))]);
-
     // 과목 필터링
     if (subject) {
-        const beforeFilter = classes.length;
         classes = classes.filter(c => c.subject === subject);
-        console.log(`[fetchClassesFromEnrollments] After filtering by ${subject}: ${classes.length} classes (was ${beforeFilter})`);
     }
 
     // 정렬

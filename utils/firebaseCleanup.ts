@@ -22,23 +22,15 @@ class ListenerRegistry {
     const count = this.componentCounts.get(componentName) || 0;
     this.componentCounts.set(componentName, count + 1);
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[Firebase] Listener registered: ${componentName} (total: ${count + 1})`);
-    }
-
     // Return cleanup function
     return () => {
       const unsub = this.listeners.get(id);
       if (unsub) {
         unsub();
         this.listeners.delete(id);
-        
+
         const newCount = (this.componentCounts.get(componentName) || 1) - 1;
         this.componentCounts.set(componentName, newCount);
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[Firebase] Listener unregistered: ${componentName} (remaining: ${newCount})`);
-        }
       }
     };
   }
@@ -54,10 +46,6 @@ class ListenerRegistry {
     this.listeners.forEach(unsub => unsub());
     this.listeners.clear();
     this.componentCounts.clear();
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Firebase] All listeners cleaned up');
-    }
   }
 }
 

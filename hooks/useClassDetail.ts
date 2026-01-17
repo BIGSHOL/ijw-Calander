@@ -43,8 +43,6 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
   return useQuery<ClassDetail>({
     queryKey: ['classDetail', className, subject],
     queryFn: async () => {
-      console.log(`[useClassDetail] Fetching details for class: ${className}, subject: ${subject}`);
-
       let teacher = '';
       let schedule: string[] = [];
       let room = '';
@@ -74,10 +72,9 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
               schedule = classDoc.legacySchedule || classDoc.schedule || [];
             }
           }
-          console.log(`[useClassDetail] Found class info from classes collection: teacher=${teacher}, room=${room}, schedule=${JSON.stringify(schedule)}`);
         }
-      } catch (err) {
-        console.warn('[useClassDetail] Error fetching from classes collection:', err);
+      } catch {
+        // classes 컬렉션 조회 실패 시 무시
       }
 
       // 2. enrollments에서 학생 ID 수집 (attendanceDays 포함)
@@ -111,11 +108,9 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
             schedule = data.schedule || [];
           }
         });
-      } catch (err) {
-        console.warn('[useClassDetail] Error fetching from enrollments:', err);
+      } catch {
+        // enrollments 조회 실패 시 무시
       }
-
-      console.log(`[useClassDetail] Found ${studentIds.size} students in class ${className}`);
 
       // 학생 정보 조회
       const students: ClassStudent[] = [];

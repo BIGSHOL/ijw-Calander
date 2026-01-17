@@ -31,10 +31,6 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
   const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
   const queryClient = useQueryClient();
 
-  // 디버그 로그
-  console.log('[CoursesTab] Student:', student.id, student.name);
-  console.log('[CoursesTab] Enrollments:', student.enrollments);
-
   // 같은 수업(className)끼리 그룹화
   const groupedEnrollments = useMemo(() => {
     const groups = new Map<string, GroupedEnrollment>();

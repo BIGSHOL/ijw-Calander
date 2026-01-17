@@ -349,17 +349,14 @@ const App: React.FC = () => {
       const preferredTab = storage.getString(STORAGE_KEYS.DEFAULT_MAIN_TAB);
 
       if (preferredTab && preferredTab !== 'auto' && canAccessTab(preferredTab as AppTab)) {
-        console.log(`[Init] Setting appMode to user preferred tab: ${preferredTab}`);
         setAppMode(preferredTab as 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students');
       } else {
         // Fallback to first accessible tab
         const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
         if (firstAccessibleTab) {
-          console.log(`[Init] Setting initial appMode to: ${firstAccessibleTab}`);
           setAppMode(firstAccessibleTab);
         } else {
           // Fallback: no accessible tab, show calendar (will display error)
-          console.warn('[Init] No accessible tab found, falling back to calendar');
           setAppMode('calendar');
         }
       }
@@ -371,7 +368,6 @@ const App: React.FC = () => {
     if (!isAccessible) {
       const firstValidTab = priority.find(tab => canAccessTab(tab));
       if (firstValidTab) {
-        console.log(`[Access Control] Redirecting from ${appMode} to ${firstValidTab}`);
         setAppMode(firstValidTab);
       }
     }

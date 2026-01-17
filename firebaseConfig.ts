@@ -46,8 +46,7 @@ try {
             tabManager: persistentMultipleTabManager()
         })
     });
-} catch (e) {
-    console.warn('Firestore already initialized, using existing instance');
+} catch {
     dbInstance = getFirestore(app);
 }
 
@@ -221,13 +220,10 @@ async function diagnoseClassNameMatching(): Promise<{
     return { mismatched, matched, summary };
 }
 
-// 전역 expose
+// 전역 expose (콘솔 로그 제거)
 if (typeof window !== 'undefined') {
     (window as any).diagnoseEnrollments = diagnoseEnrollments;
     (window as any).diagnoseClassNameMatching = diagnoseClassNameMatching;
     (window as any).db = dbInstance;
-    console.log('🛠️ 개발 도구 로드됨:');
-    console.log('  - window.diagnoseEnrollments()');
-    console.log('  - window.diagnoseClassNameMatching()');
 }
 
