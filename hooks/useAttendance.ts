@@ -9,19 +9,35 @@ const STUDENTS_COLLECTION = 'students'; // Unified DB
 const RECORDS_COLLECTION = 'attendance_records';
 const CONFIG_COLLECTION = 'attendance_config';
 
+
 /**
- * 학생별 enrollments 서브컬렉션 조회 (완전 병렬 처리)
- * - 학생 문서 내 enrollments 배열 대신 서브컬렉션 사용
- * - 학생 관리/수업 관리와 동일한 데이터 소스 사용
+ * 학생별 enrollments 조회 (최적화)
+ * - 학생 문서에 enrollments 배열이 있으면 서브컬렉션 조회 스킵 (성능 최적화)
+ * - 배열이 없는 학생만 서브컬렉션에서 조회
  * - 50명씩 청크 처리로 Firebase 제한 회피
  */
 async function fetchEnrollmentsForAttendanceStudents(students: Student[]): Promise<void> {
     if (students.length === 0) return;
 
+    // 문서에 enrollments 배열이 이미 있는 학생은 스킵
+    const studentsNeedingFetch = students.filter(student => {
+        const arrayEnrollments = (student as any).enrollments;
+        if (Array.isArray(arrayEnrollments) && arrayEnrollments.length > 0) {
+            // 이미 문서에 enrollments가 있음 - 서브컬렉션 조회 불필요
+            return false;
+        }
+        return true;
+    });
+
+    // 모든 학생이 이미 enrollments를 가지고 있으면 조기 종료
+    if (studentsNeedingFetch.length === 0) {
+        return;
+    }
+
     const CHUNK_SIZE = 50;
     const chunks: Student[][] = [];
-    for (let i = 0; i < students.length; i += CHUNK_SIZE) {
-        chunks.push(students.slice(i, i + CHUNK_SIZE));
+    for (let i = 0; i < studentsNeedingFetch.length; i += CHUNK_SIZE) {
+        chunks.push(studentsNeedingFetch.slice(i, i + CHUNK_SIZE));
     }
 
     for (const chunk of chunks) {
@@ -34,18 +50,7 @@ async function fetchEnrollmentsForAttendanceStudents(students: Student[]): Promi
                     ...d.data()
                 })) as any[];
 
-                // 문서 내 배열 필드 (Legacy - 호환성 유지)
-                const arrayEnrollments = Array.isArray((student as any).enrollments)
-                    ? (student as any).enrollments
-                    : [];
-
-                // 병합: 서브컬렉션 데이터 우선, 배열 데이터는 fallback
-                // 서브컬렉션에 데이터가 있으면 그것만 사용 (최신 구조)
-                if (subcollectionEnrollments.length > 0) {
-                    (student as any).enrollments = subcollectionEnrollments;
-                } else {
-                    (student as any).enrollments = arrayEnrollments;
-                }
+                (student as any).enrollments = subcollectionEnrollments;
             } catch (err) {
                 console.warn(`[useAttendance] Failed to fetch enrollments for student ${student.id}:`, err);
                 (student as any).enrollments = [];
@@ -55,6 +60,7 @@ async function fetchEnrollmentsForAttendanceStudents(students: Student[]): Promi
         await Promise.all(promises);
     }
 }
+
 
 // ================== READ HOOKS ==================
 
@@ -219,6 +225,7 @@ export const useAttendanceStudents = (options?: {
         gcTime: 1000 * 60 * 30, // Keep in memory for 30 minutes (was cacheTime in v4)
         refetchOnWindowFocus: false, // === COST OPTIMIZATION: No refetch on tab focus ===
         refetchOnReconnect: false, // === COST OPTIMIZATION: No refetch on reconnect ===
+        refetchOnMount: false, // === PERFORMANCE: Use cache on mount if available ===
     });
 
     // Phase 2: Fetch attendance records for current month
@@ -235,12 +242,11 @@ export const useAttendanceStudents = (options?: {
             }
 
             try {
-                // === ALREADY OPTIMIZED: Batch fetch records (not N+1) ===
+                // === PERFORMANCE: Batch fetch using where(documentId(), 'in', ...) ===
+                // Reduces network round trips from N to ceil(N/30)
                 const expectedDocIds = studentData.filtered.map((s: Student) => `${s.id}_${options.yearMonth}`);
 
-                // Chunking for large student lists (Firestore batch limit is usually 30 for 'in' query, 
-                // but here we are fetching by ID. `getDoc` is 1 read per call.
-                // Wait, the previous implementation was doing `getDoc` in parallel.
+                // Firestore 'in' query limit is 30
                 const CHUNK_SIZE = 30;
                 const chunks: string[][] = [];
                 for (let i = 0; i < expectedDocIds.length; i += CHUNK_SIZE) {
@@ -249,36 +255,32 @@ export const useAttendanceStudents = (options?: {
 
                 const recordsMap = new Map<string, { attendance: Record<string, number>; memos: Record<string, string> }>();
 
-                for (const chunk of chunks) {
-                    const chunkPromises = chunk.map(async (docId) => {
-                        try {
-                            const docSnap = await getDoc(doc(db, RECORDS_COLLECTION, docId));
-                            if (docSnap.exists()) {
-                                const idParts = docId.split('_');
-                                idParts.pop(); // Remove yearMonth part
-                                const extractedStudentId = idParts.join('_');
-                                return {
-                                    studentId: extractedStudentId,
-                                    attendance: (docSnap.data().attendance || {}) as Record<string, number>,
-                                    memos: (docSnap.data().memos || {}) as Record<string, string>
-                                };
-                            }
-                        } catch (e) {
-                            console.warn(`Failed to fetch record ${docId}`, e);
-                        }
-                        return null;
-                    });
+                // Parallel chunk processing
+                const chunkPromises = chunks.map(async (chunkDocIds) => {
+                    try {
+                        const q = query(
+                            collection(db, RECORDS_COLLECTION),
+                            where('__name__', 'in', chunkDocIds)
+                        );
+                        const snapshot = await getDocs(q);
 
-                    const results = await Promise.all(chunkPromises);
-                    results.forEach(r => {
-                        if (r) {
-                            recordsMap.set(r.studentId, {
-                                attendance: r.attendance,
-                                memos: r.memos
+                        snapshot.docs.forEach(docSnap => {
+                            const docId = docSnap.id;
+                            const idParts = docId.split('_');
+                            idParts.pop(); // Remove yearMonth part
+                            const extractedStudentId = idParts.join('_');
+
+                            recordsMap.set(extractedStudentId, {
+                                attendance: (docSnap.data().attendance || {}) as Record<string, number>,
+                                memos: (docSnap.data().memos || {}) as Record<string, string>
                             });
-                        }
-                    });
-                }
+                        });
+                    } catch (e) {
+                        console.warn('Failed to batch fetch records:', e);
+                    }
+                });
+
+                await Promise.all(chunkPromises);
 
                 // Merge attendance records into student objects
                 const merged = studentData.filtered.map((student: Student) => {
@@ -300,6 +302,7 @@ export const useAttendanceStudents = (options?: {
         staleTime: 1000 * 60 * 5, // === COST OPTIMIZATION: 5-minute cache ===
         gcTime: 1000 * 60 * 30,
         refetchOnWindowFocus: false,
+        refetchOnMount: false, // === PERFORMANCE: Use cache on mount if available ===
     });
 
     // Combined refetch function (for mutations)

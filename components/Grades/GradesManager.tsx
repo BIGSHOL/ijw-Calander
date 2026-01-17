@@ -12,6 +12,7 @@ import {
   Users, Calendar, BookOpen, BarChart3, Search, Filter, RefreshCw, Loader2,
   TrendingUp, TrendingDown, Minus, AlertCircle, Check, Tag, Building2
 } from 'lucide-react';
+import { formatSchoolGrade } from '../../utils/studentUtils';
 
 // 시험별 전체 성적 조회 Hook
 const useExamScores = (examId: string) => {
@@ -706,7 +707,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                         const input = scoreInputs[student.id] || { score: '' };
                         const score = input.score ? Number(input.score) : null;
                         const studentRank = score !== null ? rankMap[student.id] : null;
-                        const schoolGrade = `${student.school || '-'}${student.grade || ''}`;
+                        const schoolGrade = formatSchoolGrade(student.school, student.grade);
                         const isEditing = editingStudentIds.includes(student.id);
 
                         return (
@@ -771,7 +772,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
           /* 시험 목록 화면 - 행 기반 레이아웃 */
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             {/* 헤더 행 */}
-            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-[#373d41]">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-medium text-[#373d41]">
               <span className="w-24 shrink-0">날짜</span>
               <span className="w-48 shrink-0">시험명</span>
               <span className="w-16 shrink-0 text-center">과목</span>
@@ -798,7 +799,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                   <div key={exam.id}>
                     {/* 시험 행 */}
                     <div
-                      className="flex items-center gap-3 px-3 py-2 bg-white border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors cursor-pointer"
+                      className="flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer group"
                       onClick={() => setExpandedExamId(isExpanded ? null : exam.id)}
                     >
                       {/* 날짜 */}
@@ -813,10 +814,9 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
 
                       {/* 과목 뱃지 */}
                       <span className="w-16 shrink-0 text-center">
-                        <span className={`px-1.5 py-0.5 text-xs rounded ${
-                          exam.subject === 'math' ? 'bg-blue-100 text-blue-700' :
-                          exam.subject === 'english' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
-                        }`}>
+                        <span className={`px-1.5 py-0.5 text-xs rounded ${exam.subject === 'math' ? 'bg-blue-100 text-blue-700' :
+                            exam.subject === 'english' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
+                          }`}>
                           {exam.subject === 'both' ? '통합' : exam.subject === 'math' ? '수학' : '영어'}
                         </span>
                       </span>

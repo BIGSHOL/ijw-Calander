@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Check, X, Underline } from 'lucide-react';
 import { TimetableStudent } from '../../../../types';
+import { formatSchoolGrade } from '../../../../utils/studentUtils';
 
 interface StudentListTableProps {
     students: TimetableStudent[];
@@ -147,7 +148,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                 </span>
                                 {(student.school || student.grade) && (
                                     <span className="text-xs text-gray-400">
-                                        {student.school}{student.grade}
+                                        {formatSchoolGrade(student.school, student.grade)}
                                     </span>
                                 )}
                             </div>
@@ -288,7 +289,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                     </span>
                                     {(student.school || student.grade) && (
                                         <span className="text-xs text-gray-400">
-                                            {student.school}{student.grade}
+                                            {formatSchoolGrade(student.school, student.grade)}
                                         </span>
                                     )}
                                 </div>

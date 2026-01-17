@@ -54,9 +54,9 @@ const StudentList: React.FC<StudentListProps> = ({
   return (
     <div className="flex flex-col h-full">
       {/* 페이지 크기 선택 - 터치 영역 최적화 (최소 44x32px) */}
-      <div className="px-3 py-2 border-b border-[#373d41]/20 bg-[#081429]">
+      <div className="px-3 py-2 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-300 font-medium">페이지당</span>
+          <span className="text-xs text-[#373d41] font-medium">페이지당</span>
           <div className="flex gap-1.5">
             {[10, 20, 50, 100].map((size) => (
               <button
@@ -64,7 +64,7 @@ const StudentList: React.FC<StudentListProps> = ({
                 onClick={() => handlePageSizeChange(size)}
                 className={`min-w-[44px] px-3 py-2 text-xs rounded-lg transition-colors ${pageSize === size
                   ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
-                  : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/10'
+                  : 'bg-white text-[#373d41] hover:bg-gray-100 border border-gray-200'
                   }`}
               >
                 {size}
@@ -145,9 +145,9 @@ const StudentList: React.FC<StudentListProps> = ({
 
       {/* 페이지네이션 컨트롤 - 터치 영역 최적화 (최소 44x32px) */}
       {students.length > 0 && totalPages > 1 && (
-        <div className="px-3 py-2 border-t border-[#373d41]/20 bg-[#081429]">
+        <div className="px-3 py-2 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-300 font-medium">
+            <div className="text-xs text-[#373d41] font-medium">
               {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, students.length)} / {students.length}명
             </div>
             <div className="flex items-center gap-1">
@@ -155,20 +155,20 @@ const StudentList: React.FC<StudentListProps> = ({
               <button
                 onClick={() => handlePageChange(1)}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
                 title="첫 페이지"
               >
-                <ChevronsLeft className="w-4 h-4 text-gray-300" />
+                <ChevronsLeft className="w-4 h-4 text-[#373d41]" />
               </button>
 
               {/* 이전 페이지 */}
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
                 title="이전 페이지"
               >
-                <ChevronLeft className="w-4 h-4 text-gray-300" />
+                <ChevronLeft className="w-4 h-4 text-[#373d41]" />
               </button>
 
               {/* 페이지 번호 */}
@@ -178,7 +178,7 @@ const StudentList: React.FC<StudentListProps> = ({
                   <>
                     <button
                       onClick={() => handlePageChange(1)}
-                      className="min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg hover:bg-white/10 text-gray-300 flex items-center justify-center"
+                      className="min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg hover:bg-gray-100 text-[#373d41] flex items-center justify-center"
                     >
                       1
                     </button>
@@ -197,7 +197,7 @@ const StudentList: React.FC<StudentListProps> = ({
                       onClick={() => handlePageChange(page)}
                       className={`min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-center ${currentPage === page
                         ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
-                        : 'hover:bg-white/10 text-gray-300'
+                        : 'hover:bg-gray-100 text-[#373d41]'
                         }`}
                     >
                       {page}
@@ -210,7 +210,7 @@ const StudentList: React.FC<StudentListProps> = ({
                     {currentPage < totalPages - 3 && <span className="text-xs text-gray-400 px-1">...</span>}
                     <button
                       onClick={() => handlePageChange(totalPages)}
-                      className="min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg hover:bg-white/10 text-gray-300 flex items-center justify-center"
+                      className="min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg hover:bg-gray-100 text-[#373d41] flex items-center justify-center"
                     >
                       {totalPages}
                     </button>
@@ -222,20 +222,20 @@ const StudentList: React.FC<StudentListProps> = ({
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
                 title="다음 페이지"
               >
-                <ChevronRight className="w-4 h-4 text-gray-300" />
+                <ChevronRight className="w-4 h-4 text-[#373d41]" />
               </button>
 
               {/* 마지막 페이지 */}
               <button
                 onClick={() => handlePageChange(totalPages)}
                 disabled={currentPage === totalPages}
-                className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
                 title="마지막 페이지"
               >
-                <ChevronsRight className="w-4 h-4 text-gray-300" />
+                <ChevronsRight className="w-4 h-4 text-[#373d41]" />
               </button>
             </div>
           </div>

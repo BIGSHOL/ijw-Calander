@@ -1,6 +1,7 @@
 import React from 'react';
 import { Student } from '../types';
 import { X, UserPlus, UserMinus } from 'lucide-react';
+import { formatSchoolGrade } from '../../../utils/studentUtils';
 
 interface Props {
   isOpen: boolean;
@@ -45,7 +46,7 @@ const StudentListModal: React.FC<Props> = ({ isOpen, onClose, title, students, t
                       <p className="font-bold text-gray-800">{student.name}</p>
                       {student.isHomeroom && <span className="text-xxs bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold">담임</span>}
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">{student.school} {student.grade} <span className="text-gray-300">|</span> {student.group || '그룹 미지정'}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{formatSchoolGrade(student.school, student.grade)} <span className="text-gray-300">|</span> {student.group || '그룹 미지정'}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xxs text-gray-400 mb-0.5">{type === 'new' ? '등록일' : '퇴원일'}</p>

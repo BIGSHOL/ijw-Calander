@@ -1,6 +1,7 @@
 import React from 'react';
 import { Users } from 'lucide-react';
 import { ClassStudent } from '../../hooks/useClassDetail';
+import { formatSchoolGrade } from '../../utils/studentUtils';
 
 interface ClassStudentListProps {
   students: ClassStudent[];
@@ -59,7 +60,7 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
             {student.name}
           </span>
           <span className="text-[#373d41] text-sm">
-            {student.school}{student.grade}
+            {formatSchoolGrade(student.school, student.grade)}
           </span>
           {/* 등원 요일이 수업 요일과 다른 경우에만 표시 */}
           {shouldShowAttendanceDays(student.attendanceDays) && (

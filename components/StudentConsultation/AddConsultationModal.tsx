@@ -71,6 +71,18 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
         return Array.from(new Set(selectedStudent.enrollments.map(e => e.subject)));
     }, [selectedStudent]);
 
+    // 초기 consultantId 설정 (staff 로딩 후 본인 매칭)
+    useEffect(() => {
+        if (isEditing || !staff.length) return;
+        const currentStaff = staff.find(s =>
+            s.uid === currentUser?.uid ||
+            s.email === currentUser?.email
+        );
+        if (currentStaff) {
+            setConsultantId(currentStaff.id);
+        }
+    }, [staff, currentUser, isEditing]);
+
     // 과목에 따른 담당선생님 자동 선택 (신규 작성 시에만 동작)
     useEffect(() => {
         if (isEditing) return; // 수정 모드에서는 자동 변경 방지
@@ -401,14 +413,39 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                             onChange={(e) => setConsultantId(e.target.value)}
                             className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
                         >
-                            <option value={currentUser?.uid || ''}>{currentUser?.displayName || '본인 (Desk)'}</option>
-                            {staff
-                                .filter(s => s.id !== currentUser?.uid)
-                                .map(s => (
-                                    <option key={s.id} value={s.id}>
-                                        {s.name} {s.role ? `(${s.role})` : ''}
+                            {/* 본인 옵션: staff에서 uid 또는 email로 매칭 */}
+                            {(() => {
+                                const currentStaff = staff.find(s =>
+                                    s.uid === currentUser?.uid ||
+                                    s.email === currentUser?.email
+                                );
+                                if (currentStaff) {
+                                    // 본인이 staff에 등록되어 있으면 해당 정보 표시
+                                    // systemRole이 있으면 우선 표시, 없으면 role 표시
+                                    const displayRole = currentStaff.systemRole?.toUpperCase() || currentStaff.role;
+                                    return (
+                                        <option value={currentStaff.id}>
+                                            {currentStaff.name} ({displayRole}) - 본인
+                                        </option>
+                                    );
+                                }
+                                // staff에 없으면 기본 표시
+                                return (
+                                    <option value={currentUser?.uid || ''}>
+                                        {currentUser?.displayName || '본인'} (Desk)
                                     </option>
-                                ))}
+                                );
+                            })()}
+                            {staff
+                                .filter(s => s.uid !== currentUser?.uid && s.email !== currentUser?.email)
+                                .map(s => {
+                                    const displayRole = s.systemRole?.toUpperCase() || s.role;
+                                    return (
+                                        <option key={s.id} value={s.id}>
+                                            {s.name} {displayRole ? `(${displayRole})` : ''}
+                                        </option>
+                                    );
+                                })}
                         </select>
                     </div>
 

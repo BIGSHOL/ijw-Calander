@@ -26,6 +26,7 @@ interface MigrationItem extends ParsedConsultation {
     matchStatus: 'READY' | 'NO_STUDENT' | 'NO_COUNSELOR' | 'ERROR' | 'AMBIGUOUS' | 'NEW_STUDENT';
     matchedStudent?: UnifiedStudent;
     matchedConsultant?: StaffMember;
+    matchedHomeroom?: StaffMember; // 담임선생님 (enrollment 기반)
     generatedTitle?: string;
     generatedCategory?: string;
     isNewStudent?: boolean; // New flag for auto-creation
@@ -70,17 +71,13 @@ const mapSubjectFromContent = (content: any) => {
     return '기타';
 };
 
-const mapStatus = (statusCell: any, subject: string) => {
+const mapStatus = (statusCell: any) => {
     const status = String(statusCell || '').trim();
-    if (status === '재원생') {
-        if (subject === '수학') return '수학등록';
-        if (subject === '영어') return '영어등록';
-        return '수학등록';
-    }
-    if (status.includes('대기')) return '추후 등록예정';
-    if (status.includes('퇴원')) return '미등록';
+    if (status === '재원생') return '재원생';
+    if (status.includes('대기')) return '대기';
+    if (status.includes('퇴원')) return '퇴원';
     if (status.includes('미등록')) return '미등록';
-    return '미등록';
+    return status || '기타';
 };
 
 const parseExcelDate = (cellVal: any) => {
@@ -170,7 +167,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                             consultationDate: dateStr,
                             notes: noteContent.trim(),
                             subject: subject,
-                            status: mapStatus(statusStr, subject),
+                            status: mapStatus(statusStr),
                             generatedTitle,
                             generatedCategory
                         };
@@ -248,49 +245,94 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                     // We will set isNewStudent = true
                 }
 
-                // Counselor Matching
+                // Counselor Matching - registrar 필드에서 직접 매칭
+                // registrar 형식: "박나연(Jenny)" 또는 "박나연" 또는 "Jenny"
                 let matchedConsultant = staffMembers.find(s => {
-                    if (!item.counselor) return false;
-                    // Exact match
-                    if (s.name === item.counselor || s.englishName === item.counselor) return true;
-                    // Partial match
-                    if (item.counselor.includes(s.name)) return true;
-                    if (s.englishName && item.counselor.includes(s.englishName)) return true;
+                    if (!item.registrar) return false;
+                    const registrar = item.registrar.trim();
+
+                    // 정확히 일치
+                    if (s.name === registrar || s.englishName === registrar) return true;
+
+                    // "박나연(Jenny)" 형식에서 한글 이름 추출
+                    const koreanNameMatch = registrar.match(/^([가-힣]+)/);
+                    if (koreanNameMatch && s.name === koreanNameMatch[1]) return true;
+
+                    // "박나연(Jenny)" 형식에서 영문 이름 추출
+                    const englishNameMatch = registrar.match(/\(([^)]+)\)/);
+                    if (englishNameMatch && s.englishName &&
+                        s.englishName.toLowerCase() === englishNameMatch[1].toLowerCase()) return true;
+
+                    // 부분 매칭
+                    if (registrar.includes(s.name)) return true;
+                    if (s.englishName && registrar.toLowerCase().includes(s.englishName.toLowerCase())) return true;
+
                     return false;
                 });
 
-                // Auto-map Teacher based on Subject & Student Enrollment (User Request)
-                // Refined Logic based on User Request:
-                // 1. One class -> That teacher
-                // 2. Multiple classes -> If registrar matches a teacher name, use that teacher.
-                if (!matchedConsultant && matchedStudent) {
+                // 담임선생님 매칭 (학생의 enrollment 기반)
+                let matchedHomeroom: typeof matchedConsultant = undefined;
+                if (matchedStudent) {
                     const subjectKey = item.subject === '수학' ? 'math' : (item.subject === '영어' ? 'english' : null);
                     let candidateEnrollments = matchedStudent.enrollments || [];
 
-                    // Filter by subject if known (e.g. if subject is Math, only look at Math classes)
+                    // 과목별 필터링
                     if (subjectKey) {
                         candidateEnrollments = candidateEnrollments.filter(e => e.subject === subjectKey);
                     }
 
                     if (candidateEnrollments.length === 1) {
-                        // Case 1: Only 1 class found -> Use that teacher
+                        // 수업이 1개면 해당 담당 선생님
                         const teacherId = candidateEnrollments[0].teacherId;
-                        matchedConsultant = staffMembers.find(s => s.id === teacherId || s.name === teacherId);
-                    } else if (candidateEnrollments.length > 1) {
-                        // Case 2: Multiple classes -> Check if registrar matches any teacher
-                        // The user said: "Consultant(registrar) matches homeroom teacher"
-                        if (item.registrar) {
-                            const matchingEnrollment = candidateEnrollments.find(e => {
-                                const teacher = staffMembers.find(s => s.id === e.teacherId || s.name === e.teacherId);
-                                // Check Korean name match
-                                return teacher && teacher.name === item.registrar;
-                            });
+                        matchedHomeroom = staffMembers.find(s => s.id === teacherId || s.name === teacherId);
+                    } else if (candidateEnrollments.length > 1 && item.registrar) {
+                        // 수업이 여러개면 registrar와 매칭되는 선생님 (한글/영어 이름 모두 지원)
+                        const matchingEnrollment = candidateEnrollments.find(e => {
+                            const teacher = staffMembers.find(s => s.id === e.teacherId || s.name === e.teacherId);
+                            if (!teacher) return false;
+                            const registrar = item.registrar.trim();
 
-                            if (matchingEnrollment) {
-                                const teacherId = matchingEnrollment.teacherId;
-                                matchedConsultant = staffMembers.find(s => s.id === teacherId || s.name === teacherId);
+                            // 한글 이름 매칭
+                            if (teacher.name === registrar) return true;
+                            const koreanNameMatch = registrar.match(/^([가-힣]+)/);
+                            if (koreanNameMatch && teacher.name === koreanNameMatch[1]) return true;
+
+                            // 영어 이름 매칭 (영어 선생님용)
+                            if (teacher.englishName) {
+                                if (teacher.englishName.toLowerCase() === registrar.toLowerCase()) return true;
+                                const englishNameMatch = registrar.match(/\(([^)]+)\)/);
+                                if (englishNameMatch && teacher.englishName.toLowerCase() === englishNameMatch[1].toLowerCase()) return true;
                             }
+
+                            return false;
+                        });
+
+                        if (matchingEnrollment) {
+                            const teacherId = matchingEnrollment.teacherId;
+                            matchedHomeroom = staffMembers.find(s => s.id === teacherId || s.name === teacherId);
                         }
+                    }
+                }
+
+                // 상담자가 없으면 담임선생님을 상담자로 사용
+                if (!matchedConsultant && matchedHomeroom) {
+                    matchedConsultant = matchedHomeroom;
+                }
+
+                // 담임이 비어있고, 상담자가 강사로 등록되어 있다면 담임으로 매칭
+                if (!matchedHomeroom && matchedConsultant && matchedConsultant.role === 'teacher') {
+                    matchedHomeroom = matchedConsultant;
+                }
+
+                // 상담자가 강사라면, 그 강사의 과목으로 우선 분류
+                let finalSubject = item.subject;
+                if (matchedConsultant && matchedConsultant.role === 'teacher' && matchedConsultant.subjects && matchedConsultant.subjects.length > 0) {
+                    // 강사의 첫 번째 과목으로 분류 (math -> 수학, english -> 영어)
+                    const teacherSubject = matchedConsultant.subjects[0];
+                    if (teacherSubject === 'math') {
+                        finalSubject = '수학';
+                    } else if (teacherSubject === 'english') {
+                        finalSubject = '영어';
                     }
                 }
 
@@ -303,9 +345,11 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
 
                 return {
                     ...item,
+                    subject: finalSubject, // 상담자 과목 우선 적용
                     matchStatus: status,
                     matchedStudent,
                     matchedConsultant,
+                    matchedHomeroom,
                     generatedTitle: title,
                     generatedCategory: 'general', // Default
                     isNewStudent: !matchedStudent // Flag to indicate need for creation
@@ -537,7 +581,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                                         {migrationItems.map((item, idx) => (
                                             <tr key={idx} className={`hover:bg-gray-50 ${item.matchStatus !== 'READY' ? 'bg-purple-50/30' : ''}`}>
                                                 <td className="px-3 py-2 text-gray-500 font-mono">{item.no}</td>
-                                                <td className="px-3 py-2 text-gray-700">{item.status}</td>
+                                                <td className="px-3 py-2 text-gray-700">{item.subject}</td>
                                                 <td className="px-3 py-2 font-medium text-gray-900">
                                                     {item.studentName}
                                                     {item.matchStatus === 'NEW_STUDENT' && <span className="text-[10px] text-purple-600 ml-1">(신규)</span>}
@@ -549,14 +593,20 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                                                 <td className="px-3 py-2 max-w-[200px] truncate" title={item.notes}>
                                                     {item.generatedTitle}
                                                 </td>
-                                                <td className="px-3 py-2 text-gray-600 font-medium">{item.registrar}</td>
-                                                <td className="px-3 py-2 text-gray-400">
-                                                    {item.counselor ? (
+                                                <td className="px-3 py-2 text-gray-600">
+                                                    {item.registrar ? (
                                                         item.matchedConsultant ? (
-                                                            <span className="text-blue-600">{item.matchedConsultant.name}</span>
+                                                            <span className="text-blue-600 font-medium">{item.matchedConsultant.name}</span>
                                                         ) : (
-                                                            <span className="text-red-400">{item.counselor}</span>
+                                                            <span className="text-orange-500">{item.registrar}</span>
                                                         )
+                                                    ) : (
+                                                        <span className="text-gray-300">-</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-gray-400">
+                                                    {item.matchedHomeroom ? (
+                                                        <span className="text-green-600">{item.matchedHomeroom.name}</span>
                                                     ) : (
                                                         <span className="text-gray-300">-</span>
                                                     )}

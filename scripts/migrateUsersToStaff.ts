@@ -92,59 +92,83 @@ export async function migratePhase2_MergeUserData(): Promise<MigrationReport> {
 
     // 이메일로 매핑
     const staffByEmail = new Map<string, any>();
-    staffSnapshot.forEach((doc) => {
-      const staff = doc.data();
+    staffSnapshot.forEach((docSnap) => {
+      const staff = docSnap.data();
       if (staff.email) {
-        staffByEmail.set(staff.email.toLowerCase(), { id: doc.id, data: staff });
+        const emailKey = staff.email.toLowerCase().trim();
+        staffByEmail.set(emailKey, { id: docSnap.id, data: staff });
+        console.log(`📧 Staff 이메일 등록: "${emailKey}" → ${docSnap.id}`);
       }
     });
+
+    console.log(`\n📊 Staff 이메일 맵 크기: ${staffByEmail.size}`);
+    console.log('📧 등록된 이메일 목록:', Array.from(staffByEmail.keys()));
 
     // 각 user를 처리
     for (const userDoc of usersSnapshot.docs) {
       const user = userDoc.data() as UserProfile;
 
+      // uid가 없으면 문서 ID를 사용
+      if (!user.uid) {
+        user.uid = userDoc.id;
+      }
+
       try {
+        // email이 없으면 스킵
+        if (!user.email) {
+          report.errors.push(`${userDoc.id}: 이메일 없음`);
+          console.warn(`⚠️ 스킵: ${userDoc.id} - 이메일 없음`);
+          continue;
+        }
+
         const email = user.email.toLowerCase();
         const existingStaff = staffByEmail.get(email);
 
         if (existingStaff) {
           // 기존 staff 업데이트 (병합)
           const staffRef = doc(db, 'staff', existingStaff.id);
-          await updateDoc(staffRef, {
+          const updateData: Record<string, any> = {
             uid: user.uid,
-            englishName: user.jobTitle || '', // jobTitle → englishName
-            systemRole: user.role,
-            approvalStatus: user.status,
+            jobTitle: user.jobTitle || existingStaff.data.jobTitle || '',
+            systemRole: user.role || 'user',
+            approvalStatus: user.status || 'pending',
             departmentPermissions: user.departmentPermissions || {},
-            primaryDepartmentId: user.departmentId,
-            teacherId: user.teacherId,
             favoriteDepartments: user.favoriteDepartments || [],
+            accountLinked: true,
             updatedAt: new Date().toISOString(),
-          });
+          };
+          // undefined 값 제외 (Firestore는 undefined를 허용하지 않음)
+          if (user.departmentId) updateData.primaryDepartmentId = user.departmentId;
+          if (user.teacherId) updateData.teacherId = user.teacherId;
+
+          await updateDoc(staffRef, updateData);
           report.matched++;
           report.staffUpdated++;
           console.log(`✅ 업데이트: ${user.email} → ${existingStaff.id}`);
         } else {
           // 신규 staff 생성
           const newStaffRef = doc(collection(db, 'staff'));
-          const newStaff: StaffMember = {
+          const newStaff: Record<string, any> = {
             id: newStaffRef.id,
             uid: user.uid,
             name: user.displayName || user.email.split('@')[0],
-            englishName: user.jobTitle || '', // jobTitle → englishName
+            jobTitle: user.jobTitle || '',
             email: user.email,
             role: 'staff', // 기본 직원 타입
-            systemRole: user.role,
-            approvalStatus: user.status,
+            systemRole: user.role || 'user',
+            approvalStatus: user.status || 'pending',
             departmentPermissions: user.departmentPermissions || {},
-            primaryDepartmentId: user.departmentId,
-            teacherId: user.teacherId,
             favoriteDepartments: user.favoriteDepartments || [],
             hireDate: new Date().toISOString().split('T')[0],
             status: 'active',
+            accountLinked: true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           };
+          // undefined 값 제외
+          if (user.departmentId) newStaff.primaryDepartmentId = user.departmentId;
+          if (user.teacherId) newStaff.teacherId = user.teacherId;
+
           await setDoc(newStaffRef, newStaff);
           report.staffCreated++;
           console.log(`✅ 생성: ${user.email} → ${newStaffRef.id}`);

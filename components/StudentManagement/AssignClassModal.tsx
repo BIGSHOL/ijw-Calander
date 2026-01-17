@@ -3,6 +3,7 @@ import { X, BookOpen, Loader2, Plus } from 'lucide-react';
 import { db } from '../../firebaseConfig';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { UnifiedStudent } from '../../types';
+import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useClasses } from '../../hooks/useClasses';
 
 interface AssignClassModalProps {
@@ -124,7 +125,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                     <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                         <div className="text-xs text-gray-500 mb-1">학생</div>
                         <div className="font-bold text-base text-[#081429]">
-                            {student.name} ({student.school} {student.grade})
+                            {student.name} ({formatSchoolGrade(student.school, student.grade)})
                         </div>
                     </div>
 

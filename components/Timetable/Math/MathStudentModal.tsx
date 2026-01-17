@@ -6,6 +6,7 @@ import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { TimetableStudent, TimetableClass } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { formatSchoolGrade } from '../../../utils/studentUtils';
 
 interface MathStudentModalProps {
     isOpen: boolean;
@@ -384,7 +385,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                                                 </span>
                                                 {(student.school || student.grade) && (
                                                     <span className="text-xs text-gray-400">
-                                                        {student.school}{student.grade}
+                                                        {formatSchoolGrade(student.school, student.grade)}
                                                     </span>
                                                 )}
                                             </div>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Student, SalaryConfig } from '../types';
 import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting } from '../utils';
+import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save, ChevronUp, ChevronDown, GripVertical, Check, X } from 'lucide-react';
 import { Exam, StudentScore, GRADE_COLORS } from '../../../types';
 
@@ -667,8 +668,8 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
       </td>
       <td className="p-1 sticky left-[102px] z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[80px]">
         <div className="flex flex-col gap-0.5 justify-center">
-          <div className="text-xxs text-[#373d41] font-medium truncate" title={`${student.school} ${student.grade}`}>
-            {student.school} {student.grade}
+          <div className="text-xxs text-[#373d41] font-medium truncate" title={formatSchoolGrade(student.school, student.grade)}>
+            {formatSchoolGrade(student.school, student.grade)}
           </div>
           <span
             className={`text-micro px-1.5 py-0.5 rounded-full w-fit font-bold ${badgeClass}`}

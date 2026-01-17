@@ -7,7 +7,7 @@ import AddStudentModal from './AddStudentModal';
 import StudentMigrationModal from './StudentMigrationModal';
 import EnglishClassAssignmentModal from './EnglishClassAssignmentModal';
 import DeleteInvalidStudentsModal from './DeleteInvalidStudentsModal';
-import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, BookOpen, Trash2 } from 'lucide-react';
+import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database } from 'lucide-react';
 
 export interface StudentFilters {
   searchQuery: string;
@@ -169,24 +169,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             >
               <Database size={14} />
               <span className="text-xs hidden md:inline">데이터 가져오기</span>
-            </button>
-            {/* 잘못된 문서 삭제 버튼 */}
-            <button
-              onClick={() => setShowDeleteInvalidModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-red-600/80 text-white hover:bg-red-600 transition-colors shadow-sm font-bold border border-red-500/30"
-              title="잘못된 학생 문서 삭제"
-            >
-              <Trash2 size={14} />
-              <span className="text-xs hidden md:inline">정리</span>
-            </button>
-            {/* 영어 수업 자동 배정 버튼 */}
-            <button
-              onClick={() => setShowEnglishAssignmentModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-emerald-600/80 text-white hover:bg-emerald-600 transition-colors shadow-sm font-bold border border-emerald-500/30"
-              title="영어 수업 자동 배정"
-            >
-              <BookOpen size={14} />
-              <span className="text-xs hidden md:inline">영어 배정</span>
             </button>
             <button
               onClick={() => setIsAddStudentModalOpen(true)}

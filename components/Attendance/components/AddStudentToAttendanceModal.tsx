@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Search, UserPlus, Check, Target, BookOpen } from 'lucide-react';
 import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
+import { formatSchoolGrade } from '../../../utils/studentUtils';
 
 interface StudentInfo {
     id: string;
@@ -200,7 +201,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
                                                     )}
                                                 </p>
                                                 <p className="text-xs text-gray-500">
-                                                    {student.school} {student.grade}
+                                                    {formatSchoolGrade(student.school, student.grade)}
                                                 </p>
                                             </div>
                                         </div>

@@ -19,6 +19,7 @@ import {
     BookOpen,
     ArrowRight
 } from 'lucide-react';
+import { formatSchoolGrade } from '../../utils/studentUtils';
 import {
     collection,
     getDocs,
@@ -491,7 +492,7 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
                                                     <User size={16} className="text-gray-500" />
                                                     <span className="font-bold text-gray-800">{student.studentName}</span>
                                                     <span className="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">
-                                                        {student.school} {student.grade}
+                                                        {formatSchoolGrade(student.school, student.grade)}
                                                     </span>
                                                 </div>
                                                 <span className="text-xs font-mono text-gray-400 select-all">{student.studentId}</span>
