@@ -442,92 +442,76 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     <div className="flex flex-col h-full min-h-0 bg-white text-[#373d41]">
       {/* Navigation is now handled in App.tsx header */}
 
-      {/* Settings Button Header */}
-      <div className="px-6 py-3 flex justify-end border-b border-gray-100 flex-shrink-0">
-        <button
-          onClick={() => setSettingsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg font-bold text-sm hover:bg-gray-600 transition-colors shadow-sm"
-          title="출석부 설정"
-        >
-          <Settings size={16} />
-          설정
-        </button>
-      </div>
-
-      {/* Stats Cards - Regular flow (scrolls with content) */}
-      <div className="px-6 py-5 grid grid-cols-1 md:grid-cols-5 gap-4 flex-shrink-0 border-b border-gray-100">
+      {/* Stats Cards + Settings - Compact single row */}
+      <div className="px-4 py-2 flex items-center gap-2 flex-shrink-0 border-b border-gray-100 overflow-x-auto">
         <div
           onClick={() => setSettlementModalOpen(true)}
-          className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 cursor-pointer hover:border-blue-300 transition-colors"
+          className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-blue-300 transition-colors flex-shrink-0"
         >
-          <div className="w-12 h-12 bg-blue-50 text-[#081429] rounded-lg flex items-center justify-center">
-            <span className="text-2xl font-bold leading-none">₩</span>
+          <div className="w-7 h-7 bg-blue-50 text-[#081429] rounded-md flex items-center justify-center">
+            <span className="text-sm font-bold leading-none">₩</span>
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">이번 달 급여</p>
-            <p className="text-xl font-bold text-[#373d41]">{formatCurrency(finalSalary)}</p>
+            <p className="text-[10px] text-gray-500 font-medium">이번 달 급여</p>
+            <p className="text-sm font-bold text-[#373d41]">{formatCurrency(finalSalary)}</p>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-gray-50 text-[#081429] rounded-lg">
-            <Users size={24} />
+        <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 flex-shrink-0">
+          <div className="p-1.5 bg-gray-50 text-[#081429] rounded-md">
+            <Users size={16} />
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">전체 학생</p>
-            <p className="text-xl font-bold text-[#373d41]">{visibleStudents.length}명</p>
+            <p className="text-[10px] text-gray-500 font-medium">전체 학생</p>
+            <p className="text-sm font-bold text-[#373d41]">{visibleStudents.length}명</p>
           </div>
         </div>
 
         <div
           onClick={() => setListModal({ isOpen: true, type: 'new' })}
-          className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 relative overflow-hidden cursor-pointer hover:border-yellow-300 transition-colors"
+          className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-yellow-300 transition-colors flex-shrink-0"
         >
-          <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-50 rounded-bl-full -mr-8 -mt-8"></div>
-          <div className="p-3 bg-yellow-100 text-[#081429] rounded-lg z-10">
-            <UserPlus size={24} />
+          <div className="p-1.5 bg-yellow-100 text-[#081429] rounded-md">
+            <UserPlus size={16} />
           </div>
-          <div className="z-10">
-            <p className="text-sm text-gray-500 font-medium">신입생 유입</p>
-            <div className="flex items-baseline gap-1">
-              <p className="text-xl font-bold text-[#fdb813]">+{stats.newStudentsCount}명</p>
-              {stats.newStudentsCount > 0 && (
-                <span className="text-xs font-semibold text-[#fdb813]/80">(+{stats.newStudentRate}%)</span>
-              )}
-            </div>
+          <div>
+            <p className="text-[10px] text-gray-500 font-medium">신입생 유입</p>
+            <p className="text-sm font-bold text-[#fdb813]">+{stats.newStudentsCount}명</p>
           </div>
         </div>
 
         <div
           onClick={() => setListModal({ isOpen: true, type: 'dropped' })}
-          className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4 cursor-pointer hover:border-red-300 transition-colors"
+          className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-red-300 transition-colors flex-shrink-0"
         >
-          <div className="p-3 bg-red-50 text-red-600 rounded-lg">
-            <UserMinus size={24} />
+          <div className="p-1.5 bg-red-50 text-red-600 rounded-md">
+            <UserMinus size={16} />
           </div>
           <div>
-            <p className="text-sm text-gray-500 font-medium">지난달 퇴원</p>
-            <div className="flex items-baseline gap-1">
-              <p className="text-xl font-bold text-red-500">-{stats.droppedStudentsCount}명</p>
-              {stats.droppedStudentsCount > 0 && (
-                <span className="text-xs font-semibold text-red-400">({stats.droppedStudentRate}%)</span>
-              )}
-            </div>
+            <p className="text-[10px] text-gray-500 font-medium">지난달 퇴원</p>
+            <p className="text-sm font-bold text-red-500">-{stats.droppedStudentsCount}명</p>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+        <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 flex-shrink-0">
           <div>
-            <p className="text-sm text-gray-500 font-medium">출석률</p>
-            <div className="flex items-end gap-2">
-              <p className="text-xl font-bold text-[#373d41]">
-                {stats.totalPresent + stats.totalAbsent === 0 ? '0' : Math.round((stats.totalPresent / (stats.totalPresent + stats.totalAbsent)) * 100)}%
-              </p>
-            </div>
-          </div>
-          <div className="h-10 w-10 rounded-full border-4 border-[#f1f5f9] border-t-[#081429] flex items-center justify-center transform -rotate-45">
+            <p className="text-[10px] text-gray-500 font-medium">출석률</p>
+            <p className="text-sm font-bold text-[#373d41]">
+              {stats.totalPresent + stats.totalAbsent === 0 ? '0' : Math.round((stats.totalPresent / (stats.totalPresent + stats.totalAbsent)) * 100)}%
+            </p>
           </div>
         </div>
+
+        {/* Settings Button - same row */}
+        <div className="flex-1"></div>
+        <button
+          onClick={() => setSettingsModalOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 text-white rounded-lg font-bold text-xs hover:bg-gray-600 transition-colors shadow-sm flex-shrink-0"
+          title="출석부 설정"
+        >
+          <Settings size={14} />
+          설정
+        </button>
       </div>
 
       {/* Main Table Area - Fixed height with sticky horizontal scrollbar at bottom */}

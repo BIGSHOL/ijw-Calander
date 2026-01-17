@@ -588,4 +588,25 @@ const ClassCard: React.FC<ClassCardProps> = ({
     );
 };
 
-export default ClassCard;
+// React.memo로 불필요한 리렌더링 방지
+export default React.memo(ClassCard, (prevProps, nextProps) => {
+    // 핵심 데이터가 변경되지 않았으면 리렌더링 스킵
+    return (
+        prevProps.cls.id === nextProps.cls.id &&
+        prevProps.cls.className === nextProps.cls.className &&
+        prevProps.cls.studentList === nextProps.cls.studentList &&
+        prevProps.cls.studentIds === nextProps.cls.studentIds &&
+        prevProps.span === nextProps.span &&
+        prevProps.searchQuery === nextProps.searchQuery &&
+        prevProps.showStudents === nextProps.showStudents &&
+        prevProps.showClassName === nextProps.showClassName &&
+        prevProps.showSchool === nextProps.showSchool &&
+        prevProps.showGrade === nextProps.showGrade &&
+        prevProps.dragOverClassId === nextProps.dragOverClassId &&
+        prevProps.currentDay === nextProps.currentDay &&
+        prevProps.fontSize === nextProps.fontSize &&
+        prevProps.rowHeight === nextProps.rowHeight &&
+        prevProps.showHoldStudents === nextProps.showHoldStudents &&
+        prevProps.showWithdrawnStudents === nextProps.showWithdrawnStudents
+    );
+});

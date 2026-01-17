@@ -116,15 +116,20 @@ export const MATH_PERIOD_TIMES: Record<string, string> = {
     '4-2': '21:05~22:00',
 };
 
+// 레거시 periodId → 통일된 periodId 매핑 (모듈 레벨 상수로 한 번만 생성)
+export const LEGACY_TO_UNIFIED_PERIOD_MAP: Record<string, string> = {
+    '1-1': '1', '1-2': '2',
+    '2-1': '3', '2-2': '4',
+    '3-1': '5', '3-2': '6',
+    '4-1': '7', '4-2': '8',
+    // 이미 통일된 ID도 지원
+    '1': '1', '2': '2', '3': '3', '4': '4',
+    '5': '5', '6': '6', '7': '7', '8': '8',
+};
+
 // 레거시 periodId를 통일된 periodId로 변환
 export const convertLegacyPeriodId = (legacyId: string): string => {
-    const mapping: Record<string, string> = {
-        '1-1': '1', '1-2': '2',
-        '2-1': '3', '2-2': '4',
-        '3-1': '5', '3-2': '6',
-        '4-1': '7', '4-2': '8',
-    };
-    return mapping[legacyId] || legacyId;
+    return LEGACY_TO_UNIFIED_PERIOD_MAP[legacyId] || legacyId;
 };
 
 // 통일된 periodId를 레거시 periodId로 변환 (필요시)

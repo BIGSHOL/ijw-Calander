@@ -22,25 +22,25 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-[#081429] p-5 flex justify-between items-center text-white shrink-0">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <DollarSign size={24} className="text-[#fdb813]" />
+        <div className="bg-[#081429] px-4 py-2.5 flex justify-between items-center text-white shrink-0">
+          <h2 className="text-sm font-bold flex items-center gap-1.5">
+            <DollarSign size={16} className="text-[#fdb813]" />
             출석부 설정
           </h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
           >
-            <X size={24} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3">
           <SalarySettingsTab teachers={teachers} />
         </div>
       </div>

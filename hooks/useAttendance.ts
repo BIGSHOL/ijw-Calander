@@ -9,6 +9,53 @@ const STUDENTS_COLLECTION = 'students'; // Unified DB
 const RECORDS_COLLECTION = 'attendance_records';
 const CONFIG_COLLECTION = 'attendance_config';
 
+/**
+ * 학생별 enrollments 서브컬렉션 조회 (완전 병렬 처리)
+ * - 학생 문서 내 enrollments 배열 대신 서브컬렉션 사용
+ * - 학생 관리/수업 관리와 동일한 데이터 소스 사용
+ * - 50명씩 청크 처리로 Firebase 제한 회피
+ */
+async function fetchEnrollmentsForAttendanceStudents(students: Student[]): Promise<void> {
+    if (students.length === 0) return;
+
+    const CHUNK_SIZE = 50;
+    const chunks: Student[][] = [];
+    for (let i = 0; i < students.length; i += CHUNK_SIZE) {
+        chunks.push(students.slice(i, i + CHUNK_SIZE));
+    }
+
+    for (const chunk of chunks) {
+        const promises = chunk.map(async (student) => {
+            try {
+                const enrollmentsRef = collection(db, STUDENTS_COLLECTION, student.id, 'enrollments');
+                const enrollmentsSnap = await getDocs(enrollmentsRef);
+                const subcollectionEnrollments = enrollmentsSnap.docs.map(d => ({
+                    id: d.id,
+                    ...d.data()
+                })) as any[];
+
+                // 문서 내 배열 필드 (Legacy - 호환성 유지)
+                const arrayEnrollments = Array.isArray((student as any).enrollments)
+                    ? (student as any).enrollments
+                    : [];
+
+                // 병합: 서브컬렉션 데이터 우선, 배열 데이터는 fallback
+                // 서브컬렉션에 데이터가 있으면 그것만 사용 (최신 구조)
+                if (subcollectionEnrollments.length > 0) {
+                    (student as any).enrollments = subcollectionEnrollments;
+                } else {
+                    (student as any).enrollments = arrayEnrollments;
+                }
+            } catch (err) {
+                console.warn(`[useAttendance] Failed to fetch enrollments for student ${student.id}:`, err);
+                (student as any).enrollments = [];
+            }
+        });
+
+        await Promise.all(promises);
+    }
+}
+
 // ================== READ HOOKS ==================
 
 /**
@@ -59,6 +106,10 @@ export const useAttendanceStudents = (options?: {
                 teacherIds: d.data().teacherIds || [],
             } as Student));
 
+            // === FIX: enrollments 서브컬렉션에서 조회 (학생 관리/수업 관리와 동일) ===
+            // 학생 문서 내 enrollments 배열이 아닌, 서브컬렉션 데이터 사용
+            await fetchEnrollmentsForAttendanceStudents(allRaw);
+
             let data = [...allRaw];
 
             // Client-side filtering (same logic as before)
@@ -73,6 +124,14 @@ export const useAttendanceStudents = (options?: {
                     const teacherClasses = teacherEnrollments.map((e: any) => e.className);
                     const teacherDays: string[] = [];
                     teacherEnrollments.forEach((e: any) => {
+                        // schedule 배열에서 요일 추출 (형식: "요일 교시", 예: "월 5", "목 6")
+                        if (e.schedule && Array.isArray(e.schedule)) {
+                            e.schedule.forEach((slot: string) => {
+                                const day = slot.split(' ')[0]; // "월 5" → "월"
+                                if (day && !teacherDays.includes(day)) teacherDays.push(day);
+                            });
+                        }
+                        // 레거시: days 필드가 있는 경우도 지원
                         if (e.days && Array.isArray(e.days)) {
                             e.days.forEach((d: string) => {
                                 if (!teacherDays.includes(d)) teacherDays.push(d);
@@ -126,6 +185,14 @@ export const useAttendanceStudents = (options?: {
                     // 해당 과목의 모든 수업 요일 병합
                     const subjectDays: string[] = [];
                     subjectEnrollments.forEach((e: any) => {
+                        // schedule 배열에서 요일 추출 (형식: "요일 교시", 예: "월 5", "목 6")
+                        if (e.schedule && Array.isArray(e.schedule)) {
+                            e.schedule.forEach((slot: string) => {
+                                const day = slot.split(' ')[0]; // "월 5" → "월"
+                                if (day && !subjectDays.includes(day)) subjectDays.push(day);
+                            });
+                        }
+                        // 레거시: days 필드가 있는 경우도 지원
                         if (e.days && Array.isArray(e.days)) {
                             e.days.forEach((d: string) => {
                                 if (!subjectDays.includes(d)) subjectDays.push(d);
