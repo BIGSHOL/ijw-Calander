@@ -7,6 +7,7 @@ import { EN_DRAFT_COLLECTION, CLASS_DRAFT_COLLECTION, SCENARIO_COLLECTION } from
 import { validateScenarioData, calculateScenarioStats, generateScenarioId } from './scenarioUtils';
 import { ScenarioEntry } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useSimulationOptional } from './context/SimulationContext';
 
 interface ScenarioManagementModalProps {
     isOpen: boolean;
@@ -41,6 +42,9 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
     const canEdit = hasPermission('timetable.english.edit') || currentUser?.role === 'master';
     const canManageSimulation = hasPermission('timetable.english.simulation') || currentUser?.role === 'master';
     const isMaster = currentUser?.role === 'master';
+
+    // SimulationContext 사용 (새 구조)
+    const simulation = useSimulationOptional();
 
     // Format date
     const formatDate = (dateString: string) => {
@@ -79,7 +83,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         return listenerRegistry.register('ScenarioManagementModal', unsubscribe);
     }, [isOpen]);
 
-    // Save current draft as scenario
+    // Save current draft as scenario (새 구조: Context 사용)
     const handleSaveScenario = async () => {
         if (!canEdit) {
             alert('저장 권한이 없습니다.');
@@ -94,7 +98,27 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         setActiveOperation('saving');
 
         try {
-            // 1. Get current draft data
+            // 새 구조: SimulationContext 사용
+            if (simulation?.isSimulationMode) {
+                const scenarioId = await simulation.saveToScenario(
+                    newScenarioName.trim(),
+                    newScenarioDesc.trim(),
+                    currentUser?.uid || '',
+                    currentUser?.displayName || currentUser?.email || 'Unknown'
+                );
+
+                const classCount = Object.keys(simulation.draftClasses).length;
+                const studentCount = Object.values(simulation.draftEnrollments)
+                    .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
+
+                alert(`✅ 시나리오 "${newScenarioName}"가 저장되었습니다.\n(수업: ${classCount}개, 학생: ${studentCount}명)`);
+                setIsSaveDialogOpen(false);
+                setNewScenarioName('');
+                setNewScenarioDesc('');
+                return;
+            }
+
+            // Fallback: 레거시 방식 (SimulationContext 없을 때)
             const [scheduleSnapshot, classSnapshot] = await Promise.all([
                 getDocs(collection(db, EN_DRAFT_COLLECTION)),
                 getDocs(collection(db, CLASS_DRAFT_COLLECTION))
@@ -147,35 +171,48 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         }
     };
 
-    // Load scenario to draft
+    // Load scenario to draft (새 구조: Context 사용)
     const handleLoadScenario = async (scenario: ScenarioEntry) => {
         if (!canEdit) {
             alert('불러오기 권한이 없습니다.');
             return;
         }
 
-        // Validate
-        const validation = validateScenarioData(scenario);
-        if (!validation.isValid) {
-            alert(`⚠️ 시나리오 데이터 검증 실패\n\n${validation.error}\n\n불러오기를 진행할 수 없습니다.`);
-            return;
+        // 새 구조 시나리오 (version 2) 확인
+        const isNewStructure = (scenario as any).version === 2;
+
+        // Validate (레거시만)
+        if (!isNewStructure) {
+            const validation = validateScenarioData(scenario);
+            if (!validation.isValid) {
+                alert(`⚠️ 시나리오 데이터 검증 실패\n\n${validation.error}\n\n불러오기를 진행할 수 없습니다.`);
+                return;
+            }
         }
 
         const confirmMsg = `시나리오 "${scenario.name}"를 불러오시겠습니까?
 
 통계:
-- 시간표 문서: ${scenario.stats?.timetableDocCount || Object.keys(scenario.data).length}개
 - 수업: ${scenario.stats?.classCount || 0}개
 - 학생: ${scenario.stats?.studentCount || 0}명
 
-⚠️ 현재 Draft 상태가 완전히 교체됩니다.
-✨ 불러오기 전 현재 상태가 자동 백업됩니다.`;
+⚠️ 현재 Draft 상태가 완전히 교체됩니다.`;
 
         if (!confirm(confirmMsg)) return;
 
         setActiveOperation(scenario.id);
 
         try {
+            // 새 구조: SimulationContext 사용
+            if (isNewStructure && simulation?.isSimulationMode) {
+                await simulation.loadFromScenario(scenario.id);
+                alert(`✅ 시나리오 "${scenario.name}"를 불러왔습니다.`);
+                onLoadScenario?.(scenario.name);
+                onClose();
+                return;
+            }
+
+            // 레거시 시나리오 처리 (기존 로직 유지)
             // Step 1: Backup current draft state
             const preLoadBackupId = `backup_preload_${Date.now()}`;
             try {

@@ -9,6 +9,10 @@
  * 2. Get student IDs from enrollment document paths
  * 3. Map student data from studentMap (unified student DB)
  *
+ * SIMULATION MODE (2026-01-17):
+ * - isSimulationMode=true일 때 SimulationContext의 draft 데이터 사용
+ * - 메모리 기반 상태로 Firebase 조회 없이 즉시 반환
+ *
  * OPTIMIZATION (2026-01-17):
  * - onSnapshot → getDocs + React Query 캐싱으로 변경
  * - Firebase 읽기 비용 60% 이상 절감 (실시간 구독 제거)
@@ -24,6 +28,7 @@ import { useQuery } from '@tanstack/react-query';
 import { query, where, collectionGroup, getDocs } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
+import { useSimulationOptional } from '../context/SimulationContext';
 
 export interface ClassStudentData {
     studentList: TimetableStudent[];
@@ -43,6 +48,17 @@ export const useClassStudents = (
 
     // Memoize classNames to avoid unnecessary re-fetches
     const classNamesKey = useMemo(() => [...classNames].sort().join(','), [classNames]);
+
+    // SimulationContext - optional (may not be wrapped in provider)
+    const simulation = useSimulationOptional();
+
+    // 시뮬레이션 모드: Context에서 draft 데이터 사용
+    const simulationData = useMemo(() => {
+        if (!isSimulationMode || !simulation?.isSimulationMode) {
+            return null;
+        }
+        return simulation.getClassStudents(classNames, studentMapRef.current);
+    }, [isSimulationMode, simulation, classNames]);
 
     const { data: classDataMap = {}, isLoading, refetch } = useQuery<Record<string, ClassStudentData>>({
         queryKey: ['englishClassStudents', classNamesKey],
@@ -140,11 +156,24 @@ export const useClassStudents = (
 
             return result;
         },
-        enabled: classNames.length > 0,
+        // 시뮬레이션 모드에서는 실행하지 않음 (simulationData 사용)
+        enabled: classNames.length > 0 && !isSimulationMode,
         staleTime: 1000 * 60 * 5,     // 5분 캐싱
         gcTime: 1000 * 60 * 15,       // 15분 GC
         refetchOnWindowFocus: false,  // 창 포커스 시 자동 재요청 비활성화
     });
+
+    // 시뮬레이션 모드면 simulationData 반환, 아니면 React Query 결과 반환
+    if (isSimulationMode && simulationData) {
+        return {
+            classDataMap: simulationData,
+            isLoading: false,
+            refetch: async () => {
+                // 시뮬레이션 모드에서는 loadFromLive로 새로고침
+                await simulation?.loadFromLive();
+            },
+        };
+    }
 
     return { classDataMap, isLoading, refetch };
 };
