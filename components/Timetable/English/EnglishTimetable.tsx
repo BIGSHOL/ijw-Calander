@@ -60,38 +60,55 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     // Fetch classes data for mainTeacher (담임) information
     const { data: classesData } = useClasses('english');
 
-    // Data loading with structure toggle support
+    // 시뮬레이션 모드: draftClasses에서 시간표 데이터 생성
     useEffect(() => {
-        const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, true);
+        if (!isSimulationMode) return;
 
-        // 시뮬레이션 모드: 항상 english_schedules_draft 사용
-        if (isSimulationMode) {
-            const unsubscribe = onSnapshot(collection(db, EN_DRAFT_COLLECTION), (snapshot) => {
-                const mergedData: ScheduleData = {};
-                snapshot.docs.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    Object.entries(data).forEach(([key, value]) => {
-                        if (typeof value === 'object' && value !== null) {
-                            const isNested = Object.keys(value).some(k => ['월', '화', '수', '목', '금', '토', '일'].includes(k));
-                            if (isNested) {
-                                Object.entries(value as Record<string, ScheduleCell>).forEach(([day, cell]) => {
-                                    const flatKey = `${key}-${day}`;
-                                    mergedData[flatKey] = cell;
-                                });
-                            } else {
-                                mergedData[key] = value as ScheduleCell;
-                            }
-                        }
+        // draftClasses를 scheduleData 형식으로 변환
+        const scheduleData: ScheduleData = {};
+
+        Object.values(simulation.draftClasses).forEach((cls) => {
+            if (!cls.schedule || !Array.isArray(cls.schedule)) return;
+
+            cls.schedule.forEach((slot: { day: string; periodId: string; room?: string }) => {
+                const slotKey = `${slot.day}-${slot.periodId}`;
+                const slotTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
+                const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room;
+
+                const key = `${slotTeacher}-${slot.periodId}-${slot.day}`;
+
+                // 같은 키에 이미 수업이 있으면 merged로 추가 (합반 처리)
+                if (scheduleData[key]) {
+                    const existing = scheduleData[key];
+                    if (!existing.merged) {
+                        existing.merged = [];
+                    }
+                    existing.merged.push({
+                        className: cls.className,
+                        room: slotRoom,
+                        underline: cls.underline || false
                     });
-                });
-                setScheduleData(mergedData);
-                setLoading(false);
-            }, (error) => {
-                console.error('시뮬레이션 데이터 로딩 실패:', error);
-                setLoading(false);
+                } else {
+                    scheduleData[key] = {
+                        className: cls.className,
+                        room: slotRoom,
+                        teacher: slotTeacher,
+                        merged: []
+                    };
+                }
             });
-            return listenerRegistry.register('EnglishTimetable(draft)', unsubscribe);
-        }
+        });
+
+        setScheduleData(scheduleData);
+        setLoading(false);
+    }, [isSimulationMode, simulation.draftClasses]);
+
+    // Data loading with structure toggle support (일반 모드)
+    useEffect(() => {
+        // 시뮬레이션 모드에서는 위의 useEffect에서 처리
+        if (isSimulationMode) return;
+
+        const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, true);
 
         // 일반 모드: 토글에 따라 데이터 소스 결정
         if (useNewStructure) {

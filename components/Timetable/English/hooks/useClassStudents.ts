@@ -53,12 +53,13 @@ export const useClassStudents = (
     const simulation = useSimulationOptional();
 
     // 시뮬레이션 모드: Context에서 draft 데이터 사용
+    // simulation 객체의 상태(draftEnrollments)가 변경될 때도 재계산되도록 의존성 추가
     const simulationData = useMemo(() => {
         if (!isSimulationMode || !simulation?.isSimulationMode) {
             return null;
         }
         return simulation.getClassStudents(classNames, studentMapRef.current);
-    }, [isSimulationMode, simulation, classNames]);
+    }, [isSimulationMode, simulation?.isSimulationMode, simulation?.draftEnrollments, classNames]);
 
     const { data: classDataMap = {}, isLoading, refetch } = useQuery<Record<string, ClassStudentData>>({
         queryKey: ['englishClassStudents', classNamesKey],

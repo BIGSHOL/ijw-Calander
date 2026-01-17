@@ -256,7 +256,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
             onHold: enrollment?.onHold,
             isMoved: false,
             attendanceDays: enrollment?.attendanceDays || [],
-            isSimulationAdded: enrollment?.studentId ? false : true,
+            isSimulationAdded: false,  // 시뮬레이션에서 추가되면 별도 표시 필요시 수정
           } as SimulationStudent;
         })
         .filter(Boolean) as SimulationStudent[];
@@ -486,37 +486,42 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
       query(collectionGroup(db, 'enrollments'), where('subject', '==', 'english'))
     );
 
-    // 삭제 배치
-    const deleteBatch = writeBatch(db);
-    let deleteCount = 0;
-    existingEnrollmentsSnapshot.docs.forEach(docSnap => {
-      deleteBatch.delete(docSnap.ref);
-      deleteCount++;
-      if (deleteCount >= 500) {
-        // Firestore 배치 제한
-        console.warn('Enrollment 삭제 500개 제한 도달');
-      }
-    });
-    if (deleteCount > 0) {
-      await deleteBatch.commit();
+    // 삭제 배치 (500개 단위로 분할)
+    const docsToDelete = existingEnrollmentsSnapshot.docs;
+    for (let i = 0; i < docsToDelete.length; i += 500) {
+      const batch = writeBatch(db);
+      const chunk = docsToDelete.slice(i, i + 500);
+      chunk.forEach(docSnap => {
+        batch.delete(docSnap.ref);
+      });
+      await batch.commit();
+      console.log(`✅ Deleted enrollments batch: ${i + chunk.length}/${docsToDelete.length}`);
     }
 
-    // 생성 배치
-    const createBatch = writeBatch(db);
-    let createCount = 0;
+    // 생성 배치 (500개 단위로 분할)
+    const enrollmentsToCreate: { ref: any; data: any }[] = [];
     Object.entries(draftEnrollments).forEach(([className, students]) => {
       Object.entries(students).forEach(([studentId, enrollment]) => {
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `english_${className}`);
-        createBatch.set(enrollmentRef, {
-          ...enrollment,
-          subject: 'english',
-          className,
+        enrollmentsToCreate.push({
+          ref: enrollmentRef,
+          data: {
+            ...enrollment,
+            subject: 'english',
+            className,
+          },
         });
-        createCount++;
       });
     });
-    if (createCount > 0) {
-      await createBatch.commit();
+
+    for (let i = 0; i < enrollmentsToCreate.length; i += 500) {
+      const batch = writeBatch(db);
+      const chunk = enrollmentsToCreate.slice(i, i + 500);
+      chunk.forEach(item => {
+        batch.set(item.ref, item.data);
+      });
+      await batch.commit();
+      console.log(`✅ Created enrollments batch: ${i + chunk.length}/${enrollmentsToCreate.length}`);
     }
 
     setState(prev => ({
