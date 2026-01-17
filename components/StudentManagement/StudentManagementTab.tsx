@@ -161,14 +161,12 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             <span className="text-sm font-bold text-white">학생 목록</span>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2">
-            {/* 데이터 가져오기 버튼 (마이그레이션) */}
             <button
               onClick={() => setShowMigrationModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 text-white hover:bg-white/20 transition-colors shadow-sm font-bold border border-white/20"
-              title="원생목록 마이그레이션"
+              className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+              title="데이터 가져오기"
             >
-              <Database size={14} />
-              <span className="text-xs hidden md:inline">데이터 가져오기</span>
+              <Database className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setIsAddStudentModalOpen(true)}
@@ -261,12 +259,13 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         }}
       />
 
-      {/* 마이그레이션 모달 */}
+
+      {/* 학생 데이터 마이그레이션 모달 */}
       {showMigrationModal && (
         <StudentMigrationModal
           onClose={() => {
+            refreshStudents();
             setShowMigrationModal(false);
-            refreshStudents(); // 마이그레이션 후 목록 새로고침
           }}
         />
       )}

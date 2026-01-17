@@ -132,17 +132,27 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                     if (no && !isNaN(parseInt(no))) {
                         if (currentRecord) records.push(currentRecord);
 
-                        const content = row['P'] || '';
+                        const rawContent = row['P'] || '';
+                        // P열에서 불필요한 헤더 제거: "상담 내역", "상담 기록 항목:" 등
+                        const content = rawContent
+                            .replace(/^상담\s*내역\s*/gm, '')
+                            .replace(/^상담\s*기록\s*항목\s*:\s*/gm, '')
+                            .trim();
                         const subject = mapSubjectFromContent(content);
                         const statusStr = row['B'] ? String(row['B']) : '';
                         const dateStr = parseExcelDate(row['L']);
 
-                        // Generate Title
-                        let generatedTitle = `상담 기록 (${dateStr})`;
-                        if (content.length > 0) {
-                            const firstLine = content.split('\n')[0];
-                            if (firstLine.length < 30) generatedTitle = firstLine;
-                            else generatedTitle = firstLine.substring(0, 30) + '...';
+                        // O열에서 제목 읽기 (없으면 자동 생성)
+                        const excelTitle = row['O'] ? String(row['O']).trim() : '';
+                        let generatedTitle = excelTitle;
+                        if (!generatedTitle) {
+                            // O열이 비어있으면 기존 로직으로 제목 생성
+                            generatedTitle = `상담 기록 (${dateStr})`;
+                            if (content.length > 0) {
+                                const firstLine = content.split('\n')[0];
+                                if (firstLine.length < 30) generatedTitle = firstLine;
+                                else generatedTitle = firstLine.substring(0, 30) + '...';
+                            }
                         }
 
                         // Determine Category
@@ -172,9 +182,15 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                             generatedCategory
                         };
                     } else if (currentRecord) {
-                        // Append multi-line content
+                        // Append multi-line content (불필요한 헤더 제거)
                         if (row['P']) {
-                            currentRecord.notes += '\n' + row['P'];
+                            const additionalContent = String(row['P'])
+                                .replace(/^상담\s*내역\s*/gm, '')
+                                .replace(/^상담\s*기록\s*항목\s*:\s*/gm, '')
+                                .trim();
+                            if (additionalContent) {
+                                currentRecord.notes += '\n' + additionalContent;
+                            }
                         }
                     }
                 });
@@ -338,10 +354,14 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
 
                 if (!matchedConsultant && status === 'READY') status = 'NO_COUNSELOR';
 
-                // Generate Title
-                const content = item.notes || '';
-                let title = content.length > 20 ? content.substring(0, 20) + '...' : content;
-                if (!title) title = "상담 기록 (자동 이전)";
+                // 기존 generatedTitle 유지 (파싱 단계에서 O열 또는 P열 기반으로 이미 생성됨)
+                // 없는 경우에만 기본값 설정
+                let title = (item as any).generatedTitle;
+                if (!title) {
+                    const content = item.notes || '';
+                    title = content.length > 20 ? content.substring(0, 20) + '...' : content;
+                    if (!title) title = "상담 기록 (자동 이전)";
+                }
 
                 return {
                     ...item,
@@ -351,7 +371,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                     matchedConsultant,
                     matchedHomeroom,
                     generatedTitle: title,
-                    generatedCategory: 'general', // Default
+                    generatedCategory: (item as any).generatedCategory || 'general',
                     isNewStudent: !matchedStudent // Flag to indicate need for creation
                 };
             });
@@ -590,8 +610,17 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                                                 <td className="px-3 py-2 text-gray-600">{item.grade}</td>
                                                 <td className="px-3 py-2 text-gray-500">{item.parentPhone}</td>
                                                 <td className="px-3 py-2 text-gray-500 text-[11px]">{item.studentPhone}</td>
-                                                <td className="px-3 py-2 max-w-[200px] truncate" title={item.notes}>
-                                                    {item.generatedTitle}
+                                                <td className="px-3 py-2 max-w-[300px]" title={item.notes}>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] shrink-0 ${
+                                                            item.generatedCategory === 'progress'
+                                                                ? 'bg-blue-100 text-blue-700'
+                                                                : 'bg-gray-100 text-gray-600'
+                                                        }`}>
+                                                            {item.generatedCategory === 'progress' ? '학습 진도' : '일반 상담'}
+                                                        </span>
+                                                        <span className="truncate">{item.generatedTitle}</span>
+                                                    </div>
                                                 </td>
                                                 <td className="px-3 py-2 text-gray-600">
                                                     {item.registrar ? (

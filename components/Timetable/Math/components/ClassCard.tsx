@@ -4,6 +4,7 @@ import { TimetableClass, ClassKeywordColor, Teacher } from '../../../../types';
 import { getSubjectTheme } from '../utils/gridUtils';
 import { Clock } from 'lucide-react';
 import { MATH_PERIOD_INFO, MATH_PERIOD_TIMES, WEEKEND_PERIOD_INFO, WEEKEND_PERIOD_TIMES } from '../../constants';
+import { formatSchoolGrade } from '../../../../utils/studentUtils';
 
 interface ClassCardProps {
     cls: TimetableClass;
@@ -376,8 +377,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {commonStudents.active.map(s => {
                                     const isHighlighted = searchQuery && s.name.includes(searchQuery);
                                     let displayText = s.name;
-                                    if (showSchool && s.school) displayText += `/${s.school}`;
-                                    if (showGrade && s.grade) displayText += showSchool ? s.grade : `/${s.grade}`;
+                                    if (showSchool || showGrade) {
+                                        const schoolGrade = formatSchoolGrade(
+                                            showSchool ? s.school : null,
+                                            showGrade ? s.grade : null
+                                        );
+                                        if (schoolGrade && schoolGrade !== '-') displayText += `/${schoolGrade}`;
+                                    }
                                     return (
                                         <li
                                             key={s.id}
@@ -428,8 +434,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                         {dayActiveStudents.map(s => {
                                                             const isHighlighted = searchQuery && s.name.includes(searchQuery);
                                                             let displayText = s.name;
-                                                            if (showSchool && s.school) displayText += `/${s.school}`;
-                                                            if (showGrade && s.grade) displayText += showSchool ? s.grade : `/${s.grade}`;
+                                                            if (showSchool || showGrade) {
+                                                                const schoolGrade = formatSchoolGrade(
+                                                                    showSchool ? s.school : null,
+                                                                    showGrade ? s.grade : null
+                                                                );
+                                                                if (schoolGrade && schoolGrade !== '-') displayText += `/${schoolGrade}`;
+                                                            }
                                                             return (
                                                                 <li
                                                                     key={s.id}
@@ -506,11 +517,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {activeStudents.map(s => {
                                     const isHighlighted = searchQuery && s.name.includes(searchQuery);
                                     let displayText = s.name;
-                                    if (showSchool && s.school) {
-                                        displayText += `/${s.school}`;
-                                    }
-                                    if (showGrade && s.grade) {
-                                        displayText += showSchool ? s.grade : `/${s.grade}`;
+                                    if (showSchool || showGrade) {
+                                        const schoolGrade = formatSchoolGrade(
+                                            showSchool ? s.school : null,
+                                            showGrade ? s.grade : null
+                                        );
+                                        if (schoolGrade && schoolGrade !== '-') displayText += `/${schoolGrade}`;
                                     }
                                     return (
                                         <li

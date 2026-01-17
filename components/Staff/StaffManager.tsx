@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Filter, RefreshCw, Calendar, Briefcase, AlertCircle, Database } from 'lucide-react';
+import { Plus, Search, Filter, RefreshCw, Calendar, Briefcase, AlertCircle } from 'lucide-react';
 import { useStaff } from '../../hooks/useStaff';
 import { useStaffLeaves } from '../../hooks/useStaffLeaves';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, UserProfile } from '../../types';
@@ -8,7 +8,6 @@ import StaffForm from './StaffForm';
 import StaffViewModal from './StaffViewModal';
 import StaffSchedule from './StaffSchedule';
 import LeaveManagement from './LeaveManagement';
-import UserStaffMigrationModal from './UserStaffMigrationModal';
 
 type ViewMode = 'list' | 'schedule' | 'leave';
 
@@ -32,7 +31,6 @@ const StaffManager: React.FC<StaffManagerProps> = ({
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [viewingStaff, setViewingStaff] = useState<StaffMember | null>(null); // 조회 모달용
-  const [showMigrationModal, setShowMigrationModal] = useState(false);
 
   // Hooks
   const { staff, loading, error, refreshStaff, addStaff, updateStaff, deleteStaff } = useStaff();
@@ -152,16 +150,6 @@ const StaffManager: React.FC<StaffManagerProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {isMaster && (
-              <button
-                onClick={() => setShowMigrationModal(true)}
-                className="flex items-center gap-1.5 px-3 py-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors text-sm"
-                title="Users → Staff 마이그레이션"
-              >
-                <Database className="w-4 h-4" />
-                <span>데이터 동기화</span>
-              </button>
-            )}
             <button
               onClick={refreshStaff}
               className="p-2 text-gray-500 hover:text-[#081429] hover:bg-gray-100 rounded-lg transition-colors"
@@ -357,12 +345,6 @@ const StaffManager: React.FC<StaffManagerProps> = ({
         />
       )}
 
-      {/* User-Staff Migration Modal */}
-      {showMigrationModal && (
-        <UserStaffMigrationModal
-          onClose={() => setShowMigrationModal(false)}
-        />
-      )}
     </div>
   );
 };

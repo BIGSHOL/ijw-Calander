@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import {
     collection,
     getDocs,
@@ -8,11 +8,17 @@ import {
     Query,
     DocumentData,
     limit,
+    startAfter,
+    QueryDocumentSnapshot,
+    getCountFromServer,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Consultation, ConsultationCategory } from '../types';
 
 export const COL_STUDENT_CONSULTATIONS = 'student_consultations';
+
+/** 페이지당 기본 개수 */
+export const DEFAULT_PAGE_SIZE = 50;
 
 /**
  * 상담 필터 옵션
@@ -26,6 +32,14 @@ export interface StudentConsultationFilters {
     followUpStatus?: 'all' | 'needed' | 'done' | 'pending';
     subject?: 'math' | 'english' | 'all';
     searchQuery?: string;
+}
+
+/**
+ * 페이지네이션 옵션
+ */
+export interface PaginationOptions {
+    pageSize?: number;
+    page?: number;
 }
 
 /**
@@ -189,4 +203,148 @@ export function getFollowUpDaysLeft(followUpDate: string): number {
     const todayDate = new Date(today);
     const diffTime = followUp.getTime() - todayDate.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * 페이지네이션 결과 타입
+ */
+export interface PaginatedConsultationsResult {
+    consultations: Consultation[];
+    totalCount: number;
+    currentPage: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+}
+
+/**
+ * 커서 기반 페이지네이션 상담 기록 조회 Hook
+ * - 페이지 이동 시에만 Firebase 조회
+ * - 각 페이지별 캐싱
+ */
+export function usePaginatedConsultations(
+    filters?: StudentConsultationFilters,
+    pagination?: PaginationOptions
+) {
+    const pageSize = pagination?.pageSize || DEFAULT_PAGE_SIZE;
+    const currentPage = pagination?.page || 1;
+
+    const { data, isLoading, error: queryError, refetch } = useQuery<PaginatedConsultationsResult>({
+        queryKey: ['student_consultations_paginated', filters, currentPage, pageSize],
+        queryFn: async () => {
+            const colRef = collection(db, COL_STUDENT_CONSULTATIONS);
+            const constraints: any[] = [];
+
+            // 필터 적용
+            if (filters?.studentId) {
+                constraints.push(where('studentId', '==', filters.studentId));
+            } else {
+                if (filters?.type) {
+                    constraints.push(where('type', '==', filters.type));
+                }
+                if (filters?.consultantId) {
+                    constraints.push(where('consultantId', '==', filters.consultantId));
+                }
+                if (filters?.category) {
+                    constraints.push(where('category', '==', filters.category));
+                }
+                if (filters?.subject && filters.subject !== 'all') {
+                    constraints.push(where('subject', '==', filters.subject === 'math' ? '수학' : '영어'));
+                }
+            }
+
+            // 정렬 (date 기준 내림차순)
+            constraints.push(orderBy('date', 'desc'));
+
+            // 1. 총 개수 조회 (필터 적용)
+            const countQuery = query(colRef, ...constraints.filter(c => c.type !== 'limit' && c.type !== 'startAfter'));
+            const countSnapshot = await getCountFromServer(query(colRef, ...constraints.slice(0, -1).concat([orderBy('date', 'desc')])));
+            const totalCount = countSnapshot.data().count;
+            const totalPages = Math.ceil(totalCount / pageSize);
+
+            // 2. 해당 페이지 데이터 조회
+            // offset 기반으로 처리 (Firestore는 offset을 직접 지원하지 않으므로 startAfter 사용)
+            let consultationList: Consultation[] = [];
+
+            if (currentPage === 1) {
+                // 첫 페이지: limit만 적용
+                const q = query(colRef, ...constraints, limit(pageSize));
+                const snapshot = await getDocs(q);
+                consultationList = snapshot.docs.map(docSnap => ({
+                    id: docSnap.id,
+                    ...docSnap.data()
+                } as Consultation));
+            } else {
+                // n페이지: (n-1)*pageSize 개를 건너뛰고 pageSize개 조회
+                // 먼저 offset 위치의 문서를 찾기 위해 쿼리
+                const offsetQuery = query(colRef, ...constraints, limit((currentPage - 1) * pageSize));
+                const offsetSnapshot = await getDocs(offsetQuery);
+
+                if (offsetSnapshot.docs.length > 0) {
+                    const lastDoc = offsetSnapshot.docs[offsetSnapshot.docs.length - 1];
+                    const pageQuery = query(colRef, ...constraints, startAfter(lastDoc), limit(pageSize));
+                    const pageSnapshot = await getDocs(pageQuery);
+                    consultationList = pageSnapshot.docs.map(docSnap => ({
+                        id: docSnap.id,
+                        ...docSnap.data()
+                    } as Consultation));
+                }
+            }
+
+            // 클라이언트 사이드 필터링 (서버에서 처리 못한 필터들)
+            if (filters?.dateRange) {
+                const { start, end } = filters.dateRange;
+                consultationList = consultationList.filter(c => c.date >= start && c.date <= end);
+            }
+
+            if (filters?.followUpStatus && filters.followUpStatus !== 'all') {
+                if (filters.followUpStatus === 'needed') {
+                    consultationList = consultationList.filter(c => c.followUpNeeded && !c.followUpDone);
+                } else if (filters.followUpStatus === 'done') {
+                    consultationList = consultationList.filter(c => c.followUpNeeded && c.followUpDone);
+                } else if (filters.followUpStatus === 'pending') {
+                    consultationList = consultationList.filter(c => {
+                        if (!c.followUpNeeded || c.followUpDone) return false;
+                        if (!c.followUpDate) return true;
+                        return c.followUpDate >= new Date().toISOString().split('T')[0];
+                    });
+                }
+            }
+
+            if (filters?.searchQuery) {
+                const lowerQuery = filters.searchQuery.toLowerCase();
+                consultationList = consultationList.filter(c =>
+                    c.studentName.toLowerCase().includes(lowerQuery) ||
+                    c.title.toLowerCase().includes(lowerQuery) ||
+                    c.content.toLowerCase().includes(lowerQuery)
+                );
+            }
+
+            return {
+                consultations: consultationList,
+                totalCount,
+                currentPage,
+                totalPages,
+                hasNextPage: currentPage < totalPages,
+                hasPrevPage: currentPage > 1,
+            };
+        },
+        staleTime: 1000 * 60 * 5,     // 5분 캐싱
+        gcTime: 1000 * 60 * 10,       // 10분 GC
+        refetchOnWindowFocus: false,
+    });
+
+    const error = queryError ? (queryError as Error).message : null;
+
+    return {
+        consultations: data?.consultations || [],
+        totalCount: data?.totalCount || 0,
+        currentPage: data?.currentPage || 1,
+        totalPages: data?.totalPages || 1,
+        hasNextPage: data?.hasNextPage || false,
+        hasPrevPage: data?.hasPrevPage || false,
+        loading: isLoading,
+        error,
+        refetch,
+    };
 }
