@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import { TimetableClass, Teacher, ClassKeywordColor } from '../../../../types';
 import { getClassesForCell, getConsecutiveSpan, shouldSkipCell } from '../utils/gridUtils';
 import ClassCard from './ClassCard';
-import { MATH_PERIOD_TIMES, WEEKEND_PERIOD_TIMES, ENGLISH_PERIODS, ALL_WEEKDAYS } from '../../constants';
+import { MATH_PERIOD_TIMES, WEEKEND_PERIOD_TIMES, ENGLISH_PERIODS, ALL_WEEKDAYS, LEGACY_TO_UNIFIED_PERIOD_MAP } from '../../constants';
+import { BookOpen } from 'lucide-react';
 
 // Helper: 특정 요일에 강사가 수업이 있는지 확인 (메인 teacher 또는 slotTeachers)
 const hasClassOnDay = (
@@ -27,14 +28,8 @@ const hasClassOnDay = (
                 if (parts.length >= 2) {
                     const slotDay = parts[0];
                     const periodPart = parts[1];
-                    // 레거시 periodId를 새 periodId로 변환 (1-2 -> 2)
-                    const periodMap: Record<string, string> = {
-                        '1-1': '1', '1-2': '2', '2-1': '3', '2-2': '4',
-                        '3-1': '5', '3-2': '6', '4-1': '7', '4-2': '8',
-                        '1': '1', '2': '2', '3': '3', '4': '4',
-                        '5': '5', '6': '6', '7': '7', '8': '8'
-                    };
-                    const normalizedPeriod = periodMap[periodPart] || periodPart;
+                    // 레거시 periodId를 새 periodId로 변환 (모듈 상수 사용)
+                    const normalizedPeriod = LEGACY_TO_UNIFIED_PERIOD_MAP[periodPart] || periodPart;
                     const slotKey = `${slotDay}-${normalizedPeriod}`;
                     const slotTeacher = cls.slotTeachers?.[slotKey];
                     // slotTeacher가 있고 메인 teacher와 다르면 override
@@ -65,13 +60,8 @@ const hasClassOnDay = (
                 if (parts.length >= 2) {
                     const slotDay = parts[0];
                     const periodPart = parts[1];
-                    const periodMap: Record<string, string> = {
-                        '1-1': '1', '1-2': '2', '2-1': '3', '2-2': '4',
-                        '3-1': '5', '3-2': '6', '4-1': '7', '4-2': '8',
-                        '1': '1', '2': '2', '3': '3', '4': '4',
-                        '5': '5', '6': '6', '7': '7', '8': '8'
-                    };
-                    const normalizedPeriod = periodMap[periodPart] || periodPart;
+                    // 레거시 periodId를 새 periodId로 변환 (모듈 상수 사용)
+                    const normalizedPeriod = LEGACY_TO_UNIFIED_PERIOD_MAP[periodPart] || periodPart;
                     const slotKey = `${slotDay}-${normalizedPeriod}`;
                     const slotRoom = cls.slotRooms?.[slotKey];
                     return slotRoom && slotRoom.trim() !== resource?.trim();
@@ -91,7 +81,6 @@ const hasClassOnDay = (
         return false;
     }
 };
-import { BookOpen } from 'lucide-react';
 
 interface TimetableGridProps {
     filteredClasses: TimetableClass[];

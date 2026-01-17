@@ -130,6 +130,12 @@ export const calculateStats = (
   const todayKey = formatDateKey(new Date());
 
   visibleStudents.forEach(student => {
+    // Check if student is NEW this month (startDate is in current month)
+    const { isNew } = getStudentStatus(student, currentMonth);
+    if (isNew) {
+      newStudents.push(student);
+    }
+
     // Salary Stats (Existing Logic)
     // We still need to iterate attendance records for salary calculation (based on units)
     const monthlyAttendance = Object.entries(student.attendance).filter(([dateKey]) =>
