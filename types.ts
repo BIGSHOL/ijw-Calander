@@ -119,7 +119,8 @@ export interface UnifiedStudent {
 
 
   // 상태 관리
-  status: 'active' | 'on_hold' | 'withdrawn' | 'prospect' | 'waitlisted';
+  // prospect = prospective (예비), waitlisted = waiting (대기) - 두 표기 모두 지원
+  status: 'active' | 'on_hold' | 'withdrawn' | 'prospect' | 'prospective' | 'waitlisted' | 'waiting';
   startDate: string;             // 등록일 (YYYY-MM-DD)
   endDate?: string;              // 퇴원일
   withdrawalDate?: string;       // 퇴원일 (YYYY-MM-DD) - 영어 시간표와 호환

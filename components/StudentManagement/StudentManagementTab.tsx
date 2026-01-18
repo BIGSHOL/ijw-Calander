@@ -7,7 +7,8 @@ import AddStudentModal from './AddStudentModal';
 import StudentMigrationModal from './StudentMigrationModal';
 import EnglishClassAssignmentModal from './EnglishClassAssignmentModal';
 import DeleteInvalidStudentsModal from './DeleteInvalidStudentsModal';
-import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database } from 'lucide-react';
+import NormalizeStudentIdsModal from './NormalizeStudentIdsModal';
+import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, Wrench } from 'lucide-react';
 
 export interface StudentFilters {
   searchQuery: string;
@@ -31,6 +32,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const [showMigrationModal, setShowMigrationModal] = useState(false);
   const [showEnglishAssignmentModal, setShowEnglishAssignmentModal] = useState(false);
   const [showDeleteInvalidModal, setShowDeleteInvalidModal] = useState(false);
+  const [showNormalizeIdsModal, setShowNormalizeIdsModal] = useState(false);
 
   // 검색어가 있고 메모리 결과가 적으면 과거 퇴원생 자동 검색
   useEffect(() => {
@@ -96,9 +98,15 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
       result = result.filter((s) => s.grade === filters.grade);
     }
 
-    // 상태 필터
+    // 상태 필터 (prospect/prospective 모두 지원, status 없으면 active로 간주)
     if (filters.status !== 'all') {
-      result = result.filter((s) => s.status === filters.status);
+      result = result.filter((s) => {
+        const studentStatus = s.status || 'active';  // status 없으면 재원으로 간주
+        if (filters.status === 'prospect') {
+          return studentStatus === 'prospect' || studentStatus === 'prospective';
+        }
+        return studentStatus === filters.status;
+      });
     }
 
     // 수강 과목 필터
@@ -161,6 +169,13 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             <span className="text-sm font-bold text-white">학생 목록</span>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2">
+            <button
+              onClick={() => setShowNormalizeIdsModal(true)}
+              className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+              title="학생 ID 정규화"
+            >
+              <Wrench className="w-3.5 h-3.5" />
+            </button>
             <button
               onClick={() => setShowMigrationModal(true)}
               className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
@@ -283,6 +298,16 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         <DeleteInvalidStudentsModal
           onClose={() => setShowDeleteInvalidModal(false)}
           onComplete={() => refreshStudents()}
+        />
+      )}
+
+      {/* 학생 ID 정규화 모달 */}
+      {showNormalizeIdsModal && (
+        <NormalizeStudentIdsModal
+          onClose={() => {
+            refreshStudents();
+            setShowNormalizeIdsModal(false);
+          }}
         />
       )}
     </div>

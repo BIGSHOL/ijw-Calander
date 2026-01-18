@@ -233,6 +233,8 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
         });
     };
 
+    // 구 프로젝트(injaewon-project-8ea38)에서 데이터 마이그레이션 (일회성 기능)
+    // 참고: 구 프로젝트의 english_schedules 컬렉션에서 가져옴 (현재 프로젝트와 무관)
     const handleMigrateFromAcademy = async () => {
         if (!confirm('기존 Academy App (injaewon-project-8ea38)에서 데이터를 가져오시겠습니까?')) return;
 
@@ -242,7 +244,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
             secondaryApp = initializeApp(OLD_FIREBASE_CONFIG, "secondary");
             const oldDb = getFirestore(secondaryApp);
 
-            // 2. Fetch General Settings
+            // 2. Fetch General Settings (구 프로젝트의 레거시 경로)
             const settingsRef = doc(oldDb, 'english_schedules', 'integration_settings');
             const settingsSnap = await getDoc(settingsRef);
             let newSettings = { ...safeSettings };

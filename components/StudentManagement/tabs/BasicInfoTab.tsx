@@ -28,6 +28,9 @@ const STATUS_STYLES: Record<string, { label: string; bg: string; text: string }>
   on_hold: { label: '휴원', bg: '#f59e0b', text: '#ffffff' },
   withdrawn: { label: '퇴원', bg: '#6b7280', text: '#ffffff' },
   prospect: { label: '예비', bg: '#3b82f6', text: '#ffffff' },
+  prospective: { label: '예비', bg: '#3b82f6', text: '#ffffff' },  // 예비 상태 별칭
+  waitlisted: { label: '대기', bg: '#8b5cf6', text: '#ffffff' },
+  waiting: { label: '대기', bg: '#8b5cf6', text: '#ffffff' },  // 대기 상태 별칭
 };
 
 // 학년 옵션
@@ -511,7 +514,8 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
                 <option value="active">재원</option>
                 <option value="on_hold">휴원</option>
                 <option value="withdrawn">퇴원</option>
-                <option value="prospect">예비</option>
+                <option value="prospective">예비</option>
+                <option value="waitlisted">대기</option>
               </select>
             ) : (
               <span

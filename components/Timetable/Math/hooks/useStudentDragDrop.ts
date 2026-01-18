@@ -90,17 +90,27 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         try {
             const batch = writeBatch(db);
 
-            // Build final state for each affected class
-            const affectedClassIds = new Set<string>();
-            pendingMoves.forEach(m => {
-                affectedClassIds.add(m.fromClassId);
-                affectedClassIds.add(m.toClassId);
-            });
+            // 각 이동에 대해 enrollment 업데이트
+            pendingMoves.forEach(move => {
+                const { studentId, fromClassId, toClassId } = move;
 
-            affectedClassIds.forEach(classId => {
-                const cls = localClasses.find(c => c.id === classId);
-                if (cls) {
-                    batch.update(doc(db, '수업목록', classId), { studentIds: cls.studentIds || [] });
+                // from class에서 className 추출 (classId 형식: "math_강사_수업명")
+                const fromClass = localClasses.find(c => c.id === fromClassId);
+                const toClass = localClasses.find(c => c.id === toClassId);
+
+                if (fromClass && toClass) {
+                    // 기존 enrollment 삭제
+                    const oldEnrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${fromClass.className}`);
+                    batch.delete(oldEnrollmentRef);
+
+                    // 새 enrollment 생성
+                    const newEnrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${toClass.className}`);
+                    batch.set(newEnrollmentRef, {
+                        className: toClass.className,
+                        subject: 'math',
+                        enrollmentDate: new Date().toISOString().split('T')[0],
+                        createdAt: new Date().toISOString()
+                    });
                 }
             });
 

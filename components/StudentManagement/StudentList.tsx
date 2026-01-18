@@ -34,43 +34,89 @@ const StudentList: React.FC<StudentListProps> = ({
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | undefined) => {
     switch (status) {
       case 'prospect':
-        return <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-medium border border-orange-200">예비</span>;
+      case 'prospective':  // 예비 상태 (두 가지 표기 지원)
+        return <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium">예비</span>;
       case 'active':
         return <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">재원</span>;
       case 'on_hold':
-        return <span className="text-xs bg-gray-100 text-gray-800 px-2 py-0.5 rounded font-medium">휴원</span>;
+        return <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">휴원</span>;
       case 'waitlisted':
-        return <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-medium">대기</span>;
+      case 'waiting':  // 대기 상태 (두 가지 표기 지원)
+        return <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-medium">대기</span>;
       case 'withdrawn':
-        return <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded font-medium">퇴원</span>;
+        return <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-medium">퇴원</span>;
       default:
-        return null;
+        // status가 없거나 인식되지 않는 경우 기본값으로 "재원" 표시
+        // (status 필드가 없는 기존 학생 데이터 호환)
+        return <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">재원</span>;
     }
   };
 
   return (
     <div className="flex flex-col h-full">
-      {/* 페이지 크기 선택 - 터치 영역 최적화 (최소 44x32px) */}
+      {/* 상단: 총 학생 수 + 페이지 크기 선택 + 페이지네이션 */}
       <div className="px-3 py-2 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-[#373d41] font-medium">페이지당</span>
-          <div className="flex gap-1.5">
-            {[10, 20, 50, 100].map((size) => (
-              <button
-                key={size}
-                onClick={() => handlePageSizeChange(size)}
-                className={`min-w-[44px] px-3 py-2 text-xs rounded-lg transition-colors ${pageSize === size
-                  ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
-                  : 'bg-white text-[#373d41] hover:bg-gray-100 border border-gray-200'
-                  }`}
-              >
-                {size}
-              </button>
-            ))}
+          {/* 왼쪽: 총 학생 수 + 페이지 크기 */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#081429] font-bold">
+              총 <span className="text-[#fdb813]">{students.length}</span>명
+            </span>
+            <select
+              value={pageSize}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              className="text-xs border border-gray-300 rounded px-2 py-1 bg-white text-[#373d41] focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
+            >
+              <option value={10}>10개씩 보기</option>
+              <option value={20}>20개씩 보기</option>
+              <option value={50}>50개씩 보기</option>
+              <option value={100}>100개씩 보기</option>
+            </select>
           </div>
+
+          {/* 오른쪽: 페이지네이션 */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className="p-1 text-[#373d41] hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed"
+                title="첫 페이지"
+              >
+                <ChevronsLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="p-1 text-[#373d41] hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed"
+                title="이전 페이지"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-xs text-[#373d41] px-2 font-medium">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="p-1 text-[#373d41] hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed"
+                title="다음 페이지"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className="p-1 text-[#373d41] hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed"
+                title="마지막 페이지"
+              >
+                <ChevronsRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -143,104 +189,6 @@ const StudentList: React.FC<StudentListProps> = ({
         )}
       </div>
 
-      {/* 페이지네이션 컨트롤 - 터치 영역 최적화 (최소 44x32px) */}
-      {students.length > 0 && totalPages > 1 && (
-        <div className="px-3 py-2 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-[#373d41] font-medium">
-              {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, students.length)} / {students.length}명
-            </div>
-            <div className="flex items-center gap-1">
-              {/* 첫 페이지 */}
-              <button
-                onClick={() => handlePageChange(1)}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
-                title="첫 페이지"
-              >
-                <ChevronsLeft className="w-4 h-4 text-[#373d41]" />
-              </button>
-
-              {/* 이전 페이지 */}
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
-                title="이전 페이지"
-              >
-                <ChevronLeft className="w-4 h-4 text-[#373d41]" />
-              </button>
-
-              {/* 페이지 번호 */}
-              <div className="flex items-center gap-1 mx-1">
-                {/* 첫 페이지 근처 */}
-                {currentPage > 3 && (
-                  <>
-                    <button
-                      onClick={() => handlePageChange(1)}
-                      className="min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg hover:bg-gray-100 text-[#373d41] flex items-center justify-center"
-                    >
-                      1
-                    </button>
-                    {currentPage > 4 && <span className="text-xs text-gray-400 px-1">...</span>}
-                  </>
-                )}
-
-                {/* 현재 페이지 근처 3개 */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(page => {
-                    return Math.abs(page - currentPage) <= 1;
-                  })
-                  .map(page => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-center ${currentPage === page
-                        ? 'bg-[#fdb813] text-[#081429] font-bold shadow-sm'
-                        : 'hover:bg-gray-100 text-[#373d41]'
-                        }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-
-                {/* 마지막 페이지 근처 */}
-                {currentPage < totalPages - 2 && (
-                  <>
-                    {currentPage < totalPages - 3 && <span className="text-xs text-gray-400 px-1">...</span>}
-                    <button
-                      onClick={() => handlePageChange(totalPages)}
-                      className="min-w-[32px] min-h-[32px] px-2 py-1.5 text-xs rounded-lg hover:bg-gray-100 text-[#373d41] flex items-center justify-center"
-                    >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* 다음 페이지 */}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
-                title="다음 페이지"
-              >
-                <ChevronRight className="w-4 h-4 text-[#373d41]" />
-              </button>
-
-              {/* 마지막 페이지 */}
-              <button
-                onClick={() => handlePageChange(totalPages)}
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed min-w-[32px] min-h-[32px] flex items-center justify-center"
-                title="마지막 페이지"
-              >
-                <ChevronsRight className="w-4 h-4 text-[#373d41]" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

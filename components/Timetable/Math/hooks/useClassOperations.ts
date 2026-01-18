@@ -1,7 +1,15 @@
 import { doc, setDoc, deleteDoc, updateDoc, collection } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
-import { TimetableClass, TimetableStudent } from '../../../../types';
+import { TimetableClass } from '../../../../types';
 
+const COL_CLASSES = 'classes';
+
+/**
+ * useClassOperations - 수학 수업 CRUD 작업
+ *
+ * 데이터 저장: classes 컬렉션
+ * 학생 등록: enrollments subcollection
+ */
 export const useClassOperations = () => {
     // Check for consecutive periods
     const checkConsecutiveSchedule = (schedule: string[], periods: string[]): boolean => {
@@ -46,7 +54,9 @@ export const useClassOperations = () => {
             throw new Error('최소 1개 이상의 시간대를 선택해주세요.');
         }
 
-        const classId = `${subject}_${teacher.trim().replace(/\s/g, '')}_${className.trim().replace(/\s/g, '_')}`;
+        // subject 변환: '수학' -> 'math', '영어' -> 'english'
+        const subjectKey = subject === '수학' ? 'math' : subject === '영어' ? 'english' : subject;
+        const classId = `${subjectKey}_${teacher.trim().replace(/\s/g, '')}_${className.trim().replace(/\s/g, '_')}`;
 
         const existingClass = classes.find(c => c.id === classId);
         if (existingClass) {
@@ -57,18 +67,27 @@ export const useClassOperations = () => {
             throw new Error('같은 요일의 수업 시간은 연속되어야 합니다.\n\n예: 1-1, 1-2 (O) / 1-1, 2-1 (X - 중간에 1-2번이 비어있음)');
         }
 
-        const newClass: TimetableClass = {
+        // schedule을 새 구조로 변환: "월 1-1" -> { day: "월", periodId: "1-1" }
+        const scheduleObjects = schedule.map(slot => {
+            const [day, periodId] = slot.split(' ');
+            return { day, periodId };
+        });
+
+        const newClass = {
             id: classId,
             className: className.trim(),
             teacher: teacher.trim(),
             room: room.trim(),
-            subject: subject,
-            schedule: schedule,
-            studentList: [],
+            subject: subjectKey,
+            schedule: scheduleObjects,
+            legacySchedule: schedule, // 호환성용
+            studentIds: [],
+            isActive: true,
+            createdAt: new Date().toISOString(),
             order: classes.length + 1
         };
 
-        await setDoc(doc(db, '수업목록', classId), newClass);
+        await setDoc(doc(db, COL_CLASSES, classId), newClass);
         return newClass;
     };
 
@@ -85,16 +104,27 @@ export const useClassOperations = () => {
             throw new Error('같은 요일의 수업 시간은 연속되어야 합니다.\n\n예: 1-1, 1-2 (O) / 1-1, 2-1 (X - 중간에 1-2번이 비어있음)');
         }
 
-        await updateDoc(doc(db, '수업목록', classId), updates);
+        // schedule이 있으면 새 구조로 변환
+        const updateData: any = { ...updates };
+        if (updates.schedule) {
+            updateData.schedule = updates.schedule.map(slot => {
+                const [day, periodId] = slot.split(' ');
+                return { day, periodId };
+            });
+            updateData.legacySchedule = updates.schedule;
+        }
+
+        await updateDoc(doc(db, COL_CLASSES, classId), updateData);
     };
 
     const deleteClass = async (classId: string) => {
-        await deleteDoc(doc(db, '수업목록', classId));
+        // Soft delete - isActive를 false로 설정
+        await updateDoc(doc(db, COL_CLASSES, classId), { isActive: false });
     };
 
     const addStudent = async (
         classId: string,
-        currentStudentIds: string[] | undefined,
+        className: string,
         studentData: {
             name: string;
             grade: string;
@@ -116,32 +146,32 @@ export const useClassOperations = () => {
             grade: studentData.grade.trim(),
             school: studentData.school.trim(),
             status: 'active',
-            subject: 'math', // Default for this context
-            teacherIds: [], // Could populate if we knew the teacher ID from class
+            subjects: ['math'],
             createdAt: now,
             updatedAt: now
         };
 
         await setDoc(studentRef, newStudent);
 
-        // 2. Link to Class
-        const updatedIds = [...(currentStudentIds || []), newStudentId];
-        await updateDoc(doc(db, '수업목록', classId), {
-            studentIds: updatedIds,
-            // Deprecated: maintain for compatibility if needed, else remove
-            // studentList: ... 
+        // 2. Create enrollment
+        const enrollmentRef = doc(db, 'students', newStudentId, 'enrollments', `math_${className}`);
+        await setDoc(enrollmentRef, {
+            className,
+            subject: 'math',
+            enrollmentDate: now.split('T')[0],
+            createdAt: now
         });
 
-        return updatedIds; // Return IDs instead of list
+        return newStudentId;
     };
 
-    const removeStudent = async (classId: string, currentStudentIds: string[] | undefined, studentId: string) => {
-        const updatedIds = (currentStudentIds || []).filter(id => id !== studentId);
-        await updateDoc(doc(db, '수업목록', classId), { studentIds: updatedIds });
-        return updatedIds;
+    const removeStudent = async (className: string, studentId: string) => {
+        // enrollment 문서 삭제
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+        await deleteDoc(enrollmentRef);
     };
 
-    const withdrawStudent = async (classId: string, currentStudentIds: string[] | undefined, studentId: string) => {
+    const withdrawStudent = async (className: string, studentId: string) => {
         // Update Student Status
         const studentRef = doc(db, 'students', studentId);
         const now = new Date().toISOString();
@@ -150,21 +180,31 @@ export const useClassOperations = () => {
             endDate: now.split('T')[0],
             updatedAt: now
         });
-        // We don't remove from class if we want to keep showing them as withdrawn
-        return currentStudentIds || [];
+
+        // enrollment에 withdrawalDate 설정
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+        await updateDoc(enrollmentRef, {
+            withdrawalDate: now.split('T')[0]
+        });
     };
 
-    const restoreStudent = async (classId: string, currentStudentIds: string[] | undefined, studentId: string) => {
+    const restoreStudent = async (className: string, studentId: string) => {
         // Update Student Status
         const studentRef = doc(db, 'students', studentId);
         const now = new Date().toISOString();
         await updateDoc(studentRef, {
             status: 'active',
-            endDate: null, // Clear end date
-            withdrawalDate: null, // Clear if any
+            endDate: null,
+            withdrawalDate: null,
             updatedAt: now
         });
-        return currentStudentIds || [];
+
+        // enrollment에서 withdrawalDate 제거
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+        await updateDoc(enrollmentRef, {
+            withdrawalDate: null,
+            onHold: false
+        });
     };
 
     return {

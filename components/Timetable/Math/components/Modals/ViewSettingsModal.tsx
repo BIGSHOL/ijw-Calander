@@ -9,8 +9,8 @@ interface ViewSettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
     // 표시 설정
-    columnWidth: 'narrow' | 'normal' | 'wide';
-    setColumnWidth: (width: 'narrow' | 'normal' | 'wide') => void;
+    columnWidth: 'compact' | 'narrow' | 'normal' | 'wide';
+    setColumnWidth: (width: 'compact' | 'narrow' | 'normal' | 'wide') => void;
     rowHeight: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';
     setRowHeight: (height: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall') => void;
     fontSize: 'small' | 'normal' | 'large' | 'very-large';
@@ -191,13 +191,13 @@ const ViewSettingsModal: React.FC<ViewSettingsModalProps> = ({
                         <div>
                             <div className="text-xs font-bold text-gray-500 mb-2">가로 폭</div>
                             <div className="flex gap-1">
-                                {(['narrow', 'normal', 'wide'] as const).map(w => (
+                                {(['compact', 'narrow', 'normal', 'wide'] as const).map(w => (
                                     <button
                                         key={w}
                                         onClick={() => setColumnWidth(w)}
                                         className={`flex-1 py-1.5 text-xs rounded border ${columnWidth === w ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold' : 'border-gray-300 text-gray-500 hover:bg-gray-50'}`}
                                     >
-                                        {w === 'narrow' ? '좁게' : w === 'normal' ? '보통' : '넓게'}
+                                        {w === 'compact' ? '컴팩트' : w === 'narrow' ? '좁게' : w === 'normal' ? '보통' : '넓게'}
                                     </button>
                                 ))}
                             </div>

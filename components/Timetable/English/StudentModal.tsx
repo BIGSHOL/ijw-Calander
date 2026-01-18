@@ -123,7 +123,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
                     } else {
                         // 실시간 모드: 사용자 확인 필요
                         const confirmed = confirm(
-                            `⚠️ "${className}" 수업이 수업목록에 없습니다.\n\n` +
+                            `⚠️ "${className}" 수업을 찾을 수 없습니다.\n\n` +
                             `새로 생성하시겠습니까?\n(취소 시 모달이 닫힙니다)`
                         );
                         if (!confirmed) {

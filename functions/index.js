@@ -24,9 +24,9 @@ function normalizeTeacherName(name) {
     return mappings[name] || name;
 }
 
-// Helper: Extract teacher name from Math class ID
+// Helper: Extract teacher name from class ID (new format: math_teacher_className)
 function extractTeacherFromClassId(classId) {
-    if (classId.startsWith("수학_")) {
+    if (classId.startsWith("math_") || classId.startsWith("english_")) {
         const parts = classId.split("_");
         if (parts.length >= 2) return parts[1];
     }
@@ -35,9 +35,12 @@ function extractTeacherFromClassId(classId) {
 
 // Helper: Infer subject from class data
 function inferSubject(classData, classId) {
-    if (classId.startsWith("수학_")) return "math";
-    if (classId.startsWith("영어_")) return "english";
-    const className = classData.className || "";
+    // 새 구조: classData.subject 필드 우선
+    if (classData?.subject) return classData.subject;
+
+    if (classId.startsWith("math_")) return "math";
+    if (classId.startsWith("english_")) return "english";
+    const className = classData?.className || "";
     if (/^[A-Z]{2,3}\d/.test(className)) return "english";
     return "math";
 }
@@ -51,13 +54,13 @@ function getStudentKey(student) {
 }
 
 /**
- * Triggered when any document in '수업목록' is created, updated, or deleted.
+ * Triggered when any document in 'classes' is created, updated, or deleted.
  * Region: asia-northeast3 (Seoul)
  */
 exports.syncStudentsOnClassChange = functions
     .region("asia-northeast3")
     .firestore
-    .document("%EC%88%98%EC%97%85%EB%AA%A9%EB%A1%9D/{classId}")
+    .document("classes/{classId}")
     .onWrite(async (change, context) => {
         const classId = context.params.classId;
         const beforeData = change.before.data();
@@ -253,7 +256,7 @@ exports.onTeacherDeleted = functions
         let studentsUpdated = 0;
 
         // 1. Find all classes with this teacher
-        const classesSnapshot = await db.collection("수업목록")
+        const classesSnapshot = await db.collection("classes")
             .where("teacher", "==", teacherName)
             .get();
 

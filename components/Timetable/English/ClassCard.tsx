@@ -206,6 +206,15 @@ const ClassCard: React.FC<ClassCardProps> = ({
     useEffect(() => {
         let currentList = [...students];
 
+        // === 입학일 필터링: 오늘 이전에 입학한 학생만 표시 ===
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        currentList = currentList.filter(s => {
+            // enrollmentDate가 없으면 표시 (기존 학생)
+            if (!s.enrollmentDate) return true;
+            // 입학일이 오늘 이전이면 표시
+            return s.enrollmentDate <= today;
+        });
+
         if (moveChanges) {
             // 1. Remove students moved OUT
             currentList = currentList.filter(s => {
@@ -276,161 +285,161 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 onMouseEnter={() => mode !== 'edit' && setShowScheduleTooltip(true)}
                                 onMouseLeave={() => setShowScheduleTooltip(false)}
                             >
-                            {classInfo.name}
+                                {classInfo.name}
 
-                            {/* Schedule Tooltip (조회 모드에서만 마우스 오버 시 실제 스케줄 표시) */}
-                            {mode !== 'edit' && showScheduleTooltip && scheduleInfo.length > 0 && (
-                                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 p-2 min-w-[140px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
-                                    <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-700">
-                                        <Clock size={12} className="text-yellow-400" />
-                                        <span className="font-bold">수업 시간</span>
+                                {/* Schedule Tooltip (조회 모드에서만 마우스 오버 시 실제 스케줄 표시) */}
+                                {mode !== 'edit' && showScheduleTooltip && scheduleInfo.length > 0 && (
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 p-2 min-w-[140px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
+                                        <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-700">
+                                            <Clock size={12} className="text-yellow-400" />
+                                            <span className="font-bold">수업 시간</span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            {scheduleInfo.map(({ day, timeRange }) => (
+                                                <div key={day} className="flex justify-between gap-3">
+                                                    <span className={`font-bold ${day === '토' || day === '일' ? 'text-red-400' : 'text-blue-300'}`}>
+                                                        {day}
+                                                    </span>
+                                                    <span className="text-gray-200">{timeRange}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {/* 툴팁 화살표 */}
+                                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
                                     </div>
-                                    <div className="space-y-1">
-                                        {scheduleInfo.map(({ day, timeRange }) => (
-                                            <div key={day} className="flex justify-between gap-3">
-                                                <span className={`font-bold ${day === '토' || day === '일' ? 'text-red-400' : 'text-blue-300'}`}>
-                                                    {day}
-                                                </span>
-                                                <span className="text-gray-200">{timeRange}</span>
+                                )}
+
+                                {/* Edit Controls: Menu & Hide (Edit Mode Only) */}
+                                {mode === 'edit' && (
+                                    <>
+                                        {/* Hide Toggle - Right 7 (approx 28px left of menu) */}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
+                                            className="absolute top-1 right-7 p-1 rounded hover:bg-black/10 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title={isHidden ? "보이기" : "숨기기"}
+                                        >
+                                            {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                                        </button>
+
+                                        {/* Menu Button - Right 1 */}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onMenuToggle(!isMenuOpen); }}
+                                            className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <MoreVertical size={14} />
+                                        </button>
+
+                                        {/* Level Up Dropdown */}
+                                        {isMenuOpen && (
+                                            <div className="absolute top-8 right-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    onClick={() => {
+                                                        // Check if class level is valid
+                                                        if (!isValidLevel(classInfo.name, englishLevels)) {
+                                                            alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+                                                            onMenuToggle(false);
+                                                            return;
+                                                        }
+
+                                                        const newName = numberLevelUp(classInfo.name);
+                                                        if (newName) {
+                                                            setLevelUpModal({ isOpen: true, type: 'number', newName });
+                                                        }
+                                                        onMenuToggle(false);
+                                                    }}
+                                                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-indigo-50 text-gray-700"
+                                                >
+                                                    <TrendingUp size={14} className="text-indigo-500" />
+                                                    숫자 레벨업
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        // Check if class level is valid
+                                                        if (!isValidLevel(classInfo.name, englishLevels)) {
+                                                            alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+                                                            onMenuToggle(false);
+                                                            return;
+                                                        }
+
+                                                        const newName = classLevelUp(classInfo.name, englishLevels);
+                                                        if (newName) {
+                                                            setLevelUpModal({ isOpen: true, type: 'class', newName });
+                                                        }
+                                                        onMenuToggle(false);
+                                                    }}
+                                                    disabled={isMaxLevel(classInfo.name, englishLevels)}
+                                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-orange-50 text-gray-700'}`}
+                                                >
+                                                    <ArrowUpCircle size={14} className={isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300' : 'text-orange-500'} />
+                                                    클래스 레벨업
+                                                </button>
                                             </div>
-                                        ))}
-                                    </div>
-                                    {/* 툴팁 화살표 */}
-                                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
-                                </div>
-                            )}
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        );
+                    })()}
 
-                            {/* Edit Controls: Menu & Hide (Edit Mode Only) */}
-                            {mode === 'edit' && (
-                                <>
-                                    {/* Hide Toggle - Right 7 (approx 28px left of menu) */}
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
-                                        className="absolute top-1 right-7 p-1 rounded hover:bg-black/10 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        title={isHidden ? "보이기" : "숨기기"}
-                                    >
-                                        {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
-                                    </button>
-
-                                    {/* Menu Button - Right 1 */}
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onMenuToggle(!isMenuOpen); }}
-                                        className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        <MoreVertical size={14} />
-                                    </button>
-
-                                    {/* Level Up Dropdown */}
-                                    {isMenuOpen && (
-                                        <div className="absolute top-8 right-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
-                                            <button
-                                                onClick={() => {
-                                                    // Check if class level is valid
-                                                    if (!isValidLevel(classInfo.name, englishLevels)) {
-                                                        alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
-                                                        onMenuToggle(false);
-                                                        return;
-                                                    }
-
-                                                    const newName = numberLevelUp(classInfo.name);
-                                                    if (newName) {
-                                                        setLevelUpModal({ isOpen: true, type: 'number', newName });
-                                                    }
-                                                    onMenuToggle(false);
-                                                }}
-                                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-indigo-50 text-gray-700"
-                                            >
-                                                <TrendingUp size={14} className="text-indigo-500" />
-                                                숫자 레벨업
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    // Check if class level is valid
-                                                    if (!isValidLevel(classInfo.name, englishLevels)) {
-                                                        alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
-                                                        onMenuToggle(false);
-                                                        return;
-                                                    }
-
-                                                    const newName = classLevelUp(classInfo.name, englishLevels);
-                                                    if (newName) {
-                                                        setLevelUpModal({ isOpen: true, type: 'class', newName });
-                                                    }
-                                                    onMenuToggle(false);
-                                                }}
-                                                disabled={isMaxLevel(classInfo.name, englishLevels)}
-                                                className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-orange-50 text-gray-700'}`}
-                                            >
-                                                <ArrowUpCircle size={14} className={isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300' : 'text-orange-500'} />
-                                                클래스 레벨업
-                                            </button>
+                    {/* Info Summary (Teacher/Room) */}
+                    {(displayOptions?.showTeacher || displayOptions?.showRoom) && (
+                        <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
+                            {displayOptions?.showTeacher && (
+                                <div className={`flex border-b border-orange-200 h-[26px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
+                                    {isTimeColumnOnly ? (
+                                        <span className="font-bold text-orange-800">담임</span>
+                                    ) : (
+                                        <div className="flex-1 p-0.5 text-center font-bold text-gray-900 flex items-center justify-center h-full">
+                                            {classInfo.mainTeacher}
                                         </div>
                                     )}
-                                </>
+                                </div>
+                            )}
+                            {displayOptions?.showRoom && (
+                                <div className={`flex h-[32px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
+                                    {isTimeColumnOnly ? (
+                                        <span className="font-bold text-orange-800">강의실</span>
+                                    ) : (
+                                        <div className="flex-1 p-0.5 text-center font-bold text-navy flex items-center justify-center break-all h-full leading-tight text-xs">
+                                            {classInfo.formattedRoomStr || classInfo.mainRoom || '-'}
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
-                    );
-                })()}
+                    )}
 
-                {/* Info Summary (Teacher/Room) */}
-                {(displayOptions?.showTeacher || displayOptions?.showRoom) && (
-                    <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
-                        {displayOptions?.showTeacher && (
-                            <div className={`flex border-b border-orange-200 h-[26px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
-                                {isTimeColumnOnly ? (
-                                    <span className="font-bold text-orange-800">담임</span>
-                                ) : (
-                                    <div className="flex-1 p-0.5 text-center font-bold text-gray-900 flex items-center justify-center h-full">
-                                        {classInfo.mainTeacher}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        {displayOptions?.showRoom && (
-                            <div className={`flex h-[32px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
-                                {isTimeColumnOnly ? (
-                                    <span className="font-bold text-orange-800">강의실</span>
-                                ) : (
-                                    <div className="flex-1 p-0.5 text-center font-bold text-navy flex items-center justify-center break-all h-full leading-tight text-xs">
-                                        {classInfo.formattedRoomStr || classInfo.mainRoom || '-'}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
+                    <div className="border-b border-gray-300 flex-none">
+                        {/* Grid Header */}
+                        <div className="flex bg-gray-200 text-xxs font-bold border-b border-gray-400 h-[24px]">
+                            {!hideTime && (
+                                <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
+                            )}
+                            {/* If TimeOnly, don't show days header or keep it blank? TimeOnly usually implies just the time labels on the left. */}
+                            {!isTimeColumnOnly && classInfo.finalDays.map((d) => (
+                                <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
+                                    {d}
+                                </div>
+                            ))}
+                        </div>
 
-                <div className="border-b border-gray-300 flex-none">
-                    {/* Grid Header */}
-                    <div className="flex bg-gray-200 text-xxs font-bold border-b border-gray-400 h-[24px]">
-                        {!hideTime && (
-                            <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
-                        )}
-                        {/* If TimeOnly, don't show days header or keep it blank? TimeOnly usually implies just the time labels on the left. */}
-                        {!isTimeColumnOnly && classInfo.finalDays.map((d) => (
-                            <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
-                                {d}
-                            </div>
-                        ))}
+                        {/* Grid Rows */}
+                        <div className="bg-white">
+                            {classInfo.visiblePeriods.map(p => (
+                                <MiniGridRow
+                                    key={p.id}
+                                    period={p}
+                                    scheduleMap={classInfo.scheduleMap}
+                                    weekendShift={classInfo.weekendShift}
+                                    teachersData={teachersData}
+                                    displayDays={classInfo.finalDays}
+                                    hiddenTeachers={hiddenTeacherList}
+                                    hideTime={hideTime}
+                                    onlyTime={isTimeColumnOnly}
+                                />
+                            ))}
+                        </div>
                     </div>
-
-                    {/* Grid Rows */}
-                    <div className="bg-white">
-                        {classInfo.visiblePeriods.map(p => (
-                            <MiniGridRow
-                                key={p.id}
-                                period={p}
-                                scheduleMap={classInfo.scheduleMap}
-                                weekendShift={classInfo.weekendShift}
-                                teachersData={teachersData}
-                                displayDays={classInfo.finalDays}
-                                hiddenTeachers={hiddenTeacherList}
-                                hideTime={hideTime}
-                                onlyTime={isTimeColumnOnly}
-                            />
-                        ))}
-                    </div>
-                </div>
                 </div>
                 {/* 수업 상세 클릭 영역 끝 */}
 

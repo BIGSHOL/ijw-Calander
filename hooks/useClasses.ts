@@ -1,12 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, orderBy, where, collectionGroup } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { storage, STORAGE_KEYS } from '../utils/localStorage';
 
 export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'other';
 
-const COL_CLASSES_OLD = '수업목록';
-const COL_CLASSES_NEW = 'classes';
+const COL_CLASSES = 'classes';
 
 export interface ClassInfo {
     id: string;
@@ -26,224 +24,61 @@ export interface ClassInfo {
  * 반(수업) 목록 조회 Hook
  * @param subject 과목 필터 (선택)
  *
- * 데이터 소스 우선순위:
- * 1. classes 컬렉션 (Phase 1 마이그레이션 후 통일된 구조)
- * 2. enrollments 구조 (레거시 - useNewDataStructure=true)
- * 3. 수업목록 컬렉션 (레거시 - useNewDataStructure=false)
+ * 데이터 소스: classes 컬렉션 (isActive=true)
  */
 export const useClasses = (subject?: SubjectType) => {
     return useQuery<ClassInfo[]>({
         queryKey: ['classes', subject],
         queryFn: async () => {
-            // 1. 먼저 새로운 classes 컬렉션 확인
-            const unifiedClasses = await fetchClassesFromUnifiedCollection(subject);
-            if (unifiedClasses.length > 0) {
-                return unifiedClasses;
-            }
+            let q;
 
-            // 2. classes 컬렉션이 비어있으면 레거시 방식 사용
-            const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, true);
-
-            if (useNewStructure) {
-                return await fetchClassesFromEnrollments(subject);
+            if (subject) {
+                q = query(
+                    collection(db, COL_CLASSES),
+                    where('subject', '==', subject),
+                    where('isActive', '==', true)
+                );
             } else {
-                return await fetchClassesFromOldStructure(subject);
+                q = query(
+                    collection(db, COL_CLASSES),
+                    where('isActive', '==', true)
+                );
             }
+
+            const snapshot = await getDocs(q);
+
+            const classes: ClassInfo[] = snapshot.docs.map(doc => {
+                const data = doc.data() as any;
+
+                // schedule을 레거시 문자열 형식으로 변환
+                const scheduleStrings = data.schedule?.map((slot: any) =>
+                    `${slot.day} ${slot.periodId}`
+                ) || data.legacySchedule || [];
+
+                return {
+                    id: doc.id,
+                    className: data.className || '',
+                    teacher: data.teacher || '',
+                    subject: data.subject || 'math',
+                    schedule: scheduleStrings,
+                    studentCount: data.studentIds?.length || 0,
+                    assistants: data.assistants,
+                    room: data.room,
+                    slotTeachers: data.slotTeachers,
+                    slotRooms: data.slotRooms,
+                    memo: data.memo,
+                };
+            });
+
+            // className 기준 정렬
+            classes.sort((a, b) => a.className.localeCompare(b.className, 'ko'));
+
+            return classes;
         },
         staleTime: 1000 * 60 * 5,
         gcTime: 1000 * 60 * 30,
         refetchOnWindowFocus: false,
     });
-};
-
-/**
- * 통일된 classes 컬렉션에서 조회 (Phase 1 마이그레이션 후)
- */
-async function fetchClassesFromUnifiedCollection(subject?: SubjectType): Promise<ClassInfo[]> {
-    let q;
-
-    if (subject) {
-        q = query(
-            collection(db, COL_CLASSES_NEW),
-            where('subject', '==', subject),
-            where('isActive', '==', true)
-        );
-    } else {
-        q = query(
-            collection(db, COL_CLASSES_NEW),
-            where('isActive', '==', true)
-        );
-    }
-
-    const snapshot = await getDocs(q);
-
-    const classes: ClassInfo[] = snapshot.docs.map(doc => {
-        const data = doc.data() as any;
-
-        // schedule을 레거시 문자열 형식으로 변환
-        const scheduleStrings = data.schedule?.map((slot: any) =>
-            `${slot.day} ${slot.periodId}`
-        ) || data.legacySchedule || [];
-
-        return {
-            id: doc.id,
-            className: data.className || '',
-            teacher: data.teacher || '',
-            subject: data.subject || 'math',
-            schedule: scheduleStrings,
-            studentCount: data.studentIds?.length || 0,
-            assistants: data.assistants,
-            room: data.room,
-            slotTeachers: data.slotTeachers,
-            slotRooms: data.slotRooms,
-            memo: data.memo,
-        };
-    });
-
-    // className 기준 정렬
-    classes.sort((a, b) => a.className.localeCompare(b.className, 'ko'));
-
-    return classes;
-}
-
-/**
- * 기존 구조에서 클래스 조회 (수업목록 컬렉션)
- */
-async function fetchClassesFromOldStructure(subject?: SubjectType): Promise<ClassInfo[]> {
-    const q = query(
-        collection(db, COL_CLASSES_OLD),
-        orderBy('className')
-    );
-
-    const snapshot = await getDocs(q);
-    let classes = snapshot.docs.map(doc => {
-        const data = doc.data() as any;
-        // subject 추론: className 패턴이나 teacher 기반으로 추론
-        const inferredSubject = inferSubject(data.className, data.teacher);
-
-        return {
-            id: doc.id,
-            className: data.className || '',
-            teacher: data.teacher || '',
-            subject: inferredSubject,
-            schedule: data.schedule || [],
-            studentCount: data.studentIds?.length || data.studentList?.length || 0,
-        } as ClassInfo;
-    });
-
-    // 과목 필터링
-    if (subject) {
-        classes = classes.filter(c => c.subject === subject);
-    }
-
-    return classes;
-}
-
-/**
- * 새로운 구조에서 클래스 조회 (students/enrollments)
- */
-async function fetchClassesFromEnrollments(subject?: SubjectType): Promise<ClassInfo[]> {
-    // collectionGroup으로 enrollments 조회 (subject 필터링 적용)
-    let enrollmentsQuery;
-    if (subject) {
-        // subject가 지정된 경우 필터 적용하여 조회 최적화
-        enrollmentsQuery = query(
-            collectionGroup(db, 'enrollments'),
-            where('subject', '==', subject)
-        );
-    } else {
-        // subject가 없는 경우 전체 조회
-        enrollmentsQuery = query(collectionGroup(db, 'enrollments'));
-    }
-    const snapshot = await getDocs(enrollmentsQuery);
-
-    // className + subject 조합으로 그룹화 (같은 이름이라도 과목이 다르면 별개)
-    const classMap = new Map<string, {
-        className: string;
-        teacher: string;
-        subject: 'math' | 'english';
-        schedule: string[];
-        studentIds: Set<string>;
-    }>();
-
-    snapshot.docs.forEach(doc => {
-        const data = doc.data() as any;
-        const studentId = doc.ref.parent.parent?.id || '';
-        const className = data.className || '';
-        const enrollmentSubject = data.subject || 'math';
-
-        if (!className) return;
-
-        // 키: subject + className (같은 이름이라도 과목이 다르면 다른 수업)
-        const key = `${enrollmentSubject}_${className}`;
-
-        if (!classMap.has(key)) {
-            classMap.set(key, {
-                className,
-                teacher: data.teacherId || data.teacher || '',
-                subject: enrollmentSubject,
-                schedule: data.schedule || [],
-                studentIds: new Set(),
-            });
-        }
-
-        classMap.get(key)!.studentIds.add(studentId);
-    });
-
-    // ClassInfo 배열로 변환
-    let classes: ClassInfo[] = Array.from(classMap.values()).map((classData, index) => ({
-        id: `${classData.subject}_${classData.className}_${index}`,
-        className: classData.className,
-        teacher: classData.teacher,
-        subject: classData.subject,
-        schedule: classData.schedule,
-        studentCount: classData.studentIds.size,
-    }));
-
-    // 과목 필터링
-    if (subject) {
-        classes = classes.filter(c => c.subject === subject);
-    }
-
-    // 정렬
-    classes.sort((a, b) => a.className.localeCompare(b.className, 'ko'));
-
-    return classes;
-}
-
-/**
- * 과목 추론 헬퍼
- * 클래스명이나 선생님 이름으로 수학/영어 판별
- */
-const inferSubject = (className: string, teacher: string): 'math' | 'english' => {
-    const englishPatterns = [
-        /^DP/, /^PL/, /^LE/, /^RTT/, /^RW/, /^GR/, /^VT/,  // 영어 레벨 약어
-        /^JP/, /^KW/, /^LT/, /^MEC/, /^PJ/, /^RTS/,  // 영어 레벨 약어 추가
-        /E_/,  // E_ 포함
-        /phonics/i, /grammar/i, /reading/i, /writing/i,
-        /초등\s*브릿지/, /중등E/, /고등E/, /중고E/,
-    ];
-
-    for (const pattern of englishPatterns) {
-        if (pattern.test(className)) {
-            return 'english';
-        }
-    }
-
-    // 수학 패턴
-    const mathPatterns = [
-        /수학/, /개념/, /유형/, /심화/, /최상위/, /사고력/,
-        /M_/,
-    ];
-
-    for (const pattern of mathPatterns) {
-        if (pattern.test(className)) {
-            return 'math';
-        }
-    }
-
-    // 기본값: 수학
-    return 'math';
 };
 
 /**

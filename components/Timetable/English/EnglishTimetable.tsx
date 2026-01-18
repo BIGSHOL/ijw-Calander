@@ -2,9 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { collection, onSnapshot, getDocs, doc, setDoc, writeBatch, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
-import { Clock, RefreshCw, AlertTriangle, Copy, Upload, ArrowRightLeft, History, Save } from 'lucide-react';
-import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
-import { EN_COLLECTION, EN_DRAFT_COLLECTION, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
+import { Copy, Upload, ArrowRightLeft, Save } from 'lucide-react';
+import { CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useClasses } from '../../../hooks/useClasses';
@@ -103,97 +102,64 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         setLoading(false);
     }, [isSimulationMode, simulation.draftClasses]);
 
-    // Data loading with structure toggle support (일반 모드)
+    // Data loading (일반 모드) - classes 컬렉션에서 영어 수업 로드
     useEffect(() => {
         // 시뮬레이션 모드에서는 위의 useEffect에서 처리
         if (isSimulationMode) return;
 
-        const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, true);
+        const unsubscribe = onSnapshot(
+            collection(db, 'classes'),
+            (snapshot) => {
+                const scheduleData: ScheduleData = {};
 
-        // 일반 모드: 토글에 따라 데이터 소스 결정
-        if (useNewStructure) {
-            // 새 구조: classes 컬렉션에서 영어 수업 로드
-            const unsubscribe = onSnapshot(
-                collection(db, 'classes'),
-                (snapshot) => {
-                    const scheduleData: ScheduleData = {};
-
-                    snapshot.docs.forEach((docSnap) => {
-                        const cls = docSnap.data();
-
-                        // 영어 수업만 처리
-                        if (cls.subject !== 'english') return;
-
-                        // schedule 배열을 순회하여 scheduleData 생성
-                        if (!cls.schedule || !Array.isArray(cls.schedule)) return;
-
-                        cls.schedule.forEach((slot: any) => {
-                            const slotKey = `${slot.day}-${slot.periodId}`;
-                            // 부담임이 있으면 그대로 사용 (LAB 포함), 없으면 담임
-                            const slotTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
-                            const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room;
-
-                            const key = `${slotTeacher}-${slot.periodId}-${slot.day}`;
-
-                            // 같은 키에 이미 수업이 있으면 merged로 추가 (합반 처리)
-                            if (scheduleData[key]) {
-                                const existing = scheduleData[key];
-                                if (!existing.merged) {
-                                    existing.merged = [];
-                                }
-                                existing.merged.push({
-                                    className: cls.className,
-                                    room: slotRoom,
-                                    underline: cls.underline || false
-                                });
-                            } else {
-                                scheduleData[key] = {
-                                    className: cls.className,
-                                    room: slotRoom,
-                                    teacher: slotTeacher,
-                                    merged: []
-                                };
-                            }
-                        });
-                    });
-
-                    setScheduleData(scheduleData);
-                    setLoading(false);
-                },
-                (error) => {
-                    console.error('classes 컬렉션 로딩 실패:', error);
-                    setLoading(false);
-                }
-            );
-            return listenerRegistry.register('EnglishTimetable(new)', unsubscribe);
-        } else {
-            // 기존 구조: english_schedules 컬렉션 사용
-            const unsubscribe = onSnapshot(collection(db, EN_COLLECTION), (snapshot) => {
-                const mergedData: ScheduleData = {};
                 snapshot.docs.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    Object.entries(data).forEach(([key, value]) => {
-                        if (typeof value === 'object' && value !== null) {
-                            const isNested = Object.keys(value).some(k => ['월', '화', '수', '목', '금', '토', '일'].includes(k));
-                            if (isNested) {
-                                Object.entries(value as Record<string, ScheduleCell>).forEach(([day, cell]) => {
-                                    const flatKey = `${key}-${day}`;
-                                    mergedData[flatKey] = cell;
-                                });
-                            } else {
-                                mergedData[key] = value as ScheduleCell;
+                    const cls = docSnap.data();
+
+                    // 영어 수업만 처리, 비활성 수업 제외
+                    if (cls.subject !== 'english' || cls.isActive === false) return;
+
+                    // schedule 배열을 순회하여 scheduleData 생성
+                    if (!cls.schedule || !Array.isArray(cls.schedule)) return;
+
+                    cls.schedule.forEach((slot: any) => {
+                        const slotKey = `${slot.day}-${slot.periodId}`;
+                        // 부담임이 있으면 그대로 사용 (LAB 포함), 없으면 담임
+                        const slotTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
+                        const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room;
+
+                        const key = `${slotTeacher}-${slot.periodId}-${slot.day}`;
+
+                        // 같은 키에 이미 수업이 있으면 merged로 추가 (합반 처리)
+                        if (scheduleData[key]) {
+                            const existing = scheduleData[key];
+                            if (!existing.merged) {
+                                existing.merged = [];
                             }
+                            existing.merged.push({
+                                className: cls.className,
+                                room: slotRoom,
+                                underline: cls.underline || false
+                            });
+                        } else {
+                            scheduleData[key] = {
+                                className: cls.className,
+                                room: slotRoom,
+                                teacher: slotTeacher,
+                                merged: []
+                            };
                         }
                     });
                 });
-                setScheduleData(mergedData);
+
+                setScheduleData(scheduleData);
                 setLoading(false);
-            }, (error) => {
-                console.error('데이터 로딩 실패:', error);
+            },
+            (error) => {
+                console.error('classes 컬렉션 로딩 실패:', error);
                 setLoading(false);
-            });
-            return listenerRegistry.register('EnglishTimetable(old)', unsubscribe);
-        }
+            }
+        );
+        return listenerRegistry.register('EnglishTimetable', unsubscribe);
     }, [isSimulationMode]);
 
     // Manual refresh is no longer strictly needed for data, but can trigger re-sync if needed.
@@ -402,7 +368,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     onOpenOrderModal={() => setIsOrderModalOpen(true)}
                                     classKeywords={classKeywords}
                                     currentUser={currentUser}
-                                    targetCollection={isSimulationMode ? EN_DRAFT_COLLECTION : EN_COLLECTION}
+                                    targetCollection={isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION}
                                 />
 
                                 <TeacherOrderModal

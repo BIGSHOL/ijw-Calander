@@ -71,7 +71,7 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
             <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                 {/* 헤더 */}
                 <div className="bg-[#081429] text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10">

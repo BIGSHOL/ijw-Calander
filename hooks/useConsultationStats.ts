@@ -8,11 +8,12 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { Consultation, ConsultationCategory, StaffMember } from '../types';
+import { Consultation, ConsultationCategory, StaffMember, UnifiedStudent } from '../types';
 import { COL_STUDENT_CONSULTATIONS } from './useStudentConsultations';
 import { DailyConsultationStat } from '../components/Dashboard/CounselingOverview';
 import { CategoryStat } from '../components/Dashboard/CategoryStats';
 import { StaffPerformance } from '../components/Dashboard/PerformanceProgress';
+import { COL_STUDENTS } from './useStudents';
 
 /**
  * 상담 통계 필터 옵션
@@ -34,6 +35,16 @@ export interface StaffSubjectStat {
 }
 
 /**
+ * 상담 미완료 학생 정보
+ */
+export interface StudentNeedingConsultation {
+  studentId: string;
+  studentName: string;
+  enrolledSubjects: ('math' | 'english')[];  // 수강 중인 과목
+  lastConsultationDate?: string;  // 가장 최근 상담일 (전체 기간)
+}
+
+/**
  * 통계 결과 타입
  */
 export interface ConsultationStatsResult {
@@ -47,6 +58,7 @@ export interface ConsultationStatsResult {
   studentConsultations: number;
   followUpNeeded: number;
   followUpDone: number;
+  studentsNeedingConsultation: StudentNeedingConsultation[];
 }
 
 /**
@@ -58,6 +70,7 @@ export const DEFAULT_MONTHLY_TARGET = 100;
  * 상담 통계 조회 Hook
  * - 일별/카테고리별/상담자별 통계
  * - 대시보드용 집계 데이터
+ * - 상담 미완료 학생 목록
  */
 export function useConsultationStats(
   filters?: ConsultationStatsFilters,
@@ -94,10 +107,16 @@ export function useConsultationStats(
         (c) => c.date >= dateRange.start && c.date <= dateRange.end
       );
 
-      // 과목 필터링
+      // 과목 필터링 (subject는 'math'/'english' 또는 '수학'/'영어' 둘 다 가능)
       if (filters?.subject && filters.subject !== 'all') {
-        const subjectValue = filters.subject === 'math' ? '수학' : '영어';
-        consultations = consultations.filter((c) => c.subject === subjectValue);
+        consultations = consultations.filter((c) => {
+          if (filters.subject === 'math') {
+            return c.subject === 'math' || c.subject === '수학';
+          } else if (filters.subject === 'english') {
+            return c.subject === 'english' || c.subject === '영어';
+          }
+          return true;
+        });
       }
 
       // 일별 통계 집계
@@ -140,10 +159,16 @@ export function useConsultationStats(
         })
       );
 
-      // 상담자별 통계 집계
+      // 강사(teacher) ID 목록 생성
+      const teacherIds = new Set(
+        (staff || []).filter(s => s.role === 'teacher').map(s => s.id)
+      );
+
+      // 상담자별 통계 집계 (강사만)
       const staffMap = new Map<string, { name: string; count: number }>();
       consultations.forEach((c) => {
-        if (c.consultantId) {
+        // 강사 목록이 있으면 강사만, 없으면 모든 상담자 표시
+        if (c.consultantId && (teacherIds.size === 0 || teacherIds.has(c.consultantId))) {
           const existing = staffMap.get(c.consultantId) || {
             name: c.consultantName || '알 수 없음',
             count: 0,
@@ -153,6 +178,7 @@ export function useConsultationStats(
         }
       });
 
+      const teacherCount = teacherIds.size || 5;
       const staffPerformances: StaffPerformance[] = Array.from(
         staffMap.entries()
       )
@@ -160,30 +186,29 @@ export function useConsultationStats(
           id,
           name: data.name,
           consultationCount: data.count,
-          targetCount: Math.ceil(DEFAULT_MONTHLY_TARGET / (staff?.length || 5)),
+          targetCount: Math.ceil(DEFAULT_MONTHLY_TARGET / teacherCount),
           percentage: Math.min(
             100,
             Math.round(
-              (data.count /
-                Math.ceil(DEFAULT_MONTHLY_TARGET / (staff?.length || 5))) *
-                100
+              (data.count / Math.ceil(DEFAULT_MONTHLY_TARGET / teacherCount)) * 100
             )
           ),
         }))
         .sort((a, b) => b.consultationCount - a.consultationCount);
 
-      // 선생님별 과목별 통계 집계
+      // 선생님별 과목별 통계 집계 (강사만)
       const staffSubjectMap = new Map<string, { name: string; math: number; english: number }>();
       consultations.forEach((c) => {
-        if (c.consultantId) {
+        if (c.consultantId && (teacherIds.size === 0 || teacherIds.has(c.consultantId))) {
           const existing = staffSubjectMap.get(c.consultantId) || {
             name: c.consultantName || '알 수 없음',
             math: 0,
             english: 0,
           };
-          if (c.subject === '수학') {
+          // subject는 'math' | 'english' | '수학' | '영어' 둘 다 가능
+          if (c.subject === 'math' || c.subject === '수학') {
             existing.math++;
-          } else if (c.subject === '영어') {
+          } else if (c.subject === 'english' || c.subject === '영어') {
             existing.english++;
           }
           staffSubjectMap.set(c.consultantId, existing);
@@ -210,6 +235,66 @@ export function useConsultationStats(
         (c) => c.followUpNeeded && c.followUpDone
       ).length;
 
+      // ============ 상담 미완료 학생 목록 계산 ============
+      // 의도: 선택한 기간 내에 1건 이상의 상담 기록이 없는 재원생 목록
+
+      // 1. 재원생 조회 (status === 'active')
+      const studentsQuery = query(
+        collection(db, COL_STUDENTS),
+        where('status', '==', 'active')
+      );
+      const studentsSnapshot = await getDocs(studentsQuery);
+      const students = studentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as UnifiedStudent));
+
+      // 2. 수강과목이 있는 학생 필터링
+      const eligibleStudents = students.filter(student => {
+        const hasEnrollments = student.enrollments && student.enrollments.length > 0;
+        if (!hasEnrollments) return false;
+
+        // 수강과목에 math 또는 english가 있는지 확인
+        const hasSubjects = student.enrollments.some(
+          e => e.subject === 'math' || e.subject === 'english'
+        );
+        return hasSubjects;
+      });
+
+      // 3. 학생별로 선택 기간 내 상담 여부 체크 (과목 무관, 1건이라도 있으면 OK)
+      const studentsNeedingConsultation: StudentNeedingConsultation[] = [];
+
+      eligibleStudents.forEach(student => {
+        // 이 학생의 수강과목 목록 (표시용)
+        const enrolledSubjects: ('math' | 'english')[] = [];
+        student.enrollments.forEach(e => {
+          if (e.subject === 'math' || e.subject === 'english') {
+            if (!enrolledSubjects.includes(e.subject)) {
+              enrolledSubjects.push(e.subject);
+            }
+          }
+        });
+
+        // 이 학생의 선택 기간 내 상담 기록 (과목 무관)
+        const studentConsultationsInPeriod = consultations.filter(c => c.studentId === student.id);
+
+        // 기간 내 상담 기록이 0건이면 상담 필요 목록에 추가
+        if (studentConsultationsInPeriod.length === 0) {
+          // 전체 상담 기록에서 마지막 상담일 찾기 (기간 외 포함)
+          // Note: consultations는 이미 기간 필터링이 된 상태이므로, 전체 기록을 다시 조회하지 않음
+          // 대신 '해당 기간 내 상담 없음'으로 표시
+          studentsNeedingConsultation.push({
+            studentId: student.id,
+            studentName: student.name,
+            enrolledSubjects,
+            lastConsultationDate: undefined,  // 기간 내 상담 없음
+          });
+        }
+      });
+
+      // 학생 이름순으로 정렬
+      studentsNeedingConsultation.sort((a, b) => a.studentName.localeCompare(b.studentName));
+
       return {
         dailyStats,
         categoryStats,
@@ -223,6 +308,7 @@ export function useConsultationStats(
           .length,
         followUpNeeded,
         followUpDone,
+        studentsNeedingConsultation,
       };
     },
     staleTime: 1000 * 60 * 5, // 5분 캐싱
@@ -244,6 +330,7 @@ export function useConsultationStats(
       studentConsultations: 0,
       followUpNeeded: 0,
       followUpDone: 0,
+      studentsNeedingConsultation: [],
     },
     loading: isLoading,
     error,
@@ -256,36 +343,56 @@ export function useConsultationStats(
  */
 export type DatePreset = 'thisWeek' | 'thisMonth' | 'lastMonth' | 'last3Months';
 
+/**
+ * Date를 'YYYY-MM-DD' 형식으로 변환 (로컬 시간 기준)
+ */
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function getDateRangeFromPreset(preset: DatePreset): {
   start: string;
   end: string;
 } {
   const now = new Date();
   let start: Date;
-  let end: Date = now;
+  let end: Date;
 
   switch (preset) {
     case 'thisWeek':
+      // 이번 주: 월요일 ~ 일요일
+      const dayOfWeek = now.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 일요일이면 -6, 아니면 월요일까지 거리
       start = new Date(now);
-      start.setDate(now.getDate() - now.getDay());
+      start.setDate(now.getDate() + mondayOffset);
+      end = new Date(start);
+      end.setDate(start.getDate() + 6); // 일요일
       break;
     case 'thisMonth':
+      // 이번 달: 1일 ~ 말일 (예: 1/1 ~ 1/31)
       start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // 말일
       break;
     case 'lastMonth':
+      // 지난 달: 1일 ~ 말일
       start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      end = new Date(now.getFullYear(), now.getMonth(), 0);
+      end = new Date(now.getFullYear(), now.getMonth(), 0); // 지난달 말일
       break;
     case 'last3Months':
+      // 3개월: 2달 전 1일 ~ 이번달 말일
       start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // 이번달 말일
       break;
     default:
       start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   }
 
   return {
-    start: start.toISOString().split('T')[0],
-    end: end.toISOString().split('T')[0],
+    start: formatLocalDate(start),
+    end: formatLocalDate(end),
   };
 }

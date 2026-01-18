@@ -3,7 +3,7 @@ import { collection, query, orderBy, limit, onSnapshot, doc, getDocs, writeBatch
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { X, RotateCcw, Clock, User, AlertTriangle, Pencil, Trash2, Check } from 'lucide-react';
-import { EN_COLLECTION, CLASS_COLLECTION } from './englishUtils';
+import { CLASS_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
 
 interface BackupEntry {
@@ -196,7 +196,7 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
             // Step 1: 현재 상태 백업 (복원 전 안전장치) - 시간표 + 학생 데이터
             const preRestoreBackupId = `pre_restore_${Date.now()}`;
             try {
-                const currentTimetableSnapshot = await getDocs(collection(db, EN_COLLECTION));
+                const currentTimetableSnapshot = await getDocs(collection(db, CLASS_COLLECTION));
                 const currentClassSnapshot = await getDocs(collection(db, CLASS_COLLECTION));
 
                 const currentTimetableData: Record<string, any> = {};
@@ -226,7 +226,7 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
             }
 
             // Step 2: 시간표 복원
-            const currentSnapshot = await getDocs(collection(db, EN_COLLECTION));
+            const currentSnapshot = await getDocs(collection(db, CLASS_COLLECTION));
             const currentDocIds = new Set(currentSnapshot.docs.map(doc => doc.id));
             const backupDocIds = new Set(Object.keys(backup.data));
 
@@ -238,13 +238,13 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
 
             currentDocIds.forEach(docId => {
                 if (!backupDocIds.has(docId)) {
-                    timetableBatch.delete(doc(db, EN_COLLECTION, docId));
+                    timetableBatch.delete(doc(db, CLASS_COLLECTION, docId));
                     timetableDeleteCount++;
                 }
             });
 
             Object.entries(backup.data).forEach(([docId, docData]) => {
-                timetableBatch.set(doc(db, EN_COLLECTION, docId), docData);
+                timetableBatch.set(doc(db, CLASS_COLLECTION, docId), docData);
                 timetableWriteCount++;
             });
 

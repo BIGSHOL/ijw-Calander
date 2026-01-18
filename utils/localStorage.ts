@@ -12,19 +12,16 @@ export const STORAGE_KEYS = {
   DARK_MODE: 'ijw_dark_mode',
   DEFAULT_VIEW_MODE: 'ijw_default_view_mode',
   DEFAULT_MAIN_TAB: 'ijw_default_main_tab',
-  
-  // Feature Flags
-  USE_NEW_DATA_STRUCTURE: 'ijw_use_new_data_structure',
-  
+
   // Guide/Tutorial Flags
   ENGLISH_TIMETABLE_GUIDE_SHOWN: 'ijw_english_timetable_guide_shown',
-  
+
   // Data Storage
   TUITION_HISTORY: 'ijw_tuition_history',
   TUITION_ENTRIES: 'ijw_tuition_entries',
-  
+
   // Dynamic keys (functions)
-  attendanceGroupOrder: (teacherId: string, subject: string) => 
+  attendanceGroupOrder: (teacherId: string, subject: string) =>
     `ijw_attendance_group_order_${subject}_${teacherId}`,
 } as const;
 

@@ -248,6 +248,29 @@ const ConsultationManagementTab: React.FC = () => {
                             {/* 구분선 */}
                             <div className="w-px h-4 bg-white/20 mx-1"></div>
 
+                            {/* 상담자(직원) 필터 */}
+                            <select
+                                value={filters.consultantId || ''}
+                                onChange={(e) => setFilters(prev => ({
+                                    ...prev,
+                                    consultantId: e.target.value || undefined
+                                }))}
+                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                            >
+                                <option value="">전체 상담자</option>
+                                {staff
+                                    .filter(s => s.role === 'teacher')
+                                    .map(s => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.name}
+                                        </option>
+                                    ))
+                                }
+                            </select>
+
+                            {/* 구분선 */}
+                            <div className="w-px h-4 bg-white/20 mx-1"></div>
+
                             {/* 검색 */}
                             <div className="relative">
                                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />

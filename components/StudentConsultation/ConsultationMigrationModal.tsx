@@ -408,10 +408,12 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                     let studentId = item.matchedStudent?.id;
                     let studentName = item.matchedStudent?.name || item.studentName;
 
-                    // If NO_STUDENT, create a new student ref
+                    // If NO_STUDENT, create a new student with 이름_학교_학년 ID pattern
                     if (!studentId && item.isNewStudent) {
-                        const newStudentRef = doc(collection(db, 'students'));
-                        studentId = newStudentRef.id;
+                        // 문서 ID: 이름_학교_학년 형식
+                        const docId = `${item.studentName}_${item.schoolName || '미정'}_${item.grade || '0'}`;
+                        const newStudentRef = doc(db, 'students', docId);
+                        studentId = docId;
 
                         const newStudentData = {
                             id: studentId,
@@ -426,7 +428,8 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                             updatedAt: new Date().toISOString(),
                             enrollments: []
                         };
-                        batch.set(newStudentRef, newStudentData);
+                        // merge: true로 기존 문서가 있으면 병합
+                        batch.set(newStudentRef, newStudentData, { merge: true });
                     }
 
                     if (!studentId) continue;
@@ -511,8 +514,8 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
     const newStudentCount = migrationItems.filter(i => i.isNewStudent).length;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-2xl w-[900px] max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white rounded-xl shadow-2xl w-[900px] max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="bg-[#081429] px-6 py-4 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">

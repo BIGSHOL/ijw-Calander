@@ -51,8 +51,6 @@ type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 // Import Firestore Converters from separate file
 import { departmentConverter, eventConverter } from './converters';
-import './scripts/migrateStudents'; // Temporary: for v6 migration
-import './scripts/migrateUsersToStaff'; // Migration: users → staff integration
 
 // Import Style Utilities
 import { INJAEWON_LOGO, getJobTitleStyle } from './utils/styleUtils';
@@ -227,7 +225,7 @@ const App: React.FC = () => {
   const [studentFilters, setStudentFilters] = useState({
     searchQuery: '',
     grade: 'all',
-    status: 'all' as 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn',
+    status: 'active' as 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn',  // 기본값: 재원
     subject: 'all',
   });
   const [studentSortBy, setStudentSortBy] = useState<'name' | 'grade' | 'startDate'>('name');
@@ -1873,7 +1871,7 @@ const App: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setStudentFilters(prev => ({ ...prev, status: 'prospect' }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'prospect' ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'prospect' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
                   >
                     예비
                   </button>
@@ -1885,9 +1883,9 @@ const App: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setStudentFilters(prev => ({ ...prev, status: 'on_hold' }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'on_hold' ? 'bg-yellow-500 text-black shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'on_hold' ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
                   >
-                    대기
+                    휴원
                   </button>
                   <button
                     onClick={() => setStudentFilters(prev => ({ ...prev, status: 'withdrawn' }))}

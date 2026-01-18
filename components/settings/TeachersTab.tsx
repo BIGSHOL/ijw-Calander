@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Teacher } from '../../types';
 import { db } from '../../firebaseConfig';
-import { setDoc, doc, deleteDoc, writeBatch, getDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import { setDoc, doc, deleteDoc, writeBatch, getDocs, collection, query, where } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import {
     Search, Plus, Check, X, Eye, EyeOff, Edit, Trash2
@@ -111,68 +111,24 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
 
             // 이름 변경 시 관련 수업/스케줄 동기화
             if (oldName !== newName) {
-                // Sync math classes (수학 시간표)
-                console.log(`수학 시간표: "${oldName}" → "${newName}" 수업 검색 중...`);
+                // Sync classes (수학/영어 시간표)
+                console.log(`수업 데이터: "${oldName}" → "${newName}" 수업 검색 중...`);
                 const classesSnapshot = await getDocs(
-                    query(collection(db, '수업목록'), where('teacher', '==', oldName))
+                    query(collection(db, 'classes'), where('teacher', '==', oldName))
                 );
 
-                console.log(`수학: 발견된 수업 ${classesSnapshot.docs.length}개`);
+                console.log(`수업: 발견된 수업 ${classesSnapshot.docs.length}개`);
                 if (classesSnapshot.docs.length > 0) {
                     const batch = writeBatch(db);
                     classesSnapshot.docs.forEach(docSnap => {
-                        batch.update(doc(db, '수업목록', docSnap.id), { teacher: newName });
+                        batch.update(doc(db, 'classes', docSnap.id), { teacher: newName });
                     });
                     await batch.commit();
-                    console.log(`✅ 수학: ${classesSnapshot.docs.length}개 수업의 강사명 변경 완료`);
+                    console.log(`✅ 수업: ${classesSnapshot.docs.length}개 수업의 강사명 변경 완료`);
                 }
 
-                // Sync English schedule (영어 시간표 - 문서 ID가 강사명)
-                if (editTeacherSubjects.includes('english')) {
-                    console.log(`영어 시간표: "${oldName}" → "${newName}" 스케줄 이전 중...`);
-                    const oldEnglishDocRef = doc(db, 'english_schedules', oldName);
-                    const oldEnglishDocSnap = await getDoc(oldEnglishDocRef);
-
-                    if (oldEnglishDocSnap.exists()) {
-                        let data = oldEnglishDocSnap.data();
-                        console.log(`📋 기존 데이터 샘플:`, JSON.stringify(data).substring(0, 200));
-
-                        // 재귀적으로 모든 키와 값에서 강사명 변경
-                        const replaceTeacherNameInData = (obj: any): any => {
-                            if (obj === null || obj === undefined) return obj;
-                            if (typeof obj === 'string') {
-                                return obj.replace(new RegExp(oldName, 'g'), newName);
-                            }
-                            if (Array.isArray(obj)) {
-                                return obj.map(item => replaceTeacherNameInData(item));
-                            }
-                            if (typeof obj === 'object') {
-                                const newObj: any = {};
-                                for (const key in obj) {
-                                    const newKey = key.replace(new RegExp(oldName, 'g'), newName);
-                                    newObj[newKey] = replaceTeacherNameInData(obj[key]);
-                                }
-                                return newObj;
-                            }
-                            return obj;
-                        };
-
-                        data = replaceTeacherNameInData(data);
-                        console.log(`✏️ 변경된 데이터 샘플:`, JSON.stringify(data).substring(0, 200));
-
-                        const newEnglishDocRef = doc(db, 'english_schedules', newName);
-                        await setDoc(newEnglishDocRef, data);
-                        console.log(`💾 새 문서 저장 완료: ${newName}`);
-
-                        await deleteDoc(oldEnglishDocRef);
-                        console.log(`🗑️ 기존 문서 삭제 완료: ${oldName}`);
-                        console.log(`✅ 영어: "${oldName}" 스케줄을 "${newName}"으로 이전 완료`);
-                    } else {
-                        console.log(`ℹ️ 영어: "${oldName}" 스케줄 없음`);
-                    }
-                } else {
-                    console.log(`⏭️ 영어 시간표 스킵: "${oldName}"은 영어 강사가 아님`);
-                }
+                // 영어 시간표 강사명 변경은 classes 컬렉션 업데이트로 이미 처리됨
+                // (레거시 english_schedules 컬렉션은 더 이상 사용하지 않음)
             }
 
             setEditingTeacherId(null);

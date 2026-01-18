@@ -97,22 +97,24 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
       setRawData(data);
       setTotalCount(data.length);
 
-      // 기존 학생과 매칭 분석
+      // 기존 학생과 매칭 분석 (문서 ID 기준)
       const studentsRef = collection(db, 'students');
       const existingSnapshot = await getDocs(studentsRef);
-      const existingNames = new Set<string>();
+      const existingDocIds = new Set<string>();
 
-      existingSnapshot.forEach(doc => {
-        const student = doc.data() as UnifiedStudent;
-        existingNames.add(student.name);
+      existingSnapshot.forEach(docSnap => {
+        // 문서 ID를 기준으로 체크
+        existingDocIds.add(docSnap.id);
       });
 
-      // 신규/업데이트 카운트
+      // 신규/업데이트 카운트 (문서 ID 기준으로 판단)
       let newCnt = 0;
       let updateCnt = 0;
 
       data.forEach(item => {
-        if (existingNames.has(item.이름)) {
+        // 문서 ID 생성: 이름_학교_학년 형식
+        const docId = `${item.이름}_${item.학교 || '미정'}_${item.학년 || '0'}`;
+        if (existingDocIds.has(docId)) {
           updateCnt++;
         } else {
           newCnt++;
@@ -149,17 +151,17 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
     setProgress(0);
 
     try {
-      // 기존 학생 데이터 로드
+      // 기존 학생 데이터 로드 (문서 ID 기준)
       const studentsRef = collection(db, 'students');
       const existingSnapshot = await getDocs(studentsRef);
       const existingStudentsMap = new Map<string, any>();
 
       existingSnapshot.forEach(docSnap => {
         const student = docSnap.data() as UnifiedStudent;
-        // 이름으로 매핑하되, Firebase 문서 ID도 함께 저장
-        existingStudentsMap.set(student.name, {
+        // 문서 ID를 키로 사용하여 매핑
+        existingStudentsMap.set(docSnap.id, {
           ...student,
-          _firestoreDocId: docSnap.id  // Firebase 문서 ID 저장
+          _firestoreDocId: docSnap.id
         });
       });
 
@@ -174,13 +176,16 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
         const batchData = rawData.slice(start, end);
 
         batchData.forEach(excelData => {
-          const existingStudent = existingStudentsMap.get(excelData.이름) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
           const now = new Date().toISOString();
 
-          // ID 생성: Firebase 문서 ID 우선 사용
-          const id = existingStudent?._firestoreDocId ||  // 기존 Firebase 문서 ID 사용
-            existingStudent?.id ||
-            `${excelData.이름}_${excelData.학교 || '미정'}_${excelData.학년 || '0'}`;  // 새 문서는 이름_학교_학년 형식
+          // 문서 ID 생성: 이름_학교_학년 형식 (항상 이 패턴 사용)
+          const docId = `${excelData.이름}_${excelData.학교 || '미정'}_${excelData.학년 || '0'}`;
+
+          // 기존 문서가 있으면 가져옴 (문서 ID 기준)
+          const existingStudent = existingStudentsMap.get(docId) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
+
+          // ID는 항상 문서 ID와 동일
+          const id = docId;
 
           // 주소 통합
           const address = [excelData.주소1, excelData.주소2]
