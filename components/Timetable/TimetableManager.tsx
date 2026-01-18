@@ -202,7 +202,7 @@ const TimetableManager = ({
     const [showSchool, setShowSchool] = useState(savedSettings?.showSchool ?? false);
     const [showGrade, setShowGrade] = useState(savedSettings?.showGrade ?? true);
     const [showEmptyRooms, setShowEmptyRooms] = useState(savedSettings?.showEmptyRooms ?? false);
-    const [columnWidth, setColumnWidth] = useState<'narrow' | 'normal' | 'wide'>(
+    const [columnWidth, setColumnWidth] = useState<'compact' | 'narrow' | 'normal' | 'wide'>(
         savedSettings?.columnWidth || 'normal'
     );
     const [rowHeight, setRowHeight] = useState<'compact' | 'short' | 'normal' | 'tall' | 'very-tall'>(

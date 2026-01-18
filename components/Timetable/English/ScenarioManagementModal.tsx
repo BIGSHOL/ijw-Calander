@@ -3,11 +3,28 @@ import { collection, query, orderBy, onSnapshot, doc, getDocs, writeBatch, setDo
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, FileText, BarChart3 } from 'lucide-react';
-import { EN_DRAFT_COLLECTION, CLASS_DRAFT_COLLECTION, SCENARIO_COLLECTION } from './englishUtils';
+import { CLASS_DRAFT_COLLECTION, SCENARIO_COLLECTION } from './englishUtils';
 import { validateScenarioData, calculateScenarioStats, generateScenarioId } from './scenarioUtils';
 import { ScenarioEntry } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useSimulationOptional } from './context/SimulationContext';
+
+/**
+ * Firebase에 저장 전 undefined 값을 제거합니다.
+ * Firebase Firestore는 undefined 값을 허용하지 않습니다.
+ */
+const sanitizeForFirestore = <T extends Record<string, any>>(obj: T): T => {
+    const result: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+        if (value === undefined) continue;
+        if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+            result[key] = sanitizeForFirestore(value);
+        } else {
+            result[key] = value;
+        }
+    }
+    return result as T;
+};
 
 interface ScenarioManagementModalProps {
     isOpen: boolean;
@@ -121,7 +138,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
             // Fallback: 레거시 방식 (SimulationContext 없을 때)
             const [scheduleSnapshot, classSnapshot] = await Promise.all([
-                getDocs(collection(db, EN_DRAFT_COLLECTION)),
+                getDocs(collection(db, CLASS_DRAFT_COLLECTION)),
                 getDocs(collection(db, CLASS_DRAFT_COLLECTION))
             ]);
 
@@ -144,14 +161,14 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             // 3. Calculate stats
             const stats = calculateScenarioStats(scheduleData, studentData);
 
-            // 4. Save to Firestore
+            // 4. Save to Firestore (sanitized to remove undefined values)
             const scenarioId = generateScenarioId();
             const newScenario: ScenarioEntry = {
                 id: scenarioId,
                 name: newScenarioName.trim(),
                 description: newScenarioDesc.trim(),
-                data: scheduleData,
-                studentData: studentData,
+                data: sanitizeForFirestore(scheduleData),
+                studentData: sanitizeForFirestore(studentData),
                 createdAt: new Date().toISOString(),
                 createdBy: currentUser?.displayName || currentUser?.email || 'Unknown',
                 createdByUid: currentUser?.uid || '',
@@ -219,7 +236,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             const preLoadBackupId = `backup_preload_${Date.now()}`;
             try {
                 const [currentSchedule, currentClass] = await Promise.all([
-                    getDocs(collection(db, EN_DRAFT_COLLECTION)),
+                    getDocs(collection(db, CLASS_DRAFT_COLLECTION)),
                     getDocs(collection(db, CLASS_DRAFT_COLLECTION))
                 ]);
 
@@ -241,8 +258,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                     id: preLoadBackupId,
                     name: `백업(자동)_${new Date().toLocaleString()}`,
                     description: `[자동백업] 시나리오 "${scenario.name}" 불러오기 전 자동 생성됨.`,
-                    data: currentScheduleData,
-                    studentData: currentStudentData,
+                    data: sanitizeForFirestore(currentScheduleData),
+                    studentData: sanitizeForFirestore(currentStudentData),
                     createdAt: new Date().toISOString(),
                     createdBy: `${currentUser?.displayName || 'Unknown'} (자동)`,
                     createdByUid: currentUser?.uid || '',
@@ -257,7 +274,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             }
 
             // Step 2: Replace draft schedule data
-            const currentScheduleSnapshot = await getDocs(collection(db, EN_DRAFT_COLLECTION));
+            const currentScheduleSnapshot = await getDocs(collection(db, CLASS_DRAFT_COLLECTION));
             const currentScheduleIds = new Set(currentScheduleSnapshot.docs.map(d => d.id));
             const scenarioScheduleIds = new Set(Object.keys(scenario.data));
 
@@ -270,13 +287,13 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             // Delete docs not in scenario
             currentScheduleIds.forEach(docId => {
                 if (!scenarioScheduleIds.has(docId)) {
-                    scheduleBatch.delete(doc(db, EN_DRAFT_COLLECTION, docId));
+                    scheduleBatch.delete(doc(db, CLASS_DRAFT_COLLECTION, docId));
                 }
             });
 
-            // Write scenario data
+            // Write scenario data (sanitized)
             Object.entries(scenario.data).forEach(([docId, docData]) => {
-                scheduleBatch.set(doc(db, EN_DRAFT_COLLECTION, docId), docData);
+                scheduleBatch.set(doc(db, CLASS_DRAFT_COLLECTION, docId), sanitizeForFirestore(docData as Record<string, any>));
             });
 
             await scheduleBatch.commit();
@@ -301,7 +318,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                 });
 
                 Object.entries(scenario.studentData).forEach(([docId, docData]) => {
-                    classBatch.set(doc(db, CLASS_DRAFT_COLLECTION, docId), docData);
+                    classBatch.set(doc(db, CLASS_DRAFT_COLLECTION, docId), sanitizeForFirestore(docData as Record<string, any>));
                 });
 
                 await classBatch.commit();

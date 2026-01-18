@@ -188,17 +188,36 @@ const ClassCard: React.FC<ClassCardProps> = ({
         return attendanceDays.includes(day);
     };
 
+    // === 입학일 기반 스타일 (영어 시간표와 동일) ===
+    const getEnrollmentStyle = (student: any) => {
+        if (student.enrollmentDate) {
+            const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+            if (days <= 30) return { bg: 'bg-red-500', text: 'text-white font-bold' };
+            if (days <= 60) return { bg: 'bg-pink-100', text: 'text-black font-bold' };
+        }
+        return null;
+    };
+
     // 병합 셀 여부 확인
     const isMergedCell = mergedDays.length > 1;
 
     // 전체 학생 목록 가져오기
     const allStudents = useMemo(() => {
+        let students: any[] = [];
         if (cls.studentList && cls.studentList.length > 0) {
-            return [...cls.studentList];
+            students = [...cls.studentList];
         } else if (cls.studentIds && cls.studentIds.length > 0) {
-            return cls.studentIds.map(id => studentMap[id]).filter(Boolean);
+            students = cls.studentIds.map(id => studentMap[id]).filter(Boolean);
         }
-        return [];
+
+        // === 입학일 필터링: 오늘 이전에 입학한 학생만 표시 ===
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        return students.filter(s => {
+            // enrollmentDate가 없으면 표시 (기존 학생)
+            if (!s.enrollmentDate) return true;
+            // 입학일이 오늘 이전이면 표시
+            return s.enrollmentDate <= today;
+        });
     }, [cls.studentList, cls.studentIds, studentMap]);
 
     // 학생이 병합된 모든 요일에 등원하는지 확인
@@ -376,6 +395,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             <ul className="flex flex-col gap-0">
                                 {commonStudents.active.map(s => {
                                     const isHighlighted = searchQuery && s.name.includes(searchQuery);
+                                    const enrollmentStyle = getEnrollmentStyle(s);
                                     let displayText = s.name;
                                     if (showSchool || showGrade) {
                                         const schoolGrade = formatSchoolGrade(
@@ -395,9 +415,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     onStudentClick(s.id);
                                                 }
                                             }}
-                                            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] truncate font-medium
-                                            ${canEdit ? 'cursor-grab hover:bg-white/80' : onStudentClick ? 'cursor-pointer hover:bg-white/80' : ''}
-                                            ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : theme.text}`}
+                                            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] truncate font-medium rounded
+                                            ${canEdit ? 'cursor-grab hover:brightness-95' : onStudentClick ? 'cursor-pointer hover:brightness-95' : ''}
+                                            ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : theme.text}`}
+                                            title={s.enrollmentDate ? `입학일: ${s.enrollmentDate}` : undefined}
                                         >
                                             {displayText}
                                         </li>
@@ -433,6 +454,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     <ul className="flex flex-col gap-0">
                                                         {dayActiveStudents.map(s => {
                                                             const isHighlighted = searchQuery && s.name.includes(searchQuery);
+                                                            const enrollmentStyle = getEnrollmentStyle(s);
                                                             let displayText = s.name;
                                                             if (showSchool || showGrade) {
                                                                 const schoolGrade = formatSchoolGrade(
@@ -452,9 +474,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                             onStudentClick(s.id);
                                                                         }
                                                                     }}
-                                                                    className={`py-0 px-1 ${fontSizeClass} leading-[1.3] truncate
-                                                                    ${canEdit ? 'cursor-grab hover:bg-white/80' : onStudentClick ? 'cursor-pointer hover:bg-white/80' : ''}
-                                                                    ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : 'text-amber-900 font-medium'}`}
+                                                                    className={`py-0 px-1 ${fontSizeClass} leading-[1.3] truncate rounded
+                                                                    ${canEdit ? 'cursor-grab hover:brightness-95' : onStudentClick ? 'cursor-pointer hover:brightness-95' : ''}
+                                                                    ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : 'text-amber-900 font-medium'}`}
+                                                                    title={s.enrollmentDate ? `입학일: ${s.enrollmentDate}` : undefined}
                                                                 >
                                                                     {displayText}
                                                                 </li>
@@ -516,6 +539,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             <ul className="flex flex-col">
                                 {activeStudents.map(s => {
                                     const isHighlighted = searchQuery && s.name.includes(searchQuery);
+                                    const enrollmentStyle = getEnrollmentStyle(s);
                                     let displayText = s.name;
                                     if (showSchool || showGrade) {
                                         const schoolGrade = formatSchoolGrade(
@@ -535,9 +559,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     onStudentClick(s.id);
                                                 }
                                             }}
-                                            className={`py-0 px-0.5 ${fontSizeClass} leading-tight truncate
-                                            ${canEdit ? 'cursor-grab hover:bg-white/80' : onStudentClick ? 'cursor-pointer hover:bg-white/80' : ''}
-                                            ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : theme.text}`}
+                                            className={`py-0 px-0.5 ${fontSizeClass} leading-tight truncate rounded
+                                            ${canEdit ? 'cursor-grab hover:brightness-95' : onStudentClick ? 'cursor-pointer hover:brightness-95' : ''}
+                                            ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : theme.text}`}
+                                            title={s.enrollmentDate ? `입학일: ${s.enrollmentDate}` : undefined}
                                         >
                                             {displayText}
                                         </li>

@@ -5,6 +5,8 @@ import { ScenarioEntry } from '../../../types';
 
 /**
  * 시나리오 데이터 검증
+ * - version 1 (레거시): data, studentData 필드 사용
+ * - version 2 (새 구조): classes, enrollments 필드 사용
  */
 export const validateScenarioData = (scenario: any): { isValid: boolean; error?: string } => {
     if (!scenario) {
@@ -19,6 +21,19 @@ export const validateScenarioData = (scenario: any): { isValid: boolean; error?:
         return { isValid: false, error: '생성 날짜 정보가 없습니다.' };
     }
 
+    // Version 2 (새 구조): classes, enrollments 필드 검증
+    if (scenario.version === 2) {
+        if (!scenario.classes || typeof scenario.classes !== 'object') {
+            return { isValid: false, error: '수업 데이터(classes)가 손상되었습니다.' };
+        }
+        // enrollments는 빈 객체일 수 있음
+        if (scenario.enrollments && typeof scenario.enrollments !== 'object') {
+            return { isValid: false, error: '수강 데이터(enrollments)가 손상되었습니다.' };
+        }
+        return { isValid: true };
+    }
+
+    // Version 1 (레거시): data, studentData 필드 검증
     if (!scenario.data || typeof scenario.data !== 'object') {
         return { isValid: false, error: '시간표 데이터가 손상되었습니다.' };
     }

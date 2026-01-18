@@ -20,6 +20,26 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useRe
 import { collection, collectionGroup, query, where, getDocs, writeBatch, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
+import { SCENARIO_COLLECTION } from '../englishUtils';
+
+// ============ UTILITIES ============
+
+/**
+ * Firebase에 저장 전 undefined 값을 제거합니다.
+ * Firebase Firestore는 undefined 값을 허용하지 않습니다.
+ */
+const sanitizeForFirestore = <T extends Record<string, any>>(obj: T): T => {
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) continue;
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      result[key] = sanitizeForFirestore(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result as T;
+};
 
 // ============ TYPES ============
 
@@ -395,13 +415,17 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     const studentCount = Object.values(draftEnrollments)
       .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
 
+    // Firebase에 저장 전 undefined 값 제거
+    const sanitizedClasses = sanitizeForFirestore(draftClasses);
+    const sanitizedEnrollments = sanitizeForFirestore(draftEnrollments);
+
     const scenarioData = {
       id: scenarioId,
       name,
       description,
-      // 새 구조 데이터
-      classes: draftClasses,
-      enrollments: draftEnrollments,
+      // 새 구조 데이터 (sanitized)
+      classes: sanitizedClasses,
+      enrollments: sanitizedEnrollments,
       // 메타데이터
       createdAt: new Date().toISOString(),
       createdBy: userName,
@@ -414,7 +438,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
       version: 2,  // 새 구조 버전 표시
     };
 
-    await setDoc(doc(db, 'english_scenarios', scenarioId), scenarioData);
+    await setDoc(doc(db, SCENARIO_COLLECTION, scenarioId), scenarioData);
 
     setState(prev => ({
       ...prev,
@@ -426,7 +450,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
   }, []);
 
   const loadFromScenario = useCallback(async (scenarioId: string) => {
-    const docSnap = await getDocs(query(collection(db, 'english_scenarios')));
+    const docSnap = await getDocs(query(collection(db, SCENARIO_COLLECTION)));
     const scenario = docSnap.docs.find(d => d.id === scenarioId)?.data();
 
     if (!scenario) {
@@ -461,22 +485,22 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
     const backupId = `backup_${Date.now()}`;
     const { draftClasses: liveClasses, draftEnrollments: liveEnrollments } = await loadFromLiveInternal();
 
-    await setDoc(doc(db, 'english_scenarios', backupId), {
+    await setDoc(doc(db, SCENARIO_COLLECTION, backupId), {
       id: backupId,
       name: `백업_${new Date().toLocaleString()}`,
       description: '[자동백업] 실제 반영 전 자동 생성',
-      classes: liveClasses,
-      enrollments: liveEnrollments,
+      classes: sanitizeForFirestore(liveClasses),
+      enrollments: sanitizeForFirestore(liveEnrollments),
       createdAt: new Date().toISOString(),
       createdBy: `${userName} (자동)`,
       createdByUid: userId,
       version: 2,
     });
 
-    // 2. classes 업데이트
+    // 2. classes 업데이트 (sanitized)
     const classBatch = writeBatch(db);
     Object.entries(draftClasses).forEach(([classId, classData]) => {
-      classBatch.set(doc(db, 'classes', classId), classData);
+      classBatch.set(doc(db, 'classes', classId), sanitizeForFirestore(classData));
     });
     await classBatch.commit();
 
@@ -498,18 +522,18 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
       console.log(`✅ Deleted enrollments batch: ${i + chunk.length}/${docsToDelete.length}`);
     }
 
-    // 생성 배치 (500개 단위로 분할)
+    // 생성 배치 (500개 단위로 분할, sanitized)
     const enrollmentsToCreate: { ref: any; data: any }[] = [];
     Object.entries(draftEnrollments).forEach(([className, students]) => {
       Object.entries(students).forEach(([studentId, enrollment]) => {
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `english_${className}`);
         enrollmentsToCreate.push({
           ref: enrollmentRef,
-          data: {
+          data: sanitizeForFirestore({
             ...enrollment,
             subject: 'english',
             className,
-          },
+          }),
         });
       });
     });

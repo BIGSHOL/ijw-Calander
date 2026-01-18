@@ -47,10 +47,9 @@ export const isExcludedStudent = (className: string): boolean => {
     return className.includes('퇴원') || className.includes('신입');
 };
 
-export const EN_COLLECTION = 'english_schedules';
-export const EN_DRAFT_COLLECTION = 'english_schedules_draft';
-export const CLASS_COLLECTION = '수업목록';
-export const CLASS_DRAFT_COLLECTION = '수업목록_draft';
+// 통합 컬렉션 (english_schedules → classes로 완전 마이그레이션 완료)
+export const CLASS_COLLECTION = 'classes';
+export const CLASS_DRAFT_COLLECTION = 'classes_draft';
 export const SCENARIO_COLLECTION = 'english_simulation_scenarios';
 
 export interface Period {

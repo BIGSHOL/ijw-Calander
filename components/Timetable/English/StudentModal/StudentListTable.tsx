@@ -62,7 +62,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
         return (
             <div className="text-center py-8 text-gray-400 text-sm">
                 <p>수업 정보를 찾을 수 없습니다.</p>
-                <p className="text-xs mt-1">'{className}'이(가) 수업목록에 등록되어 있는지 확인해주세요.</p>
+                <p className="text-xs mt-1">'{className}'이(가) 등록되어 있는지 확인해주세요.</p>
             </div>
         );
     }

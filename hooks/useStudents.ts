@@ -81,48 +81,13 @@ export function useStudents(includeWithdrawn = false) {
         queryKey: ['students', includeWithdrawn],
         queryFn: async () => {
             if (includeWithdrawn) {
-                // 활성 학생 + 최근 90일 퇴원생만 조회
-                const cutoffDate = new Date();
-                cutoffDate.setDate(cutoffDate.getDate() - 90);
-                const cutoffString = cutoffDate.toISOString().split('T')[0];
+                // 전체 학생 조회 (조건 없이 모든 문서)
+                const allStudentsSnap = await getDocs(collection(db, COL_STUDENTS));
 
-                // 두 쿼리 병렬 실행
-                const activeQuery = query(
-                    collection(db, COL_STUDENTS),
-                    where('status', 'in', ['active', 'on_hold'])
-                );
-                // withdrawalDate가 없는 퇴원생도 포함하기 위해 단순 withdrawn 쿼리
-                const withdrawnQuery = query(
-                    collection(db, COL_STUDENTS),
-                    where('status', '==', 'withdrawn')
-                );
-
-                const [activeSnap, withdrawnSnap] = await Promise.all([
-                    getDocs(activeQuery).catch(err => {
-                        console.error('Active students query failed:', err);
-                        // 빈 결과 반환하여 부분 실패 허용
-                        return { docs: [] } as any;
-                    }),
-                    getDocs(withdrawnQuery).catch(err => {
-                        console.error('Withdrawn students query failed:', err);
-                        return { docs: [] } as any;
-                    })
-                ]);
-
-                // withdrawalDate 기준 필터링 (클라이언트 사이드)
-                const withdrawnStudents = withdrawnSnap.docs
-                    .map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as UnifiedStudent))
-                    .filter(student => {
-                        // withdrawalDate가 없으면 포함 (레거시 데이터)
-                        if (!student.withdrawalDate) return true;
-                        // withdrawalDate가 있으면 90일 이내만 포함
-                        return student.withdrawalDate >= cutoffString;
-                    });
-
-                const studentList = [
-                    ...activeSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as UnifiedStudent)),
-                    ...withdrawnStudents
-                ];
+                const studentList = allStudentsSnap.docs.map(docSnap => ({
+                    id: docSnap.id,
+                    ...docSnap.data()
+                } as UnifiedStudent));
 
                 // Client-side sort by name (먼저 정렬)
                 studentList.sort((a, b) => a.name.localeCompare(b.name));

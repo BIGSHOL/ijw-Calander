@@ -3,18 +3,16 @@
 // 영어 강사별 시간표 탭
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { doc, setDoc, deleteField, collection, onSnapshot, query } from 'firebase/firestore';
-import { db } from '../../../firebaseConfig';
 import { Edit3, Move, Eye, Settings } from 'lucide-react';
-import { EN_PERIODS, EN_WEEKDAYS, EN_COLLECTION, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks, isExcludedStudent } from './englishUtils';
+import { EN_PERIODS, EN_WEEKDAYS, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks, isExcludedStudent } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { Teacher, ClassKeywordColor, PermissionId } from '../../../types';
-import BatchInputBar, { InputData, MergedClass } from './BatchInputBar';
+import { Teacher, ClassKeywordColor } from '../../../types';
+import BatchInputBar, { InputData, MergedClass, ClassSuggestion } from './BatchInputBar';
 import MoveConfirmBar from './MoveConfirmBar';
 import MoveSelectionModal from './MoveSelectionModal';
 import PortalTooltip from '../../Common/PortalTooltip';
 import { useEnglishClassUpdater } from '../../../hooks/useEnglishClassUpdater';
-import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
+import { useClasses } from '../../../hooks/useClasses';
 
 export interface ScheduleCell {
     className?: string;
@@ -42,25 +40,28 @@ interface EnglishTeacherTabProps {
 
 type ViewSize = 'small' | 'medium' | 'large';
 
-// Helper interface for delete logic
-type GenericObject = { [key: string]: any };
-
-const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onRefresh, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser, targetCollection = EN_COLLECTION }) => {
+const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
 
-    // Feature Flag: 새로운 classes 컬렉션 기반 쓰기 사용 여부
-    const useNewStructure = storage.getBoolean(STORAGE_KEYS.USE_NEW_DATA_STRUCTURE, true);
+    // classes 컬렉션 사용 (마이그레이션 완료)
 
-    // classes 컬렉션 업데이터 훅 (새 구조 사용 시)
+    // classes 컬렉션 업데이터 훅
     const {
         assignCellToClass,
-        removeCellFromClass,
         removeAllClassesFromCell,
-        moveClass: moveClassToNewStructure,
         moveSelectedClasses
     } = useEnglishClassUpdater();
+
+    // 영어 수업 목록 (자동완성용)
+    const { data: englishClasses = [] } = useClasses('english');
+    const classSuggestions: ClassSuggestion[] = useMemo(() => {
+        return englishClasses.map(c => ({
+            className: c.className,
+            room: c.room,
+        }));
+    }, [englishClasses]);
 
     const [mode, setMode] = useState<'view' | 'edit' | 'move'>('view');
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
@@ -309,352 +310,113 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
 
         if (!sData) return;
 
-        // === 새 구조 사용 시: classes 컬렉션에 즉시 저장 ===
-        if (useNewStructure) {
-            try {
-                // 이동할 수업 목록과 남길 수업 목록 계산
-                const sMain = sData.className ? { className: sData.className, room: sData.room, underline: sData.underline } : null;
-                const sMerged = sData.merged || [];
+        try {
+            // 이동할 수업 목록과 남길 수업 목록 계산
+            const sMain = sData.className ? { className: sData.className, room: sData.room, underline: sData.underline } : null;
+            const sMerged = sData.merged || [];
 
-                let classesToMove: { className: string; room?: string; underline?: boolean }[] = [];
-                let classesToKeep: { className: string; room?: string; underline?: boolean }[] = [];
+            let classesToMove: { className: string; room?: string; underline?: boolean }[] = [];
+            let classesToKeep: { className: string; room?: string; underline?: boolean }[] = [];
 
-                if (moveIndices) {
-                    // 선택적 이동
-                    const indicesToMove = new Set(moveIndices);
+            if (moveIndices) {
+                // 선택적 이동
+                const indicesToMove = new Set(moveIndices);
 
-                    if (sMain) {
-                        if (indicesToMove.has(-1) && !isExcludedStudent(sMain.className)) {
-                            classesToMove.push(sMain);
-                        } else {
-                            classesToKeep.push(sMain);
-                        }
+                if (sMain) {
+                    if (indicesToMove.has(-1) && !isExcludedStudent(sMain.className)) {
+                        classesToMove.push(sMain);
+                    } else {
+                        classesToKeep.push(sMain);
                     }
+                }
 
-                    sMerged.forEach((m, idx) => {
-                        if (indicesToMove.has(idx) && !isExcludedStudent(m.className)) {
-                            classesToMove.push({ className: m.className, room: m.room, underline: m.underline });
-                        } else {
-                            classesToKeep.push({ className: m.className, room: m.room, underline: m.underline });
-                        }
-                    });
-                } else {
-                    // 전체 이동 (제외 대상 제외)
-                    if (sMain) {
-                        if (isExcludedStudent(sMain.className)) {
-                            classesToKeep.push(sMain);
-                        } else {
-                            classesToMove.push(sMain);
-                        }
+                sMerged.forEach((m, idx) => {
+                    if (indicesToMove.has(idx) && !isExcludedStudent(m.className)) {
+                        classesToMove.push({ className: m.className, room: m.room, underline: m.underline });
+                    } else {
+                        classesToKeep.push({ className: m.className, room: m.room, underline: m.underline });
                     }
-
-                    sMerged.forEach(m => {
-                        if (isExcludedStudent(m.className)) {
-                            classesToKeep.push({ className: m.className, room: m.room, underline: m.underline });
-                        } else {
-                            classesToMove.push({ className: m.className, room: m.room, underline: m.underline });
-                        }
-                    });
+                });
+            } else {
+                // 전체 이동 (제외 대상 제외)
+                if (sMain) {
+                    if (isExcludedStudent(sMain.className)) {
+                        classesToKeep.push(sMain);
+                    } else {
+                        classesToMove.push(sMain);
+                    }
                 }
 
-                if (classesToMove.length === 0) {
-                    alert("이동할 학생이 없습니다 (모두 제외 대상)");
-                    setPendingMove(null);
-                    return;
-                }
+                sMerged.forEach(m => {
+                    if (isExcludedStudent(m.className)) {
+                        classesToKeep.push({ className: m.className, room: m.room, underline: m.underline });
+                    } else {
+                        classesToMove.push({ className: m.className, room: m.room, underline: m.underline });
+                    }
+                });
+            }
 
-                // classes 컬렉션에 직접 저장
-                await moveSelectedClasses(sKey, tKey, classesToMove, classesToKeep);
-
-                // UI 업데이트 (로컬 상태도 업데이트하여 즉시 반영)
-                const newData = { ...scheduleData };
-
-                // 소스 업데이트
-                if (classesToKeep.length > 0) {
-                    const mainKeep = classesToKeep[0];
-                    newData[sKey] = {
-                        className: mainKeep.className,
-                        room: mainKeep.room,
-                        underline: mainKeep.underline,
-                        merged: classesToKeep.slice(1).map(c => ({ className: c.className, room: c.room, underline: c.underline })),
-                        teacher: sTeacher
-                    };
-                } else {
-                    delete newData[sKey];
-                }
-
-                // 타겟 업데이트
-                const tData = scheduleData[tKey];
-                const tTeacher = filteredTeachers[target.tIdx];
-                const existingAtTarget = tData ? [
-                    ...(tData.className ? [{ className: tData.className, room: tData.room, underline: tData.underline }] : []),
-                    ...(tData.merged || [])
-                ] : [];
-
-                const allAtTarget = [...classesToMove, ...existingAtTarget];
-                if (allAtTarget.length > 0) {
-                    const mainTarget = allAtTarget[0];
-                    newData[tKey] = {
-                        className: mainTarget.className,
-                        room: mainTarget.room,
-                        underline: mainTarget.underline,
-                        merged: allAtTarget.slice(1).map(c => ({ className: c.className, room: c.room, underline: c.underline })),
-                        teacher: tTeacher
-                    };
-                }
-
-                onUpdateLocal(newData);
-                setHasChanges(true);
-                setPendingMove(null);
-                return;
-            } catch (error) {
-                console.error('이동 실패:', error);
-                alert('이동 중 오류가 발생했습니다');
+            if (classesToMove.length === 0) {
+                alert("이동할 학생이 없습니다 (모두 제외 대상)");
                 setPendingMove(null);
                 return;
             }
-        }
 
-        // === 레거시 구조: 로컬 상태만 업데이트 (나중에 saveMoveChanges로 저장) ===
-        const newData = { ...scheduleData };
-        const tData = newData[tKey];
-        const tTeacher = filteredTeachers[target.tIdx];
+            // classes 컬렉션에 직접 저장
+            await moveSelectedClasses(sKey, tKey, classesToMove, classesToKeep);
 
-        const nowInfo = new Date().toISOString();
+            // UI 업데이트 (로컬 상태도 업데이트하여 즉시 반영)
+            const newData = { ...scheduleData };
 
-        if (moveIndices) {
-            // --- Selective Move (from Modal) ---
-
-            // Prepare source items
-            let sMain = sData.className ? { className: sData.className, room: sData.room, underline: sData.underline, lastMovedAt: sData.lastMovedAt } : null;
-            let sMerged = sData.merged ? [...sData.merged] : [];
-
-            // Items to move
-            let moveMain = null;
-            let moveMerged: MergedClass[] = [];
-
-            // Items to keep (initially all, will remove moved)
-            let keepMain = sMain;
-            let keepMerged = [...sMerged];
-
-            // 1. Identify items to move based on indices
-            // Check exclusion for each selected item
-            const indicesToMove = moveIndices.sort((a, b) => b - a); // Descending order
-
-            indicesToMove.forEach(idx => {
-                if (idx === -1) {
-                    // Check Main Class exclusion
-                    if (sMain && !isExcludedStudent(sMain.className)) {
-                        moveMain = { ...sMain, lastMovedAt: nowInfo };
-                        keepMain = null;
-                    }
-                } else {
-                    // Check Merged Class exclusion
-                    const mItem = keepMerged[idx];
-                    if (mItem && !isExcludedStudent(mItem.className)) {
-                        moveMerged.unshift({ ...mItem, lastMovedAt: nowInfo });
-                        keepMerged.splice(idx, 1);
-                    }
-                }
-            });
-
-            // 2. Update Source in newData
-            if (keepMain || keepMerged.length > 0) {
+            // 소스 업데이트
+            if (classesToKeep.length > 0) {
+                const mainKeep = classesToKeep[0];
                 newData[sKey] = {
-                    ...(newData[sKey] || {}),
-                    className: keepMain?.className,
-                    room: keepMain?.room,
-                    underline: keepMain?.underline,
-                    lastMovedAt: keepMain?.lastMovedAt,
-                    merged: keepMerged,
+                    className: mainKeep.className,
+                    room: mainKeep.room,
+                    underline: mainKeep.underline,
+                    merged: classesToKeep.slice(1).map(c => ({ className: c.className, room: c.room, underline: c.underline })),
                     teacher: sTeacher
                 };
-                if (!keepMain) {
-                    delete newData[sKey].className;
-                    delete newData[sKey].room;
-                    delete newData[sKey].underline;
-                    delete newData[sKey].lastMovedAt;
-                }
             } else {
                 delete newData[sKey];
             }
 
+            // 타겟 업데이트
+            const tData = scheduleData[tKey];
+            const tTeacher = filteredTeachers[target.tIdx];
+            const existingAtTarget = tData ? [
+                ...(tData.className ? [{ className: tData.className, room: tData.room, underline: tData.underline }] : []),
+                ...(tData.merged || [])
+            ] : [];
 
-            // 3. Update Target in newData
-            let tMain = tData?.className ? { className: tData.className, room: tData.room, underline: tData.underline, lastMovedAt: tData.lastMovedAt } : null;
-            let tMerged = tData?.merged ? [...tData.merged] : [];
-
-            // Add moved merged items
-            tMerged = [...tMerged, ...moveMerged];
-
-            if (moveMain) {
-                if (tMain) {
-                    // Push existing target main to merged
-                    tMerged.unshift({
-                        className: tMain.className,
-                        room: tMain.room || '',
-                        underline: tMain.underline,
-                        lastMovedAt: tMain.lastMovedAt
-                    });
-                }
-                tMain = moveMain;
-            }
-
-            // Ensure valid structure (if only merged exist, promote first to main)
-            if (!tMain && tMerged.length > 0) {
-                const first = tMerged.shift();
-                if (first) {
-                    tMain = {
-                        className: first.className,
-                        room: first.room,
-                        underline: first.underline,
-                        lastMovedAt: first.lastMovedAt
-                    };
-                }
-            }
-
-            if (tMain || tMerged.length > 0) {
+            const allAtTarget = [...classesToMove, ...existingAtTarget];
+            if (allAtTarget.length > 0) {
+                const mainTarget = allAtTarget[0];
                 newData[tKey] = {
-                    className: tMain?.className,
-                    room: tMain?.room,
-                    underline: tMain?.underline,
-                    lastMovedAt: tMain?.lastMovedAt,
-                    merged: tMerged,
+                    className: mainTarget.className,
+                    room: mainTarget.room,
+                    underline: mainTarget.underline,
+                    merged: allAtTarget.slice(1).map(c => ({ className: c.className, room: c.room, underline: c.underline })),
                     teacher: tTeacher
                 };
             }
 
-        } else {
-            // --- Full Cell Drag (No Indices) ---
-            // Logic:
-            // 1. Identify excluded vs moving in Source
-            // 2. Keep excluded in Source
-            // 3. Move moving to Target (handle collision)
-
-            let sMain = sData.className ? { className: sData.className, room: sData.room, underline: sData.underline, lastMovedAt: sData.lastMovedAt } : null;
-            let sMerged = sData.merged ? [...sData.merged] : [];
-
-            let moveMain = null;
-            let moveMerged: MergedClass[] = [];
-
-            let keepMain = null;
-            let keepMerged: MergedClass[] = [];
-
-            // Filter Main
-            if (sMain) {
-                if (isExcludedStudent(sMain.className)) {
-                    keepMain = sMain;
-                } else {
-                    moveMain = { ...sMain, lastMovedAt: nowInfo };
-                }
-            }
-
-            // Filter Merged
-            sMerged.forEach(m => {
-                if (isExcludedStudent(m.className)) {
-                    keepMerged.push(m);
-                } else {
-                    moveMerged.push({ ...m, lastMovedAt: nowInfo });
-                }
-            });
-
-            // Nothing to move?
-            if (!moveMain && moveMerged.length === 0) {
-                return; // or alert("이동할 학생이 없습니다 (모두 제외 대상)");
-            }
-
-            // Update Source
-            if (keepMain || keepMerged.length > 0) {
-                newData[sKey] = {
-                    ...(newData[sKey] || {}),
-                    className: keepMain?.className,
-                    room: keepMain?.room,
-                    underline: keepMain?.underline,
-                    lastMovedAt: keepMain?.lastMovedAt,
-                    merged: keepMerged,
-                    teacher: sTeacher
-                };
-                if (!keepMain) {
-                    delete newData[sKey].className;
-                    delete newData[sKey].room;
-                    delete newData[sKey].underline;
-                    delete newData[sKey].lastMovedAt;
-                }
-            } else {
-                delete newData[sKey];
-            }
-
-            // Update Target
-            let tMain = tData?.className ? { className: tData.className, room: tData.room, underline: tData.underline, lastMovedAt: tData.lastMovedAt } : null;
-            let tMerged = tData?.merged ? [...tData.merged] : [];
-
-            // Add moved merged
-            tMerged = [...tMerged, ...moveMerged];
-
-            // Handle Move Main
-            if (moveMain) {
-                if (tMain) {
-                    // Existing target main becomes merged
-                    tMerged.unshift({
-                        className: tMain.className,
-                        room: tMain.room || '',
-                        underline: tMain.underline,
-                        lastMovedAt: tMain.lastMovedAt
-                    });
-                }
-                tMain = moveMain;
-            }
-
-            // Promote if needed
-            if (!tMain && tMerged.length > 0) {
-                const first = tMerged.shift();
-                if (first) {
-                    tMain = {
-                        className: first.className,
-                        room: first.room,
-                        underline: first.underline,
-                        lastMovedAt: first.lastMovedAt
-                    };
-                }
-            }
-
-            if (tMain || tMerged.length > 0) {
-                newData[tKey] = {
-                    className: tMain?.className,
-                    room: tMain?.room,
-                    underline: tMain?.underline,
-                    lastMovedAt: tMain?.lastMovedAt,
-                    merged: tMerged,
-                    teacher: tTeacher
-                };
-            }
+            onUpdateLocal(newData);
+            setHasChanges(true);
+            setPendingMove(null);
+        } catch (error) {
+            console.error('이동 실패:', error);
+            alert('이동 중 오류가 발생했습니다');
+            setPendingMove(null);
         }
-
-        onUpdateLocal(newData);
-        setHasChanges(true);
-        setPendingMove(null);
     };
 
     const saveMoveChanges = async () => {
-        // 새 구조에서는 performMove에서 즉시 저장되므로 여기서는 상태만 리셋
-        if (useNewStructure) {
-            setHasChanges(false);
-            setOriginalData(JSON.parse(JSON.stringify(scheduleData)));
-            alert("저장 완료");
-            return;
-        }
-
-        // 레거시 구조: english_schedules에 저장
-        try {
-            await saveSplitDataToFirebase(scheduleData);
-            setHasChanges(false);
-            setOriginalData(JSON.parse(JSON.stringify(scheduleData)));
-            onUpdateLocal(scheduleData);
-            alert("저장 완료");
-        } catch (error) {
-            console.error(error);
-            alert("저장 실패");
-        }
+        // performMove에서 즉시 저장되므로 여기서는 상태만 리셋
+        setHasChanges(false);
+        setOriginalData(JSON.parse(JSON.stringify(scheduleData)));
+        alert("저장 완료");
     };
 
     const cancelMoveChanges = () => {
@@ -666,27 +428,8 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
 
     // --- Batch Operations ---
 
-    // Save split data to simpler teacher collections
-    const saveSplitDataToFirebase = async (fullData: ScheduleData) => {
-        const teacherGroups: Record<string, ScheduleData> = {};
-
-        Object.keys(fullData).forEach((key) => {
-            const [teacherName] = key.split("-");
-            if (!teacherName) return;
-            const trimmedTeacher = teacherName.trim();
-            if (!teacherGroups[trimmedTeacher]) teacherGroups[trimmedTeacher] = {};
-            teacherGroups[trimmedTeacher][key] = fullData[key];
-        });
-
-        const promises = Object.keys(teacherGroups).map((teacherName) => {
-            return setDoc(doc(db, targetCollection, teacherName), teacherGroups[teacherName], { merge: true });
-        });
-
-        await Promise.all(promises);
-    };
-
     const handleBatchSave = async () => {
-        console.log('handleBatchSave called!', { size: selectedCells.size, inputData, useNewStructure });
+        console.log('handleBatchSave called!', { size: selectedCells.size, inputData });
         if (selectedCells.size === 0) return;
 
         // Save current scroll position before clearing selection
@@ -707,99 +450,27 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         if (overwrite && !window.confirm("덮어쓰시겠습니까?")) return;
 
         try {
-            // === 새 구조 사용 시: classes 컬렉션에 직접 저장 ===
-            if (useNewStructure) {
-                const isDelete = !inputData.className && (!inputData.merged || inputData.merged.length === 0);
+            const isDelete = !inputData.className && (!inputData.merged || inputData.merged.length === 0);
 
-                for (const key of Array.from(selectedCells)) {
-                    if (isDelete) {
-                        // 셀의 모든 수업 제거
-                        await removeAllClassesFromCell(key);
-                    } else {
-                        // 셀에 수업 배치 (합반 포함)
-                        await assignCellToClass(key, {
-                            className: inputData.className,
-                            room: inputData.room,
-                            merged: inputData.merged || [],
-                            underline: inputData.underline || false
-                        });
-                    }
-                }
-
-                // UI는 React Query 캐시 무효화로 자동 업데이트됨
-                setSelectedCells(new Set());
-
-                // Restore scroll position
-                requestAnimationFrame(() => {
-                    if (scrollContainer) {
-                        scrollContainer.scrollTop = scrollTop;
-                        scrollContainer.scrollLeft = scrollLeft;
-                    }
-                });
-
-                return;
-            }
-
-            // === 레거시 구조: english_schedules 컬렉션에 저장 ===
-            const updates: ScheduleData = { ...scheduleData };
-            const toDelete: Set<string> = new Set();
-            const toUpdate: Set<string> = new Set();
-
-            selectedCells.forEach(key => {
-                if (!inputData.className && (!inputData.merged || inputData.merged.length === 0)) {
-                    delete updates[key];
-                    toDelete.add(key);
+            for (const key of Array.from(selectedCells)) {
+                if (isDelete) {
+                    // 셀의 모든 수업 제거
+                    await removeAllClassesFromCell(key);
                 } else {
-                    const [teacherName] = key.split('-');
-                    updates[key] = {
-                        ...updates[key],
+                    // 셀에 수업 배치 (합반 포함)
+                    await assignCellToClass(key, {
                         className: inputData.className,
                         room: inputData.room,
                         merged: inputData.merged || [],
-                        underline: inputData.underline || false,
-                        teacher: teacherName.trim()
-                    };
-                    toUpdate.add(key);
+                        underline: inputData.underline || false
+                    });
                 }
-            });
-
-            // 1. Handle Updates
-            if (toUpdate.size > 0) {
-                const teacherGroups: Record<string, ScheduleData> = {};
-                toUpdate.forEach(key => {
-                    const [teacherName] = key.split("-");
-                    const trimmed = teacherName.trim();
-                    if (!teacherGroups[trimmed]) teacherGroups[trimmed] = {};
-                    teacherGroups[trimmed][key] = updates[key];
-                });
-
-                const updatePromises = Object.keys(teacherGroups).map(teacherName => {
-                    return setDoc(doc(db, targetCollection, teacherName), teacherGroups[teacherName], { merge: true });
-                });
-                await Promise.all(updatePromises);
             }
 
-            // 2. Handle Deletions
-            if (toDelete.size > 0) {
-                const deleteGroups: GenericObject = {};
-                toDelete.forEach(key => {
-                    const [teacherName] = key.split("-");
-                    const trimmed = teacherName.trim();
-                    if (!deleteGroups[trimmed]) deleteGroups[trimmed] = {};
-                    deleteGroups[trimmed][key] = deleteField();
-                });
-
-                const deletePromises = Object.keys(deleteGroups).map(teacherName =>
-                    setDoc(doc(db, targetCollection, teacherName), deleteGroups[teacherName], { merge: true })
-                );
-                await Promise.all(deletePromises);
-            }
-
-            onUpdateLocal(updates);
+            // UI는 React Query 캐시 무효화로 자동 업데이트됨
             setSelectedCells(new Set());
-            setOriginalData(JSON.parse(JSON.stringify(updates)));
 
-            // Restore scroll position after state update
+            // Restore scroll position
             requestAnimationFrame(() => {
                 if (scrollContainer) {
                     scrollContainer.scrollTop = scrollTop;
@@ -821,51 +492,14 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         const scrollLeft = scrollContainer?.scrollLeft || 0;
 
         try {
-            // === 새 구조 사용 시: classes 컬렉션에서 삭제 ===
-            if (useNewStructure) {
-                for (const key of Array.from(selectedCells)) {
-                    await removeAllClassesFromCell(key);
-                }
-
-                // UI는 React Query 캐시 무효화로 자동 업데이트됨
-                setSelectedCells(new Set<string>());
-
-                // Restore scroll position
-                requestAnimationFrame(() => {
-                    if (scrollContainer) {
-                        scrollContainer.scrollTop = scrollTop;
-                        scrollContainer.scrollLeft = scrollLeft;
-                    }
-                });
-
-                return;
+            for (const key of Array.from(selectedCells)) {
+                await removeAllClassesFromCell(key);
             }
 
-            // === 레거시 구조: english_schedules 컬렉션에서 삭제 ===
-            const updates: ScheduleData = { ...scheduleData };
-
-            selectedCells.forEach(key => {
-                delete updates[key];
-            });
-
-            // Firestore Deletion
-            const deletions: GenericObject = {};
-            selectedCells.forEach(key => {
-                const [teacherName] = key.split('-');
-                if (!deletions[teacherName]) deletions[teacherName] = {};
-                deletions[teacherName][key] = deleteField();
-            });
-
-            const delPromises = Object.keys(deletions).map(t =>
-                setDoc(doc(db, targetCollection, t), deletions[t], { merge: true })
-            );
-            await Promise.all(delPromises);
-
-            onUpdateLocal(updates);
+            // UI는 React Query 캐시 무효화로 자동 업데이트됨
             setSelectedCells(new Set<string>());
-            setOriginalData(JSON.parse(JSON.stringify(updates)));
 
-            // Restore scroll position after state update
+            // Restore scroll position
             requestAnimationFrame(() => {
                 if (scrollContainer) {
                     scrollContainer.scrollTop = scrollTop;
@@ -1035,12 +669,6 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                 <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
                                 {filteredTeachers.map((teacher, tIdx) => {
                                     const colors = getTeacherColor(teacher, teachersData);
-                                    // teacher는 영어 이름일 수 있으므로, name 또는 englishName으로 찾기
-                                    const teacherData = teachersData.find(t =>
-                                        t.name === teacher || t.englishName === teacher
-                                    );
-                                    // teacher 자체가 이미 표시할 이름 (영어 이름 또는 한국 이름)
-                                    const displayName = teacher;
                                     return (
                                         <th
                                             key={teacher}
@@ -1051,13 +679,13 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                         `}
                                             style={{ backgroundColor: colors.bg, color: colors.text }}
                                         >
-                                            {displayName}
+                                            {teacher}
                                         </th>
                                     );
                                 })}
                             </tr>
                             <tr>
-                                {filteredTeachers.map((teacher, tIdx) => (
+                                {filteredTeachers.map((teacher) => (
                                     filteredWeekdays.map((day, dIdx) => (
                                         <th
                                             key={`${teacher}-${day}`}
@@ -1250,6 +878,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         removeMerged={removeMerged}
                         handleBatchSave={handleBatchSave}
                         handleBatchDelete={handleBatchDelete}
+                        classSuggestions={classSuggestions}
                     />
                 </div>
             )}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, TrendingUp, ArrowUpCircle, AlertTriangle, Loader } from 'lucide-react';
 import { collection, getDocs, getDoc, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { EN_COLLECTION } from './englishUtils';
+import { CLASS_COLLECTION } from './englishUtils';
 
 interface LevelUpConfirmModalProps {
     isOpen: boolean;
@@ -32,49 +32,10 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
         try {
             console.log('[LevelUp] Starting:', oldClassName, '→', newClassName);
             const batch = writeBatch(db);
-            let scheduleCount = 0;
-            let classListCount = 0;
             let groupsUpdated = false;
 
-            // 1. Update english_schedules (시간표 데이터)
-            const schedulesRef = collection(db, EN_COLLECTION);
-            const schedSnapshot = await getDocs(schedulesRef);
-            console.log('[LevelUp] Found', schedSnapshot.docs.length, 'teacher documents');
-
-            schedSnapshot.docs.forEach(docSnap => {
-                const data = docSnap.data();
-                let hasUpdate = false;
-                const updates: Record<string, any> = {};
-
-                Object.entries(data).forEach(([key, cell]) => {
-                    if (typeof cell === 'object' && cell !== null && (cell as any).className === oldClassName) {
-                        console.log('[LevelUp] Schedule match:', docSnap.id, key);
-                        updates[key] = { ...cell, className: newClassName };
-                        scheduleCount++;
-                        hasUpdate = true;
-                    }
-                });
-
-                if (hasUpdate) {
-                    batch.update(doc(db, EN_COLLECTION, docSnap.id), updates);
-                }
-            });
-
-            // 2. Update 수업목록 (className field) - 레거시
-            const classListRef = collection(db, '수업목록');
-            const classSnapshot = await getDocs(classListRef);
-
-            classSnapshot.docs.forEach(docSnap => {
-                const data = docSnap.data();
-                if (data.className === oldClassName) {
-                    console.log('[LevelUp] ClassList match:', docSnap.id);
-                    batch.update(doc(db, '수업목록', docSnap.id), { className: newClassName });
-                    classListCount++;
-                }
-            });
-
-            // 2-1. Update classes 컬렉션 (새 구조)
-            const classesRef = collection(db, 'classes');
+            // 1. Update classes 컬렉션 (시간표 데이터)
+            const classesRef = collection(db, CLASS_COLLECTION);
             const classesSnapshot = await getDocs(classesRef);
             let classesCount = 0;
 
@@ -82,7 +43,7 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                 const data = docSnap.data();
                 if (data.className === oldClassName && data.subject === 'english') {
                     console.log('[LevelUp] Classes collection match:', docSnap.id);
-                    batch.update(doc(db, 'classes', docSnap.id), { className: newClassName });
+                    batch.update(doc(db, CLASS_COLLECTION, docSnap.id), { className: newClassName });
                     classesCount++;
                 }
             });
@@ -129,8 +90,8 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                 console.log('[LevelUp] Integration settings document not found');
             }
 
-            const totalUpdates = scheduleCount + classListCount + classesCount + enrollmentsCount + (groupsUpdated ? 1 : 0);
-            console.log('[LevelUp] Total updates:', { scheduleCount, classListCount, classesCount, enrollmentsCount, groupsUpdated });
+            const totalUpdates = classesCount + enrollmentsCount + (groupsUpdated ? 1 : 0);
+            console.log('[LevelUp] Total updates:', { classesCount, enrollmentsCount, groupsUpdated });
 
             if (totalUpdates === 0) {
                 setError('업데이트할 데이터가 없습니다.');

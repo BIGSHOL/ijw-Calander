@@ -93,7 +93,7 @@ interface TimetableGridProps {
     searchQuery: string;
     canEdit: boolean;
     // View Settings
-    columnWidth: 'narrow' | 'normal' | 'wide';
+    columnWidth: 'compact' | 'narrow' | 'normal' | 'wide';
     rowHeight: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';
     fontSize: 'small' | 'normal' | 'large' | 'very-large';
     showClassName: boolean;
@@ -157,19 +157,19 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     // Helper to get column width style
     // 병합 셀용 (월/목 같이 여러 요일 병합) - 각 요일당 좁은 너비
     const getMergedCellWidthStyle = (colspan: number) => {
-        const perDayWidth = columnWidth === 'narrow' ? 80 : columnWidth === 'wide' ? 120 : 100;
+        const perDayWidth = columnWidth === 'compact' ? 60 : columnWidth === 'narrow' ? 80 : columnWidth === 'wide' ? 120 : 100;
         return { width: `${colspan * perDayWidth}px`, minWidth: `${colspan * perDayWidth}px` };
     };
 
     // 단일 셀용 (수, 토, 일 등 병합 안 된 셀) - 수업명이 한 줄에 보이도록 넓게
     const getSingleCellWidthStyle = () => {
-        const baseWidth = columnWidth === 'narrow' ? 140 : columnWidth === 'wide' ? 200 : 170;
+        const baseWidth = columnWidth === 'compact' ? 110 : columnWidth === 'narrow' ? 140 : columnWidth === 'wide' ? 200 : 170;
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 
     // 날짜별 뷰용 - 더 넓은 너비로 강의명이 한줄에 표시되도록
     const getDayBasedCellWidthStyle = () => {
-        const baseWidth = columnWidth === 'narrow' ? 140 : columnWidth === 'wide' ? 200 : 170;
+        const baseWidth = columnWidth === 'compact' ? 110 : columnWidth === 'narrow' ? 140 : columnWidth === 'wide' ? 200 : 170;
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 

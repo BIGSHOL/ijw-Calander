@@ -57,7 +57,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
         if (!mathClass?.id) return;
 
         const unsubscribe = onSnapshot(
-            doc(db, '수업목록', mathClass.id),
+            doc(db, 'classes', mathClass.id),
             (snapshot) => {
                 if (snapshot.exists()) {
                     const data = snapshot.data();
@@ -77,7 +77,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
 
         try {
             setLoading(true);
-            await setDoc(doc(db, '수업목록', mathClass.id), {
+            await setDoc(doc(db, 'classes', mathClass.id), {
                 ...mathClass,
                 studentList: students
             }, { merge: true });

@@ -2,7 +2,6 @@
  * useEnglishStats - Student statistics for English timetable
  *
  * PURPOSE: Fetch student statistics from students/enrollments structure
- * instead of the legacy 수업목록 collection.
  *
  * DATA FLOW:
  * 1. Query enrollments collection group for subject='english'
