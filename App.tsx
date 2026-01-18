@@ -10,6 +10,17 @@ import { useTabPermissions } from './hooks/useTabPermissions';
 import { storage, STORAGE_KEYS } from './utils/localStorage';
 import { useStudents } from './hooks/useStudents';
 import { useClasses } from './hooks/useClasses';
+// State management hooks (Vercel React Best Practices: rerender-derived-state)
+import {
+  useCalendarState,
+  useEventModalState,
+  useModalState,
+  useTimetableState,
+  useStudentFilterState,
+  useGradesFilterState,
+  useDarkMode,
+  usePendingEventMoves,
+} from './hooks/useAppState';
 
 // 항상 필요한 컴포넌트 (즉시 로딩)
 import EventModal from './components/Calendar/EventModal';
@@ -148,14 +159,67 @@ const App: React.FC = () => {
   // App Mode (Top-level navigation) - null until permissions are loaded
   const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
 
-  const [baseDate, setBaseDate] = useState(new Date());
+  // ============================================
+  // Custom Hooks (Vercel Best Practices: rerender-derived-state)
+  // ============================================
+  const calendarState = useCalendarState();
+  const eventModalState = useEventModalState();
+  const modalState = useModalState();
+  const timetableState = useTimetableState();
+  const studentFilterState = useStudentFilterState();
+  const gradesFilterState = useGradesFilterState();
+  const darkModeState = useDarkMode();
+  const pendingMovesState = usePendingEventMoves();
+
+  // Destructure for backward compatibility
+  const {
+    baseDate, setBaseDate, viewMode, setViewMode, viewColumns, setViewColumns,
+    selectedDate, setSelectedDate, selectedEndDate, setSelectedEndDate,
+    selectedDeptId, setSelectedDeptId, showArchived, setShowArchived,
+    selectedCategory, setSelectedCategory, showFavoritesOnly, setShowFavoritesOnly,
+    isFilterOpen, setIsFilterOpen, hiddenDeptIds, setHiddenDeptIds,
+  } = calendarState;
+
+  const {
+    isEventModalOpen, setIsEventModalOpen, editingEvent, setEditingEvent,
+    templateEvent, setTemplateEvent, initialStartTime, setInitialStartTime,
+    initialEndTime, setInitialEndTime, initialTitle, setInitialTitle,
+    pendingBucketId, setPendingBucketId, closeEventModal,
+  } = eventModalState;
+
+  const {
+    isSettingsOpen, setIsSettingsOpen, isTimetableSettingsOpen, setIsTimetableSettingsOpen,
+    isCalendarSettingsOpen, setIsCalendarSettingsOpen, isLoginModalOpen, setIsLoginModalOpen,
+    isProfileMenuOpen, setIsProfileMenuOpen, isPermissionViewOpen, setIsPermissionViewOpen,
+    isGlobalSearchOpen, setIsGlobalSearchOpen, isAttendanceAddStudentModalOpen, setIsAttendanceAddStudentModalOpen,
+  } = modalState;
+
+  const {
+    timetableSubject, setTimetableSubject, timetableViewType, setTimetableViewType,
+    mathViewMode, setMathViewMode,
+  } = timetableState;
+
+  const {
+    studentFilters, setStudentFilters, studentSortBy, setStudentSortBy,
+    updateFilter: updateStudentFilter, resetFilters: resetStudentFilters,
+  } = studentFilterState;
+
+  const {
+    gradesSubjectFilter, setGradesSubjectFilter, gradesSearchQuery, setGradesSearchQuery,
+  } = gradesFilterState;
+
+  const { isDarkMode, setIsDarkMode, toggleDarkMode } = darkModeState;
+
+  const {
+    pendingEventMoves, setPendingEventMoves, addPendingMove, removePendingMove, clearPendingMoves,
+  } = pendingMovesState;
+
   const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
   const thirdDate = subYears(baseDate, 2);  // 3단: 2년 전
 
   // Auth State (Moved up for dependencies)
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
 
   // Firestore Data State - React Query for static data (cached 30-60min)
@@ -184,109 +248,16 @@ const App: React.FC = () => {
   // Real-time data (still uses onSnapshot for events)
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false); // New State
-  const [isPermissionViewOpen, setIsPermissionViewOpen] = useState(false); // Permission View Toggle
-  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false); // Global Search Modal
-
-
-
-  // Local Settings
-  const [hiddenDeptIds, setHiddenDeptIds] = useState<string[]>(() => {
-    return storage.getJSON<string[]>(STORAGE_KEYS.DEPT_HIDDEN_IDS, []);
-  });
-
-  // Dark Mode Setting
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    return storage.getBoolean(STORAGE_KEYS.DARK_MODE, false);
-  });
-
-  // Apply dark mode class to document
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    storage.setBoolean(STORAGE_KEYS.DARK_MODE, isDarkMode);
-  }, [isDarkMode]);
-
-  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isTimetableSettingsOpen, setIsTimetableSettingsOpen] = useState(false);
-  const [isCalendarSettingsOpen, setIsCalendarSettingsOpen] = useState(false);
-  const [showArchived, setShowArchived] = useState(false); // Phase 9: Global Archive State
-
-  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedEndDate, setSelectedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedDeptId, setSelectedDeptId] = useState<string>(''); // For creating new events
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>(() => {
-    const saved = storage.getString(STORAGE_KEYS.DEFAULT_VIEW_MODE);
-    return (saved as 'daily' | 'weekly' | 'monthly' | 'yearly') || 'monthly';
-  });
-  const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(2); // 1단, 2단, 3단
-
-  // Force viewColumns to 2 if currently 3 when switching to yearly view
-  useEffect(() => {
-    if (viewMode === 'yearly' && viewColumns === 3) {
-      setViewColumns(2);
-    }
-  }, [viewMode, viewColumns]);
-
-  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
-
-  // Student Management Filters (for header integration)
-  const [studentFilters, setStudentFilters] = useState({
-    searchQuery: '',
-    grade: 'all',
-    status: 'active' as 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn',  // 기본값: 재원
-    subject: 'all',
-  });
-  const [studentSortBy, setStudentSortBy] = useState<'name' | 'grade' | 'startDate'>('name');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null); // New Category Filter State
-
-  const [initialStartTime, setInitialStartTime] = useState('');
-  const [initialTitle, setInitialTitle] = useState(''); // For bucket-to-event conversion
-  const [pendingBucketId, setPendingBucketId] = useState<string | null>(null); // Bucket to delete after event save
-
   // Derive unique categories from available departments
   const uniqueCategories = Array.from(new Set(departments.map(d => d.category).filter(Boolean))) as string[];
-  const [initialEndTime, setInitialEndTime] = useState('');
 
-  // Template Event State for Copy Feature
-  const [templateEvent, setTemplateEvent] = useState<CalendarEvent | null>(null);
-
-
-
-  // UI State for New Header
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-
-  // Attendance Navigation State (for App-level attendance bar)
+  // Attendance State (depends on userProfile)
   const [attendanceSubject, setAttendanceSubject] = useState<'math' | 'english'>('math');
   const [attendanceTeacherId, setAttendanceTeacherId] = useState<string | undefined>(undefined);
   const [attendanceDate, setAttendanceDate] = useState(() => new Date());
 
-  // Timetable Filter State (for App-level filter bar)
-  const [timetableSubject, setTimetableSubject] = useState<'math' | 'english'>('math');
-  const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room' | 'class'>('teacher');
-  // 수학 뷰 모드 (날짜별/강사별)
-  const [mathViewMode, setMathViewMode] = useState<'day-based' | 'teacher-based'>('teacher-based');
-
-  // Grades Filter State (for App-level filter bar)
-  const [gradesSubjectFilter, setGradesSubjectFilter] = useState<'all' | 'math' | 'english'>('all');
-  const [gradesSearchQuery, setGradesSearchQuery] = useState('');
-
-  // Pending Event Moves State (for drag-and-drop)
-  const [pendingEventMoves, setPendingEventMoves] = useState<{ original: CalendarEvent, updated: CalendarEvent }[]>([]);
-
-  // Auth State
-
-
   // Permission Hook
   const { hasPermission, rolePermissions } = usePermissions(userProfile || null);
-
-  // Modal State for Attendance "Add Student" (lifted from AttendanceManager)
-  const [isAttendanceAddStudentModalOpen, setIsAttendanceAddStudentModalOpen] = useState(false);
 
   // TEMPORARY: Disabled auto-initialization based on permissions
   // TODO: Re-enable after fixing permission configuration
