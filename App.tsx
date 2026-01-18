@@ -110,23 +110,36 @@ const staffToUserProfile = (staff: StaffMember): UserProfile => ({
 // Helper: 신규 사용자를 staff 컬렉션에 생성
 const createNewStaffMember = async (user: User, isMaster: boolean): Promise<StaffMember> => {
   const newStaffRef = doc(collection(db, 'staff'));
+  const systemRole = isMaster ? 'master' : 'user';
+  const now = new Date().toISOString();
   const newStaff: StaffMember = {
     id: newStaffRef.id,
     uid: user.uid,
     name: user.displayName || user.email!.split('@')[0],
     email: user.email!,
     role: 'staff',
-    systemRole: isMaster ? 'master' : 'user',
+    systemRole,
     approvalStatus: isMaster ? 'approved' : 'pending',
     departmentPermissions: {},
     favoriteDepartments: [],
-    hireDate: new Date().toISOString().split('T')[0],
+    hireDate: now.split('T')[0],
     status: 'active',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   };
+
+  // staffIndex 먼저 생성 (Firestore Rules에서 역할 확인용)
+  const indexRef = doc(db, 'staffIndex', user.uid);
+  await setDoc(indexRef, {
+    staffId: newStaffRef.id,
+    systemRole,
+    updatedAt: now,
+  });
+
+  // staff 문서 생성
   await setDoc(newStaffRef, newStaff);
-  console.log('✅ New staff created:', newStaffRef.id);
+
+  console.log('✅ New staff created:', newStaffRef.id, 'with staffIndex');
   return newStaff;
 };
 
@@ -408,62 +421,95 @@ const App: React.FC = () => {
           where('uid', '==', user.uid)
         );
 
-        profileUnsubscribe = onSnapshot(staffQuery, async (snapshot) => {
-          const masterEmails = systemConfig?.masterEmails || ['st2000423@gmail.com'];
-          const isMasterEmail = user.email && masterEmails.includes(user.email);
+        try {
+          profileUnsubscribe = onSnapshot(staffQuery, async (snapshot) => {
+            try {
+              const masterEmails = systemConfig?.masterEmails || ['st2000423@gmail.com'];
+              const isMasterEmail = user.email && masterEmails.includes(user.email);
 
-          if (!snapshot.empty) {
-            // staff 문서가 존재함
-            const staffDoc = snapshot.docs[0];
-            const staffData = { id: staffDoc.id, ...staffDoc.data() } as StaffMember;
+              if (!snapshot.empty) {
+                // staff 문서가 존재함
+                const staffDoc = snapshot.docs[0];
+                const staffData = { id: staffDoc.id, ...staffDoc.data() } as StaffMember;
+                const now = new Date().toISOString();
 
-            // 마스터 이메일인데 역할이 master가 아니면 업데이트
-            if (isMasterEmail && staffData.systemRole !== 'master') {
-              await updateDoc(staffDoc.ref, {
-                systemRole: 'master',
-                approvalStatus: 'approved',
-                updatedAt: new Date().toISOString(),
-              });
-              // snapshot이 다시 trigger됨
-            } else {
-              // staff → UserProfile 변환
-              const userProfile = staffToUserProfile(staffData);
-              setUserProfile(prev => {
-                if (JSON.stringify(prev) === JSON.stringify(userProfile)) return prev;
-                return userProfile;
-              });
+                // staffIndex 동기화 (없으면 생성, 있으면 업데이트)
+                const currentRole = isMasterEmail ? 'master' : (staffData.systemRole || 'user');
+                const indexRef = doc(db, 'staffIndex', user.uid);
+                await setDoc(indexRef, {
+                  staffId: staffDoc.id,
+                  systemRole: currentRole,
+                  updatedAt: now,
+                }, { merge: true });
+
+                // 마스터 이메일인데 역할이 master가 아니면 업데이트
+                if (isMasterEmail && staffData.systemRole !== 'master') {
+                  await updateDoc(staffDoc.ref, {
+                    systemRole: 'master',
+                    approvalStatus: 'approved',
+                    updatedAt: now,
+                  });
+                  // snapshot이 다시 trigger됨
+                } else {
+                  // staff → UserProfile 변환
+                  const userProfile = staffToUserProfile(staffData);
+                  setUserProfile(prev => {
+                    if (JSON.stringify(prev) === JSON.stringify(userProfile)) return prev;
+                    return userProfile;
+                  });
+                }
+              } else {
+                // staff 문서가 없음 - 이메일로 한 번 더 검색 (기존 직원 연동)
+                const emailQuery = query(
+                  collection(db, 'staff'),
+                  where('email', '==', user.email)
+                );
+                const emailSnapshot = await getDocs(emailQuery);
+
+                if (!emailSnapshot.empty) {
+                  // 이메일로 매칭된 staff 있음 - uid 연동
+                  const existingStaff = emailSnapshot.docs[0];
+                  const existingData = existingStaff.data();
+                  const linkedRole = isMasterEmail ? 'master' : (existingData.systemRole || 'user');
+                  const linkNow = new Date().toISOString();
+
+                  // staffIndex 먼저 생성 (Firestore Rules에서 역할 확인용)
+                  const indexRef = doc(db, 'staffIndex', user.uid);
+                  await setDoc(indexRef, {
+                    staffId: existingStaff.id,
+                    systemRole: linkedRole,
+                    updatedAt: linkNow,
+                  });
+
+                  // staff 문서 업데이트
+                  await updateDoc(existingStaff.ref, {
+                    uid: user.uid,
+                    systemRole: linkedRole,
+                    approvalStatus: isMasterEmail ? 'approved' : (existingData.approvalStatus || 'pending'),
+                    updatedAt: linkNow,
+                  });
+                  console.log('✅ Existing staff linked with uid:', existingStaff.id, 'staffIndex created');
+                  // snapshot이 다시 trigger됨
+                } else {
+                  // 완전 신규 사용자 - staff 생성
+                  const newStaff = await createNewStaffMember(user, isMasterEmail);
+                  const userProfile = staffToUserProfile(newStaff);
+                  setUserProfile(userProfile);
+                }
+              }
+              setAuthLoading(false);
+            } catch (innerError) {
+              console.error("Error processing staff data:", innerError);
+              setAuthLoading(false);
             }
-          } else {
-            // staff 문서가 없음 - 이메일로 한 번 더 검색 (기존 직원 연동)
-            const emailQuery = query(
-              collection(db, 'staff'),
-              where('email', '==', user.email)
-            );
-            const emailSnapshot = await getDocs(emailQuery);
-
-            if (!emailSnapshot.empty) {
-              // 이메일로 매칭된 staff 있음 - uid 연동
-              const existingStaff = emailSnapshot.docs[0];
-              await updateDoc(existingStaff.ref, {
-                uid: user.uid,
-                systemRole: isMasterEmail ? 'master' : (existingStaff.data().systemRole || 'user'),
-                approvalStatus: isMasterEmail ? 'approved' : (existingStaff.data().approvalStatus || 'pending'),
-                updatedAt: new Date().toISOString(),
-              });
-              console.log('✅ Existing staff linked with uid:', existingStaff.id);
-              // snapshot이 다시 trigger됨
-            } else {
-              // 완전 신규 사용자 - staff 생성
-              const newStaff = await createNewStaffMember(user, isMasterEmail);
-              const userProfile = staffToUserProfile(newStaff);
-              setUserProfile(userProfile);
-            }
-          }
+          }, (error) => {
+            console.error("Error listening to staff profile:", error);
+            setAuthLoading(false);
+          });
+        } catch (error) {
+          console.error("Error setting up staff listener:", error);
           setAuthLoading(false);
-        }, (error) => {
-          console.error("Error listening to staff profile:", error);
-          setAuthLoading(false);
-        });
+        }
 
       } else {
         setUserProfile(null);
@@ -2194,9 +2240,9 @@ const App: React.FC = () => {
             </div>
           ) : appMode === 'calendar' ? (
             /* Calendar View */
-            <div className="w-full flex-1 max-w-full mx-auto h-full print:p-0 flex flex-col xl:flex-row gap-4 print:flex-row print:gap-2 overflow-x-auto">
+            <div className="w-full flex-1 max-w-full mx-auto h-full print:p-0 flex flex-col xl:flex-row print:flex-row print:gap-2 overflow-x-auto">
               {/* 1단: 현재 년도 (항상 표시) */}
-              <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-y-auto ${viewColumns >= 2 ? 'min-w-[320px]' : 'min-w-0'}`}>
+              <div className={`flex-1 flex flex-col overflow-y-auto ${viewColumns >= 2 ? 'min-w-[320px] border-r-4 border-gray-400' : 'min-w-0'}`}>
                 <CalendarBoard
                   currentDate={baseDate}
                   onDateChange={setBaseDate}
@@ -2225,7 +2271,7 @@ const App: React.FC = () => {
               </div>
 
               {/* 2단: 1년 전 (viewColumns >= 2 일 때 표시) */}
-              <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-[320px] transition-all duration-300 ${viewColumns >= 2 ? '' : 'hidden'}`}>
+              <div className={`flex-1 flex flex-col overflow-hidden min-w-[320px] transition-all duration-300 ${viewColumns >= 2 ? (viewColumns >= 3 ? 'border-r-4 border-gray-400' : '') : 'hidden'}`}>
                 <CalendarBoard
                   currentDate={rightDate}
                   onDateChange={(date) => setBaseDate(addYears(date, 1))}
@@ -2249,7 +2295,7 @@ const App: React.FC = () => {
               </div>
 
               {/* 3단: 2년 전 (viewColumns >= 3 일 때 표시) */}
-              <div className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden min-w-[320px] transition-all duration-300 ${viewColumns >= 3 ? '' : 'hidden'}`}>
+              <div className={`flex-1 flex flex-col overflow-hidden min-w-[320px] transition-all duration-300 ${viewColumns >= 3 ? '' : 'hidden'}`}>
                 <CalendarBoard
                   currentDate={thirdDate}
                   onDateChange={(date) => setBaseDate(addYears(date, 2))}
@@ -2275,7 +2321,7 @@ const App: React.FC = () => {
           ) : appMode === 'timetable' ? (
             /* Timetable View */
             <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 p-4 md:p-6 overflow-hidden">
+              <div className="w-full flex-1 overflow-hidden">
                 <TimetableManager
                   subjectTab={timetableSubject}
                   onSubjectChange={setTimetableSubject}

@@ -412,7 +412,7 @@ const TimetableManager = ({
     }
 
     return (
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
+        <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
             {/* Header Component */}
             <TimetableHeader
                 weekLabel={weekLabel}

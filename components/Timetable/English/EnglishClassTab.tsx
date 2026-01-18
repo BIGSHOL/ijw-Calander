@@ -422,7 +422,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 ) : (
                     <div className="flex flex-col gap-6">
                         {groupedClasses.map(group => (
-                            <div key={group.periodIndex} className="bg-white rounded-lg shadow border border-gray-300 overflow-hidden w-max max-w-full">
+                            <div key={group.periodIndex} className="bg-white shadow border border-gray-300 overflow-hidden w-max max-w-full">
                                 {/* Group Header */}
                                 <div className="bg-gray-800 text-white px-4 py-2 font-bold text-sm flex items-center gap-2">
                                     <span>🕒 {group.label}</span>

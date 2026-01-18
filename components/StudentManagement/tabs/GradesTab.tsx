@@ -92,93 +92,75 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
 
     if (loadingScores) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 animate-spin text-[#fdb813]" />
+            <div className="flex items-center justify-center h-32">
+                <Loader2 className="w-5 h-5 animate-spin text-[#fdb813]" />
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-2">
             {/* 헤더 */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
-                        <GraduationCap className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-[#081429]">성적 현황</h3>
-                        <p className="text-xs text-gray-500">총 {stats.totalExams}개 시험</p>
-                    </div>
+                <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-[#081429]">성적 현황</h3>
+                    <span className="text-xs text-gray-500">({stats.totalExams}개 시험)</span>
                 </div>
 
                 {/* 성적 추가 버튼 */}
                 <button
                     onClick={() => setIsAddingScore(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#081429] text-white rounded-lg text-sm font-medium hover:bg-[#0f2847] transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 bg-[#081429] text-white rounded text-xs font-medium hover:bg-[#0f2847] transition-colors"
                 >
-                    <Plus size={14} />
-                    성적 입력
+                    <Plus size={12} />
+                    입력
                 </button>
             </div>
 
             {/* 통계 카드 */}
             {stats.totalExams > 0 && (
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-4 gap-2">
                     {/* 평균 점수 */}
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-blue-600">평균 점수</span>
-                            <BarChart3 size={14} className="text-blue-400" />
+                    <div className="bg-blue-50 p-2 border border-blue-100">
+                        <div className="flex items-center justify-between">
+                            <span className="text-micro font-medium text-blue-600">평균</span>
+                            <BarChart3 size={10} className="text-blue-400" />
                         </div>
-                        <div className="text-2xl font-bold text-[#081429]">
+                        <div className="text-sm font-bold text-[#081429]">
                             {stats.averagePercentage.toFixed(1)}%
-                        </div>
-                        <div className={`flex items-center gap-1 text-xs mt-1 ${trendColor}`}>
-                            <TrendIcon size={12} />
-                            <span>{stats.trend === 'up' ? '상승 중' : stats.trend === 'down' ? '하락 중' : '유지'}</span>
                         </div>
                     </div>
 
                     {/* 최고 점수 */}
-                    <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-emerald-600">최고 점수</span>
-                            <Award size={14} className="text-emerald-400" />
+                    <div className="bg-emerald-50 p-2 border border-emerald-100">
+                        <div className="flex items-center justify-between">
+                            <span className="text-micro font-medium text-emerald-600">최고</span>
+                            <Award size={10} className="text-emerald-400" />
                         </div>
-                        <div className="text-2xl font-bold text-[#081429]">
+                        <div className="text-sm font-bold text-[#081429]">
                             {stats.highestScore?.percentage?.toFixed(0) || '-'}%
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1 truncate">
-                            {stats.highestScore?.examTitle || '-'}
                         </div>
                     </div>
 
                     {/* 최근 성적 */}
-                    <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-amber-600">최근 성적</span>
-                            <Calendar size={14} className="text-amber-400" />
+                    <div className="bg-amber-50 p-2 border border-amber-100">
+                        <div className="flex items-center justify-between">
+                            <span className="text-micro font-medium text-amber-600">최근</span>
+                            <Calendar size={10} className="text-amber-400" />
                         </div>
-                        <div className="text-2xl font-bold text-[#081429]">
+                        <div className="text-sm font-bold text-[#081429]">
                             {scores[0]?.percentage?.toFixed(0) || '-'}%
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1 truncate">
-                            {scores[0]?.examTitle || '-'}
                         </div>
                     </div>
 
                     {/* 등급 */}
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-100">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-purple-600">평균 등급</span>
-                            <GraduationCap size={14} className="text-purple-400" />
+                    <div className="bg-purple-50 p-2 border border-purple-100">
+                        <div className="flex items-center justify-between">
+                            <span className="text-micro font-medium text-purple-600">등급</span>
+                            <GraduationCap size={10} className="text-purple-400" />
                         </div>
-                        <div className="text-2xl font-bold text-[#081429]">
+                        <div className="text-sm font-bold text-[#081429]">
                             {calculateGrade(stats.averagePercentage)}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                            {stats.totalExams}개 시험 기준
                         </div>
                     </div>
                 </div>
@@ -186,24 +168,24 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
 
             {/* 성적 추이 차트 */}
             {chartData.length > 1 && (
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <h4 className="text-sm font-bold text-[#081429] mb-4 flex items-center gap-2">
-                        <TrendingUp size={16} className="text-blue-500" />
+                <div className="bg-white border border-gray-200 p-2">
+                    <h4 className="text-xs font-bold text-[#081429] mb-2 flex items-center gap-1">
+                        <TrendingUp size={12} className="text-blue-500" />
                         성적 추이
                     </h4>
-                    <div className="h-48">
+                    <div className="h-28">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                 <XAxis
                                     dataKey="name"
-                                    tick={{ fontSize: 10 }}
+                                    tick={{ fontSize: 8 }}
                                     tickLine={false}
                                     axisLine={{ stroke: '#e5e7eb' }}
                                 />
                                 <YAxis
                                     domain={[0, 100]}
-                                    tick={{ fontSize: 10 }}
+                                    tick={{ fontSize: 8 }}
                                     tickLine={false}
                                     axisLine={{ stroke: '#e5e7eb' }}
                                 />
@@ -211,9 +193,9 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
                                     contentStyle={{
                                         backgroundColor: '#081429',
                                         border: 'none',
-                                        borderRadius: '8px',
+                                        borderRadius: '4px',
                                         color: 'white',
-                                        fontSize: '12px',
+                                        fontSize: '10px',
                                     }}
                                     formatter={(value: number) => [`${value.toFixed(1)}%`, '점수']}
                                 />
@@ -222,9 +204,9 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
                                     type="monotone"
                                     dataKey="score"
                                     stroke="#6366f1"
-                                    strokeWidth={2}
-                                    dot={{ fill: '#6366f1', strokeWidth: 2 }}
-                                    activeDot={{ r: 6, fill: '#4f46e5' }}
+                                    strokeWidth={1.5}
+                                    dot={{ fill: '#6366f1', strokeWidth: 1, r: 2 }}
+                                    activeDot={{ r: 4, fill: '#4f46e5' }}
                                 />
                             </LineChart>
                         </ResponsiveContainer>
@@ -233,31 +215,31 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
             )}
 
             {/* 성적 목록 */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-white border border-gray-200 overflow-hidden">
                 {/* 헤더 */}
-                <div className="p-4 border-b border-gray-100">
-                    <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-bold text-[#081429] flex items-center gap-2">
-                            <BookOpen size={16} className="text-indigo-500" />
+                <div className="px-2 py-1.5 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold text-[#081429] flex items-center gap-1">
+                            <BookOpen size={12} className="text-indigo-500" />
                             시험별 성적
                             {allScores.length > 0 && (
-                                <span className="text-xs font-normal text-gray-400">
+                                <span className="text-xxs font-normal text-gray-400">
                                     ({scores.length}/{allScores.length})
                                 </span>
                             )}
                         </h4>
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+                            className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xxs transition-colors ${
                                 showFilters || activeFilterCount > 0
                                     ? 'bg-indigo-100 text-indigo-700'
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                         >
-                            <Filter size={14} />
+                            <Filter size={10} />
                             필터
                             {activeFilterCount > 0 && (
-                                <span className="bg-indigo-600 text-white px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+                                <span className="bg-indigo-600 text-white px-1 rounded-full text-micro font-bold">
                                     {activeFilterCount}
                                 </span>
                             )}
@@ -266,34 +248,14 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
 
                     {/* 검색 및 필터 */}
                     {showFilters && (
-                        <div className="space-y-3 pt-2">
-                            {/* 검색 */}
-                            <div className="relative">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="시험명 또는 날짜로 검색..."
-                                    className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
-                                />
-                                {searchQuery && (
-                                    <button
-                                        onClick={() => setSearchQuery('')}
-                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                )}
-                            </div>
-
+                        <div className="space-y-1.5 pt-1.5">
                             {/* 필터 옵션 */}
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1">
                                 {/* 과목 필터 */}
                                 <select
                                     value={subjectFilter}
                                     onChange={(e) => setSubjectFilter(e.target.value as any)}
-                                    className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                    className="text-xxs border border-gray-200 rounded px-1.5 py-0.5 bg-white focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                                 >
                                     <option value="all">전체 과목</option>
                                     <option value="math">수학</option>
@@ -304,14 +266,12 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
                                 <select
                                     value={examTypeFilter}
                                     onChange={(e) => setExamTypeFilter(e.target.value)}
-                                    className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                    className="text-xxs border border-gray-200 rounded px-1.5 py-0.5 bg-white focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                                 >
                                     <option value="all">전체 유형</option>
                                     <option value="mock">모의고사</option>
                                     <option value="weekly">주간테스트</option>
                                     <option value="school">학교시험</option>
-                                    <option value="diagnostic">진단평가</option>
-                                    <option value="other">기타</option>
                                 </select>
 
                                 {/* 필터 초기화 */}
@@ -322,7 +282,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
                                             setExamTypeFilter('all');
                                             setSearchQuery('');
                                         }}
-                                        className="text-xs text-red-500 hover:text-red-600 px-2 py-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                        className="text-xxs text-red-500 hover:text-red-600 px-1.5 py-0.5 hover:bg-red-50 rounded transition-colors"
                                     >
                                         초기화
                                     </button>
@@ -333,44 +293,44 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
                 </div>
 
                 {/* 테이블 헤더 */}
-                <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-[#373d41]">
-                    <span className="w-20 shrink-0">날짜</span>
-                    <span className="w-12 shrink-0">과목</span>
+                <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
+                    <span className="w-16 shrink-0">날짜</span>
+                    <span className="w-8 shrink-0">과목</span>
                     <span className="flex-1">시험명</span>
-                    <span className="w-20 shrink-0 text-center">점수</span>
-                    <span className="w-16 shrink-0 text-center">등급</span>
-                    <span className="w-8 shrink-0"></span>
+                    <span className="w-14 shrink-0 text-center">점수</span>
+                    <span className="w-8 shrink-0 text-center">등급</span>
+                    <span className="w-5 shrink-0"></span>
                 </div>
 
                 {scores.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <div className="w-12 h-12 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                    <div className="p-4 text-center">
+                        <div className="w-8 h-8 mx-auto mb-2 bg-gray-100 rounded-full flex items-center justify-center">
                             {activeFilterCount > 0 ? (
-                                <Search className="w-6 h-6 text-gray-400" />
+                                <Search className="w-4 h-4 text-gray-400" />
                             ) : (
-                                <GraduationCap className="w-6 h-6 text-gray-400" />
+                                <GraduationCap className="w-4 h-4 text-gray-400" />
                             )}
                         </div>
                         {activeFilterCount > 0 ? (
                             <>
-                                <p className="text-gray-500 text-sm">검색 결과가 없습니다</p>
+                                <p className="text-gray-500 text-xs">검색 결과가 없습니다</p>
                                 <button
                                     onClick={() => {
                                         setSubjectFilter('all');
                                         setExamTypeFilter('all');
                                         setSearchQuery('');
                                     }}
-                                    className="mt-3 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                                    className="mt-2 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
                                 >
                                     필터 초기화
                                 </button>
                             </>
                         ) : (
                             <>
-                                <p className="text-gray-500 text-sm">등록된 성적이 없습니다</p>
+                                <p className="text-gray-500 text-xs">등록된 성적이 없습니다</p>
                                 <button
                                     onClick={() => setIsAddingScore(true)}
-                                    className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                                    className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
                                 >
                                     + 첫 성적 입력하기
                                 </button>
@@ -387,54 +347,51 @@ const GradesTab: React.FC<GradesTabProps> = ({ student }) => {
                             return (
                                 <div
                                     key={score.id}
-                                    className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors group"
+                                    className="flex items-center gap-2 px-2 py-1 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors group"
                                 >
                                     {/* 날짜 */}
-                                    <span className="text-xs text-[#373d41] w-20 shrink-0">
+                                    <span className="text-xxs text-[#373d41] w-16 shrink-0">
                                         {examDate}
                                     </span>
 
                                     {/* 과목 */}
-                                    <span className={`w-12 shrink-0 px-1.5 py-0.5 rounded text-xs font-medium text-center ${
+                                    <span className={`w-8 shrink-0 px-1 py-0.5 rounded text-micro font-medium text-center ${
                                         score.subject === 'math'
                                             ? 'bg-blue-100 text-blue-700'
                                             : 'bg-purple-100 text-purple-700'
                                     }`}>
-                                        {score.subject === 'math' ? '수학' : '영어'}
+                                        {score.subject === 'math' ? '수' : '영'}
                                     </span>
 
                                     {/* 시험명 */}
-                                    <span className="flex-1 text-sm text-[#081429] truncate">
+                                    <span className="flex-1 text-xs text-[#081429] truncate">
                                         {score.examTitle || '시험'}
                                     </span>
 
                                     {/* 점수 */}
-                                    <span className="w-20 shrink-0 text-center">
-                                        <span className="text-sm font-bold text-[#081429]">
+                                    <span className="w-14 shrink-0 text-center">
+                                        <span className="text-xs font-bold text-[#081429]">
                                             {score.percentage?.toFixed(0)}%
-                                        </span>
-                                        <span className="text-xs text-gray-400 ml-1">
-                                            ({score.score}/{score.maxScore})
                                         </span>
                                     </span>
 
                                     {/* 등급 */}
-                                    <span className="w-16 shrink-0 text-center">
+                                    <span className="w-8 shrink-0 text-center">
                                         {gradeColor ? (
-                                            <span className={`text-xs px-2 py-0.5 rounded font-bold ${gradeColor.bg} ${gradeColor.text}`}>
+                                            <span className={`text-micro px-1 py-0.5 rounded font-bold ${gradeColor.bg} ${gradeColor.text}`}>
                                                 {score.grade}
                                             </span>
                                         ) : (
-                                            <span className="text-xs text-gray-400">-</span>
+                                            <span className="text-micro text-gray-400">-</span>
                                         )}
                                     </span>
 
                                     {/* 삭제 버튼 */}
                                     <button
                                         onClick={() => handleDeleteScore(score.id)}
-                                        className="w-8 shrink-0 opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                        className="w-5 shrink-0 opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
                                     >
-                                        <Trash2 size={14} />
+                                        <Trash2 size={12} />
                                     </button>
                                 </div>
                             );

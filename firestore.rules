@@ -4,9 +4,20 @@ service cloud.firestore {
 
     // === Helper Functions ===
 
-    // Get user role from users collection
+    // staffIndex 컬렉션에서 uid로 systemRole 조회
+    // staffIndex/{uid} 문서 구조: { staffId, systemRole, updatedAt }
+    function getStaffRoleByUid(uid) {
+      return get(/databases/$(database)/documents/staffIndex/$(uid)).data.systemRole;
+    }
+
+    // 레거시 호환: getUserRole은 staffIndex 사용
     function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return getStaffRoleByUid(request.auth.uid);
+    }
+
+    // staff 컬렉션의 문서 ID로 role 가져오기
+    function getStaffRole(staffId) {
+      return get(/databases/$(database)/documents/staff/$(staffId)).data.systemRole;
     }
 
     // Check if user is authenticated
@@ -19,19 +30,41 @@ service cloud.firestore {
       return isAuthenticated() && getUserRole() in roles;
     }
 
-    // === User Management ===
-
-    // === User Management ===
-
-    match /users/{userId} {
+    // === Staff Index (uid → systemRole 매핑) ===
+    // staff 컬렉션의 문서 ID가 auto-generated이므로, uid로 빠르게 역할을 조회하기 위한 인덱스
+    // staff 생성/업데이트 시 자동 동기화됨
+    match /staffIndex/{uid} {
       allow read: if isAuthenticated();
-      // Allow write if self, master, or has specific user management permissions
-      allow write: if isAuthenticated() &&
-                      (request.auth.uid == userId || 
-                       hasRole(['master']) ||
-                       hasPermission('users.change_role') ||
-                       hasPermission('users.approve') ||
-                       hasPermission('users.change_permissions'));
+      // 본인 문서 생성/업데이트 허용 (초기 등록 시)
+      // master/admin은 다른 사용자의 인덱스도 수정 가능
+      allow create: if isAuthenticated() && uid == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        uid == request.auth.uid ||
+        hasRole(['master', 'admin'])
+      );
+      allow delete: if false; // 삭제 차단
+    }
+
+
+    // === Staff Management (New User System) ===
+    match /staff/{staffId} {
+      // Read: All authenticated users can read staff list
+      allow read: if isAuthenticated();
+
+      // Create: Authenticated users can create their own profile during registration
+      allow create: if isAuthenticated() &&
+                      (request.resource.data.uid == request.auth.uid ||
+                       resource.data.systemRole == 'master');
+
+      // Update: Self or users with master/admin systemRole in their staff document
+      allow update: if isAuthenticated() && (
+                      resource.data.uid == request.auth.uid ||
+                      getStaffRoleByUid(request.auth.uid) in ['master', 'admin']
+                    );
+
+      // Delete: Users with master/admin systemRole (checked via staff document)
+      allow delete: if isAuthenticated() &&
+                      getStaffRoleByUid(request.auth.uid) in ['master', 'admin'];
     }
 
     // === Settings ===
@@ -212,6 +245,27 @@ service cloud.firestore {
         hasPermission('timetable.english.edit') ||
         hasPermission('attendance.manage_math') ||
         hasPermission('attendance.manage_english')
+      );
+    }
+
+    // Student Enrollments Subcollection (수강 이력)
+    match /students/{studentId}/enrollments/{enrollmentId} {
+      // Read: All authenticated users
+      allow read: if isAuthenticated();
+
+      // Write: Master or users with timetable/attendance permissions
+      allow create, update: if isAuthenticated() && (
+        hasRole(['master']) ||
+        hasPermission('timetable.math.edit') ||
+        hasPermission('timetable.english.edit') ||
+        hasPermission('attendance.manage_math') ||
+        hasPermission('attendance.manage_english')
+      );
+
+      allow delete: if isAuthenticated() && (
+        hasRole(['master']) ||
+        hasPermission('timetable.math.edit') ||
+        hasPermission('timetable.english.edit')
       );
     }
 

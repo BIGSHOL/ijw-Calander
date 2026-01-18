@@ -78,7 +78,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
       active: staff.filter(s => s.status === 'active').length,
       teachers: staff.filter(s => s.role === 'teacher').length,
       pendingLeaves: pendingCount,
-      pendingApprovals, // 가입 승인 대기 (staff 기반)
+      pendingApprovals, // 가입대기 인원(staff 기반)
     };
   }, [staff, pendingCount]);
 
@@ -136,74 +136,62 @@ const StaffManager: React.FC<StaffManagerProps> = ({
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#081429] rounded-lg flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-[#fdb813]" />
+      {/* Header - Compact */}
+      <div className="bg-white border-b border-gray-200 px-4 py-2">
+        <div className="flex items-center justify-between">
+          {/* Left: Title + Stats inline */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-[#fdb813]" />
+              <h1 className="text-sm font-bold text-[#081429]">직원 관리</h1>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-[#081429]">직원 관리</h1>
-              <p className="text-sm text-gray-500">Staff Management</p>
+
+            {/* Inline Stats */}
+            <div className="flex items-center gap-3 text-xs">
+              <span className="text-gray-500">전체 <span className="font-bold text-[#081429]">{stats.total}</span></span>
+              <span className="text-gray-300">|</span>
+              <span className="text-gray-500">재직 <span className="font-bold text-emerald-600">{stats.active}</span></span>
+              <span className="text-gray-300">|</span>
+              <span className="text-gray-500">강사 <span className="font-bold text-blue-600">{stats.teachers}</span></span>
+              {stats.pendingLeaves > 0 && (
+                <>
+                  <span className="text-gray-300">|</span>
+                  <span className="text-amber-600 font-bold">휴가대기 {stats.pendingLeaves}</span>
+                </>
+              )}
+              {stats.pendingApprovals > 0 && (
+                <>
+                  <span className="text-gray-300">|</span>
+                  <span className="text-red-600 font-bold flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    가입대기 {stats.pendingApprovals}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
+          {/* Right: Actions */}
           <div className="flex items-center gap-2">
             <button
               onClick={refreshStaff}
-              className="p-2 text-gray-500 hover:text-[#081429] hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-[#081429] hover:bg-gray-100 rounded transition-colors"
               title="새로고침"
             >
-              <RefreshCw className="w-5 h-5" />
+              <RefreshCw className="w-4 h-4" />
             </button>
             <button
               onClick={handleAddNew}
-              className="flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-lg hover:bg-[#0a1a35] transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 bg-[#081429] text-white rounded text-xs font-bold hover:bg-[#0a1a35] transition-colors"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3 h-3" />
               <span>직원 추가</span>
             </button>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-5 gap-4 mb-4">
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-2xl font-bold text-[#081429]">{stats.total}</div>
-            <div className="text-xs text-gray-500">전체 직원</div>
-          </div>
-          <div className="bg-emerald-50 rounded-lg p-3">
-            <div className="text-2xl font-bold text-emerald-600">{stats.active}</div>
-            <div className="text-xs text-gray-500">재직중</div>
-          </div>
-          <div className="bg-blue-50 rounded-lg p-3">
-            <div className="text-2xl font-bold text-blue-600">{stats.teachers}</div>
-            <div className="text-xs text-gray-500">강사</div>
-          </div>
-          <div className="bg-amber-50 rounded-lg p-3">
-            <div className="text-2xl font-bold text-amber-600">{stats.pendingLeaves}</div>
-            <div className="text-xs text-gray-500">휴가 승인 대기</div>
-          </div>
-          <div className={`rounded-lg p-3 ${stats.pendingApprovals > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-            <div className={`text-2xl font-bold ${stats.pendingApprovals > 0 ? 'text-red-600' : 'text-gray-400'}`}>{stats.pendingApprovals}</div>
-            <div className="text-xs text-gray-500">가입 승인 대기</div>
-          </div>
-        </div>
-
-        {/* 승인 대기 알림 */}
-        {stats.pendingApprovals > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-            <div className="flex-1">
-              <span className="text-sm font-bold text-red-900">{stats.pendingApprovals}명의 가입 승인 대기</span>
-              <span className="text-xs text-red-700 ml-2">직원을 클릭하여 시스템 권한을 설정해주세요.</span>
-            </div>
-          </div>
-        )}
-
-        {/* View Mode Tabs */}
-        <div className="flex items-center gap-4 border-b border-gray-200">
+        {/* View Mode Tabs - Compact */}
+        <div className="flex items-center gap-2 mt-2 border-t border-gray-100 pt-2">
           <button
             onClick={() => setViewMode('list')}
             className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${

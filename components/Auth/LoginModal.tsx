@@ -126,8 +126,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
     };
 
     return (
-        <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-xl flex items-center justify-center z-[100]" 
+        <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xl flex items-center justify-center z-[100]"
             onClick={() => canClose && onClose()}
             role="dialog"
             aria-modal="true"
@@ -161,9 +161,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                 <div className="p-8">
                     <form onSubmit={handleAuth} className="space-y-4">
                         <div>
-                            <label htmlFor="email-input" className="block text-sm font-bold text-gray-700 mb-1">이메일</label>
+                            <label htmlFor={isSignUp ? 'signup-email' : 'login-email'} className="block text-sm font-bold text-gray-700 mb-1">이메일</label>
                             <input
-                                id="email-input"
+                                id={isSignUp ? 'signup-email' : 'login-email'}
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -176,9 +176,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         </div>
 
                         <div>
-                            <label htmlFor="password-input" className="block text-sm font-bold text-gray-700 mb-1">비밀번호</label>
+                            <label htmlFor={isSignUp ? 'signup-password' : 'login-password'} className="block text-sm font-bold text-gray-700 mb-1">비밀번호</label>
                             <input
-                                id="password-input"
+                                id={isSignUp ? 'signup-password' : 'login-password'}
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}

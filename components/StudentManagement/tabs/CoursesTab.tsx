@@ -1,15 +1,199 @@
 import React, { useState, useMemo } from 'react';
 import { UnifiedStudent } from '../../../types';
-import { BookOpen, Plus, User, X, Loader2 } from 'lucide-react';
+import { BookOpen, Plus, User, X, Loader2, Users } from 'lucide-react';
 import AssignClassModal from '../AssignClassModal';
 import { useStudents } from '../../../hooks/useStudents';
 import { useTeachers } from '../../../hooks/useFirebaseQueries';
-import { ClassInfo } from '../../../hooks/useClasses';
+import { ClassInfo, useClasses } from '../../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../../utils/styleUtils';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
 import { doc, deleteDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  SubjectForSchedule,
+  MATH_PERIOD_INFO,
+  ENGLISH_PERIOD_INFO,
+  WEEKEND_PERIOD_INFO,
+} from '../../Timetable/constants';
+
+// 요일별 색상 정의
+const DAY_COLORS: Record<string, { bg: string; text: string }> = {
+  '월': { bg: '#fef3c7', text: '#92400e' },
+  '화': { bg: '#fce7f3', text: '#9d174d' },
+  '수': { bg: '#dbeafe', text: '#1e40af' },
+  '목': { bg: '#d1fae5', text: '#065f46' },
+  '금': { bg: '#e0e7ff', text: '#3730a3' },
+  '토': { bg: '#fee2e2', text: '#991b1b' },
+  '일': { bg: '#f3e8ff', text: '#6b21a8' },
+};
+
+// 수학 교시 라벨 포맷팅
+function formatMathLabel(periods: string[]): string {
+  const completeGroups: number[] = [];
+  const usedPeriods = new Set<string>();
+
+  for (let group = 1; group <= 4; group++) {
+    const first = String(group * 2 - 1);
+    const second = String(group * 2);
+
+    if (periods.includes(first) && periods.includes(second)) {
+      completeGroups.push(group);
+      usedPeriods.add(first);
+      usedPeriods.add(second);
+    }
+  }
+
+  const allPeriodsUsed = periods.every(p => usedPeriods.has(p));
+
+  if (allPeriodsUsed && completeGroups.length > 0) {
+    return completeGroups.map(g => `${g}교시`).join(', ');
+  } else {
+    const times = periods.map(p => MATH_PERIOD_INFO[p]).filter(Boolean);
+    if (times.length === 0) return '시간 미정';
+
+    const startTime = times[0].startTime;
+    const endTime = times[times.length - 1].endTime;
+    return `${startTime}~${endTime}`;
+  }
+}
+
+// 주말 교시 라벨 포맷팅
+function formatWeekendLabel(periods: string[]): string {
+  if (periods.length === 0) return '시간 미정';
+
+  const times = periods
+    .map(p => WEEKEND_PERIOD_INFO[p])
+    .filter(Boolean)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+  if (times.length === 0) return '시간 미정';
+
+  const startTime = times[0].startTime;
+  const endTime = times[times.length - 1].endTime;
+  return `${startTime}~${endTime}`;
+}
+
+// 영어 교시 라벨 포맷팅
+function formatEnglishLabel(periods: string[]): string {
+  if (periods.length === 0) return '시간 미정';
+
+  const nums = periods.map(Number).sort((a, b) => a - b);
+
+  if (nums.length === 1) {
+    return `${nums[0]}교시`;
+  }
+
+  const isConsecutive = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
+
+  if (isConsecutive) {
+    return `${nums[0]}~${nums[nums.length - 1]}교시`;
+  } else {
+    return nums.map(n => `${n}교시`).join(', ');
+  }
+}
+
+interface ScheduleBadgeProps {
+  schedule?: string[];
+  subject: SubjectForSchedule;
+}
+
+const ScheduleBadge: React.FC<ScheduleBadgeProps> = ({ schedule, subject }) => {
+  if (!schedule || schedule.length === 0) {
+    return <span className="text-gray-400 italic text-xxs">시간 미정</span>;
+  }
+
+  const getPeriodInfoForDay = (day: string) => {
+    if (day === '토' || day === '일') {
+      return WEEKEND_PERIOD_INFO;
+    }
+    return subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
+  };
+
+  const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+
+  const dayPeriods: Map<string, string[]> = new Map();
+
+  for (const item of schedule) {
+    const parts = item.split(' ');
+    const day = parts[0];
+    const periodId = parts[1] || '';
+    const periodInfo = getPeriodInfoForDay(day);
+    if (!periodId || !periodInfo[periodId]) continue;
+
+    if (!dayPeriods.has(day)) {
+      dayPeriods.set(day, []);
+    }
+    dayPeriods.get(day)!.push(periodId);
+  }
+
+  if (dayPeriods.size === 0) {
+    return <span className="text-gray-400 italic text-xxs">시간 미정</span>;
+  }
+
+  const dayLabels: Map<string, string> = new Map();
+
+  for (const [day, periods] of dayPeriods) {
+    const sortedPeriods = periods.sort((a, b) => Number(a) - Number(b));
+    const isWeekend = day === '토' || day === '일';
+
+    let label: string;
+    if (isWeekend) {
+      label = formatWeekendLabel(sortedPeriods);
+    } else if (subject === 'english') {
+      label = formatEnglishLabel(sortedPeriods);
+    } else {
+      label = formatMathLabel(sortedPeriods);
+    }
+    dayLabels.set(day, label);
+  }
+
+  const labelToDays: Map<string, string[]> = new Map();
+
+  for (const [day, label] of dayLabels) {
+    if (!labelToDays.has(label)) {
+      labelToDays.set(label, []);
+    }
+    labelToDays.get(label)!.push(day);
+  }
+
+  const entries: Array<{ days: string[]; label: string }> = [];
+  for (const [label, days] of labelToDays) {
+    days.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+    entries.push({ days, label });
+  }
+
+  entries.sort((a, b) => dayOrder.indexOf(a.days[0]) - dayOrder.indexOf(b.days[0]));
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {entries.map((entry, idx) => (
+        <div key={idx} className="flex items-center gap-0.5">
+          <div className="flex">
+            {entry.days.map((day, dayIdx) => {
+              const colors = DAY_COLORS[day] || { bg: '#f3f4f6', text: '#374151' };
+              return (
+                <span
+                  key={day}
+                  className={`px-1 py-0.5 text-micro font-bold ${dayIdx === 0 ? 'rounded-l' : ''} ${dayIdx === entry.days.length - 1 ? 'rounded-r' : ''}`}
+                  style={{ backgroundColor: colors.bg, color: colors.text }}
+                >
+                  {day}
+                </span>
+              );
+            })}
+          </div>
+          <span className="text-xxs font-semibold text-gray-700">
+            {entry.label}
+          </span>
+          {idx < entries.length - 1 && (
+            <span className="text-gray-300 mx-0.5">/</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 interface CoursesTabProps {
   student: UnifiedStudent;
@@ -29,6 +213,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
   const [deletingClass, setDeletingClass] = useState<string | null>(null);
   const { refreshStudents } = useStudents();
   const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
+  const { data: allClasses = [] } = useClasses();
   const queryClient = useQueryClient();
 
   // 같은 수업(className)끼리 그룹화
@@ -99,16 +284,27 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
 
   // 수업 클릭 시 ClassDetailModal용 ClassInfo 생성
   const handleClassClick = (group: GroupedEnrollment) => {
-    const mainTeacher = getMainTeacher(group);
-    const classInfo: ClassInfo = {
-      id: `${group.subject}_${group.className}`,
-      className: group.className,
-      subject: group.subject,
-      teacher: mainTeacher || group.teachers[0] || '',
-      schedule: group.days.map(day => `${day}`),
-      studentCount: 0,
-    };
-    setSelectedClass(classInfo);
+    // allClasses에서 실제 수업 정보 찾기
+    const actualClass = allClasses.find(
+      c => c.className === group.className && c.subject === group.subject
+    );
+
+    if (actualClass) {
+      // 실제 수업 정보가 있으면 그대로 사용
+      setSelectedClass(actualClass);
+    } else {
+      // 없으면 enrollment 기반으로 기본 정보 생성
+      const mainTeacher = getMainTeacher(group);
+      const classInfo: ClassInfo = {
+        id: `${group.subject}_${group.className}`,
+        className: group.className,
+        subject: group.subject,
+        teacher: mainTeacher || group.teachers[0] || '',
+        schedule: group.days.map(day => `${day}`),
+        studentCount: 0,
+      };
+      setSelectedClass(classInfo);
+    }
   };
 
   // 수업 배정 취소 (해당 학생의 enrollment만 삭제)
@@ -159,17 +355,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
     refreshStudents();
   };
 
-  // 요일 정렬 헬퍼
-  const sortDays = (days: string[]) => {
-    const order = ['월', '화', '수', '목', '금', '토', '일'];
-    return [...days].sort((a, b) => order.indexOf(a) - order.indexOf(b));
-  };
-
   if (loadingTeachers) {
     return (
-      <div className="text-center py-12">
-        <div className="animate-spin w-8 h-8 border-4 border-[#fdb813] border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p className="text-gray-500">수업 정보 불러오는 중...</p>
+      <div className="text-center py-6">
+        <div className="animate-spin w-5 h-5 border-2 border-[#fdb813] border-t-transparent rounded-full mx-auto mb-2"></div>
+        <p className="text-gray-500 text-xs">수업 정보 불러오는 중...</p>
       </div>
     );
   }
@@ -189,15 +379,21 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
     const key = `${group.subject}_${group.className}`;
     const isDeleting = deletingClass === key;
 
+    // 실제 수업 정보 가져오기
+    const actualClass = allClasses.find(
+      c => c.className === group.className && c.subject === group.subject
+    );
+    const subjectForSchedule: SubjectForSchedule = group.subject === 'english' ? 'english' : 'math';
+
     return (
       <div
         key={`${group.subject}-${index}`}
         onClick={() => !isDeleting && handleClassClick(group)}
-        className={`flex items-center gap-3 px-3 py-2.5 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors ${isDeleting ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
+        className={`flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors ${isDeleting ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
       >
         {/* 과목 뱃지 */}
         <span
-          className="w-12 shrink-0 text-xs px-2 py-1 rounded font-semibold text-center"
+          className="w-8 shrink-0 text-micro px-1 py-0.5 rounded font-semibold text-center"
           style={{
             backgroundColor: subjectColor.bg,
             color: subjectColor.text,
@@ -207,34 +403,42 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
         </span>
 
         {/* 수업명 */}
-        <span className="flex-1 text-sm text-[#081429] truncate font-medium">
+        <span className="w-24 shrink-0 text-xs text-[#081429] truncate font-medium">
           {group.className}
         </span>
 
         {/* 강사 */}
-        <div className="w-24 shrink-0 flex items-center gap-1">
-          <User className="w-3.5 h-3.5 text-gray-400" />
-          <span className="text-sm text-[#373d41] truncate">
+        <div className="w-14 shrink-0 flex items-center gap-0.5">
+          <User className="w-3 h-3 text-gray-400" />
+          <span className="text-xxs text-[#373d41] truncate">
             {mainTeacher || visibleTeachers[0] || '-'}
           </span>
         </div>
 
-        {/* 요일 */}
-        <div className="w-16 shrink-0 text-sm text-[#373d41] text-right">
-          {sortDays(group.days).join(' ')}
+        {/* 스케줄 (요일+교시 배지) */}
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <ScheduleBadge schedule={actualClass?.schedule} subject={subjectForSchedule} />
+        </div>
+
+        {/* 학생수 */}
+        <div className="w-10 shrink-0 flex items-center justify-center gap-0.5">
+          <Users className="w-3 h-3 text-gray-400" />
+          <span className="text-xxs font-medium text-[#081429]">
+            {actualClass?.studentCount || 0}
+          </span>
         </div>
 
         {/* 삭제 버튼 */}
         <button
           onClick={(e) => handleRemoveEnrollment(group, e)}
           disabled={isDeleting}
-          className="w-8 h-8 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+          className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
           title="수업 배정 취소"
         >
           {isDeleting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-3 h-3 animate-spin" />
           ) : (
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3" />
           )}
         </button>
       </div>
@@ -242,42 +446,43 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* 헤더 */}
       <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-bold text-[#081429]">수강 중인 수업</h3>
-          <p className="text-sm text-[#373d41] mt-1">
-            총 {groupedEnrollments.length}개 수업
-          </p>
+        <div className="flex items-center gap-2">
+          <h3 className="text-xs font-bold text-[#081429]">수강 중인 수업</h3>
+          <span className="text-xs text-[#373d41]">
+            ({groupedEnrollments.length}개)
+          </span>
         </div>
         <button
           onClick={() => setIsAssignModalOpen(true)}
-          className="bg-[#fdb813] text-[#081429] px-4 py-2 rounded-lg font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-2"
+          className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
         >
-          <Plus className="w-4 h-4" />
-          수업 배정
+          <Plus className="w-3 h-3" />
+          배정
         </button>
       </div>
 
       {/* 수업 목록 - 행 스타일 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white border border-gray-200 overflow-hidden">
         {/* 테이블 헤더 */}
-        <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-[#373d41]">
-          <span className="w-12 shrink-0">과목</span>
-          <span className="flex-1">수업명</span>
-          <span className="w-24 shrink-0">강사</span>
-          <span className="w-16 shrink-0 text-right">요일</span>
-          <span className="w-8 shrink-0"></span>
+        <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
+          <span className="w-8 shrink-0">과목</span>
+          <span className="w-24 shrink-0">수업명</span>
+          <span className="w-14 shrink-0">강사</span>
+          <span className="flex-1">스케줄</span>
+          <span className="w-10 shrink-0 text-center">인원</span>
+          <span className="w-5 shrink-0"></span>
         </div>
 
         {groupedEnrollments.length === 0 ? (
-          <div className="text-center py-12">
-            <BookOpen className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-gray-500">수강 중인 수업이 없습니다</p>
+          <div className="text-center py-6">
+            <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+            <p className="text-gray-500 text-xs">수강 중인 수업이 없습니다</p>
             <button
               onClick={() => setIsAssignModalOpen(true)}
-              className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
             >
               + 수업 배정하기
             </button>

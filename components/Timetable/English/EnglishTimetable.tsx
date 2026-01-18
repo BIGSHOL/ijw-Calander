@@ -291,7 +291,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     }, [publishToLive, currentUser]);
 
     return (
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
+        <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
             {/* Header */}
             <div className={`text-center py-3 border-b shrink-0 relative transition-colors duration-300 ${isSimulationMode ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
                 <h1 className="text-2xl font-black text-gray-800 tracking-tight flex items-center justify-center gap-2">

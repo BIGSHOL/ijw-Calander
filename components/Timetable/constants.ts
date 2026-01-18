@@ -174,6 +174,33 @@ export const MATH_GROUP_TIMES: Record<number, string> = {
     4: '20:10~22:00',
 };
 
+// 수학 시간표 그리드용: 그룹화된 교시 목록 (1-1+1-2 → 1교시, 2-1+2-2 → 2교시, ...)
+export const MATH_GROUPED_PERIODS = ['1', '2', '3', '4'] as const;
+
+// 수학 시간표 그리드용: 그룹 번호별 포함 교시
+export const MATH_GROUP_PERIOD_IDS: Record<string, string[]> = {
+    '1': ['1-1', '1-2'],  // 1교시 = 1-1 + 1-2
+    '2': ['2-1', '2-2'],  // 2교시 = 2-1 + 2-2
+    '3': ['3-1', '3-2'],  // 3교시 = 3-1 + 3-2
+    '4': ['4-1', '4-2'],  // 4교시 = 4-1 + 4-2
+};
+
+// 수학 시간표 그리드용: 그룹 번호별 표시 정보
+export const MATH_GROUP_DISPLAY: Record<string, { label: string; time: string }> = {
+    '1': { label: '1교시', time: '14:30~16:20' },
+    '2': { label: '2교시', time: '16:20~18:10' },
+    '3': { label: '3교시', time: '18:20~20:10' },
+    '4': { label: '4교시', time: '20:10~22:00' },
+};
+
+// 레거시 periodId → 그룹 번호 매핑
+export const LEGACY_PERIOD_TO_GROUP: Record<string, string> = {
+    '1-1': '1', '1-2': '1',
+    '2-1': '2', '2-2': '2',
+    '3-1': '3', '3-2': '3',
+    '4-1': '4', '4-2': '4',
+};
+
 // 하위 호환용
 export const GROUP_TIMES = MATH_GROUP_TIMES;
 
