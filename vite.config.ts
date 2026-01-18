@@ -63,9 +63,23 @@ export default defineConfig(({ mode }) => {
           // Ensure proper chunk loading order
           inlineDynamicImports: false,
           manualChunks: (id) => {
-            // Firebase - 가장 큰 의존성
+            // React 코어 - 별도 청크로 분리 (캐싱 효율화)
+            if (id.includes('node_modules/react-dom')) {
+              return 'react-dom';
+            }
+            if (id.includes('node_modules/react/') || id.includes('node_modules/scheduler')) {
+              return 'react';
+            }
+
+            // Firebase - 모듈별 분리
+            if (id.includes('firebase/auth') || id.includes('@firebase/auth')) {
+              return 'firebase-auth';
+            }
+            if (id.includes('firebase/firestore') || id.includes('@firebase/firestore')) {
+              return 'firebase-firestore';
+            }
             if (id.includes('firebase')) {
-              return 'firebase';
+              return 'firebase-core';
             }
 
             // Lucide-react in separate chunk
@@ -74,7 +88,7 @@ export default defineConfig(({ mode }) => {
             }
 
             // Charts - 큰 라이브러리
-            if (id.includes('recharts')) {
+            if (id.includes('recharts') || id.includes('d3-')) {
               return 'charts';
             }
 
@@ -99,8 +113,23 @@ export default defineConfig(({ mode }) => {
             }
 
             // Markdown
-            if (id.includes('react-markdown')) {
+            if (id.includes('react-markdown') || id.includes('remark') || id.includes('unified')) {
               return 'markdown';
+            }
+
+            // Excel processing
+            if (id.includes('xlsx')) {
+              return 'xlsx';
+            }
+
+            // Google AI
+            if (id.includes('@google/genai') || id.includes('@google/generative-ai')) {
+              return 'google-ai';
+            }
+
+            // Tanstack React Query
+            if (id.includes('@tanstack/react-query')) {
+              return 'react-query';
             }
 
             // Common components - separate chunk
@@ -108,7 +137,7 @@ export default defineConfig(({ mode }) => {
               return 'common-components';
             }
 
-            // ALL node_modules (including React) in vendor
+            // 나머지 node_modules
             if (id.includes('node_modules')) {
               return 'vendor';
             }

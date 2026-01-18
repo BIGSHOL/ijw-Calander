@@ -3,7 +3,9 @@ import { UnifiedStudent, Consultation, CATEGORY_CONFIG } from '../../../types';
 import { MessageSquare, Plus } from 'lucide-react';
 import { useStudentConsultations, getFollowUpUrgency, getFollowUpDaysLeft } from '../../../hooks/useStudentConsultations';
 import { useStaff } from '../../../hooks/useStaff';
-import { AddConsultationModal, ConsultationDetailModal } from '../../StudentConsultation';
+import { ConsultationDetailModal } from '../../StudentConsultation';
+// Lazy load for better code splitting
+const AddConsultationModal = React.lazy(() => import('../../StudentConsultation/AddConsultationModal'));
 
 interface ConsultationsTabProps {
   student: UnifiedStudent;

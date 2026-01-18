@@ -3,8 +3,9 @@ import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List } from 'luci
 import { usePaginatedConsultations, StudentConsultationFilters, DEFAULT_PAGE_SIZE } from '../../hooks/useStudentConsultations';
 import { ConsultationCategory, CATEGORY_CONFIG } from '../../types';
 import ConsultationList from './ConsultationList';
-import AddConsultationModal from './AddConsultationModal';
-import ConsultationMigrationModal from './ConsultationMigrationModal';
+// Lazy load modals for better code splitting
+const AddConsultationModal = React.lazy(() => import('./AddConsultationModal'));
+const ConsultationMigrationModal = React.lazy(() => import('./ConsultationMigrationModal'));
 import { useStudents } from '../../hooks/useStudents';
 import { useStaff } from '../../hooks/useStaff';
 import { ConsultationDashboard } from '../Dashboard';
