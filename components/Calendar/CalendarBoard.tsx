@@ -7,7 +7,8 @@ import { getMonthWeeks } from '../../utils/dateUtils';
 import WeekBlock from './WeekBlock';
 import MyEventsModal from './MyEventsModal'; // Import
 import CustomSelect from './CustomSelect'; // Import CustomSelect
-import CalendarSettingsModal from './CalendarSettingsModal'; // Import CalendarSettingsModal
+// CalendarSettingsModal은 App.tsx에서 lazy loading으로 관리됨
+const CalendarSettingsModal = React.lazy(() => import('./CalendarSettingsModal'));
 import { Archive, Clock, Users, Edit3, ChevronLeft, ChevronRight, Calendar as CalendarIcon, List, Search, Filter, X, Check, Settings } from 'lucide-react';
 import { EVENT_COLORS } from '../../constants';
 import YearlyView from './YearlyView'; // Import YearlyView

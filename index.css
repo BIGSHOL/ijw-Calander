@@ -614,3 +614,71 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ==================== PERFORMANCE OPTIMIZATIONS ==================== */
+/* Vercel React Best Practices: rendering-content-visibility */
+
+/* 긴 목록 아이템 최적화 - 화면 밖 콘텐츠 렌더링 지연 */
+.student-list-item,
+.consultation-list-item,
+.class-list-item,
+.attendance-row,
+.event-list-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 60px;
+}
+
+/* 테이블 행 최적화 */
+.virtual-table-row,
+tbody tr {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 48px;
+}
+
+/* 카드 컴포넌트 최적화 */
+.class-card,
+.student-card,
+.event-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 120px;
+}
+
+/* 캘린더 이벤트 최적화 */
+.calendar-event-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 32px;
+}
+
+/* 모달 내부 긴 목록 최적화 */
+.modal-list-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 44px;
+}
+
+/* 시간표 셀 최적화 */
+.timetable-cell {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 80px;
+}
+
+/* contain 속성으로 레이아웃 격리 */
+.isolated-component {
+  contain: layout style paint;
+}
+
+/* 스크롤 성능 개선 */
+.scroll-container {
+  will-change: scroll-position;
+  overflow-anchor: none;
+}
+
+/* GPU 가속 활성화 (애니메이션 요소) */
+.animate-element {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* 무거운 스타일 요소 격리 */
+.heavy-component {
+  contain: strict;
+}
