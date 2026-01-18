@@ -159,7 +159,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                         강의실 데이터가 없습니다.
                     </div>
                 ) : (
-                    <table className="border-collapse bg-white rounded shadow w-max table-fixed">
+                    <table className="border-collapse bg-white shadow w-max table-fixed">
                         <thead className="sticky top-0 z-10">
                             <tr>
                                 <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>

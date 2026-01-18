@@ -20,10 +20,10 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
   const { updateStudent, deleteStudent } = useStudents();
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
-    { id: 'basic', label: '기본정보', icon: <User className="w-4 h-4" /> },
-    { id: 'courses', label: '수업', icon: <BookOpen className="w-4 h-4" /> },
-    { id: 'grades', label: '성적', icon: <GraduationCap className="w-4 h-4" /> },
-    { id: 'consultations', label: '상담', icon: <MessageSquare className="w-4 h-4" /> },
+    { id: 'basic', label: '기본정보', icon: <User className="w-3 h-3" /> },
+    { id: 'courses', label: '수업', icon: <BookOpen className="w-3 h-3" /> },
+    { id: 'grades', label: '성적', icon: <GraduationCap className="w-3 h-3" /> },
+    { id: 'consultations', label: '상담', icon: <MessageSquare className="w-3 h-3" /> },
   ];
 
   const isWithdrawn = student.status === 'withdrawn';
@@ -67,53 +67,48 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
   return (
     <div className="flex flex-col h-full">
       {/* 헤더: 학생 이름 + 퇴원/재원 버튼 */}
-      <div className="p-5 border-b border-gray-200 bg-white">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-[#081429]">{student.name}</h2>
-            {student.englishName && (
-              <p className="text-sm text-gray-500 mt-1 font-medium">{student.englishName}</p>
-            )}
-          </div>
+      <div className="px-3 py-2 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-bold text-[#081429]">{student.name}</span>
 
           {/* 퇴원/재원/삭제 버튼 */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {isWithdrawn ? (
               <button
                 onClick={handleReactivate}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors"
               >
-                <UserCheck className="w-4 h-4" />
+                <UserCheck className="w-3 h-3" />
                 <span>재원 복구</span>
               </button>
             ) : (
               <button
                 onClick={() => setShowWithdrawalModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
               >
-                <UserMinus className="w-4 h-4" />
+                <UserMinus className="w-3 h-3" />
                 <span>퇴원 처리</span>
               </button>
             )}
             <button
               onClick={handleDelete}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-red-100 hover:text-red-700 transition-colors"
+              className="flex items-center gap-1 p-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-red-100 hover:text-red-700 transition-colors"
               title="학생 삭제"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3 h-3" />
             </button>
           </div>
         </div>
       </div>
 
       {/* 탭 네비게이션 */}
-      <div className="border-b border-gray-200 bg-white px-5">
-        <div className="flex gap-4">
+      <div className="border-b border-gray-200 bg-white px-3">
+        <div className="flex gap-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-1 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === tab.id
+              className={`flex items-center gap-1 px-1 py-1.5 text-xs font-bold border-b-2 transition-all ${activeTab === tab.id
                 ? 'text-[#081429] border-[#fdb813]'
                 : 'text-gray-400 border-transparent hover:text-gray-600'
                 }`}
@@ -126,7 +121,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
       </div>
 
       {/* 탭 컨텐츠 */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3">
         {activeTab === 'basic' && <BasicInfoTab student={student} />}
         {activeTab === 'courses' && <CoursesTab student={student} />}
         {activeTab === 'grades' && <GradesTab student={student} />}

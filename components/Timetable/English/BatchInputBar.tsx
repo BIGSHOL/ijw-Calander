@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Trash2, Check, X, Plus } from 'lucide-react';
 
 export interface MergedClass {
@@ -51,23 +52,29 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
     // 자동완성 상태 관리
     const [showMainSuggestions, setShowMainSuggestions] = useState(false);
     const [activeMergedIndex, setActiveMergedIndex] = useState<number | null>(null);
-    const mainInputRef = useRef<HTMLInputElement>(null);
-    const mergedInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+    const mainInputRef = useRef<HTMLDivElement>(null);
+    const mergedInputRefs = useRef<(HTMLDivElement | null)[]>([]);
     const suggestionsRef = useRef<HTMLDivElement>(null);
 
-    // 검색 필터링된 수업 목록
+    // 드롭다운 위치 계산
+    const updateDropdownPosition = (inputEl: HTMLDivElement | null) => {
+        if (!inputEl) return;
+        const rect = inputEl.getBoundingClientRect();
+        setDropdownPos({
+            top: rect.top - 4, // input 위에 표시
+            left: rect.left,
+        });
+    };
+
+    // 검색 필터링된 수업 목록 (전체 표시, 스크롤로 탐색)
     const getFilteredSuggestions = (searchValue: string) => {
-        if (!searchValue.trim()) return classSuggestions.slice(0, 10);
+        if (!searchValue.trim()) return classSuggestions;
         const lower = searchValue.toLowerCase();
-        return classSuggestions
-            .filter(c => c.className.toLowerCase().includes(lower))
-            .slice(0, 10);
+        return classSuggestions.filter(c => c.className.toLowerCase().includes(lower));
     };
 
     const mainSuggestions = getFilteredSuggestions(inputData.className);
-    const mergedSuggestions = activeMergedIndex !== null && inputData.merged[activeMergedIndex]
-        ? getFilteredSuggestions(inputData.merged[activeMergedIndex].className)
-        : [];
 
     // 수업 선택 핸들러 (메인)
     const handleSelectMainClass = (suggestion: ClassSuggestion) => {
@@ -99,6 +106,60 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // 현재 표시할 suggestions 결정
+    const currentSuggestions = showMainSuggestions
+        ? mainSuggestions
+        : (activeMergedIndex !== null ? getFilteredSuggestions(inputData.merged[activeMergedIndex]?.className || '') : []);
+
+    const handleSuggestionClick = (suggestion: ClassSuggestion) => {
+        if (showMainSuggestions) {
+            handleSelectMainClass(suggestion);
+        } else if (activeMergedIndex !== null) {
+            handleSelectMergedClass(activeMergedIndex, suggestion);
+        }
+    };
+
+    // 드롭다운 Portal 렌더링
+    const renderDropdown = () => {
+        if ((!showMainSuggestions && activeMergedIndex === null) || currentSuggestions.length === 0 || !dropdownPos) {
+            return null;
+        }
+
+        return createPortal(
+            <div
+                ref={suggestionsRef}
+                className="fixed bg-white border border-gray-300 shadow-2xl overflow-hidden"
+                style={{
+                    top: dropdownPos.top,
+                    left: dropdownPos.left,
+                    transform: 'translateY(-100%)',
+                    zIndex: 9999,
+                    minWidth: 200,
+                    maxHeight: 180, // ~5개 항목
+                }}
+            >
+                <div className="sticky top-0 bg-gray-100 px-2 py-1 text-xxs text-gray-500 font-bold border-b">
+                    등록된 수업 ({classSuggestions.length}개)
+                </div>
+                <div className="overflow-y-auto" style={{ maxHeight: 145 }}>
+                    {currentSuggestions.map((s, i) => (
+                        <button
+                            key={`suggestion-${i}-${s.className}`}
+                            type="button"
+                            onClick={() => handleSuggestionClick(s)}
+                            className="w-full px-3 py-2 text-xs text-left hover:bg-yellow-50 flex items-center justify-between border-b border-gray-50 last:border-b-0"
+                        >
+                            <span className="font-medium">{s.className}</span>
+                            {s.room && <span className="text-gray-400 text-xxs ml-2 shrink-0">{s.room}</span>}
+                        </button>
+                    ))}
+                </div>
+            </div>,
+            document.body
+        );
+    };
+
     return (
         <div className="flex-none bg-white border-t border-[#081429] shadow-[0_-5px_20px_rgba(0,0,0,0.15)] px-6 py-3 z-[50] animate-in slide-in-from-bottom duration-200 flex flex-col gap-2">
 
@@ -146,7 +207,7 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
             <div className="flex gap-2 items-center overflow-x-auto">
 
                 {/* Main Class Card */}
-                <div className="bg-[#fff9db] p-2 rounded-lg border border-yellow-200 shadow-sm flex flex-col gap-1 w-[140px] shrink-0 animate-in zoom-in duration-200 relative">
+                <div className="bg-[#fff9db] p-2 border border-yellow-200 shadow-sm flex flex-col gap-1 w-[140px] shrink-0 animate-in zoom-in duration-200 relative">
                     <div className="flex justify-between items-center -mt-1">
                         <span className="text-xxs font-bold text-yellow-700">#1</span>
                         <label className="flex items-center gap-0.5 cursor-pointer select-none">
@@ -162,45 +223,21 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                         </label>
                     </div>
 
-                    <div className="relative">
-                        <input
-                            ref={mainInputRef}
-                            value={inputData.className}
-                            onChange={(e) => {
-                                setInputData({ ...inputData, className: e.target.value });
-                                setShowMainSuggestions(true);
-                            }}
-                            onFocus={() => setShowMainSuggestions(true)}
-                            placeholder="수업명"
-                            className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
-                            autoComplete="off"
-                        />
-                        {/* 자동완성 드롭다운 */}
-                        {showMainSuggestions && mainSuggestions.length > 0 && (
-                            <div
-                                ref={suggestionsRef}
-                                className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[100] max-h-[200px] overflow-y-auto"
-                            >
-                                {mainSuggestions.map((s, i) => (
-                                    <button
-                                        key={`main-${i}-${s.className}`}
-                                        type="button"
-                                        onClick={() => handleSelectMainClass(s)}
-                                        className="w-full px-2 py-1.5 text-xs text-left hover:bg-yellow-50 flex items-center justify-between border-b border-gray-50 last:border-b-0"
-                                    >
-                                        <span className="font-medium truncate">{s.className}</span>
-                                        {s.room && <span className="text-gray-400 text-xxs ml-1">{s.room}</span>}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                    <div
+                        ref={mainInputRef}
+                        onClick={() => {
+                            setShowMainSuggestions(true);
+                            setActiveMergedIndex(null);
+                            updateDropdownPosition(mainInputRef.current);
+                        }}
+                        className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white hover:bg-yellow-50 cursor-pointer text-center truncate"
+                    >
+                        {inputData.className || <span className="text-gray-400">수업 선택</span>}
                     </div>
 
                     <input
                         value={inputData.room}
-                        onChange={(e) =>
-                            setInputData({ ...inputData, room: e.target.value })
-                        }
+                        onChange={(e) => setInputData({ ...inputData, room: e.target.value })}
                         placeholder="강의실"
                         className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
                     />
@@ -209,22 +246,17 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                 {/* Add Merged Class Button */}
                 <button
                     onClick={addMerged}
-                    className="w-[60px] h-[70px] rounded-lg border-2 border-dashed border-gray-300 text-gray-400 hover:border-[#fdb813] hover:text-[#fdb813] hover:bg-yellow-50 flex flex-col items-center justify-center gap-1 shrink-0 transition-all"
+                    className="w-[60px] h-[70px] border-2 border-dashed border-gray-300 text-gray-400 hover:border-[#fdb813] hover:text-[#fdb813] hover:bg-yellow-50 flex flex-col items-center justify-center gap-1 shrink-0 transition-all"
                 >
                     <Plus size={20} />
                     <span className="text-xxs font-bold">합반</span>
                 </button>
 
                 {/* Merged List */}
-                {inputData.merged.map((m, idx) => {
-                    const currentMergedSuggestions = activeMergedIndex === idx
-                        ? getFilteredSuggestions(m.className)
-                        : [];
-
-                    return (
+                {inputData.merged.map((m, idx) => (
                         <div
                             key={`merged-${idx}-${m.className}-${m.room}`}
-                            className="bg-[#fff9db] p-2 rounded-lg border border-yellow-200 shadow-sm flex flex-col gap-1 w-[140px] shrink-0 relative group animate-in zoom-in duration-200"
+                            className="bg-[#fff9db] p-2 border border-yellow-200 shadow-sm flex flex-col gap-1 w-[140px] shrink-0 relative group animate-in zoom-in duration-200"
                         >
                             <div className="flex justify-between items-center -mt-1">
                                 <span className="text-xxs font-bold text-yellow-700">
@@ -249,35 +281,16 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                                 </div>
                             </div>
 
-                            <div className="relative">
-                                <input
-                                    ref={el => { mergedInputRefs.current[idx] = el; }}
-                                    value={m.className}
-                                    onChange={(e) => {
-                                        updateMerged(idx, "className", e.target.value);
-                                        setActiveMergedIndex(idx);
-                                    }}
-                                    onFocus={() => setActiveMergedIndex(idx)}
-                                    placeholder="수업명"
-                                    className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
-                                    autoComplete="off"
-                                />
-                                {/* 합반 자동완성 드롭다운 */}
-                                {activeMergedIndex === idx && currentMergedSuggestions.length > 0 && (
-                                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[100] max-h-[200px] overflow-y-auto">
-                                        {currentMergedSuggestions.map((s, i) => (
-                                            <button
-                                                key={`merged-${idx}-${i}-${s.className}`}
-                                                type="button"
-                                                onClick={() => handleSelectMergedClass(idx, s)}
-                                                className="w-full px-2 py-1.5 text-xs text-left hover:bg-yellow-50 flex items-center justify-between border-b border-gray-50 last:border-b-0"
-                                            >
-                                                <span className="font-medium truncate">{s.className}</span>
-                                                {s.room && <span className="text-gray-400 text-xxs ml-1">{s.room}</span>}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
+                            <div
+                                ref={el => { mergedInputRefs.current[idx] = el as any; }}
+                                onClick={() => {
+                                    setActiveMergedIndex(idx);
+                                    setShowMainSuggestions(false);
+                                    updateDropdownPosition(mergedInputRefs.current[idx] as any);
+                                }}
+                                className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white hover:bg-yellow-50 cursor-pointer text-center truncate"
+                            >
+                                {m.className || <span className="text-gray-400">수업 선택</span>}
                             </div>
 
                             <input
@@ -287,9 +300,11 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                                 className="w-full text-xs border border-yellow-200/50 rounded px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
                             />
                         </div>
-                    );
-                })}
+                ))}
             </div>
+
+            {/* 자동완성 드롭다운 (Portal) */}
+            {renderDropdown()}
         </div>
     );
 };

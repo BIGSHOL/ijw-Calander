@@ -202,7 +202,21 @@ export function useStaff() {
         await cascadeNameUpdate(oldName, oldEnglishName, newName, newEnglishName);
       }
 
-      // users 컬렉션 동기화 제거됨 - staff 컬렉션이 유일한 데이터 소스
+      // staffIndex 동기화 (Firestore Rules에서 역할 확인용)
+      const staffDocSnap = await getDoc(docRef);
+      const staffData = staffDocSnap.data();
+      if (staffData?.uid && updates.systemRole) {
+        const indexRef = doc(db, 'staffIndex', staffData.uid);
+        try {
+          await updateDoc(indexRef, {
+            systemRole: updates.systemRole,
+            updatedAt: now,
+          });
+        } catch {
+          // staffIndex 문서가 없으면 무시 (로그인 시 생성됨)
+          console.warn('staffIndex not found for uid:', staffData.uid);
+        }
+      }
 
       return { id, updates };
     },

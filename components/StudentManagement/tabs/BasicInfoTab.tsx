@@ -180,18 +180,18 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
     disabled?: boolean;
     className?: string;
   }) => (
-    <div className={`flex items-center gap-3 px-4 py-2.5 ${className}`}>
-      <label className="w-28 shrink-0 text-sm font-medium text-[#373d41]">{label}</label>
+    <div className={`flex items-center gap-2 px-2 py-1 ${className}`}>
+      <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">{label}</label>
       {isEditing && !disabled ? (
         <input
           type={type}
           value={value ?? ''}
           onChange={(e) => handleChange(field, type === 'number' ? Number(e.target.value) : e.target.value)}
           placeholder={placeholder}
-          className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
+          className="flex-1 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
         />
       ) : (
-        <span className="flex-1 text-sm text-[#081429]">{value || '-'}</span>
+        <span className="flex-1 text-xs text-[#081429]">{value || '-'}</span>
       )}
     </div>
   );
@@ -210,13 +210,13 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
     options: string[];
     className?: string;
   }) => (
-    <div className={`flex items-center gap-3 px-4 py-2.5 ${className}`}>
-      <label className="w-28 shrink-0 text-sm font-medium text-[#373d41]">{label}</label>
+    <div className={`flex items-center gap-2 px-2 py-1 ${className}`}>
+      <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">{label}</label>
       {isEditing ? (
         <select
           value={value || ''}
           onChange={(e) => handleChange(field, e.target.value)}
-          className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
+          className="flex-1 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
         >
           <option value="">선택</option>
           {options.map(opt => (
@@ -224,7 +224,7 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
           ))}
         </select>
       ) : (
-        <span className="flex-1 text-sm text-[#081429]">{value || '-'}</span>
+        <span className="flex-1 text-xs text-[#081429]">{value || '-'}</span>
       )}
     </div>
   );
@@ -239,23 +239,23 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
     checked: boolean | undefined;
     field: keyof UnifiedStudent;
   }) => (
-    <label className="flex items-center gap-2 cursor-pointer">
+    <label className="flex items-center gap-1 cursor-pointer">
       <input
         type="checkbox"
         checked={checked ?? false}
         onChange={(e) => handleChange(field, e.target.checked)}
         disabled={!isEditing}
-        className="w-4 h-4 text-[#fdb813] rounded focus:ring-[#fdb813] disabled:opacity-50"
+        className="w-3 h-3 text-[#fdb813] rounded focus:ring-[#fdb813] disabled:opacity-50"
       />
-      <span className="text-sm text-[#373d41]">{label}</span>
+      <span className="text-xs text-[#373d41]">{label}</span>
     </label>
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* 저장 메시지 */}
       {saveMessage && (
-        <div className={`px-4 py-2 rounded-lg text-sm font-medium ${
+        <div className={`px-2 py-1 rounded text-xs font-medium ${
           saveMessage.includes('실패') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
         }`}>
           {saveMessage}
@@ -264,43 +264,40 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
 
       {/* 액션 버튼 */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <span
-            className="px-3 py-1 rounded text-xs font-semibold"
+            className="px-1.5 py-0.5 rounded text-micro font-semibold"
             style={{ backgroundColor: statusStyle.bg, color: statusStyle.text }}
           >
             {statusStyle.label}
           </span>
-          <span className="text-lg font-bold text-[#081429]">{student.name}</span>
-          {student.englishName && (
-            <span className="text-sm text-[#373d41]">({student.englishName})</span>
-          )}
+          <span className="text-xs font-bold text-[#081429]">{student.name}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {isEditing ? (
             <>
               <button
                 onClick={handleCancel}
-                className="px-4 py-2 text-sm font-medium text-[#373d41] bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
+                className="px-2 py-1 text-xs font-medium text-[#373d41] bg-gray-100 rounded hover:bg-gray-200 transition-colors flex items-center gap-1"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3 h-3" />
                 취소
               </button>
               <button
                 onClick={handleSave}
                 disabled={isUpdating}
-                className="px-4 py-2 text-sm font-medium text-[#081429] bg-[#fdb813] rounded-lg hover:bg-[#e5a711] transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="px-2 py-1 text-xs font-medium text-[#081429] bg-[#fdb813] rounded hover:bg-[#e5a711] transition-colors flex items-center gap-1 disabled:opacity-50"
               >
-                <Save className="w-4 h-4" />
+                <Save className="w-3 h-3" />
                 {isUpdating ? '저장 중...' : '저장'}
               </button>
             </>
           ) : (
             <button
               onClick={() => setIsEditing(true)}
-              className="px-4 py-2 text-sm font-medium text-white bg-[#081429] rounded-lg hover:bg-[#1a2845] transition-colors flex items-center gap-2"
+              className="px-2 py-1 text-xs font-medium text-white bg-[#081429] rounded hover:bg-[#1a2845] transition-colors flex items-center gap-1"
             >
-              <FileText className="w-4 h-4" />
+              <FileText className="w-3 h-3" />
               수정
             </button>
           )}
@@ -308,41 +305,41 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
       </div>
 
       {/* 기본 정보 섹션 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <User className="w-5 h-5 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-lg">기본 정보</h3>
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <User className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
         </div>
         <div className="divide-y divide-gray-100">
           <InputField label="이름" value={formData.name} field="name" />
           <InputField label="영어 이름" value={formData.englishName ?? ''} field="englishName" />
-          <div className="flex items-center gap-3 px-4 py-2.5">
-            <label className="w-28 shrink-0 text-sm font-medium text-[#373d41]">성별</label>
+          <div className="flex items-center gap-2 px-2 py-1">
+            <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">성별</label>
             {isEditing ? (
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1 cursor-pointer">
                   <input
                     type="radio"
                     name="gender"
                     checked={formData.gender === 'male'}
                     onChange={() => handleChange('gender', 'male')}
-                    className="w-4 h-4 text-[#fdb813] focus:ring-[#fdb813]"
+                    className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
                   />
-                  <span className="text-sm">남</span>
+                  <span className="text-xs">남</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-1 cursor-pointer">
                   <input
                     type="radio"
                     name="gender"
                     checked={formData.gender === 'female'}
                     onChange={() => handleChange('gender', 'female')}
-                    className="w-4 h-4 text-[#fdb813] focus:ring-[#fdb813]"
+                    className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
                   />
-                  <span className="text-sm">여</span>
+                  <span className="text-xs">여</span>
                 </label>
               </div>
             ) : (
-              <span className="flex-1 text-sm text-[#081429]">
+              <span className="flex-1 text-xs text-[#081429]">
                 {formData.gender === 'male' ? '남' : formData.gender === 'female' ? '여' : '-'}
               </span>
             )}
@@ -351,10 +348,10 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
       </div>
 
       {/* 학교 정보 섹션 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <School className="w-5 h-5 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-lg">학교 정보</h3>
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <School className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">학교 정보</h3>
         </div>
         <div className="divide-y divide-gray-100">
           <InputField label="학교" value={formData.school} field="school" placeholder="예: 침산초" />
@@ -364,72 +361,56 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
       </div>
 
       {/* 연락처 섹션 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <Phone className="w-5 h-5 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-lg">연락처</h3>
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <Phone className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">연락처</h3>
         </div>
         <div className="divide-y divide-gray-100">
           <InputField label="원생 휴대폰" value={formData.studentPhone} field="studentPhone" placeholder="010-0000-0000" />
           <InputField label="원생 집전화" value={formData.homePhone} field="homePhone" placeholder="053-000-0000" />
-          <div className="flex items-center gap-3 px-4 py-2.5">
-            <label className="w-28 shrink-0 text-sm font-medium text-[#373d41]">보호자 (SMS)</label>
+          <div className="flex items-center gap-2 px-2 py-1">
+            <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">보호자 (SMS)</label>
             {isEditing ? (
-              <div className="flex-1 flex items-center gap-2">
+              <div className="flex-1 flex items-center gap-1 flex-wrap">
                 <input
                   type="text"
                   value={formData.parentPhone ?? ''}
                   onChange={(e) => handleChange('parentPhone', e.target.value)}
                   placeholder="010-0000-0000"
-                  className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
+                  className="flex-1 min-w-[100px] px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
                 />
                 <select
                   value={formData.parentRelation ?? '모'}
                   onChange={(e) => handleChange('parentRelation', e.target.value)}
-                  className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
+                  className="w-14 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
                 >
                   {RELATION_OPTIONS.map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
-                <span className="text-sm text-[#373d41]">보호자명:</span>
-                <input
-                  type="text"
-                  value={formData.parentName ?? ''}
-                  onChange={(e) => handleChange('parentName', e.target.value)}
-                  placeholder="이름"
-                  className="w-24 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
-                />
               </div>
             ) : (
-              <span className="flex-1 text-sm text-[#081429]">
-                {formData.parentPhone ? `${formData.parentPhone} (${formData.parentRelation || '모'}) ${formData.parentName || ''}` : '-'}
+              <span className="flex-1 text-xs text-[#081429]">
+                {formData.parentPhone ? `${formData.parentPhone} (${formData.parentRelation || '모'})` : '-'}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 px-4 py-2.5">
-            <label className="w-28 shrink-0 text-sm font-medium text-[#373d41]">기타 알림 번호</label>
+          <div className="flex items-center gap-2 px-2 py-1">
+            <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">기타 알림</label>
             {isEditing ? (
-              <div className="flex-1 flex items-center gap-2">
+              <div className="flex-1 flex items-center gap-1">
                 <input
                   type="text"
                   value={formData.otherPhone ?? ''}
                   onChange={(e) => handleChange('otherPhone', e.target.value)}
                   placeholder="010-0000-0000"
-                  className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
-                />
-                <span className="text-sm text-[#373d41]">관계:</span>
-                <input
-                  type="text"
-                  value={formData.otherPhoneRelation ?? ''}
-                  onChange={(e) => handleChange('otherPhoneRelation', e.target.value)}
-                  placeholder="관계"
-                  className="w-24 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
+                  className="flex-1 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
                 />
               </div>
             ) : (
-              <span className="flex-1 text-sm text-[#081429]">
-                {formData.otherPhone ? `${formData.otherPhone} (${formData.otherPhoneRelation || '-'})` : '-'}
+              <span className="flex-1 text-xs text-[#081429]">
+                {formData.otherPhone || '-'}
               </span>
             )}
           </div>
@@ -437,42 +418,35 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
       </div>
 
       {/* 알림 설정 섹션 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <Bell className="w-5 h-5 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-lg">알림 설정</h3>
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <Bell className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">알림 설정</h3>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="p-2 space-y-2">
           <div>
-            <p className="text-sm font-medium text-[#373d41] mb-2">등하원알림</p>
-            <div className="flex flex-wrap gap-4">
+            <p className="text-xs font-medium text-[#373d41] mb-1">등하원알림</p>
+            <div className="flex flex-wrap gap-3">
               <CheckboxField label="SMS" checked={formData.smsNotification} field="smsNotification" />
               <CheckboxField label="푸시" checked={formData.pushNotification} field="pushNotification" />
               <CheckboxField label="알림톡" checked={formData.kakaoNotification} field="kakaoNotification" />
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium text-[#373d41] mb-2">수납문자발송</p>
-            <div className="flex flex-wrap gap-4">
+            <p className="text-xs font-medium text-[#373d41] mb-1">수납/미납 문자</p>
+            <div className="flex flex-wrap gap-3">
               <CheckboxField label="보호자" checked={formData.billingSmsPrimary} field="billingSmsPrimary" />
               <CheckboxField label="기타보호자" checked={formData.billingSmsOther} field="billingSmsOther" />
-            </div>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-[#373d41] mb-2">미납문자발송</p>
-            <div className="flex flex-wrap gap-4">
-              <CheckboxField label="보호자" checked={formData.overdueSmsPrimary} field="overdueSmsPrimary" />
-              <CheckboxField label="기타보호자" checked={formData.overdueSmsOther} field="overdueSmsOther" />
             </div>
           </div>
         </div>
       </div>
 
       {/* 주소 정보 섹션 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <MapPin className="w-5 h-5 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-lg">주소</h3>
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <MapPin className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">주소</h3>
         </div>
         <div className="divide-y divide-gray-100">
           <InputField label="우편번호" value={formData.zipCode} field="zipCode" placeholder="12345" />
@@ -482,34 +456,33 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
       </div>
 
       {/* 추가 정보 섹션 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <Cake className="w-5 h-5 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-lg">추가 정보</h3>
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <Cake className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">추가 정보</h3>
         </div>
         <div className="divide-y divide-gray-100">
           <InputField label="생년월일" value={formData.birthDate} field="birthDate" type="date" />
           <InputField label="닉네임" value={formData.nickname} field="nickname" />
           <InputField label="원생 이메일" value={formData.studentEmail} field="studentEmail" type="email" placeholder="example@email.com" />
-          <InputField label="입학동기" value={formData.enrollmentReason} field="enrollmentReason" />
         </div>
       </div>
 
       {/* 등록/재원 정보 섹션 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <Calendar className="w-5 h-5 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-lg">등록 정보</h3>
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <Calendar className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">등록 정보</h3>
         </div>
         <div className="divide-y divide-gray-100">
-          <InputField label="등록일(입학일)" value={formData.startDate} field="startDate" type="date" />
-          <div className="flex items-center gap-3 px-4 py-2.5">
-            <label className="w-28 shrink-0 text-sm font-medium text-[#373d41]">재원상태</label>
+          <InputField label="등록일" value={formData.startDate} field="startDate" type="date" />
+          <div className="flex items-center gap-2 px-2 py-1">
+            <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">재원상태</label>
             {isEditing ? (
               <select
                 value={formData.status ?? 'active'}
                 onChange={(e) => handleChange('status', e.target.value)}
-                className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
+                className="flex-1 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
               >
                 <option value="active">재원</option>
                 <option value="on_hold">휴원</option>
@@ -519,7 +492,7 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
               </select>
             ) : (
               <span
-                className="px-3 py-1 rounded text-xs font-semibold"
+                className="px-1.5 py-0.5 rounded text-micro font-semibold"
                 style={{ backgroundColor: statusStyle.bg, color: statusStyle.text }}
               >
                 {statusStyle.label}
@@ -533,68 +506,66 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
       </div>
 
       {/* 수납 정보 섹션 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <CreditCard className="w-5 h-5 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-lg">수납 정보</h3>
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <CreditCard className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">수납 정보</h3>
         </div>
         <div className="divide-y divide-gray-100">
-          <div className="flex items-center gap-3 px-4 py-2.5">
-            <label className="w-28 shrink-0 text-sm font-medium text-[#373d41]">현금영수증</label>
+          <div className="flex items-center gap-2 px-2 py-1">
+            <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">현금영수증</label>
             {isEditing ? (
-              <div className="flex-1 flex items-center gap-2">
+              <div className="flex-1 flex items-center gap-1">
                 <input
                   type="text"
                   value={formData.cashReceiptNumber ?? ''}
                   onChange={(e) => handleChange('cashReceiptNumber', e.target.value)}
-                  placeholder="휴대폰 또는 사업자번호"
-                  className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
+                  placeholder="휴대폰/사업자번호"
+                  className="flex-1 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
                 />
-                <label className="flex items-center gap-1 cursor-pointer">
+                <label className="flex items-center gap-0.5 cursor-pointer">
                   <input
                     type="radio"
                     name="cashReceiptType"
                     checked={formData.cashReceiptType === 'income'}
                     onChange={() => handleChange('cashReceiptType', 'income')}
-                    className="w-4 h-4 text-[#fdb813] focus:ring-[#fdb813]"
+                    className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
                   />
-                  <span className="text-sm">소득공제용</span>
+                  <span className="text-xs">소득</span>
                 </label>
-                <label className="flex items-center gap-1 cursor-pointer">
+                <label className="flex items-center gap-0.5 cursor-pointer">
                   <input
                     type="radio"
                     name="cashReceiptType"
                     checked={formData.cashReceiptType === 'expense'}
                     onChange={() => handleChange('cashReceiptType', 'expense')}
-                    className="w-4 h-4 text-[#fdb813] focus:ring-[#fdb813]"
+                    className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
                   />
-                  <span className="text-sm">지출증빙용</span>
+                  <span className="text-xs">지출</span>
                 </label>
               </div>
             ) : (
-              <span className="flex-1 text-sm text-[#081429]">
-                {formData.cashReceiptNumber
-                  ? `${formData.cashReceiptNumber} (${formData.cashReceiptType === 'income' ? '소득공제용' : '지출증빙용'})`
-                  : '-'}
+              <span className="flex-1 text-xs text-[#081429]">
+                {formData.cashReceiptNumber || '-'}
               </span>
             )}
           </div>
           <InputField label="수납 청구일" value={formData.billingDay} field="billingDay" type="number" placeholder="매월 (일)" />
-          <div className="flex items-center gap-3 px-4 py-2.5">
-            <label className="w-28 shrink-0 text-sm font-medium text-[#373d41]">수납 기본할인</label>
+          <div className="flex items-center gap-2 px-2 py-1">
+            <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">기본할인</label>
             {isEditing ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <input
                   type="number"
                   value={formData.billingDiscount ?? 0}
                   onChange={(e) => handleChange('billingDiscount', Number(e.target.value))}
                   placeholder="0"
-                  className="w-32 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
+                  className="w-20 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
                 />
-                <span className="text-sm text-[#373d41]">원</span>
+                <span className="text-xs text-[#373d41]">원</span>
               </div>
             ) : (
-              <span className="flex-1 text-sm text-[#081429]">
+              <span className="flex-1 text-xs text-[#081429]">
                 {(formData.billingDiscount ?? 0).toLocaleString()}원
               </span>
             )}
@@ -603,10 +574,10 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
       </div>
 
       {/* 기타 정보 섹션 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <CheckSquare className="w-5 h-5 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-lg">기타</h3>
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <CheckSquare className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">기타</h3>
         </div>
         <div className="divide-y divide-gray-100">
           <InputField label="기타항목1" value={formData.customField1} field="customField1" />
@@ -615,23 +586,23 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student }) => {
       </div>
 
       {/* 메모 섹션 */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <FileText className="w-5 h-5 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-lg">메모</h3>
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <FileText className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">메모</h3>
         </div>
-        <div className="p-4">
+        <div className="p-2">
           {isEditing ? (
             <textarea
               value={formData.memo ?? ''}
               onChange={(e) => handleChange('memo', e.target.value)}
-              placeholder="학생에 대한 특이사항이나 메모를 입력하세요"
-              rows={4}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] resize-none"
+              placeholder="학생 특이사항/메모"
+              rows={2}
+              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] resize-none"
             />
           ) : (
-            <div className="bg-gray-50 rounded-lg p-4 min-h-[80px]">
-              <p className="text-sm text-[#081429] whitespace-pre-wrap">
+            <div className="bg-gray-50 rounded p-2 min-h-[40px]">
+              <p className="text-xs text-[#081429] whitespace-pre-wrap">
                 {formData.memo || '등록된 메모가 없습니다.'}
               </p>
             </div>

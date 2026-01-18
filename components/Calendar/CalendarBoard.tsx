@@ -470,14 +470,14 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
         />
       ) : (
         <>
-          {/* Unified Header */}
-          <div className="mb-1 @sm:mb-2 @lg:mb-4 flex flex-row justify-between items-center gap-1 @sm:gap-2 @lg:gap-4 sticky top-0 z-30 bg-white py-1 @sm:py-2 -mx-2 @sm:-mx-4 @lg:-mx-8 px-2 @sm:px-4 @lg:px-8 border-b border-gray-100">
+          {/* Unified Header - Compact with rounded */}
+          <div className="mb-1 flex flex-row justify-between items-center gap-1 @sm:gap-2 sticky top-0 z-30 bg-white py-1 -mx-2 @sm:-mx-4 px-2 @sm:px-4 border-b border-gray-100 rounded-lg">
 
             {/* Navigation Group (Left) */}
-            <div className="flex items-center gap-0.5 p-0.5 @xs:p-1 @sm:p-1.5 bg-[#f8fafc] rounded-none border border-gray-200 shadow-sm flex-none">
+            <div className="flex items-center gap-0.5 p-0.5 bg-[#f8fafc] rounded-lg border border-gray-200 shadow-sm flex-none">
               <button
                 onClick={handlePrev}
-                className="p-1 @xs:p-1.5 @sm:p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-none transition-all text-gray-400 hover:text-[#081429]"
+                className="p-1 @xs:p-1.5 @sm:p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-md transition-all text-gray-400 hover:text-[#081429]"
               >
                 <ChevronLeft size={14} className="@sm:w-4 @sm:h-4 @lg:w-5 @lg:h-5" strokeWidth={3} />
               </button>
@@ -521,7 +521,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
 
               <button
                 onClick={handleNext}
-                className="p-1 @xs:p-1.5 @sm:p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-none transition-all text-gray-400 hover:text-[#081429]"
+                className="p-1 @xs:p-1.5 @sm:p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-md transition-all text-gray-400 hover:text-[#081429]"
               >
                 <ChevronRight size={14} className="@sm:w-4 @sm:h-4 @lg:w-5 @lg:h-5" strokeWidth={3} />
               </button>
@@ -544,7 +544,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                         }
                       }}
                       onFocus={() => setIsFilterOpen(true)}
-                      className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-none focus:outline-none focus:ring-2 focus:ring-[#fdb813]/50 transition-all font-medium text-sm"
+                      className="w-full pl-10 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813]/50 transition-all font-medium text-xs"
                     />
 
 
@@ -560,19 +560,19 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                   </div>
                   <button
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className={`p-2 rounded-none border transition-all flex items-center gap-2 font-bold whitespace-nowrap ${isFilterOpen || activeSearch.depts.length > 0 || activeSearch.baseDate ? 'bg-[#081429] text-white border-[#081429]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                    className={`p-1.5 rounded-lg border transition-all flex items-center gap-1 font-bold whitespace-nowrap text-xs ${isFilterOpen || activeSearch.depts.length > 0 || activeSearch.baseDate ? 'bg-[#081429] text-white border-[#081429]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                   >
                     <Filter size={18} />
                     <span className="hidden md:inline text-sm">필터</span>
                     {(activeSearch.depts.length > 0 || activeSearch.baseDate) && (
-                      <div className="w-2 h-2 bg-red-500 rounded-none" />
+                      <div className="w-2 h-2 bg-red-500 rounded-full" />
                     )}
                   </button>
                 </div>
 
                 {/* Filter Panel */}
                 {isFilterOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-3 p-4 bg-white border border-gray-200 rounded-none shadow-lg animate-in slide-in-from-top-2 z-40">
+                  <div className="absolute top-full left-0 right-0 mt-2 p-3 bg-white border border-gray-200 rounded-lg shadow-lg animate-in slide-in-from-top-2 z-40">
 
                     {/* 1. Category Filter (Departments) */}
                     <div className="mb-4">
@@ -591,7 +591,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                               if (selectedDeptsInput.includes(dept.id)) setSelectedDeptsInput(selectedDeptsInput.filter(id => id !== dept.id));
                               else setSelectedDeptsInput([...selectedDeptsInput, dept.id]);
                             }}
-                            className={`px-2 py-1 rounded-none text-xs font-bold border transition-colors ${selectedDeptsInput.includes(dept.id)
+                            className={`px-2 py-1 rounded-md text-xs font-bold border transition-colors ${selectedDeptsInput.includes(dept.id)
                               ? 'bg-[#081429] text-white border-[#081429]'
                               : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                               }`}
@@ -615,7 +615,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                         {/* Base Date */}
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-gray-600 w-12 shrink-0">기준일:</span>
-                          <div className="bg-gray-100 rounded-none px-2 py-1 flex items-center gap-2">
+                          <div className="bg-gray-100 rounded-md px-2 py-1 flex items-center gap-2">
                             <CalendarIcon size={14} className="text-gray-400" />
                             <input
                               type="date"
@@ -629,36 +629,36 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                         {/* Duration & Direction */}
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-medium text-gray-600 w-12 shrink-0">범위:</span>
-                          <div className="flex bg-gray-100 p-0.5 rounded-none">
+                          <div className="flex bg-gray-100 p-0.5 rounded-md">
                             {(['1w', '1m', '1y'] as const).map(d => (
                               <button
                                 key={d}
                                 onClick={() => setFilterDurationInput(d)}
-                                className={`px-3 py-1 rounded-none text-xs font-bold transition-all ${filterDurationInput === d ? 'bg-white shadow text-[#081429]' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filterDurationInput === d ? 'bg-white shadow text-[#081429]' : 'text-gray-500 hover:text-gray-700'}`}
                               >
                                 {d === '1w' ? '1주일' : d === '1m' ? '1개월' : '1년'}
                               </button>
                             ))}
                           </div>
-                          <div className="flex bg-gray-100 p-0.5 rounded-none">
-                            <button onClick={() => setFilterDirectionInput('before')} className={`px-3 py-1 rounded-none text-xs font-bold transition-all ${filterDirectionInput === 'before' ? 'bg-white shadow text-red-600' : 'text-gray-500'}`}>이전</button>
-                            <button onClick={() => setFilterDirectionInput('after')} className={`px-3 py-1 rounded-none text-xs font-bold transition-all ${filterDirectionInput === 'after' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>이후</button>
+                          <div className="flex bg-gray-100 p-0.5 rounded-md">
+                            <button onClick={() => setFilterDirectionInput('before')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filterDirectionInput === 'before' ? 'bg-white shadow text-red-600' : 'text-gray-500'}`}>이전</button>
+                            <button onClick={() => setFilterDirectionInput('after')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filterDirectionInput === 'after' ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>이후</button>
                           </div>
                         </div>
                       </div>
                     </div>
 
                     {/* Search Button */}
-                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end gap-2">
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end gap-2">
                       <button
                         onClick={handleResetFilter}
-                        className="px-4 py-2 rounded-none text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+                        className="px-3 py-1.5 rounded-md text-xs font-medium text-gray-500 hover:bg-gray-100 transition-colors"
                       >
                         초기화
                       </button>
                       <button
                         onClick={handleApplyFilter}
-                        className="px-6 py-2 rounded-none text-sm font-bold text-white bg-[#081429] hover:bg-[#081429]/90 shadow-lg shadow-[#081429]/20 transition-all flex items-center gap-2"
+                        className="px-4 py-1.5 rounded-md text-xs font-bold text-white bg-[#081429] hover:bg-[#081429]/90 shadow-lg shadow-[#081429]/20 transition-all flex items-center gap-2"
                       >
                         <Search size={14} />
                         조회하기
@@ -671,8 +671,8 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                 {/* Search Results Panel - Option B */}
                 {/* Search Results Panel - Option B */}
                 {(filteredEvents.length > 0) && (activeSearch.query || activeSearch.depts.length > 0 || activeSearch.baseDate) && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-none shadow-2xl border border-gray-200 max-h-[400px] overflow-y-auto animate-in fade-in zoom-in-95 duration-200 p-2 z-50">
-                    <div className="px-3 py-2 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 sticky top-0 backdrop-blur-sm rounded-none">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-2xl border border-gray-200 max-h-[400px] overflow-y-auto animate-in fade-in zoom-in-95 duration-200 p-2 z-50">
+                    <div className="px-3 py-2 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 sticky top-0 backdrop-blur-sm rounded-t-md">
                       <span className="text-xs font-bold text-gray-500">검색 결과 ({filteredEvents.length}건)</span>
                       <button onClick={() => {
                         // Reset Inputs to Defaults (User Request: "Default values")
@@ -695,10 +695,10 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                               onDateChange(parseISO(event.startDate));
                               setIsFilterOpen(false);
                             }}
-                            className="p-2 hover:bg-indigo-50 cursor-pointer rounded-none group transition-colors border border-transparent hover:border-indigo-100"
+                            className="p-2 hover:bg-indigo-50 cursor-pointer rounded-md group transition-colors border border-transparent hover:border-indigo-100"
                           >
                             <div className="flex items-center justify-between mb-0.5">
-                              <span className="text-xxs font-bold bg-gray-100 px-1.5 py-0.5 rounded-none text-gray-600 group-hover:bg-white transition-colors">
+                              <span className="text-xxs font-bold bg-gray-100 px-1.5 py-0.5 rounded-md text-gray-600 group-hover:bg-white transition-colors">
                                 {format(parseISO(event.startDate), 'yyyy. MM. dd (EEE)', { locale: ko })}
                               </span>
                               <span className="text-xxs text-gray-400">
@@ -707,7 +707,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                             </div>
                             <div className="flex items-center gap-2">
                               <div
-                                className="w-1 h-6 rounded-none shrink-0"
+                                className="w-1 h-6 rounded-full shrink-0"
                                 style={{ backgroundColor: event.color || primaryDept?.color }}
                               />
                               <div className="flex-1 min-w-0">
@@ -726,7 +726,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                                     return (
                                       <span
                                         key={tagId}
-                                        className="text-micro px-1.5 py-0.5 rounded-none font-bold"
+                                        className="text-micro px-1.5 py-0.5 rounded-md font-bold"
                                         style={{
                                           backgroundColor: tagDef?.color ? `${tagDef.color}20` : '#E5E7EB',
                                           color: tagDef?.color || '#6B7280',
@@ -742,7 +742,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                                 </div>
                               )}
                               {primaryDept && (
-                                <span className="text-xxs px-2 py-1 rounded-none bg-gray-50 font-medium text-gray-500 whitespace-nowrap">
+                                <span className="text-xxs px-2 py-1 rounded-md bg-gray-50 font-medium text-gray-500 whitespace-nowrap">
                                   {primaryDept.name}
                                 </span>
                               )}
@@ -755,7 +755,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                 )}
                 {/* No Results State */}
                 {(filteredEvents.length === 0) && (activeSearch.query) && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-none shadow-xl border border-gray-200 p-8 text-center animate-in fade-in zoom-in-95 z-50">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-8 text-center animate-in fade-in zoom-in-95 z-50">
                     <Search size={32} className="mx-auto text-gray-300 mb-2" />
                     <p className="text-gray-500 font-bold text-sm">검색 결과가 없습니다.</p>
                     <p className="text-xs text-gray-400 mt-1">다른 검색어나 필터를 사용해보세요.</p>
@@ -767,12 +767,12 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
             {/* Right Action Group (Right) - Only show My Events on Primary View */}
             {isPrimaryView && (
               <div className="flex items-center gap-1 @sm:gap-2 @lg:gap-3 w-auto justify-end flex-none">
-                <div className="hidden @xl:flex text-xs @2xl:text-sm font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/10 px-2 @2xl:px-4 py-1.5 @2xl:py-2 rounded-none border border-[#fdb813]/20">
+                <div className="hidden @xl:flex text-xs font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/10 px-2 py-1 rounded-lg border border-[#fdb813]/20">
                   {format(currentDate, 'yyyy. MM')}
                 </div>
                 <button
                   onClick={() => setIsSettingsOpen(true)}
-                  className="flex items-center gap-1 @sm:gap-1.5 @lg:gap-2 bg-gray-700 hover:bg-gray-600 text-white px-1.5 @xs:px-2 @sm:px-3 py-1.5 @sm:py-2 rounded-none transition-all shadow-md hover:shadow-lg font-bold text-[10px] @xs:text-xs @lg:text-sm"
+                  className="flex items-center gap-1 @sm:gap-1 bg-gray-700 hover:bg-gray-600 text-white px-1.5 @xs:px-2 @sm:px-2.5 py-1 @sm:py-1.5 rounded-lg transition-all shadow-md hover:shadow-lg font-bold text-[10px] @xs:text-xs"
                   title="연간 일정 설정"
                 >
                   <Settings size={14} className="@sm:w-4 @sm:h-4" />
@@ -781,7 +781,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                 <div className="relative">
                   <button
                     onClick={() => setIsMyEventsOpen(true)}
-                    className="flex items-center gap-1 @sm:gap-1.5 @lg:gap-2 bg-[#081429] hover:bg-[#081429]/90 text-white px-1.5 @xs:px-2 @sm:px-3 @lg:px-5 py-1.5 @sm:py-2 @lg:py-2.5 rounded-none transition-all shadow-md hover:shadow-lg font-bold text-[10px] @xs:text-xs @lg:text-sm transform hover:-translate-y-0.5"
+                    className="flex items-center gap-1 @sm:gap-1 bg-[#081429] hover:bg-[#081429]/90 text-white px-1.5 @xs:px-2 @sm:px-3 py-1 @sm:py-1.5 rounded-lg transition-all shadow-md hover:shadow-lg font-bold text-[10px] @xs:text-xs transform hover:-translate-y-0.5"
                   >
                     <List size={14} className="text-[#fdb813] @sm:w-4 @sm:h-4" />
                     <span className="hidden @sm:inline">내 일정</span>
