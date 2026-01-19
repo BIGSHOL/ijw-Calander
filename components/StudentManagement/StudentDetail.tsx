@@ -10,11 +10,14 @@ import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Tra
 
 interface StudentDetailProps {
   student: UnifiedStudent;
+  compact?: boolean;  // 모달에서 사용 시 컴팩트 모드
+  readOnly?: boolean; // 조회 전용 모드 (수정 버튼 숨김)
+  // compact 모드(모달)에서는 퇴원처리 버튼이 항상 숨겨짐 - 학생관리에서만 처리
 }
 
 type TabType = 'basic' | 'courses' | 'grades' | 'consultations';
 
-const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
+const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false, readOnly = false }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const { updateStudent, deleteStudent } = useStudents();
@@ -67,37 +70,39 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
   return (
     <div className="flex flex-col h-full">
       {/* 헤더: 학생 이름 + 퇴원/재원 버튼 */}
-      <div className="px-3 py-2 border-b border-gray-200 bg-white">
+      <div className={`px-3 py-2 border-b border-gray-200 bg-white ${compact ? 'pr-10' : ''}`}>
         <div className="flex items-center justify-between">
           <span className="text-sm font-bold text-[#081429]">{student.name}</span>
 
-          {/* 퇴원/재원/삭제 버튼 */}
-          <div className="flex items-center gap-1">
-            {isWithdrawn ? (
+          {/* 퇴원/재원/삭제 버튼 - compact 모드(모달)에서는 항상 숨김, 학생관리에서만 표시 */}
+          {!compact && (
+            <div className="flex items-center gap-1">
+              {isWithdrawn ? (
+                <button
+                  onClick={handleReactivate}
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors"
+                >
+                  <UserCheck className="w-3 h-3" />
+                  <span>재원 복구</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowWithdrawalModal(true)}
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                >
+                  <UserMinus className="w-3 h-3" />
+                  <span>퇴원 처리</span>
+                </button>
+              )}
               <button
-                onClick={handleReactivate}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors"
+                onClick={handleDelete}
+                className="flex items-center gap-1 p-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-red-100 hover:text-red-700 transition-colors"
+                title="학생 삭제"
               >
-                <UserCheck className="w-3 h-3" />
-                <span>재원 복구</span>
+                <Trash2 className="w-3 h-3" />
               </button>
-            ) : (
-              <button
-                onClick={() => setShowWithdrawalModal(true)}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-              >
-                <UserMinus className="w-3 h-3" />
-                <span>퇴원 처리</span>
-              </button>
-            )}
-            <button
-              onClick={handleDelete}
-              className="flex items-center gap-1 p-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-red-100 hover:text-red-700 transition-colors"
-              title="학생 삭제"
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -122,7 +127,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student }) => {
 
       {/* 탭 컨텐츠 */}
       <div className="flex-1 overflow-y-auto p-3">
-        {activeTab === 'basic' && <BasicInfoTab student={student} />}
+        {activeTab === 'basic' && <BasicInfoTab student={student} readOnly={readOnly} />}
         {activeTab === 'courses' && <CoursesTab student={student} />}
         {activeTab === 'grades' && <GradesTab student={student} />}
         {activeTab === 'consultations' && <ConsultationsTab student={student} />}

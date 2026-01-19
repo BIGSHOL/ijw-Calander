@@ -1776,7 +1776,7 @@ const App: React.FC = () => {
                     {(canManageMath || isMasterOrAdmin) && (
                       <button
                         onClick={() => setAttendanceSubject('math')}
-                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'math'
+                        className={`px-2 py-0.5 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'math'
                           ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                           : 'text-gray-400 hover:text-white hover:bg-white/5'
                           }`}
@@ -1787,7 +1787,7 @@ const App: React.FC = () => {
                     {(canManageEnglish || isMasterOrAdmin) && (
                       <button
                         onClick={() => setAttendanceSubject('english')}
-                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'english'
+                        className={`px-2 py-0.5 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'english'
                           ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                           : 'text-gray-400 hover:text-white hover:bg-white/5'
                           }`}
@@ -1841,7 +1841,7 @@ const App: React.FC = () => {
                   {/* Add Student Button (Special Attendance) */}
                   <button
                     onClick={() => setIsAttendanceAddStudentModalOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm ml-2"
+                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm ml-2"
                     title="특강/보강 학생 출석부 추가"
                   >
                     <UserPlus size={14} />

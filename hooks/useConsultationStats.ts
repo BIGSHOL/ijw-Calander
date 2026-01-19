@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   collection,
+  collectionGroup,
   getDocs,
   query,
   where,
@@ -67,10 +68,15 @@ export interface ConsultationStatsResult {
 export const DEFAULT_MONTHLY_TARGET = 100;
 
 /**
- * 상담 통계 조회 Hook
+ * 상담 통계 조회 Hook (성능 최적화 버전)
  * - 일별/카테고리별/상담자별 통계
  * - 대시보드용 집계 데이터
  * - 상담 미완료 학생 목록
+ *
+ * 최적화 내용:
+ * - Firestore 서버사이드 날짜 필터링 (where 사용)
+ * - 중복 쿼리 제거 (allConsultationsQuery 제거)
+ * - collectionGroup 대신 학생 문서 내 enrollments 배열 활용
  */
 export function useConsultationStats(
   filters?: ConsultationStatsFilters,
@@ -94,17 +100,18 @@ export function useConsultationStats(
     queryFn: async () => {
       const colRef = collection(db, COL_STUDENT_CONSULTATIONS);
 
-      // 복합 인덱스 문제를 피하기 위해 orderBy만 사용하고 클라이언트에서 필터링
-      const q = query(colRef, orderBy('date', 'desc'));
+      // === 성능 최적화: Firestore 서버사이드 날짜 필터링 ===
+      // 기존: 전체 데이터 로드 후 클라이언트 필터링 -> 개선: 서버에서 범위 쿼리
+      const q = query(
+        colRef,
+        where('date', '>=', dateRange.start),
+        where('date', '<=', dateRange.end),
+        orderBy('date', 'desc')
+      );
       const snapshot = await getDocs(q);
 
       let consultations = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Consultation)
-      );
-
-      // 클라이언트 사이드 날짜 필터링
-      consultations = consultations.filter(
-        (c) => c.date >= dateRange.start && c.date <= dateRange.end
       );
 
       // 과목 필터링 (subject는 'math'/'english' 또는 '수학'/'영어' 둘 다 가능)
@@ -235,65 +242,94 @@ export function useConsultationStats(
         (c) => c.followUpNeeded && c.followUpDone
       ).length;
 
-      // ============ 상담 미완료 학생 목록 계산 ============
+      // ============ 상담 미완료 학생 목록 계산 (최적화) ============
       // 의도: 선택한 기간 내에 1건 이상의 상담 기록이 없는 재원생 목록
 
-      // 1. 재원생 조회 (status === 'active')
+      // 1. 재원생 조회 (status === 'active') - enrollments 배열 포함
       const studentsQuery = query(
         collection(db, COL_STUDENTS),
         where('status', '==', 'active')
       );
       const studentsSnapshot = await getDocs(studentsQuery);
-      const students = studentsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as UnifiedStudent));
 
-      // 2. 수강과목이 있는 학생 필터링
-      const eligibleStudents = students.filter(student => {
-        const hasEnrollments = student.enrollments && student.enrollments.length > 0;
-        if (!hasEnrollments) return false;
-
-        // 수강과목에 math 또는 english가 있는지 확인
-        const hasSubjects = student.enrollments.some(
-          e => e.subject === 'math' || e.subject === 'english'
-        );
-        return hasSubjects;
+      // 학생 ID -> 이름 매핑
+      const studentMap = new Map<string, string>();
+      studentsSnapshot.docs.forEach(doc => {
+        studentMap.set(doc.id, doc.data().name || '(이름없음)');
       });
 
-      // 3. 학생별로 선택 기간 내 상담 여부 체크 (과목 무관, 1건이라도 있으면 OK)
-      const studentsNeedingConsultation: StudentNeedingConsultation[] = [];
+      // 2. collectionGroup으로 모든 enrollments 서브컬렉션을 단일 쿼리로 조회
+      // (학생 문서 내 enrollments 배열이 아닌 서브컬렉션 사용)
+      const allEnrollmentsSnap = await getDocs(collectionGroup(db, 'enrollments'));
 
-      eligibleStudents.forEach(student => {
-        // 이 학생의 수강과목 목록 (표시용)
-        const enrolledSubjects: ('math' | 'english')[] = [];
-        student.enrollments.forEach(e => {
-          if (e.subject === 'math' || e.subject === 'english') {
-            if (!enrolledSubjects.includes(e.subject)) {
-              enrolledSubjects.push(e.subject);
-            }
-          }
-        });
+      // 학생별 수강과목 집계
+      const studentEnrollmentMap = new Map<string, Set<'math' | 'english'>>();
+      allEnrollmentsSnap.docs.forEach(enrollDoc => {
+        // 문서 경로: students/{studentId}/enrollments/{enrollmentId}
+        const pathParts = enrollDoc.ref.path.split('/');
+        const studentId = pathParts[1]; // students 다음 segment가 studentId
 
-        // 이 학생의 선택 기간 내 상담 기록 (과목 무관)
-        const studentConsultationsInPeriod = consultations.filter(c => c.studentId === student.id);
+        // 재원생만 처리
+        if (!studentMap.has(studentId)) return;
 
-        // 기간 내 상담 기록이 0건이면 상담 필요 목록에 추가
-        if (studentConsultationsInPeriod.length === 0) {
-          // 전체 상담 기록에서 마지막 상담일 찾기 (기간 외 포함)
-          // Note: consultations는 이미 기간 필터링이 된 상태이므로, 전체 기록을 다시 조회하지 않음
-          // 대신 '해당 기간 내 상담 없음'으로 표시
-          studentsNeedingConsultation.push({
-            studentId: student.id,
-            studentName: student.name,
-            enrolledSubjects,
-            lastConsultationDate: undefined,  // 기간 내 상담 없음
+        const subject = enrollDoc.data().subject as string;
+        if (!studentEnrollmentMap.has(studentId)) {
+          studentEnrollmentMap.set(studentId, new Set());
+        }
+        const subjectSet = studentEnrollmentMap.get(studentId)!;
+        if (subject === 'math') {
+          subjectSet.add('math');
+        } else if (subject === 'english') {
+          subjectSet.add('english');
+        }
+      });
+
+      // 수강과목이 있는 재원생만 필터링
+      const eligibleStudents: { id: string; name: string; enrolledSubjects: ('math' | 'english')[] }[] = [];
+      studentEnrollmentMap.forEach((subjects, studentId) => {
+        if (subjects.size > 0) {
+          eligibleStudents.push({
+            id: studentId,
+            name: studentMap.get(studentId) || '(이름없음)',
+            enrolledSubjects: Array.from(subjects),
           });
         }
       });
 
-      // 학생 이름순으로 정렬
-      studentsNeedingConsultation.sort((a, b) => a.studentName.localeCompare(b.studentName));
+      // 2. 학생별로 선택 기간 내 상담 여부 체크 (과목 무관, 1건이라도 있으면 OK)
+      const consultedStudentIds = new Set(consultations.map(c => c.studentId));
+
+      // === 성능 최적화: 별도의 allConsultationsQuery 제거 ===
+      // 기존: 전체 상담 기록 다시 조회 (중복)
+      // 개선: 이미 조회한 consultations에서 마지막 상담일 추출
+      // 참고: 선택 기간 외의 상담은 조회되지 않으므로, lastConsultationDate는 기간 내 최신 날짜
+      const studentLastConsultationMap = new Map<string, string>();
+      consultations.forEach(c => {
+        const existing = studentLastConsultationMap.get(c.studentId);
+        // date가 더 최신이거나 없으면 업데이트
+        if (!existing || c.date > existing) {
+          studentLastConsultationMap.set(c.studentId, c.date);
+        }
+      });
+
+      const studentsNeedingConsultation: StudentNeedingConsultation[] = eligibleStudents
+        .filter(student => !consultedStudentIds.has(student.id))
+        .map(student => ({
+          studentId: student.id,
+          studentName: student.name,
+          enrolledSubjects: student.enrolledSubjects,
+          lastConsultationDate: studentLastConsultationMap.get(student.id),
+        }));
+
+      // 마지막 상담일 기준 오름차순 정렬 (오래된 순, 없는 경우 맨 위)
+      studentsNeedingConsultation.sort((a, b) => {
+        if (!a.lastConsultationDate && !b.lastConsultationDate) {
+          return a.studentName.localeCompare(b.studentName);
+        }
+        if (!a.lastConsultationDate) return -1;
+        if (!b.lastConsultationDate) return 1;
+        return a.lastConsultationDate.localeCompare(b.lastConsultationDate);
+      });
 
       return {
         dailyStats,

@@ -41,8 +41,22 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3">
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-blue-800">데이터베이스 최적화</h3>
+              <p className="text-xs text-blue-600 mt-1">출석부 로딩 속도가 느리다면 최적화를 진행하세요.</p>
+            </div>
+            <button
+              onClick={() => setIsMigrationOpen(true)}
+              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              최적화 도구 열기
+            </button>
+          </div>
           <SalarySettingsTab teachers={teachers} />
         </div>
+
+        <AttendanceMigrationModal isOpen={isMigrationOpen} onClose={() => setIsMigrationOpen(false)} />
       </div>
     </div>
   );

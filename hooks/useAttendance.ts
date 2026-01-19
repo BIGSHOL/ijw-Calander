@@ -229,12 +229,15 @@ export const useAttendanceStudents = (options?: {
     });
 
     // Phase 2: Fetch attendance records for current month
+    // === 성능 최적화: 캐시 키에서 학생 ID 배열 제거 ===
+    // 기존: studentData.filtered.map(s => s.id).join(',') -> 학생 1명 추가 시 캐시 미스
+    // 개선: yearMonth + teacherId + subject만 사용 -> 안정적인 캐시 히트
     const {
         data: mergedStudents = studentData.filtered, // Use filtered list for merging
         isLoading: isLoadingRecords,
         refetch: refetchRecords
     } = useQuery({
-        queryKey: ['attendanceRecords', options?.yearMonth, studentData.filtered.map((s: Student) => s.id).join(',')],
+        queryKey: ['attendanceRecords', options?.yearMonth, options?.teacherId, options?.subject],
         queryFn: async (): Promise<Student[]> => {
             // If no students or no month, return basic students
             if (studentData.filtered.length === 0 || !options?.yearMonth) {

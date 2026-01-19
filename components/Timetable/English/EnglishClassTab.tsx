@@ -60,7 +60,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
     const [searchTerm, setSearchTerm] = useState('');
-    const [mode, setMode] = useState<'view' | 'edit'>('view');
+    // 시뮬레이션 모드에서는 항상 수정모드 (조회모드 불필요)
+    const [mode, setMode] = useState<'view' | 'edit'>(isSimulationMode ? 'edit' : 'view');
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
 
     // UI States
@@ -209,24 +210,26 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             {/* Toolbar */}
             <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b flex-shrink-0">
                 <div className="flex items-center gap-3">
-                    {/* Mode Toggle */}
-                    <div className="flex bg-gray-200 rounded-lg p-0.5">
-                        <button
-                            onClick={() => setMode('view')}
-                            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
-                        >
-                            👁️ 조회
-                        </button>
-                        {canEditEnglish && (
+                    {/* Mode Toggle - 시뮬레이션 모드에서는 항상 수정모드이므로 숨김 */}
+                    {!isSimulationMode && (
+                        <div className="flex bg-gray-200 rounded-lg p-0.5">
                             <button
-                                onClick={() => setMode('edit')}
-                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                                onClick={() => setMode('view')}
+                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                             >
-                                <Edit className="inline-block w-3 h-3 mr-1" />
-                                수정
+                                👁️ 조회
                             </button>
-                        )}
-                    </div>
+                            {canEditEnglish && (
+                                <button
+                                    onClick={() => setMode('edit')}
+                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                                >
+                                    <Edit className="inline-block w-3 h-3 mr-1" />
+                                    수정
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     {/* Search */}
                     <div className="relative">
@@ -536,11 +539,12 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 />
             )}
 
-            {/* 학생 상세 모달 */}
+            {/* 학생 상세 모달 - 조회모드에서는 readOnly, 수정모드에서만 수정 가능 */}
             {selectedStudent && (
                 <StudentDetailModal
                     student={selectedStudent}
                     onClose={() => setSelectedStudent(null)}
+                    readOnly={mode === 'view'}
                 />
             )}
         </div>

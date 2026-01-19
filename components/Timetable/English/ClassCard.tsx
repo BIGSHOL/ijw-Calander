@@ -533,12 +533,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                             draggable={mode === 'edit' && !student.isTempMoved}
                                                             onDragStart={(e) => handleDragStart(e, student)}
                                                             onClick={(e) => {
-                                                                if (onStudentClick && mode !== 'edit') {
+                                                                if (onStudentClick) {
                                                                     e.stopPropagation();
                                                                     onStudentClick(student.id);
                                                                 }
                                                             }}
-                                                            className={`flex items-center justify-between text-[12px] py-0.5 px-1 rounded ${style.className} ${mode === 'edit' ? 'cursor-grab active:cursor-grabbing hover:brightness-95' : onStudentClick ? 'cursor-pointer hover:brightness-95' : ''}`}
+                                                            className={`flex items-center justify-between text-[12px] py-0.5 px-1 rounded ${style.className} ${onStudentClick ? 'cursor-pointer hover:brightness-95' : ''}`}
                                                             title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}` : undefined}
                                                         >
                                                             <span className={`font-medium truncate ${style.textClass} max-w-[90px]`}>

@@ -98,6 +98,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [step, setStep] = useState<'load' | 'preview' | 'migrating' | 'done'>('load');
     const [progress, setProgress] = useState(0);
+    const [skippedCount, setSkippedCount] = useState(0); // 중복 스킵 카운트
 
     // 1. File Upload Handler (Excel & JSON Support)
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -381,7 +382,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
         processItems();
     }, [rawData, students, staffMembers, studentsLoading, staffLoading]);
 
-    // 3. Execution using Batch
+    // 3. Execution using Batch (중복 체크 포함)
     const handleMigrate = async () => {
         if (migrationItems.length === 0) return;
 
@@ -390,19 +391,32 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
         setError(null);
 
         try {
+            // === 중복 체크: 기존 상담 기록 조회 ===
+            const existingConsultationsSnap = await getDocs(collection(db, 'student_consultations'));
+            const existingKeys = new Set<string>();
+
+            existingConsultationsSnap.docs.forEach(doc => {
+                const data = doc.data();
+                // 중복 판별 키: studentId + date + content 앞 100자 (하루에 여러 상담 가능)
+                const contentKey = (data.content || '').replace(/\s+/g, '').substring(0, 100);
+                const key = `${data.studentId}_${data.date}_${contentKey}`;
+                existingKeys.add(key);
+            });
+
             // Process ALL items, creating students if needed
             // Filter out Error if any (though currently logic doesn't set ERROR)
-            // Ideally process items that are READY or NO_STUDENT (new student) or NO_COUNSELOR
             const itemsToProcess = migrationItems.filter(i => i.matchStatus !== 'ERROR');
             const total = itemsToProcess.length;
             const batchSize = 100; // Safe batch size
 
             let processed = 0;
+            let skippedDuplicates = 0;
 
             // Chunking
             for (let i = 0; i < total; i += batchSize) {
                 const batch = writeBatch(db);
                 const chunk = itemsToProcess.slice(i, i + batchSize);
+                let batchHasItems = false;
 
                 for (const item of chunk) {
                     let studentId = item.matchedStudent?.id;
@@ -421,7 +435,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                             school: item.schoolName || '',
                             grade: item.grade || '',
                             parentPhone: String(item.parentPhone || ''),
-                            studentPhone: String(item.studentPhone || ''), // Use parsed studentPhone
+                            studentPhone: String(item.studentPhone || ''),
                             status: 'prospective' as any,
                             source: 'MakeEdu_Migration',
                             createdAt: new Date().toISOString(),
@@ -430,11 +444,22 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                         };
                         // merge: true로 기존 문서가 있으면 병합
                         batch.set(newStudentRef, newStudentData, { merge: true });
+                        batchHasItems = true;
                     }
 
                     if (!studentId) continue;
 
-                    // FIX: Use 'student_consultations' instead of 'consultations'
+                    // === 중복 체크 (내용 기반) ===
+                    const contentKey = (item.notes || '').replace(/\s+/g, '').substring(0, 100);
+                    const duplicateKey = `${studentId}_${item.consultationDate}_${contentKey}`;
+                    if (existingKeys.has(duplicateKey)) {
+                        skippedDuplicates++;
+                        continue; // 중복이면 스킵
+                    }
+
+                    // 새 키를 추가 (같은 배치 내 중복 방지)
+                    existingKeys.add(duplicateKey);
+
                     const docRef = doc(collection(db, 'student_consultations'));
 
                     // Append Registrar to content since schema doesn't have it
@@ -465,12 +490,18 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                     };
 
                     batch.set(docRef, consultationData);
+                    batchHasItems = true;
                 }
 
-                await batch.commit();
+                if (batchHasItems) {
+                    await batch.commit();
+                }
                 processed += chunk.length;
                 setProgress(Math.round((processed / total) * 100));
             }
+
+            // 중복 스킵 카운트 저장
+            setSkippedCount(skippedDuplicates);
 
             setStep('done');
         } catch (err: any) {
@@ -675,8 +706,13 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                             <div className="text-center space-y-2">
                                 <h3 className="text-2xl font-bold text-[#081429]">마이그레이션 완료!</h3>
                                 <p className="text-gray-600">
-                                    총 <span className="text-green-600 font-bold">{readyCount}</span>건의 상담 기록이 성공적으로 저장되었습니다.
+                                    총 <span className="text-green-600 font-bold">{readyCount - skippedCount}</span>건의 상담 기록이 성공적으로 저장되었습니다.
                                 </p>
+                                {skippedCount > 0 && (
+                                    <p className="text-sm text-orange-600">
+                                        (중복 <span className="font-bold">{skippedCount}</span>건 스킵)
+                                    </p>
+                                )}
                             </div>
                         </div>
                     )}
