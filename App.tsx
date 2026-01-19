@@ -2444,7 +2444,7 @@ const App: React.FC = () => {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        canClose={false} // Prevent closing without login when forced
+        canClose={!!currentUser} // Only allow close if logged in
       />
 
       {/* Profile Dropdown Menu (Moved to Root to avoid z-index trap) */}
@@ -2622,12 +2622,6 @@ const App: React.FC = () => {
         onBatchUpdateAttendance={handleBatchUpdateAttendance}
         onCopy={handleCopyEvent}
         templateEvent={templateEvent}
-      />
-
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        canClose={!!currentUser} // Only allow close if logged in
       />
 
       <SettingsModal
