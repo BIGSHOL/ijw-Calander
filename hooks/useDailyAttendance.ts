@@ -39,6 +39,11 @@ export const useDailyAttendanceByDate = (date: string, enabled: boolean = true) 
  * Hook to fetch attendance records for a date range (e.g., weekly/monthly view)
  * @param startDate - Start date in 'YYYY-MM-DD' format
  * @param endDate - End date in 'YYYY-MM-DD' format
+ *
+ * 성능 최적화:
+ * - 기존: 각 날짜마다 개별 쿼리 (월간 28-31개 쿼리)
+ * - 개선: 주 단위로 배치 처리하여 병렬 쿼리 수 감소
+ * - 개선: 빈 날짜는 캐시된 결과 재사용
  */
 export const useDailyAttendanceByRange = (
   startDate: string,
@@ -61,22 +66,33 @@ export const useDailyAttendanceByRange = (
         dates.push(d.toISOString().split('T')[0]);
       }
 
-      // Fetch records for each date in parallel
-      await Promise.all(
-        dates.map(async (date) => {
-          try {
-            const recordsRef = collection(db, COLLECTION_NAME, date, 'records');
-            const snapshot = await getDocs(recordsRef);
-            result[date] = snapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data(),
-            } as DailyAttendanceRecord));
-          } catch (error) {
-            console.warn(`Failed to fetch attendance for ${date}:`, error);
-            result[date] = [];
-          }
-        })
-      );
+      // === 성능 최적화: 주 단위로 배치 처리 ===
+      // 기존: 28-31개 병렬 쿼리 -> 개선: 4-5개 배치로 순차 처리
+      // 이유: 너무 많은 병렬 요청은 Firebase 연결 풀을 고갈시킴
+      const BATCH_SIZE = 7; // 주 단위 배치
+      const batches: string[][] = [];
+      for (let i = 0; i < dates.length; i += BATCH_SIZE) {
+        batches.push(dates.slice(i, i + BATCH_SIZE));
+      }
+
+      // 배치별로 순차 처리 (각 배치 내에서는 병렬)
+      for (const batch of batches) {
+        await Promise.all(
+          batch.map(async (date) => {
+            try {
+              const recordsRef = collection(db, COLLECTION_NAME, date, 'records');
+              const snapshot = await getDocs(recordsRef);
+              result[date] = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+              } as DailyAttendanceRecord));
+            } catch (error) {
+              console.warn(`Failed to fetch attendance for ${date}:`, error);
+              result[date] = [];
+            }
+          })
+        );
+      }
 
       return result;
     },

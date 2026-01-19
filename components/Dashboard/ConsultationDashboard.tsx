@@ -1,10 +1,20 @@
-import React, { useState } from 'react';
-import { Calendar, RefreshCw, FileText, Users, UserCheck, AlertTriangle, X, ChevronRight, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Calendar, RefreshCw, FileText, Users, UserCheck, AlertTriangle, X, ChevronRight, AlertCircle, Search } from 'lucide-react';
 import { useConsultationStats, getDateRangeFromPreset, DatePreset, DEFAULT_MONTHLY_TARGET, StaffSubjectStat, StudentNeedingConsultation } from '../../hooks/useConsultationStats';
 import { useStaff } from '../../hooks/useStaff';
 import CounselingOverview from './CounselingOverview';
 import CategoryStats from './CategoryStats';
 import StaffSubjectStats from './StaffSubjectStats';
+
+/** 날짜로부터 경과일 계산 */
+const getDaysSince = (dateStr: string): number => {
+  const date = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  const diffTime = today.getTime() - date.getTime();
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+};
 
 /**
  * 학원 브랜드 색상
@@ -13,17 +23,37 @@ import StaffSubjectStats from './StaffSubjectStats';
  * - 회색: #373d41
  */
 
-const ConsultationDashboard: React.FC = () => {
-  const [datePreset, setDatePreset] = useState<DatePreset>('thisMonth');
+interface ConsultationDashboardProps {
+  /** 외부에서 전달받은 날짜 범위 (공통 필터) */
+  dateRange?: { start: string; end: string };
+  /** 날짜 범위 변경 핸들러 */
+  onDateRangeChange?: (range: { start: string; end: string } | undefined) => void;
+}
+
+const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
+  dateRange: externalDateRange,
+  onDateRangeChange,
+}) => {
+  const [internalDatePreset, setInternalDatePreset] = useState<DatePreset>('thisMonth');
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [showNeedingConsultationModal, setShowNeedingConsultationModal] = useState(false);
 
-  const dateRange = getDateRangeFromPreset(datePreset);
+  // 외부 dateRange가 있으면 사용, 없으면 내부 preset 사용
+  const dateRange = externalDateRange || getDateRangeFromPreset(internalDatePreset);
   const { staff } = useStaff();
   const { stats, loading, refetch } = useConsultationStats(
     { dateRange },
     staff
   );
+
+  // 대시보드 자체 preset 변경 시 부모에게도 알림
+  const handlePresetChange = (preset: DatePreset) => {
+    setInternalDatePreset(preset);
+    if (onDateRangeChange) {
+      const newRange = getDateRangeFromPreset(preset);
+      onDateRangeChange(newRange);
+    }
+  };
 
   const percentage = Math.min(100, Math.round((stats.totalConsultations / DEFAULT_MONTHLY_TARGET) * 100));
 
@@ -40,23 +70,6 @@ const ConsultationDashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex bg-[#081429]/5 rounded-lg p-0.5">
-            {(['thisWeek', 'thisMonth', 'lastMonth', 'last3Months'] as DatePreset[]).map((preset) => (
-              <button
-                key={preset}
-                onClick={() => setDatePreset(preset)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  datePreset === preset
-                    ? 'bg-[#081429] text-white'
-                    : 'text-[#373d41] hover:text-[#081429]'
-                }`}
-              >
-                {preset === 'thisWeek' ? '이번 주' :
-                 preset === 'thisMonth' ? '이번 달' :
-                 preset === 'lastMonth' ? '지난 달' : '3개월'}
-              </button>
-            ))}
-          </div>
           <button
             onClick={() => refetch()}
             disabled={loading}
@@ -67,67 +80,57 @@ const ConsultationDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 메인 컨텐츠 - 3열 그리드로 모든 요소 배치 */}
-      <div className="grid grid-cols-12 gap-3">
-        {/* 왼쪽: 요약 카드 5개 (2행 배치) + 카테고리 */}
-        <div className="col-span-3 space-y-3">
-          {/* 요약 카드 그리드 */}
-          <div className="grid grid-cols-2 gap-2">
-            <MiniCard icon={<FileText className="w-4 h-4" />} label="총 상담" value={stats.totalConsultations} loading={loading} color="primary" />
-            <MiniCard icon={<Users className="w-4 h-4" />} label="학부모" value={stats.parentConsultations} loading={loading} color="accent" />
-            <MiniCard icon={<UserCheck className="w-4 h-4" />} label="학생" value={stats.studentConsultations} loading={loading} color="secondary" />
-            <MiniCard icon={<AlertTriangle className="w-4 h-4" />} label="후속필요" value={stats.followUpNeeded} loading={loading} color={stats.followUpNeeded > 0 ? 'warning' : 'muted'} />
-          </div>
+      {/* 상단: 요약 카드 가로 배치 */}
+      <div className="grid grid-cols-6 gap-3">
+        <MiniCard icon={<FileText className="w-4 h-4" />} label="총 상담" value={stats.totalConsultations} loading={loading} color="primary" />
+        <MiniCard icon={<Users className="w-4 h-4" />} label="학부모" value={stats.parentConsultations} loading={loading} color="accent" />
+        <MiniCard icon={<UserCheck className="w-4 h-4" />} label="학생" value={stats.studentConsultations} loading={loading} color="secondary" />
+        <MiniCard icon={<AlertTriangle className="w-4 h-4" />} label="후속필요" value={stats.followUpNeeded} loading={loading} color={stats.followUpNeeded > 0 ? 'warning' : 'muted'} />
 
-          {/* 상담 필요 카드 */}
-          <div
-            onClick={() => setShowNeedingConsultationModal(true)}
-            className={`bg-white rounded-xl border p-3 cursor-pointer transition-all hover:shadow-md ${
-              stats.studentsNeedingConsultation.length > 0 ? 'border-[#fdb813] bg-[#fdb813]/5' : 'border-[#081429]/10'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className={`w-4 h-4 ${stats.studentsNeedingConsultation.length > 0 ? 'text-[#fdb813]' : 'text-[#373d41]/50'}`} />
-                <span className="text-xs text-[#373d41]">상담 필요</span>
-              </div>
-              <span className={`text-lg font-bold ${stats.studentsNeedingConsultation.length > 0 ? 'text-[#fdb813]' : 'text-[#081429]'}`}>
+        {/* 상담 필요 카드 */}
+        <div
+          onClick={() => setShowNeedingConsultationModal(true)}
+          className={`bg-white rounded-xl border p-3 cursor-pointer transition-all hover:shadow-md ${
+            stats.studentsNeedingConsultation.length > 0 ? 'border-[#fdb813] bg-[#fdb813]/5' : 'border-[#081429]/10'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              stats.studentsNeedingConsultation.length > 0 ? 'bg-[#fdb813]/20' : 'bg-[#373d41]/10'
+            }`}>
+              <AlertCircle className={`w-4 h-4 ${stats.studentsNeedingConsultation.length > 0 ? 'text-[#fdb813]' : 'text-[#373d41]/50'}`} />
+            </div>
+            <div>
+              <div className={`text-lg font-bold ${stats.studentsNeedingConsultation.length > 0 ? 'text-[#fdb813]' : 'text-[#081429]'}`}>
                 {stats.studentsNeedingConsultation.length}명
-              </span>
+              </div>
+              <div className="text-[10px] text-[#373d41]">상담 필요</div>
             </div>
-          </div>
-
-          {/* 목표 달성률 */}
-          <div className="bg-white rounded-xl border border-[#081429]/10 p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-[#373d41]">목표 달성률</span>
-              <span className="text-sm font-bold text-[#081429]">{percentage}%</span>
-            </div>
-            <div className="h-2 bg-[#081429]/10 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${percentage >= 100 ? 'bg-[#fdb813]' : 'bg-[#081429]'}`}
-                style={{ width: `${percentage}%` }}
-              />
-            </div>
-            <div className="flex justify-between mt-1.5 text-[10px] text-[#373d41]">
-              <span>{stats.totalConsultations}건</span>
-              <span>목표 {DEFAULT_MONTHLY_TARGET}건</span>
-            </div>
-          </div>
-
-          {/* 카테고리별 분포 */}
-          <div className="bg-white rounded-xl border border-[#081429]/10 p-3">
-            <h3 className="text-xs font-semibold text-[#081429] mb-2">카테고리별 분포</h3>
-            <CategoryStats
-              stats={stats.categoryStats}
-              totalCount={stats.totalConsultations}
-              loading={loading}
-              minimal
-            />
           </div>
         </div>
 
-        {/* 중앙: 일별 차트 */}
+        {/* 목표 달성률 */}
+        <div className="bg-white rounded-xl border border-[#081429]/10 p-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-medium text-[#373d41]">목표 달성률</span>
+            <span className="text-sm font-bold text-[#081429]">{percentage}%</span>
+          </div>
+          <div className="h-2 bg-[#081429]/10 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${percentage >= 100 ? 'bg-[#fdb813]' : 'bg-[#081429]'}`}
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+          <div className="flex justify-between mt-1 text-[10px] text-[#373d41]">
+            <span>{stats.totalConsultations}건</span>
+            <span>목표 {DEFAULT_MONTHLY_TARGET}건</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 하단: 차트 + 카테고리 + 선생님별 */}
+      <div className="grid grid-cols-12 gap-3">
+        {/* 일별 차트 - 더 넓게 */}
         <div className="col-span-6 bg-white rounded-xl border border-[#081429]/10 p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-[#081429]">일별 상담 현황</h3>
@@ -146,12 +149,23 @@ const ConsultationDashboard: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="h-[280px]">
+          <div className="h-[260px]">
             <CounselingOverview data={stats.dailyStats} loading={loading} minimal />
           </div>
         </div>
 
-        {/* 오른쪽: 선생님별 상담 */}
+        {/* 카테고리별 분포 */}
+        <div className="col-span-3 bg-white rounded-xl border border-[#081429]/10 p-4">
+          <h3 className="text-sm font-semibold text-[#081429] mb-3">카테고리별 분포</h3>
+          <CategoryStats
+            stats={stats.categoryStats}
+            totalCount={stats.totalConsultations}
+            loading={loading}
+            minimal
+          />
+        </div>
+
+        {/* 선생님별 상담 */}
         <div
           className="col-span-3 bg-white rounded-xl border border-[#081429]/10 p-4 cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => setShowStaffModal(true)}
@@ -284,45 +298,114 @@ interface NeedingConsultationModalProps {
 }
 
 const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ students, onClose }) => {
+  const [subjectFilter, setSubjectFilter] = useState<'all' | 'math' | 'english'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // 필터링된 학생 목록
+  const filteredStudents = useMemo(() => {
+    let result = students;
+
+    // 과목 필터
+    if (subjectFilter !== 'all') {
+      result = result.filter(s => s.enrolledSubjects.includes(subjectFilter));
+    }
+
+    // 이름 검색
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(s => s.studentName.toLowerCase().includes(query));
+    }
+
+    return result;
+  }, [students, subjectFilter, searchQuery]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-[#081429]/30 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#081429]/10 bg-[#fdb813]">
           <div>
-            <h3 className="text-sm font-semibold text-[#081429]">상담 필요 학생 ({students.length}명)</h3>
-            <p className="text-[10px] text-[#081429]/70">이번 달 과목별 상담 미완료</p>
+            <h3 className="text-sm font-semibold text-[#081429]">상담 필요 학생 ({filteredStudents.length}명)</h3>
+            <p className="text-[10px] text-[#081429]/70">선택 기간 내 상담 미완료</p>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-[#081429]/10 rounded">
             <X className="w-4 h-4 text-[#081429]" />
           </button>
         </div>
-        <div className="max-h-80 overflow-y-auto">
-          {students.length === 0 ? (
+
+        {/* 필터 영역 */}
+        <div className="px-4 py-2 border-b border-[#081429]/10 bg-[#081429]/5 flex items-center gap-2">
+          {/* 과목 필터 */}
+          <div className="flex bg-white rounded-md p-0.5 border border-[#081429]/10">
+            <button
+              onClick={() => setSubjectFilter('all')}
+              className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                subjectFilter === 'all' ? 'bg-[#081429] text-white' : 'text-[#373d41] hover:bg-[#081429]/10'
+              }`}
+            >
+              전체
+            </button>
+            <button
+              onClick={() => setSubjectFilter('math')}
+              className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                subjectFilter === 'math' ? 'bg-[#081429] text-white' : 'text-[#373d41] hover:bg-[#081429]/10'
+              }`}
+            >
+              수학
+            </button>
+            <button
+              onClick={() => setSubjectFilter('english')}
+              className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                subjectFilter === 'english' ? 'bg-[#fdb813] text-[#081429]' : 'text-[#373d41] hover:bg-[#081429]/10'
+              }`}
+            >
+              영어
+            </button>
+          </div>
+
+          {/* 이름 검색 */}
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#373d41]/50" />
+            <input
+              type="text"
+              placeholder="이름 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-6 pr-2 py-1 text-xs border border-[#081429]/10 rounded-md focus:outline-none focus:border-[#fdb813] bg-white"
+            />
+          </div>
+        </div>
+
+        <div className="max-h-72 overflow-y-auto">
+          {filteredStudents.length === 0 ? (
             <div className="text-center py-6">
               <AlertCircle className="w-10 h-10 text-[#373d41]/30 mx-auto mb-2" />
-              <p className="text-sm text-[#373d41]">모든 학생이 상담을 완료했습니다!</p>
+              <p className="text-sm text-[#373d41]">
+                {students.length === 0 ? '모든 학생이 상담을 완료했습니다!' : '검색 결과가 없습니다'}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-[#081429]/5">
-              {students.map((student) => (
-                <div key={student.studentId} className="px-4 py-2.5 hover:bg-[#081429]/5">
+              {filteredStudents.map((student) => (
+                <div key={student.studentId} className="px-4 py-2 hover:bg-[#081429]/5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[#081429]">{student.studentName}</span>
-                    {student.enrolledSubjects.map((subject) => (
-                      <span
-                        key={subject}
-                        className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                          subject === 'math' ? 'bg-[#081429]/10 text-[#081429]' : 'bg-[#fdb813]/30 text-[#081429]'
-                        }`}
-                      >
-                        {subject === 'math' ? '수학' : '영어'}
+                    <span className="text-sm font-medium text-[#081429] min-w-[60px]">{student.studentName}</span>
+                    {student.enrolledSubjects.includes('math') && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[#081429]/10 text-[#081429]">
+                        수학
                       </span>
-                    ))}
+                    )}
+                    {student.enrolledSubjects.includes('english') && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[#fdb813]/30 text-[#081429]">
+                        영어
+                      </span>
+                    )}
                   </div>
-                  <div className="text-[10px] text-[#373d41] mt-0.5">
-                    선택 기간 내 상담 기록 없음
-                  </div>
+                  <span className="text-[10px] text-[#373d41]">
+                    {student.lastConsultationDate
+                      ? `최근: ${student.lastConsultationDate} (${getDaysSince(student.lastConsultationDate)}일 전)`
+                      : '상담 기록 없음'}
+                  </span>
                 </div>
               ))}
             </div>

@@ -517,7 +517,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         <div
           className="flex-1 overflow-auto mx-4"
           style={{
-            maxHeight: 'calc(100vh - 280px)',
+            // maxHeight removed to let flex-1 handle height and reduce bottom margin
             // Sticky scrollbar at bottom using CSS
             scrollbarGutter: 'stable'
           }}

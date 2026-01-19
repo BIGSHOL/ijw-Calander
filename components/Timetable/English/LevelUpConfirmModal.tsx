@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, TrendingUp, ArrowUpCircle, AlertTriangle, Loader } from 'lucide-react';
 import { collection, getDocs, getDoc, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../firebaseConfig';
 import { CLASS_COLLECTION } from './englishUtils';
 
@@ -21,6 +22,7 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
     newClassName,
     type
 }) => {
+    const queryClient = useQueryClient();
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [updateCount, setUpdateCount] = useState<number | null>(null);
@@ -102,6 +104,12 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
             await batch.commit();
             console.log('[LevelUp] Batch commit successful');
             setUpdateCount(totalUpdates);
+
+            // React Query 캐시 무효화 - 시간표 및 학생 관리에 즉시 반영
+            queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            queryClient.invalidateQueries({ queryKey: ['classes'] });
+            console.log('[LevelUp] Cache invalidated');
 
             // Wait to show success message
             setTimeout(() => {

@@ -23,7 +23,7 @@
  */
 
 import { useMemo, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { query, where, collectionGroup, getDocs } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
@@ -39,11 +39,24 @@ export const useClassStudents = (
     isSimulationMode: boolean = false,
     studentMap: Record<string, any> = {}
 ) => {
+    const queryClient = useQueryClient();
+
     // Use Ref to avoid re-fetch when studentMap reference changes
     const studentMapRef = useRef(studentMap);
+
+    // studentMap이 변경되면 캐시된 데이터를 무효화하여 재계산 트리거
+    // (학생 기본 정보 변경 시 시간표에 반영되도록)
+    const prevStudentMapRef = useRef<Record<string, any> | null>(null);
     useEffect(() => {
         studentMapRef.current = studentMap;
-    }, [studentMap]);
+
+        // studentMap이 실제로 변경되었는지 확인 (초기 로드 제외)
+        if (prevStudentMapRef.current !== null && prevStudentMapRef.current !== studentMap) {
+            // 캐시 무효화하여 재조회 트리거
+            queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+        }
+        prevStudentMapRef.current = studentMap;
+    }, [studentMap, queryClient]);
 
     // Memoize classNames to avoid unnecessary re-fetches
     const classNamesKey = useMemo(() => [...classNames].sort().join(','), [classNames]);

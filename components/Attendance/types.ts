@@ -60,6 +60,7 @@ export interface Student {
   teacherIds: string[];
   subjects: AttendanceSubject[];  // Array support
   ownerId?: string;
+  enrollments?: any[]; // For embedded enrollment data (Performance Optimization)
 
   // Metadata
   createdAt?: string;

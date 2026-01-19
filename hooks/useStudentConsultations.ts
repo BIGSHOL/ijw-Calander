@@ -8,9 +8,6 @@ import {
     Query,
     DocumentData,
     limit,
-    startAfter,
-    QueryDocumentSnapshot,
-    getCountFromServer,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Consultation, ConsultationCategory } from '../types';
@@ -219,7 +216,7 @@ export interface PaginatedConsultationsResult {
 
 /**
  * 커서 기반 페이지네이션 상담 기록 조회 Hook
- * - 페이지 이동 시에만 Firebase 조회
+ * - 클라이언트 사이드 필터링으로 정확한 개수 제공
  * - 각 페이지별 캐싱
  */
 export function usePaginatedConsultations(
@@ -235,7 +232,7 @@ export function usePaginatedConsultations(
             const colRef = collection(db, COL_STUDENT_CONSULTATIONS);
             const constraints: any[] = [];
 
-            // 필터 적용
+            // 서버 필터 적용 (Firestore에서 처리 가능한 것만)
             if (filters?.studentId) {
                 constraints.push(where('studentId', '==', filters.studentId));
             } else {
@@ -256,54 +253,27 @@ export function usePaginatedConsultations(
             // 정렬 (date 기준 내림차순)
             constraints.push(orderBy('date', 'desc'));
 
-            // 1. 총 개수 조회 (필터 적용)
-            const countQuery = query(colRef, ...constraints.filter(c => c.type !== 'limit' && c.type !== 'startAfter'));
-            const countSnapshot = await getCountFromServer(query(colRef, ...constraints.slice(0, -1).concat([orderBy('date', 'desc')])));
-            const totalCount = countSnapshot.data().count;
-            const totalPages = Math.ceil(totalCount / pageSize);
-
-            // 2. 해당 페이지 데이터 조회
-            // offset 기반으로 처리 (Firestore는 offset을 직접 지원하지 않으므로 startAfter 사용)
-            let consultationList: Consultation[] = [];
-
-            if (currentPage === 1) {
-                // 첫 페이지: limit만 적용
-                const q = query(colRef, ...constraints, limit(pageSize));
-                const snapshot = await getDocs(q);
-                consultationList = snapshot.docs.map(docSnap => ({
-                    id: docSnap.id,
-                    ...docSnap.data()
-                } as Consultation));
-            } else {
-                // n페이지: (n-1)*pageSize 개를 건너뛰고 pageSize개 조회
-                // 먼저 offset 위치의 문서를 찾기 위해 쿼리
-                const offsetQuery = query(colRef, ...constraints, limit((currentPage - 1) * pageSize));
-                const offsetSnapshot = await getDocs(offsetQuery);
-
-                if (offsetSnapshot.docs.length > 0) {
-                    const lastDoc = offsetSnapshot.docs[offsetSnapshot.docs.length - 1];
-                    const pageQuery = query(colRef, ...constraints, startAfter(lastDoc), limit(pageSize));
-                    const pageSnapshot = await getDocs(pageQuery);
-                    consultationList = pageSnapshot.docs.map(docSnap => ({
-                        id: docSnap.id,
-                        ...docSnap.data()
-                    } as Consultation));
-                }
-            }
+            // 전체 데이터 조회 (클라이언트 사이드 필터링을 위해)
+            const q = query(colRef, ...constraints, limit(2000)); // 최대 2000개 제한
+            const snapshot = await getDocs(q);
+            let allConsultations = snapshot.docs.map(docSnap => ({
+                id: docSnap.id,
+                ...docSnap.data()
+            } as Consultation));
 
             // 클라이언트 사이드 필터링 (서버에서 처리 못한 필터들)
             if (filters?.dateRange) {
                 const { start, end } = filters.dateRange;
-                consultationList = consultationList.filter(c => c.date >= start && c.date <= end);
+                allConsultations = allConsultations.filter(c => c.date >= start && c.date <= end);
             }
 
             if (filters?.followUpStatus && filters.followUpStatus !== 'all') {
                 if (filters.followUpStatus === 'needed') {
-                    consultationList = consultationList.filter(c => c.followUpNeeded && !c.followUpDone);
+                    allConsultations = allConsultations.filter(c => c.followUpNeeded && !c.followUpDone);
                 } else if (filters.followUpStatus === 'done') {
-                    consultationList = consultationList.filter(c => c.followUpNeeded && c.followUpDone);
+                    allConsultations = allConsultations.filter(c => c.followUpNeeded && c.followUpDone);
                 } else if (filters.followUpStatus === 'pending') {
-                    consultationList = consultationList.filter(c => {
+                    allConsultations = allConsultations.filter(c => {
                         if (!c.followUpNeeded || c.followUpDone) return false;
                         if (!c.followUpDate) return true;
                         return c.followUpDate >= new Date().toISOString().split('T')[0];
@@ -313,12 +283,20 @@ export function usePaginatedConsultations(
 
             if (filters?.searchQuery) {
                 const lowerQuery = filters.searchQuery.toLowerCase();
-                consultationList = consultationList.filter(c =>
+                allConsultations = allConsultations.filter(c =>
                     c.studentName.toLowerCase().includes(lowerQuery) ||
                     c.title.toLowerCase().includes(lowerQuery) ||
                     c.content.toLowerCase().includes(lowerQuery)
                 );
             }
+
+            // 필터링 후 총 개수 계산
+            const totalCount = allConsultations.length;
+            const totalPages = Math.ceil(totalCount / pageSize);
+
+            // 페이지네이션 적용
+            const startIndex = (currentPage - 1) * pageSize;
+            const consultationList = allConsultations.slice(startIndex, startIndex + pageSize);
 
             return {
                 consultations: consultationList,

@@ -45,7 +45,7 @@ const ConsultationManagementTab: React.FC = () => {
         loading,
         error,
         refetch
-    } = usePaginatedConsultations(filters, { page: currentPage, pageSize });
+    } = usePaginatedConsultations({ ...filters, searchQuery }, { page: currentPage, pageSize });
 
     const { students } = useStudents();
     const { staff } = useStaff();
@@ -55,16 +55,8 @@ const ConsultationManagementTab: React.FC = () => {
         setCurrentPage(1);
     }, [filters]);
 
-    // 검색 쿼리 적용 (클라이언트 측 추가 필터링)
-    const filteredConsultations = useMemo(() => {
-        if (!searchQuery.trim()) return consultations;
-        const lowerQuery = searchQuery.toLowerCase();
-        return consultations.filter(c =>
-            c.studentName.toLowerCase().includes(lowerQuery) ||
-            c.title.toLowerCase().includes(lowerQuery) ||
-            c.content.toLowerCase().includes(lowerQuery)
-        );
-    }, [consultations, searchQuery]);
+    // 검색 쿼리 적용 (클라이언트 측 추가 필터링) - 이제 훅 내부에서 처리되므로 제거
+    // const filteredConsultations = useMemo(() => { ... }, [consultations, searchQuery]);
 
     // 페이지 사이즈 변경 핸들러
     const handlePageSizeChange = (newSize: number) => {
@@ -79,13 +71,25 @@ const ConsultationManagementTab: React.FC = () => {
         localStorage.setItem('consultation_viewMode', mode);
     };
 
+    // 현재 활성화된 날짜 프리셋 (localStorage에서 복원)
+    const [activeDatePreset, setActiveDatePreset] = useState<'today' | 'week' | 'thisMonth' | 'lastMonth' | 'last3Months' | 'all'>(() => {
+        const saved = localStorage.getItem('consultation_datePreset');
+        if (saved && ['today', 'week', 'thisMonth', 'lastMonth', 'last3Months', 'all'].includes(saved)) {
+            return saved as 'today' | 'week' | 'thisMonth' | 'lastMonth' | 'last3Months' | 'all';
+        }
+        return 'thisMonth';
+    });
+
     // 날짜 범위 프리셋
-    const applyDatePreset = (preset: 'today' | 'week' | 'month' | 'all') => {
+    const applyDatePreset = (preset: 'today' | 'week' | 'thisMonth' | 'lastMonth' | 'last3Months' | 'all') => {
         const today = new Date();
         const yyyy = today.getFullYear();
         const mm = String(today.getMonth() + 1).padStart(2, '0');
         const dd = String(today.getDate()).padStart(2, '0');
         const todayStr = `${yyyy}-${mm}-${dd}`;
+
+        setActiveDatePreset(preset);
+        localStorage.setItem('consultation_datePreset', preset);
 
         if (preset === 'today') {
             setFilters(prev => ({ ...prev, dateRange: { start: todayStr, end: todayStr } }));
@@ -94,21 +98,55 @@ const ConsultationManagementTab: React.FC = () => {
             weekAgo.setDate(today.getDate() - 7);
             const startStr = weekAgo.toISOString().split('T')[0];
             setFilters(prev => ({ ...prev, dateRange: { start: startStr, end: todayStr } }));
-        } else if (preset === 'month') {
-            const monthAgo = new Date(today);
-            monthAgo.setMonth(today.getMonth() - 1);
-            const startStr = monthAgo.toISOString().split('T')[0];
-            setFilters(prev => ({ ...prev, dateRange: { start: startStr, end: todayStr } }));
+        } else if (preset === 'thisMonth') {
+            // 이번 달: 1일 ~ 말일
+            const start = new Date(today.getFullYear(), today.getMonth(), 1);
+            const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            setFilters(prev => ({
+                ...prev,
+                dateRange: {
+                    start: start.toISOString().split('T')[0],
+                    end: end.toISOString().split('T')[0]
+                }
+            }));
+        } else if (preset === 'lastMonth') {
+            // 지난 달: 1일 ~ 말일
+            const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const end = new Date(today.getFullYear(), today.getMonth(), 0);
+            setFilters(prev => ({
+                ...prev,
+                dateRange: {
+                    start: start.toISOString().split('T')[0],
+                    end: end.toISOString().split('T')[0]
+                }
+            }));
+        } else if (preset === 'last3Months') {
+            // 최근 3개월: 2달 전 1일 ~ 이번달 말일
+            const start = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+            const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            setFilters(prev => ({
+                ...prev,
+                dateRange: {
+                    start: start.toISOString().split('T')[0],
+                    end: end.toISOString().split('T')[0]
+                }
+            }));
         } else {
             setFilters(prev => ({ ...prev, dateRange: undefined }));
         }
     };
 
+    // 초기 로드 시 저장된 프리셋 또는 기본값(이번 달) 적용
+    useEffect(() => {
+        applyDatePreset(activeDatePreset);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     return (
         <div className="h-full flex flex-col overflow-hidden">
-            {/* 상단 네비게이션 바 (다른 탭과 동일한 스타일) */}
-            <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
-                <div className="flex items-center gap-3">
+            {/* 상단 네비게이션 바 (다른 탭과 동일한 스타일) - 모바일 대응을 위해 h-auto 및 flex-wrap 적용 */}
+            <div className="bg-[#081429] min-h-10 h-auto flex flex-wrap items-center justify-between px-6 py-2 border-b border-white/10 text-xs z-30 gap-2">
+                <div className="flex flex-wrap items-center gap-3">
                     {/* 뷰 모드 토글 */}
                     <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10">
                         <button
@@ -132,6 +170,73 @@ const ConsultationManagementTab: React.FC = () => {
                             <LayoutDashboard size={14} />
                         </button>
                     </div>
+
+                    {/* 공통 필터들 (목록/대시보드 모두에 표시) */}
+                    <>
+                        {/* 구분선 */}
+                        <div className="w-px h-4 bg-white/20 mx-1"></div>
+
+                        {/* 날짜 범위 버튼 */}
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => applyDatePreset('today')}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'today'
+                                    ? 'bg-[#fdb813] text-[#081429]'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                오늘
+                            </button>
+                            <button
+                                onClick={() => applyDatePreset('week')}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'week'
+                                    ? 'bg-[#fdb813] text-[#081429]'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                최근 7일
+                            </button>
+                            <button
+                                onClick={() => applyDatePreset('thisMonth')}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'thisMonth'
+                                    ? 'bg-[#fdb813] text-[#081429]'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                이번 달
+                            </button>
+                            <button
+                                onClick={() => applyDatePreset('lastMonth')}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'lastMonth'
+                                    ? 'bg-[#fdb813] text-[#081429]'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                지난 달
+                            </button>
+                            <button
+                                onClick={() => applyDatePreset('last3Months')}
+                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'last3Months'
+                                    ? 'bg-[#fdb813] text-[#081429]'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                3개월
+                            </button>
+                            {/* 전체 버튼은 목록뷰에서만 표시 */}
+                            {viewMode === 'list' && (
+                                <button
+                                    onClick={() => applyDatePreset('all')}
+                                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'all'
+                                        ? 'bg-[#fdb813] text-[#081429]'
+                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                        }`}
+                                >
+                                    전체
+                                </button>
+                            )}
+                        </div>
+                    </>
 
                     {/* 목록 모드 전용 필터들 */}
                     {viewMode === 'list' && (
@@ -168,43 +273,6 @@ const ConsultationManagementTab: React.FC = () => {
                                 >
                                     <GraduationCap className="inline-block w-4 h-4 mr-1" />
                                     학생
-                                </button>
-                            </div>
-
-                            {/* 구분선 */}
-                            <div className="w-px h-4 bg-white/20 mx-1"></div>
-
-                            {/* 날짜 범위 버튼 */}
-                            <div className="flex gap-1">
-                                <button
-                                    onClick={() => applyDatePreset('today')}
-                                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${filters.dateRange?.start === filters.dateRange?.end
-                                        ? 'bg-[#fdb813] text-[#081429]'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                        }`}
-                                >
-                                    오늘
-                                </button>
-                                <button
-                                    onClick={() => applyDatePreset('week')}
-                                    className="px-2 py-1 rounded text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
-                                >
-                                    최근 7일
-                                </button>
-                                <button
-                                    onClick={() => applyDatePreset('month')}
-                                    className="px-2 py-1 rounded text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
-                                >
-                                    최근 30일
-                                </button>
-                                <button
-                                    onClick={() => applyDatePreset('all')}
-                                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${!filters.dateRange
-                                        ? 'bg-[#fdb813] text-[#081429]'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                        }`}
-                                >
-                                    전체
                                 </button>
                             </div>
 
@@ -291,7 +359,7 @@ const ConsultationManagementTab: React.FC = () => {
                     {/* 결과 카운트 - 목록 모드에서만 */}
                     {viewMode === 'list' && (
                         <span className="text-gray-400 text-xs">
-                            총 <span className="text-[#fdb813] font-bold">{filteredConsultations.length}</span>건의 상담
+                            총 <span className="text-[#fdb813] font-bold">{totalCount}</span>개의 상담 기록
                         </span>
                     )}
 
@@ -321,8 +389,17 @@ const ConsultationManagementTab: React.FC = () => {
             {/* 메인 콘텐츠 영역 */}
             <div className="flex-1 overflow-auto bg-gray-50 p-6">
                 {viewMode === 'dashboard' ? (
-                    /* 대시보드 뷰 */
-                    <ConsultationDashboard />
+                    /* 대시보드 뷰 - 공통 날짜 필터 전달 */
+                    <ConsultationDashboard
+                        dateRange={filters.dateRange}
+                        onDateRangeChange={(range) => {
+                            setFilters(prev => ({ ...prev, dateRange: range }));
+                            // dateRange가 없으면 'all', 있으면 적절한 프리셋 설정
+                            if (!range) {
+                                setActiveDatePreset('all');
+                            }
+                        }}
+                    />
                 ) : (
                     /* 목록 뷰 */
                     <>
@@ -341,7 +418,7 @@ const ConsultationManagementTab: React.FC = () => {
 
                         {/* 상담 목록 */}
                         <ConsultationList
-                            consultations={filteredConsultations}
+                            consultations={consultations}
                             loading={loading}
                             onRefresh={refetch}
                             students={students}

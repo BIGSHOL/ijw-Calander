@@ -1,6 +1,7 @@
 // StudentModal.tsx - 영어 통합 뷰 학생 관리 모달
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Users, Save } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, getDoc, collectionGroup, writeBatch, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -34,6 +35,9 @@ const StudentModal: React.FC<StudentModalProps> = ({
     studentMap = {},
     initialStudents = []
 }) => {
+    // React Query client for cache invalidation
+    const queryClient = useQueryClient();
+
     // State
     const [students, setStudents] = useState<TimetableStudent[]>([]);
     const [classDocId, setClassDocId] = useState<string | null>(null);
@@ -43,7 +47,8 @@ const StudentModal: React.FC<StudentModalProps> = ({
     const [isDirty, setIsDirty] = useState(false); // 변경사항 유무
 
     // NEW: enrollments 기반 데이터 사용 여부
-    const useEnrollmentsMode = initialStudents.length > 0 || Object.keys(studentMap).length > 0;
+    // studentMap이 전달되면 enrollments 모드 (initialStudents가 비어있어도)
+    const useEnrollmentsMode = Object.keys(studentMap).length > 0;
 
     // Get full class name (e.g., PL5 -> Pre Let's 5)
     const fullClassName = useMemo(() => {
@@ -257,6 +262,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
     };
 
     // Update student - enrollments 모드에서는 바로 Firebase 업데이트
+    // 학생 기본 정보(name, englishName, school, grade)는 students 컬렉션도 함께 업데이트
     const handleUpdateStudent = async (id: string, updates: Partial<TimetableStudent>) => {
         // 로컬 상태 먼저 업데이트 (UI 반응성)
         setStudents(prev => prev.map(s =>
@@ -266,39 +272,53 @@ const StudentModal: React.FC<StudentModalProps> = ({
         if (useEnrollmentsMode) {
             // Enrollments 모드: Firebase에 바로 저장
             try {
-                // 해당 학생의 영어 enrollment 문서 찾기
-                const enrollmentsQuery = query(
-                    collectionGroup(db, 'enrollments'),
-                    where('className', '==', className),
-                    where('subject', '==', 'english')
-                );
-                const snapshot = await getDocs(enrollmentsQuery);
+                // 학생 기본 정보 필드 분리 (students 컬렉션에도 저장해야 하는 필드)
+                const studentBasicFields = ['name', 'englishName', 'school', 'grade'];
+                const basicUpdates: Record<string, any> = {};
+                const enrollmentUpdates: Record<string, any> = {};
 
-                // 학생 ID로 해당 enrollment 찾기
-                const enrollmentDoc = snapshot.docs.find(doc => {
-                    const studentId = doc.ref.parent.parent?.id;
-                    return studentId === id;
+                Object.entries(updates).forEach(([key, value]) => {
+                    const cleanValue = value !== undefined ? value : null;
+                    if (studentBasicFields.includes(key)) {
+                        basicUpdates[key] = cleanValue;
+                    }
+                    enrollmentUpdates[key] = cleanValue;
+                });
+
+                // 1. 학생 기본 정보가 변경된 경우 students 컬렉션 업데이트
+                if (Object.keys(basicUpdates).length > 0) {
+                    const studentDocRef = doc(db, 'students', id);
+                    await updateDoc(studentDocRef, {
+                        ...basicUpdates,
+                        updatedAt: new Date().toISOString()
+                    });
+                    console.log('[StudentModal] Student basic info updated:', id, basicUpdates);
+
+                    // 학생관리 캐시 무효화 (학생관리 화면에서 변경사항 반영)
+                    queryClient.invalidateQueries({ queryKey: ['students'] });
+                }
+
+                // 2. enrollment 문서 업데이트 - 학생 ID 기반으로 직접 조회
+                // students/{studentId}/enrollments 에서 className이 일치하는 문서 찾기
+                const studentEnrollmentsRef = collection(db, 'students', id, 'enrollments');
+                const enrollmentsSnapshot = await getDocs(studentEnrollmentsRef);
+
+                const enrollmentDoc = enrollmentsSnapshot.docs.find(doc => {
+                    const data = doc.data();
+                    return data.className === className;
                 });
 
                 if (enrollmentDoc) {
-                    // undefined 값 제거
-                    const cleanUpdates: Record<string, any> = {};
-                    Object.entries(updates).forEach(([key, value]) => {
-                        if (value !== undefined) {
-                            cleanUpdates[key] = value;
-                        } else {
-                            // undefined는 삭제로 처리
-                            cleanUpdates[key] = null;
-                        }
-                    });
+                    await updateDoc(enrollmentDoc.ref, enrollmentUpdates);
+                    console.log('[StudentModal] Enrollment updated:', id, enrollmentUpdates);
 
-                    await updateDoc(enrollmentDoc.ref, cleanUpdates);
-                    console.log('[StudentModal] Enrollment updated:', id, cleanUpdates);
+                    // 영어 시간표 캐시 무효화 (시간표에서 변경사항 반영)
+                    queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
                 } else {
                     console.warn('[StudentModal] Enrollment not found for student:', id);
                 }
             } catch (error) {
-                console.error('[StudentModal] Error updating enrollment:', error);
+                console.error('[StudentModal] Error updating student:', error);
                 alert('학생 정보 업데이트 중 오류가 발생했습니다.');
             }
         } else {
@@ -315,21 +335,22 @@ const StudentModal: React.FC<StudentModalProps> = ({
         if (useEnrollmentsMode) {
             // Enrollments 모드: Firebase에서 enrollment 삭제
             try {
-                const enrollmentsQuery = query(
-                    collectionGroup(db, 'enrollments'),
-                    where('className', '==', className),
-                    where('subject', '==', 'english')
-                );
-                const snapshot = await getDocs(enrollmentsQuery);
+                // 학생 ID 기반으로 직접 조회
+                const studentEnrollmentsRef = collection(db, 'students', id, 'enrollments');
+                const enrollmentsSnapshot = await getDocs(studentEnrollmentsRef);
 
-                const enrollmentDoc = snapshot.docs.find(doc => {
-                    const studentId = doc.ref.parent.parent?.id;
-                    return studentId === id;
+                const enrollmentDoc = enrollmentsSnapshot.docs.find(doc => {
+                    const data = doc.data();
+                    return data.className === className;
                 });
 
                 if (enrollmentDoc) {
                     await deleteDoc(enrollmentDoc.ref);
                     console.log('[StudentModal] Enrollment deleted:', id);
+
+                    // 캐시 무효화
+                    queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+                    queryClient.invalidateQueries({ queryKey: ['students'] });
                 } else {
                     console.warn('[StudentModal] Enrollment not found for deletion:', id);
                 }
