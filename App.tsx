@@ -34,6 +34,7 @@ import GlobalSearch, { SearchResult } from './components/Common/GlobalSearch';
 
 // 탭별 컴포넌트 (lazy loading - 해당 탭 진입 시 로딩)
 const TimetableManager = lazy(() => import('./components/Timetable/TimetableManager'));
+const TimetableSettingsModal = lazy(() => import('./components/Timetable/TimetableSettingsModal'));
 const AttendanceManager = lazy(() => import('./components/Attendance/AttendanceManager'));
 const PaymentReport = lazy(() => import('./components/PaymentReport/PaymentReport'));
 const GanttManager = lazy(() => import('./components/Gantt/GanttManager'));
@@ -2164,6 +2165,19 @@ const App: React.FC = () => {
                     </button>
                   )}
 
+                  {/* Spacer to push settings button to the right */}
+                  <div className="flex-1"></div>
+
+                  {/* Timetable Settings Button - 영어/수학 공용 */}
+                  <button
+                    onClick={() => setIsTimetableSettingsOpen(true)}
+                    className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-white font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                    title="시간표 설정"
+                  >
+                    <Settings size={12} />
+                    설정
+                  </button>
+
                   {/* Removed Summary Indicators */}
 
                 </div>
@@ -2638,7 +2652,17 @@ const App: React.FC = () => {
         onToggleArchived={() => setShowArchived(!showArchived)}
       />
 
-      {/* Timetable Settings Modal - TimetableManager 내부에서 관리됨 */}
+      {/* Timetable Settings Modal - 시간표 탭 상단에서 열림 */}
+      {isTimetableSettingsOpen && (
+        <Suspense fallback={null}>
+          <TimetableSettingsModal
+            isOpen={isTimetableSettingsOpen}
+            onClose={() => setIsTimetableSettingsOpen(false)}
+            canEdit={hasPermission('timetable.math.edit') || hasPermission('timetable.english.edit')}
+            currentUser={userProfile}
+          />
+        </Suspense>
+      )}
 
       {/* Calendar Settings Modal - 연간 일정 네비게이션에서 열림 */}
       {isCalendarSettingsOpen && (

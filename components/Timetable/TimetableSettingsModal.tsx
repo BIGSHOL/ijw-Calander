@@ -1,19 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Settings } from 'lucide-react';
 import ClassSettingsModal from '../ClassManagement/ClassSettingsModal';
+import ViewSettingsModal from './Math/components/Modals/ViewSettingsModal';
+import { UserProfile } from '../../types';
 // TeachersTab 제거됨 - 강사 관리는 시스템 관리의 사용자 관리(staff 컬렉션)에서 통합 관리
 
 interface TimetableSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   canEdit?: boolean;
+  currentUser: UserProfile | null;
 }
 
 const TimetableSettingsModal: React.FC<TimetableSettingsModalProps> = ({
   isOpen,
   onClose,
   canEdit = true,
+  currentUser,
 }) => {
+  const [activeTab, setActiveTab] = useState<'class' | 'view'>('view');
+
   if (!isOpen) return null;
 
   return (
@@ -39,14 +45,44 @@ const TimetableSettingsModal: React.FC<TimetableSettingsModalProps> = ({
           </button>
         </div>
 
-        {/* Content - 일반 설정(수업 설정)만 표시 */}
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 bg-gray-50">
+          <button
+            onClick={() => setActiveTab('view')}
+            className={`flex-1 px-4 py-2 text-sm font-bold transition-colors ${
+              activeTab === 'view'
+                ? 'bg-white text-[#081429] border-b-2 border-[#fdb813]'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            보기 설정
+          </button>
+          <button
+            onClick={() => setActiveTab('class')}
+            className={`flex-1 px-4 py-2 text-sm font-bold transition-colors ${
+              activeTab === 'class'
+                ? 'bg-white text-[#081429] border-b-2 border-[#fdb813]'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            수업 설정
+          </button>
+        </div>
+
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-3">
-          <ClassSettingsModal
-            isOpen={true}
-            onClose={() => {}}
-            canEdit={canEdit}
-            embedded={true}
-          />
+          {activeTab === 'class' ? (
+            <ClassSettingsModal
+              isOpen={true}
+              onClose={() => {}}
+              canEdit={canEdit}
+              embedded={true}
+            />
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              보기 설정 기능은 준비 중입니다.
+            </div>
+          )}
         </div>
       </div>
     </div>
