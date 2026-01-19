@@ -4,13 +4,13 @@ import { Search, Users, Shield, ShieldCheck, ChevronDown, ChevronRight, Eye, Edi
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useStaffWithAccounts } from '../../../hooks/useFirebaseQueries';
+import { usePermissions } from '../../../hooks/usePermissions';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface DepartmentPermissionsTabProps {
   departments: Department[];
   users?: UserProfile[]; // deprecated - staff 데이터로 대체됨
   currentUser: UserProfile | null;
-  isMaster: boolean;
-  isAdmin: boolean;
 }
 
 // 권한 레이블 (부서 가시성만 제어)
@@ -23,12 +23,17 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
   departments,
   users,
   currentUser,
-  isMaster,
-  isAdmin,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
+
+  // Permission checks
+  const { hasPermission } = usePermissions(currentUser);
+  const isMaster = currentUser?.role === 'master';
+  const isAdmin = currentUser?.role === 'admin';
 
   // staff 컬렉션에서 계정 연동된 직원 가져오기
   const { data: staffWithAccounts = [] } = useStaffWithAccounts(isMaster || isAdmin);
@@ -103,6 +108,10 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
     }
 
     setSaving(uid);
+
+    // Optimistic update를 위한 이전 데이터 백업
+    const previousData = queryClient.getQueryData(['staffWithAccounts']);
+
     try {
       const newPerms = { ...(user.departmentPermissions || {}) };
       if (level === 'none') {
@@ -111,6 +120,16 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
         newPerms[deptId] = level;
       }
 
+      // Optimistic update: UI 즉시 업데이트
+      queryClient.setQueryData(['staffWithAccounts'], (old: any) => {
+        if (!old) return old;
+        return old.map((s: any) =>
+          s.id === staffId
+            ? { ...s, departmentPermissions: newPerms }
+            : s
+        );
+      });
+
       // staff 컬렉션에 저장
       await updateDoc(doc(db, 'staff', staffId), {
         departmentPermissions: newPerms,
@@ -118,6 +137,8 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
     } catch (e) {
       console.error('권한 변경 실패:', e);
       alert('권한 변경에 실패했습니다.');
+      // 실패 시 이전 데이터로 롤백
+      queryClient.setQueryData(['staffWithAccounts'], previousData);
     } finally {
       setSaving(null);
     }
@@ -135,6 +156,10 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
     }
 
     setSaving(uid);
+
+    // Optimistic update를 위한 이전 데이터 백업
+    const previousData = queryClient.getQueryData(['staffWithAccounts']);
+
     try {
       const newPerms: Record<string, 'view'> = {};
       if (level !== 'none') {
@@ -143,6 +168,16 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
         });
       }
 
+      // Optimistic update: UI 즉시 업데이트
+      queryClient.setQueryData(['staffWithAccounts'], (old: any) => {
+        if (!old) return old;
+        return old.map((s: any) =>
+          s.id === staffId
+            ? { ...s, departmentPermissions: newPerms }
+            : s
+        );
+      });
+
       // staff 컬렉션에 저장
       await updateDoc(doc(db, 'staff', staffId), {
         departmentPermissions: newPerms,
@@ -150,12 +185,14 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
     } catch (e) {
       console.error('일괄 권한 변경 실패:', e);
       alert('권한 변경에 실패했습니다.');
+      // 실패 시 이전 데이터로 롤백
+      queryClient.setQueryData(['staffWithAccounts'], previousData);
     } finally {
       setSaving(null);
     }
   };
 
-  const canEdit = isMaster || isAdmin;
+  const canEdit = isMaster || hasPermission('departments.manage');
 
   return (
     <div className="space-y-3">

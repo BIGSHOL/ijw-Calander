@@ -380,6 +380,21 @@ service cloud.firestore {
       allow delete: if hasRole(['master']);
     }
 
+    // === Student Consultation Records (학생 상담 기록) ===
+    match /student_consultations/{consultationId} {
+      // Read: All authenticated users can view
+      allow read: if isAuthenticated();
+
+      // Create/Update: Master or users with consultation permission
+      allow create, update: if hasRole(['master']) ||
+                              hasPermission('consultation.create') ||
+                              hasPermission('consultation.edit');
+
+      // Delete: Only master or users with consultation edit permission
+      allow delete: if hasRole(['master']) ||
+                       hasPermission('consultation.edit');
+    }
+
     // === Class Management (Korean collection names) ===
     // Using wildcard match for Korean collection names
 
@@ -392,16 +407,16 @@ service cloud.firestore {
       allow write: if hasRole(['master']) || hasPermission('system.classes.edit');
     }
 
-    // === Default: Deny by Default ===
-    // Explicit rules above handle all known collections
-    // This fallback denies access to undefined collections for safety
-    // NOTE: 새 컬렉션 추가 시 위에 명시적 규칙 필요
+    // === Default: Role-Based Access for All Collections ===
+    // 새 컬렉션은 역할 권한과 탭 권한에 따라 자동으로 접근 제어됨
+    // 위에 명시적 규칙이 없는 모든 컬렉션에 적용
 
     match /{document=**} {
-      // 기본 거부 - 명시적으로 허용된 컬렉션만 접근 가능
-      // Master/Admin은 새 컬렉션 테스트를 위해 접근 허용
-      allow read: if hasRole(['master', 'admin']);
-      allow write: if hasRole(['master']);
+      // Read: 모든 인증된 사용자 (탭 권한은 클라이언트에서 제어)
+      allow read: if isAuthenticated();
+
+      // Write: Master 또는 Admin 역할
+      allow write: if hasRole(['master', 'admin']);
     }
   }
 }
