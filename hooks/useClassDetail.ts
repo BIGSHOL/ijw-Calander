@@ -13,6 +13,7 @@ export interface ClassStudent {
   status: 'active' | 'on_hold' | 'withdrawn';
   enrollmentDate: string;
   attendanceDays?: string[];  // 실제 등원 요일 (비어있으면 모든 수업 요일에 등원)
+  underline?: boolean;  // 영어 시간표용 밑줄 강조 표시
 }
 
 export interface ClassDetail {
@@ -77,9 +78,10 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
         // classes 컬렉션 조회 실패 시 무시
       }
 
-      // 2. enrollments에서 학생 ID 수집 (attendanceDays 포함)
+      // 2. enrollments에서 학생 ID 수집 (attendanceDays, underline 포함)
       const studentIds = new Set<string>();
       const studentAttendanceDays: Record<string, string[]> = {};  // studentId -> attendanceDays
+      const studentUnderline: Record<string, boolean> = {};  // studentId -> underline
 
       try {
         const enrollmentsQuery = query(
@@ -98,6 +100,10 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
             // attendanceDays 저장
             if (data.attendanceDays && Array.isArray(data.attendanceDays)) {
               studentAttendanceDays[studentId] = data.attendanceDays;
+            }
+            // underline 저장 (영어 과목용)
+            if (data.underline !== undefined) {
+              studentUnderline[studentId] = data.underline;
             }
           }
 

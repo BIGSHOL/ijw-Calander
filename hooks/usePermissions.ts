@@ -63,14 +63,23 @@ export function usePermissions(userProfile: UserProfile | null): UsePermissionsR
 
     // Check if current user has a specific permission
     const hasPermission = useCallback((permission: PermissionId): boolean => {
+        // Edge case: No user profile
         if (!userProfile) return false;
+
+        // Edge case: Missing or invalid role
+        if (!userProfile.role) return false;
 
         // MASTER always has all permissions
         if (userProfile.role === 'master') return true;
 
         // Get permissions for user's role
         const rolePerms = rolePermissions[userProfile.role as keyof RolePermissions];
-        if (!rolePerms) return false;
+
+        // Edge case: Role not found in permissions config
+        if (!rolePerms) {
+            console.warn(`[usePermissions] No permissions found for role: ${userProfile.role}`);
+            return false;
+        }
 
         return rolePerms[permission] ?? false;
     }, [userProfile, rolePermissions]);

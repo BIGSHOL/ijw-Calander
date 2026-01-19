@@ -9,17 +9,17 @@ import {
   DEFAULT_TAB_PERMISSIONS,
   APP_TABS,
   AppTab,
-  UserRole
+  UserRole,
+  UserProfile
 } from '../../types';
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { listenerRegistry } from '../../utils/firebaseCleanup';
 import { RotateCcw, Save, Shield, Layout, ChevronDown, ChevronRight, Check, X } from 'lucide-react';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface RoleManagementPageProps {
-  isMaster: boolean;
-  isAdmin: boolean;
-  currentUserRole?: string;
+  currentUser: UserProfile | null;
 }
 
 // Permission categories for compact display
@@ -169,10 +169,16 @@ const ROLES_TO_SHOW = ROLE_HIERARCHY.filter(r => r !== 'master') as UserRole[];
 const STORAGE_KEY_EXPANDED = 'roleManagement_expandedCategories';
 
 const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
-  isMaster,
-  isAdmin,
-  currentUserRole
+  currentUser
 }) => {
+  // Permissions
+  const { hasPermission } = usePermissions(currentUser);
+  const isMaster = currentUser?.role === 'master';
+
+  // 권한 체크: settings.role_permissions 권한이 있거나 MASTER인 경우
+  const canView = isMaster || hasPermission('settings.access');
+  const canEdit = isMaster || hasPermission('settings.role_permissions');
+
   // State
   const [activeSection, setActiveSection] = useState<'permissions' | 'tabs'>('permissions');
   const [rolePermissions, setRolePermissions] = useState<RolePermissions>(DEFAULT_ROLE_PERMISSIONS);
@@ -191,9 +197,6 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
     return new Set(); // 기본값: 모두 접힘
   });
   const [hasChanges, setHasChanges] = useState(false);
-
-  const canView = isMaster || isAdmin;
-  const canEdit = isMaster;
 
   // Load data
   useEffect(() => {
@@ -292,6 +295,12 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
   };
 
   const handleSave = async () => {
+    // 권한 체크 (개발자 도구 우회 방지)
+    if (!canEdit) {
+      alert('권한이 없습니다. MASTER만 수정할 수 있습니다.');
+      return;
+    }
+
     try {
       await Promise.all([
         setDoc(doc(db, 'settings', 'rolePermissions'), rolePermissions, { merge: true }),
@@ -306,6 +315,12 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
   };
 
   const handleReset = () => {
+    // 권한 체크 (개발자 도구 우회 방지)
+    if (!canEdit) {
+      alert('권한이 없습니다. MASTER만 수정할 수 있습니다.');
+      return;
+    }
+
     if (confirm('모든 설정을 기본값으로 초기화하시겠습니까?')) {
       setRolePermissions(DEFAULT_ROLE_PERMISSIONS);
       setTabPermissions(DEFAULT_TAB_PERMISSIONS);
@@ -374,6 +389,9 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
           <div>
             <h1 className="text-lg font-bold text-gray-800">역할 관리</h1>
             <p className="text-xs text-gray-500">역할별 권한과 탭 접근을 관리합니다</p>
+            <p className="text-xs text-orange-600 font-medium mt-0.5">
+              ⚠️ 권한 변경 후 최대 30분 소요 (즉시 적용: 재로그인 필요)
+            </p>
           </div>
         </div>
 

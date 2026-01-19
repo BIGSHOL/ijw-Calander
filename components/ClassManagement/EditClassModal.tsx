@@ -36,8 +36,9 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const [studentSearch, setStudentSearch] = useState('');
   const [studentsToAdd, setStudentsToAdd] = useState<Set<string>>(new Set());
   const [studentsToRemove, setStudentsToRemove] = useState<Set<string>>(new Set());
-  const [studentAttendanceDays, setStudentAttendanceDays] = useState<Record<string, string[]>>({});  // 학생별 등원 요일
+  const [studentAttendanceDays, setStudentAttendanceDays] = useState<Record<string, string[]>>({});  // 학생별 등원 요일 (수학용)
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);  // 요일 설정 펼친 학생
+  const [studentUnderlines, setStudentUnderlines] = useState<Record<string, boolean>>({});  // 학생별 밑줄 강조 (영어용)
 
   const [error, setError] = useState('');
 
@@ -159,16 +160,21 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     }
   }, [classDetail?.memo]);
 
-  // classDetail에서 기존 학생 attendanceDays 로드
+  // classDetail에서 기존 학생 attendanceDays, underline 로드
   useEffect(() => {
     if (classDetail?.students) {
       const existingDays: Record<string, string[]> = {};
+      const existingUnderlines: Record<string, boolean> = {};
       classDetail.students.forEach(student => {
         if (student.attendanceDays && student.attendanceDays.length > 0) {
           existingDays[student.id] = student.attendanceDays;
         }
+        if (student.underline) {
+          existingUnderlines[student.id] = student.underline;
+        }
       });
       setStudentAttendanceDays(existingDays);
+      setStudentUnderlines(existingUnderlines);
     }
   }, [classDetail?.students]);
 
@@ -292,6 +298,14 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     return days.join(', ');
   };
 
+  // 영어 과목: 학생 밑줄 강조 토글
+  const toggleStudentUnderline = (studentId: string) => {
+    setStudentUnderlines(prev => ({
+      ...prev,
+      [studentId]: !prev[studentId]
+    }));
+  };
+
   // 저장
   const handleSave = async () => {
     if (!className.trim()) {
@@ -356,8 +370,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       // 1. 수업 정보 업데이트
       await updateClassMutation.mutateAsync(updateData);
 
-      // 2. 학생 추가/제거/등원요일 변경이 있으면 처리
-      const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0;
+      // 2. 학생 추가/제거/등원요일/밑줄 변경이 있으면 처리
+      const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0;
       if (hasStudentChanges) {
         await manageStudentsMutation.mutateAsync({
           className: className.trim(),
@@ -367,6 +381,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
           addStudentIds: Array.from(studentsToAdd),
           removeStudentIds: Array.from(studentsToRemove),
           studentAttendanceDays,
+          studentUnderlines,
         });
       }
 
@@ -696,8 +711,12 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                 <div className="border-b border-gray-200">
                   <div className="px-2.5 py-1.5 bg-blue-50 text-xs font-semibold text-blue-700 flex items-center justify-between">
                     <span>현재 등록된 학생 ({currentStudents.length - studentsToRemove.size}명)</span>
-                    {classDays.length > 1 && (
+                    {/* 수학: 등원 요일 설정 안내, 영어: 밑줄 강조 안내 */}
+                    {classInfo.subject === 'math' && classDays.length > 1 && (
                       <span className="text-[10px] text-blue-500 font-normal">클릭하여 등원 요일 설정</span>
+                    )}
+                    {classInfo.subject === 'english' && (
+                      <span className="text-[10px] text-blue-500 font-normal">U: 밑줄 강조</span>
                     )}
                   </div>
                   <div className="max-h-40 overflow-y-auto">
@@ -708,25 +727,51 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                         const isMarkedForRemoval = studentsToRemove.has(student.id);
                         const isExpanded = expandedStudentId === student.id;
                         const attendanceDaysText = getAttendanceDaysText(student.id);
+                        const hasUnderline = studentUnderlines[student.id] || false;
+                        const isMath = classInfo.subject === 'math';
+                        const isEnglish = classInfo.subject === 'english';
+                        // 수학에서만 등원 요일 클릭 가능
+                        const canExpandForDays = isMath && classDays.length > 1 && !isMarkedForRemoval;
+
                         return (
                           <div key={student.id} className={isMarkedForRemoval ? 'bg-red-50' : ''}>
                             <div
-                              className={`flex items-center justify-between px-2.5 py-1.5 text-sm ${isMarkedForRemoval ? 'line-through text-gray-400' : 'hover:bg-gray-50'} ${classDays.length > 1 && !isMarkedForRemoval ? 'cursor-pointer' : ''}`}
+                              className={`flex items-center justify-between px-2.5 py-1.5 text-sm ${isMarkedForRemoval ? 'line-through text-gray-400' : 'hover:bg-gray-50'} ${canExpandForDays ? 'cursor-pointer' : ''}`}
                               onClick={() => {
-                                if (classDays.length > 1 && !isMarkedForRemoval) {
+                                if (canExpandForDays) {
                                   setExpandedStudentId(isExpanded ? null : student.id);
                                 }
                               }}
                             >
                               <div className="flex items-center gap-2 flex-1 min-w-0">
-                                {classDays.length > 1 && !isMarkedForRemoval && (
+                                {/* 수학: Calendar 아이콘 */}
+                                {isMath && classDays.length > 1 && !isMarkedForRemoval && (
                                   <Calendar size={12} className="text-gray-400 flex-shrink-0" />
+                                )}
+                                {/* 영어: 밑줄 토글 버튼 */}
+                                {isEnglish && !isMarkedForRemoval && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleStudentUnderline(student.id);
+                                    }}
+                                    className={`w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded flex-shrink-0 transition-colors ${
+                                      hasUnderline
+                                        ? 'bg-blue-500 text-white underline'
+                                        : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                                    }`}
+                                    title={hasUnderline ? '밑줄 해제' : '밑줄 강조'}
+                                  >
+                                    U
+                                  </button>
                                 )}
                                 <span className={`truncate ${isMarkedForRemoval ? 'text-gray-400' : 'text-gray-800'}`}>
                                   {student.name}
                                 </span>
                                 <span className="text-[10px] text-gray-400 flex-shrink-0">{formatSchoolGrade(student.school, student.grade)}</span>
-                                {attendanceDaysText && !isMarkedForRemoval && (
+                                {/* 수학에서만 등원 요일 표시 */}
+                                {isMath && attendanceDaysText && !isMarkedForRemoval && (
                                   <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
                                     {attendanceDaysText}만
                                   </span>
@@ -751,8 +796,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                 )}
                               </button>
                             </div>
-                            {/* 요일 선택 UI (펼쳐졌을 때) */}
-                            {isExpanded && classDays.length > 1 && (
+                            {/* 수학: 요일 선택 UI (펼쳐졌을 때) */}
+                            {isMath && isExpanded && classDays.length > 1 && (
                               <div className="px-2.5 py-2 bg-gray-50 border-t border-gray-100">
                                 <div className="text-[10px] text-gray-500 mb-1.5">등원 요일 선택 (체크 해제하면 해당 요일 미등원)</div>
                                 <div className="flex gap-1 flex-wrap">

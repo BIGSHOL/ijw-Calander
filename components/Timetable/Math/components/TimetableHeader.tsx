@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    ChevronLeft, ChevronRight, Search, X, Settings, Sliders
+    ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit
 } from 'lucide-react';
 
 interface TimetableHeaderProps {
@@ -12,12 +12,15 @@ interface TimetableHeaderProps {
     setSearchQuery: (query: string) => void;
     viewType: 'teacher' | 'room' | 'class';
     setIsTeacherOrderModalOpen: (isOpen: boolean) => void;
-    setIsViewSettingsOpen: (isOpen: boolean) => void;
     setIsTimetableSettingsOpen: (isOpen: boolean) => void;
     pendingMovesCount: number;
     handleSavePendingMoves: () => void;
     handleCancelPendingMoves: () => void;
     isSaving: boolean;
+    // 조회/수정 모드
+    mode: 'view' | 'edit';
+    setMode: (mode: 'view' | 'edit') => void;
+    canEdit: boolean;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -29,12 +32,14 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     setSearchQuery,
     viewType,
     setIsTeacherOrderModalOpen,
-    setIsViewSettingsOpen,
     setIsTimetableSettingsOpen,
     pendingMovesCount,
     handleSavePendingMoves,
     handleCancelPendingMoves,
-    isSaving
+    isSaving,
+    mode,
+    setMode,
+    canEdit
 }) => {
     return (
         <div className="bg-gray-50 h-10 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs">
@@ -65,6 +70,29 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
             {/* Right: Search and Actions */}
             <div className="flex items-center gap-2">
+                {/* Mode Toggle - 조회/수정 모드 */}
+                <div className="flex bg-gray-200 rounded-lg p-0.5">
+                    <button
+                        onClick={() => setMode('view')}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                    >
+                        <Eye size={12} />
+                        조회
+                    </button>
+                    {canEdit && (
+                        <button
+                            onClick={() => setMode('edit')}
+                            className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                        >
+                            <Edit size={12} />
+                            수정
+                        </button>
+                    )}
+                </div>
+
+                {/* Separator */}
+                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
                 {/* Search */}
                 <div className="relative">
                     <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -99,7 +127,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     </button>
                 )}
 
-                {/* Timetable Settings Button (수업 설정 + 강사 관리) */}
+                {/* Timetable Settings Button (수업 설정 + 보기 설정 통합) */}
                 <button
                     onClick={() => setIsTimetableSettingsOpen(true)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border bg-[#081429] border-[#081429] text-white hover:bg-[#0a1a35] transition-all"
@@ -107,15 +135,6 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 >
                     <Settings size={14} />
                     <span>설정</span>
-                </button>
-
-                {/* View Settings Button (보기 설정) */}
-                <button
-                    onClick={() => setIsViewSettingsOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border bg-white border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
-                    title="보기 설정"
-                >
-                    <Sliders size={14} />
                 </button>
 
                 {/* Pending Moves */}

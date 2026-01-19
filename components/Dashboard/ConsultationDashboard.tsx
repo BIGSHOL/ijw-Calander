@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Calendar, RefreshCw, FileText, Users, UserCheck, AlertTriangle, X, ChevronRight, AlertCircle, Search } from 'lucide-react';
-import { useConsultationStats, getDateRangeFromPreset, DatePreset, DEFAULT_MONTHLY_TARGET, StaffSubjectStat, StudentNeedingConsultation } from '../../hooks/useConsultationStats';
+import { useConsultationStats, getDateRangeFromPreset, DatePreset, StaffSubjectStat, StudentNeedingConsultation } from '../../hooks/useConsultationStats';
 import { useStaff } from '../../hooks/useStaff';
 import CounselingOverview from './CounselingOverview';
 import CategoryStats from './CategoryStats';
@@ -46,6 +46,13 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
     staff
   );
 
+  // 상담 완료율용: 항상 이번 달 기준 (필터와 무관)
+  const thisMonthRange = useMemo(() => getDateRangeFromPreset('thisMonth'), []);
+  const { stats: thisMonthStats } = useConsultationStats(
+    { dateRange: thisMonthRange },
+    staff
+  );
+
   // 대시보드 자체 preset 변경 시 부모에게도 알림
   const handlePresetChange = (preset: DatePreset) => {
     setInternalDatePreset(preset);
@@ -55,7 +62,19 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
     }
   };
 
-  const percentage = Math.min(100, Math.round((stats.totalConsultations / DEFAULT_MONTHLY_TARGET) * 100));
+  // 상담 완료율: 항상 이번 달 기준 (필터와 무관)
+  // (재원생 - 상담 필요 학생) / 재원생 * 100
+  // 상담 필요 학생이 0이 되면 100%
+  const thisMonthTotalActive = thisMonthStats?.totalActiveStudents || 0;
+  const thisMonthNeedingCount = thisMonthStats?.studentsNeedingConsultation?.length || 0;
+  const consultedStudents = Math.max(0, thisMonthTotalActive - thisMonthNeedingCount);
+  const percentage = thisMonthTotalActive > 0
+    ? Math.round((consultedStudents / thisMonthTotalActive) * 100)
+    : 0;
+
+  // 상담 완료율 제목: yy.mm월 상담 완료율
+  const now = new Date();
+  const completionRateTitle = `${String(now.getFullYear()).slice(-2)}.${String(now.getMonth() + 1).padStart(2, '0')}월 상담 완료율`;
 
   return (
     <div className="space-y-3 w-full">
@@ -109,10 +128,10 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
           </div>
         </div>
 
-        {/* 목표 달성률 */}
+        {/* 상담 완료율 - 항상 이번 달 기준 */}
         <div className="bg-white rounded-xl border border-[#081429]/10 p-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-medium text-[#373d41]">목표 달성률</span>
+            <span className="text-xs font-medium text-[#373d41]">{completionRateTitle}</span>
             <span className="text-sm font-bold text-[#081429]">{percentage}%</span>
           </div>
           <div className="h-2 bg-[#081429]/10 rounded-full overflow-hidden">
@@ -122,8 +141,8 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
             />
           </div>
           <div className="flex justify-between mt-1 text-[10px] text-[#373d41]">
-            <span>{stats.totalConsultations}건</span>
-            <span>목표 {DEFAULT_MONTHLY_TARGET}건</span>
+            <span>{consultedStudents}명 완료</span>
+            <span>재원생 {thisMonthTotalActive}명</span>
           </div>
         </div>
       </div>

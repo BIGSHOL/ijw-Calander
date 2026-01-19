@@ -7,6 +7,7 @@ interface StaffFormProps {
   onClose: () => void;
   onSubmit: (data: Omit<StaffMember, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   showSystemFields?: boolean; // 시스템 권한 필드 표시 여부 (MASTER/ADMIN만)
+  currentUserRole?: UserRole; // 현재 사용자의 시스템 역할
 }
 
 // 시스템 역할 옵션 (MASTER/ADMIN만 변경 가능)
@@ -28,7 +29,19 @@ const APPROVAL_STATUS_OPTIONS = [
   { value: 'rejected', label: '거부됨' },
 ];
 
-const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSystemFields = false }) => {
+// 역할 계층 정의 (낮은 숫자가 높은 권한)
+const ROLE_HIERARCHY: Record<UserRole, number> = {
+  master: 1,
+  admin: 2,
+  manager: 3,
+  math_lead: 4,
+  english_lead: 4,
+  math_teacher: 5,
+  english_teacher: 5,
+  user: 6,
+};
+
+const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSystemFields = false, currentUserRole = 'user' }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -80,6 +93,18 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
       });
     }
   }, [staff]);
+
+  // 현재 사용자가 변경 가능한 역할 목록 필터링
+  const availableRoles = SYSTEM_ROLE_OPTIONS.filter((option) => {
+    const currentUserLevel = ROLE_HIERARCHY[currentUserRole];
+    const targetRoleLevel = ROLE_HIERARCHY[option.value];
+
+    // MASTER는 선택할 수 없음 (아무도 MASTER로 설정 불가)
+    if (option.value === 'master') return false;
+
+    // 자신의 역할보다 낮은 역할만 설정 가능 (숫자가 크면 낮은 역할)
+    return targetRoleLevel > currentUserLevel;
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -418,10 +443,21 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                       onChange={handleChange}
                       className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
                     >
-                      {SYSTEM_ROLE_OPTIONS.map(({ value, label }) => (
+                      {/* 현재 역할이 변경 불가능한 경우 현재 값을 표시 */}
+                      {!availableRoles.some(r => r.value === formData.systemRole) && (
+                        <option value={formData.systemRole}>
+                          {SYSTEM_ROLE_OPTIONS.find(r => r.value === formData.systemRole)?.label || formData.systemRole} (변경 불가)
+                        </option>
+                      )}
+                      {availableRoles.map(({ value, label }) => (
                         <option key={value} value={value}>{label}</option>
                       ))}
                     </select>
+                    {!availableRoles.some(r => r.value === formData.systemRole) && (
+                      <p className="text-[10px] text-amber-600 mt-0.5">
+                        현재 역할은 변경할 수 없습니다. (자신보다 낮은 권한만 설정 가능)
+                      </p>
+                    )}
                   </div>
 
                   {/* 승인 상태 */}

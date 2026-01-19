@@ -14,7 +14,6 @@ import { useStudents } from '../../hooks/useStudents';
 import { UnifiedStudent } from '../../types';
 import TimetableHeader from './Math/components/TimetableHeader';
 import AddClassModal from './Math/components/Modals/AddClassModal';
-import ViewSettingsModal from './Math/components/Modals/ViewSettingsModal';
 import TimetableGrid from './Math/components/TimetableGrid';
 import ClassDetailModal from '../ClassManagement/ClassDetailModal';
 import StudentDetailModal from '../StudentManagement/StudentDetailModal';
@@ -61,10 +60,38 @@ const TimetableManager = ({
     const isMaster = currentUser?.role === 'master';
     const canEditMath = isMaster || hasPermission('timetable.math.edit');
     const canEditEnglish = isMaster || hasPermission('timetable.english.edit');
+    const canViewMath = isMaster || hasPermission('timetable.math.view') || canEditMath;
+    const canViewEnglish = isMaster || hasPermission('timetable.english.view') || canEditEnglish;
+
     // Subject Tab (use external if provided)
     const [internalSubjectTab, setInternalSubjectTab] = useState<'math' | 'english'>('math');
     const subjectTab = externalSubjectTab ?? internalSubjectTab;
     const setSubjectTab = onSubjectChange ?? setInternalSubjectTab;
+
+    // Guard: Check if user has permission to view current subject
+    if (!currentUser) {
+        return (
+            <div className="flex items-center justify-center h-full text-gray-500">
+                로그인이 필요합니다.
+            </div>
+        );
+    }
+
+    if (subjectTab === 'math' && !canViewMath) {
+        return (
+            <div className="flex items-center justify-center h-full text-red-500">
+                수학 시간표를 볼 수 있는 권한이 없습니다.
+            </div>
+        );
+    }
+
+    if (subjectTab === 'english' && !canViewEnglish) {
+        return (
+            <div className="flex items-center justify-center h-full text-red-500">
+                영어 시간표를 볼 수 있는 권한이 없습니다.
+            </div>
+        );
+    }
 
     // Hook Integration: Classes Data
     const { classes, loading: classesLoading } = useTimetableClasses();
@@ -170,6 +197,9 @@ const TimetableManager = ({
     const viewType = externalViewType ?? internalViewType;
     const setViewType = onViewTypeChange ?? setInternalViewType;
 
+    // 조회/수정 모드 상태
+    const [mode, setMode] = useState<'view' | 'edit'>('view');
+
     const [isAddClassOpen, setIsAddClassOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<TimetableClass | null>(null);
     const [selectedClassInfo, setSelectedClassInfo] = useState<ClassInfo | null>(null);
@@ -185,9 +215,6 @@ const TimetableManager = ({
     const [newRoom, setNewRoom] = useState('');
     const [newSubject, setNewSubject] = useState('수학');
     const [newSchedule, setNewSchedule] = useState<string[]>([]);
-
-    // View Settings State
-    const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
 
     // Timetable Settings State (수업 설정 + 강사 관리)
     const [isTimetableSettingsOpen, setIsTimetableSettingsOpen] = useState(false);
@@ -423,12 +450,14 @@ const TimetableManager = ({
                 setSearchQuery={setSearchQuery}
                 viewType={viewType}
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
-                setIsViewSettingsOpen={setIsViewSettingsOpen}
                 setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                 pendingMovesCount={pendingMoves.length}
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}
                 isSaving={isSaving}
+                mode={mode}
+                setMode={setMode}
+                canEdit={canEditMath}
             />
 
             {/* Timetable Grid - 외부 스크롤 제거, 내부 그리드 스크롤만 사용 */}
@@ -443,6 +472,7 @@ const TimetableManager = ({
                     teachers={teachers}
                     searchQuery={searchQuery}
                     canEdit={canEditMath}
+                    mode={mode}
                     columnWidth={columnWidth}
                     rowHeight={rowHeight}
                     fontSize={fontSize}
@@ -515,39 +545,9 @@ const TimetableManager = ({
                 <StudentDetailModal
                     student={selectedStudentForModal}
                     onClose={() => setSelectedStudentForModal(null)}
+                    readOnly={mode === 'view'}
                 />
             )}
-
-            {/* View Settings Modal (통합 설정) */}
-            <ViewSettingsModal
-                isOpen={isViewSettingsOpen}
-                onClose={() => setIsViewSettingsOpen(false)}
-                columnWidth={columnWidth}
-                setColumnWidth={setColumnWidth}
-                rowHeight={rowHeight}
-                setRowHeight={setRowHeight}
-                fontSize={fontSize}
-                setFontSize={setFontSize}
-                showClassName={showClassName}
-                setShowClassName={setShowClassName}
-                showSchool={showSchool}
-                setShowSchool={setShowSchool}
-                showGrade={showGrade}
-                setShowGrade={setShowGrade}
-                showEmptyRooms={showEmptyRooms}
-                setShowEmptyRooms={setShowEmptyRooms}
-                showStudents={showStudents}
-                setShowStudents={setShowStudents}
-                showHoldStudents={showHoldStudents}
-                setShowHoldStudents={setShowHoldStudents}
-                showWithdrawnStudents={showWithdrawnStudents}
-                setShowWithdrawnStudents={setShowWithdrawnStudents}
-                selectedDays={selectedDays}
-                setSelectedDays={setSelectedDays}
-                timetableViewMode={timetableViewMode}
-                setTimetableViewMode={setTimetableViewMode}
-                viewType={viewType}
-            />
 
             {/* Teacher Order Modal (Math) */}
             <TeacherOrderModal
