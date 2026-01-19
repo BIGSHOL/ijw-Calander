@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { X, BookOpen, Loader2, Plus, Search } from 'lucide-react';
 import { db } from '../../firebaseConfig';
-import { doc, setDoc, Timestamp, getDoc, updateDoc } from 'firebase/firestore';
-import { UnifiedStudent, SubjectType, ClassHistoryEntry } from '../../types';
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
+import { UnifiedStudent, SubjectType } from '../../types';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useClasses } from '../../hooks/useClasses';
 import { SUBJECT_LABELS, SUBJECT_COLORS } from '../../utils/styleUtils';
@@ -90,7 +90,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
             const startDate = now.toISOString().split('T')[0]; // YYYY-MM-DD 형식
 
             await setDoc(doc(db, `students/${student.id}/enrollments`, enrollmentId), {
-                classId: selectedClass.id, // [FIX] ID 저장 추가
+                classId: selectedClass.id,
                 subject: selectedSubject,
                 className: selectedClass.className,
                 teacherId: selectedClass.teacher,
@@ -98,31 +98,11 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                 days: [], // 기본값 (나중에 수정 가능)
                 period: null,
                 room: null,
-                startDate: Timestamp.now(),
-                endDate: null,
+                startDate: startDate, // YYYY-MM-DD 문자열
+                endDate: null, // 배정 취소 시 업데이트
                 color: null,
                 createdAt: Timestamp.now(),
             });
-
-            // 수강 이력 추가
-            const studentDocRef = doc(db, 'students', student.id);
-            const studentDoc = await getDoc(studentDocRef);
-
-            if (studentDoc.exists()) {
-                const currentHistory = (studentDoc.data().classHistory || []) as ClassHistoryEntry[];
-
-                const newHistoryEntry: ClassHistoryEntry = {
-                    className: selectedClass.className,
-                    subject: selectedSubject,
-                    startDate: startDate,
-                    teacher: selectedClass.teacher,
-                };
-
-                await updateDoc(studentDocRef, {
-                    classHistory: [...currentHistory, newHistoryEntry],
-                    updatedAt: now.toISOString(),
-                });
-            }
 
             // 캐시 무효화: classes 쿼리 갱신 (학생 수 업데이트)
             queryClient.invalidateQueries({ queryKey: ['classes'] });

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { UnifiedStudent, ClassHistoryEntry } from '../../../types';
+import { UnifiedStudent } from '../../../types';
 import { BookOpen, Plus, User, X, Loader2, Users } from 'lucide-react';
 import AssignClassModal from '../AssignClassModal';
 import { useStudents } from '../../../hooks/useStudents';
@@ -7,7 +7,7 @@ import { useTeachers } from '../../../hooks/useFirebaseQueries';
 import { ClassInfo, useClasses } from '../../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../../utils/styleUtils';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
-import { doc, deleteDoc, getDocs, collection, query, where, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDocs, collection, query, where, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -229,50 +229,50 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false }) => 
     return `${year}.${month}.${day}`;
   };
 
-  // 같은 수업(className)끼리 그룹화 + 수강 이력 정보 추가
+  // 같은 수업(className)끼리 그룹화 (endDate가 없는 enrollments만)
   const groupedEnrollments = useMemo(() => {
     const groups = new Map<string, GroupedEnrollment>();
 
-    (student.enrollments || []).forEach(enrollment => {
-      const key = `${enrollment.subject}_${enrollment.className}`;
+    (student.enrollments || [])
+      .filter(enrollment => !(enrollment as any).endDate) // endDate가 없는 것만 = 현재 수강중
+      .forEach(enrollment => {
+        const key = `${enrollment.subject}_${enrollment.className}`;
 
-      // classHistory에서 해당 수업의 이력 찾기 (endDate가 없는 항목 = 현재 수강중)
-      const classHistory = student.classHistory || [];
-      const currentHistory = classHistory.find(
-        h => h.className === enrollment.className &&
-             h.subject === enrollment.subject &&
-             !h.endDate
-      );
-
-      if (groups.has(key)) {
-        const existing = groups.get(key)!;
-        if (!existing.teachers.includes(enrollment.teacherId)) {
-          existing.teachers.push(enrollment.teacherId);
-        }
-        enrollment.days?.forEach(day => {
-          if (!existing.days.includes(day)) {
-            existing.days.push(day);
+        if (groups.has(key)) {
+          const existing = groups.get(key)!;
+          if (!existing.teachers.includes(enrollment.teacherId)) {
+            existing.teachers.push(enrollment.teacherId);
           }
-        });
-        // enrollment ID 추가
-        if ((enrollment as any).id && !existing.enrollmentIds.includes((enrollment as any).id)) {
-          existing.enrollmentIds.push((enrollment as any).id);
+          enrollment.days?.forEach(day => {
+            if (!existing.days.includes(day)) {
+              existing.days.push(day);
+            }
+          });
+          // enrollment ID 추가
+          if ((enrollment as any).id && !existing.enrollmentIds.includes((enrollment as any).id)) {
+            existing.enrollmentIds.push((enrollment as any).id);
+          }
+          // startDate는 가장 빠른 날짜 사용
+          const existingStartDate = existing.startDate ? new Date(existing.startDate) : null;
+          const currentStartDate = (enrollment as any).startDate ? new Date((enrollment as any).startDate) : null;
+          if (currentStartDate && (!existingStartDate || currentStartDate < existingStartDate)) {
+            existing.startDate = (enrollment as any).startDate;
+          }
+        } else {
+          groups.set(key, {
+            className: enrollment.className,
+            subject: enrollment.subject,
+            teachers: [enrollment.teacherId],
+            days: [...(enrollment.days || [])],
+            enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
+            startDate: (enrollment as any).startDate,
+            endDate: undefined,
+          });
         }
-      } else {
-        groups.set(key, {
-          className: enrollment.className,
-          subject: enrollment.subject,
-          teachers: [enrollment.teacherId],
-          days: [...(enrollment.days || [])],
-          enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
-          startDate: currentHistory?.startDate,
-          endDate: currentHistory?.endDate,
-        });
-      }
-    });
+      });
 
     return Array.from(groups.values());
-  }, [student.enrollments, student.classHistory]);
+  }, [student.enrollments]);
 
   // 수업의 대표 강사 결정
   const getMainTeacher = (group: GroupedEnrollment): string | null => {
@@ -342,13 +342,18 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false }) => 
     setDeletingClass(key);
 
     try {
+      const now = new Date();
+      const endDate = now.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+
       // 1. 저장된 enrollmentIds가 있으면 사용
       if (group.enrollmentIds.length > 0) {
         for (const enrollmentId of group.enrollmentIds) {
-          await deleteDoc(doc(db, `students/${student.id}/enrollments`, enrollmentId));
+          await updateDoc(doc(db, `students/${student.id}/enrollments`, enrollmentId), {
+            endDate: endDate,
+          });
         }
       } else {
-        // 2. enrollmentIds가 없으면 쿼리로 찾아서 삭제
+        // 2. enrollmentIds가 없으면 쿼리로 찾아서 업데이트
         const enrollmentsRef = collection(db, `students/${student.id}/enrollments`);
         const q = query(
           enrollmentsRef,
@@ -358,40 +363,15 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false }) => 
         const snapshot = await getDocs(q);
 
         for (const docSnap of snapshot.docs) {
-          await deleteDoc(docSnap.ref);
+          await updateDoc(docSnap.ref, {
+            endDate: endDate,
+          });
         }
-      }
-
-      // 수강 이력에 종료일 추가
-      const now = new Date();
-      const endDate = now.toISOString().split('T')[0]; // YYYY-MM-DD 형식
-
-      const studentDocRef = doc(db, 'students', student.id);
-      const studentDoc = await getDoc(studentDocRef);
-
-      if (studentDoc.exists()) {
-        const currentHistory = (studentDoc.data().classHistory || []) as ClassHistoryEntry[];
-
-        // 해당 수업의 가장 최근 이력(endDate가 없는 항목) 찾아서 종료일 추가
-        const updatedHistory = currentHistory.map((entry) => {
-          if (
-            entry.className === group.className &&
-            entry.subject === group.subject &&
-            !entry.endDate
-          ) {
-            return { ...entry, endDate: endDate };
-          }
-          return entry;
-        });
-
-        await updateDoc(studentDocRef, {
-          classHistory: updatedHistory,
-          updatedAt: now.toISOString(),
-        });
       }
 
       // 캐시 무효화 및 새로고침
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
       refreshStudents();
 
     } catch (err) {
@@ -415,21 +395,47 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false }) => 
     );
   }
 
-  // 종료된 수업 목록 (classHistory에서 endDate가 있는 항목)
+  // 종료된 수업 목록 (enrollments에서 endDate가 있는 항목)
   const completedClasses = useMemo(() => {
-    const classHistory = student.classHistory || [];
-    return classHistory
-      .filter(h => h.endDate) // endDate가 있는 것만
-      .map(h => ({
-        className: h.className,
-        subject: h.subject as 'math' | 'english',
-        teachers: h.teacher ? [h.teacher] : [],
-        days: [],
-        enrollmentIds: [],
-        startDate: h.startDate,
-        endDate: h.endDate,
-      }));
-  }, [student.classHistory]);
+    const groups = new Map<string, GroupedEnrollment>();
+
+    (student.enrollments || [])
+      .filter(enrollment => (enrollment as any).endDate) // endDate가 있는 것만 = 종료됨
+      .forEach(enrollment => {
+        const key = `${enrollment.subject}_${enrollment.className}`;
+
+        if (groups.has(key)) {
+          const existing = groups.get(key)!;
+          if (!existing.teachers.includes(enrollment.teacherId)) {
+            existing.teachers.push(enrollment.teacherId);
+          }
+          // startDate는 가장 빠른 날짜, endDate는 가장 늦은 날짜 사용
+          const existingStartDate = existing.startDate ? new Date(existing.startDate) : null;
+          const currentStartDate = (enrollment as any).startDate ? new Date((enrollment as any).startDate) : null;
+          if (currentStartDate && (!existingStartDate || currentStartDate < existingStartDate)) {
+            existing.startDate = (enrollment as any).startDate;
+          }
+
+          const existingEndDate = existing.endDate ? new Date(existing.endDate) : null;
+          const currentEndDate = (enrollment as any).endDate ? new Date((enrollment as any).endDate) : null;
+          if (currentEndDate && (!existingEndDate || currentEndDate > existingEndDate)) {
+            existing.endDate = (enrollment as any).endDate;
+          }
+        } else {
+          groups.set(key, {
+            className: enrollment.className,
+            subject: enrollment.subject as 'math' | 'english',
+            teachers: [enrollment.teacherId],
+            days: [],
+            enrollmentIds: [],
+            startDate: (enrollment as any).startDate,
+            endDate: (enrollment as any).endDate,
+          });
+        }
+      });
+
+    return Array.from(groups.values());
+  }, [student.enrollments]);
 
   // 과목별 분류
   const mathClasses = groupedEnrollments.filter(g => g.subject === 'math');
