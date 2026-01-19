@@ -35,7 +35,7 @@ const StaffList: React.FC<StaffListProps> = ({
       resigned: 'bg-gray-100 text-gray-800',
     };
     return (
-      <span className={`text-xs px-2 py-0.5 rounded font-medium ${styles[status]}`}>
+      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${styles[status]}`}>
         {STAFF_STATUS_LABELS[status]}
       </span>
     );
@@ -48,7 +48,7 @@ const StaffList: React.FC<StaffListProps> = ({
       staff: 'bg-gray-100 text-gray-800',
     };
     return (
-      <span className={`text-xs px-2 py-0.5 rounded font-medium ${styles[role]}`}>
+      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${styles[role]}`}>
         {STAFF_ROLE_LABELS[role]}
       </span>
     );
@@ -84,42 +84,42 @@ const StaffList: React.FC<StaffListProps> = ({
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Pagination - Top */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gray-50">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">페이지당</span>
+            <span className="text-xs text-gray-600">페이지당</span>
             <select
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="px-2 py-1 border border-gray-300 rounded text-sm"
+              className="px-1.5 py-0.5 border border-gray-300 rounded text-xs"
             >
               {[10, 20, 50, 100].map((size) => (
                 <option key={size} value={size}>{size}</option>
               ))}
             </select>
-            <span className="text-sm text-gray-600">
+            <span className="text-xs text-gray-600">
               {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, staff.length)} / {staff.length}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-0.5 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-xs font-medium text-gray-700">
               {currentPage} / {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-0.5 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -130,28 +130,28 @@ const StaffList: React.FC<StaffListProps> = ({
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
+              <th className="px-2 py-1.5 text-left text-[11px] font-medium text-[#373d41]">
                 이름
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
+              <th className="px-2 py-1.5 text-left text-[11px] font-medium text-[#373d41]">
                 직책
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
+              <th className="px-2 py-1.5 text-left text-[11px] font-medium text-[#373d41]">
                 전화번호
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
+              <th className="px-2 py-1.5 text-left text-[11px] font-medium text-[#373d41]">
                 담당과목
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
+              <th className="px-2 py-1.5 text-left text-[11px] font-medium text-[#373d41]">
                 시간표 정보
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
+              <th className="px-2 py-1.5 text-left text-[11px] font-medium text-[#373d41]">
                 입사일
               </th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium text-[#373d41]">
+              <th className="px-2 py-1.5 text-left text-[11px] font-medium text-[#373d41]">
                 상태
               </th>
-              <th className="px-4 py-2.5 text-center text-xs font-medium text-[#373d41]">
+              <th className="px-2 py-1.5 text-center text-[11px] font-medium text-[#373d41]">
                 시스템 계정
               </th>
             </tr>
@@ -164,10 +164,10 @@ const StaffList: React.FC<StaffListProps> = ({
                 className={`hover:bg-gray-50 transition-colors cursor-pointer group ${selectedStaff?.id === member.id ? 'bg-[#fdb813]/10' : ''
                   }`}
               >
-                <td className="px-4 py-2.5">
-                  <div className="flex items-center gap-3">
+                <td className="px-2 py-1.5">
+                  <div className="flex items-center gap-2">
                     <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
                       style={{
                         backgroundColor: member.role === 'teacher' && member.bgColor ? member.bgColor : '#081429',
                         color: member.role === 'teacher' && member.textColor ? member.textColor : '#ffffff'
@@ -175,38 +175,35 @@ const StaffList: React.FC<StaffListProps> = ({
                     >
                       {member.name.charAt(0)}
                     </div>
-                    <div>
-                      <div className="font-medium text-[#081429]">
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium text-[#081429] truncate">
                         {member.name}
                         {member.englishName && (
-                          <span className="ml-2 text-xs text-gray-500 font-normal">({member.englishName})</span>
+                          <span className="ml-1 text-[10px] text-gray-500 font-normal">({member.englishName})</span>
                         )}
                       </div>
                       {member.email && (
-                        <div className="text-xs text-gray-500">{member.email}</div>
+                        <div className="text-[10px] text-gray-500 truncate">{member.email}</div>
                       )}
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-2 py-1.5">
                   {getRoleBadge(member.role)}
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-2 py-1.5">
                   {member.phone ? (
-                    <div className="flex items-center gap-1 text-sm text-gray-600">
-                      <Phone className="w-3 h-3" />
-                      <span>{member.phone}</span>
-                    </div>
+                    <span className="text-[11px] text-gray-600">{member.phone}</span>
                   ) : (
-                    <span className="text-xs text-gray-400">-</span>
+                    <span className="text-[10px] text-gray-400">-</span>
                   )}
                 </td>
-                <td className="px-4 py-2.5">
-                  <div className="flex gap-1">
+                <td className="px-2 py-1.5">
+                  <div className="flex gap-0.5">
                     {member.subjects?.map((subject) => (
                       <span
                         key={subject}
-                        className={`text-xs px-2 py-0.5 rounded ${subject === 'math'
+                        className={`text-[10px] px-1.5 py-0.5 rounded ${subject === 'math'
                             ? 'bg-blue-100 text-blue-700'
                             : 'bg-pink-100 text-pink-700'
                           }`}
@@ -215,84 +212,75 @@ const StaffList: React.FC<StaffListProps> = ({
                       </span>
                     ))}
                     {(!member.subjects || member.subjects.length === 0) && (
-                      <span className="text-xs text-gray-400">-</span>
+                      <span className="text-[10px] text-gray-400">-</span>
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-2 py-1.5">
                   {member.role === 'teacher' ? (
-                    <div className="flex flex-col gap-1">
-                      {/* 색상 미리보기 */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       {member.bgColor && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <div
-                            className="w-6 h-6 rounded border border-gray-300"
+                            className="w-4 h-4 rounded border border-gray-300 flex items-center justify-center text-[9px] font-bold"
                             style={{
                               backgroundColor: member.bgColor,
                               color: member.textColor || '#ffffff'
                             }}
-                            title={`배경: ${member.bgColor}, 글자: ${member.textColor || '#ffffff'}`}
+                            title={`배경: ${member.bgColor}`}
                           >
-                            <div className="w-full h-full flex items-center justify-center text-xs font-bold">
-                              A
-                            </div>
+                            A
                           </div>
-                          <span className="text-xs text-gray-500">{member.bgColor}</span>
+                          <span className="text-[10px] text-gray-500">{member.bgColor}</span>
                         </div>
                       )}
-                      {/* 기본 강의실 */}
                       {member.defaultRoom && (
-                        <span className="text-xs text-gray-600">
+                        <span className="text-[10px] text-gray-600">
                           강의실: <span className="font-medium">{member.defaultRoom}</span>
                         </span>
                       )}
-                      {/* 원어민 / 숨김 표시 */}
-                      <div className="flex gap-1">
-                        {member.isNative && (
-                          <span className="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
-                            원어민
-                          </span>
-                        )}
-                        {member.isHiddenInTimetable && (
-                          <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
-                            숨김
-                          </span>
-                        )}
-                      </div>
-                      {/* 아무것도 없으면 - 표시 */}
+                      {member.isNative && (
+                        <span className="text-[10px] px-1 py-0.5 bg-purple-100 text-purple-700 rounded">
+                          원어민
+                        </span>
+                      )}
+                      {member.isHiddenInTimetable && (
+                        <span className="text-[10px] px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
+                          숨김
+                        </span>
+                      )}
                       {!member.bgColor && !member.defaultRoom && !member.isNative && !member.isHiddenInTimetable && (
-                        <span className="text-xs text-gray-400">-</span>
+                        <span className="text-[10px] text-gray-400">-</span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-400">-</span>
+                    <span className="text-[10px] text-gray-400">-</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
+                <td className="px-2 py-1.5 text-[11px] text-gray-600">
                   {member.hireDate}
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-2 py-1.5">
                   {getStatusBadge(member.status)}
                 </td>
-                {/* 시스템 계정 - staff 데이터 기반 */}
-                <td className="px-4 py-2.5 text-center">
+                <td className="px-2 py-1.5 text-center">
                   {member.uid ? (
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="flex items-center gap-1">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <div className="flex items-center gap-0.5">
                         {(() => {
                           const style = getSystemRoleStyle(member.systemRole);
                           if (!style) return <CheckCircle className="w-3 h-3 text-emerald-600" />;
                           return (
                             <>
                               <span className={style.color}>{style.icon}</span>
-                              <span className={`text-xs font-medium ${style.color}`}>
+                              <span className={`text-[10px] font-medium ${style.color}`}>
                                 {ROLE_LABELS[member.systemRole as keyof typeof ROLE_LABELS] || member.systemRole}
                               </span>
                             </>
                           );
                         })()}
                       </div>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                      <span className={`text-[9px] px-1 py-0.5 rounded ${
                         member.approvalStatus === 'approved' ? 'bg-emerald-100 text-emerald-700' :
                         member.approvalStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-red-100 text-red-700'
@@ -302,7 +290,7 @@ const StaffList: React.FC<StaffListProps> = ({
                       </span>
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-400 flex items-center justify-center gap-1">
+                    <span className="text-[10px] text-gray-400 flex items-center justify-center gap-0.5">
                       <XCircle className="w-3 h-3" />
                       미연동
                     </span>

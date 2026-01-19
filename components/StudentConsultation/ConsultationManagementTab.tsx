@@ -9,6 +9,7 @@ const ConsultationMigrationModal = React.lazy(() => import('./ConsultationMigrat
 import { useStudents } from '../../hooks/useStudents';
 import { useStaff } from '../../hooks/useStaff';
 import { ConsultationDashboard } from '../Dashboard';
+import { getMonthRangeKST, getTodayKST } from '../../utils/dateUtils';
 
 /**
  * 상담 관리 메인 탭
@@ -80,13 +81,18 @@ const ConsultationManagementTab: React.FC = () => {
         return 'thisMonth';
     });
 
+    // 로컬 날짜 포맷 헬퍼 (UTC 문제 방지)
+    const formatLocalDate = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     // 날짜 범위 프리셋
     const applyDatePreset = (preset: 'today' | 'week' | 'thisMonth' | 'lastMonth' | 'last3Months' | 'all') => {
         const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const todayStr = `${yyyy}-${mm}-${dd}`;
+        const todayStr = getTodayKST();
 
         setActiveDatePreset(preset);
         localStorage.setItem('consultation_datePreset', preset);
@@ -96,39 +102,33 @@ const ConsultationManagementTab: React.FC = () => {
         } else if (preset === 'week') {
             const weekAgo = new Date(today);
             weekAgo.setDate(today.getDate() - 7);
-            const startStr = weekAgo.toISOString().split('T')[0];
+            const startStr = formatLocalDate(weekAgo);
             setFilters(prev => ({ ...prev, dateRange: { start: startStr, end: todayStr } }));
         } else if (preset === 'thisMonth') {
-            // 이번 달: 1일 ~ 말일
-            const start = new Date(today.getFullYear(), today.getMonth(), 1);
-            const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            // 이번 달: 1일 ~ 말일 (로컬 시간 기준)
+            const range = getMonthRangeKST();
             setFilters(prev => ({
                 ...prev,
-                dateRange: {
-                    start: start.toISOString().split('T')[0],
-                    end: end.toISOString().split('T')[0]
-                }
+                dateRange: range
             }));
         } else if (preset === 'lastMonth') {
             // 지난 달: 1일 ~ 말일
-            const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-            const end = new Date(today.getFullYear(), today.getMonth(), 0);
+            const lastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 15);
+            const range = getMonthRangeKST(lastMonthDate);
             setFilters(prev => ({
                 ...prev,
-                dateRange: {
-                    start: start.toISOString().split('T')[0],
-                    end: end.toISOString().split('T')[0]
-                }
+                dateRange: range
             }));
         } else if (preset === 'last3Months') {
             // 최근 3개월: 2달 전 1일 ~ 이번달 말일
-            const start = new Date(today.getFullYear(), today.getMonth() - 2, 1);
-            const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 15);
+            const startRange = getMonthRangeKST(twoMonthsAgo);
+            const endRange = getMonthRangeKST();
             setFilters(prev => ({
                 ...prev,
                 dateRange: {
-                    start: start.toISOString().split('T')[0],
-                    end: end.toISOString().split('T')[0]
+                    start: startRange.start,
+                    end: endRange.end
                 }
             }));
         } else {

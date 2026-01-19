@@ -289,7 +289,8 @@ export interface ManageClassStudentsData {
   schedule?: string[];
   addStudentIds?: string[];     // 추가할 학생 IDs
   removeStudentIds?: string[];  // 제거할 학생 IDs
-  studentAttendanceDays?: Record<string, string[]>;  // { studentId: ['월', '목'] } 학생별 등원 요일
+  studentAttendanceDays?: Record<string, string[]>;  // { studentId: ['월', '목'] } 학생별 등원 요일 (수학용)
+  studentUnderlines?: Record<string, boolean>;  // { studentId: true } 학생별 밑줄 강조 (영어용)
 }
 
 export const useManageClassStudents = () => {
@@ -297,7 +298,7 @@ export const useManageClassStudents = () => {
 
   return useMutation({
     mutationFn: async (data: ManageClassStudentsData) => {
-      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {} } = data;
+      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {}, studentUnderlines = {} } = data;
 
       // 학생 추가
       if (addStudentIds.length > 0) {
@@ -311,9 +312,13 @@ export const useManageClassStudents = () => {
             schedule,
             createdAt: new Date().toISOString(),
           };
-          // 신규 학생에게 attendanceDays가 설정되어 있으면 추가
+          // 신규 학생에게 attendanceDays가 설정되어 있으면 추가 (수학용)
           if (studentAttendanceDays[studentId] && studentAttendanceDays[studentId].length > 0) {
             enrollmentData.attendanceDays = studentAttendanceDays[studentId];
+          }
+          // 신규 학생에게 underline이 설정되어 있으면 추가 (영어용)
+          if (studentUnderlines[studentId]) {
+            enrollmentData.underline = true;
           }
           await addDoc(enrollmentsRef, enrollmentData);
         });
@@ -340,7 +345,7 @@ export const useManageClassStudents = () => {
         await Promise.all(removePromises);
       }
 
-      // 기존 학생 attendanceDays 업데이트 (추가/제거 대상이 아닌 학생들)
+      // 기존 학생 attendanceDays 업데이트 (추가/제거 대상이 아닌 학생들) - 수학용
       const updateStudentIds = Object.keys(studentAttendanceDays).filter(
         id => !addStudentIds.includes(id) && !removeStudentIds.includes(id)
       );
@@ -367,6 +372,30 @@ export const useManageClassStudents = () => {
           await Promise.all(updateOps);
         });
         await Promise.all(updatePromises);
+      }
+
+      // 기존 학생 underline 업데이트 (추가/제거 대상이 아닌 학생들) - 영어용
+      const underlineStudentIds = Object.keys(studentUnderlines).filter(
+        id => !addStudentIds.includes(id) && !removeStudentIds.includes(id)
+      );
+
+      if (underlineStudentIds.length > 0) {
+        const underlinePromises = underlineStudentIds.map(async (studentId) => {
+          const enrollmentsQuery = query(
+            collection(db, COL_STUDENTS, studentId, 'enrollments'),
+            where('subject', '==', subject),
+            where('className', '==', className)
+          );
+          const snapshot = await getDocs(enrollmentsQuery);
+
+          const updateOps = snapshot.docs.map(async (docSnap) => {
+            const hasUnderline = studentUnderlines[studentId];
+            await updateDoc(docSnap.ref, { underline: hasUnderline || false });
+          });
+
+          await Promise.all(updateOps);
+        });
+        await Promise.all(underlinePromises);
       }
     },
     onSuccess: () => {

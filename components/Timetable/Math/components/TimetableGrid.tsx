@@ -92,6 +92,8 @@ interface TimetableGridProps {
     teachers: Teacher[];
     searchQuery: string;
     canEdit: boolean;
+    // 조회/수정 모드
+    mode: 'view' | 'edit';
     // View Settings
     columnWidth: 'compact' | 'narrow' | 'normal' | 'wide';
     rowHeight: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';
@@ -131,6 +133,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     teachers,
     searchQuery,
     canEdit,
+    mode,
     columnWidth,
     rowHeight,
     fontSize,
@@ -154,6 +157,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     classKeywords = [],
     onStudentClick
 }) => {
+    // 수정 모드일 때만 실제 canEdit 적용
+    const effectiveCanEdit = canEdit && mode === 'edit';
     // Helper to get column width style
     // 병합 셀용 (월/목 같이 여러 요일 병합) - 각 요일당 좁은 너비
     const getMergedCellWidthStyle = (colspan: number) => {
@@ -576,7 +581,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showClassName={showClassName}
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
-                                                                                canEdit={canEdit}
+                                                                                canEdit={effectiveCanEdit}
                                                                                 dragOverClassId={dragOverClassId}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -717,7 +722,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showClassName={showClassName}
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
-                                                                                canEdit={canEdit}
+                                                                                canEdit={effectiveCanEdit}
                                                                                 dragOverClassId={dragOverClassId}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -875,7 +880,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showClassName={showClassName}
                                                                                     showSchool={showSchool}
                                                                                     showGrade={showGrade}
-                                                                                    canEdit={canEdit}
+                                                                                    canEdit={effectiveCanEdit}
                                                                                     dragOverClassId={dragOverClassId}
                                                                                     onClick={onClassClick}
                                                                                     onDragStart={onDragStart}
@@ -1020,7 +1025,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showClassName={showClassName}
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
-                                                                            canEdit={canEdit}
+                                                                            canEdit={effectiveCanEdit}
                                                                             dragOverClassId={dragOverClassId}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
@@ -1265,7 +1270,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showClassName={showClassName}
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
-                                                                            canEdit={canEdit}
+                                                                            canEdit={effectiveCanEdit}
                                                                             dragOverClassId={dragOverClassId}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
@@ -1343,7 +1348,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showClassName={showClassName}
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
-                                                                            canEdit={canEdit}
+                                                                            canEdit={effectiveCanEdit}
                                                                             dragOverClassId={dragOverClassId}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
@@ -1438,7 +1443,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showClassName={showClassName}
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
-                                                                                canEdit={canEdit}
+                                                                                canEdit={effectiveCanEdit}
                                                                                 dragOverClassId={dragOverClassId}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -1543,7 +1548,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         showClassName={showClassName}
                                                                         showSchool={showSchool}
                                                                         showGrade={showGrade}
-                                                                        canEdit={canEdit}
+                                                                        canEdit={effectiveCanEdit}
                                                                         dragOverClassId={dragOverClassId}
                                                                         onClick={onClassClick}
                                                                         onDragStart={onDragStart}

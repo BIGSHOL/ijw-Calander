@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Search, Filter, RefreshCw, Calendar, Briefcase, AlertCircle } from 'lucide-react';
 import { useStaff } from '../../hooks/useStaff';
 import { useStaffLeaves } from '../../hooks/useStaffLeaves';
-import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, UserProfile } from '../../types';
+import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, UserProfile, ROLE_HIERARCHY } from '../../types';
 import StaffList from './StaffList';
 import StaffForm from './StaffForm';
 import StaffViewModal from './StaffViewModal';
@@ -94,9 +94,51 @@ const StaffManager: React.FC<StaffManagerProps> = ({
     setSelectedStaff(staffMember);
   };
 
+  // 권한 체크: 대상 직원을 수정할 수 있는지 확인
+  const canEditStaff = (targetStaff: StaffMember): boolean => {
+    if (!currentUserProfile) return false;
+
+    const currentRole = currentUserProfile.role;
+    const targetRole = targetStaff.systemRole || 'user';
+
+    // 자기 자신은 수정 가능
+    if (currentUserProfile.uid === targetStaff.uid) return true;
+
+    // ROLE_HIERARCHY에서 인덱스 확인 (낮은 인덱스 = 높은 권한)
+    const currentIndex = ROLE_HIERARCHY.indexOf(currentRole);
+    const targetIndex = ROLE_HIERARCHY.indexOf(targetRole);
+
+    // 자신보다 낮은 권한만 수정 가능 (같은 권한도 불가)
+    return currentIndex < targetIndex;
+  };
+
+  // 권한 체크: 대상 직원을 삭제할 수 있는지 확인
+  const canDeleteStaff = (targetStaff: StaffMember): boolean => {
+    if (!currentUserProfile) return false;
+
+    const currentRole = currentUserProfile.role;
+    const targetRole = targetStaff.systemRole || 'user';
+
+    // 자기 자신은 삭제 불가
+    if (currentUserProfile.uid === targetStaff.uid) return false;
+
+    // ROLE_HIERARCHY에서 인덱스 확인 (낮은 인덱스 = 높은 권한)
+    const currentIndex = ROLE_HIERARCHY.indexOf(currentRole);
+    const targetIndex = ROLE_HIERARCHY.indexOf(targetRole);
+
+    // 자신보다 낮은 권한만 삭제 가능 (같은 권한도 불가)
+    return currentIndex < targetIndex;
+  };
+
   // 조회 모달에서 수정 버튼 클릭 시
   const handleEditFromView = () => {
     if (viewingStaff) {
+      // 권한 체크
+      if (!canEditStaff(viewingStaff)) {
+        alert('자신보다 높거나 같은 권한의 직원은 수정할 수 없습니다.\n(본인 계정은 수정 가능합니다)');
+        return;
+      }
+
       setEditingStaff(viewingStaff);
       setViewingStaff(null);
       setShowForm(true);
@@ -191,41 +233,41 @@ const StaffManager: React.FC<StaffManagerProps> = ({
         </div>
 
         {/* View Mode Tabs - Compact */}
-        <div className="flex items-center gap-2 mt-2 border-t border-gray-100 pt-2">
+        <div className="flex items-center gap-1 mt-1.5 border-t border-gray-100 pt-1.5">
           <button
             onClick={() => setViewMode('list')}
-            className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border-b-2 transition-colors ${
               viewMode === 'list'
                 ? 'border-[#fdb813] text-[#081429] font-semibold'
                 : 'border-transparent text-gray-500 hover:text-[#081429]'
             }`}
           >
-            <Briefcase className="w-4 h-4" />
+            <Briefcase className="w-3.5 h-3.5" />
             <span>직원 목록</span>
           </button>
           <button
             onClick={() => setViewMode('schedule')}
-            className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border-b-2 transition-colors ${
               viewMode === 'schedule'
                 ? 'border-[#fdb813] text-[#081429] font-semibold'
                 : 'border-transparent text-gray-500 hover:text-[#081429]'
             }`}
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-3.5 h-3.5" />
             <span>근무 일정</span>
           </button>
           <button
             onClick={() => setViewMode('leave')}
-            className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border-b-2 transition-colors ${
               viewMode === 'leave'
                 ? 'border-[#fdb813] text-[#081429] font-semibold'
                 : 'border-transparent text-gray-500 hover:text-[#081429]'
             }`}
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-3.5 h-3.5" />
             <span>휴가 관리</span>
             {pendingCount > 0 && (
-              <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
                 {pendingCount}
               </span>
             )}
@@ -235,27 +277,27 @@ const StaffManager: React.FC<StaffManagerProps> = ({
 
       {/* Filters (only for list view) */}
       {viewMode === 'list' && (
-        <div className="bg-white border-b border-gray-200 px-6 py-3">
-          <div className="flex items-center gap-4">
+        <div className="bg-white border-b border-gray-200 px-4 py-2">
+          <div className="flex items-center gap-3">
             {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input
                 type="text"
                 placeholder="이름, 이메일, 전화번호 검색..."
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-transparent"
               />
             </div>
 
             {/* Role Filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-gray-400" />
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value as StaffMember['role'] | 'all')}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
               >
                 <option value="all">전체 직책</option>
                 {Object.entries(STAFF_ROLE_LABELS).map(([value, label]) => (
@@ -268,7 +310,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StaffMember['status'] | 'all')}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+              className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
             >
               <option value="all">전체 상태</option>
               {Object.entries(STAFF_STATUS_LABELS).map(([value, label]) => (
@@ -277,7 +319,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
             </select>
 
             {/* Count */}
-            <div className="text-sm text-gray-500">
+            <div className="text-xs text-gray-500">
               {filteredStaff.length}명
             </div>
           </div>
@@ -285,7 +327,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4">
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#081429]"></div>
@@ -318,8 +360,9 @@ const StaffManager: React.FC<StaffManagerProps> = ({
           onClose={() => setViewingStaff(null)}
           onEdit={handleEditFromView}
           onDelete={handleDelete}
-          canEdit={isMaster || isAdmin}
-          canDelete={isMaster || isAdmin}
+          canEdit={canEditStaff(viewingStaff)}
+          canDelete={canDeleteStaff(viewingStaff)}
+          currentUserUid={currentUserProfile?.uid}
         />
       )}
 
@@ -330,6 +373,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
           onClose={handleFormClose}
           onSubmit={handleFormSubmit}
           showSystemFields={isMaster || isAdmin}
+          currentUserRole={currentUserProfile?.role}
         />
       )}
 

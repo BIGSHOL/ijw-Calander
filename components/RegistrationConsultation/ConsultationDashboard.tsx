@@ -25,17 +25,17 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
     };
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col h-full">
-            <h3 className="text-lg font-bold text-slate-800 mb-6">{title}</h3>
-            <div className="flex flex-col sm:flex-row items-center justify-between h-auto sm:h-auto flex-1 gap-6">
+        <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100 flex flex-col h-full">
+            <h3 className="text-sm font-bold text-slate-800 mb-3">{title}</h3>
+            <div className="flex flex-row items-center justify-between flex-1 gap-3">
                 {/* Chart Side */}
-                <div className="relative w-40 h-40 sm:w-56 sm:h-56 flex-shrink-0 mx-auto sm:mx-0" style={{ minHeight: '160px' }}>
-                    <ResponsiveContainer width="100%" height="100%" minHeight={160}>
+                <div className="relative w-24 h-24 flex-shrink-0" style={{ minHeight: '96px' }}>
+                    <ResponsiveContainer width="100%" height="100%" minHeight={96}>
                         <PieChart>
                             <Pie
                                 data={data}
-                                innerRadius={40}
-                                outerRadius={60}
+                                innerRadius={28}
+                                outerRadius={42}
                                 paddingAngle={2}
                                 dataKey="value"
                                 stroke="none"
@@ -64,33 +64,33 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
                         className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-300"
                         style={{ opacity: activeIndex !== null ? 0.3 : 1 }}
                     >
-                        <span className="text-slate-400 text-xs sm:text-sm font-medium">{totalLabel}</span>
-                        <span className="text-xl sm:text-2xl font-bold text-slate-800">{totalValue}</span>
+                        <span className="text-slate-400 text-[9px] font-medium">{totalLabel}</span>
+                        <span className="text-base font-bold text-slate-800">{totalValue}</span>
                     </div>
                 </div>
 
                 {/* Legend Side */}
-                <div className="w-full sm:flex-1 flex flex-col justify-center space-y-2">
+                <div className="flex-1 flex flex-col justify-center space-y-1">
                     {data.map((entry, index) => (
                         <div
                             key={index}
                             onMouseEnter={() => setActiveIndex(index)}
                             onMouseLeave={() => setActiveIndex(null)}
-                            className={`flex items-center justify-between text-sm p-2 sm:p-3 rounded-xl transition-all duration-300 cursor-pointer border ${activeIndex === index
-                                ? 'bg-white border-indigo-200 shadow-md transform scale-[1.02] z-10'
+                            className={`flex items-center justify-between text-xs p-1.5 rounded-lg transition-all duration-300 cursor-pointer border ${activeIndex === index
+                                ? 'bg-white border-indigo-200 shadow-sm'
                                 : 'bg-transparent border-transparent hover:bg-slate-50'
                                 }`}
                         >
                             <div className="flex items-center">
                                 <div
-                                    className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full mr-3 shadow-sm transition-all duration-300 ${activeIndex === index ? 'ring-2 ring-offset-2 ring-indigo-200' : ''}`}
+                                    className={`w-2 h-2 rounded-full mr-2 shadow-sm transition-all duration-300 ${activeIndex === index ? 'ring-1 ring-offset-1 ring-indigo-200' : ''}`}
                                     style={{ backgroundColor: CONSULTATION_CHART_COLORS[index % CONSULTATION_CHART_COLORS.length] }}
                                 ></div>
-                                <span className={`font-medium transition-colors text-xs sm:text-sm ${activeIndex === index ? 'text-slate-900' : 'text-slate-600'}`}>
+                                <span className={`font-medium transition-colors text-[11px] ${activeIndex === index ? 'text-slate-900' : 'text-slate-600'}`}>
                                     {entry.name}
                                 </span>
                             </div>
-                            <span className={`font-bold px-2 py-0.5 rounded-lg text-xs transition-colors ${activeIndex === index
+                            <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] transition-colors ${activeIndex === index
                                 ? 'bg-indigo-600 text-white shadow-sm'
                                 : 'bg-slate-100 text-slate-600'
                                 }`}>
@@ -245,22 +245,22 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
     const monthDisplay = month === 'all' ? '전체' : `${month}월`;
 
     return (
-        <div className="space-y-6 animate-fade-in pb-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-3">
-                <h2 className="text-xl font-bold text-slate-800 hidden md:block">
+        <div className="space-y-3 animate-fade-in pb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-800 hidden md:block">
                     {monthDisplay} 운영 대시보드
                 </h2>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                 <StatsCard
                     title="총 상담"
                     value={`${currentStats.total}`}
                     trend={trends.total}
                     trendValue={trends.totalValue}
                     trendLabel="전월대비"
-                    icon={<Users className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" />}
+                    icon={<Users className="w-4 h-4 text-indigo-600" />}
                     colorClass="bg-indigo-500"
                 />
                 <StatsCard
@@ -269,7 +269,7 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
                     trend={trends.registered}
                     trendValue={trends.registeredValue}
                     trendLabel="전월대비"
-                    icon={<UserCheck className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />}
+                    icon={<UserCheck className="w-4 h-4 text-emerald-600" />}
                     colorClass="bg-emerald-500"
                 />
                 <StatsCard
@@ -277,7 +277,7 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
                     value={`${currentStats.conversion.toFixed(1)}%`}
                     trend={trends.conversion}
                     trendLabel="전월대비"
-                    icon={<Percent className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />}
+                    icon={<Percent className="w-4 h-4 text-amber-600" />}
                     colorClass="bg-amber-500"
                 />
                 <StatsCard
@@ -285,13 +285,13 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
                     value={`₩${(currentStats.revenue / 10000).toLocaleString()}만`}
                     trend={trends.revenue}
                     trendLabel="전월대비"
-                    icon={<CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />}
+                    icon={<CreditCard className="w-4 h-4 text-blue-600" />}
                     colorClass="bg-blue-500"
                 />
             </div>
 
             {/* Charts Row 1 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <DonutChartSection
                     title="등록 현황 상세"
                     data={statusData}
@@ -307,19 +307,19 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
             </div>
 
             {/* Charts Row 2 */}
-            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-slate-100">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">일별 상담 추이</h3>
-                <div className="h-56 sm:h-64" style={{ minHeight: '224px' }}>
-                    <ResponsiveContainer width="100%" height="100%" minHeight={224}>
+            <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 mb-2">일별 상담 추이</h3>
+                <div className="h-40" style={{ minHeight: '160px' }}>
+                    <ResponsiveContainer width="100%" height="100%" minHeight={160}>
                         <LineChart data={dailyData}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={10} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={5} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} width={25} />
                             <Tooltip
-                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                contentStyle={{ borderRadius: '6px', border: 'none', boxShadow: '0 2px 4px -1px rgb(0 0 0 / 0.1)', fontSize: '11px' }}
                                 formatter={(value: number) => [`${value}회`, '상담횟수']}
                             />
-                            <Line type="monotone" dataKey="consultations" stroke="#4f46e5" strokeWidth={3} dot={{ fill: '#4f46e5', r: 4 }} activeDot={{ r: 6 }} />
+                            <Line type="monotone" dataKey="consultations" stroke="#4f46e5" strokeWidth={2} dot={{ fill: '#4f46e5', r: 3 }} activeDot={{ r: 4 }} />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>

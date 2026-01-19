@@ -1,10 +1,70 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { TimetableClass, ClassKeywordColor, Teacher } from '../../../../types';
 import { getSubjectTheme } from '../utils/gridUtils';
 import { Clock } from 'lucide-react';
 import { MATH_PERIOD_INFO, MATH_PERIOD_TIMES, WEEKEND_PERIOD_INFO, WEEKEND_PERIOD_TIMES } from '../../constants';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
+
+// 학생 항목 컴포넌트 - hover 효과를 위해 분리
+interface StudentItemProps {
+    student: any;
+    displayText: string;
+    canEdit: boolean;
+    onStudentClick?: (studentId: string) => void;
+    onDragStart: (e: React.DragEvent, studentId: string, classId: string) => void;
+    classId: string;
+    fontSizeClass: string;
+    isHighlighted: boolean;
+    enrollmentStyle: { bg: string; text: string } | null;
+    themeText: string;
+}
+
+const StudentItem: React.FC<StudentItemProps> = ({
+    student,
+    displayText,
+    canEdit,
+    onStudentClick,
+    onDragStart,
+    classId,
+    fontSizeClass,
+    isHighlighted,
+    enrollmentStyle,
+    themeText
+}) => {
+    const [isHovered, setIsHovered] = useState(false);
+    // 조회 모드/수정 모드 모두에서 학생 클릭 가능 (영어 시간표와 동일)
+    const isClickable = !!onStudentClick;
+
+    // hover 시 적용할 스타일 (자연스럽게)
+    const hoverStyle: React.CSSProperties = isClickable && isHovered ? {
+        backgroundColor: '#dbeafe', // blue-100
+        color: '#1e40af', // blue-800
+        fontWeight: 600
+    } : {};
+
+    return (
+        <li
+            draggable={canEdit}
+            onDragStart={(e) => canEdit && onDragStart(e, student.id, classId)}
+            onClick={(e) => {
+                if (isClickable) {
+                    e.stopPropagation();
+                    onStudentClick(student.id);
+                }
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] truncate font-medium transition-all duration-150
+            ${canEdit ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''}
+            ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}`}
+            style={hoverStyle}
+            title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}\n(클릭하여 상세정보 보기)` : '클릭하여 상세정보 보기'}
+        >
+            {displayText}
+        </li>
+    );
+};
 
 interface ClassCardProps {
     cls: TimetableClass;
@@ -14,16 +74,16 @@ interface ClassCardProps {
     showClassName: boolean;
     showSchool: boolean;
     showGrade: boolean;
-    canEdit: boolean;
+    canEdit: boolean;  // 수정 모드 여부 (true일 때 수업명 클릭하면 수업 상세 모달)
     dragOverClassId: string | null;
-    onClick: (cls: TimetableClass) => void;
+    onClick: (cls: TimetableClass) => void;  // 수업 상세 모달 열기 (수정 모드에서만)
     onDragStart: (e: React.DragEvent, studentId: string, fromClassId: string) => void;
     onDragOver: (e: React.DragEvent, classId: string) => void;
     onDragLeave: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent, toClassId: string) => void;
     studentMap: Record<string, any>;
     classKeywords?: ClassKeywordColor[];
-    onStudentClick?: (studentId: string) => void;
+    onStudentClick?: (studentId: string) => void;  // 학생 클릭 시 상세 모달 (조회/수정 모두)
     currentDay?: string;
     mergedDays?: string[];
     teachers?: Teacher[];
@@ -304,25 +364,33 @@ const ClassCard: React.FC<ClassCardProps> = ({
         ? { backgroundColor: matchedKeyword.bgColor }
         : { backgroundColor: '#ffffff' };
 
+    // 수정 모드에서 수업명 헤더 클릭 핸들러
+    const handleClassHeaderClick = (e: React.MouseEvent) => {
+        if (canEdit) {
+            e.stopPropagation();
+            onClick(cls);
+        }
+    };
+
     return (
         <div
-            onClick={() => canEdit && onClick(cls)}
             onDragOver={(e) => canEdit && onDragOver(e, cls.id)}
             onDragLeave={canEdit ? onDragLeave : undefined}
             onDrop={(e) => canEdit && onDrop(e, cls.id)}
-            className={`flex flex-col h-full overflow-hidden transition-all hover:brightness-95 ${dragOverClassId === cls.id ? 'ring-2 ring-indigo-400 scale-[1.02]' : (canEdit ? 'cursor-pointer' : '')} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
+            className={`flex flex-col h-full overflow-hidden transition-all ${dragOverClassId === cls.id ? 'ring-2 ring-indigo-400 scale-[1.02]' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
             style={cardBgStyle}
         >
-            {/* Class Name Header - 키워드 색상 적용, 마우스 오버시 스케줄 툴팁 */}
+            {/* Class Name Header - 수정 모드에서 클릭 시 수업 상세 모달, 조회 모드에서 마우스 오버시 스케줄 툴팁 */}
             {showClassName && (
                 <div
                     ref={headerRef}
-                    className={`text-center font-bold py-1 px-1 ${titleFontSizeClass} cursor-help ${showStudents ? 'border-b border-gray-300' : 'flex-1 flex flex-col justify-center'}`}
+                    onClick={handleClassHeaderClick}
+                    className={`text-center font-bold py-1 px-1 ${titleFontSizeClass} ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-help'} ${showStudents ? 'border-b border-gray-300' : 'flex-1 flex flex-col justify-center'}`}
                     style={matchedKeyword
                         ? { color: matchedKeyword.textColor }
                         : { color: '#1f2937' }
                     }
-                    onMouseEnter={() => setShowScheduleTooltip(true)}
+                    onMouseEnter={() => !canEdit && setShowScheduleTooltip(true)}
                     onMouseLeave={() => setShowScheduleTooltip(false)}
                 >
                     <div>{cls.className}</div>
@@ -394,7 +462,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0`}>({commonStudents.active.length})</div>
                             <ul className="flex flex-col gap-0">
                                 {commonStudents.active.map(s => {
-                                    const isHighlighted = searchQuery && s.name.includes(searchQuery);
+                                    const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
                                     const enrollmentStyle = getEnrollmentStyle(s);
                                     let displayText = s.name;
                                     if (showSchool || showGrade) {
@@ -405,23 +473,19 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         if (schoolGrade && schoolGrade !== '-') displayText += `/${schoolGrade}`;
                                     }
                                     return (
-                                        <li
+                                        <StudentItem
                                             key={s.id}
-                                            draggable={canEdit}
-                                            onDragStart={(e) => canEdit && onDragStart(e, s.id, cls.id)}
-                                            onClick={(e) => {
-                                                if (onStudentClick && !canEdit) {
-                                                    e.stopPropagation();
-                                                    onStudentClick(s.id);
-                                                }
-                                            }}
-                                            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] truncate font-medium rounded
-                                            ${canEdit ? 'cursor-grab hover:brightness-95' : onStudentClick ? 'cursor-pointer hover:brightness-95' : ''}
-                                            ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : theme.text}`}
-                                            title={s.enrollmentDate ? `입학일: ${s.enrollmentDate}` : undefined}
-                                        >
-                                            {displayText}
-                                        </li>
+                                            student={s}
+                                            displayText={displayText}
+                                            canEdit={canEdit}
+                                            onStudentClick={onStudentClick}
+                                            onDragStart={onDragStart}
+                                            classId={cls.id}
+                                            fontSizeClass={fontSizeClass}
+                                            isHighlighted={isHighlighted}
+                                            enrollmentStyle={enrollmentStyle}
+                                            themeText={theme.text}
+                                        />
                                     );
                                 })}
                             </ul>
@@ -453,7 +517,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 <div className="px-0.5 py-0 bg-amber-50 flex-1">
                                                     <ul className="flex flex-col gap-0">
                                                         {dayActiveStudents.map(s => {
-                                                            const isHighlighted = searchQuery && s.name.includes(searchQuery);
+                                                            const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
                                                             const enrollmentStyle = getEnrollmentStyle(s);
                                                             let displayText = s.name;
                                                             if (showSchool || showGrade) {
@@ -464,23 +528,19 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 if (schoolGrade && schoolGrade !== '-') displayText += `/${schoolGrade}`;
                                                             }
                                                             return (
-                                                                <li
+                                                                <StudentItem
                                                                     key={s.id}
-                                                                    draggable={canEdit}
-                                                                    onDragStart={(e) => canEdit && onDragStart(e, s.id, cls.id)}
-                                                                    onClick={(e) => {
-                                                                        if (onStudentClick && !canEdit) {
-                                                                            e.stopPropagation();
-                                                                            onStudentClick(s.id);
-                                                                        }
-                                                                    }}
-                                                                    className={`py-0 px-1 ${fontSizeClass} leading-[1.3] truncate rounded
-                                                                    ${canEdit ? 'cursor-grab hover:brightness-95' : onStudentClick ? 'cursor-pointer hover:brightness-95' : ''}
-                                                                    ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : 'text-amber-900 font-medium'}`}
-                                                                    title={s.enrollmentDate ? `입학일: ${s.enrollmentDate}` : undefined}
-                                                                >
-                                                                    {displayText}
-                                                                </li>
+                                                                    student={s}
+                                                                    displayText={displayText}
+                                                                    canEdit={canEdit}
+                                                                    onStudentClick={onStudentClick}
+                                                                    onDragStart={onDragStart}
+                                                                    classId={cls.id}
+                                                                    fontSizeClass={fontSizeClass}
+                                                                    isHighlighted={isHighlighted}
+                                                                    enrollmentStyle={enrollmentStyle}
+                                                                    themeText="text-amber-900 font-medium"
+                                                                />
                                                             );
                                                         })}
                                                         {/* 빈 슬롯 추가 - 다른 요일과 높이 맞춤 */}
@@ -538,7 +598,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             <div className="text-[10px] font-bold text-indigo-600 mb-0.5">재원생 ({activeStudents.length}명)</div>
                             <ul className="flex flex-col">
                                 {activeStudents.map(s => {
-                                    const isHighlighted = searchQuery && s.name.includes(searchQuery);
+                                    const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
                                     const enrollmentStyle = getEnrollmentStyle(s);
                                     let displayText = s.name;
                                     if (showSchool || showGrade) {
@@ -549,23 +609,19 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         if (schoolGrade && schoolGrade !== '-') displayText += `/${schoolGrade}`;
                                     }
                                     return (
-                                        <li
+                                        <StudentItem
                                             key={s.id}
-                                            draggable={canEdit}
-                                            onDragStart={(e) => canEdit && onDragStart(e, s.id, cls.id)}
-                                            onClick={(e) => {
-                                                if (onStudentClick && !canEdit) {
-                                                    e.stopPropagation();
-                                                    onStudentClick(s.id);
-                                                }
-                                            }}
-                                            className={`py-0 px-0.5 ${fontSizeClass} leading-tight truncate rounded
-                                            ${canEdit ? 'cursor-grab hover:brightness-95' : onStudentClick ? 'cursor-pointer hover:brightness-95' : ''}
-                                            ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : theme.text}`}
-                                            title={s.enrollmentDate ? `입학일: ${s.enrollmentDate}` : undefined}
-                                        >
-                                            {displayText}
-                                        </li>
+                                            student={s}
+                                            displayText={displayText}
+                                            canEdit={canEdit}
+                                            onStudentClick={onStudentClick}
+                                            onDragStart={onDragStart}
+                                            classId={cls.id}
+                                            fontSizeClass={fontSizeClass}
+                                            isHighlighted={isHighlighted}
+                                            enrollmentStyle={enrollmentStyle}
+                                            themeText={theme.text}
+                                        />
                                     );
                                 })}
                             </ul>
@@ -639,6 +695,7 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.showClassName === nextProps.showClassName &&
         prevProps.showSchool === nextProps.showSchool &&
         prevProps.showGrade === nextProps.showGrade &&
+        prevProps.canEdit === nextProps.canEdit &&
         prevProps.dragOverClassId === nextProps.dragOverClassId &&
         prevProps.currentDay === nextProps.currentDay &&
         prevProps.fontSize === nextProps.fontSize &&

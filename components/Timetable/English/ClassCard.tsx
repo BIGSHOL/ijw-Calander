@@ -8,9 +8,61 @@ import { MoveChange } from './hooks/useEnglishChanges';
 import { DisplayOptions } from './IntegrationViewSettings';
 import MiniGridRow from './MiniGridRow';
 import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, EN_PERIODS, INJAE_PERIODS } from './englishUtils';
-import StudentModal from './StudentModal';
 import LevelUpConfirmModal from './LevelUpConfirmModal';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
+
+// 학생 항목 컴포넌트 - hover 효과를 위해 분리
+interface EnglishStudentItemProps {
+    student: TimetableStudent & { isTempMoved?: boolean };
+    style: { className: string; textClass: string; subTextClass: string; englishTextClass: string };
+    mode: 'view' | 'edit';
+    onStudentClick?: (studentId: string) => void;
+    onDragStart: (e: React.DragEvent, student: TimetableStudent) => void;
+}
+
+const EnglishStudentItem: React.FC<EnglishStudentItemProps> = ({
+    student,
+    style,
+    mode,
+    onStudentClick,
+    onDragStart
+}) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const isClickable = !!onStudentClick;
+
+    // hover 시 적용할 스타일 (수학 시간표와 동일)
+    const hoverStyle: React.CSSProperties = isClickable && isHovered ? {
+        backgroundColor: '#dbeafe', // blue-100
+        color: '#1e40af', // blue-800
+        fontWeight: 600
+    } : {};
+
+    return (
+        <div
+            draggable={mode === 'edit' && !student.isTempMoved}
+            onDragStart={(e) => onDragStart(e, student)}
+            onClick={(e) => {
+                if (isClickable) {
+                    e.stopPropagation();
+                    onStudentClick(student.id);
+                }
+            }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className={`flex items-center justify-between text-[12px] py-0.5 px-1 transition-all duration-150 ${style.className} ${isClickable ? 'cursor-pointer' : ''}`}
+            style={hoverStyle}
+            title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}\n(클릭하여 상세정보 보기)` : '클릭하여 상세정보 보기'}
+        >
+            <span className={`font-medium truncate max-w-[90px] ${isHovered && isClickable ? '' : style.textClass}`}>
+                {student.name}
+                {student.englishName && <span className={`font-normal ml-0.5 ${isHovered && isClickable ? '' : (style.englishTextClass || 'text-gray-500')}`}>({student.englishName})</span>}
+            </span>
+            <span className={`text-micro ml-1 shrink-0 text-right leading-none ${isHovered && isClickable ? '' : (style.subTextClass || 'text-gray-500')}`}>
+                {formatSchoolGrade(student.school, student.grade)}
+            </span>
+        </div>
+    );
+};
 
 // 주말 실제 시간대 (09:00~17:00, 1시간 단위)
 const WEEKEND_PERIOD_TIMES: Record<string, string> = {
@@ -60,12 +112,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onMenuToggle,
     displayOptions,
     hiddenTeacherList,
-    currentUser,
+    currentUser: _currentUser,
     englishLevels,
     isSimulationMode = false,
     moveChanges,
     onMoveStudent,
-    studentMap,
+    studentMap: _studentMap,
     classStudentData, // Cost Optimization: Centralized fetch
     isTimeColumnOnly = false,
     hideTime = false,
@@ -79,7 +131,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
     // TimeColumnOnly: 49px (48px time + 1px border)
     const cardWidthClass = isTimeColumnOnly ? 'w-[49px]' : (hideTime ? 'w-[160px]' : 'w-[190px]');
 
-    const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
     const [studentCount, setStudentCount] = useState<number>(0);
     const [students, setStudents] = useState<TimetableStudent[]>([]);
     const [displayStudents, setDisplayStudents] = useState<TimetableStudent[]>([]);
@@ -469,18 +520,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             {/* 재원생 Section - Fixed Height */}
                             <div className="h-[290px] flex flex-col border-b border-indigo-100">
                                 <div className="border-b border-gray-300 flex items-center justify-center h-[30px] shrink-0 bg-white">
-                                    <button
-                                        className={`w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2 transition-colors ${mode === 'edit' ? 'cursor-pointer hover:bg-indigo-100' : 'cursor-default'}`}
-                                        onClick={(e) => {
-                                            if (mode === 'edit') {
-                                                e.stopPropagation();
-                                                setIsStudentModalOpen(true);
-                                            }
-                                        }}
-                                    >
-                                        {mode === 'edit' && <Users size={14} />}
+                                    <div className="w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2">
+                                        <Users size={14} />
                                         <span>{studentCount}명</span>
-                                    </button>
+                                    </div>
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto px-2 py-1.5 text-xxs flex flex-col custom-scrollbar">
@@ -528,34 +571,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 {sortedActive.slice(0, 12).map((student: TimetableStudent & { isTempMoved?: boolean }) => {
                                                     const style = getRowStyle(student);
                                                     return (
-                                                        <div
+                                                        <EnglishStudentItem
                                                             key={student.id}
-                                                            draggable={mode === 'edit' && !student.isTempMoved}
-                                                            onDragStart={(e) => handleDragStart(e, student)}
-                                                            onClick={(e) => {
-                                                                if (onStudentClick) {
-                                                                    e.stopPropagation();
-                                                                    onStudentClick(student.id);
-                                                                }
-                                                            }}
-                                                            className={`flex items-center justify-between text-[12px] py-0.5 px-1 rounded ${style.className} ${onStudentClick ? 'cursor-pointer hover:brightness-95' : ''}`}
-                                                            title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}` : undefined}
-                                                        >
-                                                            <span className={`font-medium truncate ${style.textClass} max-w-[90px]`}>
-                                                                {student.name}
-                                                                {student.englishName && <span className={`font-normal ml-0.5 ${style.englishTextClass || 'text-gray-500'}`}>({student.englishName})</span>}
-                                                            </span>
-                                                            <span className={`text-micro ml-1 shrink-0 ${style.subTextClass || 'text-gray-500'} text-right leading-none`}>
-                                                                {formatSchoolGrade(student.school, student.grade)}
-                                                            </span>
-                                                        </div>
+                                                            student={student}
+                                                            style={style}
+                                                            mode={mode}
+                                                            onStudentClick={onStudentClick}
+                                                            onDragStart={handleDragStart}
+                                                        />
                                                     );
                                                 })}
                                                 {sortedActive.length > 12 && (
-                                                    <div
-                                                        className={`text-indigo-500 font-bold mt-0.5 text-xs ${mode === 'edit' ? 'cursor-pointer hover:underline' : 'cursor-default'}`}
-                                                        onClick={() => mode === 'edit' && setIsStudentModalOpen(true)}
-                                                    >
+                                                    <div className="text-indigo-500 font-bold mt-0.5 text-xs">
                                                         +{sortedActive.length - 12}명 더보기...
                                                     </div>
                                                 )}
@@ -626,20 +653,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     )
                 )}
             </div>
-
-            {/* Student Modal */}
-            <StudentModal
-                isOpen={isStudentModalOpen}
-                onClose={() => setIsStudentModalOpen(false)}
-                className={classInfo.name}
-                teacher={classInfo.mainTeacher}
-                currentUser={currentUser}
-                readOnly={mode === 'view' || (isSimulationMode && currentUser?.role !== 'master')}
-                isSimulationMode={isSimulationMode}
-                // NEW: Enrollments 기반 데이터 전달
-                studentMap={studentMap}
-                initialStudents={classStudentData?.studentList || []}
-            />
 
             {/* Level Up Confirm Modal */}
             <LevelUpConfirmModal

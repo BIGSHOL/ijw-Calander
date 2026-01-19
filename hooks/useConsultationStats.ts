@@ -60,6 +60,7 @@ export interface ConsultationStatsResult {
   followUpNeeded: number;
   followUpDone: number;
   studentsNeedingConsultation: StudentNeedingConsultation[];
+  totalActiveStudents: number;  // 전체 재원생 수 (status === 'active')
 }
 
 /**
@@ -82,15 +83,9 @@ export function useConsultationStats(
   filters?: ConsultationStatsFilters,
   staff?: StaffMember[]
 ) {
-  // 기본 날짜 범위: 이번 달
+  // 기본 날짜 범위: 이번 달 (로컬 시간 기준)
   const defaultDateRange = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
-    };
+    return getDateRangeFromPreset('thisMonth');
   }, []);
 
   const dateRange = filters?.dateRange || defaultDateRange;
@@ -296,21 +291,38 @@ export function useConsultationStats(
         }
       });
 
-      // 2. 학생별로 선택 기간 내 상담 여부 체크 (과목 무관, 1건이라도 있으면 OK)
+      // 3. 학생별로 선택 기간 내 상담 여부 체크 (과목 무관, 1건이라도 있으면 OK)
       const consultedStudentIds = new Set(consultations.map(c => c.studentId));
 
-      // === 성능 최적화: 별도의 allConsultationsQuery 제거 ===
-      // 기존: 전체 상담 기록 다시 조회 (중복)
-      // 개선: 이미 조회한 consultations에서 마지막 상담일 추출
-      // 참고: 선택 기간 외의 상담은 조회되지 않으므로, lastConsultationDate는 기간 내 최신 날짜
+      // 4. 상담이 필요한 학생 필터링 (선택 기간 내 상담 없는 학생)
+      const studentsNeedingIds = eligibleStudents
+        .filter(student => !consultedStudentIds.has(student.id))
+        .map(student => student.id);
+
+      // 5. 상담 필요 학생들의 마지막 상담일 조회 (전체 기간에서)
+      // 참고: 상담이 필요한 학생만 조회하여 쿼리 최적화
       const studentLastConsultationMap = new Map<string, string>();
-      consultations.forEach(c => {
-        const existing = studentLastConsultationMap.get(c.studentId);
-        // date가 더 최신이거나 없으면 업데이트
-        if (!existing || c.date > existing) {
-          studentLastConsultationMap.set(c.studentId, c.date);
-        }
-      });
+
+      if (studentsNeedingIds.length > 0) {
+        // Set으로 변환하여 O(1) 조회
+        const needingIdsSet = new Set(studentsNeedingIds);
+
+        // 전체 상담 기록에서 해당 학생들의 마지막 상담일만 조회
+        const allConsultationsQuery = query(
+          collection(db, COL_STUDENT_CONSULTATIONS),
+          orderBy('date', 'desc')
+        );
+        const allConsultationsSnap = await getDocs(allConsultationsQuery);
+
+        allConsultationsSnap.docs.forEach(doc => {
+          const data = doc.data();
+          const studentId = data.studentId as string;
+          // 상담 필요 학생만 처리 & 이미 기록이 있으면 스킵 (desc 정렬이라 첫 번째가 최신)
+          if (needingIdsSet.has(studentId) && !studentLastConsultationMap.has(studentId)) {
+            studentLastConsultationMap.set(studentId, data.date as string);
+          }
+        });
+      }
 
       const studentsNeedingConsultation: StudentNeedingConsultation[] = eligibleStudents
         .filter(student => !consultedStudentIds.has(student.id))
@@ -345,6 +357,7 @@ export function useConsultationStats(
         followUpNeeded,
         followUpDone,
         studentsNeedingConsultation,
+        totalActiveStudents: studentsSnapshot.docs.length,  // 전체 재원생 수
       };
     },
     staleTime: 1000 * 60 * 5, // 5분 캐싱
@@ -367,6 +380,7 @@ export function useConsultationStats(
       followUpNeeded: 0,
       followUpDone: 0,
       studentsNeedingConsultation: [],
+      totalActiveStudents: 0,
     },
     loading: isLoading,
     error,

@@ -13,11 +13,10 @@ interface DepartmentPermissionsTabProps {
   isAdmin: boolean;
 }
 
-// 권한 레이블
+// 권한 레이블 (부서 가시성만 제어)
 const PERMISSION_LABELS = {
   none: '차단',
-  view: '조회만',
-  edit: '수정 가능',
+  view: '보기',
 };
 
 const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
@@ -75,27 +74,25 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
     );
   }, [approvedUsers, searchTerm]);
 
-  // 권한 요약 계산
+  // 권한 요약 계산 (가시성만)
   const getPermissionSummary = (user: UserProfile) => {
-    if (user.role === 'master') return { view: departments.length, edit: departments.length, none: 0, label: '전체 권한' };
+    if (user.role === 'master') return { view: departments.length, none: 0, label: '전체 보기' };
 
     const perms = user.departmentPermissions || {};
-    let view = 0, edit = 0, none = 0;
+    let view = 0, none = 0;
     departments.forEach(d => {
       const p = perms[d.id];
-      if (p === 'edit') edit++;
-      else if (p === 'view') view++;
+      if (p === 'view') view++;
       else none++;
     });
 
-    if (edit === departments.length) return { view, edit, none, label: '전체 수정' };
-    if (view + edit === departments.length) return { view, edit, none, label: '전체 조회' };
-    if (none === departments.length) return { view, edit, none, label: '권한 없음' };
-    return { view, edit, none, label: `조회 ${view + edit}개 / 수정 ${edit}개` };
+    if (view === departments.length) return { view, none, label: '전체 보기' };
+    if (none === departments.length) return { view, none, label: '전체 차단' };
+    return { view, none, label: `보기 ${view}개 / 차단 ${none}개` };
   };
 
-  // 권한 변경 핸들러 - staff 컬렉션에 저장
-  const handlePermissionChange = async (uid: string, deptId: string, level: 'none' | 'view' | 'edit') => {
+  // 권한 변경 핸들러 - staff 컬렉션에 저장 (가시성만)
+  const handlePermissionChange = async (uid: string, deptId: string, level: 'none' | 'view') => {
     const user = approvedUsers.find(u => u.uid === uid);
     if (!user) return;
 
@@ -126,8 +123,8 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
     }
   };
 
-  // 일괄 권한 변경 - staff 컬렉션에 저장
-  const handleBulkPermission = async (uid: string, level: 'none' | 'view' | 'edit') => {
+  // 일괄 권한 변경 - staff 컬렉션에 저장 (가시성만)
+  const handleBulkPermission = async (uid: string, level: 'none' | 'view') => {
     const user = approvedUsers.find(u => u.uid === uid);
     if (!user) return;
 
@@ -139,7 +136,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
 
     setSaving(uid);
     try {
-      const newPerms: Record<string, 'view' | 'edit'> = {};
+      const newPerms: Record<string, 'view'> = {};
       if (level !== 'none') {
         departments.forEach(d => {
           newPerms[d.id] = level;
@@ -234,11 +231,6 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                   ) : (
                     <>
                       <div className="flex items-center gap-1 text-[10px]">
-                        {summary.edit > 0 && (
-                          <span className="flex items-center gap-0.5 text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
-                            <Edit3 size={8} /> {summary.edit}
-                          </span>
-                        )}
                         {summary.view > 0 && (
                           <span className="flex items-center gap-0.5 text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                             <Eye size={8} /> {summary.view}
@@ -258,7 +250,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
               {/* 펼쳐진 내용 */}
               {isExpanded && !isUserMaster && (
                 <div className="border-t border-gray-100 p-2 bg-gray-50/50">
-                  {/* 일괄 설정 버튼 - 차단 → 조회 → 수정 순서 */}
+                  {/* 일괄 설정 버튼 - 차단 / 보기 */}
                   {canEdit && !isCurrentUser && (
                     <div className="flex gap-1 mb-2">
                       <button
@@ -273,14 +265,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                         disabled={isSaving}
                         className="px-2 py-1 text-[10px] font-bold bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                       >
-                        전체 조회
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleBulkPermission(user.uid, 'edit'); }}
-                        disabled={isSaving}
-                        className="px-2 py-1 text-[10px] font-bold bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                      >
-                        전체 수정
+                        전체 보기
                       </button>
                     </div>
                   )}
@@ -327,17 +312,6 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                               title={PERMISSION_LABELS.view}
                             >
                               <Eye size={10} />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handlePermissionChange(user.uid, dept.id, 'edit'); }}
-                              disabled={!canEdit || isCurrentUser || isSaving}
-                              className={`w-5 h-5 flex items-center justify-center rounded transition-all ${current === 'edit'
-                                  ? 'bg-green-500 text-white'
-                                  : 'text-gray-300 hover:bg-gray-200'
-                                } ${(!canEdit || isCurrentUser) ? 'cursor-not-allowed' : ''}`}
-                              title={PERMISSION_LABELS.edit}
-                            >
-                              <Edit3 size={10} />
                             </button>
                           </div>
                         </div>

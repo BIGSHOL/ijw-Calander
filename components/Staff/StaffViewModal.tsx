@@ -9,6 +9,7 @@ interface StaffViewModalProps {
   onDelete: (id: string) => void;
   canEdit?: boolean;
   canDelete?: boolean;
+  currentUserUid?: string;
 }
 
 // 시스템 권한 레이블 및 색상
@@ -30,12 +31,29 @@ const APPROVAL_STYLES: Record<string, { label: string; bg: string; text: string;
   rejected: { label: '거부됨', bg: 'bg-red-100', text: 'text-red-800', icon: <XCircle className="w-3.5 h-3.5" /> },
 };
 
-const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit, onDelete, canEdit = true, canDelete = true }) => {
+const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit, onDelete, canEdit = true, canDelete = true, currentUserUid }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const systemRoleStyle = staff.systemRole ? SYSTEM_ROLE_STYLES[staff.systemRole] : null;
   const approvalStyle = staff.approvalStatus ? APPROVAL_STYLES[staff.approvalStatus] : null;
+
+  // 자기 자신인지 확인
+  const isSelf = currentUserUid && staff.uid === currentUserUid;
+
+  // 수정 불가 시 툴팁 메시지
+  const getEditTooltip = () => {
+    if (canEdit) return '수정';
+    if (isSelf) return '수정 (본인 계정)';
+    return '자신보다 높거나 같은 권한의 직원은 수정할 수 없습니다';
+  };
+
+  // 삭제 불가 시 툴팁 메시지
+  const getDeleteTooltip = () => {
+    if (canDelete) return '삭제';
+    if (isSelf) return '본인 계정은 삭제할 수 없습니다';
+    return '자신보다 높거나 같은 권한의 직원은 삭제할 수 없습니다';
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -290,15 +308,19 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
         {/* Footer */}
         <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex justify-between">
           <div>
-            {canDelete && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                삭제
-              </button>
-            )}
+            <button
+              onClick={canDelete ? () => setShowDeleteConfirm(true) : undefined}
+              disabled={!canDelete}
+              title={getDeleteTooltip()}
+              className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg transition-colors ${
+                canDelete
+                  ? 'text-red-600 hover:bg-red-50 cursor-pointer'
+                  : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+              }`}
+            >
+              <Trash2 className="w-4 h-4" />
+              삭제
+            </button>
           </div>
           <div className="flex gap-2">
             <button
@@ -307,15 +329,19 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
             >
               닫기
             </button>
-            {canEdit && (
-              <button
-                onClick={onEdit}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-[#081429] text-white rounded-lg hover:bg-[#0a1a35] transition-colors"
-              >
-                <Edit className="w-4 h-4" />
-                수정
-              </button>
-            )}
+            <button
+              onClick={canEdit ? onEdit : undefined}
+              disabled={!canEdit}
+              title={getEditTooltip()}
+              className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg transition-colors ${
+                canEdit
+                  ? 'bg-[#081429] text-white hover:bg-[#0a1a35] cursor-pointer'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              <Edit className="w-4 h-4" />
+              수정
+            </button>
           </div>
         </div>
       </div>

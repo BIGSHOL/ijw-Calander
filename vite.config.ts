@@ -71,15 +71,9 @@ export default defineConfig(({ mode }) => {
               return 'react';
             }
 
-            // Firebase - 모듈별 분리
-            if (id.includes('firebase/auth') || id.includes('@firebase/auth')) {
-              return 'firebase-auth';
-            }
-            if (id.includes('firebase/firestore') || id.includes('@firebase/firestore')) {
-              return 'firebase-firestore';
-            }
-            if (id.includes('firebase')) {
-              return 'firebase-core';
+            // Firebase - 하나의 청크로 통합 (순환 참조 방지)
+            if (id.includes('firebase') || id.includes('@firebase')) {
+              return 'firebase';
             }
 
             // Lucide-react in separate chunk

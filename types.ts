@@ -16,7 +16,7 @@ export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'other';
 
 // Detailed Enrollment Information
 export interface Enrollment {
-  subject: 'math' | 'english';
+  subject: 'math' | 'english' | 'science' | 'korean' | 'other';
   classId: string;    // Document ID of the class
   className: string;  // Name of the class
   teacherId: string;  // Teacher Name/ID
@@ -373,12 +373,15 @@ export type PermissionId =
   | 'timetable.english.view' | 'timetable.english.edit'
   | 'timetable.english.simulation'
   | 'timetable.english.backup.view' | 'timetable.english.backup.restore'
+  | 'timetable.science.view' | 'timetable.science.edit'
+  | 'timetable.korean.view' | 'timetable.korean.edit'
   | 'timetable.integrated.view'
   // Gantt
   | 'gantt.view' | 'gantt.create' | 'gantt.edit' | 'gantt.delete'
   // Attendance
   | 'attendance.manage_own' | 'attendance.edit_all'
   | 'attendance.manage_math' | 'attendance.manage_english'
+  | 'attendance.manage_science' | 'attendance.manage_korean'
   | 'attendance.edit_student_info'
   // Students (NEW)
   | 'students.view' | 'students.edit' | 'students.delete'
@@ -416,12 +419,15 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'timetable.english.view': true, 'timetable.english.edit': true,
     'timetable.english.simulation': true,
     'timetable.english.backup.view': true, 'timetable.english.backup.restore': true,
+    'timetable.science.view': true, 'timetable.science.edit': true,
+    'timetable.korean.view': true, 'timetable.korean.edit': true,
     'timetable.integrated.view': true,
     // Gantt
     'gantt.view': true, 'gantt.create': true, 'gantt.edit': true, 'gantt.delete': true,
     // Attendance
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': true,
+    'attendance.manage_science': true, 'attendance.manage_korean': true,
     'attendance.edit_student_info': true,
     // Students
     'students.view': true, 'students.edit': true, 'students.delete': true,
@@ -449,12 +455,15 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'timetable.english.view': true, 'timetable.english.edit': true,
     'timetable.english.simulation': true,
     'timetable.english.backup.view': true, 'timetable.english.backup.restore': false,
+    'timetable.science.view': true, 'timetable.science.edit': true,
+    'timetable.korean.view': true, 'timetable.korean.edit': true,
     'timetable.integrated.view': true,
     // Gantt
     'gantt.view': true, 'gantt.create': true, 'gantt.edit': true, 'gantt.delete': false,
     // Attendance
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': true,
+    'attendance.manage_science': true, 'attendance.manage_korean': true,
     'attendance.edit_student_info': true,
     // Students
     'students.view': true, 'students.edit': true, 'students.delete': false,
@@ -483,10 +492,13 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Timetable
     'timetable.math.view': true, 'timetable.math.edit': true,
     'timetable.english.view': true, 'timetable.english.edit': false,
+    'timetable.science.view': true, 'timetable.science.edit': false,
+    'timetable.korean.view': true, 'timetable.korean.edit': false,
     'timetable.integrated.view': true,
     // Attendance (manage math only)
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': true, 'attendance.manage_english': false,
+    'attendance.manage_science': false, 'attendance.manage_korean': false,
     'attendance.edit_student_info': true,
     // Students
     'students.view': true, 'students.edit': true, 'students.delete': false,
@@ -517,10 +529,13 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'timetable.english.view': true, 'timetable.english.edit': true,
     'timetable.english.simulation': true,
     'timetable.english.backup.view': true, 'timetable.english.backup.restore': false,
+    'timetable.science.view': true, 'timetable.science.edit': false,
+    'timetable.korean.view': true, 'timetable.korean.edit': false,
     'timetable.integrated.view': true,
     // Attendance (manage english only)
     'attendance.manage_own': true, 'attendance.edit_all': true,
     'attendance.manage_math': false, 'attendance.manage_english': true,
+    'attendance.manage_science': false, 'attendance.manage_korean': false,
     'attendance.edit_student_info': true,
     // Students
     'students.view': true, 'students.edit': true, 'students.delete': false,
@@ -549,9 +564,12 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Timetable (view only)
     'timetable.math.view': true, 'timetable.math.edit': false,
     'timetable.english.view': false, 'timetable.english.edit': false,
+    'timetable.science.view': false, 'timetable.science.edit': false,
+    'timetable.korean.view': false, 'timetable.korean.edit': false,
     // Attendance (own students only)
     'attendance.manage_own': true, 'attendance.edit_all': false,
     'attendance.manage_math': false, 'attendance.manage_english': false,
+    'attendance.manage_science': false, 'attendance.manage_korean': false,
     'attendance.edit_student_info': false,
     // Students (view only)
     'students.view': true, 'students.edit': false, 'students.delete': false,
@@ -580,9 +598,12 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Timetable (view only)
     'timetable.math.view': false, 'timetable.math.edit': false,
     'timetable.english.view': true, 'timetable.english.edit': false,
+    'timetable.science.view': false, 'timetable.science.edit': false,
+    'timetable.korean.view': false, 'timetable.korean.edit': false,
     // Attendance (own students only)
     'attendance.manage_own': true, 'attendance.edit_all': false,
     'attendance.manage_math': false, 'attendance.manage_english': false,
+    'attendance.manage_science': false, 'attendance.manage_korean': false,
     'attendance.edit_student_info': false,
     // Students (view only)
     'students.view': true, 'students.edit': false, 'students.delete': false,
@@ -623,8 +644,9 @@ export interface UserProfile {
   status: 'approved' | 'pending' | 'rejected';
   /** @deprecated Use granular permissions instead (kept for migration) */
   allowedDepartments?: string[];
-  // Granular permissions per department (maintained)
-  departmentPermissions?: Record<string, 'view' | 'edit'>;
+  // Department visibility control: 'view' = visible, undefined/missing = hidden
+  // Note: Edit permissions are controlled by role permissions, not department permissions
+  departmentPermissions?: Record<string, 'view'>;
   // Favorite departments (user-specific bookmarks)
   favoriteDepartments?: string[];
 
@@ -1324,7 +1346,7 @@ export interface StaffMember {
   // === 시스템 권한 필드 (UserProfile 통합) ===
   systemRole?: UserRole;           // 시스템 권한 역할 (8단계)
   approvalStatus?: 'approved' | 'pending' | 'rejected';  // 승인 상태
-  departmentPermissions?: Record<string, 'view' | 'edit'>;  // 부서별 권한
+  departmentPermissions?: Record<string, 'view'>;  // 부서 가시성 제어 ('view' = 보임, 없음 = 숨김)
   favoriteDepartments?: string[];  // 즐겨찾기 부서
   primaryDepartmentId?: string;    // 주 소속 부서
   jobTitle?: string;               // 호칭

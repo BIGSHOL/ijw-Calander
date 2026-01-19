@@ -48,7 +48,6 @@ const BillingManager = lazy(() => import('./components/Billing').then(m => ({ de
 const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
 const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
 const RoleManagementPage = lazy(() => import('./components/RoleManagement/RoleManagementPage'));
-const TimetableSettingsModal = lazy(() => import('./components/Timetable/TimetableSettingsModal'));
 const CalendarSettingsModal = lazy(() => import('./components/Calendar/CalendarSettingsModal'));
 // ProspectManagementTab removed - merged into ConsultationManager
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit, Calculator, BookOpen, Library, Building, ClipboardList, MessageCircle, BarChart3, Check, DollarSign } from 'lucide-react';
@@ -188,7 +187,7 @@ const App: React.FC = () => {
   } = eventModalState;
 
   const {
-    isSettingsOpen, setIsSettingsOpen, isTimetableSettingsOpen, setIsTimetableSettingsOpen,
+    isSettingsOpen, setIsSettingsOpen,
     isCalendarSettingsOpen, setIsCalendarSettingsOpen, isLoginModalOpen, setIsLoginModalOpen,
     isProfileMenuOpen, setIsProfileMenuOpen, isPermissionViewOpen, setIsPermissionViewOpen,
     isGlobalSearchOpen, setIsGlobalSearchOpen, isAttendanceAddStudentModalOpen, setIsAttendanceAddStudentModalOpen,
@@ -287,26 +286,30 @@ const App: React.FC = () => {
 
   // Guard: Strictly enforce permission access to subjects
   // If a user somehow lands on a subject they don't have permission for, switch them.
-  // TEMPORARY: Disabled permission guard for timetable subject switching
-  // TODO: Re-enable after fixing permission issues
-  // useEffect(() => {
-  //   if (!userProfile) return;
+  useEffect(() => {
+    if (!userProfile || appMode !== 'timetable') return;
 
-  //   const canViewMath = hasPermission('timetable.math.view') || hasPermission('timetable.math.edit');
-  //   const canViewEnglish = hasPermission('timetable.english.view') || hasPermission('timetable.english.edit');
+    const canViewMath = hasPermission('timetable.math.view') || hasPermission('timetable.math.edit');
+    const canViewEnglish = hasPermission('timetable.english.view') || hasPermission('timetable.english.edit');
 
-  //   if (timetableSubject === 'math' && !canViewMath) {
-  //     if (canViewEnglish) {
-  //       console.log('[Guard] Switching to English due to missing Math permission');
-  //       setTimetableSubject('english');
-  //     }
-  //   } else if (timetableSubject === 'english' && !canViewEnglish) {
-  //     if (canViewMath) {
-  //       console.log('[Guard] Switching to Math due to missing English permission');
-  //       setTimetableSubject('math');
-  //     }
-  //   }
-  // }, [timetableSubject, hasPermission, userProfile]);
+    if (timetableSubject === 'math' && !canViewMath) {
+      if (canViewEnglish) {
+        console.log('[Guard] Switching to English due to missing Math permission');
+        setTimetableSubject('english');
+      } else {
+        console.log('[Guard] No timetable permissions, redirecting to calendar');
+        setAppMode('calendar');
+      }
+    } else if (timetableSubject === 'english' && !canViewEnglish) {
+      if (canViewMath) {
+        console.log('[Guard] Switching to Math due to missing English permission');
+        setTimetableSubject('math');
+      } else {
+        console.log('[Guard] No timetable permissions, redirecting to calendar');
+        setAppMode('calendar');
+      }
+    }
+  }, [timetableSubject, userProfile, appMode, hasPermission]);
 
   // Initialize attendance subject based on user's permissions
   useEffect(() => {
@@ -640,17 +643,16 @@ const App: React.FC = () => {
   // Docs say: "2. 마스터계정과 같이 '권한'들을 내려줄 수 있는 '어드민' 계정 지정"
 
   // Filter Departments based on RBAC AND Local Toggles
-  // Filter Departments based on RBAC AND Local Toggles
   const visibleDepartments = departments.filter(d => {
     // 1. Access Control Check
     let hasAccess = false;
 
-    // Master/Admin has access to everything -> NO, only Master. Admin follows permissions.
-    if (isMaster) {
+    // Master and Admin have access to everything
+    if (isMaster || isAdmin) {
       hasAccess = true;
     }
-    // Check Granular Permissions
-    else if (userProfile?.departmentPermissions?.[d.id]) {
+    // Check Granular Permissions (by ID or by name for legacy compatibility)
+    else if (userProfile?.departmentPermissions?.[d.id] || userProfile?.departmentPermissions?.[d.name]) {
       hasAccess = true;
     }
     // Legacy Fallback
@@ -844,6 +846,7 @@ const App: React.FC = () => {
       // Silent return or alert
       return;
     }
+
     setSelectedDate(date);
     setSelectedEndDate(date);
     setSelectedDeptId(deptId);
@@ -855,6 +858,7 @@ const App: React.FC = () => {
   const handleRangeSelect = (startDate: string, endDate: string, deptId: string, deptIds?: string[]) => {
     console.log('DEBUG: App handleRangeSelect', { startDate, endDate, deptId, deptIds });
     if (!hasPermission('events.create')) return;
+
     setSelectedDate(startDate);
     setSelectedEndDate(endDate);
     setSelectedDeptId(deptId);
@@ -2164,14 +2168,7 @@ const App: React.FC = () => {
 
                 </div>
 
-                {/* Settings Button - 우측 끝 */}
-                <button
-                  onClick={() => setIsTimetableSettingsOpen(true)}
-                  className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
-                  title="시간표 설정"
-                >
-                  <Settings size={16} />
-                </button>
+                {/* Settings Button removed - TimetableHeader에 설정 버튼이 있음 */}
               </div>
             )
           }
@@ -2409,9 +2406,7 @@ const App: React.FC = () => {
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-hidden">
                 <RoleManagementPage
-                  isMaster={isMaster}
-                  isAdmin={isAdmin}
-                  currentUserRole={userProfile?.role}
+                  currentUser={userProfile}
                 />
               </div>
             </Suspense>
@@ -2649,16 +2644,7 @@ const App: React.FC = () => {
         onToggleArchived={() => setShowArchived(!showArchived)}
       />
 
-      {/* Timetable Settings Modal - 시간표 네비게이션에서 열림 */}
-      {isTimetableSettingsOpen && (
-        <Suspense fallback={null}>
-          <TimetableSettingsModal
-            isOpen={isTimetableSettingsOpen}
-            onClose={() => setIsTimetableSettingsOpen(false)}
-            canEdit={isMaster || hasPermission('timetable.math.edit')}
-          />
-        </Suspense>
-      )}
+      {/* Timetable Settings Modal - TimetableManager 내부에서 관리됨 */}
 
       {/* Calendar Settings Modal - 연간 일정 네비게이션에서 열림 */}
       {isCalendarSettingsOpen && (

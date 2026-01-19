@@ -10,7 +10,14 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
 
     return useMemo(() => {
         const canAccessTab = (tab: AppTab): boolean => {
+            // Edge case: No user profile
             if (!userProfile) return false;
+
+            // Edge case: Missing or invalid role
+            if (!userProfile.role) {
+                console.warn('[useTabPermissions] User profile has no role');
+                return false;
+            }
 
             // Master always has access to everything
             if (userProfile.role === 'master') return true;

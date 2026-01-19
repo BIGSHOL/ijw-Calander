@@ -1,12 +1,14 @@
 export const ALL_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
 // ============================================
-// 통일된 PERIODS (수학 8교시, 영어 10교시)
+// 통일된 PERIODS (수학/과학/국어 8교시, 영어 10교시)
 // periodId: "1" ~ "10"
 // ============================================
 export const UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 export const MATH_UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 export const ENGLISH_UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+export const SCIENCE_UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8'];
+export const KOREAN_UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
 export interface PeriodInfo {
     id: string;
@@ -40,6 +42,30 @@ export const ENGLISH_PERIOD_INFO: Record<string, PeriodInfo> = {
     '8': { id: '8', label: '8교시', time: '19:15~20:10', startTime: '19:15', endTime: '20:10' },
     '9': { id: '9', label: '9교시', time: '20:10~21:05', startTime: '20:10', endTime: '21:05' },
     '10': { id: '10', label: '10교시', time: '21:05~22:00', startTime: '21:05', endTime: '22:00' },
+};
+
+// 과학 교시 정보 (8교시, 55분 단위 - 수학과 동일)
+export const SCIENCE_PERIOD_INFO: Record<string, PeriodInfo> = {
+    '1': { id: '1', label: '1교시', time: '14:30~15:25', startTime: '14:30', endTime: '15:25' },
+    '2': { id: '2', label: '2교시', time: '15:25~16:20', startTime: '15:25', endTime: '16:20' },
+    '3': { id: '3', label: '3교시', time: '16:20~17:15', startTime: '16:20', endTime: '17:15' },
+    '4': { id: '4', label: '4교시', time: '17:15~18:10', startTime: '17:15', endTime: '18:10' },
+    '5': { id: '5', label: '5교시', time: '18:20~19:15', startTime: '18:20', endTime: '19:15' },
+    '6': { id: '6', label: '6교시', time: '19:15~20:10', startTime: '19:15', endTime: '20:10' },
+    '7': { id: '7', label: '7교시', time: '20:10~21:05', startTime: '20:10', endTime: '21:05' },
+    '8': { id: '8', label: '8교시', time: '21:05~22:00', startTime: '21:05', endTime: '22:00' },
+};
+
+// 국어 교시 정보 (8교시, 55분 단위 - 수학과 동일)
+export const KOREAN_PERIOD_INFO: Record<string, PeriodInfo> = {
+    '1': { id: '1', label: '1교시', time: '14:30~15:25', startTime: '14:30', endTime: '15:25' },
+    '2': { id: '2', label: '2교시', time: '15:25~16:20', startTime: '15:25', endTime: '16:20' },
+    '3': { id: '3', label: '3교시', time: '16:20~17:15', startTime: '16:20', endTime: '17:15' },
+    '4': { id: '4', label: '4교시', time: '17:15~18:10', startTime: '17:15', endTime: '18:10' },
+    '5': { id: '5', label: '5교시', time: '18:20~19:15', startTime: '18:20', endTime: '19:15' },
+    '6': { id: '6', label: '6교시', time: '19:15~20:10', startTime: '19:15', endTime: '20:10' },
+    '7': { id: '7', label: '7교시', time: '20:10~21:05', startTime: '20:10', endTime: '21:05' },
+    '8': { id: '8', label: '8교시', time: '21:05~22:00', startTime: '21:05', endTime: '22:00' },
 };
 
 // 기본 교시 정보 (수학 기준, 하위 호환용)
@@ -84,8 +110,17 @@ export const WEEKEND_PERIOD_TIMES: Record<string, string> = {
 };
 
 // periodId로 시간 정보 가져오기
-export const getPeriodTime = (periodId: string, subject?: 'math' | 'english'): string => {
-    const info = subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
+export const getPeriodTime = (periodId: string, subject?: 'math' | 'english' | 'science' | 'korean'): string => {
+    let info: Record<string, PeriodInfo>;
+    if (subject === 'english') {
+        info = ENGLISH_PERIOD_INFO;
+    } else if (subject === 'science') {
+        info = SCIENCE_PERIOD_INFO;
+    } else if (subject === 'korean') {
+        info = KOREAN_PERIOD_INFO;
+    } else {
+        info = MATH_PERIOD_INFO;
+    }
     return info[periodId]?.time || '';
 };
 
@@ -95,8 +130,17 @@ export const getPeriodLabel = (periodId: string): string => {
 };
 
 // 과목별 PeriodInfo 가져오기
-export const getPeriodInfo = (periodId: string, subject?: 'math' | 'english'): PeriodInfo | undefined => {
-    const info = subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
+export const getPeriodInfo = (periodId: string, subject?: 'math' | 'english' | 'science' | 'korean'): PeriodInfo | undefined => {
+    let info: Record<string, PeriodInfo>;
+    if (subject === 'english') {
+        info = ENGLISH_PERIOD_INFO;
+    } else if (subject === 'science') {
+        info = SCIENCE_PERIOD_INFO;
+    } else if (subject === 'korean') {
+        info = KOREAN_PERIOD_INFO;
+    } else {
+        info = MATH_PERIOD_INFO;
+    }
     return info[periodId];
 };
 
@@ -211,7 +255,7 @@ interface ScheduleSlotParsed {
     position: 'first' | 'second';
 }
 
-export type SubjectForSchedule = 'math' | 'english';
+export type SubjectForSchedule = 'math' | 'english' | 'science' | 'korean';
 
 /**
  * 스케줄 배열을 스마트하게 포맷팅
@@ -237,7 +281,16 @@ export const formatScheduleCompact = (
     if (!schedule || schedule.length === 0) return '시간 미정';
 
     const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
-    const weekdayPeriodInfo = subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
+    let weekdayPeriodInfo: Record<string, PeriodInfo>;
+    if (subject === 'english') {
+        weekdayPeriodInfo = ENGLISH_PERIOD_INFO;
+    } else if (subject === 'science') {
+        weekdayPeriodInfo = SCIENCE_PERIOD_INFO;
+    } else if (subject === 'korean') {
+        weekdayPeriodInfo = KOREAN_PERIOD_INFO;
+    } else {
+        weekdayPeriodInfo = MATH_PERIOD_INFO;
+    }
 
     // 요일에 따라 적절한 period info 선택
     const getPeriodInfoForDay = (day: string) => {
