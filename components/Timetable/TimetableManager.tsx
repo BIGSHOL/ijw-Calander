@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { TimetableClass, Teacher, ClassKeywordColor } from '../../types';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { TimetableClass, Teacher, ClassKeywordColor, SubjectType } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, getMonth, getYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -17,15 +17,19 @@ import AddClassModal from './Math/components/Modals/AddClassModal';
 import TimetableGrid from './Math/components/TimetableGrid';
 import ClassDetailModal from '../ClassManagement/ClassDetailModal';
 import StudentDetailModal from '../StudentManagement/StudentDetailModal';
+import SimpleViewSettingsModal from './Math/components/Modals/SimpleViewSettingsModal';
 import { ClassInfo } from '../../hooks/useClasses';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
+
+// Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
+const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
 
 
 
 // Props interface for external filter control
 interface TimetableManagerProps {
-    subjectTab?: 'math' | 'english';
-    onSubjectChange?: (subject: 'math' | 'english') => void;
+    subjectTab?: SubjectType;
+    onSubjectChange?: (subject: SubjectType) => void;
     viewType?: 'teacher' | 'room' | 'class';
     onViewTypeChange?: (viewType: 'teacher' | 'room' | 'class') => void;
     showStudents?: boolean;
@@ -59,11 +63,15 @@ const TimetableManager = ({
     const isMaster = currentUser?.role === 'master';
     const canEditMath = isMaster || hasPermission('timetable.math.edit');
     const canEditEnglish = isMaster || hasPermission('timetable.english.edit');
+    const canEditScience = isMaster || hasPermission('timetable.science.edit');
+    const canEditKorean = isMaster || hasPermission('timetable.korean.edit');
     const canViewMath = isMaster || hasPermission('timetable.math.view') || canEditMath;
     const canViewEnglish = isMaster || hasPermission('timetable.english.view') || canEditEnglish;
+    const canViewScience = isMaster || hasPermission('timetable.science.view') || canEditScience;
+    const canViewKorean = isMaster || hasPermission('timetable.korean.view') || canEditKorean;
 
     // Subject Tab (use external if provided)
-    const [internalSubjectTab, setInternalSubjectTab] = useState<'math' | 'english'>('math');
+    const [internalSubjectTab, setInternalSubjectTab] = useState<SubjectType>('math');
     const subjectTab = externalSubjectTab ?? internalSubjectTab;
     const setSubjectTab = onSubjectChange ?? setInternalSubjectTab;
 
@@ -88,6 +96,22 @@ const TimetableManager = ({
         return (
             <div className="flex items-center justify-center h-full text-red-500">
                 영어 시간표를 볼 수 있는 권한이 없습니다.
+            </div>
+        );
+    }
+
+    if (subjectTab === 'science' && !canViewScience) {
+        return (
+            <div className="flex items-center justify-center h-full text-red-500">
+                과학 시간표를 볼 수 있는 권한이 없습니다.
+            </div>
+        );
+    }
+
+    if (subjectTab === 'korean' && !canViewKorean) {
+        return (
+            <div className="flex items-center justify-center h-full text-red-500">
+                국어 시간표를 볼 수 있는 권한이 없습니다.
             </div>
         );
     }
@@ -200,6 +224,7 @@ const TimetableManager = ({
     const [mode, setMode] = useState<'view' | 'edit'>('view');
 
     const [isAddClassOpen, setIsAddClassOpen] = useState(false);
+    const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<TimetableClass | null>(null);
     const [selectedClassInfo, setSelectedClassInfo] = useState<ClassInfo | null>(null);
     const [selectedStudentForModal, setSelectedStudentForModal] = useState<UnifiedStudent | null>(null);
@@ -225,13 +250,13 @@ const TimetableManager = ({
     const [showSchool, setShowSchool] = useState(savedSettings?.showSchool ?? false);
     const [showGrade, setShowGrade] = useState(savedSettings?.showGrade ?? true);
     const [showEmptyRooms, setShowEmptyRooms] = useState(savedSettings?.showEmptyRooms ?? false);
-    const [columnWidth, setColumnWidth] = useState<'compact' | 'narrow' | 'normal' | 'wide'>(
+    const [columnWidth, setColumnWidth] = useState<'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide'>(
         savedSettings?.columnWidth || 'normal'
     );
     const [rowHeight, setRowHeight] = useState<'compact' | 'short' | 'normal' | 'tall' | 'very-tall'>(
         savedSettings?.rowHeight || 'normal'
     );
-    const [fontSize, setFontSize] = useState<'small' | 'normal' | 'large' | 'very-large'>(
+    const [fontSize, setFontSize] = useState<'small' | 'normal' | 'large'>(
         savedSettings?.fontSize || 'normal'
     );
     const [showHoldStudents, setShowHoldStudents] = useState(savedSettings?.showHoldStudents ?? true);
@@ -434,6 +459,45 @@ const TimetableManager = ({
         />;
     }
 
+    // Performance Note (async-suspense-boundaries): Generic Timetable with Suspense
+    if (subjectTab === 'science') {
+        return (
+            <Suspense fallback={
+                <div className="flex items-center justify-center h-64">
+                    <div className="text-gray-500">과학 시간표 로딩 중...</div>
+                </div>
+            }>
+                <GenericTimetable
+                    subject="science"
+                    currentUser={currentUser}
+                    viewType={viewType}
+                    onStudentsUpdated={() => {
+                        // Refresh logic if needed
+                    }}
+                />
+            </Suspense>
+        );
+    }
+
+    if (subjectTab === 'korean') {
+        return (
+            <Suspense fallback={
+                <div className="flex items-center justify-center h-64">
+                    <div className="text-gray-500">국어 시간표 로딩 중...</div>
+                </div>
+            }>
+                <GenericTimetable
+                    subject="korean"
+                    currentUser={currentUser}
+                    viewType={viewType}
+                    onStudentsUpdated={() => {
+                        // Refresh logic if needed
+                    }}
+                />
+            </Suspense>
+        );
+    }
+
     return (
         <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
             {/* Header Component */}
@@ -446,6 +510,7 @@ const TimetableManager = ({
                 setSearchQuery={setSearchQuery}
                 viewType={viewType}
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
+                setIsViewSettingsOpen={setIsViewSettingsOpen}
                 pendingMovesCount={pendingMoves.length}
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}
@@ -551,6 +616,28 @@ const TimetableManager = ({
                 currentOrder={mathConfig.teacherOrder}
                 allTeachers={sortedTeachers}
                 onSave={handleSaveTeacherOrder}
+            />
+
+            {/* View Settings Modal (Math) */}
+            <SimpleViewSettingsModal
+                isOpen={isViewSettingsOpen}
+                onClose={() => setIsViewSettingsOpen(false)}
+                columnWidth={columnWidth}
+                setColumnWidth={setColumnWidth}
+                rowHeight={rowHeight}
+                setRowHeight={setRowHeight}
+                fontSize={fontSize}
+                setFontSize={setFontSize}
+                selectedDays={selectedDays}
+                setSelectedDays={setSelectedDays}
+                showStudents={showStudents}
+                setShowStudents={setShowStudents}
+                showClassName={showClassName}
+                setShowClassName={setShowClassName}
+                showSchool={showSchool}
+                setShowSchool={setShowSchool}
+                showGrade={showGrade}
+                setShowGrade={setShowGrade}
             />
         </div >
     );

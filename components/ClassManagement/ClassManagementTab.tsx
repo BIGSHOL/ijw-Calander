@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BookOpen, Search, Plus, Filter, Calculator, Settings, Stethoscope } from 'lucide-react';
+import { BookOpen, Search, Plus, Filter, Calculator, Settings, Stethoscope, Microscope, Book } from 'lucide-react';
 import { useClasses, ClassInfo } from '../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import ClassList from './ClassList';
@@ -9,7 +9,7 @@ import ClassSettingsModal from './ClassSettingsModal';
 import EnrollmentDiagnosticModal from './EnrollmentDiagnosticModal';
 
 export interface ClassFilters {
-  subject: 'all' | 'math' | 'english';
+  subject: 'all' | SubjectType;
   teacher: string; // 'all' or teacher name
   searchQuery: string;
   sortBy: 'name' | 'studentCount' | 'teacher';
@@ -99,14 +99,13 @@ const ClassManagementTab: React.FC = () => {
     return result;
   }, [classes, filters]);
 
-  // 과목 필터 버튼 설정 (확장 가능)
-  const subjectFilters: Array<{ value: 'all' | 'math' | 'english'; label: string; icon: React.ReactNode }> = [
+  // 과목 필터 버튼 설정 (모든 과목 지원)
+  const subjectFilters: Array<{ value: 'all' | SubjectType; label: string; icon: React.ReactNode }> = [
     { value: 'all', label: '전체', icon: <BookOpen className="w-4 h-4" /> },
     { value: 'math', label: SUBJECT_LABELS.math, icon: <Calculator className="w-4 h-4" /> },
     { value: 'english', label: SUBJECT_LABELS.english, icon: <BookOpen className="w-4 h-4" /> },
-    // 추후 확장 가능
-    // { value: 'science', label: SUBJECT_LABELS.science, icon: <Microscope className="w-4 h-4" /> },
-    // { value: 'korean', label: SUBJECT_LABELS.korean, icon: <Book className="w-4 h-4" /> },
+    { value: 'science', label: SUBJECT_LABELS.science, icon: <Microscope className="w-4 h-4" /> },
+    { value: 'korean', label: SUBJECT_LABELS.korean, icon: <Book className="w-4 h-4" /> },
   ];
 
   // 상단 영역 높이 (앱 헤더 ~64px + 브레드크럼 ~48px + 필터바 40px + 테이블헤더 36px = ~188px)

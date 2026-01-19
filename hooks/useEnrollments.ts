@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { TimetableClass, TimetableStudent } from '../types';
+import { TimetableClass, TimetableStudent, SubjectType } from '../types';
 
 export interface EnrollmentInfo {
     id: string;
     studentId: string;
     studentName: string;
-    subject: 'math' | 'english';
+    subject: SubjectType;
     className: string;
     teacherId: string;
     days?: string[];
@@ -23,7 +23,7 @@ export interface EnrollmentInfo {
  * 모든 학생의 enrollments를 조회하여 클래스 중심으로 재구성
  * 새로운 students/enrollments 구조에서 데이터를 읽어옴
  */
-export const useEnrollmentsAsClasses = (subject?: 'math' | 'english') => {
+export const useEnrollmentsAsClasses = (subject?: SubjectType) => {
     return useQuery<TimetableClass[]>({
         queryKey: ['enrollments-as-classes', subject],
         queryFn: async () => {
@@ -79,7 +79,7 @@ export const useEnrollmentsAsClasses = (subject?: 'math' | 'english') => {
             const classMap = new Map<string, {
                 className: string;
                 teacher: string;
-                subject: 'math' | 'english';
+                subject: SubjectType;
                 studentList: TimetableStudent[];
                 schedule?: string[];
                 days?: string[];
@@ -209,7 +209,7 @@ export const useStudentEnrollments = (studentId: string) => {
 /**
  * 특정 클래스의 학생 목록 조회 (enrollments에서 역산)
  */
-export const useClassStudents = (className: string, subject?: 'math' | 'english') => {
+export const useClassStudents = (className: string, subject?: SubjectType) => {
     return useQuery<TimetableStudent[]>({
         queryKey: ['class-students', className, subject],
         queryFn: async () => {

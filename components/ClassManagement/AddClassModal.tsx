@@ -4,14 +4,17 @@ import { useCreateClass, CreateClassData } from '../../hooks/useClassMutations';
 import { useStudents } from '../../hooks/useStudents';
 import { useClasses } from '../../hooks/useClasses';
 import { SUBJECT_LABELS } from '../../utils/styleUtils';
-import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
+import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS, SCIENCE_UNIFIED_PERIODS, KOREAN_UNIFIED_PERIODS } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
+import { SubjectType } from '../../types';
 
 interface AddClassModalProps {
   onClose: () => void;
-  defaultSubject?: 'math' | 'english';
+  defaultSubject?: SubjectType;
 }
+
+const AVAILABLE_SUBJECTS: SubjectType[] = ['math', 'english', 'science', 'korean'];
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
@@ -31,7 +34,7 @@ const sortSlots = (slots: string[]): string[] => {
 const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject = 'math' }) => {
   // 기본 정보
   const [className, setClassName] = useState('');
-  const [subject, setSubject] = useState<'math' | 'english'>(defaultSubject);
+  const [subject, setSubject] = useState<SubjectType>(defaultSubject);
   const [mainTeacher, setMainTeacher] = useState('');
   const [room, setRoom] = useState('');
 
@@ -72,7 +75,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
   // 강사 색상 가져오기
   const getTeacherColor = (teacherName: string) => {
-    const teacherInfo = teachersData?.find(t => t.name === teacherName);
+    const teacherInfo = teachersData?.find(t => t.name === teacherName || t.englishName === teacherName);
     return {
       bgColor: teacherInfo?.bgColor || '#fdb813',
       textColor: teacherInfo?.textColor || '#081429'
@@ -80,7 +83,10 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
   };
 
   // 과목별 교시
-  const periods = subject === 'english' ? ENGLISH_UNIFIED_PERIODS : MATH_UNIFIED_PERIODS;
+  const periods = subject === 'english' ? ENGLISH_UNIFIED_PERIODS
+    : subject === 'math' ? MATH_UNIFIED_PERIODS
+    : subject === 'science' ? SCIENCE_UNIFIED_PERIODS
+    : KOREAN_UNIFIED_PERIODS;
 
   // 학생 필터링
   const filteredStudents = useMemo(() => {
@@ -243,12 +249,12 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
               <select
                 value={subject}
                 onChange={(e) => {
-                  setSubject(e.target.value as 'math' | 'english');
+                  setSubject(e.target.value as SubjectType);
                   setSelectedSlots(new Set());
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
               >
-                {(['math', 'english'] as const).map(key => (
+                {AVAILABLE_SUBJECTS.map(key => (
                   <option key={key} value={key}>{SUBJECT_LABELS[key]}</option>
                 ))}
               </select>

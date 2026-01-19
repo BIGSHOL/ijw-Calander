@@ -24,6 +24,17 @@ export interface Enrollment {
   attendanceDays?: string[];  // 실제 등원 요일 (비어있거나 없으면 모든 수업 요일에 등원)
 }
 
+// Class History Entry - 수강 이력 추적
+export interface ClassHistoryEntry {
+  className: string;                      // 수업명
+  subject: 'math' | 'english' | 'science' | 'korean' | 'other';  // 과목
+  startDate: string;                      // 시작일 (YYYY-MM-DD)
+  endDate?: string;                       // 종료일 (undefined = 현재 수강 중)
+  teacher?: string;                       // 담당 강사
+  reason?: 'levelup' | 'schedule_change' | 'teacher_change' | 'other';  // 이동 사유
+  note?: string;                          // 메모
+}
+
 // Phase 1: Unified Schedule Slot
 export interface ScheduleSlot {
   day: string;           // 요일 (월, 화, 수, 목, 금, 토, 일)
@@ -116,7 +127,8 @@ export interface UnifiedStudent {
   // 수강 정보 (v5: 계층형 구조)
   enrollments: Enrollment[];     // 상세 수강 정보 (Subject -> Class -> Teacher mapping)
 
-
+  // 수강 이력 (반이동 추적)
+  classHistory?: ClassHistoryEntry[];  // 수강 이력 (선택, 기존 학생은 빈 배열)
 
   // 상태 관리
   // prospect = prospective (예비), waitlisted = waiting (대기) - 두 표기 모두 지원

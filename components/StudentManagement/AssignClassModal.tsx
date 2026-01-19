@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { X, BookOpen, Loader2, Plus } from 'lucide-react';
 import { db } from '../../firebaseConfig';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
-import { UnifiedStudent } from '../../types';
+import { doc, setDoc, Timestamp, getDoc, updateDoc } from 'firebase/firestore';
+import { UnifiedStudent, SubjectType, ClassHistoryEntry } from '../../types';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useClasses } from '../../hooks/useClasses';
+import { SUBJECT_LABELS, SUBJECT_COLORS } from '../../utils/styleUtils';
 
 interface AssignClassModalProps {
     isOpen: boolean;
@@ -13,19 +14,30 @@ interface AssignClassModalProps {
     onSuccess: () => void;
 }
 
+const AVAILABLE_SUBJECTS: SubjectType[] = ['math', 'english', 'science', 'korean'];
+
 const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, student, onSuccess }) => {
-    const [selectedSubject, setSelectedSubject] = useState<'math' | 'english'>('math');
+    const [selectedSubject, setSelectedSubject] = useState<SubjectType>('math');
     const [selectedClassName, setSelectedClassName] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
 
-    // 과목별 수업 목록 조회
+    // 과목별 수업 목록 조회 (모든 과목)
     const { data: mathClasses, isLoading: loadingMath } = useClasses('math');
     const { data: englishClasses, isLoading: loadingEnglish } = useClasses('english');
+    const { data: scienceClasses, isLoading: loadingScience } = useClasses('science');
+    const { data: koreanClasses, isLoading: loadingKorean } = useClasses('korean');
 
     // 현재 선택된 과목의 수업 목록
-    const currentClasses = selectedSubject === 'math' ? mathClasses : englishClasses;
-    const isLoading = selectedSubject === 'math' ? loadingMath : loadingEnglish;
+    const currentClasses = selectedSubject === 'math' ? mathClasses
+        : selectedSubject === 'english' ? englishClasses
+        : selectedSubject === 'science' ? scienceClasses
+        : koreanClasses;
+
+    const isLoading = selectedSubject === 'math' ? loadingMath
+        : selectedSubject === 'english' ? loadingEnglish
+        : selectedSubject === 'science' ? loadingScience
+        : loadingKorean;
 
     // 이미 배정된 수업 필터링
     const availableClasses = useMemo(() => {
@@ -60,6 +72,9 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
             const enrollmentId = `enrollment_${Date.now()}`;
 
             // students/{studentId}/enrollments/{enrollmentId}에 추가
+            const now = new Date();
+            const startDate = now.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+
             await setDoc(doc(db, `students/${student.id}/enrollments`, enrollmentId), {
                 classId: selectedClass.id, // [FIX] ID 저장 추가
                 subject: selectedSubject,
@@ -74,6 +89,26 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                 color: null,
                 createdAt: Timestamp.now(),
             });
+
+            // 수강 이력 추가
+            const studentDocRef = doc(db, 'students', student.id);
+            const studentDoc = await getDoc(studentDocRef);
+
+            if (studentDoc.exists()) {
+                const currentHistory = (studentDoc.data().classHistory || []) as ClassHistoryEntry[];
+
+                const newHistoryEntry: ClassHistoryEntry = {
+                    className: selectedClass.className,
+                    subject: selectedSubject,
+                    startDate: startDate,
+                    teacher: selectedClass.teacher,
+                };
+
+                await updateDoc(studentDocRef, {
+                    classHistory: [...currentHistory, newHistoryEntry],
+                    updatedAt: now.toISOString(),
+                });
+            }
 
             // 성공 처리
             onSuccess();
@@ -141,33 +176,30 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                             <label className="block text-sm font-bold text-gray-700 mb-2">
                                 과목 <span className="text-red-500">*</span>
                             </label>
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSelectedSubject('math');
-                                        setSelectedClassName('');
-                                    }}
-                                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${selectedSubject === 'math'
-                                            ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    수학
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setSelectedSubject('english');
-                                        setSelectedClassName('');
-                                    }}
-                                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${selectedSubject === 'english'
-                                            ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    영어
-                                </button>
+                            <div className="grid grid-cols-2 gap-2">
+                                {AVAILABLE_SUBJECTS.map(subject => {
+                                    const colors = SUBJECT_COLORS[subject];
+                                    return (
+                                        <button
+                                            key={subject}
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedSubject(subject);
+                                                setSelectedClassName('');
+                                            }}
+                                            className={`py-2.5 rounded-lg text-sm font-bold transition-colors ${selectedSubject === subject
+                                                ? `shadow-sm text-white`
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                            style={selectedSubject === subject ? {
+                                                backgroundColor: colors.bg,
+                                                color: colors.text
+                                            } : undefined}
+                                        >
+                                            {SUBJECT_LABELS[subject]}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 

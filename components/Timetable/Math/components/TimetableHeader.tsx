@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit
+    ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit, SlidersHorizontal
 } from 'lucide-react';
 
 interface TimetableHeaderProps {
@@ -12,6 +12,7 @@ interface TimetableHeaderProps {
     setSearchQuery: (query: string) => void;
     viewType: 'teacher' | 'room' | 'class';
     setIsTeacherOrderModalOpen: (isOpen: boolean) => void;
+    setIsViewSettingsOpen: (isOpen: boolean) => void;
     pendingMovesCount: number;
     handleSavePendingMoves: () => void;
     handleCancelPendingMoves: () => void;
@@ -31,6 +32,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     setSearchQuery,
     viewType,
     setIsTeacherOrderModalOpen,
+    setIsViewSettingsOpen,
     pendingMovesCount,
     handleSavePendingMoves,
     handleCancelPendingMoves,
@@ -124,6 +126,16 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         ↕️ 강사 순서
                     </button>
                 )}
+
+                {/* View Settings */}
+                <button
+                    onClick={() => setIsViewSettingsOpen(true)}
+                    className="px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
+                    title="보기 설정"
+                >
+                    <SlidersHorizontal size={12} />
+                    보기
+                </button>
 
                 {/* Pending Moves */}
                 {pendingMovesCount > 0 && (

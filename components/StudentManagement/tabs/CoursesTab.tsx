@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { UnifiedStudent } from '../../../types';
+import { UnifiedStudent, ClassHistoryEntry } from '../../../types';
 import { BookOpen, Plus, User, X, Loader2, Users } from 'lucide-react';
 import AssignClassModal from '../AssignClassModal';
 import { useStudents } from '../../../hooks/useStudents';
@@ -7,7 +7,7 @@ import { useTeachers } from '../../../hooks/useFirebaseQueries';
 import { ClassInfo, useClasses } from '../../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../../utils/styleUtils';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
-import { doc, deleteDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import { doc, deleteDoc, getDocs, collection, query, where, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -197,6 +197,7 @@ const ScheduleBadge: React.FC<ScheduleBadgeProps> = ({ schedule, subject }) => {
 
 interface CoursesTabProps {
   student: UnifiedStudent;
+  compact?: boolean; // 컴팩트 모드 (모달)
 }
 
 interface GroupedEnrollment {
@@ -205,9 +206,11 @@ interface GroupedEnrollment {
   teachers: string[];
   days: string[];
   enrollmentIds: string[]; // 삭제를 위해 enrollment ID 저장
+  startDate?: string; // 수강 시작일
+  endDate?: string; // 수강 종료일 (undefined = 재원중)
 }
 
-const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
+const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false }) => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
   const [deletingClass, setDeletingClass] = useState<string | null>(null);
@@ -216,12 +219,30 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
   const { data: allClasses = [] } = useClasses();
   const queryClient = useQueryClient();
 
-  // 같은 수업(className)끼리 그룹화
+  // 날짜 포맷팅 함수 (YYYY-MM-DD -> YY.MM.DD)
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    const year = String(date.getFullYear()).slice(2); // 마지막 2자리
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}.${month}.${day}`;
+  };
+
+  // 같은 수업(className)끼리 그룹화 + 수강 이력 정보 추가
   const groupedEnrollments = useMemo(() => {
     const groups = new Map<string, GroupedEnrollment>();
 
     (student.enrollments || []).forEach(enrollment => {
       const key = `${enrollment.subject}_${enrollment.className}`;
+
+      // classHistory에서 해당 수업의 이력 찾기 (endDate가 없는 항목 = 현재 수강중)
+      const classHistory = student.classHistory || [];
+      const currentHistory = classHistory.find(
+        h => h.className === enrollment.className &&
+             h.subject === enrollment.subject &&
+             !h.endDate
+      );
 
       if (groups.has(key)) {
         const existing = groups.get(key)!;
@@ -243,13 +264,15 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
           subject: enrollment.subject,
           teachers: [enrollment.teacherId],
           days: [...(enrollment.days || [])],
-          enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : []
+          enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
+          startDate: currentHistory?.startDate,
+          endDate: currentHistory?.endDate,
         });
       }
     });
 
     return Array.from(groups.values());
-  }, [student.enrollments]);
+  }, [student.enrollments, student.classHistory]);
 
   // 수업의 대표 강사 결정
   const getMainTeacher = (group: GroupedEnrollment): string | null => {
@@ -339,6 +362,34 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
         }
       }
 
+      // 수강 이력에 종료일 추가
+      const now = new Date();
+      const endDate = now.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+
+      const studentDocRef = doc(db, 'students', student.id);
+      const studentDoc = await getDoc(studentDocRef);
+
+      if (studentDoc.exists()) {
+        const currentHistory = (studentDoc.data().classHistory || []) as ClassHistoryEntry[];
+
+        // 해당 수업의 가장 최근 이력(endDate가 없는 항목) 찾아서 종료일 추가
+        const updatedHistory = currentHistory.map((entry) => {
+          if (
+            entry.className === group.className &&
+            entry.subject === group.subject &&
+            !entry.endDate
+          ) {
+            return { ...entry, endDate: endDate };
+          }
+          return entry;
+        });
+
+        await updateDoc(studentDocRef, {
+          classHistory: updatedHistory,
+          updatedAt: now.toISOString(),
+        });
+      }
+
       // 캐시 무효화 및 새로고침
       queryClient.invalidateQueries({ queryKey: ['students'] });
       refreshStudents();
@@ -364,11 +415,30 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
     );
   }
 
+  // 종료된 수업 목록 (classHistory에서 endDate가 있는 항목)
+  const completedClasses = useMemo(() => {
+    const classHistory = student.classHistory || [];
+    return classHistory
+      .filter(h => h.endDate) // endDate가 있는 것만
+      .map(h => ({
+        className: h.className,
+        subject: h.subject as 'math' | 'english',
+        teachers: h.teacher ? [h.teacher] : [],
+        days: [],
+        enrollmentIds: [],
+        startDate: h.startDate,
+        endDate: h.endDate,
+      }));
+  }, [student.classHistory]);
+
   // 과목별 분류
   const mathClasses = groupedEnrollments.filter(g => g.subject === 'math');
   const englishClasses = groupedEnrollments.filter(g => g.subject === 'english');
 
-  // 수업 행 렌더링 함수
+  const completedMathClasses = completedClasses.filter(g => g.subject === 'math');
+  const completedEnglishClasses = completedClasses.filter(g => g.subject === 'english');
+
+  // 수업 행 렌더링 함수 (현재 수강 중)
   const renderClassRow = (group: GroupedEnrollment, index: number) => {
     const mainTeacher = getMainTeacher(group);
     const visibleTeachers = group.teachers.filter(name => {
@@ -428,6 +498,18 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
           </span>
         </div>
 
+        {/* 시작일/종료일 (compact 모드가 아닐 때만) */}
+        {!compact && (
+          <>
+            <span className="w-16 shrink-0 text-xxs text-[#373d41] text-center">
+              {formatDate(group.startDate)}
+            </span>
+            <span className="w-14 shrink-0 text-xxs font-bold text-emerald-600 text-center">
+              재원중
+            </span>
+          </>
+        )}
+
         {/* 삭제 버튼 */}
         <button
           onClick={(e) => handleRemoveEnrollment(group, e)}
@@ -441,6 +523,65 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
             <X className="w-3 h-3" />
           )}
         </button>
+      </div>
+    );
+  };
+
+  // 종료된 수업 행 렌더링 함수
+  const renderCompletedClassRow = (group: GroupedEnrollment, index: number) => {
+    const subjectColor = SUBJECT_COLORS[group.subject];
+
+    return (
+      <div
+        key={`completed-${group.subject}-${index}`}
+        className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 opacity-60"
+      >
+        {/* 과목 뱃지 */}
+        <span
+          className="w-8 shrink-0 text-micro px-1 py-0.5 rounded font-semibold text-center"
+          style={{
+            backgroundColor: subjectColor.bg,
+            color: subjectColor.text,
+          }}
+        >
+          {SUBJECT_LABELS[group.subject]}
+        </span>
+
+        {/* 수업명 */}
+        <span className="w-24 shrink-0 text-xs text-[#373d41] truncate">
+          {group.className}
+        </span>
+
+        {/* 강사 */}
+        <div className="w-14 shrink-0 flex items-center gap-0.5">
+          <User className="w-3 h-3 text-gray-400" />
+          <span className="text-xxs text-[#373d41] truncate">
+            {group.teachers[0] || '-'}
+          </span>
+        </div>
+
+        {/* 스케줄 (빈 공간) */}
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <span className="text-xxs text-gray-400 italic">종료됨</span>
+        </div>
+
+        {/* 학생수 (빈 공간) */}
+        <div className="w-10 shrink-0"></div>
+
+        {/* 시작일/종료일 (compact 모드가 아닐 때만) */}
+        {!compact && (
+          <>
+            <span className="w-16 shrink-0 text-xxs text-[#373d41] text-center">
+              {formatDate(group.startDate)}
+            </span>
+            <span className="w-14 shrink-0 text-xxs text-[#373d41] text-center">
+              {formatDate(group.endDate)}
+            </span>
+          </>
+        )}
+
+        {/* 삭제 버튼 자리 (빈 공간) */}
+        <div className="w-5 shrink-0"></div>
       </div>
     );
   };
@@ -473,6 +614,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
           <span className="w-14 shrink-0">강사</span>
           <span className="flex-1">스케줄</span>
           <span className="w-10 shrink-0 text-center">인원</span>
+          {!compact && (
+            <>
+              <span className="w-16 shrink-0 text-center">시작</span>
+              <span className="w-14 shrink-0 text-center">종료</span>
+            </>
+          )}
           <span className="w-5 shrink-0"></span>
         </div>
 
@@ -497,6 +644,38 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student }) => {
           </div>
         )}
       </div>
+
+      {/* 지난 수업 섹션 */}
+      {completedClasses.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-xs font-bold text-[#373d41] mb-2">지난 수업 ({completedClasses.length}개)</h3>
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            {/* 테이블 헤더 */}
+            <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
+              <span className="w-8 shrink-0">과목</span>
+              <span className="w-24 shrink-0">수업명</span>
+              <span className="w-14 shrink-0">강사</span>
+              <span className="flex-1">상태</span>
+              <span className="w-10 shrink-0"></span>
+              {!compact && (
+                <>
+                  <span className="w-16 shrink-0 text-center">시작</span>
+                  <span className="w-14 shrink-0 text-center">종료</span>
+                </>
+              )}
+              <span className="w-5 shrink-0"></span>
+            </div>
+
+            <div>
+              {/* 수학 수업 */}
+              {completedMathClasses.map((group, index) => renderCompletedClassRow(group, index))}
+
+              {/* 영어 수업 */}
+              {completedEnglishClasses.map((group, index) => renderCompletedClassRow(group, index))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 수업 배정 모달 */}
       {isAssignModalOpen && (

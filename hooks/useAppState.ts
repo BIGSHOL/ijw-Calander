@@ -6,7 +6,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
-import { CalendarEvent, UserProfile, AppTab } from '../types';
+import { CalendarEvent, UserProfile, AppTab, SubjectType } from '../types';
 import { storage, STORAGE_KEYS } from '../utils/localStorage';
 import { usePermissions } from './usePermissions';
 
@@ -194,7 +194,7 @@ export function useModalState() {
 // 4. Timetable State Hook
 // ============================================
 export function useTimetableState() {
-  const [timetableSubject, setTimetableSubject] = useState<'math' | 'english'>('math');
+  const [timetableSubject, setTimetableSubject] = useState<SubjectType>('math');
   const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room' | 'class'>('teacher');
   const [mathViewMode, setMathViewMode] = useState<'day-based' | 'teacher-based'>('teacher-based');
 

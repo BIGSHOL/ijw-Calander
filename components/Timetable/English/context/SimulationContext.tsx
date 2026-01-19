@@ -217,13 +217,24 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
         draftEnrollments[className] = {};
       }
 
+      // Convert Firestore Timestamp to YYYY-MM-DD string
+      const convertTimestampToDate = (timestamp: any): string | undefined => {
+        if (!timestamp) return undefined;
+        if (typeof timestamp === 'string') return timestamp;
+        if (timestamp?.toDate) {
+          const date = timestamp.toDate();
+          return date.toISOString().split('T')[0];
+        }
+        return undefined;
+      };
+
       draftEnrollments[className][studentId] = {
         studentId,
         className,
         subject: 'english',
         underline: data.underline,
-        enrollmentDate: data.enrollmentDate || data.startDate,
-        withdrawalDate: data.withdrawalDate,
+        enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
+        withdrawalDate: convertTimestampToDate(data.withdrawalDate),
         onHold: data.onHold,
         attendanceDays: data.attendanceDays || [],
       };

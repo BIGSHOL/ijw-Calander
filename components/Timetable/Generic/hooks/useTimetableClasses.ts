@@ -91,14 +91,11 @@ export function useTimetableClasses(subject: SubjectKey) {
       setLoading(false);
     });
 
-    // Register listener for cleanup
-    listenerRegistry.register(`timetable-classes-${subject}`, unsubscribe);
+    // Register listener for cleanup (returns cleanup function)
+    const cleanupListener = listenerRegistry.register(`timetable-classes-${subject}`, unsubscribe);
 
     // Cleanup on unmount
-    return () => {
-      unsubscribe();
-      listenerRegistry.unregister(`timetable-classes-${subject}`);
-    };
+    return cleanupListener;
   }, [subject]); // Performance Note (rerender-dependencies): Stable primitive dependency
 
   return { classes, loading };
