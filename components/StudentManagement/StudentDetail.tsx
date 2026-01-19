@@ -4,10 +4,9 @@ import BasicInfoTab from './tabs/BasicInfoTab';
 import CoursesTab from './tabs/CoursesTab';
 import GradesTab from './tabs/GradesTab';
 import ConsultationsTab from './tabs/ConsultationsTab';
-import ClassHistoryTab from './tabs/ClassHistoryTab';
 import WithdrawalModal from './WithdrawalModal';
 import { useStudents } from '../../hooks/useStudents';
-import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Clock } from 'lucide-react';
+import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2 } from 'lucide-react';
 
 interface StudentDetailProps {
   student: UnifiedStudent;
@@ -16,7 +15,7 @@ interface StudentDetailProps {
   // compact 모드(모달)에서는 퇴원처리 버튼이 항상 숨겨짐 - 학생관리에서만 처리
 }
 
-type TabType = 'basic' | 'courses' | 'history' | 'grades' | 'consultations';
+type TabType = 'basic' | 'courses' | 'grades' | 'consultations';
 
 const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false, readOnly = false }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
@@ -26,7 +25,6 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'basic', label: '기본정보', icon: <User className="w-3 h-3" /> },
     { id: 'courses', label: '수업', icon: <BookOpen className="w-3 h-3" /> },
-    { id: 'history', label: '이력', icon: <Clock className="w-3 h-3" /> },
     { id: 'grades', label: '성적', icon: <GraduationCap className="w-3 h-3" /> },
     { id: 'consultations', label: '상담', icon: <MessageSquare className="w-3 h-3" /> },
   ];
@@ -131,7 +129,6 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
       <div className="flex-1 overflow-y-auto p-3">
         {activeTab === 'basic' && <BasicInfoTab student={student} readOnly={readOnly} />}
         {activeTab === 'courses' && <CoursesTab student={student} compact={compact} />}
-        {activeTab === 'history' && <ClassHistoryTab student={student} />}
         {activeTab === 'grades' && <GradesTab student={student} />}
         {activeTab === 'consultations' && <ConsultationsTab student={student} />}
       </div>

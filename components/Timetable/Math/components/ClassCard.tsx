@@ -295,10 +295,26 @@ const ClassCard: React.FC<ClassCardProps> = ({
             return { commonStudents: { active: [], hold: [], withdrawn: [] }, partialStudentsByDay: null };
         }
 
+        // 신입생 정렬 가중치 함수 (영어 시간표와 동일)
+        const getEnrollmentWeight = (student: any) => {
+            // underline 학생 최상단 (가중치 0)
+            if (student.underline) return 0;
+            // enrollmentDate 기반 가중치
+            if (student.enrollmentDate) {
+                const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                if (days <= 30) return 3;  // 30일 이내 신입생 최하단
+                if (days <= 60) return 2;  // 31-60일 신입생 중간
+            }
+            return 1;  // 일반 학생
+        };
+
         // 모든 병합 요일에 등원하는 학생 (공통)
         const commonActive = allStudents
             .filter(s => !s.withdrawalDate && !s.onHold && isStudentAttendingAllMergedDays(s))
-            .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+            .sort((a, b) => {
+                const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
+                return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
+            });
         const commonHold = allStudents
             .filter(s => s.onHold && !s.withdrawalDate && isStudentAttendingAllMergedDays(s))
             .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
@@ -311,7 +327,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
         mergedDays.forEach(day => {
             const active = allStudents
                 .filter(s => !s.withdrawalDate && !s.onHold && !isStudentAttendingAllMergedDays(s) && isStudentAttendingDay(s, day))
-                .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+                .sort((a, b) => {
+                    const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
+                    return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
+                });
             const hold = allStudents
                 .filter(s => s.onHold && !s.withdrawalDate && !isStudentAttendingAllMergedDays(s) && isStudentAttendingDay(s, day))
                 .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
@@ -336,9 +355,23 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
         const filterDay = currentDay || '';
 
+        // 신입생 정렬 가중치 함수 (영어 시간표와 동일)
+        const getEnrollmentWeight = (student: any) => {
+            if (student.underline) return 0;
+            if (student.enrollmentDate) {
+                const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                if (days <= 30) return 3;
+                if (days <= 60) return 2;
+            }
+            return 1;
+        };
+
         const active = allStudents
             .filter(s => !s.withdrawalDate && !s.onHold && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
-            .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+            .sort((a, b) => {
+                const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
+                return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
+            });
 
         const hold = allStudents
             .filter(s => s.onHold && !s.withdrawalDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))

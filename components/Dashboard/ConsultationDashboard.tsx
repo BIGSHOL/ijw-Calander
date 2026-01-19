@@ -63,13 +63,13 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
   };
 
   // 상담 완료율: 항상 이번 달 기준 (필터와 무관)
-  // (재원생 - 상담 필요 학생) / 재원생 * 100
-  // 상담 필요 학생이 0이 되면 100%
-  const thisMonthTotalActive = thisMonthStats?.totalActiveStudents || 0;
-  const thisMonthNeedingCount = thisMonthStats?.studentsNeedingConsultation?.length || 0;
-  const consultedStudents = Math.max(0, thisMonthTotalActive - thisMonthNeedingCount);
-  const percentage = thisMonthTotalActive > 0
-    ? Math.round((consultedStudents / thisMonthTotalActive) * 100)
+  // 과목별 카운트 기준: (총 과목 수강 건수 - 상담 필요 항목 수) / 총 과목 수강 건수 * 100
+  // 예: 수학+영어 동시 수강생 10명 = 총 20건, 상담 필요 5건 → (20-5)/20 = 75%
+  const totalSubjectEnrollments = thisMonthStats?.totalSubjectEnrollments || 0;
+  const needingConsultationCount = thisMonthStats?.studentsNeedingConsultation?.length || 0;
+  const consultedSubjectCount = Math.max(0, totalSubjectEnrollments - needingConsultationCount);
+  const percentage = totalSubjectEnrollments > 0
+    ? Math.round((consultedSubjectCount / totalSubjectEnrollments) * 100)
     : 0;
 
   // 상담 완료율 제목: yy.mm월 상담 완료율
@@ -141,8 +141,8 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
             />
           </div>
           <div className="flex justify-between mt-1 text-[10px] text-[#373d41]">
-            <span>{consultedStudents}명 완료</span>
-            <span>재원생 {thisMonthTotalActive}명</span>
+            <span>{consultedSubjectCount}건 완료</span>
+            <span>총 {totalSubjectEnrollments}건</span>
           </div>
         </div>
       </div>
@@ -283,25 +283,52 @@ const StaffStatsModal: React.FC<StaffStatsModalProps> = ({ stats, onClose }) => 
             <X className="w-4 h-4 text-white" />
           </button>
         </div>
-        <div className="max-h-64 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto">
           {stats.length === 0 ? (
             <div className="text-center text-[#373d41] py-4 text-xs">기록 없음</div>
           ) : (
             <div className="divide-y divide-[#081429]/5">
-              {stats.map((staff, idx) => (
-                <div key={staff.id} className={`flex items-center justify-between px-3 py-1.5 ${idx === 0 ? 'bg-[#fdb813]/20' : ''}`}>
-                  <div className="flex items-center gap-2">
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      idx === 0 ? 'bg-[#fdb813] text-[#081429]' :
-                      idx === 1 ? 'bg-[#373d41]/20 text-[#373d41]' :
-                      idx === 2 ? 'bg-[#373d41]/10 text-[#373d41]' :
-                      'bg-[#081429]/5 text-[#373d41]'
-                    }`}>{idx + 1}</span>
-                    <span className="text-xs text-[#081429]">{staff.name}</span>
+              {stats.map((staff, idx) => {
+                const hasMath = staff.mathTotal > 0;
+                const hasEnglish = staff.englishTotal > 0;
+                const totalPercentage = staff.totalNeeded > 0
+                  ? Math.round((staff.totalCount / staff.totalNeeded) * 100)
+                  : 0;
+
+                return (
+                  <div key={staff.id} className={`px-3 py-2 ${idx === 0 ? 'bg-[#fdb813]/20' : ''}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          idx === 0 ? 'bg-[#fdb813] text-[#081429]' :
+                          idx === 1 ? 'bg-[#373d41]/20 text-[#373d41]' :
+                          idx === 2 ? 'bg-[#373d41]/10 text-[#373d41]' :
+                          'bg-[#081429]/5 text-[#373d41]'
+                        }`}>{idx + 1}</span>
+                        <span className="text-sm font-medium text-[#081429]">{staff.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-bold text-[#081429]">{staff.totalCount}</span>
+                        <span className="text-[10px] text-[#373d41]">/ {staff.totalNeeded}</span>
+                        <span className="text-[10px] text-[#fdb813] font-bold ml-1">({totalPercentage}%)</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] ml-7">
+                      {hasMath && (
+                        <span className="text-blue-600">
+                          수학 {staff.mathCount}/{staff.mathTotal}
+                        </span>
+                      )}
+                      {hasMath && hasEnglish && <span className="text-gray-300">|</span>}
+                      {hasEnglish && (
+                        <span className="text-emerald-600">
+                          영어 {staff.englishCount}/{staff.englishTotal}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-sm font-bold text-[#081429]">{staff.totalCount}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -320,13 +347,13 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
   const [subjectFilter, setSubjectFilter] = useState<'all' | 'math' | 'english'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 필터링된 학생 목록
+  // 필터링된 학생 목록 (과목별로 분리된 항목)
   const filteredStudents = useMemo(() => {
     let result = students;
 
     // 과목 필터
     if (subjectFilter !== 'all') {
-      result = result.filter(s => s.enrolledSubjects.includes(subjectFilter));
+      result = result.filter(s => s.subject === subjectFilter);
     }
 
     // 이름 검색
@@ -405,20 +432,17 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
             </div>
           ) : (
             <div className="divide-y divide-[#081429]/5">
-              {filteredStudents.map((student) => (
-                <div key={student.studentId} className="px-4 py-2 hover:bg-[#081429]/5 flex items-center justify-between">
+              {filteredStudents.map((student, idx) => (
+                <div key={`${student.studentId}-${student.subject}-${idx}`} className="px-4 py-2 hover:bg-[#081429]/5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-[#081429] min-w-[60px]">{student.studentName}</span>
-                    {student.enrolledSubjects.includes('math') && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[#081429]/10 text-[#081429]">
-                        수학
-                      </span>
-                    )}
-                    {student.enrolledSubjects.includes('english') && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[#fdb813]/30 text-[#081429]">
-                        영어
-                      </span>
-                    )}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                      student.subject === 'math'
+                        ? 'bg-[#081429]/10 text-[#081429]'
+                        : 'bg-[#fdb813]/30 text-[#081429]'
+                    }`}>
+                      {student.subject === 'math' ? '수학' : '영어'}
+                    </span>
                   </div>
                   <span className="text-[10px] text-[#373d41]">
                     {student.lastConsultationDate

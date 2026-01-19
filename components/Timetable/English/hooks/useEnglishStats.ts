@@ -106,10 +106,15 @@ export const useEnglishStats = (
 
                 // Skip if already counted this student
                 if (countedStudents.has(studentId)) return;
-                countedStudents.add(studentId);
 
                 // Get student base info
                 const baseStudent = studentMapRef.current[studentId];
+
+                // If student not in studentMap, skip (student doesn't exist or is withdrawn)
+                if (!baseStudent) return;
+
+                // Skip if already counted this student (moved after baseStudent check)
+                countedStudents.add(studentId);
 
                 // Withdrawn check (from enrollment data)
                 if (data.withdrawalDate) {
@@ -124,8 +129,8 @@ export const useEnglishStats = (
                 // On hold check
                 if (data.onHold) return;
 
-                // Check student status from studentMap
-                if (baseStudent && baseStudent.status !== 'active') return;
+                // Check student status from studentMap (must be 'active')
+                if (baseStudent.status !== 'active') return;
 
                 active++;
 
