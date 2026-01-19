@@ -289,8 +289,6 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
               departments={departments}
               users={users}
               currentUser={currentUser}
-              isMaster={isMaster}
-              isAdmin={isAdmin}
             />
           )}
           {activeTab === 'hashtags' && (
