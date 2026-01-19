@@ -17,7 +17,6 @@ import AddClassModal from './Math/components/Modals/AddClassModal';
 import TimetableGrid from './Math/components/TimetableGrid';
 import ClassDetailModal from '../ClassManagement/ClassDetailModal';
 import StudentDetailModal from '../StudentManagement/StudentDetailModal';
-import TimetableSettingsModal from './TimetableSettingsModal';
 import { ClassInfo } from '../../hooks/useClasses';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 
@@ -215,9 +214,6 @@ const TimetableManager = ({
     const [newRoom, setNewRoom] = useState('');
     const [newSubject, setNewSubject] = useState('수학');
     const [newSchedule, setNewSchedule] = useState<string[]>([]);
-
-    // Timetable Settings State (수업 설정 + 강사 관리)
-    const [isTimetableSettingsOpen, setIsTimetableSettingsOpen] = useState(false);
 
     // Timetable View Mode: 'day-based' (월화수목금토일) vs 'teacher-based' (월목/화금/주말/수요일)
     const [internalTimetableViewMode, setInternalTimetableViewMode] = useState<'day-based' | 'teacher-based'>(
@@ -450,7 +446,6 @@ const TimetableManager = ({
                 setSearchQuery={setSearchQuery}
                 viewType={viewType}
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
-                setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                 pendingMovesCount={pendingMoves.length}
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}
@@ -556,13 +551,6 @@ const TimetableManager = ({
                 currentOrder={mathConfig.teacherOrder}
                 allTeachers={sortedTeachers}
                 onSave={handleSaveTeacherOrder}
-            />
-
-            {/* Timetable Settings Modal (수업 설정) - 강사 관리는 직원 관리로 이동됨 */}
-            <TimetableSettingsModal
-                isOpen={isTimetableSettingsOpen}
-                onClose={() => setIsTimetableSettingsOpen(false)}
-                canEdit={canEditMath}
             />
         </div >
     );
