@@ -153,16 +153,6 @@ export const useClassStudents = (
                         // Skip if student is not active
                         if (baseStudent.status !== 'active') return null;
 
-                        // Convert student's startDate (Timestamp or string) to YYYY-MM-DD
-                        const convertStudentDate = (date: any): string | undefined => {
-                            if (!date) return undefined;
-                            if (typeof date === 'string') return date;
-                            if (date?.toDate) {
-                                return date.toDate().toISOString().split('T')[0];
-                            }
-                            return undefined;
-                        };
-
                         return {
                             id,
                             name: baseStudent.name || '',
@@ -171,9 +161,10 @@ export const useClassStudents = (
                             grade: baseStudent.grade || '',
                             // Merge enrollment-specific data
                             underline: enrollmentData.underline ?? baseStudent.underline ?? false,
-                            // Use enrollment's enrollmentDate, or fallback to student's startDate
-                            enrollmentDate: enrollmentData.enrollmentDate || convertStudentDate(baseStudent.startDate),
-                            withdrawalDate: enrollmentData.withdrawalDate || convertStudentDate(baseStudent.withdrawalDate),
+                            // Use ONLY enrollment's date (do NOT fallback to student's startDate)
+                            // This ensures only NEW enrollments are marked as new students
+                            enrollmentDate: enrollmentData.enrollmentDate,
+                            withdrawalDate: enrollmentData.withdrawalDate,
                             onHold: enrollmentData.onHold,
                             isMoved: false,
                             attendanceDays: enrollmentData.attendanceDays || [],  // 등원 요일
