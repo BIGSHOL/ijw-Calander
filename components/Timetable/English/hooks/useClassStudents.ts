@@ -171,7 +171,20 @@ export const useClassStudents = (
                                     return undefined;
                                 };
 
-                                classEnrollmentDate = convertDate(currentClassEntry.startDate) || classEnrollmentDate;
+                                const historyStartDate = convertDate(currentClassEntry.startDate);
+
+                                // Debug log
+                                if (baseStudent.name === '오해준') {
+                                    console.log('[신입생 체크]', {
+                                        name: baseStudent.name,
+                                        className,
+                                        classHistoryStartDate: historyStartDate,
+                                        enrollmentStartDate: enrollmentData.enrollmentDate,
+                                        currentClassEntry
+                                    });
+                                }
+
+                                classEnrollmentDate = historyStartDate || classEnrollmentDate;
                             }
                         }
 
