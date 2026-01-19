@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'other';
@@ -24,7 +24,7 @@ export interface ClassInfo {
  * 반(수업) 목록 조회 Hook
  * @param subject 과목 필터 (선택)
  *
- * 데이터 소스: classes 컬렉션 (isActive=true)
+ * 데이터 소스: classes 컬렉션 (isActive=true) + enrollments를 통한 실시간 학생 수 계산
  */
 export const useClasses = (subject?: SubjectType) => {
     return useQuery<ClassInfo[]>({
@@ -47,6 +47,29 @@ export const useClasses = (subject?: SubjectType) => {
 
             const snapshot = await getDocs(q);
 
+            // 모든 enrollments를 단일 쿼리로 조회하여 수업별 학생 수 계산
+            const enrollmentsQuery = subject
+                ? query(collectionGroup(db, 'enrollments'), where('subject', '==', subject))
+                : collectionGroup(db, 'enrollments');
+
+            const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+
+            // 수업명별 학생 수 집계 (중복 학생 제거)
+            const classStudentCount = new Map<string, Set<string>>();
+
+            enrollmentsSnapshot.docs.forEach(doc => {
+                const data = doc.data();
+                const className = data.className as string;
+                const studentId = doc.ref.parent.parent?.id;
+
+                if (className && studentId) {
+                    if (!classStudentCount.has(className)) {
+                        classStudentCount.set(className, new Set());
+                    }
+                    classStudentCount.get(className)!.add(studentId);
+                }
+            });
+
             const classes: ClassInfo[] = snapshot.docs.map(doc => {
                 const data = doc.data() as any;
 
@@ -55,13 +78,17 @@ export const useClasses = (subject?: SubjectType) => {
                     `${slot.day} ${slot.periodId}`
                 ) || data.legacySchedule || [];
 
+                // enrollments 기반 실시간 학생 수 계산 (fallback: studentIds 배열)
+                const enrollmentCount = classStudentCount.get(data.className)?.size || 0;
+                const studentCount = enrollmentCount > 0 ? enrollmentCount : (data.studentIds?.length || 0);
+
                 return {
                     id: doc.id,
                     className: data.className || '',
                     teacher: data.teacher || '',
                     subject: data.subject || 'math',
                     schedule: scheduleStrings,
-                    studentCount: data.studentIds?.length || 0,
+                    studentCount,
                     assistants: data.assistants,
                     room: data.room,
                     slotTeachers: data.slotTeachers,
@@ -75,9 +102,9 @@ export const useClasses = (subject?: SubjectType) => {
 
             return classes;
         },
-        staleTime: 1000 * 60 * 5,
+        staleTime: 1000 * 60 * 2,     // 2분 캐싱 (더 자주 업데이트)
         gcTime: 1000 * 60 * 30,
-        refetchOnWindowFocus: false,
+        refetchOnWindowFocus: true,   // 창 포커스 시 재조회 (enrollment 변경 감지)
     });
 };
 

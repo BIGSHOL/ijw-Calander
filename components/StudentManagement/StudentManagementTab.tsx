@@ -34,6 +34,16 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const [showDeleteInvalidModal, setShowDeleteInvalidModal] = useState(false);
   const [showNormalizeIdsModal, setShowNormalizeIdsModal] = useState(false);
 
+  // 선택된 학생 자동 업데이트 (students 배열 변경 시)
+  useEffect(() => {
+    if (selectedStudent) {
+      const updatedStudent = students.find(s => s.id === selectedStudent.id);
+      if (updatedStudent) {
+        setSelectedStudent(updatedStudent);
+      }
+    }
+  }, [students, selectedStudent?.id]); // selectedStudent 전체가 아닌 id만 의존성으로 추가
+
   // 검색어가 있고 메모리 결과가 적으면 과거 퇴원생 자동 검색
   useEffect(() => {
     const searchOldWithdrawn = async () => {

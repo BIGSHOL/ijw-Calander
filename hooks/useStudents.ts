@@ -149,10 +149,13 @@ export function useStudents(includeWithdrawn = false) {
         mutationFn: async ({ id, updates }: { id: string; updates: Partial<UnifiedStudent> }) => {
             const docRef = doc(db, COL_STUDENTS, id);
             const now = new Date().toISOString();
-            await updateDoc(docRef, {
-                ...updates,
-                updatedAt: now,
-            });
+
+            // Remove undefined values to prevent Firestore errors
+            const cleanUpdates = Object.entries({ ...updates, updatedAt: now })
+                .filter(([_, value]) => value !== undefined)
+                .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+
+            await updateDoc(docRef, cleanUpdates);
             return { id, updates };
         },
         onSuccess: () => {

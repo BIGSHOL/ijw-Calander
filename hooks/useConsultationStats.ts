@@ -31,18 +31,22 @@ export interface StaffSubjectStat {
   id: string;
   name: string;
   mathCount: number;
+  mathTotal: number;  // 수학 전체 필요 상담 건수
   englishCount: number;
+  englishTotal: number;  // 영어 전체 필요 상담 건수
   totalCount: number;
+  totalNeeded: number;  // 전체 필요 상담 건수
 }
 
 /**
- * 상담 미완료 학생 정보
+ * 상담 미완료 학생 정보 (과목별)
+ * - 수학/영어를 동시 수강 중인 학생은 과목별로 2개 항목 생성
  */
 export interface StudentNeedingConsultation {
   studentId: string;
   studentName: string;
-  enrolledSubjects: ('math' | 'english')[];  // 수강 중인 과목
-  lastConsultationDate?: string;  // 가장 최근 상담일 (전체 기간)
+  subject: 'math' | 'english';  // 해당 과목
+  lastConsultationDate?: string;  // 해당 과목의 가장 최근 상담일 (전체 기간)
 }
 
 /**
@@ -61,6 +65,7 @@ export interface ConsultationStatsResult {
   followUpDone: number;
   studentsNeedingConsultation: StudentNeedingConsultation[];
   totalActiveStudents: number;  // 전체 재원생 수 (status === 'active')
+  totalSubjectEnrollments: number;  // 전체 과목 수강 건수 (수학+영어 동시 수강 → 2건)
 }
 
 /**
@@ -217,6 +222,8 @@ export function useConsultationStats(
         }
       });
 
+      // 과목별 전체 수강 건수 계산 (나중에 eligibleStudents에서 계산)
+      // 이 시점에서는 먼저 staffSubjectStats를 생성하고, 나중에 업데이트
       const staffSubjectStats: StaffSubjectStat[] = Array.from(
         staffSubjectMap.entries()
       )
@@ -224,8 +231,11 @@ export function useConsultationStats(
           id,
           name: data.name,
           mathCount: data.math,
+          mathTotal: 0,  // 나중에 계산
           englishCount: data.english,
+          englishTotal: 0,  // 나중에 계산
           totalCount: data.math + data.english,
+          totalNeeded: 0,  // 나중에 계산
         }))
         .sort((a, b) => b.totalCount - a.totalCount);
 
@@ -257,8 +267,10 @@ export function useConsultationStats(
       // (학생 문서 내 enrollments 배열이 아닌 서브컬렉션 사용)
       const allEnrollmentsSnap = await getDocs(collectionGroup(db, 'enrollments'));
 
-      // 학생별 수강과목 집계
+      // 학생별 수강과목 집계 + 과목별 담당 선생님 매핑
       const studentEnrollmentMap = new Map<string, Set<'math' | 'english'>>();
+      const teacherSubjectStudentsMap = new Map<string, Map<'math' | 'english', Set<string>>>();
+
       allEnrollmentsSnap.docs.forEach(enrollDoc => {
         // 문서 경로: students/{studentId}/enrollments/{enrollmentId}
         const pathParts = enrollDoc.ref.path.split('/');
@@ -267,15 +279,42 @@ export function useConsultationStats(
         // 재원생만 처리
         if (!studentMap.has(studentId)) return;
 
-        const subject = enrollDoc.data().subject as string;
+        const enrollData = enrollDoc.data();
+        const subject = enrollData.subject as string;
+        const teacherId = enrollData.teacherId as string | undefined;
+
+        // 학생별 수강 과목 집계
         if (!studentEnrollmentMap.has(studentId)) {
           studentEnrollmentMap.set(studentId, new Set());
         }
         const subjectSet = studentEnrollmentMap.get(studentId)!;
+
         if (subject === 'math') {
           subjectSet.add('math');
+          // 선생님별 담당 학생 매핑
+          if (teacherId) {
+            if (!teacherSubjectStudentsMap.has(teacherId)) {
+              teacherSubjectStudentsMap.set(teacherId, new Map());
+            }
+            const teacherMap = teacherSubjectStudentsMap.get(teacherId)!;
+            if (!teacherMap.has('math')) {
+              teacherMap.set('math', new Set());
+            }
+            teacherMap.get('math')!.add(studentId);
+          }
         } else if (subject === 'english') {
           subjectSet.add('english');
+          // 선생님별 담당 학생 매핑
+          if (teacherId) {
+            if (!teacherSubjectStudentsMap.has(teacherId)) {
+              teacherSubjectStudentsMap.set(teacherId, new Map());
+            }
+            const teacherMap = teacherSubjectStudentsMap.get(teacherId)!;
+            if (!teacherMap.has('english')) {
+              teacherMap.set('english', new Set());
+            }
+            teacherMap.get('english')!.add(studentId);
+          }
         }
       });
 
@@ -291,23 +330,38 @@ export function useConsultationStats(
         }
       });
 
-      // 3. 학생별로 선택 기간 내 상담 여부 체크 (과목 무관, 1건이라도 있으면 OK)
-      const consultedStudentIds = new Set(consultations.map(c => c.studentId));
+      // 3. 학생별 과목별 상담 여부 체크 (과목 단위로 분리)
+      // 선택 기간 내 상담 기록을 학생ID+과목 키로 매핑
+      const consultedStudentSubjectSet = new Set<string>();
+      consultations.forEach(c => {
+        // subject 정규화: 'math'/'수학' -> 'math', 'english'/'영어' -> 'english'
+        let normalizedSubject = c.subject;
+        if (c.subject === '수학') normalizedSubject = 'math';
+        if (c.subject === '영어') normalizedSubject = 'english';
+        consultedStudentSubjectSet.add(`${c.studentId}-${normalizedSubject}`);
+      });
 
-      // 4. 상담이 필요한 학생 필터링 (선택 기간 내 상담 없는 학생)
-      const studentsNeedingIds = eligibleStudents
-        .filter(student => !consultedStudentIds.has(student.id))
-        .map(student => student.id);
+      // 4. 과목별로 상담 필요 학생 항목 생성
+      const needingConsultationItems: Array<{ studentId: string; name: string; subject: 'math' | 'english' }> = [];
+      eligibleStudents.forEach(student => {
+        student.enrolledSubjects.forEach(subject => {
+          const key = `${student.id}-${subject}`;
+          // 선택 기간 내 해당 과목 상담이 없으면 추가
+          if (!consultedStudentSubjectSet.has(key)) {
+            needingConsultationItems.push({
+              studentId: student.id,
+              name: student.name,
+              subject,
+            });
+          }
+        });
+      });
 
-      // 5. 상담 필요 학생들의 마지막 상담일 조회 (전체 기간에서)
-      // 참고: 상담이 필요한 학생만 조회하여 쿼리 최적화
-      const studentLastConsultationMap = new Map<string, string>();
+      // 5. 상담 필요 학생들의 과목별 마지막 상담일 조회 (전체 기간에서)
+      const studentSubjectLastConsultationMap = new Map<string, string>();
 
-      if (studentsNeedingIds.length > 0) {
-        // Set으로 변환하여 O(1) 조회
-        const needingIdsSet = new Set(studentsNeedingIds);
-
-        // 전체 상담 기록에서 해당 학생들의 마지막 상담일만 조회
+      if (needingConsultationItems.length > 0) {
+        // 전체 상담 기록에서 해당 학생+과목의 마지막 상담일 조회
         const allConsultationsQuery = query(
           collection(db, COL_STUDENT_CONSULTATIONS),
           orderBy('date', 'desc')
@@ -317,30 +371,62 @@ export function useConsultationStats(
         allConsultationsSnap.docs.forEach(doc => {
           const data = doc.data();
           const studentId = data.studentId as string;
-          // 상담 필요 학생만 처리 & 이미 기록이 있으면 스킵 (desc 정렬이라 첫 번째가 최신)
-          if (needingIdsSet.has(studentId) && !studentLastConsultationMap.has(studentId)) {
-            studentLastConsultationMap.set(studentId, data.date as string);
+          let normalizedSubject = data.subject as string;
+          if (normalizedSubject === '수학') normalizedSubject = 'math';
+          if (normalizedSubject === '영어') normalizedSubject = 'english';
+
+          const key = `${studentId}-${normalizedSubject}`;
+          // 이미 기록이 있으면 스킵 (desc 정렬이라 첫 번째가 최신)
+          if (!studentSubjectLastConsultationMap.has(key)) {
+            studentSubjectLastConsultationMap.set(key, data.date as string);
           }
         });
       }
 
-      const studentsNeedingConsultation: StudentNeedingConsultation[] = eligibleStudents
-        .filter(student => !consultedStudentIds.has(student.id))
-        .map(student => ({
-          studentId: student.id,
-          studentName: student.name,
-          enrolledSubjects: student.enrolledSubjects,
-          lastConsultationDate: studentLastConsultationMap.get(student.id),
-        }));
+      const studentsNeedingConsultation: StudentNeedingConsultation[] = needingConsultationItems.map(item => ({
+        studentId: item.studentId,
+        studentName: item.name,
+        subject: item.subject,
+        lastConsultationDate: studentSubjectLastConsultationMap.get(`${item.studentId}-${item.subject}`),
+      }));
 
       // 마지막 상담일 기준 오름차순 정렬 (오래된 순, 없는 경우 맨 위)
       studentsNeedingConsultation.sort((a, b) => {
         if (!a.lastConsultationDate && !b.lastConsultationDate) {
-          return a.studentName.localeCompare(b.studentName);
+          // 상담 기록이 둘 다 없으면 이름순, 이름이 같으면 과목순 (math < english)
+          const nameComp = a.studentName.localeCompare(b.studentName);
+          if (nameComp !== 0) return nameComp;
+          return a.subject.localeCompare(b.subject);
         }
         if (!a.lastConsultationDate) return -1;
         if (!b.lastConsultationDate) return 1;
         return a.lastConsultationDate.localeCompare(b.lastConsultationDate);
+      });
+
+      // 전체 과목 수강 건수 계산 (과목별로 분리)
+      let totalSubjectEnrollments = 0;
+      let totalMathEnrollments = 0;
+      let totalEnglishEnrollments = 0;
+
+      eligibleStudents.forEach(student => {
+        totalSubjectEnrollments += student.enrolledSubjects.length;
+        if (student.enrolledSubjects.includes('math')) {
+          totalMathEnrollments++;
+        }
+        if (student.enrolledSubjects.includes('english')) {
+          totalEnglishEnrollments++;
+        }
+      });
+
+      // 선생님별 통계에 전체 필요 상담 건수 업데이트 (담당 학생 수 기준)
+      staffSubjectStats.forEach(stat => {
+        const teacherMap = teacherSubjectStudentsMap.get(stat.id);
+        const mathStudents = teacherMap?.get('math')?.size || 0;
+        const englishStudents = teacherMap?.get('english')?.size || 0;
+
+        stat.mathTotal = mathStudents;
+        stat.englishTotal = englishStudents;
+        stat.totalNeeded = mathStudents + englishStudents;
       });
 
       return {
@@ -358,6 +444,7 @@ export function useConsultationStats(
         followUpDone,
         studentsNeedingConsultation,
         totalActiveStudents: studentsSnapshot.docs.length,  // 전체 재원생 수
+        totalSubjectEnrollments,  // 전체 과목 수강 건수
       };
     },
     staleTime: 1000 * 60 * 5, // 5분 캐싱
@@ -381,6 +468,7 @@ export function useConsultationStats(
       followUpDone: 0,
       studentsNeedingConsultation: [],
       totalActiveStudents: 0,
+      totalSubjectEnrollments: 0,
     },
     loading: isLoading,
     error,

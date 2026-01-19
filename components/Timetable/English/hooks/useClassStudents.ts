@@ -131,7 +131,7 @@ export const useClassStudents = (
                     enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
                     withdrawalDate: convertTimestampToDate(data.withdrawalDate),
                     onHold: data.onHold,
-                    attendanceDays: data.attendanceDays || [],  // 등원 요일 추가
+                    attendanceDays: data.attendanceDays || [],
                 };
             });
 
@@ -153,40 +153,10 @@ export const useClassStudents = (
                         // Skip if student is not active
                         if (baseStudent.status !== 'active') return null;
 
-                        // Find enrollment date from classHistory (most accurate)
-                        let classEnrollmentDate = enrollmentData.enrollmentDate;
-
-                        if (baseStudent.classHistory && Array.isArray(baseStudent.classHistory)) {
-                            // Find current class in history (where endDate is undefined/null)
-                            const currentClassEntry = baseStudent.classHistory.find(
-                                (entry: any) => entry.className === className && entry.subject === 'english' && !entry.endDate
-                            );
-
-                            if (currentClassEntry?.startDate) {
-                                // Convert Timestamp to string if needed
-                                const convertDate = (date: any): string | undefined => {
-                                    if (!date) return undefined;
-                                    if (typeof date === 'string') return date;
-                                    if (date?.toDate) return date.toDate().toISOString().split('T')[0];
-                                    return undefined;
-                                };
-
-                                const historyStartDate = convertDate(currentClassEntry.startDate);
-
-                                // Debug log
-                                if (baseStudent.name === '오해준') {
-                                    console.log('[신입생 체크]', {
-                                        name: baseStudent.name,
-                                        className,
-                                        classHistoryStartDate: historyStartDate,
-                                        enrollmentStartDate: enrollmentData.enrollmentDate,
-                                        currentClassEntry
-                                    });
-                                }
-
-                                classEnrollmentDate = historyStartDate || classEnrollmentDate;
-                            }
-                        }
+                        // Priority for enrollment date (학생 관리 수업 탭 기준):
+                        // 1. enrollmentData.enrollmentDate (학생 관리 수업 탭의 '시작일' from enrollments subcollection)
+                        // 2. baseStudent.startDate (학생 기본정보의 등록일 - fallback)
+                        const classEnrollmentDate = enrollmentData.enrollmentDate || baseStudent.startDate;
 
                         return {
                             id,

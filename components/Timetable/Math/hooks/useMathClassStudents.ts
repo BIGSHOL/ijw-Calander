@@ -81,11 +81,23 @@ export const useMathClassStudents = (
                 if (!studentId) return;
 
                 classStudentMap[className].add(studentId);
+
+                // Convert Firestore Timestamp to YYYY-MM-DD string
+                const convertTimestampToDate = (timestamp: any): string | undefined => {
+                    if (!timestamp) return undefined;
+                    if (typeof timestamp === 'string') return timestamp;
+                    if (timestamp?.toDate) {
+                        const date = timestamp.toDate();
+                        return date.toISOString().split('T')[0];
+                    }
+                    return undefined;
+                };
+
                 enrollmentDataMap[className][studentId] = {
-                    enrollmentDate: data.enrollmentDate || data.startDate,
-                    withdrawalDate: data.withdrawalDate,
+                    enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
+                    withdrawalDate: convertTimestampToDate(data.withdrawalDate),
                     onHold: data.onHold,
-                    attendanceDays: data.attendanceDays || [],  // 등원 요일 추가
+                    attendanceDays: data.attendanceDays || [],
                 };
             });
 
@@ -104,18 +116,23 @@ export const useMathClassStudents = (
                             return null;
                         }
 
+                        // Priority for enrollment date (학생 관리 수업 탭 기준):
+                        // 1. enrollmentData.enrollmentDate (학생 관리 수업 탭의 '시작일' from enrollments subcollection)
+                        // 2. baseStudent.startDate (학생 기본정보의 등록일 - fallback)
+                        const classEnrollmentDate = enrollmentData.enrollmentDate || baseStudent.startDate;
+
                         return {
                             id,
                             name: baseStudent.name || '',
                             englishName: baseStudent.englishName || '',
                             school: baseStudent.school || '',
                             grade: baseStudent.grade || '',
-                            // Merge enrollment-specific data
-                            enrollmentDate: enrollmentData.enrollmentDate,
+                            // Use prioritized enrollment date for new student marking
+                            enrollmentDate: classEnrollmentDate,
                             withdrawalDate: enrollmentData.withdrawalDate,
                             onHold: enrollmentData.onHold,
                             isMoved: false,
-                            attendanceDays: enrollmentData.attendanceDays || [],  // 등원 요일
+                            attendanceDays: enrollmentData.attendanceDays || [],
                         } as TimetableStudent;
                     })
                     .filter(Boolean) as TimetableStudent[];
