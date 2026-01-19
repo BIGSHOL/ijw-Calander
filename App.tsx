@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, getDate, endOfMonth, differenceInDays } from 'date-fns';
-import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor, AppTab, TAB_META, TAB_GROUPS } from './types';
+import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor, AppTab, TAB_META, TAB_GROUPS, SubjectType } from './types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
 import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig, useStaffWithAccounts, useAllStaff } from './hooks/useFirebaseQueries';
@@ -189,6 +189,7 @@ const App: React.FC = () => {
 
   const {
     isSettingsOpen, setIsSettingsOpen,
+    isTimetableSettingsOpen, setIsTimetableSettingsOpen,
     isCalendarSettingsOpen, setIsCalendarSettingsOpen, isLoginModalOpen, setIsLoginModalOpen,
     isProfileMenuOpen, setIsProfileMenuOpen, isPermissionViewOpen, setIsPermissionViewOpen,
     isGlobalSearchOpen, setIsGlobalSearchOpen, isAttendanceAddStudentModalOpen, setIsAttendanceAddStudentModalOpen,
@@ -292,19 +293,30 @@ const App: React.FC = () => {
 
     const canViewMath = hasPermission('timetable.math.view') || hasPermission('timetable.math.edit');
     const canViewEnglish = hasPermission('timetable.english.view') || hasPermission('timetable.english.edit');
+    const canViewScience = hasPermission('timetable.science.view') || hasPermission('timetable.science.edit');
+    const canViewKorean = hasPermission('timetable.korean.view') || hasPermission('timetable.korean.edit');
 
-    if (timetableSubject === 'math' && !canViewMath) {
-      if (canViewEnglish) {
-        console.log('[Guard] Switching to English due to missing Math permission');
-        setTimetableSubject('english');
-      } else {
-        console.log('[Guard] No timetable permissions, redirecting to calendar');
-        setAppMode('calendar');
-      }
-    } else if (timetableSubject === 'english' && !canViewEnglish) {
+    // Check if current subject is accessible
+    const canViewCurrent =
+      (timetableSubject === 'math' && canViewMath) ||
+      (timetableSubject === 'english' && canViewEnglish) ||
+      (timetableSubject === 'science' && canViewScience) ||
+      (timetableSubject === 'korean' && canViewKorean);
+
+    if (!canViewCurrent) {
+      // Switch to first available subject
       if (canViewMath) {
-        console.log('[Guard] Switching to Math due to missing English permission');
+        console.log('[Guard] Switching to Math (first available)');
         setTimetableSubject('math');
+      } else if (canViewEnglish) {
+        console.log('[Guard] Switching to English (first available)');
+        setTimetableSubject('english');
+      } else if (canViewScience) {
+        console.log('[Guard] Switching to Science (first available)');
+        setTimetableSubject('science');
+      } else if (canViewKorean) {
+        console.log('[Guard] Switching to Korean (first available)');
+        setTimetableSubject('korean');
       } else {
         console.log('[Guard] No timetable permissions, redirecting to calendar');
         setAppMode('calendar');
@@ -2117,20 +2129,26 @@ const App: React.FC = () => {
 
                 {/* Current Settings Summary - Clickable Toggles */}
                 <div className="flex items-center gap-2 px-4 overflow-hidden flex-1">
-                  {/* Subject Toggle Button */}
-                  {hasPermission('timetable.math.view') && hasPermission('timetable.english.view') ? (
-                    <button
-                      onClick={() => setTimetableSubject(prev => prev === 'math' ? 'english' : 'math')}
-                      className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 active:scale-95 transition-all cursor-pointer"
-                      title="클릭하여 과목 전환"
-                    >
-                      {timetableSubject === 'math' ? <><Calculator size={12} className="inline" /> 수학</> : <><BookOpen size={12} className="inline" /> 영어</>}
-                    </button>
-                  ) : (
-                    <div className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 font-bold text-xs">
-                      {timetableSubject === 'math' ? <><Calculator size={12} className="inline" /> 수학</> : <><BookOpen size={12} className="inline" /> 영어</>}
-                    </div>
-                  )}
+                  {/* Subject Select Dropdown */}
+                  <select
+                    value={timetableSubject}
+                    onChange={(e) => setTimetableSubject(e.target.value as SubjectType)}
+                    className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 transition-all cursor-pointer border-none outline-none"
+                    title="과목 선택"
+                  >
+                    {hasPermission('timetable.math.view') && (
+                      <option value="math">📐 수학</option>
+                    )}
+                    {hasPermission('timetable.english.view') && (
+                      <option value="english">📚 영어</option>
+                    )}
+                    {hasPermission('timetable.science.view') && (
+                      <option value="science">🔬 과학</option>
+                    )}
+                    {hasPermission('timetable.korean.view') && (
+                      <option value="korean">📖 국어</option>
+                    )}
+                  </select>
 
                   {/* View Type Toggle Button - 영어만 */}
                   {timetableSubject === 'english' && (
@@ -2168,14 +2186,13 @@ const App: React.FC = () => {
                   {/* Spacer to push settings button to the right */}
                   <div className="flex-1"></div>
 
-                  {/* Timetable Settings Button - 영어/수학 공용 */}
+                  {/* Timetable Settings Button - 수업 설정만 */}
                   <button
                     onClick={() => setIsTimetableSettingsOpen(true)}
-                    className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-white font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
-                    title="시간표 설정"
+                    className="p-1 rounded bg-[#081429] border border-gray-700 text-white hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+                    title="수업 설정"
                   >
-                    <Settings size={12} />
-                    설정
+                    <Settings size={14} />
                   </button>
 
                   {/* Removed Summary Indicators */}

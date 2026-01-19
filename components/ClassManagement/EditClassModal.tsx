@@ -78,7 +78,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
 
   // 강사 색상 가져오기
   const getTeacherColor = (teacherName: string) => {
-    const teacherInfo = teachersData?.find(t => t.name === teacherName);
+    const teacherInfo = teachersData?.find(t => t.name === teacherName || t.englishName === teacherName);
     return {
       bgColor: teacherInfo?.bgColor || '#fdb813',
       textColor: teacherInfo?.textColor || '#081429'

@@ -90,12 +90,22 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-        <div className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-          {/* 컴팩트 헤더 */}
-          <div className="bg-[#081429] text-white px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-lg h-[600px] flex flex-col overflow-hidden relative" onClick={(e) => e.stopPropagation()}>
+          {/* 우측 상단 닫기 버튼 */}
+          <div className="absolute top-2 right-2 z-10">
+            <button
+              onClick={onClose}
+              className="p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* 컴팩트 헤더 - 학생 모달 스타일 */}
+          <div className="bg-[#081429] text-white px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5" />
+              <BookOpen className="w-5 h-5 text-[#fdb813]" />
               <h2 className="text-base font-bold">수업 상세</h2>
             </div>
             <div className="flex items-center gap-1">
@@ -115,18 +125,11 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                 <Trash2 className="w-3.5 h-3.5" />
                 삭제
               </button>
-              <button
-                onClick={onClose}
-                disabled={deleteClassMutation.isPending}
-                className="text-white hover:bg-white/20 p-1.5 rounded transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
           </div>
 
-          {/* 수업 정보 섹션 - 컴팩트 */}
-          <div className="p-4">
+          {/* 스크롤 가능한 컨텐츠 영역 */}
+          <div className="flex-1 overflow-y-auto p-4">
             <div className="mb-4">
               <div className="flex items-center gap-1.5 mb-2">
                 <BookOpen className="w-4 h-4 text-[#081429]" />

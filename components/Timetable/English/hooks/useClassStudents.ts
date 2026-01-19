@@ -114,10 +114,22 @@ export const useClassStudents = (
                 if (data.withdrawalDate || data.onHold) return;
 
                 classStudentMap[className].add(studentId);
+
+                // Convert Firestore Timestamp to YYYY-MM-DD string
+                const convertTimestampToDate = (timestamp: any): string | undefined => {
+                    if (!timestamp) return undefined;
+                    if (typeof timestamp === 'string') return timestamp;
+                    if (timestamp?.toDate) {
+                        const date = timestamp.toDate();
+                        return date.toISOString().split('T')[0];
+                    }
+                    return undefined;
+                };
+
                 enrollmentDataMap[className][studentId] = {
                     underline: data.underline,
-                    enrollmentDate: data.enrollmentDate || data.startDate,
-                    withdrawalDate: data.withdrawalDate,
+                    enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
+                    withdrawalDate: convertTimestampToDate(data.withdrawalDate),
                     onHold: data.onHold,
                     attendanceDays: data.attendanceDays || [],  // 등원 요일 추가
                 };
@@ -141,6 +153,16 @@ export const useClassStudents = (
                         // Skip if student is not active
                         if (baseStudent.status !== 'active') return null;
 
+                        // Convert student's startDate (Timestamp or string) to YYYY-MM-DD
+                        const convertStudentDate = (date: any): string | undefined => {
+                            if (!date) return undefined;
+                            if (typeof date === 'string') return date;
+                            if (date?.toDate) {
+                                return date.toDate().toISOString().split('T')[0];
+                            }
+                            return undefined;
+                        };
+
                         return {
                             id,
                             name: baseStudent.name || '',
@@ -149,8 +171,9 @@ export const useClassStudents = (
                             grade: baseStudent.grade || '',
                             // Merge enrollment-specific data
                             underline: enrollmentData.underline ?? baseStudent.underline ?? false,
-                            enrollmentDate: enrollmentData.enrollmentDate,
-                            withdrawalDate: enrollmentData.withdrawalDate,
+                            // Use enrollment's enrollmentDate, or fallback to student's startDate
+                            enrollmentDate: enrollmentData.enrollmentDate || convertStudentDate(baseStudent.startDate),
+                            withdrawalDate: enrollmentData.withdrawalDate || convertStudentDate(baseStudent.withdrawalDate),
                             onHold: enrollmentData.onHold,
                             isMoved: false,
                             attendanceDays: enrollmentData.attendanceDays || [],  // 등원 요일

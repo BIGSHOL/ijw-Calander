@@ -67,6 +67,10 @@ const MiniGridRow: React.FC<MiniGridRowProps> = ({
                 let teacherStyle = {};
                 const isHidden = cell?.teacher && hiddenTeachers?.includes(cell.teacher);
 
+                // Get display name (영어 이름 우선)
+                const teacherData = cell?.teacher ? teachersData.find(t => t.name === cell.teacher) : null;
+                const displayName = teacherData?.englishName || cell?.teacher || '';
+
                 if (cell?.teacher && !isHidden) {
                     const colors = getTeacherColor(cell.teacher, teachersData);
                     // If underline is enabled, override color with blue
@@ -82,11 +86,11 @@ const MiniGridRow: React.FC<MiniGridRowProps> = ({
                         key={day}
                         className="flex-1 border-r border-gray-100 last:border-r-0 flex flex-col justify-center items-center text-center px-0.5 overflow-hidden text-xxs"
                         style={teacherStyle}
-                        title={cell?.teacher || ''}
+                        title={displayName}
                     >
                         {cell && !isHidden && (
                             <span className={`leading-tight line-clamp-2 break-all ${cell.underline ? 'underline italic' : ''}`}>
-                                {cell.teacher.slice(0, 4)}
+                                {displayName.slice(0, 4)}
                             </span>
                         )}
                     </div>

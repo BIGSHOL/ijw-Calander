@@ -47,7 +47,7 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 max-h-[288px] overflow-y-auto">
       {students.map((student) => (
         <div
           key={student.id}

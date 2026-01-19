@@ -51,7 +51,6 @@ const EnglishStudentItem: React.FC<EnglishStudentItemProps> = ({
             onMouseLeave={() => setIsHovered(false)}
             className={`flex items-center justify-between text-[12px] py-0.5 px-1 transition-all duration-150 ${style.className} ${isClickable ? 'cursor-pointer' : ''}`}
             style={hoverStyle}
-            title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}\n(클릭하여 상세정보 보기)` : '클릭하여 상세정보 보기'}
         >
             <span className={`font-medium truncate max-w-[90px] ${isHovered && isClickable ? '' : style.textClass}`}>
                 {student.name}
@@ -435,17 +434,23 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     {/* Info Summary (Teacher/Room) */}
                     {(displayOptions?.showTeacher || displayOptions?.showRoom) && (
                         <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
-                            {displayOptions?.showTeacher && (
-                                <div className={`flex border-b border-orange-200 h-[26px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
-                                    {isTimeColumnOnly ? (
-                                        <span className="font-bold text-orange-800">담임</span>
-                                    ) : (
-                                        <div className="flex-1 p-0.5 text-center font-bold text-gray-900 flex items-center justify-center h-full">
-                                            {classInfo.mainTeacher}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                            {displayOptions?.showTeacher && (() => {
+                                // 담임 영어 이름 표시 (영어 이름 우선)
+                                const mainTeacherData = teachersData.find(t => t.name === classInfo.mainTeacher);
+                                const displayTeacherName = mainTeacherData?.englishName || classInfo.mainTeacher;
+
+                                return (
+                                    <div className={`flex border-b border-orange-200 h-[26px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
+                                        {isTimeColumnOnly ? (
+                                            <span className="font-bold text-orange-800">담임</span>
+                                        ) : (
+                                            <div className="flex-1 p-0.5 text-center font-bold text-gray-900 flex items-center justify-center h-full">
+                                                {displayTeacherName}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                             {displayOptions?.showRoom && (
                                 <div className={`flex h-[32px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
                                     {isTimeColumnOnly ? (
@@ -499,8 +504,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     isTimeColumnOnly ? (
                         // Sticky Column: 3 Labels (재원생, 대기, 퇴원생)
                         <div className="flex flex-col border-r border-gray-300">
-                            {/* 재원생 Label - Fixed Height */}
-                            <div className="h-[290px] flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none border-b border-indigo-100">
+                            {/* 재원생 Label - Reduced Height */}
+                            <div className="h-[190px] flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none border-b border-indigo-100">
                                 <span>재</span>
                                 <span>원</span>
                                 <span>생</span>
@@ -517,8 +522,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     ) : (
                         // Data Column: 3 Sections with Content
                         <div className="flex flex-col bg-white border-r border-gray-300">
-                            {/* 재원생 Section - Fixed Height */}
-                            <div className="h-[290px] flex flex-col border-b border-indigo-100">
+                            {/* 재원생 Section - Reduced Height with Scroll */}
+                            <div className="h-[190px] flex flex-col border-b border-indigo-100">
                                 <div className="border-b border-gray-300 flex items-center justify-center h-[30px] shrink-0 bg-white">
                                     <div className="w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2">
                                         <Users size={14} />

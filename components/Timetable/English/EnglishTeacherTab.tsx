@@ -628,9 +628,13 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         className="px-2 py-1 text-xs border rounded"
                     >
                         <option value="all">전체 강사</option>
-                        {teachers.map(t => (
-                            <option key={t} value={t}>{t}</option>
-                        ))}
+                        {teachers.map(t => {
+                            const teacherData = teachersData.find(td => td.name === t);
+                            const displayName = teacherData?.englishName || t;
+                            return (
+                                <option key={t} value={t}>{displayName}</option>
+                            );
+                        })}
                     </select>
 
                     <div className="h-6 w-px bg-gray-300 mx-2" />
@@ -669,6 +673,8 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                 <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
                                 {filteredTeachers.map((teacher, tIdx) => {
                                     const colors = getTeacherColor(teacher, teachersData);
+                                    const teacherData = teachersData.find(t => t.name === teacher);
+                                    const displayName = teacherData?.englishName || teacher;
                                     return (
                                         <th
                                             key={teacher}
@@ -679,7 +685,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                         `}
                                             style={{ backgroundColor: colors.bg, color: colors.text }}
                                         >
-                                            {teacher}
+                                            {displayName}
                                         </th>
                                     );
                                 })}

@@ -95,9 +95,9 @@ interface TimetableGridProps {
     // 조회/수정 모드
     mode: 'view' | 'edit';
     // View Settings
-    columnWidth: 'compact' | 'narrow' | 'normal' | 'wide';
+    columnWidth: 'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide';
     rowHeight: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';
-    fontSize: 'small' | 'normal' | 'large' | 'very-large';
+    fontSize: 'small' | 'normal' | 'large';
     showClassName: boolean;
     showSchool: boolean;
     showGrade: boolean;
@@ -162,19 +162,28 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     // Helper to get column width style
     // 병합 셀용 (월/목 같이 여러 요일 병합) - 각 요일당 좁은 너비
     const getMergedCellWidthStyle = (colspan: number) => {
-        const perDayWidth = columnWidth === 'compact' ? 60 : columnWidth === 'narrow' ? 80 : columnWidth === 'wide' ? 120 : 100;
+        const perDayWidth = columnWidth === 'compact' ? 50 :
+                           columnWidth === 'narrow' ? 70 :
+                           columnWidth === 'wide' ? 130 :
+                           columnWidth === 'x-wide' ? 180 : 100;
         return { width: `${colspan * perDayWidth}px`, minWidth: `${colspan * perDayWidth}px` };
     };
 
     // 단일 셀용 (수, 토, 일 등 병합 안 된 셀) - 수업명이 한 줄에 보이도록 넓게
     const getSingleCellWidthStyle = () => {
-        const baseWidth = columnWidth === 'compact' ? 110 : columnWidth === 'narrow' ? 140 : columnWidth === 'wide' ? 200 : 170;
+        const baseWidth = columnWidth === 'compact' ? 100 :
+                         columnWidth === 'narrow' ? 130 :
+                         columnWidth === 'wide' ? 210 :
+                         columnWidth === 'x-wide' ? 280 : 160;
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 
     // 날짜별 뷰용 - 더 넓은 너비로 강의명이 한줄에 표시되도록
     const getDayBasedCellWidthStyle = () => {
-        const baseWidth = columnWidth === 'compact' ? 110 : columnWidth === 'narrow' ? 140 : columnWidth === 'wide' ? 200 : 170;
+        const baseWidth = columnWidth === 'compact' ? 100 :
+                         columnWidth === 'narrow' ? 130 :
+                         columnWidth === 'wide' ? 210 :
+                         columnWidth === 'x-wide' ? 280 : 160;
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 
@@ -182,12 +191,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     const getRowHeight = (): number | 'auto' => {
         // 학생 목록 숨기면 항상 auto (콘텐츠에 맞게 압축)
         if (!showStudents) return 'auto';
-        // rowHeight 설정에 따라 조절 - 더 극적인 차이로 변경
-        if (rowHeight === 'compact') return 'auto'; // 컴팩트: 콘텐츠에 맞게 자동 축소
-        if (rowHeight === 'short') return 120;      // 좁게 (수업명 + 학생 2~3명)
-        if (rowHeight === 'tall') return 280;       // 큰 높이
-        if (rowHeight === 'very-tall') return 340;  // 아주 큰 높이
-        return 200; // normal - 기본값
+        // rowHeight 설정에 따라 조절 - 극단적인 차이
+        if (rowHeight === 'compact') return 'auto';  // 컴팩트: 콘텐츠에 맞게 자동 축소
+        if (rowHeight === 'short') return 100;       // 작게 (수업명 + 학생 1~2명)
+        if (rowHeight === 'tall') return 320;        // 크게
+        if (rowHeight === 'very-tall') return 450;   // 매우 크게 (화면 꽉 참)
+        return 180; // normal - 기본값
     };
 
     // 학생 목록 숨기기도 컴팩트 모드처럼 동작

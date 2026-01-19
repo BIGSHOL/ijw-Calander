@@ -41,6 +41,7 @@ interface StudentFormData {
 
 // 학년 옵션
 const GRADE_OPTIONS = [
+    '미취학',
     '초1', '초2', '초3', '초4', '초5', '초6',
     '중1', '중2', '중3',
     '고1', '고2', '고3',
@@ -101,6 +102,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
         },
         validationRules: {
             name: [required('이름을 입력해주세요')],
+            gender: [required('성별을 선택해주세요')],
             school: [required('학교를 입력해주세요')],
             grade: [required('학년을 선택해주세요')],
             studentPhone: [phoneValidator()],
@@ -291,7 +293,9 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                     </div>
                                     {/* 성별 */}
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">성별</label>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                                            성별 <span className="text-red-500">*</span>
+                                        </label>
                                         <div className="flex items-center gap-4">
                                             <label className="flex items-center gap-1.5 cursor-pointer">
                                                 <input
