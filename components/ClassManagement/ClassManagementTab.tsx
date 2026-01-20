@@ -116,146 +116,143 @@ const ClassManagementTab: React.FC = () => {
     <div className="flex flex-col h-full min-h-0 bg-gray-50">
       {/* 상단 고정 영역 - flex-shrink-0으로 절대 줄어들지 않음 */}
       <div className="flex-shrink-0">
-        {/* 상단 네비게이션 바 */}
-        <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs overflow-x-auto">
-          <div className="flex items-center gap-3 flex-nowrap min-w-0 flex-shrink-0">
-            {/* 과목 토글 */}
-            <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm flex-shrink-0">
-              {subjectFilters.map(({ value, label, icon }) => (
-                <button
-                  key={value}
-                  onClick={() => setFilters({ ...filters, subject: value })}
-                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filters.subject === value
-                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    {icon} {label}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {/* 구분선 */}
-            <div className="w-px h-4 bg-white/20 mx-1 flex-shrink-0"></div>
-
-            {/* 강사 필터 */}
-            {teachers.length > 0 && (
-              <select
-                value={filters.teacher}
-                onChange={(e) => setFilters({ ...filters, teacher: e.target.value })}
-                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none flex-shrink-0"
-              >
-                <option value="all">전체 강사</option>
-                {teachers.map(teacher => (
-                  <option key={teacher} value={teacher}>{teacher}</option>
-                ))}
-              </select>
-            )}
-
-            {/* 구분선 */}
-            <div className="w-px h-4 bg-white/20 mx-1 flex-shrink-0"></div>
-
-            {/* 요일 필터 */}
-            <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm flex-shrink-0">
-              {ALL_DAYS.map(day => {
-                const isSelected = filters.selectedDays.includes(day);
-                const toggleDay = () => {
-                  if (isSelected) {
-                    setFilters({ ...filters, selectedDays: filters.selectedDays.filter(d => d !== day) });
-                  } else {
-                    setFilters({ ...filters, selectedDays: [...filters.selectedDays, day] });
-                  }
-                };
-                return (
+        {/* 상단 네비게이션 바 - 2행 레이아웃 */}
+        <div className="bg-[#081429] px-6 py-2 border-b border-white/10 text-xs">
+          {/* 1행: 과목, 강사, 요일 필터 */}
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-3">
+              {/* 과목 토글 */}
+              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                {subjectFilters.map(({ value, label, icon }) => (
                   <button
-                    key={day}
-                    onClick={toggleDay}
-                    className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${isSelected
+                    key={value}
+                    onClick={() => setFilters({ ...filters, subject: value })}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filters.subject === value
                       ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                       : 'text-gray-400 hover:text-white hover:bg-white/5'
                       }`}
                   >
-                    {day}
+                    <span className="inline-flex items-center gap-1.5">
+                      {icon} {label}
+                    </span>
                   </button>
-                );
-              })}
-              {filters.selectedDays.length > 0 && (
-                <button
-                  onClick={() => setFilters({ ...filters, selectedDays: [] })}
-                  className="px-2 py-0.5 rounded text-xs text-gray-400 hover:text-red-400 hover:bg-red-400/10 ml-1"
-                  title="요일 필터 초기화"
+                ))}
+              </div>
+
+              {/* 강사 필터 */}
+              {teachers.length > 0 && (
+                <select
+                  value={filters.teacher}
+                  onChange={(e) => setFilters({ ...filters, teacher: e.target.value })}
+                  className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
                 >
-                  ✕
-                </button>
+                  <option value="all">전체 강사</option>
+                  {teachers.map(teacher => (
+                    <option key={teacher} value={teacher}>{teacher}</option>
+                  ))}
+                </select>
               )}
+
+              {/* 요일 필터 */}
+              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                {ALL_DAYS.map(day => {
+                  const isSelected = filters.selectedDays.includes(day);
+                  const toggleDay = () => {
+                    if (isSelected) {
+                      setFilters({ ...filters, selectedDays: filters.selectedDays.filter(d => d !== day) });
+                    } else {
+                      setFilters({ ...filters, selectedDays: [...filters.selectedDays, day] });
+                    }
+                  };
+                  return (
+                    <button
+                      key={day}
+                      onClick={toggleDay}
+                      className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${isSelected
+                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+                {filters.selectedDays.length > 0 && (
+                  <button
+                    onClick={() => setFilters({ ...filters, selectedDays: [] })}
+                    className="px-2 py-0.5 rounded text-xs text-gray-400 hover:text-red-400 hover:bg-red-400/10 ml-1"
+                    title="요일 필터 초기화"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* 구분선 */}
-            <div className="w-px h-4 bg-white/20 mx-1 flex-shrink-0"></div>
+            {/* 우측: 버튼들 */}
+            <div className="flex items-center gap-2">
+              {/* 진단 버튼 */}
+              <button
+                onClick={() => setShowDiagnosticModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-amber-500 text-white hover:bg-amber-600 transition-colors shadow-sm font-bold"
+                title="수업 매칭 진단"
+              >
+                <Stethoscope size={14} />
+                <span>진단</span>
+              </button>
 
-            {/* 정렬 */}
-            <select
-              value={filters.sortBy}
-              onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
-              className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none flex-shrink-0"
-            >
-              <option value="name">수업명순</option>
-              <option value="studentCount">학생수순</option>
-              <option value="teacher">강사명순</option>
-            </select>
+              {/* 설정 버튼 */}
+              <button
+                onClick={() => setShowSettingsModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gray-700 text-white hover:bg-gray-600 transition-colors shadow-sm font-bold"
+                title="수업 설정"
+              >
+                <Settings size={14} />
+                <span>설정</span>
+              </button>
 
-            {/* 구분선 */}
-            <div className="w-px h-4 bg-white/20 mx-1 flex-shrink-0"></div>
-
-            {/* 검색 */}
-            <div className="relative flex-shrink-0">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="수업명, 강사명 검색..."
-                value={filters.searchQuery}
-                onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                className="bg-[#1e293b] border border-gray-700 rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
-              />
+              {/* 새 수업 추가 버튼 */}
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+              >
+                <Plus size={14} />
+                <span>새 수업</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* 2행: 정렬, 검색, 결과 카운트 */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {/* 정렬 */}
+              <select
+                value={filters.sortBy}
+                onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
+                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+              >
+                <option value="name">수업명순</option>
+                <option value="studentCount">학생수순</option>
+                <option value="teacher">강사명순</option>
+              </select>
+
+              {/* 검색 */}
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="수업명, 강사명 검색..."
+                  value={filters.searchQuery}
+                  onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
+                  className="bg-[#1e293b] border border-gray-700 rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
+                />
+              </div>
+            </div>
+
             {/* 결과 카운트 */}
             <span className="text-gray-400 text-xs">
               총 <span className="text-[#fdb813] font-bold">{filteredClasses.length}</span>개 수업
             </span>
-
-            {/* 진단 버튼 */}
-            <button
-              onClick={() => setShowDiagnosticModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-amber-500 text-white hover:bg-amber-600 transition-colors shadow-sm font-bold"
-              title="수업 매칭 진단"
-            >
-              <Stethoscope size={14} />
-              <span>진단</span>
-            </button>
-
-            {/* 설정 버튼 */}
-            <button
-              onClick={() => setShowSettingsModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gray-700 text-white hover:bg-gray-600 transition-colors shadow-sm font-bold"
-              title="수업 설정"
-            >
-              <Settings size={14} />
-              <span>설정</span>
-            </button>
-
-            {/* 새 수업 추가 버튼 */}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
-            >
-              <Plus size={14} />
-              <span>새 수업</span>
-            </button>
           </div>
         </div>
 
