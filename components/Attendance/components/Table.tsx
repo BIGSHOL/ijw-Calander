@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Student, SalaryConfig } from '../types';
 import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting } from '../utils';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
-import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save, ChevronUp, ChevronDown, GripVertical, Check, X } from 'lucide-react';
+import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save, ChevronUp, ChevronDown, ChevronRight, GripVertical, Check, X } from 'lucide-react';
 import { Exam, StudentScore, GRADE_COLORS } from '../../../types';
 
 interface Props {
@@ -21,6 +21,9 @@ interface Props {
   // Group ordering props
   groupOrder?: string[];
   onGroupOrderChange?: (newOrder: string[]) => void;
+  // Group collapse props
+  collapsedGroups?: Set<string>;
+  onCollapsedGroupsChange?: (newCollapsed: Set<string>) => void;
 }
 
 interface ContextMenuState {
@@ -45,7 +48,9 @@ const Table: React.FC<Props> = ({
   examsByDate,
   scoresByStudent,
   groupOrder = [],
-  onGroupOrderChange
+  onGroupOrderChange,
+  collapsedGroups,
+  onCollapsedGroupsChange
 }) => {
   const days = useMemo(() => getDaysInMonth(currentDate), [currentDate]);
   const memoInputRef = useRef<HTMLTextAreaElement>(null);
@@ -343,6 +348,8 @@ const Table: React.FC<Props> = ({
               examsByDate={examsByDate}
               scoresByStudent={scoresByStudent}
               onHomeworkChange={onHomeworkChange}
+              collapsedGroups={collapsedGroups}
+              onCollapsedGroupsChange={onCollapsedGroupsChange}
             />
           ) : (
             <tr>
@@ -441,7 +448,7 @@ const Table: React.FC<Props> = ({
 
 // Extracted & Memoized Components
 
-const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange, examsByDate, scoresByStudent, onHomeworkChange }: {
+const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange, examsByDate, scoresByStudent, onHomeworkChange, collapsedGroups: externalCollapsedGroups, onCollapsedGroupsChange }: {
   students: Student[],
   days: Date[],
   currentDate: Date,
@@ -456,7 +463,28 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
   examsByDate?: Map<string, Exam[]>;
   scoresByStudent?: Map<string, Map<string, StudentScore>>;
   onHomeworkChange?: (studentId: string, dateKey: string, value: boolean) => void;
+  collapsedGroups?: Set<string>;
+  onCollapsedGroupsChange?: (newCollapsed: Set<string>) => void;
 }) => {
+  // 그룹 접기/펼치기 상태 관리 (외부에서 전달받거나 내부 state 사용)
+  const [internalCollapsedGroups, setInternalCollapsedGroups] = useState<Set<string>>(new Set());
+  const collapsedGroups = externalCollapsedGroups ?? internalCollapsedGroups;
+
+  const toggleGroupCollapse = (groupName: string) => {
+    const next = new Set(collapsedGroups);
+    if (next.has(groupName)) {
+      next.delete(groupName);
+    } else {
+      next.add(groupName);
+    }
+
+    if (onCollapsedGroupsChange) {
+      onCollapsedGroupsChange(next);
+    } else {
+      setInternalCollapsedGroups(next);
+    }
+  };
+
   // Extract unique groups from students
   const uniqueGroups = useMemo(() => {
     const groups = new Set<string>();
@@ -523,6 +551,16 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
     return order;
   }, [groupOrder, uniqueGroups]);
 
+  // 각 그룹의 학생 수 계산
+  const groupStudentCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    sortedStudents.forEach(s => {
+      const group = s.group || '그룹 없음';
+      counts.set(group, (counts.get(group) || 0) + 1);
+    });
+    return counts;
+  }, [sortedStudents]);
+
   const rows: React.ReactNode[] = [];
   let currentGroup: string | null = null;
   let rankIndex = 0;
@@ -537,17 +575,41 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
       const groupIdx = effectiveGroupOrder.indexOf(currentGroup);
       const isFirst = groupIdx <= 0;
       const isLast = groupIdx >= effectiveGroupOrder.length - 1;
+      const isCollapsed = collapsedGroups.has(currentGroup);
+      const studentCount = groupStudentCounts.get(currentGroup) || 0;
 
       rows.push(
         <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">
           <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
             <div className="flex items-center gap-2">
-              <FolderOpen size={14} className="text-slate-400" />
+              {/* 접기/펼치기 버튼 */}
+              <button
+                onClick={() => toggleGroupCollapse(studentGroup)}
+                className="p-0.5 rounded hover:bg-slate-200 transition-colors"
+                title={isCollapsed ? '펼치기' : '접기'}
+              >
+                {isCollapsed ? (
+                  <ChevronRight size={14} className="text-slate-500" />
+                ) : (
+                  <ChevronDown size={14} className="text-slate-500" />
+                )}
+              </button>
+              {isCollapsed ? (
+                <Folder size={14} className="text-slate-400" />
+              ) : (
+                <FolderOpen size={14} className="text-slate-400" />
+              )}
               {currentGroup}
+              {/* 접혔을 때 학생 수 표시 */}
+              {isCollapsed && (
+                <span className="text-slate-400 font-normal text-[10px] ml-1">
+                  ({studentCount}명)
+                </span>
+              )}
               {onGroupOrderChange && (
                 <div className="flex items-center gap-0.5 ml-2">
                   <button
-                    onClick={() => moveGroup(currentGroup!, 'up')}
+                    onClick={() => moveGroup(studentGroup, 'up')}
                     disabled={isFirst}
                     className={`p-0.5 rounded hover:bg-slate-200 transition-colors ${isFirst ? 'opacity-30 cursor-not-allowed' : ''}`}
                     title="위로 이동"
@@ -555,7 +617,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
                     <ChevronUp size={12} />
                   </button>
                   <button
-                    onClick={() => moveGroup(currentGroup!, 'down')}
+                    onClick={() => moveGroup(studentGroup, 'down')}
                     disabled={isLast}
                     className={`p-0.5 rounded hover:bg-slate-200 transition-colors ${isLast ? 'opacity-30 cursor-not-allowed' : ''}`}
                     title="아래로 이동"
@@ -570,16 +632,41 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
       );
     } else if (!student.group && currentGroup !== '그룹 없음' && currentGroup !== null) {
       currentGroup = '그룹 없음';
+      const isCollapsed = collapsedGroups.has('그룹 없음');
+      const studentCount = groupStudentCounts.get('그룹 없음') || 0;
+
       rows.push(
         <tr key="group-none" className="bg-slate-100 border-y border-slate-200">
           <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
             <div className="flex items-center gap-2">
+              {/* 접기/펼치기 버튼 */}
+              <button
+                onClick={() => toggleGroupCollapse('그룹 없음')}
+                className="p-0.5 rounded hover:bg-slate-200 transition-colors"
+                title={isCollapsed ? '펼치기' : '접기'}
+              >
+                {isCollapsed ? (
+                  <ChevronRight size={14} className="text-slate-400" />
+                ) : (
+                  <ChevronDown size={14} className="text-slate-400" />
+                )}
+              </button>
               <Folder size={14} className="text-slate-400" />
               그룹 없음
+              {isCollapsed && (
+                <span className="text-slate-400 font-normal text-[10px] ml-1">
+                  ({studentCount}명)
+                </span>
+              )}
             </div>
           </td>
         </tr>
       );
+    }
+
+    // 그룹이 접혀있으면 학생 행 렌더링 스킵
+    if (collapsedGroups.has(studentGroup)) {
+      return;
     }
 
     const updates = pendingUpdatesByStudent?.[student.id];

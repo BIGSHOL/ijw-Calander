@@ -23,6 +23,8 @@ export const STORAGE_KEYS = {
   // Dynamic keys (functions)
   attendanceGroupOrder: (teacherId: string, subject: string) =>
     `ijw_attendance_group_order_${subject}_${teacherId}`,
+  attendanceCollapsedGroups: (teacherId: string, subject: string) =>
+    `ijw_attendance_collapsed_groups_${subject}_${teacherId}`,
 } as const;
 
 // Type-safe localStorage utilities

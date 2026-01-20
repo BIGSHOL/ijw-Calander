@@ -228,28 +228,17 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
         return undefined;
       };
 
-      const enrollmentDate = convertTimestampToDate(data.enrollmentDate || data.startDate);
       draftEnrollments[className][studentId] = {
         studentId,
         className,
         subject: 'english',
         underline: data.underline,
-        enrollmentDate,
+        enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
         withdrawalDate: convertTimestampToDate(data.withdrawalDate),
         onHold: data.onHold,
         attendanceDays: data.attendanceDays || [],
       };
-
-      // Debug: 신입생 확인
-      if (enrollmentDate) {
-        const days = Math.ceil((Date.now() - new Date(enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
-        if (days <= 60) {
-          console.log(`[SimContext] 신입생 발견: ${className} - studentId: ${studentId}, enrollmentDate: ${enrollmentDate}, days: ${days}`);
-        }
-      }
     });
-
-    console.log('[SimContext] loadFromLiveInternal - draftEnrollments loaded:', Object.keys(draftEnrollments).length, 'classes');
 
     setState(prev => ({
       ...prev,
@@ -286,15 +275,10 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
 
           if (!baseStudent || baseStudent.status !== 'active') return null;
 
-          const studentEnrollmentDate = enrollment?.enrollmentDate;
-
-          // Debug: 신입생 데이터 전달 확인
-          if (studentEnrollmentDate) {
-            const days = Math.ceil((Date.now() - new Date(studentEnrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
-            if (days <= 60) {
-              console.log(`[SimContext.getClassStudents] 신입생: ${className} - ${baseStudent.name}, enrollmentDate: ${studentEnrollmentDate}, days: ${days}`);
-            }
-          }
+          // Priority for enrollment date (useClassStudents와 동일한 로직):
+          // 1. enrollment.enrollmentDate (학생 관리 수업 탭의 '시작일' from enrollments subcollection)
+          // 2. baseStudent.startDate (학생 기본정보의 등록일 - fallback)
+          const studentEnrollmentDate = enrollment?.enrollmentDate || baseStudent.startDate;
 
           return {
             id,

@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, writeBatch, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
-import { CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from '../englishUtils';
+import { CLASS_COLLECTION } from '../englishUtils';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSimulationOptional } from '../context/SimulationContext';
 
 export interface MoveChange {
     student: TimetableStudent;
@@ -13,6 +15,8 @@ export interface MoveChange {
 export const useEnglishChanges = (isSimulationMode: boolean) => {
     const [moveChanges, setMoveChanges] = useState<Map<string, MoveChange>>(new Map());
     const [isSaving, setIsSaving] = useState(false);
+    const queryClient = useQueryClient();
+    const simulation = useSimulationOptional();
 
     const handleMoveStudent = (student: TimetableStudent, fromClass: string, toClass: string) => {
         if (fromClass === toClass) return;
@@ -47,58 +51,58 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
 
         setIsSaving(true);
         try {
-            const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
-            const batch = writeBatch(db);
-            const classesToUpdate = new Set<string>();
-            moveChanges.forEach(change => {
-                classesToUpdate.add(change.fromClass);
-                classesToUpdate.add(change.toClass);
+            // === 시뮬레이션 모드: SimulationContext의 draftEnrollments 업데이트 ===
+            if (isSimulationMode && simulation?.isSimulationMode) {
+                moveChanges.forEach(({ student, fromClass, toClass }) => {
+                    simulation.moveStudent(fromClass, toClass, student.id);
+                });
+                setMoveChanges(new Map());
+                alert('시뮬레이션에 반영되었습니다.\n시나리오 저장 시 함께 저장됩니다.');
+                setIsSaving(false);
+                return;
+            }
+
+            // === 실시간 모드: Firebase 업데이트 ===
+            const today = new Date().toISOString().split('T')[0];
+
+            // === 1. enrollments subcollection 업데이트 (학생 관리 연동) ===
+            const enrollmentPromises = Array.from(moveChanges.values()).map(async ({ student, fromClass, toClass }) => {
+                // 1-1. 이전 수업 enrollment에 endDate 설정 (종료 처리)
+                const fromEnrollmentsQuery = query(
+                    collection(db, 'students', student.id, 'enrollments'),
+                    where('subject', '==', 'english'),
+                    where('className', '==', fromClass)
+                );
+                const fromSnapshot = await getDocs(fromEnrollmentsQuery);
+
+                const endDatePromises = fromSnapshot.docs.map(docSnap =>
+                    updateDoc(docSnap.ref, {
+                        endDate: today,
+                        updatedAt: new Date().toISOString()
+                    })
+                );
+                await Promise.all(endDatePromises);
+
+                // 1-2. 새 수업 enrollment 생성
+                const enrollmentsRef = collection(db, 'students', student.id, 'enrollments');
+                await addDoc(enrollmentsRef, {
+                    className: toClass,
+                    subject: 'english',
+                    enrollmentDate: today,  // 시작일 = 오늘
+                    createdAt: new Date().toISOString(),
+                    // 이전 enrollment에서 underline 등 속성 복사
+                    underline: student.underline || false,
+                    attendanceDays: student.attendanceDays || [],
+                });
             });
 
-            const uniqueClasses = Array.from(classesToUpdate);
-            const classSnapshots = await Promise.all(
-                uniqueClasses.map(cName => {
-                    const q = query(collection(db, targetCollection), where('className', '==', cName));
-                    return getDocs(q);
-                })
-            );
+            await Promise.all(enrollmentPromises);
 
-            const classDocMap: Record<string, { ref: any, data: any }> = {};
+            // === 2. React Query 캐시 무효화 (학생관리/수업관리 즉시 반영) ===
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            queryClient.invalidateQueries({ queryKey: ['classes'] });
+            queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
 
-            classSnapshots.forEach(snap => {
-                if (!snap.empty) {
-                    const docSnap = snap.docs[0];
-                    classDocMap[docSnap.data().className] = {
-                        ref: docSnap.ref,
-                        data: docSnap.data()
-                    };
-                }
-            });
-
-            moveChanges.forEach(({ student, fromClass, toClass }) => {
-                if (classDocMap[fromClass]) {
-                    const list = (classDocMap[fromClass].data.studentIds || []) as string[];
-                    const newList = list.filter(id => id !== student.id);
-                    classDocMap[fromClass].data.studentIds = newList;
-                }
-
-                if (classDocMap[toClass]) {
-                    const list = (classDocMap[toClass].data.studentIds || []) as string[];
-                    if (!list.includes(student.id)) {
-                        list.push(student.id);
-                        // We cannot sort locally easily without student map, but sorting happens on read usually.
-                        // Ideally we should sort here if we want consistent DB order, but IDs are not name-sorted usually.
-                        // Validation/Sorting usually happens on client render.
-                        classDocMap[toClass].data.studentIds = list;
-                    }
-                }
-            });
-
-            Object.values(classDocMap).forEach(({ ref, data }) => {
-                batch.update(ref, { studentIds: data.studentIds });
-            });
-
-            await batch.commit();
             setMoveChanges(new Map());
             alert('저장되었습니다.');
 

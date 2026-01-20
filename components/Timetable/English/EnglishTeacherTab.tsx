@@ -37,11 +37,12 @@ interface EnglishTeacherTabProps {
     classKeywords?: ClassKeywordColor[];  // For keyword color coding
     currentUser: any;
     targetCollection?: string;
+    isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
 }
 
 type ViewSize = 'small' | 'medium' | 'large';
 
-const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser }) => {
+const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser, isSimulationMode = false }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
@@ -607,7 +608,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         >
                             <Eye size={10} className="mr-1" />조회
                         </button>
-                        {canEditEnglish && (
+                        {canEditEnglish && !isSimulationMode && (
                             <button
                                 onClick={() => changeMode('edit')}
                                 className={`px-2 py-0.5 text-xs font-bold rounded transition-all flex items-center ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'} `}
@@ -615,7 +616,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                 <Edit3 size={10} className="mr-1" />편집
                             </button>
                         )}
-                        {canEditEnglish && (
+                        {canEditEnglish && !isSimulationMode && (
                             <button
                                 onClick={() => changeMode('move')}
                                 className={`px-2 py-0.5 text-xs font-bold rounded transition-all flex items-center ${mode === 'move' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'} `}

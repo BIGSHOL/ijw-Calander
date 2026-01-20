@@ -59,6 +59,21 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     // Fetch classes data for mainTeacher (담임) information
     const { data: classesData } = useClasses('english');
 
+    // 강사 이름을 영어 이름으로 변환하는 헬퍼 (한글 이름 → 영어 이름)
+    // scheduleData 키 생성 시 teachers 배열과 일치시키기 위해 사용
+    const normalizeTeacherName = useCallback((teacherName: string): string => {
+        if (!teacherName) return teacherName;
+        // propsTeachers에서 name 또는 englishName으로 매칭
+        const matched = propsTeachers.find(t =>
+            t.name === teacherName || t.englishName === teacherName
+        );
+        // 매칭된 강사의 englishName이 있으면 사용, 없으면 원본 유지
+        if (matched?.englishName) {
+            return matched.englishName;
+        }
+        return teacherName;
+    }, [propsTeachers]);
+
     // 시뮬레이션 모드: draftClasses에서 시간표 데이터 생성
     useEffect(() => {
         if (!isSimulationMode) return;
@@ -71,7 +86,9 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
             cls.schedule.forEach((slot: { day: string; periodId: string; room?: string }) => {
                 const slotKey = `${slot.day}-${slot.periodId}`;
-                const slotTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
+                // 부담임이 있으면 그대로 사용, 없으면 담임 → 영어 이름으로 정규화
+                const rawTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
+                const slotTeacher = normalizeTeacherName(rawTeacher);
                 const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room;
 
                 const key = `${slotTeacher}-${slot.periodId}-${slot.day}`;
@@ -108,22 +125,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
         setScheduleData(scheduleData);
         setLoading(false);
-    }, [isSimulationMode, simulation.draftClasses]);
-
-    // 강사 이름을 영어 이름으로 변환하는 헬퍼 (한글 이름 → 영어 이름)
-    // scheduleData 키 생성 시 teachers 배열과 일치시키기 위해 사용
-    const normalizeTeacherName = useCallback((teacherName: string): string => {
-        if (!teacherName) return teacherName;
-        // propsTeachers에서 name 또는 englishName으로 매칭
-        const matched = propsTeachers.find(t =>
-            t.name === teacherName || t.englishName === teacherName
-        );
-        // 매칭된 강사의 englishName이 있으면 사용, 없으면 원본 유지
-        if (matched?.englishName) {
-            return matched.englishName;
-        }
-        return teacherName;
-    }, [propsTeachers]);
+    }, [isSimulationMode, simulation.draftClasses, normalizeTeacherName]);
 
     // Data loading (일반 모드) - classes 컬렉션에서 영어 수업 로드
     useEffect(() => {
@@ -402,6 +404,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     classKeywords={classKeywords}
                                     currentUser={currentUser}
                                     targetCollection={isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION}
+                                    isSimulationMode={isSimulationMode}
                                 />
 
                                 <TeacherOrderModal

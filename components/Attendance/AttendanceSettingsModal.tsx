@@ -41,6 +41,7 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3">
+          {/* 
           <div className="mb-4 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-blue-800">데이터베이스 최적화</h3>
@@ -53,10 +54,11 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
               최적화 도구 열기
             </button>
           </div>
+          */}
           <SalarySettingsTab teachers={teachers} />
         </div>
 
-        <AttendanceMigrationModal isOpen={isMigrationOpen} onClose={() => setIsMigrationOpen(false)} />
+        {/* <AttendanceMigrationModal isOpen={isMigrationOpen} onClose={() => setIsMigrationOpen(false)} /> */}
       </div>
     </div>
   );

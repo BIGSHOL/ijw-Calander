@@ -257,6 +257,7 @@ export interface StudentFilters {
   grade: string;
   status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn';
   subject: string;
+  teacher: string;  // 'all' 또는 선생님 이름
 }
 
 export function useStudentFilterState() {
@@ -265,6 +266,7 @@ export function useStudentFilterState() {
     grade: 'all',
     status: 'active',
     subject: 'all',
+    teacher: 'all',
   });
   const [studentSortBy, setStudentSortBy] = useState<'name' | 'grade' | 'startDate'>('name');
 
@@ -282,6 +284,7 @@ export function useStudentFilterState() {
       grade: 'all',
       status: 'active',
       subject: 'all',
+      teacher: 'all',
     });
   }, []);
 
