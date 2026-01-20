@@ -78,10 +78,10 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     useEffect(() => {
         if (!isSimulationMode) return;
 
-        // draftClasses를 scheduleData 형식으로 변환
+        // scenarioClasses를 scheduleData 형식으로 변환
         const scheduleData: ScheduleData = {};
 
-        Object.values(simulation.draftClasses).forEach((cls) => {
+        Object.values(simulation.scenarioClasses).forEach((cls) => {
             if (!cls.schedule || !Array.isArray(cls.schedule)) return;
 
             cls.schedule.forEach((slot: { day: string; periodId: string; room?: string }) => {
@@ -125,7 +125,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
         setScheduleData(scheduleData);
         setLoading(false);
-    }, [isSimulationMode, simulation.draftClasses, normalizeTeacherName]);
+    }, [isSimulationMode, simulation.scenarioClasses, normalizeTeacherName]);
 
     // Data loading (일반 모드) - classes 컬렉션에서 영어 수업 로드
     useEffect(() => {

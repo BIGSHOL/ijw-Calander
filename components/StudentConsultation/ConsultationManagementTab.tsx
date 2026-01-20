@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List, ChevronDown, X } from 'lucide-react';
 import { usePaginatedConsultations, StudentConsultationFilters, DEFAULT_PAGE_SIZE } from '../../hooks/useStudentConsultations';
 import { ConsultationCategory, CATEGORY_CONFIG } from '../../types';
 import ConsultationList from './ConsultationList';
@@ -50,6 +50,71 @@ const ConsultationManagementTab: React.FC = () => {
 
     const { students } = useStudents();
     const { staff } = useStaff();
+
+    // 상담자 드롭다운 상태
+    const [showConsultantDropdown, setShowConsultantDropdown] = useState(false);
+    const consultantDropdownRef = useRef<HTMLDivElement>(null);
+
+    // 드롭다운 외부 클릭 시 닫기
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (consultantDropdownRef.current && !consultantDropdownRef.current.contains(e.target as Node)) {
+                setShowConsultantDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // 상담자(교사)를 과목별로 그룹화
+    const consultantsBySubject = useMemo(() => {
+        const result: Record<string, Array<{ id: string; name: string }>> = {
+            math: [],
+            english: [],
+            science: [],
+            korean: [],
+            other: [],
+        };
+
+        // role이 teacher인 직원만 대상
+        const teachers = staff.filter(s => s.role === 'teacher');
+
+        teachers.forEach(teacher => {
+            if (teacher.subjects && teacher.subjects.length > 0) {
+                // 해당 선생님의 과목들에 추가
+                teacher.subjects.forEach(subject => {
+                    if (result[subject]) {
+                        if (!result[subject].find(t => t.id === teacher.id)) {
+                            result[subject].push({ id: teacher.id, name: teacher.name });
+                        }
+                    } else {
+                        if (!result.other.find(t => t.id === teacher.id)) {
+                            result.other.push({ id: teacher.id, name: teacher.name });
+                        }
+                    }
+                });
+            } else {
+                // 과목 정보가 없으면 기타로 분류
+                if (!result.other.find(t => t.id === teacher.id)) {
+                    result.other.push({ id: teacher.id, name: teacher.name });
+                }
+            }
+        });
+
+        // 각 과목별 이름순 정렬
+        Object.keys(result).forEach(key => {
+            result[key].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+        });
+
+        return result;
+    }, [staff]);
+
+    // 현재 선택된 상담자 이름 가져오기
+    const selectedConsultantName = useMemo(() => {
+        if (!filters.consultantId) return null;
+        const consultant = staff.find(s => s.id === filters.consultantId);
+        return consultant?.name || null;
+    }, [filters.consultantId, staff]);
 
     // 필터 변경 시 첫 페이지로 리셋
     useEffect(() => {
@@ -317,25 +382,164 @@ const ConsultationManagementTab: React.FC = () => {
                             {/* 구분선 */}
                             <div className="w-px h-4 bg-white/20 mx-1"></div>
 
-                            {/* 상담자(직원) 필터 */}
-                            <select
-                                value={filters.consultantId || ''}
-                                onChange={(e) => setFilters(prev => ({
-                                    ...prev,
-                                    consultantId: e.target.value || undefined
-                                }))}
-                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
-                            >
-                                <option value="">전체 상담자</option>
-                                {staff
-                                    .filter(s => s.role === 'teacher')
-                                    .map(s => (
-                                        <option key={s.id} value={s.id}>
-                                            {s.name}
-                                        </option>
-                                    ))
-                                }
-                            </select>
+                            {/* 상담자(직원) 필터 - 그리드 드롭다운 */}
+                            <div className="relative" ref={consultantDropdownRef}>
+                                <button
+                                    onClick={() => setShowConsultantDropdown(!showConsultantDropdown)}
+                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-medium transition-colors ${
+                                        filters.consultantId
+                                            ? 'bg-[#fdb813] border-[#fdb813] text-[#081429]'
+                                            : 'bg-[#1e293b] border-gray-700 text-white hover:border-gray-500'
+                                    }`}
+                                >
+                                    <span>{selectedConsultantName || '상담자'}</span>
+                                    <ChevronDown size={12} className={`transition-transform ${showConsultantDropdown ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {showConsultantDropdown && (
+                                    <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-gray-700 rounded-lg shadow-xl z-50 min-w-[320px] max-h-[500px] overflow-y-auto">
+                                        {/* 전체 선택 */}
+                                        <div className="p-2 border-b border-white/10">
+                                            <button
+                                                onClick={() => {
+                                                    setFilters(prev => ({ ...prev, consultantId: undefined }));
+                                                    setShowConsultantDropdown(false);
+                                                }}
+                                                className={`w-full px-3 py-1.5 rounded text-xs font-bold text-left ${
+                                                    !filters.consultantId
+                                                        ? 'bg-[#fdb813] text-[#081429]'
+                                                        : 'text-gray-300 hover:bg-white/10'
+                                                }`}
+                                            >
+                                                전체
+                                            </button>
+                                        </div>
+
+                                        <div className="p-2">
+                                            {/* 수학 */}
+                                            {consultantsBySubject.math.length > 0 && (
+                                                <div className="mb-2">
+                                                    <div className="text-[10px] text-blue-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">수학</div>
+                                                    <div className="grid grid-cols-3 gap-0.5">
+                                                        {consultantsBySubject.math.map(consultant => (
+                                                            <button
+                                                                key={`math-${consultant.id}`}
+                                                                onClick={() => {
+                                                                    setFilters(prev => ({ ...prev, consultantId: consultant.id }));
+                                                                    setShowConsultantDropdown(false);
+                                                                }}
+                                                                className={`px-2 py-1 rounded text-xs ${filters.consultantId === consultant.id ? 'bg-blue-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                                                            >
+                                                                {consultant.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* 영어 */}
+                                            {consultantsBySubject.english.length > 0 && (
+                                                <div className="mb-2">
+                                                    <div className="text-[10px] text-purple-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">영어</div>
+                                                    <div className="grid grid-cols-3 gap-0.5">
+                                                        {consultantsBySubject.english.map(consultant => (
+                                                            <button
+                                                                key={`english-${consultant.id}`}
+                                                                onClick={() => {
+                                                                    setFilters(prev => ({ ...prev, consultantId: consultant.id }));
+                                                                    setShowConsultantDropdown(false);
+                                                                }}
+                                                                className={`px-2 py-1 rounded text-xs ${filters.consultantId === consultant.id ? 'bg-purple-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                                                            >
+                                                                {consultant.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* 과학 */}
+                                            {consultantsBySubject.science.length > 0 && (
+                                                <div className="mb-2">
+                                                    <div className="text-[10px] text-green-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">과학</div>
+                                                    <div className="grid grid-cols-3 gap-0.5">
+                                                        {consultantsBySubject.science.map(consultant => (
+                                                            <button
+                                                                key={`science-${consultant.id}`}
+                                                                onClick={() => {
+                                                                    setFilters(prev => ({ ...prev, consultantId: consultant.id }));
+                                                                    setShowConsultantDropdown(false);
+                                                                }}
+                                                                className={`px-2 py-1 rounded text-xs ${filters.consultantId === consultant.id ? 'bg-green-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                                                            >
+                                                                {consultant.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* 국어 */}
+                                            {consultantsBySubject.korean.length > 0 && (
+                                                <div className="mb-2">
+                                                    <div className="text-[10px] text-orange-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">국어</div>
+                                                    <div className="grid grid-cols-3 gap-0.5">
+                                                        {consultantsBySubject.korean.map(consultant => (
+                                                            <button
+                                                                key={`korean-${consultant.id}`}
+                                                                onClick={() => {
+                                                                    setFilters(prev => ({ ...prev, consultantId: consultant.id }));
+                                                                    setShowConsultantDropdown(false);
+                                                                }}
+                                                                className={`px-2 py-1 rounded text-xs ${filters.consultantId === consultant.id ? 'bg-orange-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                                                            >
+                                                                {consultant.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* 기타 */}
+                                            {consultantsBySubject.other.length > 0 && (
+                                                <div className="mb-2">
+                                                    <div className="text-[10px] text-gray-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">기타</div>
+                                                    <div className="grid grid-cols-3 gap-0.5">
+                                                        {consultantsBySubject.other.map(consultant => (
+                                                            <button
+                                                                key={`other-${consultant.id}`}
+                                                                onClick={() => {
+                                                                    setFilters(prev => ({ ...prev, consultantId: consultant.id }));
+                                                                    setShowConsultantDropdown(false);
+                                                                }}
+                                                                className={`px-2 py-1 rounded text-xs ${filters.consultantId === consultant.id ? 'bg-gray-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                                                            >
+                                                                {consultant.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* 초기화 버튼 */}
+                                        {filters.consultantId && (
+                                            <div className="p-2 border-t border-white/10">
+                                                <button
+                                                    onClick={() => {
+                                                        setFilters(prev => ({ ...prev, consultantId: undefined }));
+                                                        setShowConsultantDropdown(false);
+                                                    }}
+                                                    className="w-full px-3 py-1.5 rounded text-xs text-red-400 hover:bg-red-400/10 flex items-center justify-center gap-1"
+                                                >
+                                                    <X size={12} />
+                                                    초기화
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
 
                             {/* 구분선 */}
                             <div className="w-px h-4 bg-white/20 mx-1"></div>

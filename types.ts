@@ -21,7 +21,15 @@ export interface Enrollment {
   className: string;  // Name of the class
   teacherId: string;  // Teacher Name/ID
   days: string[];     // Class schedule days (e.g., ['월', '수'])
+  schedule?: string[]; // 스케줄 정보 (e.g., ['월 1교시', '수 3교시'])
   attendanceDays?: string[];  // 실제 등원 요일 (비어있거나 없으면 모든 수업 요일에 등원)
+
+  // 수강 기간 정보
+  enrollmentDate?: string;  // 수강 시작일 (YYYY-MM-DD)
+  withdrawalDate?: string;  // 수강 종료일 (YYYY-MM-DD, undefined면 현재 수강 중)
+
+  // 수강 상태
+  onHold?: boolean;  // 일시정지 여부
 }
 
 // Class History Entry - 수강 이력 추적
@@ -779,7 +787,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing' | 'role-management';
+export type AppTab = 'dashboard' | 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing' | 'role-management';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -789,6 +797,7 @@ export interface TabMetadata {
 }
 
 export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
+  dashboard: { label: '대시보드', icon: '🏠' },
   calendar: { label: '연간 일정', icon: '📅' },
   timetable: { label: '시간표', icon: '📋' },
   attendance: { label: '출석부', icon: '📝' },
@@ -816,6 +825,13 @@ export interface TabGroup {
 
 // Tab Groups 정의 - 추후 Firebase에서 로드 가능하도록 설계
 export const TAB_GROUPS: TabGroup[] = [
+  {
+    id: 'home',
+    label: '홈',
+    icon: '🏠',
+    tabs: ['dashboard'],
+    order: 0,
+  },
   {
     id: 'schedule',
     label: '일정',
@@ -868,14 +884,14 @@ export type TabPermissionConfig = {
 // Default Tab Permissions (Fallback)
 // Note: master always has access to all tabs (handled in code)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing', 'role-management'],
-  admin: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing', 'role-management'],
-  manager: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing'],
-  math_lead: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'student-consultations'],
-  english_lead: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'student-consultations'],
-  math_teacher: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
-  english_teacher: ['calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
-  user: ['calendar', 'attendance', 'daily-attendance'],
+  master: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing', 'role-management'],
+  admin: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing', 'role-management'],
+  manager: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'student-consultations', 'staff', 'billing'],
+  math_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'student-consultations'],
+  english_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'student-consultations'],
+  math_teacher: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
+  english_teacher: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
+  user: ['dashboard', 'calendar', 'attendance', 'daily-attendance'],
 };
 
 export interface SystemConfig {
@@ -1145,6 +1161,128 @@ export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
   competition: '경시대회',
   diagnostic: '진단 평가',
   other: '기타',
+};
+
+// ============ GRADE PROFILE SYSTEM (Phase 1-5) ============
+
+/**
+ * 레벨테스트 유형
+ */
+export type LevelTestType = 'placement' | 'promotion' | 'diagnostic';
+
+/**
+ * 레벨테스트 기록
+ */
+export interface LevelTest {
+  id: string;
+  studentId: string;
+  studentName: string;
+
+  testDate: string;              // YYYY-MM-DD
+  subject: 'math' | 'english';
+  testType: LevelTestType;       // 배치/승급/진단
+
+  score: number;
+  maxScore: number;
+  percentage: number;
+
+  // 영역별 세부 점수 (선택)
+  sections?: {
+    name: string;                // '어휘', '문법', '독해', '연산' 등
+    score: number;
+    maxScore: number;
+  }[];
+
+  // 레벨 판정
+  recommendedLevel: string;      // 'LE', 'RTT', '최상급', '중급' 등
+  recommendedClass?: string;     // 추천 반
+
+  // 강사 평가
+  strengths?: string;            // 강점
+  weaknesses?: string;           // 보완점
+
+  // 메타데이터
+  evaluatorId: string;
+  evaluatorName: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * 목표 점수 설정
+ */
+export interface GoalSetting {
+  id: string;
+  studentId: string;
+  studentName: string;
+
+  examId: string;
+  examTitle: string;
+  examDate: string;
+  subject: 'math' | 'english';
+
+  targetScore: number;           // 목표 점수
+  maxScore: number;
+  targetPercentage: number;
+
+  // 실제 결과 (시험 후 업데이트)
+  actualScore?: number;
+  actualPercentage?: number;
+  achieved?: boolean;
+
+  reason?: string;               // 목표 설정 사유
+
+  // 메타데이터
+  setBy: string;
+  setByName: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * 강사 코멘트 카테고리
+ */
+export type GradeCommentCategory =
+  | 'strength'           // 학습적 강점
+  | 'improvement'        // 학습적 보완점
+  | 'effort'             // 성적향상 노력
+  | 'potential'          // 성장 잠재력
+  | 'general';           // 종합 소견
+
+/**
+ * 강사 코멘트
+ */
+export interface GradeComment {
+  id: string;
+  studentId: string;
+  studentName: string;
+
+  category: GradeCommentCategory;
+  subject?: 'math' | 'english' | 'all';
+  content: string;
+
+  // 기간 (월별)
+  period: string;                // '2026-01'
+
+  // 공개 설정
+  isSharedWithParent: boolean;
+
+  // 메타데이터
+  authorId: string;
+  authorName: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * 코멘트 카테고리 라벨
+ */
+export const COMMENT_CATEGORY_LABELS: Record<GradeCommentCategory, { label: string; icon: string; color: string }> = {
+  strength: { label: '학습적 강점', icon: '💪', color: 'emerald' },
+  improvement: { label: '학습적 보완점', icon: '📌', color: 'amber' },
+  effort: { label: '이번달 노력한 점', icon: '🌟', color: 'blue' },
+  potential: { label: '성장 잠재력', icon: '🚀', color: 'purple' },
+  general: { label: '종합 소견', icon: '📝', color: 'gray' },
 };
 
 // ============ CONSULTATION MANAGEMENT TYPES (Phase 1) ============
@@ -1495,6 +1633,25 @@ export interface DailyAttendanceStats {
   attendanceRate: number; // 출석률 (%)
 }
 
+/**
+ * 출결 변경 이력
+ * Firestore: attendance_history/{historyId}
+ */
+export interface AttendanceHistory {
+  id: string;
+  date: string; // 'YYYY-MM-DD' 형식
+  studentId: string;
+  studentName: string;
+  classId: string;
+  className: string;
+  previousStatus: AttendanceStatus | null; // null = 신규 생성
+  newStatus: AttendanceStatus;
+  changedBy: string; // 변경한 사용자 UID
+  changedByName?: string; // 변경한 사용자 이름 (캐시)
+  reason?: string; // 변경 사유
+  timestamp: string; // ISO 8601 timestamp
+}
+
 // ============ BILLING MANAGEMENT TYPES ============
 
 /**
@@ -1576,3 +1733,26 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: '현금',
   transfer: '계좌이체',
 };
+
+// ============ DASHBOARD TYPES ============
+
+/**
+ * KPI 카드 타입
+ */
+export type KPITrend = 'up' | 'down' | 'stable';
+
+export interface KPICardData {
+  id: string;
+  label: string;
+  value: string | number;
+  subValue?: string;
+  trend?: KPITrend;
+  trendValue?: string;
+  icon?: string;
+  color?: string;
+}
+
+/**
+ * 대시보드 역할 타입
+ */
+export type DashboardRole = 'master' | 'teacher' | 'staff' | 'manager';

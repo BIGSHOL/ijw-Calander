@@ -187,3 +187,49 @@ export const getEventPositionInWeek = (
     };
   }
 };
+
+/**
+ * YYYY-MM-DD 형식의 날짜 문자열에서 요일을 추출합니다.
+ * 타임존 문제를 방지하기 위해 날짜 문자열을 로컬 시간대로 파싱합니다.
+ *
+ * @param dateString - YYYY-MM-DD 형식의 날짜 문자열
+ * @returns 한글 요일 ('월', '화', '수', '목', '금', '토', '일')
+ *
+ * @example
+ * getWeekdayFromDate('2026-01-20') // '월'
+ * getWeekdayFromDate('2026-01-21') // '화'
+ */
+export function getWeekdayFromDate(dateString: string): string {
+  // 타임존 문제를 방지하기 위해 날짜를 파싱하여 로컬 시간대로 생성
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(year, month - 1, day); // month는 0-based이므로 -1
+
+  return date.toLocaleDateString('ko-KR', { weekday: 'short' });
+}
+
+/**
+ * 날짜가 특정 범위 내에 있는지 확인합니다.
+ *
+ * @param dateString - 확인할 날짜 (YYYY-MM-DD)
+ * @param startDate - 시작 날짜 (YYYY-MM-DD, undefined면 제한 없음)
+ * @param endDate - 종료 날짜 (YYYY-MM-DD, undefined면 제한 없음)
+ * @returns 범위 내에 있으면 true
+ *
+ * @example
+ * isDateInRange('2026-01-15', '2026-01-01', '2026-01-31') // true
+ * isDateInRange('2026-02-01', '2026-01-01', '2026-01-31') // false
+ * isDateInRange('2026-01-15', undefined, '2026-01-31') // true
+ */
+export function isDateInRange(
+  dateString: string,
+  startDate?: string,
+  endDate?: string
+): boolean {
+  if (startDate && dateString < startDate) {
+    return false;
+  }
+  if (endDate && dateString > endDate) {
+    return false;
+  }
+  return true;
+}

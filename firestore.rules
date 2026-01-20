@@ -443,6 +443,58 @@ service cloud.firestore {
                                hasPermission('attendance.manage_math') ||
                                hasPermission('attendance.manage_english');
       allow delete: if hasRole(['master', 'admin']) || hasPermission('attendance.edit_all');
+
+      // Daily attendance records subcollection (날짜별 출결 기록)
+      // Critical Security Fix: Add granular rules for records subcollection
+      match /records/{recordId} {
+        allow read: if hasRole(['master', 'admin']) ||
+                       hasPermission('attendance.manage_own') ||
+                       hasPermission('attendance.edit_all');
+
+        allow create, update: if hasRole(['master', 'admin']) ||
+                                 hasPermission('attendance.edit_all') ||
+                                 hasPermission('attendance.manage_math') ||
+                                 hasPermission('attendance.manage_english');
+
+        allow delete: if hasRole(['master', 'admin']) ||
+                         hasPermission('attendance.edit_all');
+      }
+    }
+
+    // === Attendance History (출결 변경 이력) ===
+    match /attendance_history/{historyId} {
+      // Read: 인증된 사용자 모두 조회 가능 (감사 추적용)
+      allow read: if isAuthenticated();
+
+      // Create: Batch write에서만 생성하므로 일반적으로 서버에서 처리
+      // 하지만 클라이언트에서도 생성 가능하도록 권한 부여
+      allow create: if hasRole(['master', 'admin']) ||
+                       hasPermission('attendance.edit_all') ||
+                       hasPermission('attendance.manage_math') ||
+                       hasPermission('attendance.manage_english');
+
+      // Update/Delete: 이력은 수정/삭제 불가 (감사 추적 보호)
+      allow update, delete: if false;
+    }
+
+    // === Grade Profile Collections (Phase 1-4: 성적 프로필 시스템) ===
+
+    // Level Tests (레벨테스트)
+    match /level_tests/{testId} {
+      allow read: if hasRole(['master', 'admin']) || hasPermission('grades.view');
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('grades.edit');
+    }
+
+    // Goal Settings (목표 점수)
+    match /goal_settings/{goalId} {
+      allow read: if hasRole(['master', 'admin']) || hasPermission('grades.view');
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('grades.edit');
+    }
+
+    // Grade Comments (강사 코멘트)
+    match /grade_comments/{commentId} {
+      allow read: if hasRole(['master', 'admin']) || hasPermission('grades.view');
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('grades.edit');
     }
 
     // === Default: Role-Based Access for All Collections ===

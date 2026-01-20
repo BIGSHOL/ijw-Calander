@@ -75,45 +75,45 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
 
   return (
     <div className="w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between mb-2">
         <button
           onClick={handlePrevMonth}
-          className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-0.5 hover:bg-gray-100 rounded-md transition-colors"
         >
-          <ChevronLeft className="w-5 h-5 text-gray-600" />
+          <ChevronLeft className="w-4 h-4 text-gray-600" />
         </button>
 
-        <div className="text-center">
-          <h3 className="font-medium text-gray-900">
+        <div className="text-center flex-1">
+          <h3 className="text-sm font-semibold text-gray-900">
             {currentMonth.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
           </h3>
         </div>
 
         <button
           onClick={handleNextMonth}
-          className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-0.5 hover:bg-gray-100 rounded-md transition-colors"
         >
-          <ChevronRight className="w-5 h-5 text-gray-600" />
+          <ChevronRight className="w-4 h-4 text-gray-600" />
         </button>
       </div>
 
-      {/* Today Button */}
-      <div className="flex justify-center mb-3">
+      {/* Compact Today Button */}
+      <div className="flex justify-center mb-2">
         <button
           onClick={handleToday}
-          className="px-3 py-1 text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full hover:bg-emerald-100 transition-colors"
+          className="px-2.5 py-0.5 text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full hover:bg-emerald-100 transition-colors"
         >
           오늘
         </button>
       </div>
 
       {/* Day Headers */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-0.5 mb-1">
         {DAYS.map((day, index) => (
           <div
             key={day}
-            className={`text-center text-xs font-medium py-1 ${
+            className={`text-center text-[10px] font-semibold py-0.5 ${
               index === 0 ? 'text-red-500' : index === 6 ? 'text-blue-500' : 'text-gray-500'
             }`}
           >
@@ -122,11 +122,11 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
         ))}
       </div>
 
-      {/* Calendar Days */}
-      <div className="grid grid-cols-7 gap-1">
+      {/* Compact Calendar Days */}
+      <div className="grid grid-cols-7 gap-0.5">
         {calendarDays.map((day, index) => {
           if (!day.date) {
-            return <div key={`empty-${index}`} className="h-8" />;
+            return <div key={`empty-${index}`} className="h-7" />;
           }
 
           const dateIsToday = isToday(day.dateString);
@@ -138,11 +138,11 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
             <button
               key={day.dateString}
               onClick={() => onDateChange(day.dateString)}
-              className={`h-8 w-full rounded-lg text-sm font-medium transition-all
+              className={`h-7 w-full rounded-md text-xs font-semibold transition-all
                 ${dateIsSelected
-                  ? 'bg-emerald-500 text-white'
+                  ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-sm scale-105'
                   : dateIsToday
-                    ? 'bg-emerald-100 text-emerald-700'
+                    ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300'
                     : weekend
                       ? dayOfWeek === 0
                         ? 'text-red-500 hover:bg-red-50'

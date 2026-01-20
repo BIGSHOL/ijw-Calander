@@ -24,8 +24,11 @@ import {
   useSaveMonthlySettlement
 } from '../../hooks/useAttendance';
 import { useExamsByDateMap, useScoresByExams } from '../../hooks/useExamsByDate';
+import { useCreateDailyAttendance } from '../../hooks/useDailyAttendance';
 import { UserProfile, Teacher } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
+import { mapAttendanceValueToStatus } from '../../utils/attendanceSync';
+import { secureLog, secureWarn } from '../../utils/secureLog';
 
 // Default salary config for new setups
 const INITIAL_SALARY_CONFIG: SalaryConfig = {
@@ -191,6 +194,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const updateMemoMutation = useUpdateMemo();
   const updateHomeworkMutation = useUpdateHomework();
   const saveConfigMutation = useSaveAttendanceConfig();
+  const createDailyAttendanceMutation = useCreateDailyAttendance();
 
   // Local state for modals
   const [activeTab, setActiveTab] = useState<'attendance' | 'salary'>('attendance');
@@ -255,10 +259,14 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     setPendingUpdates(prev => ({ ...prev, [key]: value }));
 
     const yearMonth = dateKey.substring(0, 7);
+
+    // 2. 출석부(attendance_records)에 저장
     updateAttendanceMutation.mutate({ studentId, yearMonth, dateKey, value }, {
       onSuccess: () => {
-        // 2. Clear pending immediately - no need to refetch since we have optimistic update
-        // React Query's onSettled in useUpdateAttendance will invalidate cache in background
+        // 3. 출결 관리(daily_attendance)에도 동기화
+        syncToDailyAttendance(studentId, dateKey, value);
+
+        // 4. Clear pending immediately
         setPendingUpdates(prev => {
           const next = { ...prev };
           delete next[key];
@@ -273,6 +281,82 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           return next;
         });
         alert('저장에 실패했습니다.');
+      }
+    });
+  };
+
+  /**
+   * 출석부 데이터를 출결 관리 시스템에 동기화
+   * 출석부(attendance_records) → 출결 관리(daily_attendance)
+   */
+  const syncToDailyAttendance = (studentId: string, dateKey: string, value: number | null) => {
+    const student = allStudents.find(s => s.id === studentId);
+    if (!student) {
+      console.warn(`[Sync] Student not found: ${studentId}`);
+      return;
+    }
+
+    // 학생의 수업 정보 가져오기 (enrollments에서)
+    const enrollments = (student as any).enrollments || [];
+    if (enrollments.length === 0) {
+      secureWarn('[Sync] No enrollments found for student', {
+        studentId: student.id,
+        studentName: student.name
+      });
+      return;
+    }
+
+    // 첫 번째 enrollment 사용 (주 수업)
+    const primaryEnrollment = enrollments[0];
+
+    // classId가 없으면 동기화 스킵 ('unknown' 저장 방지)
+    if (!primaryEnrollment.classId || !primaryEnrollment.className) {
+      secureWarn('[Sync] Invalid enrollment data for student', {
+        studentId: student.id,
+        studentName: student.name
+      });
+      return;
+    }
+
+    if (value === null) {
+      // TODO: 출결 관리에서도 기록 제거 (useDeleteDailyAttendance 훅 필요)
+      secureLog('[Sync] Attendance deleted - daily_attendance deletion not implemented yet', {
+        studentId: student.id,
+        studentName: student.name,
+        dateKey
+      });
+      return;
+    }
+
+    // 숫자 → 문자열 출석 상태 변환
+    const status = mapAttendanceValueToStatus(value);
+
+    // daily_attendance에 저장 (에러 핸들링 추가)
+    createDailyAttendanceMutation.mutate({
+      date: dateKey,
+      studentId: student.id,
+      studentName: student.name,
+      classId: primaryEnrollment.classId,
+      className: primaryEnrollment.className,
+      status: status,
+      createdBy: userProfile?.uid || 'system',
+      note: '', // 메모는 별도 처리
+    }, {
+      onError: (error) => {
+        console.error('[Sync] Failed to sync to daily_attendance:', error);
+        // 사용자에게 알림 (선택적 - 메인 저장은 성공했으므로 경고 수준)
+        secureWarn('출결 관리 동기화 실패', {
+          studentId: student.id,
+          studentName: student.name,
+          dateKey
+        });
+      },
+      onSuccess: () => {
+        secureLog('[Sync] Successfully synced to daily_attendance', {
+          studentId: student.id,
+          studentName: student.name,
+          dateKey
+        });
       }
     });
   };

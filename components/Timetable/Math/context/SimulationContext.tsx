@@ -1,11 +1,11 @@
 /**
- * ScenarioContext - 영어 시간표 시나리오 모드 상태 관리
+ * MathSimulationContext - 수학 시간표 시나리오 모드 상태 관리
  *
  * PURPOSE: 시나리오 모드에서 메모리 기반 시나리오 상태를 관리하여
  * Firebase 실시간 데이터와 분리된 편집 환경을 제공합니다.
  *
  * DATA STRUCTURE:
- * - scenarioClasses: classes collection 스냅샷 (subject='english')
+ * - scenarioClasses: classes collection 스냅샷 (subject='math')
  * - scenarioEnrollments: enrollments 데이터 (className -> studentId -> enrollment data)
  *
  * WORKFLOW:
@@ -17,10 +17,11 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
-import { collection, collectionGroup, query, where, getDocs, writeBatch, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, getDocs, writeBatch, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
-import { SCENARIO_COLLECTION } from '../englishUtils';
+
+const SCENARIO_COLLECTION = 'math_scenarios';
 
 // ============ UTILITIES ============
 
@@ -46,7 +47,7 @@ const sanitizeForFirestore = <T extends Record<string, any>>(obj: T): T => {
 export interface ScenarioClass {
   id: string;
   className: string;
-  subject: 'english';
+  subject: 'math';
   teacher: string;
   room?: string;
   schedule: { day: string; periodId: string; room?: string }[];
@@ -60,7 +61,7 @@ export interface ScenarioClass {
 export interface ScenarioEnrollment {
   studentId: string;
   className: string;
-  subject: 'english';
+  subject: 'math';
   underline?: boolean;
   enrollmentDate?: string;
   withdrawalDate?: string;
@@ -81,7 +82,7 @@ export interface ScenarioState {
   currentScenarioName: string | null;
 }
 
-export interface ScenarioContextValue extends ScenarioState {
+export interface MathSimulationContextValue extends ScenarioState {
   // Mode control
   enterScenarioMode: () => Promise<void>;
   exitScenarioMode: () => void;
@@ -112,32 +113,28 @@ export interface ScenarioContextValue extends ScenarioState {
 
 // ============ CONTEXT ============
 
-const ScenarioContext = createContext<ScenarioContextValue | null>(null);
+const MathSimulationContext = createContext<MathSimulationContextValue | null>(null);
 
-export const useScenario = () => {
-  const context = useContext(ScenarioContext);
+export const useMathSimulation = () => {
+  const context = useContext(MathSimulationContext);
   if (!context) {
-    throw new Error('useScenario must be used within ScenarioProvider');
+    throw new Error('useMathSimulation must be used within MathSimulationProvider');
   }
   return context;
 };
 
 // Optional hook that doesn't throw if outside provider
-export const useScenarioOptional = () => {
-  return useContext(ScenarioContext);
+export const useMathSimulationOptional = () => {
+  return useContext(MathSimulationContext);
 };
-
-// Backward compatibility (deprecated)
-export const useSimulation = useScenario;
-export const useSimulationOptional = useScenarioOptional;
 
 // ============ PROVIDER ============
 
-interface ScenarioProviderProps {
+interface MathSimulationProviderProps {
   children: React.ReactNode;
 }
 
-export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) => {
+export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ children }) => {
   const [state, setState] = useState<ScenarioState>({
     isScenarioMode: false,
     scenarioClasses: {},
@@ -181,9 +178,9 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
   // ============ INTERNAL LOAD FROM LIVE ============
 
   const loadFromLiveInternal = async () => {
-    // 1. Load classes (english only)
+    // 1. Load classes (math only)
     const classesSnapshot = await getDocs(
-      query(collection(db, 'classes'), where('subject', '==', 'english'))
+      query(collection(db, 'classes'), where('subject', '==', 'math'))
     );
 
     const scenarioClasses: Record<string, ScenarioClass> = {};
@@ -192,7 +189,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       scenarioClasses[docSnap.id] = {
         id: docSnap.id,
         className: data.className,
-        subject: 'english',
+        subject: 'math',
         teacher: data.teacher,
         room: data.room,
         schedule: data.schedule || [],
@@ -203,9 +200,9 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       };
     });
 
-    // 2. Load enrollments (english only)
+    // 2. Load enrollments (math only)
     const enrollmentsSnapshot = await getDocs(
-      query(collectionGroup(db, 'enrollments'), where('subject', '==', 'english'))
+      query(collectionGroup(db, 'enrollments'), where('subject', '==', 'math'))
     );
 
     const scenarioEnrollments: Record<string, Record<string, ScenarioEnrollment>> = {};
@@ -235,7 +232,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       scenarioEnrollments[className][studentId] = {
         studentId,
         className,
-        subject: 'english',
+        subject: 'math',
         underline: data.underline,
         enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
         withdrawalDate: convertTimestampToDate(data.withdrawalDate),
@@ -264,7 +261,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
 
     classNames.forEach(className => {
       if (!isScenarioMode) {
-        // Not in simulation mode - return empty, let useClassStudents handle it
+        // Not in simulation mode - return empty, let hooks handle it
         result[className] = { studentList: [], studentIds: [] };
         return;
       }
@@ -279,9 +276,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
 
           if (!baseStudent || baseStudent.status !== 'active') return null;
 
-          // Priority for enrollment date (useClassStudents와 동일한 로직):
-          // 1. enrollment.enrollmentDate (학생 관리 수업 탭의 '시작일' from enrollments subcollection)
-          // 2. baseStudent.startDate (학생 기본정보의 등록일 - fallback)
           const studentEnrollmentDate = enrollment?.enrollmentDate || baseStudent.startDate;
 
           return {
@@ -296,7 +290,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
             onHold: enrollment?.onHold,
             isMoved: false,
             attendanceDays: enrollment?.attendanceDays || [],
-            isScenarioAdded: false,  // 시나리오에서 추가되면 별도 표시 필요시 수정
+            isScenarioAdded: false,
           } as ScenarioStudent;
         })
         .filter(Boolean) as ScenarioStudent[];
@@ -350,7 +344,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
             [studentId]: {
               studentId,
               className,
-              subject: 'english',
+              subject: 'math',
               ...enrollmentData,
             },
           },
@@ -435,7 +429,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     const studentCount = Object.values(scenarioEnrollments)
       .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
 
-    // Firebase에 저장 전 undefined 값 제거
     const sanitizedClasses = sanitizeForFirestore(scenarioClasses);
     const sanitizedEnrollments = sanitizeForFirestore(scenarioEnrollments);
 
@@ -443,19 +436,17 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       id: scenarioId,
       name,
       description,
-      // 새 구조 데이터 (sanitized)
       classes: sanitizedClasses,
       enrollments: sanitizedEnrollments,
-      // 메타데이터
       createdAt: new Date().toISOString(),
       createdBy: userName,
       createdByUid: userId,
       stats: {
         classCount,
         studentCount,
-        timetableDocCount: classCount,  // 호환성
+        timetableDocCount: classCount,
       },
-      version: 2,  // 새 구조 버전 표시
+      version: 2,
     };
 
     await setDoc(doc(db, SCENARIO_COLLECTION, scenarioId), scenarioData);
@@ -477,9 +468,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       throw new Error('시나리오를 찾을 수 없습니다.');
     }
 
-    // 버전 체크
     if (scenario.version === 2) {
-      // 새 구조
       setState(prev => ({
         ...prev,
         scenarioClasses: scenario.classes || {},
@@ -488,8 +477,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         currentScenarioName: scenario.name,
       }));
     } else {
-      // 레거시 구조 - 변환 필요
-      // TODO: 레거시 시나리오 마이그레이션 로직
       throw new Error('레거시 시나리오는 아직 지원되지 않습니다. 새로운 시나리오를 생성해주세요.');
     }
   }, []);
@@ -501,7 +488,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       return;
     }
 
-    // 1. 백업 생성 (현재 실시간 데이터)
+    // 1. 백업 생성
     const backupId = `backup_${Date.now()}`;
     const { scenarioClasses: liveClasses, scenarioEnrollments: liveEnrollments } = await loadFromLiveInternal();
 
@@ -517,20 +504,19 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       version: 2,
     });
 
-    // 2. classes 업데이트 (sanitized)
+    // 2. classes 업데이트
     const classBatch = writeBatch(db);
     Object.entries(scenarioClasses).forEach(([classId, classData]) => {
       classBatch.set(doc(db, 'classes', classId), sanitizeForFirestore(classData));
     });
     await classBatch.commit();
 
-    // 3. enrollments 업데이트 (복잡 - 학생별 subcollection)
-    // 기존 enrollments 삭제 후 새로 생성
+    // 3. enrollments 업데이트
     const existingEnrollmentsSnapshot = await getDocs(
-      query(collectionGroup(db, 'enrollments'), where('subject', '==', 'english'))
+      query(collectionGroup(db, 'enrollments'), where('subject', '==', 'math'))
     );
 
-    // 삭제 배치 (500개 단위로 분할)
+    // 삭제 배치
     const docsToDelete = existingEnrollmentsSnapshot.docs;
     for (let i = 0; i < docsToDelete.length; i += 500) {
       const batch = writeBatch(db);
@@ -542,16 +528,16 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       console.log(`✅ Deleted enrollments batch: ${i + chunk.length}/${docsToDelete.length}`);
     }
 
-    // 생성 배치 (500개 단위로 분할, sanitized)
+    // 생성 배치
     const enrollmentsToCreate: { ref: any; data: any }[] = [];
     Object.entries(scenarioEnrollments).forEach(([className, students]) => {
       Object.entries(students).forEach(([studentId, enrollment]) => {
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `english_${className}`);
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
         enrollmentsToCreate.push({
           ref: enrollmentRef,
           data: sanitizeForFirestore({
             ...enrollment,
-            subject: 'english',
+            subject: 'math',
             className,
           }),
         });
@@ -585,7 +571,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
 
   // ============ CONTEXT VALUE ============
 
-  const value = useMemo<ScenarioContextValue>(() => ({
+  const value = useMemo<MathSimulationContextValue>(() => ({
     ...state,
     enterScenarioMode,
     exitScenarioMode,
@@ -620,13 +606,10 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
   ]);
 
   return (
-    <ScenarioContext.Provider value={value}>
+    <MathSimulationContext.Provider value={value}>
       {children}
-    </ScenarioContext.Provider>
+    </MathSimulationContext.Provider>
   );
 };
 
-// Backward compatibility
-export const SimulationProvider = ScenarioProvider;
-
-export default ScenarioContext;
+export default MathSimulationContext;

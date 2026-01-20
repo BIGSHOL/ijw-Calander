@@ -9,7 +9,7 @@ import { setDoc, doc, deleteDoc, writeBatch, collection, onSnapshot, updateDoc, 
 
 import { Holiday } from '../../types';
 // MyEventsModal 제거됨 - 직원 관리로 통합
-import { HolidaysTab, MigrationTab } from './';
+import { HolidaysTab } from './';
 // DepartmentsTab, GanttCategoriesTab 제거됨 - 간트 차트 페이지(GanttSettingsModal)에서 관리
 // HashtagsTab 제거됨 - 캘린더 페이지(CalendarSettingsModal)에서 관리
 import { useTabPermissions } from '../../hooks/useTabPermissions';
@@ -33,9 +33,7 @@ interface SettingsModalProps {
   onToggleArchived?: () => void;
 }
 
-type MainTabMode = 'permissions';
-// 'users' 탭 제거됨 - 직원 관리 페이지의 "시스템 사용자" 탭으로 통합
-type TabMode = 'system' | 'migration';
+// 탭 구조 제거됨 - 내용이 바로 표시됨 (2026-01-20)
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -75,8 +73,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // Get accessible tabs for current user
   const { accessibleTabs } = useTabPermissions(currentUserProfile || null);
 
-  const [mainTab, setMainTab] = useState<MainTabMode>('permissions');
-  const [activeTab, setActiveTab] = useState<TabMode>('system');
+  // 탭 상태 제거됨 - 단일 뷰로 표시
 
   // Grouped department form state
   const [newDepartmentForm, setNewDepartmentForm] = useState<NewDepartmentForm>(INITIAL_DEPARTMENT_FORM);
@@ -285,7 +282,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // System Config logic...
   useEffect(() => {
-    if (activeTab === 'system' && isMaster) {
+    if (isMaster) {
       const unsubscribe = onSnapshot(doc(db, 'system', 'config'), (doc) => {
         if (doc.exists()) {
           setLookbackYears(doc.data().eventLookbackYears || 2);
@@ -293,7 +290,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       });
       return () => unsubscribe();
     }
-  }, [activeTab, isMaster]);
+  }, [isMaster]);
 
   // Class Keywords subscription 제거됨 - 시간표 페이지(ClassSettingsModal)에서 관리
 
@@ -460,36 +457,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Header */}
           <div className="bg-[#081429] p-4 flex justify-between items-center text-white shrink-0">
-            <div className="flex items-center gap-6">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <FolderKanban size={20} className="text-[#fdb813]" />
-                시스템 관리
-              </h2>
-              <div className="flex flex-col gap-2">
-                {/* 연간 일정 탭 제거됨 - 캘린더 페이지(CalendarSettingsModal)에서 관리 */}
-                {/* 시간표 탭 제거됨 - 강사 관리가 직원 관리(staff)로 통합됨 */}
-                {/* 간트 차트 탭 제거됨 - 간트 차트 페이지(GanttSettingsModal)에서 관리 */}
-                {/* 출석부 탭 제거됨 - 출석부 페이지(AttendanceSettingsModal)에서 급여 설정 관리 */}
-
-                {/* Sub Tab Selector - 시스템 설정만 남음 */}
-                {/* 사용자 관리 탭 제거됨 - 직원 관리 페이지의 "시스템 사용자" 탭으로 통합 */}
-                <div className="flex gap-1 pl-2">
-                  {mainTab === 'permissions' && (
-                    <>
-                      {isMaster && (
-                        <button onClick={() => setActiveTab('migration')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'migration' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                          데이터 마이그레이션
-                        </button>
-                      )}
-                      {/* 기타 설정 is always visible */}
-                      <button onClick={() => setActiveTab('system')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'system' ? 'bg-white/20 text-white' : 'text-gray-400 hover:text-white'}`}>
-                        기타 설정
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <FolderKanban size={20} className="text-[#fdb813]" />
+              시스템 관리
+            </h2>
             <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
               <X size={24} />
             </button>
@@ -497,26 +468,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Content Area */}
           <div className="p-6 overflow-y-auto flex-1 bg-gray-50 pb-20">
-
-            {/* DEPARTMENT TAB 제거됨 - 캘린더 페이지(CalendarSettingsModal)에서 관리 */}
-
-            {/* USERS TAB 제거됨 - 직원 관리 페이지의 "시스템 사용자" 탭(UsersManagement)으로 통합 */}
-
-
-
-            {/* TEACHERS TAB 제거됨 - staff 컬렉션으로 통합 (2026-01-17) */}
-
-            {/* CLASSES MANAGEMENT TAB 제거됨 - 시간표 페이지(TimetableSettingsModal)에서 관리 */}
-
-
-            {/* MIGRATION TAB */}
-            {activeTab === 'migration' && isMaster && (
-              <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f8f9fa] p-4 md:p-8">
-                <MigrationTab />
-              </div>
-            )}
-
-            {activeTab === 'system' && (isMaster || isAdmin || currentUserProfile?.role === 'manager' || hasPermission('settings.access')) && (
+            {(isMaster || isAdmin || currentUserProfile?.role === 'manager' || hasPermission('settings.access')) && (
               <div className="max-w-2xl mx-auto space-y-8 pb-20">
                 {/* Holidays Tab Component */}
                 {(isMaster || hasPermission('settings.holidays')) && (
@@ -527,31 +479,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                   <h3 className="font-bold mb-4 flex gap-2"><CalendarClock size={18} /> 화면 설정</h3>
 
-                  {/* Default View Mode - Only if Calendar is accessible */}
-                  {canManageMenus && (
-                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">기본 뷰 모드</span>
-                        <p className="text-xs text-gray-400">앱 시작 시 기본으로 표시할 뷰</p>
-                      </div>
-                      <select
-                        value={storage.getString(STORAGE_KEYS.DEFAULT_VIEW_MODE) || 'monthly'}
-                        onChange={(e) => {
-                          storage.setString(STORAGE_KEYS.DEFAULT_VIEW_MODE, e.target.value);
-                          setHasChanges(true); // Hint update
-                        }}
-                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none"
-                      >
-                        <option value="daily">일간</option>
-                        <option value="weekly">주간</option>
-                        <option value="monthly">월간</option>
-                        <option value="yearly">연간</option>
-                      </select>
-                    </div>
-                  )}
-
                   {/* Dark Mode Toggle */}
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                  <div className="flex items-center justify-between py-3">
                     <div>
                       <span className="text-sm font-medium text-gray-700">다크 모드</span>
                       <p className="text-xs text-gray-400">어두운 테마 사용</p>
@@ -575,31 +504,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       />
                     </button>
                   </div>
-
-                  {/* Default Main Tab - Only show if user has access to 2+ tabs */}
-                  {accessibleTabs.length >= 2 && (
-                    <div className="flex items-center justify-between py-3">
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">기본 메인 탭</span>
-                        <p className="text-xs text-gray-400">로그인 시 먼저 표시될 탭</p>
-                      </div>
-                      <select
-                        value={localStorage.getItem('default_main_tab') || 'auto'}
-                        onChange={(e) => {
-                          localStorage.setItem('default_main_tab', e.target.value);
-                          setHasChanges(true);
-                        }}
-                        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none"
-                      >
-                        <option value="auto">자동 (첫 번째 탭)</option>
-                        {accessibleTabs.includes('calendar') && <option value="calendar">📅 연간 일정</option>}
-                        {accessibleTabs.includes('timetable') && <option value="timetable">📊 시간표</option>}
-                        {accessibleTabs.includes('payment') && <option value="payment">💰 전자 결재</option>}
-                        {accessibleTabs.includes('gantt') && <option value="gantt">📈 간트 차트</option>}
-                        {accessibleTabs.includes('consultation') && <option value="consultation">💬 상담</option>}
-                      </select>
-                    </div>
-                  )}
                 </div>
 
                 {/* 2. System Config (Data Retention) */}

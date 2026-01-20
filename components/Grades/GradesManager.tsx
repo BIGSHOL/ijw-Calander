@@ -10,9 +10,10 @@ import { db, auth } from '../../firebaseConfig';
 import {
   GraduationCap, Plus, Trash2, Edit, Save, X, ChevronDown, ChevronRight,
   Users, Calendar, BookOpen, BarChart3, Search, Filter, RefreshCw, Loader2,
-  TrendingUp, TrendingDown, Minus, AlertCircle, Check, Tag, Building2
+  TrendingUp, TrendingDown, Minus, AlertCircle, Check, Tag, Building2, Eye
 } from 'lucide-react';
 import { formatSchoolGrade } from '../../utils/studentUtils';
+import GradesTab from '../StudentManagement/tabs/GradesTab';
 
 // 시험별 전체 성적 조회 Hook
 const useExamScores = (examId: string) => {
@@ -56,9 +57,10 @@ interface GradesManagerProps {
   subjectFilter: 'all' | 'math' | 'english';
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onSubjectFilterChange?: (filter: 'all' | 'math' | 'english') => void;
 }
 
-const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuery, onSearchChange }) => {
+const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuery, onSearchChange, onSubjectFilterChange }) => {
   const user = auth.currentUser;
   const queryClient = useQueryClient();
 
@@ -67,6 +69,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
   const [isCreatingExam, setIsCreatingExam] = useState(false);
   const [expandedExamId, setExpandedExamId] = useState<string | null>(null);
+  const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<UnifiedStudent | null>(null);
 
   // Data
   const { students } = useStudents();
@@ -527,115 +530,167 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      {/* Compact Header - 시험 등록 버튼만 */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">
-            총 <span className="font-bold text-[#081429]">{filteredExams.length}</span>개 시험
-          </span>
-          <button
-            onClick={() => refetchExams()}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-            title="새로고침"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+      {/* 상단 네비게이션 바 - 반응형 레이아웃 */}
+      <div className="bg-[#081429] px-6 py-2 border-b border-white/10 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* 과목 토글 */}
+            <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+              <button
+                onClick={() => onSubjectFilterChange?.('all')}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${subjectFilter === 'all'
+                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <BookOpen className="w-4 h-4" /> 전체
+                </span>
+              </button>
+              <button
+                onClick={() => onSubjectFilterChange?.('math')}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${subjectFilter === 'math'
+                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  수학
+                </span>
+              </button>
+              <button
+                onClick={() => onSubjectFilterChange?.('english')}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${subjectFilter === 'english'
+                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  영어
+                </span>
+              </button>
+            </div>
 
-          {/* 마이그레이션 버튼 (임시) */}
-          <button
-            onClick={handleMigrateStats}
-            disabled={isMigrating}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 transition-colors"
-            title="DB 최적화: 통계 재계산"
-          >
-            {isMigrating ? <Loader2 className="w-3 h-3 animate-spin" /> : <BarChart3 className="w-3 h-3" />}
-            <span>통계 갱신</span>
-          </button>
-        </div>
+            {/* 구분선 */}
+            <div className="w-px h-4 bg-white/20"></div>
 
-        <div className="flex items-center gap-2">
-          {/* 검색 기능 이동 */}
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="시험명 검색..."
-              className="w-64 pl-9 pr-3 py-2 text-sm border border-[#081429]/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent transition-all"
-            />
+            {/* 검색 */}
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="시험명 검색..."
+                className="bg-[#1e293b] border border-gray-700 rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
+              />
+            </div>
           </div>
 
-          <button
-            onClick={() => setIsCreatingExam(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-lg hover:bg-[#0a1a35] transition-colors text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            <span>시험 등록</span>
-          </button>
+          {/* 우측: 결과 카운트, 버튼들 */}
+          <div className="flex items-center gap-2">
+            {/* 결과 카운트 */}
+            <span className="text-gray-400 text-xs">
+              총 <span className="text-[#fdb813] font-bold">{filteredExams.length}</span>개 시험
+            </span>
+
+            {/* 새로고침 버튼 */}
+            <button
+              onClick={() => refetchExams()}
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+              title="새로고침"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+
+            {/* 통계 갱신 버튼 */}
+            <button
+              onClick={handleMigrateStats}
+              disabled={isMigrating}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-white/10 text-gray-300 rounded hover:bg-white/20 transition-colors border border-white/20 font-bold"
+              title="DB 최적화: 통계 재계산"
+            >
+              {isMigrating ? <Loader2 className="w-3 h-3 animate-spin" /> : <BarChart3 className="w-3 h-3" />}
+              <span>통계 갱신</span>
+            </button>
+
+            {/* 새 시험 등록 버튼 */}
+            <button
+              onClick={() => setIsCreatingExam(true)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+            >
+              <Plus size={14} />
+              <span>시험 등록</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
         {viewMode === 'input' && selectedExam ? (
-          /* 성적 입력 화면 */
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          /* 성적 입력 화면 - 컴팩트 */
+          <div className="bg-white border border-gray-200">
+            <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between bg-gray-50">
               <div>
-                <h2 className="font-bold text-lg text-[#081429]">{selectedExam.title}</h2>
-                <p className="text-sm text-gray-500">
+                <h2 className="font-bold text-sm text-[#081429]">{selectedExam.title}</h2>
+                <p className="text-xs text-gray-500">
                   {selectedExam.date} | {selectedExam.subject === 'both' ? '통합' : selectedExam.subject === 'math' ? '수학' : '영어'} | 만점 {selectedExam.maxScore}점
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => { setViewMode('exams'); setSelectedExam(null); }}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleBatchSaveScores}
                   disabled={batchAddScores.isPending}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
                   {batchAddScores.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3 h-3 animate-spin" />
                   ) : (
-                    <Save className="w-4 h-4" />
+                    <Save className="w-3 h-3" />
                   )}
                   <span>저장</span>
                 </button>
               </div>
             </div>
 
-            {/* 학생 검색/추가 UI */}
-            <div className="p-4 border-b border-gray-200">
+            {/* 학생 검색/추가 UI - 컴팩트 */}
+            <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
               <div className="relative">
-                <div className="flex items-center gap-2">
-                  <Search className="w-4 h-4 text-gray-400" />
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                   <input
                     type="text"
                     value={studentSearchQuery}
                     onChange={(e) => setStudentSearchQuery(e.target.value)}
-                    placeholder="학생 이름을 검색하여 추가..."
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="학생 검색..."
+                    className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
+                  {addedStudents.length > 0 && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                      {addedStudents.length}명
+                    </span>
+                  )}
                 </div>
-                {/* 검색 결과 드롭다운 */}
+                {/* 검색 결과 드롭다운 - 컴팩트 */}
                 {searchedStudents.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg max-h-48 overflow-auto">
                     {searchedStudents.map(student => (
                       <button
                         key={student.id}
                         onClick={() => handleAddStudent(student.id)}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center justify-between"
+                        className="w-full px-3 py-1.5 text-left hover:bg-gray-50 flex items-center justify-between text-sm"
                       >
                         <div>
                           <span className="font-medium text-gray-900">{student.name}</span>
                           {student.englishName && (
-                            <span className="ml-2 text-sm text-gray-500">{student.englishName}</span>
+                            <span className="ml-2 text-xs text-gray-500">{student.englishName}</span>
                           )}
                         </div>
                         <span className="text-xs text-gray-400">{student.grade || '-'}</span>
@@ -644,11 +699,6 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                   </div>
                 )}
               </div>
-              {addedStudents.length > 0 && (
-                <p className="mt-2 text-sm text-gray-500">
-                  추가된 학생: <span className="font-semibold text-[#081429]">{addedStudents.length}</span>명
-                </p>
-              )}
             </div>
 
             <div className="overflow-auto max-h-[calc(100vh-420px)]">
@@ -679,27 +729,24 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                 return (
                   <table className="w-full">
                     <thead className="bg-gray-50 sticky top-0">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase w-36">이름</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase w-28">학교/학년</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-20">점수</th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-16">
+                      <tr className="border-b border-gray-200">
+                        <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 w-32">이름</th>
+                        <th className="px-2 py-1.5 text-left text-xs font-semibold text-gray-600 w-24">학교/학년</th>
+                        <th className="px-2 py-1.5 text-center text-xs font-semibold text-gray-600 w-16">점수</th>
+                        <th className="px-2 py-1.5 text-center text-xs font-semibold text-gray-600 w-14">
                           평균
-                          <span className="block text-xxs font-normal text-gray-400">
+                          <span className="block text-micro font-normal text-gray-400">
                             {avg ? avg : '-'}
                           </span>
                         </th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-16">
+                        <th className="px-2 py-1.5 text-center text-xs font-semibold text-gray-600 w-14">
                           석차
-                          <span className="block text-xxs font-normal text-gray-400">
-                            /{studentsWithScores.length || addedStudents.length}명
+                          <span className="block text-micro font-normal text-gray-400">
+                            /{studentsWithScores.length || addedStudents.length}
                           </span>
                         </th>
-                        <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase w-16">
-                          등급
-                          <span className="block text-xxs font-normal text-gray-400">(추후)</span>
-                        </th>
-                        <th className="px-3 py-2 w-10"></th>
+                        <th className="px-2 py-1.5 text-center text-xs font-semibold text-gray-600 w-12">등급</th>
+                        <th className="px-2 py-1.5 w-24 text-center text-xs font-semibold text-gray-600">액션</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -712,11 +759,11 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
 
                         return (
                           <tr key={student.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2">
-                              <div className="font-medium text-gray-900 text-sm">{student.name}</div>
+                            <td className="px-2 py-1.5">
+                              <div className="font-medium text-gray-900 text-xs">{student.name}</div>
                             </td>
-                            <td className="px-3 py-2 text-xs text-gray-600">{schoolGrade}</td>
-                            <td className="px-3 py-2 text-center">
+                            <td className="px-2 py-1.5 text-xs text-gray-600">{schoolGrade}</td>
+                            <td className="px-2 py-1.5 text-center">
                               {isEditing ? (
                                 <input
                                   type="number"
@@ -725,38 +772,45 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                                   placeholder="-"
                                   min={0}
                                   max={selectedExam.maxScore}
-                                  className="w-16 px-2 py-1 text-center text-sm border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className="w-14 px-1.5 py-0.5 text-center text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 />
                               ) : (
-                                <span className={`text-sm ${input.score ? 'font-medium text-gray-900' : 'text-gray-400'}`}>
+                                <span className={`text-xs ${input.score ? 'font-medium text-gray-900' : 'text-gray-400'}`}>
                                   {input.score || '-'}
                                 </span>
                               )}
                             </td>
-                            <td className="px-3 py-2 text-center text-sm text-gray-600">
+                            <td className="px-2 py-1.5 text-center text-xs text-gray-600">
                               {/* 평균은 자동 계산된 값(전체 평균)을 표시 */}
                               <span>{avg || '-'}</span>
                             </td>
-                            <td className="px-3 py-2 text-center text-sm font-medium text-gray-800">
+                            <td className="px-2 py-1.5 text-center text-xs font-medium text-gray-800">
                               {studentRank !== null ? studentRank : '-'}
                             </td>
-                            <td className="px-3 py-2 text-center text-xs text-gray-400">
+                            <td className="px-2 py-1.5 text-center text-xs text-gray-400">
                               -
                             </td>
-                            <td className="px-3 py-2 text-center flex items-center justify-center gap-1">
+                            <td className="px-2 py-1.5 text-center flex items-center justify-center gap-0.5">
+                              <button
+                                onClick={() => setSelectedStudentForDetail(student)}
+                                className="p-0.5 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                title="학생 상세"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
                               <button
                                 onClick={() => handleToggleEdit(student.id)}
-                                className={`p-1 rounded transition-colors ${isEditing ? 'text-green-600 hover:bg-green-50' : 'text-blue-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                                className={`p-0.5 rounded transition-colors ${isEditing ? 'text-green-600 hover:bg-green-50' : 'text-blue-400 hover:text-blue-600 hover:bg-blue-50'}`}
                                 title={isEditing ? "완료" : "수정"}
                               >
-                                {isEditing ? <Check className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                                {isEditing ? <Check className="w-3.5 h-3.5" /> : <Edit className="w-3.5 h-3.5" />}
                               </button>
                               <button
                                 onClick={() => handleRemoveStudent(student.id)}
-                                className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                                 title="학생 제거"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </td>
                           </tr>
@@ -770,18 +824,18 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
           </div>
         ) : (
           /* 시험 목록 화면 - 행 기반 레이아웃 */
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white border border-gray-200 overflow-hidden">
             {/* 헤더 행 */}
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-medium text-[#373d41]">
-              <span className="w-24 shrink-0">날짜</span>
-              <span className="w-48 shrink-0">시험명</span>
-              <span className="w-16 shrink-0 text-center">과목</span>
-              <span className="w-20 shrink-0 text-center">유형</span>
-              <span className="w-16 shrink-0 text-center">응시</span>
+            <div className="flex items-center gap-4 px-4 py-1.5 bg-gray-50 border-b border-gray-200 text-xs font-medium text-[#373d41] whitespace-nowrap">
+              <span className="w-20 shrink-0">날짜</span>
+              <span className="flex-1 min-w-[200px]">시험명</span>
+              <span className="w-14 shrink-0 text-center">과목</span>
+              <span className="w-16 shrink-0 text-center">유형</span>
+              <span className="w-14 shrink-0 text-center">응시</span>
               <span className="w-14 shrink-0 text-center">평균</span>
               <span className="w-14 shrink-0 text-center">최고</span>
               <span className="w-14 shrink-0 text-center">최저</span>
-              <span className="flex-1"></span>
+              <span className="w-24 shrink-0 text-right">액션</span>
             </div>
 
             {filteredExams.length === 0 ? (
@@ -799,22 +853,22 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                   <div key={exam.id}>
                     {/* 시험 행 */}
                     <div
-                      className="flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer group"
+                      className="flex items-center gap-4 px-4 py-1.5 bg-white border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer group whitespace-nowrap"
                       onClick={() => setExpandedExamId(isExpanded ? null : exam.id)}
                     >
                       {/* 날짜 */}
-                      <span className="text-xs text-[#373d41] w-24 shrink-0">
+                      <span className="text-xs text-[#373d41] w-20 shrink-0">
                         {exam.date}
                       </span>
 
                       {/* 시험명 */}
-                      <span className="text-sm font-medium text-[#081429] w-48 shrink-0 truncate">
+                      <span className="text-xs font-medium text-[#081429] flex-1 min-w-[200px] truncate">
                         {exam.title}
                       </span>
 
                       {/* 과목 뱃지 */}
-                      <span className="w-16 shrink-0 text-center">
-                        <span className={`px-1.5 py-0.5 text-xs rounded ${exam.subject === 'math' ? 'bg-blue-100 text-blue-700' :
+                      <span className="w-14 shrink-0 text-center">
+                        <span className={`inline-block px-1.5 py-0.5 text-xs rounded ${exam.subject === 'math' ? 'bg-blue-100 text-blue-700' :
                             exam.subject === 'english' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
                           }`}>
                           {exam.subject === 'both' ? '통합' : exam.subject === 'math' ? '수학' : '영어'}
@@ -822,37 +876,37 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                       </span>
 
                       {/* 유형 */}
-                      <span className="w-20 shrink-0 text-center">
-                        <span className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                      <span className="w-16 shrink-0 text-center">
+                        <span className="inline-block px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
                           {EXAM_TYPE_LABELS[exam.type]}
                         </span>
                       </span>
 
                       {/* 응시 */}
-                      <span className="w-16 shrink-0 text-center text-sm text-gray-600">
+                      <span className="w-14 shrink-0 text-center text-xs text-gray-600">
                         {stats.count}명
                       </span>
 
                       {/* 평균 */}
-                      <span className="w-14 shrink-0 text-center text-sm font-medium text-gray-900">
+                      <span className="w-14 shrink-0 text-center text-xs font-medium text-gray-900">
                         {stats.count > 0 ? `${stats.avg}` : '-'}
                       </span>
 
                       {/* 최고 */}
-                      <span className="w-14 shrink-0 text-center text-sm font-medium text-green-600">
+                      <span className="w-14 shrink-0 text-center text-xs font-medium text-green-600">
                         {stats.count > 0 ? stats.max : '-'}
                       </span>
 
                       {/* 최저 */}
-                      <span className="w-14 shrink-0 text-center text-sm font-medium text-red-600">
+                      <span className="w-14 shrink-0 text-center text-xs font-medium text-red-600">
                         {stats.count > 0 ? stats.min : '-'}
                       </span>
 
                       {/* 액션 버튼들 */}
-                      <div className="flex items-center gap-1 flex-1 justify-end shrink-0">
+                      <div className="flex items-center gap-1.5 w-24 shrink-0 justify-end">
                         <button
                           onClick={(e) => { e.stopPropagation(); startScoreInput(exam); }}
-                          className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                          className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
                         >
                           입력
                         </button>
@@ -863,14 +917,14 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                               deleteExamMutation.mutate(exam.id);
                             }
                           }}
-                          className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                         {isExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                          <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                          <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
                         )}
                       </div>
                     </div>
@@ -1201,6 +1255,35 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                 )}
                 <span>등록</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 학생 상세 슬라이드 패널 */}
+      {selectedStudentForDetail && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-end" onClick={() => setSelectedStudentForDetail(null)}>
+          <div
+            className="bg-white h-full w-full max-w-2xl overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 패널 헤더 */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between z-10">
+              <div>
+                <h3 className="text-sm font-bold text-[#081429]">{selectedStudentForDetail.name} 성적 프로필</h3>
+                <p className="text-xs text-gray-500">조회 전용</p>
+              </div>
+              <button
+                onClick={() => setSelectedStudentForDetail(null)}
+                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* GradesTab 컴포넌트 재사용 - 읽기 전용 */}
+            <div className="p-3">
+              <GradesTab student={selectedStudentForDetail} readOnly={true} />
             </div>
           </div>
         </div>

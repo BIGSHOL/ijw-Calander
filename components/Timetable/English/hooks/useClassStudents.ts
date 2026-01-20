@@ -64,14 +64,14 @@ export const useClassStudents = (
     // SimulationContext - optional (may not be wrapped in provider)
     const simulation = useSimulationOptional();
 
-    // 시뮬레이션 모드: Context에서 draft 데이터 사용
-    // simulation 객체의 상태(draftEnrollments)가 변경될 때도 재계산되도록 의존성 추가
+    // 시나리오 모드: Context에서 시나리오 데이터 사용
+    // simulation 객체의 상태(scenarioEnrollments)가 변경될 때도 재계산되도록 의존성 추가
     const simulationData = useMemo(() => {
-        if (!isSimulationMode || !simulation?.isSimulationMode) {
+        if (!isSimulationMode || !simulation?.isScenarioMode) {
             return null;
         }
         return simulation.getClassStudents(classNames, studentMapRef.current);
-    }, [isSimulationMode, simulation?.isSimulationMode, simulation?.draftEnrollments, classNames]);
+    }, [isSimulationMode, simulation?.isScenarioMode, simulation?.scenarioEnrollments, classNames]);
 
     const { data: classDataMap = {}, isLoading, refetch } = useQuery<Record<string, ClassStudentData>>({
         queryKey: ['englishClassStudents', classNamesKey],

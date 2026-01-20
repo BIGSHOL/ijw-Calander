@@ -45,6 +45,7 @@ const ClassManagementTab = lazy(() => import('./components/ClassManagement').the
 const StudentConsultationTab = lazy(() => import('./components/StudentConsultation').then(m => ({ default: m.ConsultationManagementTab })));
 
 // 신규 탭 (lazy loading)
+const DashboardTab = lazy(() => import('./components/Dashboard/DashboardTab'));
 const BillingManager = lazy(() => import('./components/Billing').then(m => ({ default: m.BillingManager })));
 const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
 const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
@@ -239,6 +240,12 @@ const App: React.FC = () => {
     [staffWithAccounts]
   );
 
+  // 현재 로그인한 사용자의 StaffMember 정보
+  const currentStaffMember = useMemo(() => {
+    if (!currentUser || !userProfile) return undefined;
+    return staffWithAccounts.find(s => s.uid === currentUser.uid || s.email === userProfile.email);
+  }, [currentUser, userProfile, staffWithAccounts]);
+
   // Students and Classes for Global Search
   const { students: globalStudents = [] } = useStudents(false);
   const { data: allClasses = [] } = useClasses();
@@ -344,8 +351,8 @@ const App: React.FC = () => {
         console.log('[Guard] Switching to Korean (first available)');
         setTimetableSubject('korean');
       } else {
-        console.log('[Guard] No timetable permissions, redirecting to calendar');
-        setAppMode('calendar');
+        console.log('[Guard] No timetable permissions, redirecting to dashboard');
+        setAppMode('dashboard');
       }
     }
   }, [timetableSubject, userProfile, appMode, hasPermission]);
@@ -381,8 +388,8 @@ const App: React.FC = () => {
     // Wait for permissions to load
     if (isTabPermissionLoading || !userProfile) return;
 
-    // Priority order for tabs
-    const priority: ('calendar' | 'timetable' | 'attendance' | 'payment' | 'gantt' | 'consultation' | 'students')[] = ['calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students'];
+    // Priority order for tabs (dashboard first!)
+    const priority: AppTab[] = ['dashboard', 'calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students'];
 
     // Initial setup: if appMode is null, set to first accessible tab (or user's preferred tab)
     if (appMode === null) {
@@ -390,15 +397,15 @@ const App: React.FC = () => {
       const preferredTab = storage.getString(STORAGE_KEYS.DEFAULT_MAIN_TAB);
 
       if (preferredTab && preferredTab !== 'auto' && canAccessTab(preferredTab as AppTab)) {
-        setAppMode(preferredTab as 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students');
+        setAppMode(preferredTab as AppTab);
       } else {
-        // Fallback to first accessible tab
+        // Fallback to first accessible tab (dashboard will be first if accessible)
         const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
         if (firstAccessibleTab) {
           setAppMode(firstAccessibleTab);
         } else {
-          // Fallback: no accessible tab, show calendar (will display error)
-          setAppMode('calendar');
+          // Fallback: no accessible tab, show dashboard (will display error)
+          setAppMode('dashboard');
         }
       }
       return;
@@ -2321,29 +2328,7 @@ const App: React.FC = () => {
           }
 
           {/* Timetable Filter Popover Panel Removed */}
-
-          {/* Row 2: Grades Filter Bar - Only show in grades mode */}
-          {appMode === 'grades' && (
-            <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
-              <div className="flex items-center gap-4 flex-1">
-                {/* Subject Filter Toggle */}
-                <div className="flex items-center gap-1 bg-black/20 rounded-lg p-0.5">
-                  {(['all', 'math', 'english'] as const).map(subject => (
-                    <button
-                      key={subject}
-                      onClick={() => setGradesSubjectFilter(subject)}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${gradesSubjectFilter === subject
-                        ? 'bg-[#fdb813] text-[#081429]'
-                        : 'text-gray-400 hover:text-white'
-                        }`}
-                    >
-                      {subject === 'all' ? '전체' : subject === 'math' ? '수학' : '영어'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Grades Filter Bar Removed - Filter is now inside GradesManager component */}
         </header >
 
         <main id="main-content" className="flex-1 flex flex-col md:flex-row overflow-hidden" role="main">
@@ -2353,6 +2338,13 @@ const App: React.FC = () => {
               {/* Optional: "Not Authorized" message or just blank while redirecting */}
               <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
             </div>
+          ) : appMode === 'dashboard' ? (
+            /* Dashboard View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-hidden">
+                <DashboardTab userProfile={userProfile} staffMember={currentStaffMember} />
+              </div>
+            </Suspense>
           ) : appMode === 'calendar' ? (
             /* Calendar View */
             <div className="w-full flex-1 max-w-full mx-auto h-full print:p-0 flex flex-col xl:flex-row print:flex-row print:gap-2 overflow-x-auto">
@@ -2508,6 +2500,7 @@ const App: React.FC = () => {
                   subjectFilter={gradesSubjectFilter}
                   searchQuery={gradesSearchQuery}
                   onSearchChange={setGradesSearchQuery}
+                  onSubjectFilterChange={setGradesSubjectFilter}
                 />
               </div>
             </Suspense>

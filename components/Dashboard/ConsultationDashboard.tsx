@@ -276,55 +276,89 @@ const StaffStatsModal: React.FC<StaffStatsModalProps> = ({ stats, onClose }) => 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-[#081429]/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-lg max-w-xs w-full mx-4 overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-[#081429]/10 bg-[#081429]">
-          <span className="text-sm font-semibold text-white">선생님별 상담</span>
-          <button onClick={onClose} className="p-0.5 hover:bg-white/20 rounded">
-            <X className="w-4 h-4 text-white" />
+      <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#081429]/10 bg-[#081429]">
+          <h2 className="text-lg font-bold text-white">선생님별 상담 통계</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+            <X className="w-5 h-5 text-white" />
           </button>
         </div>
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-[70vh] overflow-y-auto p-6">
           {stats.length === 0 ? (
-            <div className="text-center text-[#373d41] py-4 text-xs">기록 없음</div>
+            <div className="text-center text-[#373d41] py-8 text-sm">기록 없음</div>
           ) : (
-            <div className="divide-y divide-[#081429]/5">
+            <div className="space-y-3">
               {stats.map((staff, idx) => {
                 const hasMath = staff.mathTotal > 0;
                 const hasEnglish = staff.englishTotal > 0;
+                const mathPercentage = hasMath ? Math.round((staff.mathCount / staff.mathTotal) * 100) : 0;
+                const englishPercentage = hasEnglish ? Math.round((staff.englishCount / staff.englishTotal) * 100) : 0;
                 const totalPercentage = staff.totalNeeded > 0
                   ? Math.round((staff.totalCount / staff.totalNeeded) * 100)
                   : 0;
 
                 return (
-                  <div key={staff.id} className={`px-3 py-2 ${idx === 0 ? 'bg-[#fdb813]/20' : ''}`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                          idx === 0 ? 'bg-[#fdb813] text-[#081429]' :
-                          idx === 1 ? 'bg-[#373d41]/20 text-[#373d41]' :
-                          idx === 2 ? 'bg-[#373d41]/10 text-[#373d41]' :
-                          'bg-[#081429]/5 text-[#373d41]'
-                        }`}>{idx + 1}</span>
-                        <span className="text-sm font-medium text-[#081429]">{staff.name}</span>
+                  <div
+                    key={staff.id}
+                    className={`flex items-center gap-4 p-3 rounded-xl transition-colors ${
+                      idx === 0 ? 'bg-amber-50 border border-amber-200' :
+                      idx === 1 ? 'bg-gray-50 border border-gray-200' :
+                      idx === 2 ? 'bg-orange-50 border border-orange-200' :
+                      'bg-white border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {/* 순위 뱃지 */}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                      idx === 0 ? 'bg-amber-100 text-amber-700' :
+                      idx === 1 ? 'bg-gray-200 text-gray-600' :
+                      idx === 2 ? 'bg-orange-100 text-orange-600' :
+                      'bg-gray-100 text-gray-500'
+                    }`}>
+                      {idx + 1}
+                    </div>
+
+                    {/* 선생님 정보 */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-base font-semibold text-gray-900 mb-1">
+                        {staff.name}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-bold text-[#081429]">{staff.totalCount}</span>
-                        <span className="text-[10px] text-[#373d41]">/ {staff.totalNeeded}</span>
-                        <span className="text-[10px] text-[#fdb813] font-bold ml-1">({totalPercentage}%)</span>
+                      <div className="flex items-center gap-3 text-sm">
+                        {hasMath && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-600">수학</span>
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-medium rounded">
+                              {staff.mathCount}/{staff.mathTotal}
+                            </span>
+                            <span className="text-blue-600 font-medium">
+                              ({mathPercentage}%)
+                            </span>
+                          </div>
+                        )}
+                        {hasMath && hasEnglish && (
+                          <span className="text-gray-300">|</span>
+                        )}
+                        {hasEnglish && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-600">영어</span>
+                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-medium rounded">
+                              {staff.englishCount}/{staff.englishTotal}
+                            </span>
+                            <span className="text-emerald-600 font-medium">
+                              ({englishPercentage}%)
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] ml-7">
-                      {hasMath && (
-                        <span className="text-blue-600">
-                          수학 {staff.mathCount}/{staff.mathTotal}
-                        </span>
-                      )}
-                      {hasMath && hasEnglish && <span className="text-gray-300">|</span>}
-                      {hasEnglish && (
-                        <span className="text-emerald-600">
-                          영어 {staff.englishCount}/{staff.englishTotal}
-                        </span>
-                      )}
+
+                    {/* 합계 */}
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-gray-900">
+                        {staff.totalCount}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        /{staff.totalNeeded} ({totalPercentage}%)
+                      </div>
                     </div>
                   </div>
                 );

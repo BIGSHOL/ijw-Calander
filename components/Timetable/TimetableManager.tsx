@@ -20,6 +20,7 @@ import StudentDetailModal from '../StudentManagement/StudentDetailModal';
 import SimpleViewSettingsModal from './Math/components/Modals/SimpleViewSettingsModal';
 import { ClassInfo } from '../../hooks/useClasses';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
+import { MathSimulationProvider, useMathSimulation } from './Math/context/SimulationContext';
 
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
@@ -498,27 +499,92 @@ const TimetableManager = ({
         );
     }
 
-    return (
-        <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
-            {/* Header Component */}
-            <TimetableHeader
-                weekLabel={weekLabel}
-                goToPrevWeek={goToPrevWeek}
-                goToNextWeek={goToNextWeek}
-                goToThisWeek={goToThisWeek}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                viewType={viewType}
-                setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
-                setIsViewSettingsOpen={setIsViewSettingsOpen}
-                pendingMovesCount={pendingMoves.length}
-                handleSavePendingMoves={handleSavePendingMoves}
-                handleCancelPendingMoves={handleCancelPendingMoves}
-                isSaving={isSaving}
-                mode={mode}
-                setMode={setMode}
-                canEdit={canEditMath}
-            />
+    // Math Timetable Inner Component (uses simulation context)
+    const MathTimetableContent = () => {
+        const simulation = useMathSimulation();
+        const { isSimulationMode, enterSimulationMode, exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName } = simulation;
+        const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
+        const [loading, setLoading] = useState(false);
+
+        const handleToggleSimulation = async () => {
+            if (isSimulationMode) {
+                exitSimulationMode();
+            } else {
+                setLoading(true);
+                try {
+                    await enterSimulationMode();
+                } catch (e) {
+                    console.error('시뮬레이션 모드 진입 실패:', e);
+                    alert('시뮬레이션 모드 진입에 실패했습니다.');
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+
+        const handleCopyLiveToDraft = async () => {
+            if (!confirm('현재 실시간 시간표를 복사해 오시겠습니까?\n기존 시뮬레이션 작업 내용은 모두 사라집니다.')) return;
+            setLoading(true);
+            try {
+                await loadFromLive();
+                alert('✅ 현재 시간표를 가져왔습니다.');
+            } catch (e) {
+                console.error('복사 실패:', e);
+                alert('복사 중 오류가 발생했습니다.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const handlePublishDraftToLive = async () => {
+            if (!confirm('⚠️ 시뮬레이션 내용을 실제 시간표에 반영하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+            setLoading(true);
+            try {
+                await publishToLive(currentUser.uid, currentUser.displayName || currentUser.email);
+                alert('✅ 실제 시간표에 반영되었습니다.');
+            } catch (e) {
+                console.error('반영 실패:', e);
+                alert('반영 중 오류가 발생했습니다.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (loading) {
+            return (
+                <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+                </div>
+            );
+        }
+
+        return (
+            <>
+                <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
+                    {/* Header Component */}
+                    <TimetableHeader
+                        weekLabel={weekLabel}
+                        goToPrevWeek={goToPrevWeek}
+                        goToNextWeek={goToNextWeek}
+                        goToThisWeek={goToThisWeek}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        viewType={viewType}
+                        setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
+                        setIsViewSettingsOpen={setIsViewSettingsOpen}
+                        pendingMovesCount={pendingMoves.length}
+                        handleSavePendingMoves={handleSavePendingMoves}
+                        handleCancelPendingMoves={handleCancelPendingMoves}
+                        isSaving={isSaving}
+                        mode={mode}
+                        setMode={setMode}
+                        canEdit={canEditMath}
+                        isSimulationMode={isSimulationMode}
+                        onToggleSimulation={handleToggleSimulation}
+                        onCopyLiveToDraft={handleCopyLiveToDraft}
+                        onPublishDraftToLive={handlePublishDraftToLive}
+                        onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+                    />
 
             {/* Timetable Grid - 외부 스크롤 제거, 내부 그리드 스크롤만 사용 */}
             <div className="flex-1 overflow-hidden border-t border-gray-200 p-4">
@@ -605,7 +671,7 @@ const TimetableManager = ({
                 <StudentDetailModal
                     student={selectedStudentForModal}
                     onClose={() => setSelectedStudentForModal(null)}
-                    readOnly={mode === 'view'}
+                    readOnly={subjectTab !== 'math' || mode === 'view'}
                 />
             )}
 
@@ -639,7 +705,33 @@ const TimetableManager = ({
                 showGrade={showGrade}
                 setShowGrade={setShowGrade}
             />
-        </div >
+
+            {/* Scenario Management Modal */}
+            {/* TODO: Create Math-specific ScenarioManagementModal */}
+            {isScenarioModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setIsScenarioModalOpen(false)} />
+                    <div className="relative bg-white rounded-lg p-6 max-w-md">
+                        <h3 className="text-lg font-bold mb-4">시나리오 관리</h3>
+                        <p className="text-gray-600 mb-4">수학 시나리오 관리 기능은 개발 중입니다.</p>
+                        <button
+                            onClick={() => setIsScenarioModalOpen(false)}
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                            닫기
+                        </button>
+                    </div>
+                </div>
+            )}
+                </div>
+            </>
+        );
+    };
+
+    return (
+        <MathSimulationProvider>
+            <MathTimetableContent />
+        </MathSimulationProvider>
     );
 };
 
