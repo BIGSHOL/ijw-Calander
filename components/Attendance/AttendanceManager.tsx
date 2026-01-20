@@ -223,6 +223,21 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     storage.setJSON(groupOrderKey, newOrder);
   };
 
+  // Collapsed groups state (per teacher, stored in localStorage)
+  const collapsedGroupsKey = STORAGE_KEYS.attendanceCollapsedGroups(filterTeacherId || 'all', selectedSubject);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
+    try {
+      const saved = storage.getJSON<string[]>(collapsedGroupsKey, []);
+      return new Set(saved);
+    } catch { return new Set(); }
+  });
+
+  // Persist collapsed groups changes
+  const handleCollapsedGroupsChange = (newCollapsed: Set<string>) => {
+    setCollapsedGroups(newCollapsed);
+    storage.setJSON(collapsedGroupsKey, Array.from(newCollapsed));
+  };
+
 
 
   // Optimistic UI State: { [studentId_dateKey]: value }
@@ -536,6 +551,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             scoresByStudent={scoresByStudent}
             groupOrder={groupOrder}
             onGroupOrderChange={handleGroupOrderChange}
+            collapsedGroups={collapsedGroups}
+            onCollapsedGroupsChange={handleCollapsedGroupsChange}
           />
         </div>
       </div>

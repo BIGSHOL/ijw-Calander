@@ -243,6 +243,32 @@ const App: React.FC = () => {
   const { students: globalStudents = [] } = useStudents(false);
   const { data: allClasses = [] } = useClasses();
 
+  // 선생님 목록 추출 (학생 enrollments에서 teacherId 수집, 과목별 그룹화)
+  const teachersBySubject = useMemo(() => {
+    const subjectTeachers: Record<string, Set<string>> = {
+      math: new Set(),
+      english: new Set(),
+      science: new Set(),
+      korean: new Set(),
+      other: new Set(),
+    };
+    globalStudents.forEach(student => {
+      student.enrollments?.forEach(enrollment => {
+        if (enrollment.teacherId && enrollment.subject) {
+          const subject = subjectTeachers[enrollment.subject] ? enrollment.subject : 'other';
+          subjectTeachers[subject].add(enrollment.teacherId);
+        }
+      });
+    });
+    return {
+      math: Array.from(subjectTeachers.math).sort((a, b) => a.localeCompare(b, 'ko')),
+      english: Array.from(subjectTeachers.english).sort((a, b) => a.localeCompare(b, 'ko')),
+      science: Array.from(subjectTeachers.science).sort((a, b) => a.localeCompare(b, 'ko')),
+      korean: Array.from(subjectTeachers.korean).sort((a, b) => a.localeCompare(b, 'ko')),
+      other: Array.from(subjectTeachers.other).sort((a, b) => a.localeCompare(b, 'ko')),
+    };
+  }, [globalStudents]);
+
   // Tab Permissions
 
 
@@ -1956,19 +1982,109 @@ const App: React.FC = () => {
                   className="px-2 py-1.5 bg-white/10 border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 cursor-pointer"
                 >
                   <option value="all" className="bg-[#081429]">학년</option>
+                  <option value="elementary" className="bg-[#081429]">--- 초등학생 ---</option>
                   <option value="초1" className="bg-[#081429]">초1</option>
                   <option value="초2" className="bg-[#081429]">초2</option>
                   <option value="초3" className="bg-[#081429]">초3</option>
                   <option value="초4" className="bg-[#081429]">초4</option>
                   <option value="초5" className="bg-[#081429]">초5</option>
                   <option value="초6" className="bg-[#081429]">초6</option>
+                  <option value="middle" className="bg-[#081429]">--- 중학생 ---</option>
                   <option value="중1" className="bg-[#081429]">중1</option>
                   <option value="중2" className="bg-[#081429]">중2</option>
                   <option value="중3" className="bg-[#081429]">중3</option>
+                  <option value="high" className="bg-[#081429]">--- 고등학생 ---</option>
                   <option value="고1" className="bg-[#081429]">고1</option>
                   <option value="고2" className="bg-[#081429]">고2</option>
                   <option value="고3" className="bg-[#081429]">고3</option>
+                  <option value="other" className="bg-[#081429]">--- 기타 ---</option>
                 </select>
+
+                {/* Teacher Filter - 과목별 그룹화 */}
+                <div className="relative group">
+                  <button
+                    className={`px-2 py-1.5 bg-white/10 border border-white/10 rounded-lg text-xs cursor-pointer hover:border-white/30 transition-colors ${studentFilters.teacher !== 'all' ? 'text-[#fdb813] border-[#fdb813]/50' : 'text-white'}`}
+                  >
+                    {studentFilters.teacher === 'all' ? '선생님' : studentFilters.teacher}
+                    <ChevronDown size={12} className="inline ml-1" />
+                  </button>
+                  <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-white/20 rounded-lg shadow-xl p-2 hidden group-hover:block z-50 min-w-[200px]">
+                    <button
+                      onClick={() => setStudentFilters(prev => ({ ...prev, teacher: 'all' }))}
+                      className={`w-full text-left px-2 py-1 rounded text-xs mb-1 ${studentFilters.teacher === 'all' ? 'bg-[#fdb813] text-[#081429] font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                    >
+                      전체
+                    </button>
+                    {/* 수학 선생님 */}
+                    {teachersBySubject.math.length > 0 && (
+                      <div className="mb-2">
+                        <div className="text-[10px] text-blue-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">수학</div>
+                        <div className="grid grid-cols-2 gap-0.5">
+                          {teachersBySubject.math.map(teacher => (
+                            <button
+                              key={`math-${teacher}`}
+                              onClick={() => setStudentFilters(prev => ({ ...prev, teacher }))}
+                              className={`px-2 py-1 rounded text-xs ${studentFilters.teacher === teacher ? 'bg-blue-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                            >
+                              {teacher}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* 영어 선생님 */}
+                    {teachersBySubject.english.length > 0 && (
+                      <div className="mb-2">
+                        <div className="text-[10px] text-purple-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">영어</div>
+                        <div className="grid grid-cols-2 gap-0.5">
+                          {teachersBySubject.english.map(teacher => (
+                            <button
+                              key={`english-${teacher}`}
+                              onClick={() => setStudentFilters(prev => ({ ...prev, teacher }))}
+                              className={`px-2 py-1 rounded text-xs ${studentFilters.teacher === teacher ? 'bg-purple-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                            >
+                              {teacher}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* 과학 선생님 */}
+                    {teachersBySubject.science.length > 0 && (
+                      <div className="mb-2">
+                        <div className="text-[10px] text-green-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">과학</div>
+                        <div className="grid grid-cols-2 gap-0.5">
+                          {teachersBySubject.science.map(teacher => (
+                            <button
+                              key={`science-${teacher}`}
+                              onClick={() => setStudentFilters(prev => ({ ...prev, teacher }))}
+                              className={`px-2 py-1 rounded text-xs ${studentFilters.teacher === teacher ? 'bg-green-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                            >
+                              {teacher}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* 국어 선생님 */}
+                    {teachersBySubject.korean.length > 0 && (
+                      <div className="mb-2">
+                        <div className="text-[10px] text-orange-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">국어</div>
+                        <div className="grid grid-cols-2 gap-0.5">
+                          {teachersBySubject.korean.map(teacher => (
+                            <button
+                              key={`korean-${teacher}`}
+                              onClick={() => setStudentFilters(prev => ({ ...prev, teacher }))}
+                              className={`px-2 py-1 rounded text-xs ${studentFilters.teacher === teacher ? 'bg-orange-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                            >
+                              {teacher}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Sort */}
                 <select
@@ -1982,10 +2098,10 @@ const App: React.FC = () => {
                 </select>
 
                 {/* Reset Filters */}
-                {(studentFilters.searchQuery || studentFilters.grade !== 'all' || studentFilters.status !== 'all' || studentFilters.subject !== 'all') && (
+                {(studentFilters.searchQuery || studentFilters.grade !== 'all' || studentFilters.status !== 'all' || studentFilters.subject !== 'all' || studentFilters.teacher !== 'all') && (
                   <button
                     onClick={() => {
-                      setStudentFilters({ searchQuery: '', grade: 'all', status: 'all', subject: 'all' });
+                      setStudentFilters({ searchQuery: '', grade: 'all', status: 'all', subject: 'all', teacher: 'all' });
                       setStudentSortBy('name');
                     }}
                     className="px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"

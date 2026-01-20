@@ -221,8 +221,16 @@ const ClassCard: React.FC<ClassCardProps> = ({
         try {
             const data = JSON.parse(e.dataTransfer.getData('text/plain'));
             if (data && data.student && onMoveStudent) {
-                // Ignore if dropping on same class
-                // But fromClass is in data.
+                // 같은 반으로 이동 시 무시
+                if (data.fromClass === classInfo.name) return;
+
+                // 신입생 경고 확인
+                if (data.isNewStudent) {
+                    if (!confirm(`${data.student.name}은(는) 신입생입니다.\n반 이동하시겠습니까?`)) {
+                        return;
+                    }
+                }
+
                 onMoveStudent(data.student, data.fromClass, classInfo.name);
             }
         } catch (err) {
@@ -232,14 +240,22 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
     const handleDragStart = (e: React.DragEvent, student: TimetableStudent) => {
         if (mode !== 'edit') return;
-        if (student.withdrawalDate || student.enrollmentDate) {
-            e.preventDefault(); // Withdrawn or New students are not draggable
+        // 퇴원생만 드래그 불가 (신입생은 경고 후 허용)
+        if (student.withdrawalDate) {
+            e.preventDefault();
             return;
         }
         e.dataTransfer.setData('text/plain', JSON.stringify({
             student,
-            fromClass: classInfo.name
+            fromClass: classInfo.name,
+            isNewStudent: !!student.enrollmentDate && isNewStudent(student.enrollmentDate)
         }));
+    };
+
+    // 신입생 여부 확인 (30일 이내)
+    const isNewStudent = (enrollmentDate: string): boolean => {
+        const days = Math.ceil((Date.now() - new Date(enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+        return days <= 30;
     };
 
     // Cost Optimization: Use centralized data from parent instead of individual onSnapshot
@@ -565,10 +581,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             if (student.underline) return { className: 'bg-blue-50', textClass: 'underline decoration-blue-600 text-blue-600 underline-offset-2', subTextClass: 'text-blue-500', englishTextClass: 'text-blue-600' };
                                             if (student.enrollmentDate) {
                                                 const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
-                                                // Debug: 신입생 스타일 적용 확인
-                                                if (days <= 60) {
-                                                    console.log(`[ClassCard] 신입생 스타일 적용: ${student.name}, enrollmentDate: ${student.enrollmentDate}, days: ${days}`);
-                                                }
                                                 if (days <= 30) return { className: 'bg-red-500', textClass: 'text-white font-bold', subTextClass: 'text-white', englishTextClass: 'text-white/80' };
                                                 if (days <= 60) return { className: 'bg-pink-100', textClass: 'text-black font-bold', subTextClass: 'text-black', englishTextClass: 'text-gray-600' };
                                             }

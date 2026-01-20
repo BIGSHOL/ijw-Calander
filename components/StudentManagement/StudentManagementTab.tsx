@@ -15,6 +15,7 @@ export interface StudentFilters {
   grade: string;
   status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn';
   subject: string;
+  teacher: string;  // 'all' 또는 선생님 이름
 }
 
 interface StudentManagementTabProps {
@@ -103,9 +104,28 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
       result = [...result, ...oldFiltered];
     }
 
-    // 학년 필터
+    // 학년 필터 (초등/중등/고등 전체 선택 지원)
     if (filters.grade !== 'all') {
-      result = result.filter((s) => s.grade === filters.grade);
+      if (filters.grade === 'elementary') {
+        // 초등학생 전체 (초1~초6)
+        result = result.filter((s) => s.grade?.startsWith('초'));
+      } else if (filters.grade === 'middle') {
+        // 중학생 전체 (중1~중3)
+        result = result.filter((s) => s.grade?.startsWith('중'));
+      } else if (filters.grade === 'high') {
+        // 고등학생 전체 (고1~고3)
+        result = result.filter((s) => s.grade?.startsWith('고'));
+      } else if (filters.grade === 'other') {
+        // 기타 (초/중/고에 해당하지 않는 학년 - 미취학, 재수생 등)
+        result = result.filter((s) => {
+          const grade = s.grade;
+          if (!grade) return true; // 학년 없는 경우
+          return !grade.startsWith('초') && !grade.startsWith('중') && !grade.startsWith('고');
+        });
+      } else {
+        // 특정 학년 (초1, 중2, 고3 등)
+        result = result.filter((s) => s.grade === filters.grade);
+      }
     }
 
     // 상태 필터 (prospect/prospective 모두 지원, status 없으면 active로 간주)
@@ -126,14 +146,34 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
       );
     }
 
+    // 선생님 필터
+    if (filters.teacher !== 'all') {
+      result = result.filter((s) =>
+        s.enrollments.some((e) => e.teacherId === filters.teacher)
+      );
+    }
+
+    // 학년 정렬 우선순위 (고3 -> 고1 -> 중3 -> 중1 -> 초6 -> 초1 -> 기타)
+    const getGradeOrder = (grade: string | undefined): number => {
+      if (!grade) return 999; // 기타 (맨 뒤)
+      const gradeMap: Record<string, number> = {
+        '고3': 1, '고2': 2, '고1': 3,
+        '중3': 4, '중2': 5, '중1': 6,
+        '초6': 7, '초5': 8, '초4': 9, '초3': 10, '초2': 11, '초1': 12,
+      };
+      return gradeMap[grade] ?? 999; // 목록에 없는 학년은 기타로 처리
+    };
+
     // 정렬
     result.sort((a, b) => {
       if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
+        return a.name.localeCompare(b.name, 'ko');
       } else if (sortBy === 'grade') {
-        const gradeA = a.grade || '';
-        const gradeB = b.grade || '';
-        return gradeA.localeCompare(gradeB);
+        const orderA = getGradeOrder(a.grade);
+        const orderB = getGradeOrder(b.grade);
+        if (orderA !== orderB) return orderA - orderB;
+        // 같은 학년이면 이름순
+        return a.name.localeCompare(b.name, 'ko');
       } else if (sortBy === 'startDate') {
         return (b.startDate || '').localeCompare(a.startDate || '');
       }
@@ -141,7 +181,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
     });
 
     return result;
-  }, [students, filters, sortBy]);
+  }, [students, filters, sortBy, oldWithdrawnStudents]);
 
   if (loading) {
     return (

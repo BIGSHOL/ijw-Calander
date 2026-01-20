@@ -490,8 +490,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 classStudentData={classDataMap[cls.name]}
                                                 hideTime={true}
                                                 useInjaePeriod={group.useInjaePeriod}
-                                                // 수정 모드에서만 수업 상세 모달 열기
-                                                onClassClick={mode === 'edit' ? () => {
+                                                // 수정 모드에서만 수업 상세 모달 열기 (시뮬레이션 모드에서는 비활성화)
+                                                onClassClick={mode === 'edit' && !isSimulationMode ? () => {
                                                     // ClassInfo (from englishClasses hook) -> ClassInfoFromHook 변환
                                                     const classDetail: ClassInfoFromHook = {
                                                         className: cls.name,

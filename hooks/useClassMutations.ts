@@ -325,10 +325,12 @@ export const useManageClassStudents = () => {
         await Promise.all(addPromises);
       }
 
-      // 학생 제거
+      // 학생 제거 (반이동): enrollment에 endDate 설정 (삭제하지 않음)
+      // 이렇게 하면 출석부에서 해당 월의 수강 기록을 유지하면서, 이후 월에서는 제외됨
       if (removeStudentIds.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
         const removePromises = removeStudentIds.map(async (studentId) => {
-          // 해당 학생의 enrollments에서 className + subject 일치하는 것 찾아서 삭제
+          // 해당 학생의 enrollments에서 className + subject 일치하는 것 찾아서 endDate 설정
           const enrollmentsQuery = query(
             collection(db, COL_STUDENTS, studentId, 'enrollments'),
             where('subject', '==', subject),
@@ -336,11 +338,14 @@ export const useManageClassStudents = () => {
           );
           const snapshot = await getDocs(enrollmentsQuery);
 
-          const deletionPromises = snapshot.docs.map(async (docSnap) => {
-            await deleteDoc(docSnap.ref);
+          const updatePromises = snapshot.docs.map(async (docSnap) => {
+            await updateDoc(docSnap.ref, {
+              endDate: today,
+              updatedAt: new Date().toISOString()
+            });
           });
 
-          await Promise.all(deletionPromises);
+          await Promise.all(updatePromises);
         });
         await Promise.all(removePromises);
       }

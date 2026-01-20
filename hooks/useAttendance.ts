@@ -4,6 +4,9 @@ import { collection, doc, getDocs, getDoc, setDoc, deleteDoc, query, where, orde
 import { db } from '../firebaseConfig';
 import { Student, SalaryConfig, MonthlySettlement, AttendanceSubject } from '../components/Attendance/types';
 
+// Classes collection for checking assistants
+const CLASSES_COLLECTION = 'classes';
+
 // Collection names
 const STUDENTS_COLLECTION = 'students'; // Unified DB
 const RECORDS_COLLECTION = 'attendance_records';
@@ -120,14 +123,52 @@ export const useAttendanceStudents = (options?: {
 
             // Client-side filtering (same logic as before)
             if (options?.teacherId) {
+                // === 부담임(assistants) 지원 추가 ===
+                // 해당 선생님이 부담임으로 등록된 수업 목록 조회
+                const classesQuery = query(
+                    collection(db, CLASSES_COLLECTION),
+                    where('isActive', '==', true)
+                );
+                const classesSnapshot = await getDocs(classesQuery);
+
+                // 선생님이 부담임인 수업의 className 목록
+                const assistantClassNames: string[] = [];
+                classesSnapshot.docs.forEach(doc => {
+                    const classData = doc.data();
+                    const assistants = classData.assistants as string[] | undefined;
+                    if (assistants && assistants.includes(options.teacherId!)) {
+                        assistantClassNames.push(classData.className);
+                    }
+                });
+
                 data = data.filter(s => {
                     const enrollments = (s as any).enrollments || [];
-                    return enrollments.some((e: any) => e.teacherId === options.teacherId);
+                    // 주담임이거나 부담임 수업의 학생인 경우 포함
+                    return enrollments.some((e: any) =>
+                        e.teacherId === options.teacherId ||
+                        assistantClassNames.includes(e.className)
+                    );
                 });
                 data = data.map(s => {
                     const enrollments = (s as any).enrollments || [];
-                    const teacherEnrollments = enrollments.filter((e: any) => e.teacherId === options.teacherId);
-                    const teacherClasses = teacherEnrollments.map((e: any) => e.className);
+                    // 주담임 또는 부담임 수업의 enrollments 필터링
+                    const teacherEnrollments = enrollments.filter((e: any) =>
+                        e.teacherId === options.teacherId ||
+                        assistantClassNames.includes(e.className)
+                    );
+
+                    // 수업명에 [담임]/[부담임] 표시 추가
+                    const teacherClasses = teacherEnrollments.map((e: any) => {
+                        const isAssistant = e.teacherId !== options.teacherId && assistantClassNames.includes(e.className);
+                        const roleTag = isAssistant ? '[부담임]' : '[담임]';
+                        return `${roleTag} ${e.className}`;
+                    });
+
+                    // 부담임 수업 여부 (모든 enrollment가 부담임인 경우)
+                    const hasOnlyAssistantClasses = teacherEnrollments.every((e: any) =>
+                        e.teacherId !== options.teacherId && assistantClassNames.includes(e.className)
+                    );
+
                     const teacherDays: string[] = [];
                     teacherEnrollments.forEach((e: any) => {
                         // schedule 배열에서 요일 추출 (형식: "요일 교시", 예: "월 5", "목 6")
@@ -175,6 +216,7 @@ export const useAttendanceStudents = (options?: {
                         days: teacherDays,
                         startDate: enrollmentStartDate,
                         endDate: enrollmentEndDate,
+                        isAssistantClass: hasOnlyAssistantClasses,
                     };
                 });
             }

@@ -1,12 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { BookOpen, Search, Plus, Filter, Calculator, Settings, Stethoscope, Microscope, Book } from 'lucide-react';
+import { BookOpen, Search, Plus, Calculator, Settings, Microscope, Book } from 'lucide-react';
 import { useClasses, ClassInfo } from '../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import ClassList from './ClassList';
 import ClassDetailModal from './ClassDetailModal';
 import AddClassModal from './AddClassModal';
 import ClassSettingsModal from './ClassSettingsModal';
-import EnrollmentDiagnosticModal from './EnrollmentDiagnosticModal';
 
 export interface ClassFilters {
   subject: 'all' | SubjectType;
@@ -37,9 +36,6 @@ const ClassManagementTab: React.FC = () => {
 
   // 수업 설정 모달
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-
-  // 진단 모달
-  const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
 
   // 데이터 조회 (subject 필터 적용)
   const subjectFilter = filters.subject === 'all' ? undefined : filters.subject;
@@ -191,16 +187,6 @@ const ClassManagementTab: React.FC = () => {
 
             {/* 우측: 버튼들 */}
             <div className="flex items-center gap-2">
-              {/* 진단 버튼 */}
-              <button
-                onClick={() => setShowDiagnosticModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-amber-500 text-white hover:bg-amber-600 transition-colors shadow-sm font-bold"
-                title="수업 매칭 진단"
-              >
-                <Stethoscope size={14} />
-                <span>진단</span>
-              </button>
-
               {/* 설정 버튼 */}
               <button
                 onClick={() => setShowSettingsModal(true)}
@@ -319,12 +305,6 @@ const ClassManagementTab: React.FC = () => {
         />
       )}
 
-      {/* 진단 모달 */}
-      {showDiagnosticModal && (
-        <EnrollmentDiagnosticModal
-          onClose={() => setShowDiagnosticModal(false)}
-        />
-      )}
     </div>
   );
 };
