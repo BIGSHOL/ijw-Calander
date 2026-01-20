@@ -79,6 +79,14 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                 // 같은 키에 이미 수업이 있으면 merged로 추가 (합반 처리)
                 if (scheduleData[key]) {
                     const existing = scheduleData[key];
+                    // 같은 수업명이면 중복이므로 스킵 (데이터 중복 방지)
+                    if (existing.className === cls.className) {
+                        return;
+                    }
+                    // merged에 이미 같은 수업명이 있으면 스킵
+                    if (existing.merged?.some(m => m.className === cls.className)) {
+                        return;
+                    }
                     if (!existing.merged) {
                         existing.merged = [];
                     }
@@ -102,6 +110,21 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         setLoading(false);
     }, [isSimulationMode, simulation.draftClasses]);
 
+    // 강사 이름을 영어 이름으로 변환하는 헬퍼 (한글 이름 → 영어 이름)
+    // scheduleData 키 생성 시 teachers 배열과 일치시키기 위해 사용
+    const normalizeTeacherName = useCallback((teacherName: string): string => {
+        if (!teacherName) return teacherName;
+        // propsTeachers에서 name 또는 englishName으로 매칭
+        const matched = propsTeachers.find(t =>
+            t.name === teacherName || t.englishName === teacherName
+        );
+        // 매칭된 강사의 englishName이 있으면 사용, 없으면 원본 유지
+        if (matched?.englishName) {
+            return matched.englishName;
+        }
+        return teacherName;
+    }, [propsTeachers]);
+
     // Data loading (일반 모드) - classes 컬렉션에서 영어 수업 로드
     useEffect(() => {
         // 시뮬레이션 모드에서는 위의 useEffect에서 처리
@@ -124,7 +147,9 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     cls.schedule.forEach((slot: any) => {
                         const slotKey = `${slot.day}-${slot.periodId}`;
                         // 부담임이 있으면 그대로 사용 (LAB 포함), 없으면 담임
-                        const slotTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
+                        const rawTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
+                        // 영어 이름으로 정규화 (강사뷰 teachers 배열과 일치시키기 위해)
+                        const slotTeacher = normalizeTeacherName(rawTeacher);
                         const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room;
 
                         const key = `${slotTeacher}-${slot.periodId}-${slot.day}`;
@@ -132,6 +157,14 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         // 같은 키에 이미 수업이 있으면 merged로 추가 (합반 처리)
                         if (scheduleData[key]) {
                             const existing = scheduleData[key];
+                            // 같은 수업명이면 중복이므로 스킵 (데이터 중복 방지)
+                            if (existing.className === cls.className) {
+                                return;
+                            }
+                            // merged에 이미 같은 수업명이 있으면 스킵
+                            if (existing.merged?.some(m => m.className === cls.className)) {
+                                return;
+                            }
                             if (!existing.merged) {
                                 existing.merged = [];
                             }
@@ -160,7 +193,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             }
         );
         return listenerRegistry.register('EnglishTimetable', unsubscribe);
-    }, [isSimulationMode]);
+    }, [isSimulationMode, normalizeTeacherName]);
 
     // Manual refresh is no longer strictly needed for data, but can trigger re-sync if needed.
     // We'll keep it as a simple re-fetch of teachers or just no-op for schedule.

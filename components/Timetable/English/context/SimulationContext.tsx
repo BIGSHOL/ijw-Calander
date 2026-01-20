@@ -228,17 +228,28 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
         return undefined;
       };
 
+      const enrollmentDate = convertTimestampToDate(data.enrollmentDate || data.startDate);
       draftEnrollments[className][studentId] = {
         studentId,
         className,
         subject: 'english',
         underline: data.underline,
-        enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
+        enrollmentDate,
         withdrawalDate: convertTimestampToDate(data.withdrawalDate),
         onHold: data.onHold,
         attendanceDays: data.attendanceDays || [],
       };
+
+      // Debug: 신입생 확인
+      if (enrollmentDate) {
+        const days = Math.ceil((Date.now() - new Date(enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+        if (days <= 60) {
+          console.log(`[SimContext] 신입생 발견: ${className} - studentId: ${studentId}, enrollmentDate: ${enrollmentDate}, days: ${days}`);
+        }
+      }
     });
+
+    console.log('[SimContext] loadFromLiveInternal - draftEnrollments loaded:', Object.keys(draftEnrollments).length, 'classes');
 
     setState(prev => ({
       ...prev,
@@ -275,6 +286,16 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
 
           if (!baseStudent || baseStudent.status !== 'active') return null;
 
+          const studentEnrollmentDate = enrollment?.enrollmentDate;
+
+          // Debug: 신입생 데이터 전달 확인
+          if (studentEnrollmentDate) {
+            const days = Math.ceil((Date.now() - new Date(studentEnrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+            if (days <= 60) {
+              console.log(`[SimContext.getClassStudents] 신입생: ${className} - ${baseStudent.name}, enrollmentDate: ${studentEnrollmentDate}, days: ${days}`);
+            }
+          }
+
           return {
             id,
             name: baseStudent.name || '',
@@ -282,7 +303,7 @@ export const SimulationProvider: React.FC<SimulationProviderProps> = ({ children
             school: baseStudent.school || '',
             grade: baseStudent.grade || '',
             underline: enrollment?.underline ?? baseStudent.underline ?? false,
-            enrollmentDate: enrollment?.enrollmentDate,
+            enrollmentDate: studentEnrollmentDate,
             withdrawalDate: enrollment?.withdrawalDate,
             onHold: enrollment?.onHold,
             isMoved: false,

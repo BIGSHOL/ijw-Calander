@@ -47,14 +47,15 @@ const parseCellKey = (key: string) => {
 };
 
 /**
- * classes 컬렉션에서 영어 수업 찾기 (className + teacher 기준)
+ * classes 컬렉션에서 영어 수업 찾기 (className 기준)
+ * 영어 수업은 className이 고유하므로 className만으로 찾음
+ * teacher 매개변수는 호환성을 위해 유지하지만 사용하지 않음
  */
-const findClassByNameAndTeacher = async (className: string, teacher: string) => {
+const findClassByNameAndTeacher = async (className: string, _teacher?: string) => {
     const q = query(
         collection(db, COL_CLASSES),
         where('subject', '==', 'english'),
         where('className', '==', className),
-        where('teacher', '==', teacher),
         where('isActive', '==', true)
     );
     const snapshot = await getDocs(q);
@@ -114,6 +115,7 @@ export const useEnglishClassUpdater = () => {
 
     /**
      * 단일 수업을 classes 컬렉션에 upsert (내부 헬퍼)
+     * teacher: 해당 슬롯의 담당 강사 (slotTeachers에 저장됨)
      */
     const upsertSingleClass = async (
         className: string,
@@ -129,8 +131,8 @@ export const useEnglishClassUpdater = () => {
     ): Promise<string> => {
         const slotKey = `${day}-${periodId}`;
 
-        // 기존 수업 찾기
-        let classDoc = await findClassByNameAndTeacher(className, teacher);
+        // 기존 수업 찾기 (className으로만 찾음)
+        let classDoc = await findClassByNameAndTeacher(className);
 
         if (classDoc) {
             // 기존 수업에 스케줄 추가
@@ -154,6 +156,11 @@ export const useEnglishClassUpdater = () => {
             // slotRooms 업데이트
             updateData.slotRooms = { ...(classData.slotRooms || {}), [slotKey]: room || '' };
 
+            // slotTeachers 업데이트 (이동 시 강사 변경 반영)
+            // 기본 담임과 다른 강사로 이동하는 경우 slotTeachers에 저장
+            const currentSlotTeachers = classData.slotTeachers || {};
+            updateData.slotTeachers = { ...currentSlotTeachers, [slotKey]: teacher };
+
             // 그룹 정보 업데이트
             if (options?.classGroupId) {
                 updateData.classGroupId = options.classGroupId;
@@ -176,6 +183,7 @@ export const useEnglishClassUpdater = () => {
                 isActive: true,
                 schedule: [{ day, periodId }],
                 slotRooms: { [slotKey]: room || '' },
+                slotTeachers: { [slotKey]: teacher },
                 studentIds: [],
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
@@ -279,12 +287,17 @@ export const useEnglishClassUpdater = () => {
         const updatedSlotRooms = { ...(classData.slotRooms || {}) };
         delete updatedSlotRooms[slotKey];
 
+        // slotTeachers에서도 제거
+        const updatedSlotTeachers = { ...(classData.slotTeachers || {}) };
+        delete updatedSlotTeachers[slotKey];
+
         if (updatedSchedule.length === 0) {
             // 스케줄이 비면 수업 비활성화
             await updateDoc(doc(db, COL_CLASSES, classDocId), {
                 isActive: false,
                 schedule: [],
                 slotRooms: {},
+                slotTeachers: {},
                 classGroupId: null,
                 isGroupLeader: null,
                 groupMembers: null,
@@ -294,6 +307,7 @@ export const useEnglishClassUpdater = () => {
             await updateDoc(doc(db, COL_CLASSES, classDocId), {
                 schedule: updatedSchedule,
                 slotRooms: updatedSlotRooms,
+                slotTeachers: updatedSlotTeachers,
                 updatedAt: new Date().toISOString()
             });
         }
