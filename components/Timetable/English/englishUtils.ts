@@ -6,16 +6,16 @@ import { EnglishLevel, ParsedClassName } from '../../../types';
 export const EN_WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'] as const;
 
 export const EN_PERIODS = [
-    { id: '1', label: '1교시', time: '14:20~15:00' },
-    { id: '2', label: '2교시', time: '15:00~15:40' },
-    { id: '3', label: '3교시', time: '15:40~16:20' },
-    { id: '4', label: '4교시', time: '16:20~17:00' },
-    { id: '5', label: '5교시', time: '17:00~17:40' },
-    { id: '6', label: '6교시', time: '17:40~18:20' },
-    { id: '7', label: '7교시', time: '18:20~19:15' },
-    { id: '8', label: '8교시', time: '19:15~20:10' },
-    { id: '9', label: '9교시', time: '20:10~21:05' },
-    { id: '10', label: '10교시', time: '21:05~22:00' },
+    { id: '1', label: '1교시', time: '14:20~15:00', weekendTime: '09:00~10:00' },
+    { id: '2', label: '2교시', time: '15:00~15:40', weekendTime: '10:00~11:00' },
+    { id: '3', label: '3교시', time: '15:40~16:20', weekendTime: '11:00~12:00' },
+    { id: '4', label: '4교시', time: '16:20~17:00', weekendTime: '12:00~13:00' },
+    { id: '5', label: '5교시', time: '17:00~17:40', weekendTime: '13:00~14:00' },
+    { id: '6', label: '6교시', time: '17:40~18:20', weekendTime: '14:00~15:00' },
+    { id: '7', label: '7교시', time: '18:20~19:15', weekendTime: '15:00~16:00' },
+    { id: '8', label: '8교시', time: '19:15~20:10', weekendTime: '16:00~17:00' },
+    { id: '9', label: '9교시', time: '20:10~21:05', weekendTime: '' },
+    { id: '10', label: '10교시', time: '21:05~22:00', weekendTime: '' },
 ] as const;
 
 // 인재원 수업용 시간대 (50분 단위, 쉬는시간 포함)

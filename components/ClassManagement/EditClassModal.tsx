@@ -71,6 +71,14 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     return staffMember.name;
   };
 
+  // 강사 저장값 헬퍼 (영어 과목은 englishName 저장, 다른 과목은 name 저장)
+  const getTeacherSaveValue = (staffMember: typeof staff[0]) => {
+    if (classInfo.subject === 'english') {
+      return staffMember.englishName || staffMember.name;
+    }
+    return staffMember.name;
+  };
+
   // 강사 이름으로 staff 찾기 (name 또는 englishName 매칭)
   const findStaffByName = (name: string) => {
     return staff.find(s => s.name === name || s.englishName === name);
@@ -120,8 +128,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     if (staff.length > 0 && classInfo.teacher) {
       const matchedStaff = findStaffByName(classInfo.teacher);
       if (matchedStaff) {
-        // staff의 한글 이름으로 설정 (드롭다운 value와 매칭)
-        setTeacher(matchedStaff.name);
+        // 드롭다운 value와 일치하도록 저장값 형식으로 설정
+        setTeacher(getTeacherSaveValue(matchedStaff));
       } else {
         // 매칭 실패 시 원본 값 사용
         setTeacher(classInfo.teacher);
@@ -456,8 +464,9 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                 <option value="">선택해주세요</option>
                 {availableTeachers.map(t => {
                   const displayName = getTeacherDisplayName(t);
+                  const saveValue = getTeacherSaveValue(t);
                   return (
-                    <option key={t.id} value={t.name}>
+                    <option key={t.id} value={saveValue}>
                       {displayName}
                     </option>
                   );
@@ -608,8 +617,9 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                 </option>
                                 {availableTeachers.map(t => {
                                   const displayName = getTeacherDisplayName(t);
+                                  const saveValue = getTeacherSaveValue(t);
                                   return (
-                                    <option key={t.id} value={t.name}>
+                                    <option key={t.id} value={saveValue}>
                                       {displayName}
                                     </option>
                                   );

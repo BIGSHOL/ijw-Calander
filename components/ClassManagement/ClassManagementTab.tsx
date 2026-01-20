@@ -117,10 +117,10 @@ const ClassManagementTab: React.FC = () => {
       {/* 상단 고정 영역 - flex-shrink-0으로 절대 줄어들지 않음 */}
       <div className="flex-shrink-0">
         {/* 상단 네비게이션 바 */}
-        <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs">
-          <div className="flex items-center gap-3">
+        <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs overflow-x-auto">
+          <div className="flex items-center gap-3 flex-nowrap min-w-0 flex-shrink-0">
             {/* 과목 토글 */}
-            <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+            <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm flex-shrink-0">
               {subjectFilters.map(({ value, label, icon }) => (
                 <button
                   key={value}
@@ -138,14 +138,14 @@ const ClassManagementTab: React.FC = () => {
             </div>
 
             {/* 구분선 */}
-            <div className="w-px h-4 bg-white/20 mx-1"></div>
+            <div className="w-px h-4 bg-white/20 mx-1 flex-shrink-0"></div>
 
             {/* 강사 필터 */}
             {teachers.length > 0 && (
               <select
                 value={filters.teacher}
                 onChange={(e) => setFilters({ ...filters, teacher: e.target.value })}
-                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none flex-shrink-0"
               >
                 <option value="all">전체 강사</option>
                 {teachers.map(teacher => (
@@ -155,10 +155,10 @@ const ClassManagementTab: React.FC = () => {
             )}
 
             {/* 구분선 */}
-            <div className="w-px h-4 bg-white/20 mx-1"></div>
+            <div className="w-px h-4 bg-white/20 mx-1 flex-shrink-0"></div>
 
             {/* 요일 필터 */}
-            <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+            <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm flex-shrink-0">
               {ALL_DAYS.map(day => {
                 const isSelected = filters.selectedDays.includes(day);
                 const toggleDay = () => {
@@ -193,13 +193,13 @@ const ClassManagementTab: React.FC = () => {
             </div>
 
             {/* 구분선 */}
-            <div className="w-px h-4 bg-white/20 mx-1"></div>
+            <div className="w-px h-4 bg-white/20 mx-1 flex-shrink-0"></div>
 
             {/* 정렬 */}
             <select
               value={filters.sortBy}
               onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
-              className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+              className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none flex-shrink-0"
             >
               <option value="name">수업명순</option>
               <option value="studentCount">학생수순</option>
@@ -207,10 +207,10 @@ const ClassManagementTab: React.FC = () => {
             </select>
 
             {/* 구분선 */}
-            <div className="w-px h-4 bg-white/20 mx-1"></div>
+            <div className="w-px h-4 bg-white/20 mx-1 flex-shrink-0"></div>
 
             {/* 검색 */}
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input
                 type="text"
@@ -222,7 +222,7 @@ const ClassManagementTab: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {/* 결과 카운트 */}
             <span className="text-gray-400 text-xs">
               총 <span className="text-[#fdb813] font-bold">{filteredClasses.length}</span>개 수업

@@ -218,55 +218,26 @@ service cloud.firestore {
     }
 
     match /students/{studentId} {
-      // Read: Authenticated users (subject to component filtering)
-      allow read: if isAuthenticated();
+      // Read: master/admin 또는 students.view 권한
+      allow read: if hasRole(['master', 'admin']) || hasPermission('students.view');
 
-      // Write: Master, Admin, Manager, and Leads (for their respective subjects)
-      // + 입력값 검증 (create/update 시)
-      allow create: if isAuthenticated() &&
+      // Create/Update: master/admin 또는 students.edit 권한
+      allow create, update: if isAuthenticated() &&
         isValidStudent(request.resource.data) &&
-        (hasRole(['master']) ||
-         hasPermission('timetable.math.edit') ||
-         hasPermission('timetable.english.edit') ||
-         hasPermission('attendance.manage_math') ||
-         hasPermission('attendance.manage_english'));
+        (hasRole(['master', 'admin']) || hasPermission('students.edit'));
 
-      allow update: if isAuthenticated() &&
-        isValidStudent(request.resource.data) &&
-        (hasRole(['master']) ||
-         hasPermission('timetable.math.edit') ||
-         hasPermission('timetable.english.edit') ||
-         hasPermission('attendance.manage_math') ||
-         hasPermission('attendance.manage_english'));
-
-      allow delete: if isAuthenticated() && (
-        hasRole(['master']) ||
-        hasPermission('timetable.math.edit') ||
-        hasPermission('timetable.english.edit') ||
-        hasPermission('attendance.manage_math') ||
-        hasPermission('attendance.manage_english')
-      );
+      // Delete: master/admin 또는 students.delete 권한
+      allow delete: if hasRole(['master', 'admin']) || hasPermission('students.delete');
     }
 
     // Student Enrollments Subcollection (수강 이력)
     match /students/{studentId}/enrollments/{enrollmentId} {
-      // Read: All authenticated users
-      allow read: if isAuthenticated();
+      // Read: master/admin 또는 students.view 권한
+      allow read: if hasRole(['master', 'admin']) || hasPermission('students.view');
 
-      // Write: Master or users with timetable/attendance permissions
-      allow create, update: if isAuthenticated() && (
-        hasRole(['master']) ||
-        hasPermission('timetable.math.edit') ||
-        hasPermission('timetable.english.edit') ||
-        hasPermission('attendance.manage_math') ||
-        hasPermission('attendance.manage_english')
-      );
-
-      allow delete: if isAuthenticated() && (
-        hasRole(['master']) ||
-        hasPermission('timetable.math.edit') ||
-        hasPermission('timetable.english.edit')
-      );
+      // Write: master/admin 또는 students.enrollment.manage 권한
+      allow create, update, delete: if hasRole(['master', 'admin']) ||
+        hasPermission('students.enrollment.manage');
     }
 
     // === Gantt Chart Collections (Phase 10: Access Control) ===
@@ -404,18 +375,85 @@ service cloud.firestore {
     // === Class Keywords ===
     match /classKeywords/{keywordId} {
       allow read: if isAuthenticated();
-      allow write: if hasRole(['master']) || hasPermission('system.classes.edit');
+      allow write: if hasRole(['master', 'admin']) || hasPermission('system.classes.edit');
+    }
+
+    // === Classes Collection (수업 관리) ===
+    match /classes/{classId} {
+      // Read: master/admin 또는 classes.view 권한
+      allow read: if hasRole(['master', 'admin']) || hasPermission('classes.view');
+
+      // Create: master/admin 또는 classes.create 권한
+      allow create: if hasRole(['master', 'admin']) || hasPermission('classes.create');
+
+      // Update: master/admin 또는 classes.edit 권한
+      allow update: if hasRole(['master', 'admin']) || hasPermission('classes.edit');
+
+      // Delete: master/admin 또는 classes.delete 권한
+      allow delete: if hasRole(['master', 'admin']) || hasPermission('classes.delete');
+
+      // students subcollection
+      match /students/{studentId} {
+        allow read: if hasRole(['master', 'admin']) || hasPermission('classes.view');
+        allow write: if hasRole(['master', 'admin']) || hasPermission('classes.edit');
+      }
+    }
+
+    // === Grades Collection (성적 관리) ===
+    match /grades/{gradeId} {
+      allow read: if hasRole(['master', 'admin']) || hasPermission('grades.view');
+      allow create, update: if hasRole(['master', 'admin']) || hasPermission('grades.edit');
+      allow delete: if hasRole(['master', 'admin']) || hasPermission('grades.edit');
+    }
+
+    match /exams/{examId} {
+      allow read: if hasRole(['master', 'admin']) || hasPermission('grades.view');
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('grades.manage_exams');
+    }
+
+    match /exam_series/{seriesId} {
+      allow read: if hasRole(['master', 'admin']) || hasPermission('grades.view');
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('grades.manage_exams');
+    }
+
+    // === Billing Collection (수납 관리) ===
+    match /billing/{billingId} {
+      allow read: if hasRole(['master', 'admin']) || hasPermission('billing.view');
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('billing.edit');
+    }
+
+    // === Attendance Collection (출석 관리) ===
+    match /attendance/{attendanceId} {
+      allow read: if hasRole(['master', 'admin']) ||
+                     hasPermission('attendance.manage_own') ||
+                     hasPermission('attendance.edit_all');
+      allow create, update: if hasRole(['master', 'admin']) ||
+                               hasPermission('attendance.edit_all') ||
+                               hasPermission('attendance.manage_math') ||
+                               hasPermission('attendance.manage_english');
+      allow delete: if hasRole(['master', 'admin']) || hasPermission('attendance.edit_all');
+    }
+
+    match /daily_attendance/{docId} {
+      allow read: if hasRole(['master', 'admin']) ||
+                     hasPermission('attendance.manage_own') ||
+                     hasPermission('attendance.edit_all');
+      allow create, update: if hasRole(['master', 'admin']) ||
+                               hasPermission('attendance.edit_all') ||
+                               hasPermission('attendance.manage_math') ||
+                               hasPermission('attendance.manage_english');
+      allow delete: if hasRole(['master', 'admin']) || hasPermission('attendance.edit_all');
     }
 
     // === Default: Role-Based Access for All Collections ===
-    // 새 컬렉션은 역할 권한과 탭 권한에 따라 자동으로 접근 제어됨
-    // 위에 명시적 규칙이 없는 모든 컬렉션에 적용
+    // 위에 명시적 규칙이 없는 컬렉션에 적용
+    // master/admin만 쓰기 가능, 읽기는 인증된 사용자
 
     match /{document=**} {
-      // Read: 모든 인증된 사용자 (탭 권한은 클라이언트에서 제어)
+      // Read: 모든 인증된 사용자 (세부 권한은 클라이언트에서 제어)
       allow read: if isAuthenticated();
 
-      // Write: Master 또는 Admin 역할
+      // Write: master/admin만 허용 (명시적 규칙이 없는 컬렉션)
       allow write: if hasRole(['master', 'admin']);
     }
   }

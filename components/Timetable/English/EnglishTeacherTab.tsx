@@ -13,6 +13,7 @@ import MoveSelectionModal from './MoveSelectionModal';
 import PortalTooltip from '../../Common/PortalTooltip';
 import { useEnglishClassUpdater } from '../../../hooks/useEnglishClassUpdater';
 import { useClasses } from '../../../hooks/useClasses';
+import { useQueryClient } from '@tanstack/react-query';
 
 export interface ScheduleCell {
     className?: string;
@@ -44,6 +45,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
+    const queryClient = useQueryClient();
 
     // classes 컬렉션 사용 (마이그레이션 완료)
 
@@ -413,16 +415,18 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     };
 
     const saveMoveChanges = async () => {
-        // performMove에서 즉시 저장되므로 여기서는 상태만 리셋
+        // performMove에서 즉시 저장되므로 여기서는 상태만 리셋 (확인 버튼)
         setHasChanges(false);
         setOriginalData(JSON.parse(JSON.stringify(scheduleData)));
-        alert("저장 완료");
     };
 
     const cancelMoveChanges = () => {
-        if (window.confirm("변경사항을 취소하시겠습니까?")) {
-            onUpdateLocal(JSON.parse(JSON.stringify(originalData)));
+        if (window.confirm("이동을 되돌리시겠습니까? (DB에서 다시 불러옵니다)")) {
+            // onSnapshot이 DB 변경을 감지하여 자동으로 UI 갱신함
+            // 여기서는 로컬 상태만 리셋하고, 실제 되돌리기는 DB 기준으로 처리
             setHasChanges(false);
+            // 페이지 새로고침으로 DB 상태 복원 (onSnapshot이 다시 로드)
+            window.location.reload();
         }
     };
 
@@ -715,6 +719,9 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                     <td className="p-2 border bg-gray-50 text-xs font-bold text-gray-600 text-center whitespace-nowrap">
                                         <div>{period.label}</div>
                                         <div className="text-micro text-gray-400">{period.time}</div>
+                                        {period.weekendTime && (
+                                            <div className="text-micro text-blue-400">토일 {period.weekendTime}</div>
+                                        )}
                                     </td>
                                     {filteredTeachers.map((teacher, tIdx) => (
                                         filteredWeekdays.map((day, dIdx) => {

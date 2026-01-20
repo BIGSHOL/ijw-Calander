@@ -73,6 +73,14 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
     return staffMember.name;
   };
 
+  // 강사 저장값 헬퍼 (영어 과목은 englishName 저장, 다른 과목은 name 저장)
+  const getTeacherSaveValue = (staffMember: typeof staff[0]) => {
+    if (subject === 'english') {
+      return staffMember.englishName || staffMember.name;
+    }
+    return staffMember.name;
+  };
+
   // 강사 색상 가져오기
   const getTeacherColor = (teacherName: string) => {
     const teacherInfo = teachersData?.find(t => t.name === teacherName || t.englishName === teacherName);
@@ -272,8 +280,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                 <option value="">선택해주세요</option>
                 {availableTeachers.map(teacher => {
                   const displayName = getTeacherDisplayName(teacher);
+                  const saveValue = getTeacherSaveValue(teacher);
                   return (
-                    <option key={teacher.id} value={teacher.name}>
+                    <option key={teacher.id} value={saveValue}>
                       {displayName}
                     </option>
                   );
@@ -425,8 +434,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                                 </option>
                                 {availableTeachers.map(teacher => {
                                   const displayName = getTeacherDisplayName(teacher);
+                                  const saveValue = getTeacherSaveValue(teacher);
                                   return (
-                                    <option key={teacher.id} value={teacher.name}>
+                                    <option key={teacher.id} value={saveValue}>
                                       {displayName}
                                     </option>
                                   );

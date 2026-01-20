@@ -565,6 +565,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             if (student.underline) return { className: 'bg-blue-50', textClass: 'underline decoration-blue-600 text-blue-600 underline-offset-2', subTextClass: 'text-blue-500', englishTextClass: 'text-blue-600' };
                                             if (student.enrollmentDate) {
                                                 const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                                                // Debug: 신입생 스타일 적용 확인
+                                                if (days <= 60) {
+                                                    console.log(`[ClassCard] 신입생 스타일 적용: ${student.name}, enrollmentDate: ${student.enrollmentDate}, days: ${days}`);
+                                                }
                                                 if (days <= 30) return { className: 'bg-red-500', textClass: 'text-white font-bold', subTextClass: 'text-white', englishTextClass: 'text-white/80' };
                                                 if (days <= 60) return { className: 'bg-pink-100', textClass: 'text-black font-bold', subTextClass: 'text-black', englishTextClass: 'text-gray-600' };
                                             }
