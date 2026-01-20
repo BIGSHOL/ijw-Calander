@@ -5,8 +5,6 @@ import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
 import StudentMigrationModal from './StudentMigrationModal';
-import EnglishClassAssignmentModal from './EnglishClassAssignmentModal';
-import DeleteInvalidStudentsModal from './DeleteInvalidStudentsModal';
 import NormalizeStudentIdsModal from './NormalizeStudentIdsModal';
 import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, Wrench } from 'lucide-react';
 
@@ -31,8 +29,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const [isSearchingOld, setIsSearchingOld] = useState(false);
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [showMigrationModal, setShowMigrationModal] = useState(false);
-  const [showEnglishAssignmentModal, setShowEnglishAssignmentModal] = useState(false);
-  const [showDeleteInvalidModal, setShowDeleteInvalidModal] = useState(false);
   const [showNormalizeIdsModal, setShowNormalizeIdsModal] = useState(false);
 
   // 선택된 학생 자동 업데이트 (students 배열 변경 시)
@@ -324,7 +320,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         }}
       />
 
-
       {/* 학생 데이터 마이그레이션 모달 */}
       {showMigrationModal && (
         <StudentMigrationModal
@@ -332,22 +327,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             refreshStudents();
             setShowMigrationModal(false);
           }}
-        />
-      )}
-
-      {/* 영어 수업 자동 배정 모달 */}
-      {showEnglishAssignmentModal && (
-        <EnglishClassAssignmentModal
-          onClose={() => setShowEnglishAssignmentModal(false)}
-          onComplete={() => refreshStudents()}
-        />
-      )}
-
-      {/* 잘못된 학생 문서 삭제 모달 */}
-      {showDeleteInvalidModal && (
-        <DeleteInvalidStudentsModal
-          onClose={() => setShowDeleteInvalidModal(false)}
-          onComplete={() => refreshStudents()}
         />
       )}
 

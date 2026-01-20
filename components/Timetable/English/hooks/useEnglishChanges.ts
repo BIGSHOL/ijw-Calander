@@ -51,8 +51,8 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
 
         setIsSaving(true);
         try {
-            // === 시뮬레이션 모드: SimulationContext의 draftEnrollments 업데이트 ===
-            if (isSimulationMode && simulation?.isSimulationMode) {
+            // === 시나리오 모드: ScenarioContext의 scenarioEnrollments 업데이트 ===
+            if (isSimulationMode && simulation?.isScenarioMode) {
                 moveChanges.forEach(({ student, fromClass, toClass }) => {
                     simulation.moveStudent(fromClass, toClass, student.id);
                 });

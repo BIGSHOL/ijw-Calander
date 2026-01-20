@@ -20,6 +20,9 @@ import {
   UserProfile
 } from '../../types';
 import { useUpdateDailyAttendanceStatus } from '../../hooks/useDailyAttendance';
+import { useUpdateAttendance } from '../../hooks/useAttendance';
+import { useBatchAttendanceUpdate } from '../../hooks/useBatchAttendanceUpdate';
+import { mapAttendanceStatusToValue } from '../../utils/attendanceSync';
 
 interface ClassAttendanceListProps {
   records: DailyAttendanceRecord[];
@@ -53,9 +56,12 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteValue, setNoteValue] = useState('');
+  const [updatingRecordIds, setUpdatingRecordIds] = useState<Set<string>>(new Set());
 
-  // Mutation for updating status
+  // Mutations for updating status
+  const batchUpdateMutation = useBatchAttendanceUpdate();
   const updateStatusMutation = useUpdateDailyAttendanceStatus();
+  const updateAttendanceMutation = useUpdateAttendance();
 
   // Group records by class
   const recordsByClass = useMemo(() => {
@@ -88,19 +94,45 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
     );
   }, [records, searchQuery]);
 
-  // Handle status change
+  // Handle status change with duplicate request prevention and atomic batch update
   const handleStatusChange = async (recordId: string, status: AttendanceStatus) => {
     if (!userProfile) return;
 
+    // 중복 요청 방지: 이미 처리 중인 레코드면 무시
+    if (updatingRecordIds.has(recordId)) {
+      console.warn('Already updating this record, ignoring duplicate request');
+      return;
+    }
+
+    const record = records.find(r => r.id === recordId);
+    if (!record) return;
+
+    // 처리 중 상태로 마킹
+    setUpdatingRecordIds(prev => new Set(prev).add(recordId));
+
     try {
-      await updateStatusMutation.mutateAsync({
+      // Firestore Batch Write를 사용하여 원자적으로 양쪽 업데이트
+      await batchUpdateMutation.mutateAsync({
         date: selectedDate,
         recordId,
         status,
         updatedBy: userProfile.uid,
+        studentId: record.studentId,
+        studentName: record.studentName,
+        classId: record.classId,
+        className: record.className,
+        yearMonth: selectedDate.substring(0, 7),
       });
     } catch (error) {
       console.error('Failed to update status:', error);
+      alert('출결 상태 변경에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      // 처리 완료: 마킹 제거
+      setUpdatingRecordIds(prev => {
+        const next = new Set(prev);
+        next.delete(recordId);
+        return next;
+      });
     }
   };
 
@@ -196,21 +228,26 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
                   {/* Status Buttons */}
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-center gap-1">
-                      {STATUS_BUTTONS.map(({ status, icon: Icon, label, activeClass }) => (
-                        <button
-                          key={status}
-                          onClick={() => handleStatusChange(record.id, status)}
-                          disabled={updateStatusMutation.isPending}
-                          className={`p-1.5 rounded-lg transition-all ${
-                            record.status === status
-                              ? activeClass
-                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                          }`}
-                          title={label}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </button>
-                      ))}
+                      {STATUS_BUTTONS.map(({ status, icon: Icon, label, activeClass }) => {
+                        const isUpdating = updatingRecordIds.has(record.id);
+                        return (
+                          <button
+                            key={status}
+                            onClick={() => handleStatusChange(record.id, status)}
+                            disabled={isUpdating}
+                            className={`p-1.5 rounded-lg transition-all ${
+                              record.status === status
+                                ? activeClass
+                                : isUpdating
+                                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                            }`}
+                            title={isUpdating ? '처리 중...' : label}
+                          >
+                            <Icon className={`w-4 h-4 ${isUpdating ? 'animate-pulse' : ''}`} />
+                          </button>
+                        );
+                      })}
                     </div>
                   </td>
 

@@ -65,6 +65,7 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
           const hasEnglish = staff.englishTotal > 0;
           const mathPercentage = hasMath ? Math.round((staff.mathCount / staff.mathTotal) * 100) : 0;
           const englishPercentage = hasEnglish ? Math.round((staff.englishCount / staff.englishTotal) * 100) : 0;
+          const totalPercentage = staff.totalNeeded > 0 ? Math.round((staff.totalCount / staff.totalNeeded) * 100) : 0;
 
           return (
             <div
@@ -101,8 +102,13 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
                   )}
                 </div>
               </div>
-              <div className="text-lg font-bold text-gray-900">
-                {staff.totalCount}
+              <div className="text-right">
+                <div className="text-lg font-bold text-gray-900">
+                  {staff.totalCount}
+                </div>
+                <div className="text-[10px] text-gray-500">
+                  /{staff.totalNeeded} ({totalPercentage}%)
+                </div>
               </div>
             </div>
           );
@@ -112,56 +118,81 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <h3 className="text-sm font-semibold text-[#081429] mb-3">선생님별 상담</h3>
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <h3 className="text-lg font-semibold text-[#081429] mb-5">선생님별 상담 통계</h3>
 
-      {/* 헤더 */}
-      <div className="flex items-center gap-2 text-[10px] text-gray-500 mb-2 px-1">
-        <span className="w-16">이름</span>
-        <span className="flex-1 text-center">수학</span>
-        <span className="flex-1 text-center">영어</span>
-        <span className="w-14 text-center">합계</span>
-      </div>
-
-      {/* 선생님 목록 */}
-      <div className="space-y-1">
+      {/* 선생님 목록 - 대시보드 스타일 */}
+      <div className="space-y-3">
         {stats.map((staff, idx) => {
           const hasMath = staff.mathTotal > 0;
           const hasEnglish = staff.englishTotal > 0;
           const mathPercentage = hasMath ? Math.round((staff.mathCount / staff.mathTotal) * 100) : 0;
           const englishPercentage = hasEnglish ? Math.round((staff.englishCount / staff.englishTotal) * 100) : 0;
+          const totalPercentage = staff.totalNeeded > 0 ? Math.round((staff.totalCount / staff.totalNeeded) * 100) : 0;
 
           return (
             <div
               key={staff.id}
-              className={`flex items-center gap-2 px-1 py-1.5 rounded ${
-                idx === 0 ? 'bg-[#fdb813]/10' : 'hover:bg-gray-50'
+              className={`flex items-center gap-4 p-3 rounded-xl transition-colors ${
+                idx === 0 ? 'bg-amber-50 border border-amber-200' :
+                idx === 1 ? 'bg-gray-50 border border-gray-200' :
+                idx === 2 ? 'bg-orange-50 border border-orange-200' :
+                'bg-white border border-gray-200 hover:bg-gray-50'
               }`}
             >
-              <span className="w-16 text-xs font-medium text-[#081429] truncate">
-                {idx === 0 && '🏆 '}{staff.name}
-              </span>
-              <span className="flex-1 text-center">
-                {hasMath ? (
-                  <span className="inline-block px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-medium rounded">
-                    {staff.mathCount}/{staff.mathTotal}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-gray-300">-</span>
-                )}
-              </span>
-              <span className="flex-1 text-center">
-                {hasEnglish ? (
-                  <span className="inline-block px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-medium rounded">
-                    {staff.englishCount}/{staff.englishTotal}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-gray-300">-</span>
-                )}
-              </span>
-              <span className="w-14 text-center text-xs font-bold text-[#081429]">
-                {staff.totalCount}
-              </span>
+              {/* 순위 뱃지 */}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                idx === 0 ? 'bg-amber-100 text-amber-700' :
+                idx === 1 ? 'bg-gray-200 text-gray-600' :
+                idx === 2 ? 'bg-orange-100 text-orange-600' :
+                'bg-gray-100 text-gray-500'
+              }`}>
+                {idx + 1}
+              </div>
+
+              {/* 선생님 정보 */}
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-semibold text-gray-900 mb-1">
+                  {staff.name}
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  {hasMath && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-600">수학</span>
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-medium rounded">
+                        {staff.mathCount}/{staff.mathTotal}
+                      </span>
+                      <span className="text-blue-600 font-medium">
+                        ({mathPercentage}%)
+                      </span>
+                    </div>
+                  )}
+                  {hasMath && hasEnglish && (
+                    <span className="text-gray-300">|</span>
+                  )}
+                  {hasEnglish && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-600">영어</span>
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-medium rounded">
+                        {staff.englishCount}/{staff.englishTotal}
+                      </span>
+                      <span className="text-emerald-600 font-medium">
+                        ({englishPercentage}%)
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 합계 */}
+              <div className="text-right">
+                <div className="text-2xl font-bold text-gray-900">
+                  {staff.totalCount}
+                </div>
+                <div className="text-xs text-gray-500">
+                  /{staff.totalNeeded} ({totalPercentage}%)
+                </div>
+              </div>
             </div>
           );
         })}

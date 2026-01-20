@@ -371,9 +371,25 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                 </div>
 
                                 {/* Bucket Cards */}
-                                <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                                <div className="flex flex-row-reverse gap-2 overflow-x-auto custom-scrollbar pb-2">
                                     {bucketItems
                                         .filter(b => b.targetMonth === format(selectedMonth, 'yyyy-MM'))
+                                        .sort((a, b) => {
+                                            // 부서 색상이 지정된 항목을 우측으로 정렬
+                                            const aDept = departments.find(d => d.id === a.departmentId);
+                                            const bDept = departments.find(d => d.id === b.departmentId);
+                                            const aHasColor = aDept?.color ? 1 : 0;
+                                            const bHasColor = bDept?.color ? 1 : 0;
+
+                                            // 색상 있는 항목이 뒤로 (우측으로)
+                                            if (aHasColor !== bHasColor) {
+                                                return aHasColor - bHasColor;
+                                            }
+
+                                            // 같은 그룹 내에서는 우선순위 순서 유지
+                                            const priorityOrder = { high: 0, medium: 1, low: 2 };
+                                            return priorityOrder[a.priority] - priorityOrder[b.priority];
+                                        })
                                         .map(bucket => (
                                             <div
                                                 key={bucket.id}
@@ -391,7 +407,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                                 <div className="flex items-start justify-between">
                                                     <div className={`text-nano px-1 py-0.5 rounded-none font-bold
                                                     ${bucket.priority === 'high' ? 'bg-red-500 text-white' :
-                                                            bucket.priority === 'medium' ? 'bg-[#fdb813] text-[#081429]' :
+                                                            bucket.priority === 'medium' ? 'bg-[#081429] text-[#fdb813]' :
                                                                 'bg-gray-400 text-white'}
                                                 `}>
                                                         {bucket.priority === 'high' ? '높음' : bucket.priority === 'medium' ? '중간' : '낮음'}
@@ -430,6 +446,22 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                                         </button>
                                                     </div>
                                                 </div>
+                                                {/* Department Display */}
+                                                {bucket.departmentId && (() => {
+                                                    const dept = departments.find(d => d.id === bucket.departmentId);
+                                                    if (!dept) return null;
+                                                    return (
+                                                        <div
+                                                            className="text-nano px-1.5 py-0.5 rounded-none font-bold mt-1 inline-block"
+                                                            style={{
+                                                                backgroundColor: dept.color || '#6b7280',
+                                                                color: '#ffffff'
+                                                            }}
+                                                        >
+                                                            {dept.name}
+                                                        </div>
+                                                    );
+                                                })()}
                                                 <div className="text-xxs font-medium text-gray-700 mt-1 line-clamp-2">
                                                     {bucket.title}
                                                 </div>

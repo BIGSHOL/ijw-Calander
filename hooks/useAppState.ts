@@ -32,10 +32,13 @@ export interface CalendarState {
 export function useCalendarState() {
   const [baseDate, setBaseDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    const saved = storage.getString(STORAGE_KEYS.DEFAULT_VIEW_MODE);
-    return (saved as ViewMode) || 'monthly';
+    const saved = localStorage.getItem('calendar_view_mode');
+    return (saved as ViewMode) || 'yearly';
   });
-  const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(2);
+  const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(() => {
+    const saved = localStorage.getItem('calendar_view_columns');
+    return saved ? (parseInt(saved) as 1 | 2 | 3) : 2;
+  });
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedEndDate, setSelectedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
@@ -46,6 +49,16 @@ export function useCalendarState() {
   const [hiddenDeptIds, setHiddenDeptIds] = useState<string[]>(() => {
     return storage.getJSON<string[]>(STORAGE_KEYS.DEPT_HIDDEN_IDS, []);
   });
+
+  // Persist viewMode to localStorage
+  useEffect(() => {
+    localStorage.setItem('calendar_view_mode', viewMode);
+  }, [viewMode]);
+
+  // Persist viewColumns to localStorage
+  useEffect(() => {
+    localStorage.setItem('calendar_view_columns', viewColumns.toString());
+  }, [viewColumns]);
 
   // Force viewColumns to 2 if currently 3 when switching to yearly view
   useEffect(() => {

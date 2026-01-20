@@ -50,7 +50,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
 
     // classes 컬렉션 사용 (마이그레이션 완료)
 
-    // classes 컬렉션 업데이터 훅
+    // classes 컬렉션 업데이터 훅 (시뮬레이션 모드는 Context에서 자동 감지)
     const {
         assignCellToClass,
         removeAllClassesFromCell,
@@ -106,6 +106,20 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     const filteredWeekdays = useMemo(() => {
         return EN_WEEKDAYS.filter(day => visibleWeekdays.has(day));
     }, [visibleWeekdays]);
+
+    // 셀 키워드 매칭 Map (성능 최적화: O(n*m) → O(n) + O(1))
+    const cellKeywordMap = useMemo(() => {
+        const map = new Map<string, ClassKeywordColor | null>();
+        Object.entries(scheduleData).forEach(([key, cell]) => {
+            if (!cell.className) {
+                map.set(key, null);
+                return;
+            }
+            const matched = classKeywords.find(kw => cell.className!.includes(kw.keyword));
+            map.set(key, matched || null);
+        });
+        return map;
+    }, [scheduleData, classKeywords]);
 
     // Toggle weekday visibility
     const toggleWeekday = (day: string) => {
@@ -608,7 +622,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         >
                             <Eye size={10} className="mr-1" />조회
                         </button>
-                        {canEditEnglish && !isSimulationMode && (
+                        {canEditEnglish && (
                             <button
                                 onClick={() => changeMode('edit')}
                                 className={`px-2 py-0.5 text-xs font-bold rounded transition-all flex items-center ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'} `}
@@ -616,7 +630,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                 <Edit3 size={10} className="mr-1" />편집
                             </button>
                         )}
-                        {canEditEnglish && !isSimulationMode && (
+                        {canEditEnglish && (
                             <button
                                 onClick={() => changeMode('move')}
                                 className={`px-2 py-0.5 text-xs font-bold rounded transition-all flex items-center ${mode === 'move' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'} `}
@@ -737,10 +751,8 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                             const isMoveMode = mode === 'move';
                                             const hasContent = !!cellData?.className;
 
-                                            // 키워드 색상 매칭
-                                            const matchedKw = cellData?.className
-                                                ? classKeywords.find(kw => cellData.className?.includes(kw.keyword))
-                                                : null;
+                                            // 키워드 색상 매칭 (Map에서 O(1) 조회)
+                                            const matchedKw = cellKeywordMap.get(cellKey);
 
                                             // 셀 배경 스타일 결정
                                             const cellBgStyle = matchedKw
@@ -779,7 +791,6 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                 `}>
                                                         {cellData?.className && (
                                                             (() => {
-                                                                const matchedKw = classKeywords.find(kw => cellData.className?.includes(kw.keyword));
                                                                 const classNameParts = formatClassNameWithBreaks(cellData.className);
 
                                                                 // Check for recent move (within 14 days)

@@ -168,7 +168,7 @@ export function useConsultationStats(
 
       // 강사(teacher) ID 목록 생성
       const teacherIds = new Set(
-        (staff || []).filter(s => s.role === 'teacher').map(s => s.id)
+        (staff || []).filter(s => s.role === 'teacher' || s.role === '강사').map(s => s.id)
       );
 
       // 상담자별 통계 집계 (강사만)
@@ -205,6 +205,17 @@ export function useConsultationStats(
 
       // 선생님별 과목별 통계 집계 (강사만)
       const staffSubjectMap = new Map<string, { name: string; math: number; english: number }>();
+
+      // 모든 teacher를 초기화 (상담 기록이 없어도 표시)
+      (staff || []).filter(s => s.role === 'teacher' || s.role === '강사').forEach(teacher => {
+        staffSubjectMap.set(teacher.id, {
+          name: teacher.name,
+          math: 0,
+          english: 0,
+        });
+      });
+
+      // 상담 기록으로 카운트 업데이트
       consultations.forEach((c) => {
         if (c.consultantId && (teacherIds.size === 0 || teacherIds.has(c.consultantId))) {
           const existing = staffSubjectMap.get(c.consultantId) || {
@@ -263,58 +274,96 @@ export function useConsultationStats(
         studentMap.set(doc.id, doc.data().name || '(이름없음)');
       });
 
-      // 2. collectionGroup으로 모든 enrollments 서브컬렉션을 단일 쿼리로 조회
-      // (학생 문서 내 enrollments 배열이 아닌 서브컬렉션 사용)
+      // 2. 선생님 이름 -> ID 매핑 생성
+      const teacherNameToIdMap = new Map<string, string>();
+      (staff || []).forEach(member => {
+        // role이 'teacher' 또는 '강사'인 경우 모두 포함
+        if (member.role === 'teacher' || member.role === '강사') {
+          teacherNameToIdMap.set(member.name, member.id);
+          // 영어 이름도 매핑 (있는 경우)
+          if (member.englishName) {
+            teacherNameToIdMap.set(member.englishName, member.id);
+          }
+        }
+      });
+
+      // 담임 선생님별 학생 수 집계 맵 초기화 (숫자로 카운트)
+      const teacherMainClassStudentsMap = new Map<string, Map<'math' | 'english', number>>();
+      teacherNameToIdMap.forEach((teacherId) => {
+        teacherMainClassStudentsMap.set(teacherId, new Map([
+          ['math', 0],
+          ['english', 0]
+        ]));
+      });
+
+      // 3. 전체 enrollments 조회하여 수업별 학생 수 집계
       const allEnrollmentsSnap = await getDocs(collectionGroup(db, 'enrollments'));
 
-      // 학생별 수강과목 집계 + 과목별 담당 선생님 매핑
+      // 수업명별 학생 수 집계 (중복 학생 제거)
+      const classStudentCount = new Map<string, Set<string>>();
+
+      // 학생별 수강과목 집계 (상담 필요 학생 목록용)
       const studentEnrollmentMap = new Map<string, Set<'math' | 'english'>>();
-      const teacherSubjectStudentsMap = new Map<string, Map<'math' | 'english', Set<string>>>();
 
       allEnrollmentsSnap.docs.forEach(enrollDoc => {
         // 문서 경로: students/{studentId}/enrollments/{enrollmentId}
         const pathParts = enrollDoc.ref.path.split('/');
-        const studentId = pathParts[1]; // students 다음 segment가 studentId
+        const studentId = pathParts[1];
 
         // 재원생만 처리
         if (!studentMap.has(studentId)) return;
 
         const enrollData = enrollDoc.data();
+        const className = enrollData.className as string | undefined;
         const subject = enrollData.subject as string;
-        const teacherId = enrollData.teacherId as string | undefined;
+
+        if (!className) return;
+
+        // 수업별 학생 집합에 추가
+        if (!classStudentCount.has(className)) {
+          classStudentCount.set(className, new Set());
+        }
+        classStudentCount.get(className)!.add(studentId);
 
         // 학생별 수강 과목 집계
         if (!studentEnrollmentMap.has(studentId)) {
           studentEnrollmentMap.set(studentId, new Set());
         }
-        const subjectSet = studentEnrollmentMap.get(studentId)!;
+        if (subject === 'math' || subject === '수학') {
+          studentEnrollmentMap.get(studentId)!.add('math');
+        } else if (subject === 'english' || subject === '영어') {
+          studentEnrollmentMap.get(studentId)!.add('english');
+        }
+      });
 
-        if (subject === 'math') {
-          subjectSet.add('math');
-          // 선생님별 담당 학생 매핑
-          if (teacherId) {
-            if (!teacherSubjectStudentsMap.has(teacherId)) {
-              teacherSubjectStudentsMap.set(teacherId, new Map());
-            }
-            const teacherMap = teacherSubjectStudentsMap.get(teacherId)!;
-            if (!teacherMap.has('math')) {
-              teacherMap.set('math', new Set());
-            }
-            teacherMap.get('math')!.add(studentId);
-          }
-        } else if (subject === 'english') {
-          subjectSet.add('english');
-          // 선생님별 담당 학생 매핑
-          if (teacherId) {
-            if (!teacherSubjectStudentsMap.has(teacherId)) {
-              teacherSubjectStudentsMap.set(teacherId, new Map());
-            }
-            const teacherMap = teacherSubjectStudentsMap.get(teacherId)!;
-            if (!teacherMap.has('english')) {
-              teacherMap.set('english', new Set());
-            }
-            teacherMap.get('english')!.add(studentId);
-          }
+      // 4. classes 컬렉션에서 담임별 학생 수 집계
+      const classesSnap = await getDocs(collection(db, 'classes'));
+
+      classesSnap.docs.forEach(classDoc => {
+        const classData = classDoc.data();
+        const teacherName = classData.teacher as string | undefined;
+        const subject = classData.subject as string | undefined;
+        const className = classData.className as string | undefined;
+
+        if (!teacherName || !subject || !className || classData.isActive === false) return;
+
+        // 과목 정규화
+        let normalizedSubject: 'math' | 'english' | null = null;
+        if (subject === 'math' || subject === '수학') normalizedSubject = 'math';
+        else if (subject === 'english' || subject === '영어') normalizedSubject = 'english';
+
+        if (!normalizedSubject) return;
+
+        // 담임 이름 -> ID 변환
+        const teacherId = teacherNameToIdMap.get(teacherName);
+        if (!teacherId) return;
+
+        // 이 수업의 학생 수를 담임 선생님에게 합산
+        const studentCount = classStudentCount.get(className)?.size || 0;
+        const teacherMap = teacherMainClassStudentsMap.get(teacherId);
+        if (teacherMap) {
+          const currentCount = teacherMap.get(normalizedSubject) || 0;
+          teacherMap.set(normalizedSubject, currentCount + studentCount);
         }
       });
 
@@ -418,11 +467,11 @@ export function useConsultationStats(
         }
       });
 
-      // 선생님별 통계에 전체 필요 상담 건수 업데이트 (담당 학생 수 기준)
+      // 선생님별 통계에 전체 필요 상담 건수 업데이트 (담임으로 있는 반의 학생 수 기준)
       staffSubjectStats.forEach(stat => {
-        const teacherMap = teacherSubjectStudentsMap.get(stat.id);
-        const mathStudents = teacherMap?.get('math')?.size || 0;
-        const englishStudents = teacherMap?.get('english')?.size || 0;
+        const teacherMap = teacherMainClassStudentsMap.get(stat.id);
+        const mathStudents = teacherMap?.get('math') || 0;
+        const englishStudents = teacherMap?.get('english') || 0;
 
         stat.mathTotal = mathStudents;
         stat.englishTotal = englishStudents;

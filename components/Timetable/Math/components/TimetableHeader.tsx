@@ -1,6 +1,7 @@
 import React from 'react';
 import {
-    ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit, SlidersHorizontal
+    ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit, SlidersHorizontal,
+    ArrowRightLeft, Copy, Upload, Save
 } from 'lucide-react';
 
 interface TimetableHeaderProps {
@@ -21,6 +22,12 @@ interface TimetableHeaderProps {
     mode: 'view' | 'edit';
     setMode: (mode: 'view' | 'edit') => void;
     canEdit: boolean;
+    // 시뮬레이션 모드
+    isSimulationMode?: boolean;
+    onToggleSimulation?: () => void;
+    onCopyLiveToDraft?: () => void;
+    onPublishDraftToLive?: () => void;
+    onOpenScenarioModal?: () => void;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -39,7 +46,12 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     isSaving,
     mode,
     setMode,
-    canEdit
+    canEdit,
+    isSimulationMode = false,
+    onToggleSimulation,
+    onCopyLiveToDraft,
+    onPublishDraftToLive,
+    onOpenScenarioModal
 }) => {
     return (
         <div className="bg-gray-50 h-10 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs">
@@ -70,6 +82,60 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
             {/* Right: Search and Actions */}
             <div className="flex items-center gap-2">
+                {/* Simulation Mode Toggle */}
+                {canEdit && onToggleSimulation && (
+                    <>
+                        <div
+                            onClick={onToggleSimulation}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-pointer transition-all ${isSimulationMode
+                                ? 'bg-orange-50 border-orange-300 hover:bg-orange-100'
+                                : 'bg-white border-gray-300 hover:bg-gray-50'
+                                }`}
+                        >
+                            <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
+                            <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
+                                {isSimulationMode ? '시뮬레이션 모드' : '실시간 모드'}
+                            </span>
+                        </div>
+
+                        {/* Simulation Actions */}
+                        {isSimulationMode && (
+                            <>
+                                <button
+                                    onClick={onCopyLiveToDraft}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
+                                    title="현재 실시간 시간표를 복사해옵니다 (기존 시뮬레이션 데이터 덮어쓰기)"
+                                >
+                                    <Copy size={12} />
+                                    현재 상태 가져오기
+                                </button>
+                                {canEdit && (
+                                    <button
+                                        onClick={onPublishDraftToLive}
+                                        className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
+                                        title="시뮬레이션 내용을 실제 시간표에 적용합니다 (주의)"
+                                    >
+                                        <Upload size={12} />
+                                        실제 반영
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={onOpenScenarioModal}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
+                                    title="시나리오 저장/불러오기"
+                                >
+                                    <Save size={12} />
+                                    시나리오
+                                </button>
+                            </>
+                        )}
+
+                        {/* Separator */}
+                        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                    </>
+                )}
+
                 {/* Mode Toggle - 조회/수정 모드 */}
                 <div className="flex bg-gray-200 rounded-lg p-0.5">
                     <button

@@ -124,8 +124,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                     currentUser?.displayName || currentUser?.email || 'Unknown'
                 );
 
-                const classCount = Object.keys(simulation.draftClasses).length;
-                const studentCount = Object.values(simulation.draftEnrollments)
+                const classCount = Object.keys(simulation.scenarioClasses).length;
+                const studentCount = Object.values(simulation.scenarioEnrollments)
                     .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
 
                 alert(`✅ 시나리오 "${newScenarioName}"가 저장되었습니다.\n(수업: ${classCount}개, 학생: ${studentCount}명)`);
