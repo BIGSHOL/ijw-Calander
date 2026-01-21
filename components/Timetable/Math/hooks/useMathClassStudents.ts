@@ -25,6 +25,17 @@ import { query, where, collectionGroup, getDocs } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
 
+// Helper to convert Firestore Timestamp to YYYY-MM-DD string (hoisted to module level)
+const convertTimestampToDate = (timestamp: any): string | undefined => {
+    if (!timestamp) return undefined;
+    if (typeof timestamp === 'string') return timestamp;
+    if (timestamp?.toDate) {
+        const date = timestamp.toDate();
+        return date.toISOString().split('T')[0];
+    }
+    return undefined;
+};
+
 export interface ClassStudentData {
     studentList: TimetableStudent[];
     studentIds: string[];
@@ -69,6 +80,9 @@ export const useMathClassStudents = (
                 enrollmentDataMap[name] = {};
             });
 
+            // Get today's date for filtering future enrollments
+            const today = new Date().toISOString().split('T')[0];
+
             snapshot.docs.forEach(doc => {
                 const data = doc.data();
                 const className = data.className as string;
@@ -80,22 +94,23 @@ export const useMathClassStudents = (
                 const studentId = doc.ref.parent.parent?.id;
                 if (!studentId) return;
 
+                const startDate = convertTimestampToDate(data.enrollmentDate || data.startDate);
+                const withdrawalDate = convertTimestampToDate(data.withdrawalDate);
+
+                // Filter out students with future start dates (not yet started)
+                if (startDate && startDate > today) return;
+
+                // Filter out withdrawn students
+                if (withdrawalDate) return;
+
+                // Filter out students on hold
+                if (data.onHold) return;
+
                 classStudentMap[className].add(studentId);
 
-                // Convert Firestore Timestamp to YYYY-MM-DD string
-                const convertTimestampToDate = (timestamp: any): string | undefined => {
-                    if (!timestamp) return undefined;
-                    if (typeof timestamp === 'string') return timestamp;
-                    if (timestamp?.toDate) {
-                        const date = timestamp.toDate();
-                        return date.toISOString().split('T')[0];
-                    }
-                    return undefined;
-                };
-
                 enrollmentDataMap[className][studentId] = {
-                    enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
-                    withdrawalDate: convertTimestampToDate(data.withdrawalDate),
+                    enrollmentDate: startDate,
+                    withdrawalDate: withdrawalDate,
                     onHold: data.onHold,
                     attendanceDays: data.attendanceDays || [],
                 };

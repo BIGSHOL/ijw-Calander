@@ -230,12 +230,21 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     return `${year}.${month}.${day}`;
   };
 
-  // 같은 수업(className)끼리 그룹화 (endDate가 없는 enrollments만)
+  // 오늘 날짜 (미래 수업 구분용)
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // 같은 수업(className)끼리 그룹화 (현재 수강중인 수업만)
   const groupedEnrollments = useMemo(() => {
     const groups = new Map<string, GroupedEnrollment>();
 
     (student.enrollments || [])
-      .filter(enrollment => !(enrollment as any).endDate) // endDate가 없는 것만 = 현재 수강중
+      .filter(enrollment => {
+        // endDate가 없고, startDate가 오늘 이전이거나 없는 것만 = 현재 수강중
+        const hasEnded = !!(enrollment as any).endDate;
+        const startDate = (enrollment as any).startDate;
+        const hasStarted = !startDate || startDate <= today;
+        return !hasEnded && hasStarted;
+      })
       .forEach(enrollment => {
         const key = `${enrollment.subject}_${enrollment.className}`;
 
@@ -273,7 +282,58 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       });
 
     return Array.from(groups.values());
-  }, [student.enrollments]);
+  }, [student.enrollments, today]);
+
+  // 배정 예정 수업 그룹화 (미래 시작일)
+  const scheduledEnrollments = useMemo(() => {
+    const groups = new Map<string, GroupedEnrollment>();
+
+    (student.enrollments || [])
+      .filter(enrollment => {
+        // endDate가 없고, startDate가 미래인 것만
+        const hasEnded = !!(enrollment as any).endDate;
+        const startDate = (enrollment as any).startDate;
+        const isFuture = startDate && startDate > today;
+        return !hasEnded && isFuture;
+      })
+      .forEach(enrollment => {
+        const key = `${enrollment.subject}_${enrollment.className}`;
+
+        if (groups.has(key)) {
+          const existing = groups.get(key)!;
+          if (!existing.teachers.includes(enrollment.teacherId)) {
+            existing.teachers.push(enrollment.teacherId);
+          }
+          enrollment.days?.forEach(day => {
+            if (!existing.days.includes(day)) {
+              existing.days.push(day);
+            }
+          });
+          // enrollment ID 추가
+          if ((enrollment as any).id && !existing.enrollmentIds.includes((enrollment as any).id)) {
+            existing.enrollmentIds.push((enrollment as any).id);
+          }
+          // startDate는 가장 빠른 날짜 사용
+          const existingStartDate = existing.startDate ? new Date(existing.startDate) : null;
+          const currentStartDate = (enrollment as any).startDate ? new Date((enrollment as any).startDate) : null;
+          if (currentStartDate && (!existingStartDate || currentStartDate < existingStartDate)) {
+            existing.startDate = (enrollment as any).startDate;
+          }
+        } else {
+          groups.set(key, {
+            className: enrollment.className,
+            subject: enrollment.subject,
+            teachers: [enrollment.teacherId],
+            days: [...(enrollment.days || [])],
+            enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
+            startDate: (enrollment as any).startDate,
+            endDate: undefined,
+          });
+        }
+      });
+
+    return Array.from(groups.values());
+  }, [student.enrollments, today]);
 
   // 수업의 대표 강사 결정
   const getMainTeacher = (group: GroupedEnrollment): string | null => {
@@ -658,27 +718,156 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         )}
       </div>
 
-      {/* 지난 수업 섹션 */}
-      {completedClasses.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-xs font-bold text-[#373d41] mb-2">지난 수업 ({completedClasses.length}개)</h3>
-          <div className="bg-white border border-gray-200 overflow-hidden">
-            {/* 테이블 헤더 */}
-            <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
-              <span className="w-8 shrink-0">과목</span>
-              <span className="w-24 shrink-0">수업명</span>
-              <span className="w-14 shrink-0">강사</span>
-              <span className="flex-1">상태</span>
-              <span className="w-10 shrink-0"></span>
-              {!compact && (
-                <>
-                  <span className="w-16 shrink-0 text-center">시작</span>
-                  <span className="w-14 shrink-0 text-center">종료</span>
-                </>
-              )}
-              <span className="w-5 shrink-0"></span>
-            </div>
+      {/* 배정 예정 수업 섹션 */}
+      <div className="mt-4">
+        <div className="flex items-center gap-2 mb-2">
+          <h3 className="text-xs font-bold text-[#081429]">배정 예정 수업</h3>
+          <span className="text-xs text-[#373d41]">
+            ({scheduledEnrollments.length}개)
+          </span>
+          {scheduledEnrollments.length > 0 && (
+            <span className="text-xxs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+              🗓️ 시작일 전
+            </span>
+          )}
+        </div>
+        <div className="bg-amber-50/30 border border-amber-200 overflow-hidden">
+          {/* 테이블 헤더 */}
+          <div className="flex items-center gap-2 px-2 py-1 bg-amber-100/50 border-b border-amber-200 text-xxs font-medium text-[#373d41]">
+            <span className="w-8 shrink-0">과목</span>
+            <span className="w-24 shrink-0">수업명</span>
+            <span className="w-14 shrink-0">강사</span>
+            <span className="flex-1">스케줄</span>
+            <span className="w-10 shrink-0 text-center">인원</span>
+            {!compact && (
+              <>
+                <span className="w-16 shrink-0 text-center">시작 예정</span>
+                <span className="w-14 shrink-0 text-center">상태</span>
+              </>
+            )}
+            <span className="w-5 shrink-0"></span>
+          </div>
 
+          {scheduledEnrollments.length === 0 ? (
+            <div className="text-center py-6">
+              <BookOpen className="w-8 h-8 mx-auto mb-2 text-amber-300" />
+              <p className="text-amber-600 text-xs">배정 예정 수업이 없습니다</p>
+            </div>
+          ) : (
+            <div>
+              {scheduledEnrollments.map((group, index) => {
+                const subjectColor = SUBJECT_COLORS[group.subject];
+                const actualClass = allClasses.find(
+                  c => c.className === group.className && c.subject === group.subject
+                );
+
+                return (
+                  <div
+                    key={`scheduled-${group.subject}-${index}`}
+                    className="flex items-center gap-2 px-2 py-1.5 border-b border-amber-200 hover:bg-amber-100/30 transition-colors cursor-pointer"
+                    onClick={() => handleClassClick(group)}
+                  >
+                    {/* 과목 뱃지 */}
+                    <span
+                      className="w-8 shrink-0 text-micro px-1 py-0.5 rounded font-semibold text-center"
+                      style={{
+                        backgroundColor: subjectColor.bg,
+                        color: subjectColor.text,
+                      }}
+                    >
+                      {SUBJECT_LABELS[group.subject]}
+                    </span>
+
+                    {/* 수업명 */}
+                    <span className="w-24 shrink-0 text-xs text-[#373d41] font-medium truncate">
+                      {group.className}
+                    </span>
+
+                    {/* 강사 */}
+                    <div className="w-14 shrink-0 flex items-center gap-0.5">
+                      <User className="w-3 h-3 text-gray-400" />
+                      <span className="text-xxs text-[#373d41] truncate">
+                        {getMainTeacher(group) || '-'}
+                      </span>
+                    </div>
+
+                    {/* 스케줄 */}
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <ScheduleBadge
+                        schedule={actualClass?.schedule || group.schedule}
+                        subject={group.subject === 'english' ? 'english' : 'math'}
+                      />
+                    </div>
+
+                    {/* 학생수 */}
+                    <div className="w-10 shrink-0 flex items-center justify-center gap-0.5">
+                      <Users className="w-3 h-3 text-gray-400" />
+                      <span className="text-xxs font-medium text-[#081429]">
+                        {actualClass?.studentCount || 0}
+                      </span>
+                    </div>
+
+                    {/* 시작 예정일 (compact 모드가 아닐 때만) */}
+                    {!compact && (
+                      <>
+                        <span className="w-16 shrink-0 text-xxs text-amber-700 font-medium text-center">
+                          {formatDate(group.startDate)}
+                        </span>
+                        <span className="w-14 shrink-0 text-xxs font-bold text-amber-600 text-center">
+                          예정
+                        </span>
+                      </>
+                    )}
+
+                    {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
+                    {!readOnly && (
+                      <button
+                        onClick={(e) => handleRemoveEnrollment(group, e)}
+                        disabled={isDeleting}
+                        className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                        title="수업 배정 취소"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <X className="w-3 h-3" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 지난 수업 섹션 */}
+      <div className="mt-4">
+        <h3 className="text-xs font-bold text-[#373d41] mb-2">지난 수업 ({completedClasses.length}개)</h3>
+        <div className="bg-white border border-gray-200 overflow-hidden">
+          {/* 테이블 헤더 */}
+          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
+            <span className="w-8 shrink-0">과목</span>
+            <span className="w-24 shrink-0">수업명</span>
+            <span className="w-14 shrink-0">강사</span>
+            <span className="flex-1">상태</span>
+            <span className="w-10 shrink-0"></span>
+            {!compact && (
+              <>
+                <span className="w-16 shrink-0 text-center">시작</span>
+                <span className="w-14 shrink-0 text-center">종료</span>
+              </>
+            )}
+            <span className="w-5 shrink-0"></span>
+          </div>
+
+          {completedClasses.length === 0 ? (
+            <div className="text-center py-6">
+              <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <p className="text-gray-500 text-xs">지난 수업이 없습니다</p>
+            </div>
+          ) : (
             <div>
               {/* 수학 수업 */}
               {completedMathClasses.map((group, index) => renderCompletedClassRow(group, index))}
@@ -686,9 +875,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
               {/* 영어 수업 */}
               {completedEnglishClasses.map((group, index) => renderCompletedClassRow(group, index))}
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* 수업 배정 모달 */}
       {isAssignModalOpen && (
