@@ -701,7 +701,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false }) => {
                         성적 추이
                     </h4>
                     <div className="h-28">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minHeight={112}>
                             <LineChart data={chartData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                                 <XAxis
