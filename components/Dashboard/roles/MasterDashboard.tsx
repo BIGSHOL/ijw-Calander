@@ -7,7 +7,7 @@ import { useStudents } from '../../../hooks/useStudents';
 import { useDailyAttendanceByDate, useDailyAttendanceByRange } from '../../../hooks/useDailyAttendance';
 import { useConsultationStats } from '../../../hooks/useConsultationStats';
 import { useBilling } from '../../../hooks/useBilling';
-import { format, startOfMonth, endOfMonth, subDays, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subDays } from 'date-fns';
 import { UserPlus, ClipboardList, MessageCircle, DollarSign, BarChart3, Calendar } from 'lucide-react';
 
 interface MasterDashboardProps {
@@ -22,25 +22,26 @@ interface MasterDashboardProps {
 const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMember }) => {
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 데이터 로딩 - 모두 지난 달 기준
-  const lastMonth = useMemo(() => subMonths(new Date(), 1), []);
-  const lastMonthStart = useMemo(() => startOfMonth(lastMonth), [lastMonth]);
-  const lastMonthEnd = useMemo(() => endOfMonth(lastMonth), [lastMonth]);
+  // 데이터 로딩 - 모두 이번 달 기준 (실시간 현황 파악)
+  const currentMonth = useMemo(() => new Date(), []);
+  const currentMonthStart = useMemo(() => startOfMonth(currentMonth), [currentMonth]);
+  const currentMonthEnd = useMemo(() => endOfMonth(currentMonth), [currentMonth]);
 
   const { students = [], loading: studentsLoading } = useStudents();
 
-  // 지난 달 마지막 날의 출석 데이터 (대표값)
-  const lastDayOfLastMonth = format(lastMonthEnd, 'yyyy-MM-dd');
-  const { data: todayAttendance = [], isLoading: attendanceLoading } = useDailyAttendanceByDate(lastDayOfLastMonth);
+  // 오늘 출석 데이터
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const { data: todayAttendance = [], isLoading: attendanceLoading } = useDailyAttendanceByDate(today);
 
-  // 주간 출석 데이터 (지난 달 마지막 7일)
+  // 주간 출석 데이터 (최근 7일)
   const last7Days = useMemo(() => {
     const days = [];
+    const now = new Date();
     for (let i = 6; i >= 0; i--) {
-      days.push(format(subDays(lastMonthEnd, i), 'yyyy-MM-dd'));
+      days.push(format(subDays(now, i), 'yyyy-MM-dd'));
     }
     return days;
-  }, [lastMonthEnd]);
+  }, []);
 
   // Performance: async-parallel - 병렬 처리로 7배 빠른 데이터 페칭
   const weekStartDate = last7Days[0];
@@ -51,16 +52,16 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     return last7Days.map(date => weeklyAttendanceRange[date] || []);
   }, [last7Days, weeklyAttendanceRange]);
 
-  // 지난 달 수납 데이터
-  const lastMonthFormatted = format(lastMonthStart, 'yyyy-MM');
-  const { records: billingRecords = [], isLoading: billingLoading } = useBilling(lastMonthFormatted);
+  // 이번 달 수납 데이터
+  const currentMonthFormatted = format(currentMonthStart, 'yyyy-MM');
+  const { records: billingRecords = [], isLoading: billingLoading } = useBilling(currentMonthFormatted);
 
-  // 상담 통계 (지난 달)
+  // 상담 통계 (이번 달) - 상담 관리 대시보드와 동일한 기준
   const consultationStatsResult = useConsultationStats(
     {
       dateRange: {
-        start: format(lastMonthStart, 'yyyy-MM-dd'),
-        end: format(lastMonthEnd, 'yyyy-MM-dd'),
+        start: format(currentMonthStart, 'yyyy-MM-dd'),
+        end: format(currentMonthEnd, 'yyyy-MM-dd'),
       },
       subject: 'all',
     },
@@ -126,13 +127,13 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
   const { totalBilled, totalPaid, overdueCount, billingRate } = billingStats;
 
-  // Performance: useMemo - 신규 등록 계산 최적화
-  const newStudentsLastMonth = useMemo(() => {
+  // Performance: useMemo - 신규 등록 계산 최적화 (이번 달)
+  const newStudentsThisMonth = useMemo(() => {
     return students.filter((s) => {
       const startDate = new Date(s.startDate);
-      return startDate >= lastMonthStart && startDate <= lastMonthEnd;
+      return startDate >= currentMonthStart && startDate <= currentMonthEnd;
     }).length;
-  }, [students, lastMonthStart, lastMonthEnd]);
+  }, [students, currentMonthStart, currentMonthEnd]);
 
   // Performance: js-combine-iterations - 배열 순회 최적화 (O(5n) → O(n))
   // 과목별 학생 분포 계산
@@ -171,11 +172,12 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     ].filter(item => item.count > 0); // 0명인 과목은 제외
   }, [students]);
 
-  // 주간 출석 추이 (지난 달 마지막 7일) - 실제 데이터로 계산
+  // 주간 출석 추이 (최근 7일) - 실제 데이터로 계산
   const weeklyAttendance = useMemo(() => {
     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const now = new Date();
     return weeklyAttendanceData.map((dayData, idx) => {
-      const date = subDays(lastMonthEnd, 6 - idx);
+      const date = subDays(now, 6 - idx);
       const presentCount = dayData.filter((a) => a.status === 'present' || a.status === 'late').length;
       const totalCount = dayData.length;
       const rate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
@@ -186,7 +188,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         rate: rate
       };
     });
-  }, [weeklyAttendanceData, lastMonthEnd]);
+  }, [weeklyAttendanceData]);
 
   // KPI 카드 데이터
   const kpiCards: KPICardData[] = [
@@ -195,14 +197,14 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       label: '재원생',
       value: activeStudents,
       subValue: '명',
-      trend: newStudentsLastMonth > 0 ? 'up' : 'stable',
-      trendValue: newStudentsLastMonth > 0 ? `+${newStudentsLastMonth}` : undefined,
+      trend: newStudentsThisMonth > 0 ? 'up' : 'stable',
+      trendValue: newStudentsThisMonth > 0 ? `+${newStudentsThisMonth}` : undefined,
       icon: '👥',
       color: '#081429',
     },
     {
       id: 'attendance',
-      label: '지난달 출석률',
+      label: '오늘 출석률',
       value: `${attendanceRate}%`,
       subValue: `${presentCount}/${totalCount}`, // Performance: 중복 필터링 제거
       trend: attendanceRate >= 90 ? 'up' : attendanceRate >= 80 ? 'stable' : 'down',
@@ -231,9 +233,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     {
       id: 'new-students',
       label: '신규 등록',
-      value: newStudentsLastMonth,
-      subValue: '지난 달',
-      trend: newStudentsLastMonth > 0 ? 'up' : 'stable',
+      value: newStudentsThisMonth,
+      subValue: '이번 달',
+      trend: newStudentsThisMonth > 0 ? 'up' : 'stable',
       icon: '🆕',
       color: '#ec4899',
     },

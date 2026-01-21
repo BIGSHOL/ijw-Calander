@@ -22,6 +22,10 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
     const [selectedSubject, setSelectedSubject] = useState<SubjectType>('math');
     const [selectedClassName, setSelectedClassName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
+    const [startDate, setStartDate] = useState(() => {
+        // 기본값: 오늘 날짜
+        return new Date().toISOString().split('T')[0];
+    });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
 
@@ -86,9 +90,6 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
             const enrollmentId = `enrollment_${Date.now()}`;
 
             // students/{studentId}/enrollments/{enrollmentId}에 추가
-            const now = new Date();
-            const startDate = now.toISOString().split('T')[0]; // YYYY-MM-DD 형식
-
             await setDoc(doc(db, `students/${student.id}/enrollments`, enrollmentId), {
                 classId: selectedClass.id,
                 subject: selectedSubject,
@@ -126,6 +127,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
         setError('');
         setSelectedClassName('');
         setSearchQuery('');
+        setStartDate(new Date().toISOString().split('T')[0]); // 날짜 초기화
         onClose();
     };
 
@@ -207,6 +209,22 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                     className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
                                 />
                             </div>
+                        </div>
+
+                        {/* 수업 시작일 선택 */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                                수업 시작일 <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
+                            />
+                            <p className="mt-1 text-xxs text-gray-500">
+                                💡 미래 날짜를 선택하면 해당 날짜부터 수업이 시작됩니다
+                            </p>
                         </div>
 
                         {/* 수업 선택 - Compact */}
