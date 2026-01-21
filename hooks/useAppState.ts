@@ -265,8 +265,20 @@ export function useAttendanceState(userProfile: UserProfile | null) {
 // ============================================
 // 6. Student Filter State Hook
 // ============================================
+export type SearchField =
+  | 'all'           // 전체
+  | 'name'          // 이름
+  | 'phone'         // 전화번호 (학생/보호자/집)
+  | 'school'        // 학교
+  | 'address'       // 주소
+  | 'parent'        // 보호자
+  | 'memo'          // 메모
+  | 'email'         // 이메일
+  | 'etc';          // 기타 (생년월일, 기타항목, 퇴원사유 등)
+
 export interface StudentFilters {
   searchQuery: string;
+  searchField: SearchField;  // 검색 필드 선택
   grade: string;
   status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn';
   subjects: string[];  // 선택된 과목 배열 (빈 배열 = 전체)
@@ -276,6 +288,7 @@ export interface StudentFilters {
 export function useStudentFilterState() {
   const [studentFilters, setStudentFilters] = useState<StudentFilters>({
     searchQuery: '',
+    searchField: 'all',
     grade: 'all',
     status: 'active',
     subjects: [],
@@ -294,6 +307,7 @@ export function useStudentFilterState() {
   const resetFilters = useCallback(() => {
     setStudentFilters({
       searchQuery: '',
+      searchField: 'all',
       grade: 'all',
       status: 'active',
       subjects: [],

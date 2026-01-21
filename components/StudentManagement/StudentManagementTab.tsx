@@ -10,8 +10,20 @@ import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database
 const StudentMigrationModal = lazy(() => import('./StudentMigrationModal'));
 const NormalizeStudentIdsModal = lazy(() => import('./NormalizeStudentIdsModal'));
 
+export type SearchField =
+  | 'all'           // 전체
+  | 'name'          // 이름
+  | 'phone'         // 전화번호 (학생/보호자/집)
+  | 'school'        // 학교
+  | 'address'       // 주소
+  | 'parent'        // 보호자
+  | 'memo'          // 메모
+  | 'email'         // 이메일
+  | 'etc';          // 기타 (생년월일, 기타항목, 퇴원사유 등)
+
 export interface StudentFilters {
   searchQuery: string;
+  searchField: SearchField;  // 검색 필드 선택
   grade: string;
   status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn';
   subjects: string[];  // 선택된 과목 배열 (빈 배열 = 전체)
@@ -86,15 +98,122 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const filteredStudents = useMemo(() => {
     let result = [...students];
 
-    // 검색어 필터
+    // 검색어 필터 (선택된 필드에 따라 검색)
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
-      result = result.filter(
-        (s) =>
-          s.name.toLowerCase().includes(query) ||
-          s.englishName?.toLowerCase().includes(query) ||
-          s.school?.toLowerCase().includes(query)
-      );
+
+      result = result.filter((s) => {
+        switch (filters.searchField) {
+          case 'all':
+            // 전체 검색 (모든 필드)
+            return (
+              // 기본 정보
+              s.name.toLowerCase().includes(query) ||
+              s.englishName?.toLowerCase().includes(query) ||
+              s.school?.toLowerCase().includes(query) ||
+              s.grade?.toLowerCase().includes(query) ||
+              s.nickname?.toLowerCase().includes(query) ||
+
+              // 연락처 정보
+              s.studentPhone?.includes(query) ||
+              s.parentPhone?.includes(query) ||
+              s.homePhone?.includes(query) ||
+              s.parentName?.toLowerCase().includes(query) ||
+              s.parentRelation?.toLowerCase().includes(query) ||
+              s.otherPhone?.includes(query) ||
+              s.otherPhoneRelation?.toLowerCase().includes(query) ||
+
+              // 주소 정보
+              s.zipCode?.includes(query) ||
+              s.address?.toLowerCase().includes(query) ||
+              s.addressDetail?.toLowerCase().includes(query) ||
+
+              // 추가 정보
+              s.birthDate?.includes(query) ||
+              s.studentEmail?.toLowerCase().includes(query) ||
+              s.emailDomain?.toLowerCase().includes(query) ||
+              s.enrollmentReason?.toLowerCase().includes(query) ||
+
+              // 수납 정보
+              s.cashReceiptNumber?.includes(query) ||
+
+              // 기타 정보
+              s.graduationYear?.includes(query) ||
+              s.customField1?.toLowerCase().includes(query) ||
+              s.customField2?.toLowerCase().includes(query) ||
+              s.memo?.toLowerCase().includes(query) ||
+
+              // 퇴원 정보
+              s.withdrawalReason?.toLowerCase().includes(query) ||
+              s.withdrawalMemo?.toLowerCase().includes(query)
+            );
+
+          case 'name':
+            // 이름 (이름, 영문이름, 닉네임)
+            return (
+              s.name.toLowerCase().includes(query) ||
+              s.englishName?.toLowerCase().includes(query) ||
+              s.nickname?.toLowerCase().includes(query)
+            );
+
+          case 'phone':
+            // 전화번호 (학생, 보호자, 집, 기타)
+            return (
+              s.studentPhone?.includes(query) ||
+              s.parentPhone?.includes(query) ||
+              s.homePhone?.includes(query) ||
+              s.otherPhone?.includes(query)
+            );
+
+          case 'school':
+            // 학교
+            return s.school?.toLowerCase().includes(query);
+
+          case 'address':
+            // 주소 (우편번호, 주소, 상세주소)
+            return (
+              s.zipCode?.includes(query) ||
+              s.address?.toLowerCase().includes(query) ||
+              s.addressDetail?.toLowerCase().includes(query)
+            );
+
+          case 'parent':
+            // 보호자 (이름, 관계)
+            return (
+              s.parentName?.toLowerCase().includes(query) ||
+              s.parentRelation?.toLowerCase().includes(query) ||
+              s.otherPhoneRelation?.toLowerCase().includes(query)
+            );
+
+          case 'memo':
+            // 메모
+            return s.memo?.toLowerCase().includes(query);
+
+          case 'email':
+            // 이메일
+            return (
+              s.studentEmail?.toLowerCase().includes(query) ||
+              s.emailDomain?.toLowerCase().includes(query)
+            );
+
+          case 'etc':
+            // 기타 (생년월일, 학년, 기타항목, 퇴원사유, 현금영수증, 졸업년도, 등록이유)
+            return (
+              s.birthDate?.includes(query) ||
+              s.grade?.toLowerCase().includes(query) ||
+              s.customField1?.toLowerCase().includes(query) ||
+              s.customField2?.toLowerCase().includes(query) ||
+              s.withdrawalReason?.toLowerCase().includes(query) ||
+              s.withdrawalMemo?.toLowerCase().includes(query) ||
+              s.cashReceiptNumber?.includes(query) ||
+              s.graduationYear?.includes(query) ||
+              s.enrollmentReason?.toLowerCase().includes(query)
+            );
+
+          default:
+            return false;
+        }
+      });
 
       // 과거 퇴원생 추가 (중복 제거)
       const existingIds = new Set(result.map(s => s.id));

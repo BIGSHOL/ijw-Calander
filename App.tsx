@@ -1935,9 +1935,9 @@ const App: React.FC = () => {
                 <div className="grid grid-cols-5 gap-1 bg-white/10 rounded-lg p-1 border border-white/10 shadow-sm">
                   <button
                     onClick={() => setStudentFilters(prev => ({ ...prev, subjects: [] }))}
-                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.length === 0 ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.length === 0 ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
                   >
-                    <Library size={14} className="inline" /> 전체
+                    전체
                   </button>
                   <button
                     onClick={() => {
@@ -1949,7 +1949,7 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'math']
                       }));
                     }}
-                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('math') ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('math') ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
                   >
                     수학
                   </button>
@@ -1963,7 +1963,7 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'english']
                       }));
                     }}
-                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('english') ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('english') ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
                   >
                     영어
                   </button>
@@ -1977,7 +1977,7 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'korean']
                       }));
                     }}
-                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('korean') ? 'bg-green-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('korean') ? 'bg-green-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
                   >
                     국어
                   </button>
@@ -1991,7 +1991,7 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'science']
                       }));
                     }}
-                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('science') ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('science') ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
                   >
                     과학
                   </button>
@@ -2029,6 +2029,82 @@ const App: React.FC = () => {
                   >
                     퇴원
                   </button>
+                </div>
+
+                {/* Search Field Selector */}
+                <div className="relative group">
+                  <button
+                    className={`px-2 py-1.5 bg-white/10 border border-white/10 rounded-lg text-xs cursor-pointer hover:border-white/30 transition-colors ${studentFilters.searchField !== 'all' ? 'text-[#fdb813] border-[#fdb813]/50' : 'text-white'}`}
+                  >
+                    {studentFilters.searchField === 'all' && '전체'}
+                    {studentFilters.searchField === 'name' && '이름'}
+                    {studentFilters.searchField === 'phone' && '전화번호'}
+                    {studentFilters.searchField === 'school' && '학교'}
+                    {studentFilters.searchField === 'address' && '주소'}
+                    {studentFilters.searchField === 'parent' && '보호자'}
+                    {studentFilters.searchField === 'memo' && '메모'}
+                    {studentFilters.searchField === 'email' && '이메일'}
+                    {studentFilters.searchField === 'etc' && '기타'}
+                    <ChevronDown size={12} className="inline ml-1" />
+                  </button>
+                  <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-white/20 rounded-lg shadow-xl p-2 hidden group-hover:block z-50 min-w-[180px]">
+                    <div className="grid grid-cols-2 gap-0.5">
+                      <button
+                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'all' }))}
+                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'all' ? 'bg-[#fdb813] text-[#081429] font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                      >
+                        전체
+                      </button>
+                      <button
+                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'name' }))}
+                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'name' ? 'bg-blue-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                      >
+                        이름
+                      </button>
+                      <button
+                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'phone' }))}
+                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'phone' ? 'bg-purple-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                      >
+                        전화번호
+                      </button>
+                      <button
+                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'school' }))}
+                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'school' ? 'bg-green-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                      >
+                        학교
+                      </button>
+                      <button
+                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'address' }))}
+                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'address' ? 'bg-orange-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                      >
+                        주소
+                      </button>
+                      <button
+                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'parent' }))}
+                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'parent' ? 'bg-pink-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                      >
+                        보호자
+                      </button>
+                      <button
+                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'memo' }))}
+                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'memo' ? 'bg-indigo-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                      >
+                        메모
+                      </button>
+                      <button
+                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'email' }))}
+                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'email' ? 'bg-teal-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                      >
+                        이메일
+                      </button>
+                      <button
+                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'etc' }))}
+                        className={`px-2 py-1 rounded text-xs col-span-2 ${studentFilters.searchField === 'etc' ? 'bg-gray-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                      >
+                        기타
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Search Bar */}
