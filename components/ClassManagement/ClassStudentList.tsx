@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Users, Pause, Play } from 'lucide-react';
 import { ClassStudent } from '../../hooks/useClassDetail';
 import { formatSchoolGrade } from '../../utils/studentUtils';
@@ -17,11 +17,12 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
 }) => {
   const [updatingStudentId, setUpdatingStudentId] = useState<string | null>(null);
 
-  const handleStudentClick = (studentId: string) => {
+  // 이벤트 핸들러 최적화: useCallback으로 안정화
+  const handleStudentClick = useCallback((studentId: string) => {
     if (onStudentClick) {
       onStudentClick(studentId);
     }
-  };
+  }, [onStudentClick]);
 
   const handleToggleOnHold = async (student: ClassStudent, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -64,22 +65,24 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
     }
   };
 
+  // classDays를 Set으로 변환하여 O(1) 조회 최적화 (400명+ 규모)
+  const classDaysSet = useMemo(() => new Set(classDays), [classDays]);
+
   // 학생의 등원 요일이 수업 요일과 다른 경우에만 표시
   // (모든 수업 요일에 등원하면 표시하지 않음)
-  const shouldShowAttendanceDays = (studentAttendanceDays?: string[]): boolean => {
+  const shouldShowAttendanceDays = useCallback((studentAttendanceDays?: string[]): boolean => {
     if (!studentAttendanceDays || studentAttendanceDays.length === 0) return false;
     if (classDays.length === 0) return true;  // 수업 요일 정보 없으면 그냥 표시
 
-    // 수업 요일과 등원 요일이 동일하면 표시하지 않음
-    if (studentAttendanceDays.length === classDays.length) {
-      const sorted1 = [...studentAttendanceDays].sort();
-      const sorted2 = [...classDays].sort();
-      if (sorted1.every((day, i) => day === sorted2[i])) {
+    // 수업 요일과 등원 요일이 동일하면 표시하지 않음 (Set 사용으로 O(n) 최적화)
+    if (studentAttendanceDays.length === classDaysSet.size) {
+      const allMatch = studentAttendanceDays.every(day => classDaysSet.has(day));
+      if (allMatch) {
         return false;
       }
     }
     return true;
-  };
+  }, [classDays, classDaysSet]);
 
   if (students.length === 0) {
     return (

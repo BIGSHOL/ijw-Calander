@@ -198,6 +198,7 @@ const ScheduleBadge: React.FC<ScheduleBadgeProps> = ({ schedule, subject }) => {
 interface CoursesTabProps {
   student: UnifiedStudent;
   compact?: boolean; // 컴팩트 모드 (모달)
+  readOnly?: boolean; // 조회 전용 모드
 }
 
 interface GroupedEnrollment {
@@ -210,7 +211,7 @@ interface GroupedEnrollment {
   endDate?: string; // 수강 종료일 (undefined = 재원중)
 }
 
-const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false }) => {
+const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readOnly = false }) => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
   const [deletingClass, setDeletingClass] = useState<string | null>(null);
@@ -516,19 +517,21 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false }) => 
           </>
         )}
 
-        {/* 삭제 버튼 */}
-        <button
-          onClick={(e) => handleRemoveEnrollment(group, e)}
-          disabled={isDeleting}
-          className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-          title="수업 배정 취소"
-        >
-          {isDeleting ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <X className="w-3 h-3" />
-          )}
-        </button>
+        {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
+        {!readOnly && (
+          <button
+            onClick={(e) => handleRemoveEnrollment(group, e)}
+            disabled={isDeleting}
+            className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+            title="수업 배정 취소"
+          >
+            {isDeleting ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <X className="w-3 h-3" />
+            )}
+          </button>
+        )}
       </div>
     );
   };
@@ -602,13 +605,15 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false }) => 
             ({groupedEnrollments.length}개)
           </span>
         </div>
-        <button
-          onClick={() => setIsAssignModalOpen(true)}
-          className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
-        >
-          <Plus className="w-3 h-3" />
-          배정
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => setIsAssignModalOpen(true)}
+            className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
+          >
+            <Plus className="w-3 h-3" />
+            배정
+          </button>
+        )}
       </div>
 
       {/* 수업 목록 - 행 스타일 */}
@@ -633,12 +638,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false }) => 
           <div className="text-center py-6">
             <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
             <p className="text-gray-500 text-xs">수강 중인 수업이 없습니다</p>
-            <button
-              onClick={() => setIsAssignModalOpen(true)}
-              className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
-            >
-              + 수업 배정하기
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => setIsAssignModalOpen(true)}
+                className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
+              >
+                + 수업 배정하기
+              </button>
+            )}
           </div>
         ) : (
           <div>

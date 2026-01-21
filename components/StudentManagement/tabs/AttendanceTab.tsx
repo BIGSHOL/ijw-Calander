@@ -2,21 +2,27 @@ import React, { useMemo, useState } from 'react';
 import { UnifiedStudent } from '../../../types';
 import { Calendar as CalendarIcon, TrendingUp, TrendingDown, CheckCircle2, XCircle, BookOpen } from 'lucide-react';
 import { useAttendanceRecords } from '../../../hooks/useAttendance';
+import {
+  SubjectForSchedule,
+  MATH_PERIOD_INFO,
+  ENGLISH_PERIOD_INFO,
+  WEEKEND_PERIOD_INFO,
+} from '../../Timetable/constants';
 
 interface AttendanceTabProps {
   student: UnifiedStudent;
   readOnly?: boolean;
 }
 
-// 요일 한글 -> 영문 변환
-const WEEKDAY_MAP: Record<string, string> = {
-  '월': 'Mon',
-  '화': 'Tue',
-  '수': 'Wed',
-  '목': 'Thu',
-  '금': 'Fri',
-  '토': 'Sat',
-  '일': 'Sun',
+// 요일별 색상 정의
+const DAY_COLORS: Record<string, { bg: string; text: string }> = {
+  '월': { bg: '#fef3c7', text: '#92400e' },
+  '화': { bg: '#fce7f3', text: '#9d174d' },
+  '수': { bg: '#dbeafe', text: '#1e40af' },
+  '목': { bg: '#d1fae5', text: '#065f46' },
+  '금': { bg: '#e0e7ff', text: '#3730a3' },
+  '토': { bg: '#fee2e2', text: '#991b1b' },
+  '일': { bg: '#f3e8ff', text: '#6b21a8' },
 };
 
 // 출석 상태별 색상 및 라벨 (출석부와 동일)
@@ -30,6 +36,174 @@ const ATTENDANCE_STATUS = {
 // 요일 배열
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
+// subject 판별 최적화 (Map 사용)
+const SUBJECT_KEYWORDS = new Map<string, SubjectForSchedule>([
+  ['영어', 'english'],
+  ['English', 'english'],
+]);
+
+function getSubjectFromClassName(className: string): SubjectForSchedule {
+  for (const [keyword, subject] of SUBJECT_KEYWORDS) {
+    if (className.includes(keyword)) {
+      return subject;
+    }
+  }
+  return 'math';
+}
+
+// 스케줄 포맷 결과 캐싱 (400명+ 규모에서 중요)
+const scheduleFormatCache = new Map<string, string>();
+
+// 수학 교시 라벨 포맷팅
+function formatMathLabel(periods: string[]): string {
+  const completeGroups: number[] = [];
+  const usedPeriods = new Set<string>();
+
+  for (let group = 1; group <= 4; group++) {
+    const first = String(group * 2 - 1);
+    const second = String(group * 2);
+
+    if (periods.includes(first) && periods.includes(second)) {
+      completeGroups.push(group);
+      usedPeriods.add(first);
+      usedPeriods.add(second);
+    }
+  }
+
+  const allPeriodsUsed = periods.every(p => usedPeriods.has(p));
+
+  if (allPeriodsUsed && completeGroups.length > 0) {
+    return completeGroups.map(g => `${g}교시`).join(', ');
+  } else {
+    const times = periods.map(p => MATH_PERIOD_INFO[p]).filter(Boolean);
+    if (times.length === 0) return '시간 미정';
+
+    const startTime = times[0].startTime;
+    const endTime = times[times.length - 1].endTime;
+    return `${startTime}~${endTime}`;
+  }
+}
+
+// 주말 교시 라벨 포맷팅
+function formatWeekendLabel(periods: string[]): string {
+  if (periods.length === 0) return '시간 미정';
+
+  const times = periods
+    .map(p => WEEKEND_PERIOD_INFO[p])
+    .filter(Boolean)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+  if (times.length === 0) return '시간 미정';
+
+  const startTime = times[0].startTime;
+  const endTime = times[times.length - 1].endTime;
+  return `${startTime}~${endTime}`;
+}
+
+// 영어 교시 라벨 포맷팅
+function formatEnglishLabel(periods: string[]): string {
+  if (periods.length === 0) return '시간 미정';
+
+  const nums = periods.map(Number).sort((a, b) => a - b);
+
+  if (nums.length === 1) {
+    return `${nums[0]}교시`;
+  }
+
+  const isConsecutive = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
+
+  if (isConsecutive) {
+    return `${nums[0]}~${nums[nums.length - 1]}교시`;
+  } else {
+    return nums.map(n => `${n}교시`).join(', ');
+  }
+}
+
+// 스케줄 포맷 함수 (CoursesTab의 ScheduleBadge 로직 참고 + 캐싱)
+function formatScheduleCompact(schedule: string[] | undefined, subject: SubjectForSchedule): string {
+  if (!schedule || schedule.length === 0) {
+    return '시간 미정';
+  }
+
+  // 캐시 키 생성 (schedule과 subject 조합)
+  const cacheKey = `${subject}:${schedule.join(',')}`;
+
+  // 캐시 확인
+  if (scheduleFormatCache.has(cacheKey)) {
+    return scheduleFormatCache.get(cacheKey)!;
+  }
+
+  const getPeriodInfoForDay = (day: string) => {
+    if (day === '토' || day === '일') {
+      return WEEKEND_PERIOD_INFO;
+    }
+    return subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
+  };
+
+  const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+
+  const dayPeriods: Map<string, string[]> = new Map();
+
+  for (const item of schedule) {
+    const parts = item.split(' ');
+    const day = parts[0];
+    const periodId = parts[1] || '';
+    const periodInfo = getPeriodInfoForDay(day);
+    if (!periodId || !periodInfo[periodId]) continue;
+
+    if (!dayPeriods.has(day)) {
+      dayPeriods.set(day, []);
+    }
+    dayPeriods.get(day)!.push(periodId);
+  }
+
+  if (dayPeriods.size === 0) {
+    return '시간 미정';
+  }
+
+  const dayLabels: Map<string, string> = new Map();
+
+  for (const [day, periods] of dayPeriods) {
+    const sortedPeriods = periods.sort((a, b) => Number(a) - Number(b));
+    const isWeekend = day === '토' || day === '일';
+
+    let label: string;
+    if (isWeekend) {
+      label = formatWeekendLabel(sortedPeriods);
+    } else if (subject === 'english') {
+      label = formatEnglishLabel(sortedPeriods);
+    } else {
+      label = formatMathLabel(sortedPeriods);
+    }
+    dayLabels.set(day, label);
+  }
+
+  const labelToDays: Map<string, string[]> = new Map();
+
+  for (const [day, label] of dayLabels) {
+    if (!labelToDays.has(label)) {
+      labelToDays.set(label, []);
+    }
+    labelToDays.get(label)!.push(day);
+  }
+
+  const entries: Array<{ days: string[]; label: string }> = [];
+  for (const [label, days] of labelToDays) {
+    days.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+    entries.push({ days, label });
+  }
+
+  entries.sort((a, b) => dayOrder.indexOf(a.days[0]) - dayOrder.indexOf(b.days[0]));
+
+  // 텍스트로만 반환
+  const result = entries.map(entry => `${entry.days.join('')} ${entry.label}`).join(' / ');
+
+  // 캐시 저장
+  scheduleFormatCache.set(cacheKey, result);
+
+  return result;
+}
+
 const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false }) => {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState(currentDate);
@@ -40,12 +214,20 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
     return selectedMonth.toISOString().slice(0, 7);
   }, [selectedMonth]);
 
-  // 학생의 수업 목록 추출
+  // 학생의 수업 목록 추출 (최적화: 캐시된 함수 사용)
   const classList = useMemo(() => {
-    return student.enrollments.map(e => ({
-      className: e.className,
-      days: e.schedule?.map((slot: string) => slot.split(' ')[0]) || e.days || [],
-    }));
+    return student.enrollments.map(e => {
+      // subject 추출 (최적화된 함수 사용)
+      const subject = getSubjectFromClassName(e.className);
+
+      return {
+        className: e.className,
+        subject,
+        schedule: e.schedule,
+        days: e.schedule?.map((slot: string) => slot.split(' ')[0]) || e.days || [],
+        formattedSchedule: formatScheduleCompact(e.schedule, subject),
+      };
+    });
   }, [student.enrollments]);
 
   // Firebase에서 출석 데이터 가져오기
@@ -210,7 +392,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
             <option value="all">전체 수업</option>
             {classList.map((cls) => (
               <option key={cls.className} value={cls.className}>
-                {cls.className} ({cls.days.join(', ')})
+                {cls.className} ({cls.formattedSchedule})
               </option>
             ))}
           </select>
