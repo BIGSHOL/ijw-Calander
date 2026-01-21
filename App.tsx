@@ -1931,25 +1931,69 @@ const App: React.FC = () => {
           {appMode === 'students' && (
             <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
               <div className="flex items-center gap-3 flex-1">
-                {/* Subject Toggle */}
-                <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                {/* Subject Filter - Grid View */}
+                <div className="grid grid-cols-5 gap-1 bg-white/10 rounded-lg p-1 border border-white/10 shadow-sm">
                   <button
-                    onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'all' }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'all' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    onClick={() => setStudentFilters(prev => ({ ...prev, subjects: [] }))}
+                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.length === 0 ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
                   >
                     <Library size={14} className="inline" /> 전체
                   </button>
                   <button
-                    onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'math' }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'math' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    onClick={() => {
+                      const hasSubject = studentFilters.subjects.includes('math');
+                      setStudentFilters(prev => ({
+                        ...prev,
+                        subjects: hasSubject
+                          ? prev.subjects.filter(s => s !== 'math')
+                          : [...prev.subjects, 'math']
+                      }));
+                    }}
+                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('math') ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
                   >
                     수학
                   </button>
                   <button
-                    onClick={() => setStudentFilters(prev => ({ ...prev, subject: 'english' }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subject === 'english' ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    onClick={() => {
+                      const hasSubject = studentFilters.subjects.includes('english');
+                      setStudentFilters(prev => ({
+                        ...prev,
+                        subjects: hasSubject
+                          ? prev.subjects.filter(s => s !== 'english')
+                          : [...prev.subjects, 'english']
+                      }));
+                    }}
+                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('english') ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
                   >
                     영어
+                  </button>
+                  <button
+                    onClick={() => {
+                      const hasSubject = studentFilters.subjects.includes('korean');
+                      setStudentFilters(prev => ({
+                        ...prev,
+                        subjects: hasSubject
+                          ? prev.subjects.filter(s => s !== 'korean')
+                          : [...prev.subjects, 'korean']
+                      }));
+                    }}
+                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('korean') ? 'bg-green-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    국어
+                  </button>
+                  <button
+                    onClick={() => {
+                      const hasSubject = studentFilters.subjects.includes('science');
+                      setStudentFilters(prev => ({
+                        ...prev,
+                        subjects: hasSubject
+                          ? prev.subjects.filter(s => s !== 'science')
+                          : [...prev.subjects, 'science']
+                      }));
+                    }}
+                    className={`px-2 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('science') ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                  >
+                    과학
                   </button>
                 </div>
 
@@ -2130,10 +2174,10 @@ const App: React.FC = () => {
                 </select>
 
                 {/* Reset Filters */}
-                {(studentFilters.searchQuery || studentFilters.grade !== 'all' || studentFilters.status !== 'all' || studentFilters.subject !== 'all' || studentFilters.teacher !== 'all') && (
+                {(studentFilters.searchQuery || studentFilters.grade !== 'all' || studentFilters.status !== 'all' || studentFilters.subjects.length > 0 || studentFilters.teacher !== 'all') && (
                   <button
                     onClick={() => {
-                      setStudentFilters({ searchQuery: '', grade: 'all', status: 'all', subject: 'all', teacher: 'all' });
+                      setStudentFilters({ searchQuery: '', grade: 'all', status: 'all', subjects: [], teacher: 'all' });
                       setStudentSortBy('name');
                     }}
                     className="px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
