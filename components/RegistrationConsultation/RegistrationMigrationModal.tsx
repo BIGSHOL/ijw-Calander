@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Upload, Check, Loader2, Database, AlertCircle } from 'lucide-react';
 import { read, utils } from 'xlsx';
 import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
@@ -15,6 +15,14 @@ interface ParsedRecord extends Omit<ConsultationRecord, 'id'> {
   _rowNumber?: number;
 }
 
+// Performance: js-hoist-regexp - RegExp를 모듈 레벨로 호이스팅
+const MONTH_SHEET_PATTERN = /^\d+월$/;
+const GRADE_ELEMENTARY_PATTERN = /초(\d)/;
+const GRADE_MIDDLE_PATTERN = /중(\d)/;
+const GRADE_HIGH_PATTERN = /고(\d)/;
+const SCHOOL_PATTERN = /^([가-힣]+)[초중고]/;
+const DATE_FORMAT_PATTERN = /^\d{4}\.\d{1,2}\.\d{1,2}$/;
+
 // 학년 매핑
 function mapGrade(raw: any): SchoolGrade {
   if (!raw) return '기타' as SchoolGrade;
@@ -22,15 +30,15 @@ function mapGrade(raw: any): SchoolGrade {
 
   // 패턴: "종로초3" → "초3", "일중3" → "중3"
   if (str.includes('초')) {
-    const match = str.match(/초(\d)/);
+    const match = str.match(GRADE_ELEMENTARY_PATTERN);
     return match ? (`초${match[1]}` as SchoolGrade) : '기타' as SchoolGrade;
   }
   if (str.includes('중')) {
-    const match = str.match(/중(\d)/);
+    const match = str.match(GRADE_MIDDLE_PATTERN);
     return match ? (`중${match[1]}` as SchoolGrade) : '기타' as SchoolGrade;
   }
   if (str.includes('고')) {
-    const match = str.match(/고(\d)/);
+    const match = str.match(GRADE_HIGH_PATTERN);
     return match ? (`고${match[1]}` as SchoolGrade) : '기타' as SchoolGrade;
   }
 
@@ -43,7 +51,7 @@ function extractSchool(raw: any): string {
   const str = String(raw).trim();
 
   // "종로초3" → "종로초등학교"
-  const match = str.match(/^([가-힣]+)[초중고]/);
+  const match = str.match(SCHOOL_PATTERN);
   if (match) {
     if (str.includes('초')) return match[1] + '초등학교';
     if (str.includes('중')) return match[1] + '중학교';
@@ -86,7 +94,7 @@ function parseDate(raw: any, yearMonth: string): string {
   const str = String(raw).trim();
 
   // "2026.01.03" 형식
-  if (/^\d{4}\.\d{1,2}\.\d{1,2}$/.test(str)) {
+  if (DATE_FORMAT_PATTERN.test(str)) {
     const [year, month, day] = str.split('.');
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
   }
@@ -100,6 +108,21 @@ function parseDate(raw: any, yearMonth: string): string {
 
   return '';
 }
+
+// Performance: rendering-hoist-jsx - 정적 JSX를 컴포넌트 외부로 추출
+const TABLE_HEADERS = (
+  <thead className="bg-gray-100 sticky top-0">
+    <tr>
+      <th className="px-2 py-1 text-left">행</th>
+      <th className="px-2 py-1 text-left">이름</th>
+      <th className="px-2 py-1 text-left">학교학년</th>
+      <th className="px-2 py-1 text-left">상담일</th>
+      <th className="px-2 py-1 text-left">과목</th>
+      <th className="px-2 py-1 text-left">등록여부</th>
+      <th className="px-2 py-1 text-left">상태</th>
+    </tr>
+  </thead>
+);
 
 const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({ onClose, onSuccess }) => {
   const [step, setStep] = useState<'upload' | 'preview' | 'migrating' | 'done'>('upload');
@@ -122,7 +145,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
       const workbook = read(arrayBuffer, { cellDates: false });
 
       // 월별 시트 필터링 (예: "1월", "12월")
-      const monthSheets = workbook.SheetNames.filter(name => /^\d+월$/.test(name));
+      const monthSheets = workbook.SheetNames.filter(name => MONTH_SHEET_PATTERN.test(name));
 
       if (monthSheets.length === 0) {
         throw new Error('월별 시트가 없습니다. (예: 1월, 2월, ...)');
@@ -130,7 +153,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
 
       console.log(`📋 처리할 시트: ${monthSheets.join(', ')}`);
 
-      // 기존 상담 기록 로드 (중복 체크용)
+      // Performance: js-set-map-lookups - Set을 사용한 O(1) 중복 검색
       const existingSnapshot = await getDocs(collection(db, 'consultations'));
       const existingKeys = new Set<string>();
 
@@ -207,14 +230,21 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
         });
       }
 
-      // 통계
-      const newRecords = allRecords.filter(r => !r._isDuplicate);
-      const duplicateRecords = allRecords.filter(r => r._isDuplicate);
+      // Performance: js-combine-iterations - filter 2번을 단일 루프로 결합
+      let newCount = 0;
+      let duplicateCount = 0;
+      for (let i = 0; i < allRecords.length; i++) {
+        if (allRecords[i]._isDuplicate) {
+          duplicateCount++;
+        } else {
+          newCount++;
+        }
+      }
 
       setStats({
         total: allRecords.length,
-        new: newRecords.length,
-        duplicate: duplicateRecords.length,
+        new: newCount,
+        duplicate: duplicateCount,
       });
 
       setParsedRecords(allRecords);
@@ -360,17 +390,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
 
                 <div className="overflow-x-auto max-h-96">
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-100 sticky top-0">
-                      <tr>
-                        <th className="px-2 py-1 text-left">행</th>
-                        <th className="px-2 py-1 text-left">이름</th>
-                        <th className="px-2 py-1 text-left">학교학년</th>
-                        <th className="px-2 py-1 text-left">상담일</th>
-                        <th className="px-2 py-1 text-left">과목</th>
-                        <th className="px-2 py-1 text-left">등록여부</th>
-                        <th className="px-2 py-1 text-left">상태</th>
-                      </tr>
-                    </thead>
+                    {TABLE_HEADERS}
                     <tbody>
                       {parsedRecords.slice(0, 20).map((record, idx) => (
                         <tr
