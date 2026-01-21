@@ -5,6 +5,17 @@ import { UnifiedStudent, SubjectType } from '../types';
 
 const COL_CLASSES = 'classes';
 
+// Helper to convert Firestore Timestamp to YYYY-MM-DD string (hoisted to module level)
+const convertTimestampToDate = (timestamp: any): string | undefined => {
+  if (!timestamp) return undefined;
+  if (typeof timestamp === 'string') return timestamp;
+  if (timestamp?.toDate) {
+    const date = timestamp.toDate();
+    return date.toISOString().split('T')[0];
+  }
+  return undefined;
+};
+
 export interface ClassStudent {
   id: string;
   name: string;
@@ -52,32 +63,40 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
       let slotTeachers: Record<string, string> = {};
       let memo = '';
 
-      // 1. classes 컬렉션에서 수업 정보 조회 (우선)
-      try {
-        const classesQuery = query(
-          collection(db, COL_CLASSES),
-          where('subject', '==', subject),
-          where('className', '==', className)
-        );
-        const classesSnapshot = await getDocs(classesQuery);
+      // OPTIMIZATION: Parallelize independent queries (async-parallel)
+      const classesQuery = query(
+        collection(db, COL_CLASSES),
+        where('subject', '==', subject),
+        where('className', '==', className)
+      );
+      const enrollmentsQuery = query(
+        collectionGroup(db, 'enrollments'),
+        where('subject', '==', subject),
+        where('className', '==', className)
+      );
+      const studentsQuery = query(collection(db, 'students'));
 
-        if (classesSnapshot.docs.length > 0) {
-          const classDoc = classesSnapshot.docs[0].data();
-          teacher = classDoc.teacher || '';
-          room = classDoc.room || '';
-          slotTeachers = classDoc.slotTeachers || {};
-          memo = classDoc.memo || '';
-          // schedule이 ScheduleSlot[] 형식이면 문자열로 변환
-          if (classDoc.schedule && Array.isArray(classDoc.schedule)) {
-            if (typeof classDoc.schedule[0] === 'object') {
-              schedule = classDoc.schedule.map((slot: any) => `${slot.day} ${slot.periodId}`);
-            } else {
-              schedule = classDoc.legacySchedule || classDoc.schedule || [];
-            }
+      const [classesSnapshot, enrollmentsSnapshot, studentsSnapshot] = await Promise.all([
+        getDocs(classesQuery).catch(() => null),
+        getDocs(enrollmentsQuery).catch(() => null),
+        getDocs(studentsQuery).catch(() => null),
+      ]);
+
+      // 1. Process classes data
+      if (classesSnapshot && classesSnapshot.docs.length > 0) {
+        const classDoc = classesSnapshot.docs[0].data();
+        teacher = classDoc.teacher || '';
+        room = classDoc.room || '';
+        slotTeachers = classDoc.slotTeachers || {};
+        memo = classDoc.memo || '';
+        // schedule이 ScheduleSlot[] 형식이면 문자열로 변환
+        if (classDoc.schedule && Array.isArray(classDoc.schedule)) {
+          if (typeof classDoc.schedule[0] === 'object') {
+            schedule = classDoc.schedule.map((slot: any) => `${slot.day} ${slot.periodId}`);
+          } else {
+            schedule = classDoc.legacySchedule || classDoc.schedule || [];
           }
         }
-      } catch {
-        // classes 컬렉션 조회 실패 시 무시
       }
 
       // 2. enrollments에서 학생 ID 수집 (attendanceDays, underline, enrollmentId, onHold 포함)
@@ -87,20 +106,27 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
       const studentEnrollmentIds: Record<string, string> = {};  // studentId -> enrollmentId
       const studentOnHold: Record<string, boolean> = {};  // studentId -> onHold
 
-      try {
-        const enrollmentsQuery = query(
-          collectionGroup(db, 'enrollments'),
-          where('subject', '==', subject),
-          where('className', '==', className)
-        );
+      // Get today's date for filtering future enrollments
+      const today = new Date().toISOString().split('T')[0];
 
-        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-
+      if (enrollmentsSnapshot) {
         enrollmentsSnapshot.docs.forEach(doc => {
           const studentId = doc.ref.parent.parent?.id;
           if (studentId) {
-            studentIds.add(studentId);
             const data = doc.data();
+
+            // Filter out students with future start dates (not yet started)
+            const startDate = convertTimestampToDate(data.enrollmentDate || data.startDate);
+            if (startDate && startDate > today) return;
+
+            // Filter out withdrawn students
+            const withdrawalDate = convertTimestampToDate(data.withdrawalDate);
+            if (withdrawalDate) return;
+
+            // Don't completely filter out onHold students (they should appear in the list)
+            // The onHold state will be shown visually in the UI
+
+            studentIds.add(studentId);
             // enrollmentId 저장
             studentEnrollmentIds[studentId] = doc.id;
             // onHold 상태 저장
@@ -122,18 +148,13 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
             schedule = data.schedule || [];
           }
         });
-      } catch {
-        // enrollments 조회 실패 시 무시
       }
 
-      // 학생 정보 조회
+      // 3. Build student list (combined map/filter for efficiency)
       const students: ClassStudent[] = [];
 
-      if (studentIds.size > 0) {
-        const studentsQuery = query(collection(db, 'students'));
-        const studentsSnapshot = await getDocs(studentsQuery);
-
-        studentsSnapshot.docs.forEach(doc => {
+      if (studentIds.size > 0 && studentsSnapshot) {
+        for (const doc of studentsSnapshot.docs) {
           if (studentIds.has(doc.id)) {
             const data = doc.data() as UnifiedStudent;
             students.push({
@@ -143,12 +164,12 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
               grade: data.grade || '미정',
               status: data.status,
               enrollmentDate: data.startDate || '',
-              attendanceDays: studentAttendanceDays[doc.id],  // enrollment에서 가져온 attendanceDays
-              enrollmentId: studentEnrollmentIds[doc.id],  // enrollment ID
-              onHold: studentOnHold[doc.id] || false,  // enrollment onHold 상태
+              attendanceDays: studentAttendanceDays[doc.id],
+              enrollmentId: studentEnrollmentIds[doc.id],
+              onHold: studentOnHold[doc.id] || false,
             });
           }
-        });
+        }
 
         // 이름순 정렬
         students.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
