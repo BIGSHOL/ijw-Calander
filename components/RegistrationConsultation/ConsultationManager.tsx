@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, Suspense, lazy } from 'react';
 import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade } from '../../types';
 import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation } from '../../hooks/useConsultations';
 import { useStudents } from '../../hooks/useStudents';
@@ -6,7 +6,9 @@ import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
 import { ConsultationForm } from './ConsultationForm';
-import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, ClipboardList, Upload, Loader2 } from 'lucide-react';
+
+const RegistrationMigrationModal = lazy(() => import('./RegistrationMigrationModal'));
 
 interface ConsultationManagerProps {
     userProfile: UserProfile | null;
@@ -21,6 +23,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
     // Modal State
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingRecord, setEditingRecord] = useState<ConsultationRecord | null>(null);
+    const [showMigrationModal, setShowMigrationModal] = useState(false);
 
     // Firestore hooks - pass year as number or undefined for 'all'
     // 대시보드(통계 비교), 연간뷰(전체 흐름)에서는 전체 데이터를 불러와야 함
@@ -366,6 +369,14 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     )}
 
                     <button
+                        onClick={() => setShowMigrationModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg shadow-lg hover:shadow-green-500/30 transition-all text-xs font-bold"
+                    >
+                        <Upload size={16} />
+                        DB 불러오기
+                    </button>
+
+                    <button
                         onClick={openAddModal}
                         className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all text-xs font-bold"
                     >
@@ -508,6 +519,17 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                 onSubmit={editingRecord ? handleUpdateRecord : handleAddRecord}
                 initialData={editingRecord}
             />
+
+            {/* Migration Modal */}
+            {showMigrationModal && (
+                <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                    <Loader2 className="w-8 h-8 animate-spin text-white" />
+                </div>}>
+                    <RegistrationMigrationModal
+                        onClose={() => setShowMigrationModal(false)}
+                    />
+                </Suspense>
+            )}
         </div>
     );
 };

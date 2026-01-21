@@ -10,9 +10,10 @@ const AddConsultationModal = React.lazy(() => import('../../StudentConsultation/
 
 interface ConsultationsTabProps {
   student: UnifiedStudent;
+  readOnly?: boolean; // 조회 전용 모드
 }
 
-const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student }) => {
+const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly = false }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
   const { staff } = useStaff();
@@ -92,13 +93,15 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student }) => {
               ({sortedConsultations.length}건)
             </span>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
-          >
-            <Plus className="w-3 h-3" />
-            추가
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" />
+              추가
+            </button>
+          )}
         </div>
       </div>
 
@@ -117,12 +120,14 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student }) => {
           <div className="text-center py-6">
             <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300" />
             <p className="text-gray-500 text-xs">상담 기록이 없습니다</p>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
-            >
-              + 상담 기록 추가하기
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
+              >
+                + 상담 기록 추가하기
+              </button>
+            )}
           </div>
         ) : (
           <div>

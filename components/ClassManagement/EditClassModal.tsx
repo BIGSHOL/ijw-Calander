@@ -31,6 +31,9 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const [slotRooms, setSlotRooms] = useState<Record<string, string>>({});
   const [showAdvancedSchedule, setShowAdvancedSchedule] = useState(false);
 
+  // 탭 관리
+  const [activeTab, setActiveTab] = useState<'info' | 'schedule' | 'students'>('info');
+
   // 학생 관리
   const [showStudentList, setShowStudentList] = useState(false);
   const [studentSearch, setStudentSearch] = useState('');
@@ -422,97 +425,158 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <div className="bg-[#081429] text-white px-4 py-3 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <Edit className="w-5 h-5" />
-            <h2 className="font-bold">수업 편집</h2>
+        <div className="bg-[#081429] text-white px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Edit className="w-5 h-5 text-[#fdb813]" />
+              <h2 className="text-base font-bold">수업 편집</h2>
+              <span className="px-2 py-0.5 bg-[#fdb813] text-[#081429] rounded text-xs font-bold">
+                {SUBJECT_LABELS[classInfo.subject as SubjectType] || classInfo.subject}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleSave}
+                disabled={updateClassMutation.isPending || manageStudentsMutation.isPending}
+                className="bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-3 py-1.5 rounded font-semibold text-xs disabled:opacity-50 transition-colors"
+              >
+                {(updateClassMutation.isPending || manageStudentsMutation.isPending) ? '저장 중...' : '저장'}
+              </button>
+              <button
+                onClick={() => onClose(false)}
+                disabled={updateClassMutation.isPending || manageStudentsMutation.isPending}
+                className="p-1.5 rounded hover:bg-white/10 transition-colors disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-          <button onClick={() => onClose(false)} className="hover:bg-white/20 p-1.5 rounded-lg transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+
+          {/* 탭 네비게이션 */}
+          <div className="flex gap-1 border-t border-white/20 pt-2">
+            <button
+              onClick={() => setActiveTab('info')}
+              className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                activeTab === 'info'
+                  ? 'bg-[#fdb813] text-[#081429]'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+            >
+              기본 정보
+            </button>
+            <button
+              onClick={() => setActiveTab('schedule')}
+              className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                activeTab === 'schedule'
+                  ? 'bg-[#fdb813] text-[#081429]'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+            >
+              스케줄
+            </button>
+            <button
+              onClick={() => setActiveTab('students')}
+              className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                activeTab === 'students'
+                  ? 'bg-[#fdb813] text-[#081429]'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+            >
+              학생 ({finalStudentCount})
+            </button>
+          </div>
         </div>
 
-        {/* 본문 */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* 본문 - 고정 높이 */}
+        <div className="flex-1 overflow-y-auto p-4" style={{ minHeight: '400px' }}>
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700 text-sm">
+            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700 text-sm mb-4">
               {error}
             </div>
           )}
 
-          {/* 기본 정보 - 2열 */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                수업명 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={className}
-                onChange={(e) => setClassName(e.target.value)}
-                placeholder="예: LT1a"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
-              />
-            </div>
+          {/* 기본 정보 탭 */}
+          {activeTab === 'info' && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    수업명 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={className}
+                    onChange={(e) => setClassName(e.target.value)}
+                    placeholder="예: LT1a"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">과목</label>
-              <input
-                type="text"
-                value={SUBJECT_LABELS[classInfo.subject as SubjectType] || classInfo.subject}
-                disabled
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
-              />
-            </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    담임 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={teacher}
+                    onChange={(e) => setTeacher(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
+                  >
+                    <option value="">선택해주세요</option>
+                    {availableTeachers.map(t => {
+                      const displayName = getTeacherDisplayName(t);
+                      const saveValue = getTeacherSaveValue(t);
+                      return (
+                        <option key={t.id} value={saveValue}>
+                          {displayName}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {availableTeachers.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      ⚠️ {SUBJECT_LABELS[classInfo.subject]} 과목 강사가 없습니다. 직원 관리에서 추가해주세요.
+                    </p>
+                  )}
+                </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                담임 <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={teacher}
-                onChange={(e) => setTeacher(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
-              >
-                <option value="">선택해주세요</option>
-                {availableTeachers.map(t => {
-                  const displayName = getTeacherDisplayName(t);
-                  const saveValue = getTeacherSaveValue(t);
-                  return (
-                    <option key={t.id} value={saveValue}>
-                      {displayName}
-                    </option>
-                  );
-                })}
-              </select>
-              {availableTeachers.length === 0 && (
-                <p className="text-xs text-amber-600 mt-1">
-                  ⚠️ {SUBJECT_LABELS[classInfo.subject]} 과목 강사가 없습니다. 직원 관리에서 추가해주세요.
-                </p>
-              )}
-            </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">강의실</label>
+                  <input
+                    type="text"
+                    value={room}
+                    onChange={(e) => setRoom(e.target.value)}
+                    placeholder="예: 302"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">강의실</label>
-              <input
-                type="text"
-                value={room}
-                onChange={(e) => setRoom(e.target.value)}
-                placeholder="예: 302"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
-              />
+              {/* 메모 */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">메모</label>
+                <textarea
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                  placeholder="수업에 대한 메모를 입력하세요..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none resize-none"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* 스케줄 그리드 */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">스케줄 선택</label>
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="max-h-56 overflow-y-auto">
-                {/* 헤더 - Sticky */}
-                <div className="grid bg-gray-50 border-b border-gray-200 sticky top-0 z-10" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
+          {/* 스케줄 탭 */}
+          {activeTab === 'schedule' && (
+            <div className="space-y-3">
+              {/* 스케줄 그리드 */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">스케줄 선택</label>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="max-h-56 overflow-y-auto">
+                    {/* 헤더 - Sticky */}
+                    <div className="grid bg-gray-50 border-b border-gray-200 sticky top-0 z-10" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
                   <div className="p-1 text-center text-[10px] font-semibold text-gray-400 border-r border-gray-200"></div>
                   {WEEKDAYS.map((day) => (
                     <div key={day} className="p-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200 last:border-r-0">
@@ -692,46 +756,14 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                 </div>
               </div>
             )}
-          </div>
-
-          {/* 메모 */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">메모</label>
-            <textarea
-              value={memo}
-              onChange={(e) => setMemo(e.target.value)}
-              placeholder="수업에 대한 메모를 입력하세요..."
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none resize-none"
-            />
-          </div>
-
-          {/* 학생 관리 섹션 */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowStudentList(!showStudentList)}
-              className="w-full flex items-center justify-between p-2.5 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-semibold text-gray-700">학생 관리</span>
-                <span className="text-xs text-[#fdb813] font-semibold">
-                  {finalStudentCount}명
-                  {(studentsToAdd.size > 0 || studentsToRemove.size > 0) && (
-                    <span className="text-gray-400 ml-1">
-                      ({studentsToAdd.size > 0 && `+${studentsToAdd.size}`}
-                      {studentsToAdd.size > 0 && studentsToRemove.size > 0 && ' '}
-                      {studentsToRemove.size > 0 && `-${studentsToRemove.size}`})
-                    </span>
-                  )}
-                </span>
               </div>
-              {showStudentList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
+            </div>
+          )}
 
-            {showStudentList && (
-              <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
+          {/* 학생 탭 */}
+          {activeTab === 'students' && (
+            <div className="space-y-3">
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
                 {/* 현재 등록된 학생 */}
                 <div className="border-b border-gray-200">
                   <div className="px-2.5 py-1.5 bg-blue-50 text-xs font-semibold text-blue-700 flex items-center justify-between">
@@ -923,26 +955,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                   )}
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* 푸터 */}
-        <div className="bg-gray-50 px-4 py-2.5 flex items-center justify-end gap-2 border-t shrink-0">
-          <button
-            onClick={() => onClose(false)}
-            disabled={updateClassMutation.isPending || manageStudentsMutation.isPending}
-            className="px-4 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-          >
-            취소
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={updateClassMutation.isPending || manageStudentsMutation.isPending}
-            className="px-4 py-1.5 text-sm bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] rounded-lg font-semibold transition-colors disabled:opacity-50"
-          >
-            {(updateClassMutation.isPending || manageStudentsMutation.isPending) ? '저장 중...' : '저장'}
-          </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
