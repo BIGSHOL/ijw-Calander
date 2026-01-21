@@ -33,7 +33,8 @@
       "Bash(wmic process:*)",
       "Bash(npx firebase:*)",
       "Bash(firebase:*)",
-      "Read(//c/Users/user/.claude/skills/vercel-react-best-practices/**)"
+      "Read(//c/Users/user/.claude/skills/vercel-react-best-practices/**)",
+      "Bash(git reset:*)"
     ]
   },
   "mcpServers": {

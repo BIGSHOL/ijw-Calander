@@ -14,7 +14,7 @@ export interface StudentFilters {
   searchQuery: string;
   grade: string;
   status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn';
-  subject: string;
+  subjects: string[];  // 선택된 과목 배열 (빈 배열 = 전체)
   teacher: string;  // 'all' 또는 선생님 이름
 }
 
@@ -154,10 +154,10 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
       });
     }
 
-    // 수강 과목 필터
-    if (filters.subject !== 'all') {
+    // 수강 과목 필터 (여러 과목 선택 가능)
+    if (filters.subjects.length > 0) {
       result = result.filter((s) =>
-        s.enrollments.some((e) => e.subject === filters.subject)
+        s.enrollments.some((e) => filters.subjects.includes(e.subject))
       );
     }
 

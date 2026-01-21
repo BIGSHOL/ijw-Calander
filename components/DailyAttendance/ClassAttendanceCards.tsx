@@ -54,13 +54,6 @@ const ClassAttendanceCards: React.FC<ClassAttendanceCardsProps> = ({
     // 선택된 날짜의 요일 구하기 (타임존 문제 수정)
     const selectedDayOfWeek = getWeekdayFromDate(selectedDate);
 
-    console.log('[ClassAttendanceCards] 학생 수 계산:', {
-      selectedDate,
-      selectedDayOfWeek,
-      totalStudents: allStudents.length,
-      totalClasses: allClasses.length,
-    });
-
     // 1. 선택된 날짜에 수업이 있는 클래스만 초기화 (총 학생 수 포함)
     allClasses.forEach(cls => {
       const className = cls.className || cls.name || '';
@@ -96,17 +89,6 @@ const ClassAttendanceCards: React.FC<ClassAttendanceCardsProps> = ({
 
           return isActiveOnDate;
         });
-      });
-
-      console.log(`[ClassAttendanceCards] 수업 "${className}" 학생 수:`, {
-        classId: cls.id,
-        subject: cls.subject,
-        studentsInClassCount: studentsInClass.length,
-        sampleEnrollments: allStudents.slice(0, 2).map(s => ({
-          name: s.name,
-          enrollmentsCount: (s.enrollments || []).length,
-          enrollments: s.enrollments,
-        }))
       });
 
       summaryMap.set(cls.id, {

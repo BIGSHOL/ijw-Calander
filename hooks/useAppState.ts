@@ -269,7 +269,7 @@ export interface StudentFilters {
   searchQuery: string;
   grade: string;
   status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn';
-  subject: string;
+  subjects: string[];  // 선택된 과목 배열 (빈 배열 = 전체)
   teacher: string;  // 'all' 또는 선생님 이름
 }
 
@@ -278,7 +278,7 @@ export function useStudentFilterState() {
     searchQuery: '',
     grade: 'all',
     status: 'active',
-    subject: 'all',
+    subjects: [],
     teacher: 'all',
   });
   const [studentSortBy, setStudentSortBy] = useState<'name' | 'grade' | 'startDate'>('name');
@@ -296,7 +296,7 @@ export function useStudentFilterState() {
       searchQuery: '',
       grade: 'all',
       status: 'active',
-      subject: 'all',
+      subjects: [],
       teacher: 'all',
     });
   }, []);
