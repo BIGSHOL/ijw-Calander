@@ -44,7 +44,7 @@ const CounselingOverview: React.FC<CounselingOverviewProps> = ({ data, loading, 
   if (minimal) {
     return (
       <div className="h-64" style={{ minWidth: 0 }}>
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={256}>
           <ComposedChart
             data={data}
             margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
@@ -119,7 +119,7 @@ const CounselingOverview: React.FC<CounselingOverviewProps> = ({ data, loading, 
         일별 상담 현황
       </h3>
       <div className="h-64" style={{ minWidth: 0 }}>
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={256}>
           <ComposedChart
             data={data}
             margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
