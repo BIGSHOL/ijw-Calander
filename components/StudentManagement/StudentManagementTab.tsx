@@ -341,22 +341,26 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
 
       {/* 학생 데이터 마이그레이션 모달 */}
       {showMigrationModal && (
-        <StudentMigrationModal
-          onClose={() => {
-            refreshStudents();
-            setShowMigrationModal(false);
-          }}
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
+          <StudentMigrationModal
+            onClose={() => {
+              refreshStudents();
+              setShowMigrationModal(false);
+            }}
+          />
+        </Suspense>
       )}
 
       {/* 학생 ID 정규화 모달 */}
       {showNormalizeIdsModal && (
-        <NormalizeStudentIdsModal
-          onClose={() => {
-            refreshStudents();
-            setShowNormalizeIdsModal(false);
-          }}
-        />
+        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
+          <NormalizeStudentIdsModal
+            onClose={() => {
+              refreshStudents();
+              setShowNormalizeIdsModal(false);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );
