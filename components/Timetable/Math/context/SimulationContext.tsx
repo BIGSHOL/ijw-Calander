@@ -17,7 +17,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
-import { collection, collectionGroup, query, where, getDocs, writeBatch, doc, setDoc } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, getDocs, getDoc, writeBatch, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
 
@@ -147,37 +147,9 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  // ============ MODE CONTROL ============
-
-  const enterScenarioMode = useCallback(async () => {
-    // Load current live data into draft
-    await loadFromLiveInternal();
-    setState(prev => ({
-      ...prev,
-      isScenarioMode: true,
-      isDirty: false,
-      currentScenarioName: null,
-    }));
-  }, []);
-
-  const exitScenarioMode = useCallback(() => {
-    if (stateRef.current.isDirty) {
-      if (!confirm('저장하지 않은 변경 사항이 있습니다. 정말 나가시겠습니까?')) {
-        return;
-      }
-    }
-    setState({
-      isScenarioMode: false,
-      scenarioClasses: {},
-      scenarioEnrollments: {},
-      isDirty: false,
-      currentScenarioName: null,
-    });
-  }, []);
-
   // ============ INTERNAL LOAD FROM LIVE ============
 
-  const loadFromLiveInternal = async () => {
+  const loadFromLiveInternal = useCallback(async () => {
     // 1. Load classes (math only)
     const classesSnapshot = await getDocs(
       query(collection(db, 'classes'), where('subject', '==', 'math'))
@@ -248,7 +220,35 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     }));
 
     return { scenarioClasses, scenarioEnrollments };
-  };
+  }, []);
+
+  // ============ MODE CONTROL ============
+
+  const enterScenarioMode = useCallback(async () => {
+    // Load current live data into draft
+    await loadFromLiveInternal();
+    setState(prev => ({
+      ...prev,
+      isScenarioMode: true,
+      isDirty: false,
+      currentScenarioName: null,
+    }));
+  }, [loadFromLiveInternal]);
+
+  const exitScenarioMode = useCallback(() => {
+    if (stateRef.current.isDirty) {
+      if (!confirm('저장하지 않은 변경 사항이 있습니다. 정말 나가시겠습니까?')) {
+        return;
+      }
+    }
+    setState({
+      isScenarioMode: false,
+      scenarioClasses: {},
+      scenarioEnrollments: {},
+      isDirty: false,
+      currentScenarioName: null,
+    });
+  }, []);
 
   // ============ DATA ACCESS ============
 
@@ -461,12 +461,15 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   }, []);
 
   const loadFromScenario = useCallback(async (scenarioId: string) => {
-    const docSnap = await getDocs(query(collection(db, SCENARIO_COLLECTION)));
-    const scenario = docSnap.docs.find(d => d.id === scenarioId)?.data();
+    // Direct document read instead of full collection scan
+    const docRef = doc(db, SCENARIO_COLLECTION, scenarioId);
+    const docSnap = await getDoc(docRef);
 
-    if (!scenario) {
+    if (!docSnap.exists()) {
       throw new Error('시나리오를 찾을 수 없습니다.');
     }
+
+    const scenario = docSnap.data();
 
     if (scenario.version === 2) {
       setState(prev => ({

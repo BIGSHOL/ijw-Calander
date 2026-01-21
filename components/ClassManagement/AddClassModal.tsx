@@ -57,12 +57,49 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
   const { staff } = useStaff();
   const { data: existingClasses } = useClasses(subject); // 해당 과목의 기존 수업 목록
 
-  // 과목별 강사 필터링 (staff에서 role='teacher'이고 해당 과목을 가르치는 직원)
+  // Map을 사용해 O(1) 강사 검색 최적화 (js-optimize-map-lookups)
+  const staffMap = useMemo(() => {
+    const map = new Map();
+    staff.forEach(member => {
+      map.set(member.id, member);
+      // name과 englishName으로도 검색 가능하도록
+      if (member.name) map.set(member.name, member);
+      if (member.englishName) map.set(member.englishName, member);
+    });
+    return map;
+  }, [staff]);
+
+  // teachersData Map 생성 (O(1) 색상 조회)
+  const teachersMap = useMemo(() => {
+    const map = new Map();
+    teachersData?.forEach(teacher => {
+      if (teacher.name) map.set(teacher.name, teacher);
+      if (teacher.englishName) map.set(teacher.englishName, teacher);
+    });
+    return map;
+  }, [teachersData]);
+
+  // 과목별 강사 필터링 (systemRole 또는 role='teacher' + subjects)
   const availableTeachers = useMemo(() => {
-    return staff.filter(member =>
-      member.role === 'teacher' &&
-      member.subjects?.includes(subject)
-    );
+    return staff.filter(member => {
+      // systemRole 기반 체크
+      if (subject === 'math') {
+        if (member.systemRole === 'math_teacher' || member.systemRole === 'math_lead') {
+          return true;
+        }
+      } else if (subject === 'english') {
+        if (member.systemRole === 'english_teacher' || member.systemRole === 'english_lead') {
+          return true;
+        }
+      }
+
+      // 레거시: role='teacher' + subjects 체크
+      if (member.role === 'teacher' && member.subjects?.includes(subject)) {
+        return true;
+      }
+
+      return false;
+    });
   }, [staff, subject]);
 
   // 강사 이름 표시 헬퍼 (과목별 다른 표시)
@@ -81,9 +118,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
     return staffMember.name;
   };
 
-  // 강사 색상 가져오기
+  // 강사 색상 가져오기 (Map으로 O(1) 조회)
   const getTeacherColor = (teacherName: string) => {
-    const teacherInfo = teachersData?.find(t => t.name === teacherName || t.englishName === teacherName);
+    const teacherInfo = teachersMap.get(teacherName);
     return {
       bgColor: teacherInfo?.bgColor || '#fdb813',
       textColor: teacherInfo?.textColor || '#081429'
@@ -208,7 +245,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
       await createClassMutation.mutateAsync(classData);
       onClose();
     } catch (err) {
-      console.error('[AddClassModal] Error creating class:', err);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[AddClassModal] Error creating class:', err);
+      }
       setError('수업 생성에 실패했습니다.');
     }
   };
@@ -339,14 +378,14 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                       const displayTeacher = slotTeacher || mainTeacher;
                       const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
 
-                      // 과목에 맞게 표시할 이름 결정
+                      // 과목에 맞게 표시할 이름 결정 (Map으로 O(1) 조회)
                       let displayName = '';
                       if (isSelected) {
                         if (slotTeacher) {
-                          const staffMember = staff.find(s => s.name === slotTeacher || s.englishName === slotTeacher);
+                          const staffMember = staffMap.get(slotTeacher);
                           displayName = staffMember ? getTeacherDisplayName(staffMember) : slotTeacher;
                         } else if (mainTeacher) {
-                          const staffMember = staff.find(s => s.name === mainTeacher || s.englishName === mainTeacher);
+                          const staffMember = staffMap.get(mainTeacher);
                           displayName = staffMember ? getTeacherDisplayName(staffMember) : mainTeacher;
                         } else {
                           displayName = '✓';
@@ -428,7 +467,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                               >
                                 <option value="">
                                   {mainTeacher ? (() => {
-                                    const staffMember = staff.find(s => s.name === mainTeacher || s.englishName === mainTeacher);
+                                    const staffMember = staffMap.get(mainTeacher);
                                     return staffMember ? getTeacherDisplayName(staffMember) : mainTeacher;
                                   })() : '담임'}
                                 </option>

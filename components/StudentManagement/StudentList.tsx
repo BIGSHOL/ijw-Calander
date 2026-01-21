@@ -42,10 +42,7 @@ const StudentList: React.FC<StudentListProps> = ({
       case 'active':
         return <span className="text-micro bg-green-100 text-green-800 px-1 py-0.5 rounded font-medium">재원</span>;
       case 'on_hold':
-        return <span className="text-micro bg-amber-100 text-amber-800 px-1 py-0.5 rounded font-medium">휴원</span>;
-      case 'waitlisted':
-      case 'waiting':  // 대기 상태 (두 가지 표기 지원)
-        return <span className="text-micro bg-purple-100 text-purple-800 px-1 py-0.5 rounded font-medium">대기</span>;
+        return <span className="text-micro bg-amber-100 text-amber-800 px-1 py-0.5 rounded font-medium">휴원/대기</span>;
       case 'withdrawn':
         return <span className="text-micro bg-gray-200 text-gray-600 px-1 py-0.5 rounded font-medium">퇴원</span>;
       default:

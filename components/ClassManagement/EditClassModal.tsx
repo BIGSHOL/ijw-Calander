@@ -54,13 +54,28 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const currentStudents = classDetail?.students || [];
   const currentStudentIds = currentStudents.map(s => s.id);
 
-  // 과목별 강사 필터링 (staff에서 role='teacher'이고 해당 과목을 가르치는 직원)
+  // 과목별 강사 필터링 (systemRole 또는 role='teacher' + subjects)
   const availableTeachers = useMemo(() => {
     const subjectFilter = classInfo.subject as 'math' | 'english';
-    return staff.filter(member =>
-      member.role === 'teacher' &&
-      member.subjects?.includes(subjectFilter)
-    );
+    return staff.filter(member => {
+      // systemRole 기반 체크
+      if (subjectFilter === 'math') {
+        if (member.systemRole === 'math_teacher' || member.systemRole === 'math_lead') {
+          return true;
+        }
+      } else if (subjectFilter === 'english') {
+        if (member.systemRole === 'english_teacher' || member.systemRole === 'english_lead') {
+          return true;
+        }
+      }
+
+      // 레거시: role='teacher' + subjects 체크
+      if (member.role === 'teacher' && member.subjects?.includes(subjectFilter)) {
+        return true;
+      }
+
+      return false;
+    });
   }, [staff, classInfo.subject]);
 
   // 강사 이름 표시 헬퍼 (과목별 다른 표시)

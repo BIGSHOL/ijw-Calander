@@ -32,16 +32,6 @@ export interface Enrollment {
   onHold?: boolean;  // 일시정지 여부
 }
 
-// Class History Entry - 수강 이력 추적
-export interface ClassHistoryEntry {
-  className: string;                      // 수업명
-  subject: 'math' | 'english' | 'science' | 'korean' | 'other';  // 과목
-  startDate: string;                      // 시작일 (YYYY-MM-DD)
-  endDate?: string;                       // 종료일 (undefined = 현재 수강 중)
-  teacher?: string;                       // 담당 강사
-  reason?: 'levelup' | 'schedule_change' | 'teacher_change' | 'other';  // 이동 사유
-  note?: string;                          // 메모
-}
 
 // Phase 1: Unified Schedule Slot
 export interface ScheduleSlot {
@@ -135,12 +125,10 @@ export interface UnifiedStudent {
   // 수강 정보 (v5: 계층형 구조)
   enrollments: Enrollment[];     // 상세 수강 정보 (Subject -> Class -> Teacher mapping)
 
-  // 수강 이력 (반이동 추적)
-  classHistory?: ClassHistoryEntry[];  // 수강 이력 (선택, 기존 학생은 빈 배열)
-
   // 상태 관리
-  // prospect = prospective (예비), waitlisted = waiting (대기) - 두 표기 모두 지원
-  status: 'active' | 'on_hold' | 'withdrawn' | 'prospect' | 'prospective' | 'waitlisted' | 'waiting';
+  // prospect = prospective (예비) - 두 표기 모두 지원
+  // on_hold: 휴원/대기 통합 (enrollment 레벨에서 세부 관리)
+  status: 'active' | 'on_hold' | 'withdrawn' | 'prospect' | 'prospective';
   startDate: string;             // 등록일 (YYYY-MM-DD)
   endDate?: string;              // 퇴원일
   withdrawalDate?: string;       // 퇴원일 (YYYY-MM-DD) - 영어 시간표와 호환
@@ -940,31 +928,48 @@ export enum SchoolGrade {
 
 export interface ConsultationRecord {
   id: string;
+
+  // === 학생 기본 정보 (UnifiedStudent와 동기화) ===
   studentName: string;
-  parentPhone: string;
+  englishName?: string;            // 영어 이름 (추가)
+  gender?: 'male' | 'female';      // 성별 (추가)
   schoolName: string;
   grade: SchoolGrade;
-  address?: string; // 주소 추가
-  consultationDate: string; // ISO Date string (YYYY-MM-DD)
+  graduationYear?: string;         // 졸업 연도 (추가)
 
+  // === 연락처 정보 (UnifiedStudent와 동기화) ===
+  studentPhone?: string;           // 학생 전화번호 (추가)
+  homePhone?: string;              // 집 전화번호 (추가)
+  parentPhone: string;
+  parentName?: string;             // 보호자명 (추가)
+  parentRelation?: string;         // 보호자 관계 (추가)
+
+  // === 주소 정보 (UnifiedStudent와 동기화) ===
+  zipCode?: string;                // 우편번호 (추가)
+  address?: string;
+  addressDetail?: string;          // 상세주소 (추가)
+
+  // === 추가 정보 (UnifiedStudent와 동기화) ===
+  birthDate?: string;              // 생년월일 (추가)
+  nickname?: string;               // 닉네임 (추가)
+  enrollmentReason?: string;       // 입학 동기 (추가)
+
+  // === 상담 전용 정보 ===
+  consultationDate: string; // ISO Date string (YYYY-MM-DD)
   subject: ConsultationSubject;
   status: ConsultationStatus;
-
   counselor: string;
   receiver: string; // 수신자 (전화받고 입력한 사람)
   registrar: string;
-
   paymentAmount: string;
   paymentDate: string;
-
   notes: string;
   nonRegistrationReason: string;
-
   followUpDate: string;
   followUpContent: string;
-
   consultationPath: string;
 
+  // === 시스템 필드 ===
   createdAt: string;
   updatedAt?: string;
   authorId?: string;

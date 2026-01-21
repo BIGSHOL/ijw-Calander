@@ -215,7 +215,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       const studentId = docSnap.ref.parent.parent?.id;
 
       if (!studentId || !className) return;
-      if (data.withdrawalDate || data.onHold) return;  // Skip withdrawn/on-hold
+      if (data.withdrawalDate) return;  // Skip withdrawn only (onHold는 포함)
 
       if (!scenarioEnrollments[className]) {
         scenarioEnrollments[className] = {};
@@ -239,7 +239,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         underline: data.underline,
         enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
         withdrawalDate: convertTimestampToDate(data.withdrawalDate),
-        onHold: data.onHold,
+        onHold: data.onHold || false,  // onHold 상태 유지
         attendanceDays: data.attendanceDays || [],
       };
     });

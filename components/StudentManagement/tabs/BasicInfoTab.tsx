@@ -26,12 +26,10 @@ interface BasicInfoTabProps {
 // 상태별 스타일 정의
 const STATUS_STYLES: Record<string, { label: string; bg: string; text: string }> = {
   active: { label: '재원', bg: '#10b981', text: '#ffffff' },
-  on_hold: { label: '휴원', bg: '#f59e0b', text: '#ffffff' },
+  on_hold: { label: '휴원/대기', bg: '#f59e0b', text: '#ffffff' },
   withdrawn: { label: '퇴원', bg: '#6b7280', text: '#ffffff' },
   prospect: { label: '예비', bg: '#3b82f6', text: '#ffffff' },
   prospective: { label: '예비', bg: '#3b82f6', text: '#ffffff' },  // 예비 상태 별칭
-  waitlisted: { label: '대기', bg: '#8b5cf6', text: '#ffffff' },
-  waiting: { label: '대기', bg: '#8b5cf6', text: '#ffffff' },  // 대기 상태 별칭
 };
 
 // 학년 옵션
@@ -495,10 +493,9 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
                 className="flex-1 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
               >
                 <option value="active">재원</option>
-                <option value="on_hold">휴원</option>
+                <option value="on_hold">휴원/대기</option>
                 <option value="withdrawn">퇴원</option>
                 <option value="prospective">예비</option>
-                <option value="waitlisted">대기</option>
               </select>
             ) : (
               <span

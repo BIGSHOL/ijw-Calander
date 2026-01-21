@@ -10,6 +10,7 @@ interface KPICardProps {
 /**
  * KPI 카드 컴포넌트
  * 핵심 지표를 카드 형태로 표시
+ * Performance: rerender-memo - 부모 리렌더 시 불필요한 재렌더 방지
  */
 const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
   const { label, value, subValue, trend, trendValue, icon, color = '#081429' } = data;
@@ -85,4 +86,12 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
   );
 };
 
-export default KPICard;
+// Performance: rerender-memo - value와 trend만 변경될 때만 리렌더
+export default React.memo(KPICard, (prevProps, nextProps) => {
+  return (
+    prevProps.data.value === nextProps.data.value &&
+    prevProps.data.trend === nextProps.data.trend &&
+    prevProps.data.trendValue === nextProps.data.trendValue &&
+    prevProps.onClick === nextProps.onClick
+  );
+});

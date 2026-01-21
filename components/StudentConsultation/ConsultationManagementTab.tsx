@@ -76,8 +76,18 @@ const ConsultationManagementTab: React.FC = () => {
             other: [],
         };
 
-        // role이 teacher인 직원만 대상
-        const teachers = staff.filter(s => s.role === 'teacher');
+        // 강사 역할을 가진 직원 (systemRole 또는 role='teacher')
+        const teachers = staff.filter(s => {
+            // systemRole이 강사 관련 역할
+            if (s.systemRole && ['math_teacher', 'english_teacher', 'math_lead', 'english_lead'].includes(s.systemRole)) {
+                return true;
+            }
+            // 레거시: role='teacher'
+            if (s.role === 'teacher') {
+                return true;
+            }
+            return false;
+        });
 
         teachers.forEach(teacher => {
             if (teacher.subjects && teacher.subjects.length > 0) {

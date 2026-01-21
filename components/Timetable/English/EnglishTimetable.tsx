@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, onSnapshot, getDocs, doc, setDoc, writeBatch, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
@@ -48,7 +48,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
     // SimulationContext 사용
     const simulation = useSimulation();
-    const { isSimulationMode, currentScenarioName, enterSimulationMode, exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName } = simulation;
+    const { isScenarioMode: isSimulationMode, currentScenarioName, enterScenarioMode: enterSimulationMode, exitScenarioMode: exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName } = simulation;
 
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -59,20 +59,28 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     // Fetch classes data for mainTeacher (담임) information
     const { data: classesData } = useClasses('english');
 
+    // Performance: js-index-maps - O(1) 교사 조회를 위한 Map 생성
+    const teacherMap = useMemo(() => {
+        const map = new Map<string, Teacher>();
+        propsTeachers.forEach(t => {
+            if (t.name) map.set(t.name, t);
+            if (t.englishName) map.set(t.englishName, t);
+        });
+        return map;
+    }, [propsTeachers]);
+
     // 강사 이름을 영어 이름으로 변환하는 헬퍼 (한글 이름 → 영어 이름)
     // scheduleData 키 생성 시 teachers 배열과 일치시키기 위해 사용
     const normalizeTeacherName = useCallback((teacherName: string): string => {
         if (!teacherName) return teacherName;
-        // propsTeachers에서 name 또는 englishName으로 매칭
-        const matched = propsTeachers.find(t =>
-            t.name === teacherName || t.englishName === teacherName
-        );
+        // Performance: O(n) find → O(1) Map.get
+        const matched = teacherMap.get(teacherName);
         // 매칭된 강사의 englishName이 있으면 사용, 없으면 원본 유지
         if (matched?.englishName) {
             return matched.englishName;
         }
         return teacherName;
-    }, [propsTeachers]);
+    }, [teacherMap]);
 
     // 시뮬레이션 모드: draftClasses에서 시간표 데이터 생성
     useEffect(() => {

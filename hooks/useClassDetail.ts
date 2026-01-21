@@ -14,6 +14,8 @@ export interface ClassStudent {
   enrollmentDate: string;
   attendanceDays?: string[];  // 실제 등원 요일 (비어있으면 모든 수업 요일에 등원)
   underline?: boolean;  // 영어 시간표용 밑줄 강조 표시
+  enrollmentId?: string;  // enrollment 문서 ID (onHold 업데이트용)
+  onHold?: boolean;  // enrollment.onHold 상태
 }
 
 export interface ClassDetail {
@@ -78,10 +80,12 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
         // classes 컬렉션 조회 실패 시 무시
       }
 
-      // 2. enrollments에서 학생 ID 수집 (attendanceDays, underline 포함)
+      // 2. enrollments에서 학생 ID 수집 (attendanceDays, underline, enrollmentId, onHold 포함)
       const studentIds = new Set<string>();
       const studentAttendanceDays: Record<string, string[]> = {};  // studentId -> attendanceDays
       const studentUnderline: Record<string, boolean> = {};  // studentId -> underline
+      const studentEnrollmentIds: Record<string, string> = {};  // studentId -> enrollmentId
+      const studentOnHold: Record<string, boolean> = {};  // studentId -> onHold
 
       try {
         const enrollmentsQuery = query(
@@ -97,6 +101,10 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
           if (studentId) {
             studentIds.add(studentId);
             const data = doc.data();
+            // enrollmentId 저장
+            studentEnrollmentIds[studentId] = doc.id;
+            // onHold 상태 저장
+            studentOnHold[studentId] = data.onHold || false;
             // attendanceDays 저장
             if (data.attendanceDays && Array.isArray(data.attendanceDays)) {
               studentAttendanceDays[studentId] = data.attendanceDays;
@@ -136,6 +144,8 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
               status: data.status,
               enrollmentDate: data.startDate || '',
               attendanceDays: studentAttendanceDays[doc.id],  // enrollment에서 가져온 attendanceDays
+              enrollmentId: studentEnrollmentIds[doc.id],  // enrollment ID
+              onHold: studentOnHold[doc.id] || false,  // enrollment onHold 상태
             });
           }
         });

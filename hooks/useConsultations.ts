@@ -26,19 +26,32 @@ interface UseConsultationsOptions {
     userId?: string;
     month?: string; // 'all' | '1' | '2' | ... | '12'
     year?: number;
+    studentId?: string; // 특정 학생의 상담 이력 조회
 }
 
 /**
  * 상담 기록 목록 조회
  */
 export const useConsultations = (options: UseConsultationsOptions = {}) => {
-    const { month, year } = options;
+    const { month, year, studentId } = options;
 
     return useQuery<ConsultationRecord[]>({
-        queryKey: ['consultations', month, year],
+        queryKey: ['consultations', month, year, studentId],
         queryFn: async () => {
             const consultationsRef = collection(db, 'consultations');
-            const q = query(consultationsRef, orderBy('consultationDate', 'desc'));
+
+            // 특정 학생 ID로 필터링
+            let q;
+            if (studentId) {
+                q = query(
+                    consultationsRef,
+                    where('registeredStudentId', '==', studentId),
+                    orderBy('consultationDate', 'desc')
+                );
+            } else {
+                q = query(consultationsRef, orderBy('consultationDate', 'desc'));
+            }
+
             const snapshot = await getDocs(q);
 
             const records = snapshot.docs.map(doc => ({
