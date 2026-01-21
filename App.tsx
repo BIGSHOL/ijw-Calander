@@ -825,6 +825,9 @@ const App: React.FC = () => {
   const [memoMessage, setMemoMessage] = useState('');
   const [selectedMemo, setSelectedMemo] = useState<TaskMemo | null>(null);
 
+  // Search Field Dropdown State
+  const [isSearchFieldDropdownOpen, setIsSearchFieldDropdownOpen] = useState(false);
+
   // Subscribe to Task Memos (only current user's received memos)
   // 최적화: 서버 측 필터링 추가 (isDeleted=false, 읽기 -50%)
   useEffect(() => {
@@ -2032,8 +2035,9 @@ const App: React.FC = () => {
                 </div>
 
                 {/* Search Field Selector */}
-                <div className="relative group">
+                <div className="relative">
                   <button
+                    onClick={() => setIsSearchFieldDropdownOpen(!isSearchFieldDropdownOpen)}
                     className={`px-2 py-1.5 bg-white/10 border border-white/10 rounded-lg text-xs cursor-pointer hover:border-white/30 transition-colors ${studentFilters.searchField !== 'all' ? 'text-[#fdb813] border-[#fdb813]/50' : 'text-white'}`}
                   >
                     {studentFilters.searchField === 'all' && '전체'}
@@ -2047,64 +2051,93 @@ const App: React.FC = () => {
                     {studentFilters.searchField === 'etc' && '기타'}
                     <ChevronDown size={12} className="inline ml-1" />
                   </button>
-                  <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-white/20 rounded-lg shadow-xl p-2 hidden group-hover:block z-50 min-w-[180px]">
-                    <div className="grid grid-cols-2 gap-0.5">
-                      <button
-                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'all' }))}
-                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'all' ? 'bg-[#fdb813] text-[#081429] font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                      >
-                        전체
-                      </button>
-                      <button
-                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'name' }))}
-                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'name' ? 'bg-blue-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                      >
-                        이름
-                      </button>
-                      <button
-                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'phone' }))}
-                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'phone' ? 'bg-purple-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                      >
-                        전화번호
-                      </button>
-                      <button
-                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'school' }))}
-                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'school' ? 'bg-green-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                      >
-                        학교
-                      </button>
-                      <button
-                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'address' }))}
-                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'address' ? 'bg-orange-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                      >
-                        주소
-                      </button>
-                      <button
-                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'parent' }))}
-                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'parent' ? 'bg-pink-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                      >
-                        보호자
-                      </button>
-                      <button
-                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'memo' }))}
-                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'memo' ? 'bg-indigo-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                      >
-                        메모
-                      </button>
-                      <button
-                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'email' }))}
-                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'email' ? 'bg-teal-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                      >
-                        이메일
-                      </button>
-                      <button
-                        onClick={() => setStudentFilters(prev => ({ ...prev, searchField: 'etc' }))}
-                        className={`px-2 py-1 rounded text-xs col-span-2 ${studentFilters.searchField === 'etc' ? 'bg-gray-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                      >
-                        기타
-                      </button>
+                  {isSearchFieldDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-white/20 rounded-lg shadow-xl p-2 z-50 min-w-[180px]">
+                      <div className="grid grid-cols-2 gap-0.5">
+                        <button
+                          onClick={() => {
+                            setStudentFilters(prev => ({ ...prev, searchField: 'all' }));
+                            setIsSearchFieldDropdownOpen(false);
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'all' ? 'bg-[#fdb813] text-[#081429] font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                          전체
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStudentFilters(prev => ({ ...prev, searchField: 'name' }));
+                            setIsSearchFieldDropdownOpen(false);
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'name' ? 'bg-blue-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                          이름
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStudentFilters(prev => ({ ...prev, searchField: 'phone' }));
+                            setIsSearchFieldDropdownOpen(false);
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'phone' ? 'bg-purple-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                          전화번호
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStudentFilters(prev => ({ ...prev, searchField: 'school' }));
+                            setIsSearchFieldDropdownOpen(false);
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'school' ? 'bg-green-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                          학교
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStudentFilters(prev => ({ ...prev, searchField: 'address' }));
+                            setIsSearchFieldDropdownOpen(false);
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'address' ? 'bg-orange-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                          주소
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStudentFilters(prev => ({ ...prev, searchField: 'parent' }));
+                            setIsSearchFieldDropdownOpen(false);
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'parent' ? 'bg-pink-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                          보호자
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStudentFilters(prev => ({ ...prev, searchField: 'memo' }));
+                            setIsSearchFieldDropdownOpen(false);
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'memo' ? 'bg-indigo-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                          메모
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStudentFilters(prev => ({ ...prev, searchField: 'email' }));
+                            setIsSearchFieldDropdownOpen(false);
+                          }}
+                          className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'email' ? 'bg-teal-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                          이메일
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStudentFilters(prev => ({ ...prev, searchField: 'etc' }));
+                            setIsSearchFieldDropdownOpen(false);
+                          }}
+                          className={`px-2 py-1 rounded text-xs col-span-2 ${studentFilters.searchField === 'etc' ? 'bg-gray-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                        >
+                          기타
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Search Bar */}

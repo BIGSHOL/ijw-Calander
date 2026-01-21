@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedStudent } from '../../types';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
@@ -15,6 +15,11 @@ const StudentList: React.FC<StudentListProps> = ({
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  // 학생 목록이 변경되면 첫 페이지로 리셋 (검색, 필터 변경 시)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [students.length]);
 
   // 페이지네이션 계산
   const totalPages = Math.ceil(students.length / pageSize);
