@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List, ChevronDown, X } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
+import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List, ChevronDown, X, Loader2 } from 'lucide-react';
 import { usePaginatedConsultations, StudentConsultationFilters, DEFAULT_PAGE_SIZE } from '../../hooks/useStudentConsultations';
 import { ConsultationCategory, CATEGORY_CONFIG } from '../../types';
 import ConsultationList from './ConsultationList';
@@ -667,13 +667,15 @@ const ConsultationManagementTab: React.FC = () => {
             {/* 마이그레이션 모달 */}
             {
                 showMigrationModal && (
-                    <ConsultationMigrationModal
-                        onClose={() => setShowMigrationModal(false)}
-                        onSuccess={() => {
-                            setShowMigrationModal(false);
-                            refetch();
-                        }}
-                    />
+                    <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
+                        <ConsultationMigrationModal
+                            onClose={() => setShowMigrationModal(false)}
+                            onSuccess={() => {
+                                setShowMigrationModal(false);
+                                refetch();
+                            }}
+                        />
+                    </Suspense>
                 )
             }
         </div >
