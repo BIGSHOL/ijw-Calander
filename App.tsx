@@ -104,20 +104,45 @@ const staffToUserLike = (staff: StaffMember): UserProfile => ({
 });
 
 // Helper: staff 데이터를 UserProfile 형태로 변환
-const staffToUserProfile = (staff: StaffMember): UserProfile => ({
-  uid: staff.uid || staff.id,
-  email: staff.email || '',
-  displayName: staff.name,
-  role: staff.systemRole || 'user',
-  status: staff.approvalStatus || 'pending',
-  jobTitle: staff.jobTitle,
-  departmentPermissions: staff.departmentPermissions || {},
-  favoriteDepartments: staff.favoriteDepartments || [],
-  departmentId: staff.primaryDepartmentId,
-  teacherId: staff.teacherId,
-  allowedDepartments: [], // deprecated
-  canEdit: staff.approvalStatus === 'approved',
-});
+const staffToUserProfile = (staff: StaffMember): UserProfile => {
+  // 속성 접근 캐싱 (성능 최적화)
+  const systemRole = staff.systemRole;
+  const approvalStatus = staff.approvalStatus;
+  const email = staff.email || '';
+
+  // 승인 상태 검증
+  const isApproved = approvalStatus === 'approved';
+  const hasValidRole = systemRole && systemRole !== 'user';
+
+  // 개발 환경에서만 경고 로그 (프로덕션 번들 크기 감소)
+  if (process.env.NODE_ENV !== 'production') {
+    // 승인되었지만 역할이 없거나 'user'인 경우 경고
+    if (isApproved && !hasValidRole) {
+      console.warn('[Access Warning] Approved user without valid systemRole:', email, 'role:', systemRole);
+    }
+
+    // 역할이 있지만 승인되지 않은 경우 경고
+    if (hasValidRole && !isApproved) {
+      console.warn('[Access Warning] User has systemRole but not approved:', email, 'status:', approvalStatus);
+    }
+  }
+
+  return {
+    uid: staff.uid || staff.id,
+    email,
+    displayName: staff.name,
+    role: systemRole || 'user',
+    status: approvalStatus || 'pending',
+    jobTitle: staff.jobTitle,
+    departmentPermissions: staff.departmentPermissions || {},
+    favoriteDepartments: staff.favoriteDepartments || [],
+    departmentId: staff.primaryDepartmentId,
+    teacherId: staff.teacherId,
+    allowedDepartments: [], // deprecated
+    // 승인되었고 유효한 역할이 있는 경우에만 편집 권한 부여
+    canEdit: isApproved && hasValidRole,
+  };
+};
 
 // Helper: 신규 사용자를 staff 컬렉션에 생성
 const createNewStaffMember = async (user: User, isMaster: boolean): Promise<StaffMember> => {

@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { ConsultationRecord, UserProfile } from '../../types';
+import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade } from '../../types';
 import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation } from '../../hooks/useConsultations';
+import { useStudents } from '../../hooks/useStudents';
 import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
@@ -29,6 +30,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
     const createConsultation = useCreateConsultation();
     const updateConsultation = useUpdateConsultation();
     const deleteConsultation = useDeleteConsultation();
+
+    // 원생 전환을 위한 학생 관리 hook
+    const { students: existingStudents, addStudent } = useStudents();
 
     const handleAddRecord = useCallback((record: Omit<ConsultationRecord, 'id' | 'createdAt'>) => {
         createConsultation.mutate({
@@ -71,6 +75,107 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
             }
         });
     }, [deleteConsultation]);
+
+    // 원생 전환 핸들러
+    const handleConvertToStudent = useCallback(async (consultation: ConsultationRecord) => {
+        // 중복 방지 체크
+        if (consultation.registeredStudentId) {
+            alert('이미 원생으로 전환된 상담입니다.');
+            return;
+        }
+
+        // Performance: js-index-maps - Map을 사용한 O(1) 중복 검색
+        const studentKey = `${consultation.studentName}_${consultation.parentPhone}`;
+        const studentMap = new Map(
+            existingStudents
+                .filter(s => s.status !== 'withdrawn')
+                .map(s => [`${s.name}_${s.parentPhone}`, s])
+        );
+        const duplicate = studentMap.get(studentKey);
+
+        if (duplicate) {
+            const confirmMsg = `⚠️ 동일한 학생이 이미 등록되어 있습니다!\n\n` +
+                `이름: ${duplicate.name}\n` +
+                `학교: ${duplicate.school}\n` +
+                `학년: ${duplicate.grade}\n` +
+                `연락처: ${duplicate.parentPhone}\n` +
+                `상태: ${duplicate.status === 'active' ? '재원 중' : duplicate.status}\n\n` +
+                `그래도 새로 등록하시겠습니까?`;
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+        }
+
+        // 확인 다이얼로그
+        if (!confirm(`"${consultation.studentName}" 학생을 원생 관리로 전환하시겠습니까?\n\n전환 후 학생 관리 탭에서 수업 배정 및 추가 정보를 입력하실 수 있습니다.`)) {
+            return;
+        }
+
+        try {
+            // 1. 학생 데이터 생성
+            const newStudentData: Omit<UnifiedStudent, 'id' | 'createdAt' | 'updatedAt'> = {
+                // 기본 정보
+                name: consultation.studentName,
+                englishName: consultation.englishName || undefined,
+                gender: consultation.gender,
+                school: consultation.schoolName,
+                grade: consultation.grade, // SchoolGrade enum → string으로 자동 변환
+                graduationYear: consultation.graduationYear || undefined,
+
+                // 연락처
+                studentPhone: consultation.studentPhone || undefined,
+                homePhone: consultation.homePhone || undefined,
+                parentPhone: consultation.parentPhone,
+                parentName: consultation.parentName || undefined,
+                parentRelation: consultation.parentRelation || undefined,
+
+                // 주소
+                zipCode: consultation.zipCode || undefined,
+                address: consultation.address || undefined,
+                addressDetail: consultation.addressDetail || undefined,
+
+                // 추가 정보
+                birthDate: consultation.birthDate || undefined,
+                nickname: consultation.nickname || undefined,
+                enrollmentReason: consultation.enrollmentReason || undefined,
+
+                // 상태 및 날짜
+                status: 'active',
+                startDate: consultation.consultationDate, // 상담일을 입학일로 사용
+
+                // 수강 정보 - 상담 과목으로 기본 enrollment 생성
+                enrollments: [{
+                    subject: consultation.subject === 'English' ? 'english' :
+                             consultation.subject === 'Math' ? 'math' :
+                             consultation.subject === 'Korean' ? 'korean' :
+                             consultation.subject === 'Science' ? 'science' : 'other',
+                    classId: '', // 수업 ID는 나중에 배정
+                    className: `미배정 (${consultation.subject})`, // 임시 수업명
+                    teacherId: '', // 강사는 나중에 배정
+                    days: [], // 요일은 나중에 배정
+                    enrollmentDate: consultation.consultationDate,
+                }],
+            };
+
+            // 2. 학생 생성
+            const studentId = await addStudent(newStudentData);
+
+            // 3. 상담 기록 업데이트
+            await updateConsultation.mutateAsync({
+                id: consultation.id,
+                updates: {
+                    registeredStudentId: studentId,
+                    status: 'registered', // 등록 완료 상태로 변경
+                }
+            });
+
+            alert(`✅ "${consultation.studentName}" 학생이 원생으로 전환되었습니다!\n\n[자동 등록됨]\n과목: ${consultation.subject}\n수업: 미배정 (나중에 배정 필요)\n\n학생 관리 탭에서 수업을 배정해주세요.`);
+        } catch (error) {
+            console.error('원생 전환 오류:', error);
+            alert('❌ 원생 전환에 실패했습니다.\n\n' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+        }
+    }, [existingStudents, addStudent, updateConsultation]);
 
     const openAddModal = () => {
         setEditingRecord(null);
@@ -340,6 +445,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                             data={consultations}
                             onEdit={openEditModal}
                             onDelete={handleDeleteRecord}
+                            onConvertToStudent={handleConvertToStudent}
                         />
                     )}
 

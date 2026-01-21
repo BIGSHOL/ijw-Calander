@@ -71,9 +71,7 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                                 case 'active':
                                     return <span className="text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-medium">재원</span>;
                                 case 'on_hold':
-                                    return <span className="text-[10px] bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded font-medium">휴원</span>;
-                                case 'waitlisted':
-                                    return <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded font-medium">대기</span>;
+                                    return <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">휴원/대기</span>;
                                 case 'withdrawn':
                                     return <span className="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-medium">퇴원</span>;
                                 default:

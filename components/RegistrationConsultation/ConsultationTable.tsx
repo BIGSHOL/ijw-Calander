@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
-import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, Settings2, X, ClipboardList } from 'lucide-react';
+import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, Settings2, X, ClipboardList, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -8,6 +8,7 @@ interface ConsultationTableProps {
     data: ConsultationRecord[];
     onEdit: (record: ConsultationRecord) => void;
     onDelete: (id: string) => void;
+    onConvertToStudent?: (record: ConsultationRecord) => void; // 원생 전환 콜백
 }
 
 // 색상 테마
@@ -68,10 +69,14 @@ const loadSavedColumns = (): Set<ColumnKey> => {
     } catch (e) {
         console.warn('Failed to load column settings:', e);
     }
-    return new Set(COLUMNS.filter(c => c.defaultVisible).map(c => c.key));
+    // Performance: js-combine-iterations - filter + map을 단일 루프로 결합
+    return new Set(COLUMNS.reduce<string[]>((acc, c) => {
+        if (c.defaultVisible) acc.push(c.key);
+        return acc;
+    }, []));
 };
 
-export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEdit, onDelete }) => {
+export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEdit, onDelete, onConvertToStudent }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [showSettings, setShowSettings] = useState(false);
@@ -122,7 +127,11 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
     };
 
     const resetColumns = () => {
-        updateVisibleColumns(new Set(COLUMNS.filter(c => c.defaultVisible).map(c => c.key)));
+        // Performance: js-combine-iterations - filter + map을 단일 루프로 결합
+        updateVisibleColumns(new Set(COLUMNS.reduce<string[]>((acc, c) => {
+            if (c.defaultVisible) acc.push(c.key);
+            return acc;
+        }, [])));
     };
 
     const formatDate = (dateStr: string | undefined) => {
@@ -346,14 +355,32 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                                     onClick={() => onEdit(record)}
                                                     className="p-1.5 rounded-md transition-colors"
                                                     style={{ color: COLORS.navy }}
+                                                    title="수정"
                                                 >
                                                     <Edit2 size={14} />
                                                 </button>
+                                                {/* 원생 전환 버튼 - 이미 전환된 경우 비활성화 */}
+                                                {onConvertToStudent && !record.registeredStudentId && (
+                                                    <button
+                                                        onClick={() => onConvertToStudent(record)}
+                                                        className="p-1.5 rounded-md transition-colors text-green-600 hover:bg-green-50"
+                                                        title="원생으로 전환"
+                                                    >
+                                                        <UserPlus size={14} />
+                                                    </button>
+                                                )}
+                                                {/* 전환 완료 표시 */}
+                                                {record.registeredStudentId && (
+                                                    <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-md whitespace-nowrap" title="이미 원생으로 전환됨">
+                                                        ✓ 전환완료
+                                                    </span>
+                                                )}
                                                 <button
                                                     onClick={() => {
                                                         if (window.confirm('정말로 삭제하시겠습니까?')) onDelete(record.id);
                                                     }}
                                                     className="text-red-500 p-1.5 hover:bg-red-50 rounded-md transition-colors"
+                                                    title="삭제"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>

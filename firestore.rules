@@ -111,6 +111,14 @@ service cloud.firestore {
       allow delete: if hasRole(['master']) || hasPermission('timetable.english.simulation');
     }
 
+    // Math Simulation Scenarios (for math scenario management feature)
+    match /math_scenarios/{scenarioId} {
+      allow read: if hasRole(['master']) || hasPermission('timetable.math.simulation');
+      allow create: if hasRole(['master']) || hasPermission('timetable.math.simulation');
+      allow update: if hasRole(['master']) || hasPermission('timetable.math.simulation');
+      allow delete: if hasRole(['master']) || hasPermission('timetable.math.simulation');
+    }
+
     // Class List (수업목록)
     match /{collection}/{classId} {
       allow read: if collection == '\uC218\uC5C5\uBAA9\uB85D' && isAuthenticated();

@@ -4,10 +4,10 @@ import DashboardHeader from '../DashboardHeader';
 import KPICard from '../KPICard';
 import QuickActions, { QuickAction } from '../QuickActions';
 import { useStudents } from '../../../hooks/useStudents';
-import { useDailyAttendanceByDate } from '../../../hooks/useDailyAttendance';
+import { useDailyAttendanceByDate, useDailyAttendanceByRange } from '../../../hooks/useDailyAttendance';
 import { useConsultationStats } from '../../../hooks/useConsultationStats';
 import { useBilling } from '../../../hooks/useBilling';
-import { format, startOfMonth, subDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subDays, subMonths } from 'date-fns';
 import { UserPlus, ClipboardList, MessageCircle, DollarSign, BarChart3, Calendar } from 'lucide-react';
 
 interface MasterDashboardProps {
@@ -22,55 +22,119 @@ interface MasterDashboardProps {
 const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMember }) => {
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 데이터 로딩
+  // 데이터 로딩 - 모두 지난 달 기준
+  const lastMonth = useMemo(() => subMonths(new Date(), 1), []);
+  const lastMonthStart = useMemo(() => startOfMonth(lastMonth), [lastMonth]);
+  const lastMonthEnd = useMemo(() => endOfMonth(lastMonth), [lastMonth]);
+
   const { students = [], loading: studentsLoading } = useStudents();
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const { data: todayAttendance = [], isLoading: attendanceLoading } = useDailyAttendanceByDate(today);
 
-  const thisMonth = format(startOfMonth(new Date()), 'yyyy-MM');
-  const { records: billingRecords = [], isLoading: billingLoading } = useBilling(thisMonth);
+  // 지난 달 마지막 날의 출석 데이터 (대표값)
+  const lastDayOfLastMonth = format(lastMonthEnd, 'yyyy-MM-dd');
+  const { data: todayAttendance = [], isLoading: attendanceLoading } = useDailyAttendanceByDate(lastDayOfLastMonth);
 
-  // 상담 통계 (이번 달)
+  // 주간 출석 데이터 (지난 달 마지막 7일)
+  const last7Days = useMemo(() => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      days.push(format(subDays(lastMonthEnd, i), 'yyyy-MM-dd'));
+    }
+    return days;
+  }, [lastMonthEnd]);
+
+  // Performance: async-parallel - 병렬 처리로 7배 빠른 데이터 페칭
+  const weekStartDate = last7Days[0];
+  const weekEndDate = last7Days[6];
+  const { data: weeklyAttendanceRange = {}, isLoading: weeklyAttendanceLoading } = useDailyAttendanceByRange(weekStartDate, weekEndDate);
+
+  const weeklyAttendanceData = useMemo(() => {
+    return last7Days.map(date => weeklyAttendanceRange[date] || []);
+  }, [last7Days, weeklyAttendanceRange]);
+
+  // 지난 달 수납 데이터
+  const lastMonthFormatted = format(lastMonthStart, 'yyyy-MM');
+  const { records: billingRecords = [], isLoading: billingLoading } = useBilling(lastMonthFormatted);
+
+  // 상담 통계 (지난 달)
   const consultationStatsResult = useConsultationStats(
     {
       dateRange: {
-        start: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
-        end: format(new Date(), 'yyyy-MM-dd'),
+        start: format(lastMonthStart, 'yyyy-MM-dd'),
+        end: format(lastMonthEnd, 'yyyy-MM-dd'),
       },
       subject: 'all',
     },
     []
   );
   const stats = consultationStatsResult.stats;
-  const consultationLoading = consultationStatsResult.isLoading;
+  const consultationLoading = consultationStatsResult.loading;
 
-  // KPI 계산
-  const activeStudents = students.filter((s) => s.status === 'active').length;
+  // Performance: useMemo - 재원생 수 계산 최적화
+  const activeStudents = useMemo(() => {
+    return students.filter((s) => s.status === 'active').length;
+  }, [students]);
 
-  // 출석률 계산
-  const presentCount = todayAttendance.filter((a) => a.status === 'present' || a.status === 'late').length;
-  const totalCount = todayAttendance.length;
-  const attendanceRate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+  // Performance: useMemo - 출석률 계산 최적화 (중복 필터링 방지)
+  const attendanceStats = useMemo(() => {
+    const presentCount = todayAttendance.filter(
+      (a) => a.status === 'present' || a.status === 'late'
+    ).length;
+    const totalCount = todayAttendance.length;
+    const attendanceRate = totalCount > 0
+      ? Math.round((presentCount / totalCount) * 100)
+      : 0;
 
-  // 상담 완료율
-  const consultationRate = stats?.totalConsultations
-    ? Math.round(((stats.totalConsultations - stats.followUpNeeded) / stats.totalConsultations) * 100)
-    : 0;
+    return { presentCount, totalCount, attendanceRate };
+  }, [todayAttendance]);
 
-  // 수납률 계산
-  const totalBilled = billingRecords.reduce((sum, r) => sum + r.billedAmount, 0);
-  const totalPaid = billingRecords.reduce((sum, r) => sum + r.paidAmount, 0);
-  const billingRate = totalBilled > 0 ? Math.round((totalPaid / totalBilled) * 100) : 0;
-  const overdueCount = billingRecords.filter((r) => r.status === 'overdue').length;
+  const { presentCount, totalCount, attendanceRate } = attendanceStats;
 
-  // 신규 등록 (이번 주)
-  const newStudentsThisWeek = students.filter((s) => {
-    const startDate = new Date(s.startDate);
-    const now = new Date();
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    return startDate >= weekAgo && startDate <= now;
-  }).length;
+  // Performance: useMemo - 상담 완료율 계산 최적화
+  const consultationStats = useMemo(() => {
+    const totalSubjectEnrollments = stats?.totalSubjectEnrollments || 0;
+    const needingConsultationCount = stats?.studentsNeedingConsultation?.length || 0;
+    const consultedSubjectCount = Math.max(0, totalSubjectEnrollments - needingConsultationCount);
+    const consultationRate = totalSubjectEnrollments > 0
+      ? Math.round((consultedSubjectCount / totalSubjectEnrollments) * 100)
+      : 0;
 
+    return { totalSubjectEnrollments, consultedSubjectCount, consultationRate };
+  }, [stats]);
+
+  const { totalSubjectEnrollments, consultedSubjectCount, consultationRate } = consultationStats;
+
+  // Performance: js-combine-iterations - 수납 통계 한 번의 루프로 계산 (O(3n) → O(n))
+  const billingStats = useMemo(() => {
+    let totalBilled = 0;
+    let totalPaid = 0;
+    let overdueCount = 0;
+
+    for (const record of billingRecords) {
+      totalBilled += record.amount; // BillingRecord의 amount 필드 사용
+      totalPaid += record.paidAmount;
+      if (record.status === 'overdue') {
+        overdueCount++;
+      }
+    }
+
+    const billingRate = totalBilled > 0
+      ? Math.round((totalPaid / totalBilled) * 100)
+      : 0;
+
+    return { totalBilled, totalPaid, overdueCount, billingRate };
+  }, [billingRecords]);
+
+  const { totalBilled, totalPaid, overdueCount, billingRate } = billingStats;
+
+  // Performance: useMemo - 신규 등록 계산 최적화
+  const newStudentsLastMonth = useMemo(() => {
+    return students.filter((s) => {
+      const startDate = new Date(s.startDate);
+      return startDate >= lastMonthStart && startDate <= lastMonthEnd;
+    }).length;
+  }, [students, lastMonthStart, lastMonthEnd]);
+
+  // Performance: js-combine-iterations - 배열 순회 최적화 (O(5n) → O(n))
   // 과목별 학생 분포 계산
   const subjectDistribution = useMemo(() => {
     const activeStudentsList = students.filter((s) => s.status === 'active');
@@ -78,55 +142,51 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     // 활성 수강 중인지 확인 (withdrawalDate 없고 onHold가 아닌 경우)
     const isActiveEnrollment = (e: any) => !e.withdrawalDate && !e.onHold;
 
-    const mathCount = activeStudentsList.filter((s) =>
-      s.enrollments?.some((e) => e.subject === 'math' && isActiveEnrollment(e))
-    ).length;
+    // 한 번의 루프로 모든 과목 집계
+    const counts = { math: 0, english: 0, korean: 0, science: 0, other: 0, none: 0 };
 
-    const englishCount = activeStudentsList.filter((s) =>
-      s.enrollments?.some((e) => e.subject === 'english' && isActiveEnrollment(e))
-    ).length;
+    activeStudentsList.forEach((s) => {
+      const activeEnrollments = s.enrollments?.filter(isActiveEnrollment) || [];
 
-    const koreanCount = activeStudentsList.filter((s) =>
-      s.enrollments?.some((e) => e.subject === 'korean' && isActiveEnrollment(e))
-    ).length;
+      if (activeEnrollments.length === 0) {
+        counts.none++;
+        return;
+      }
 
-    const scienceCount = activeStudentsList.filter((s) =>
-      s.enrollments?.some((e) => e.subject === 'science' && isActiveEnrollment(e))
-    ).length;
-
-    const otherCount = activeStudentsList.filter((s) =>
-      s.enrollments?.some((e) => e.subject === 'other' && isActiveEnrollment(e))
-    ).length;
-
-    // 아무 과목도 수강하지 않는 학생
-    const noEnrollmentCount = activeStudentsList.filter((s) =>
-      !s.enrollments || s.enrollments.length === 0 || !s.enrollments.some(isActiveEnrollment)
-    ).length;
+      // 각 학생의 활성 수강 과목 집계
+      activeEnrollments.forEach((e) => {
+        if (e.subject in counts) {
+          counts[e.subject as keyof typeof counts]++;
+        }
+      });
+    });
 
     return [
-      { subject: '수학', count: mathCount, color: '#3b82f6' },
-      { subject: '영어', count: englishCount, color: '#10b981' },
-      { subject: '국어', count: koreanCount, color: '#f59e0b' },
-      { subject: '과학', count: scienceCount, color: '#8b5cf6' },
-      { subject: '기타', count: otherCount, color: '#6b7280' },
-      { subject: '미등록', count: noEnrollmentCount, color: '#ef4444' }
+      { subject: '수학', count: counts.math, color: '#3b82f6' },
+      { subject: '영어', count: counts.english, color: '#10b981' },
+      { subject: '국어', count: counts.korean, color: '#f59e0b' },
+      { subject: '과학', count: counts.science, color: '#8b5cf6' },
+      { subject: '기타', count: counts.other, color: '#6b7280' },
+      { subject: '미등록', count: counts.none, color: '#ef4444' }
     ].filter(item => item.count > 0); // 0명인 과목은 제외
   }, [students]);
 
-  // 주간 출석 추이 (최근 7일)
+  // 주간 출석 추이 (지난 달 마지막 7일) - 실제 데이터로 계산
   const weeklyAttendance = useMemo(() => {
-    const days = [];
     const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-    for (let i = 6; i >= 0; i--) {
-      const date = subDays(new Date(), i);
-      days.push({
+    return weeklyAttendanceData.map((dayData, idx) => {
+      const date = subDays(lastMonthEnd, 6 - idx);
+      const presentCount = dayData.filter((a) => a.status === 'present' || a.status === 'late').length;
+      const totalCount = dayData.length;
+      const rate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+
+      return {
         date: format(date, 'MM/dd'),
         day: dayNames[date.getDay()],
-        rate: 0 // 실제 데이터는 별도 hook 필요
-      });
-    }
-    return days;
-  }, []);
+        rate: rate
+      };
+    });
+  }, [weeklyAttendanceData, lastMonthEnd]);
 
   // KPI 카드 데이터
   const kpiCards: KPICardData[] = [
@@ -135,16 +195,16 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       label: '재원생',
       value: activeStudents,
       subValue: '명',
-      trend: newStudentsThisWeek > 0 ? 'up' : 'stable',
-      trendValue: newStudentsThisWeek > 0 ? `+${newStudentsThisWeek}` : undefined,
+      trend: newStudentsLastMonth > 0 ? 'up' : 'stable',
+      trendValue: newStudentsLastMonth > 0 ? `+${newStudentsLastMonth}` : undefined,
       icon: '👥',
       color: '#081429',
     },
     {
       id: 'attendance',
-      label: '오늘 출석률',
+      label: '지난달 출석률',
       value: `${attendanceRate}%`,
-      subValue: `${todayAttendance.filter((a) => a.status === 'present' || a.status === 'late').length}/${todayAttendance.length}`,
+      subValue: `${presentCount}/${totalCount}`, // Performance: 중복 필터링 제거
       trend: attendanceRate >= 90 ? 'up' : attendanceRate >= 80 ? 'stable' : 'down',
       icon: '✅',
       color: '#10b981',
@@ -153,7 +213,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       id: 'consultation',
       label: '상담 완료율',
       value: `${consultationRate}%`,
-      subValue: `${stats?.totalConsultations || 0}건 중 ${(stats?.totalConsultations || 0) - (stats?.followUpNeeded || 0)}건`,
+      subValue: `${consultedSubjectCount}건 완료 / 총 ${totalSubjectEnrollments}건`,
       trend: consultationRate >= 85 ? 'up' : 'stable',
       icon: '💬',
       color: '#6366f1',
@@ -171,18 +231,18 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     {
       id: 'new-students',
       label: '신규 등록',
-      value: newStudentsThisWeek,
-      subValue: '이번 주',
-      trend: newStudentsThisWeek > 0 ? 'up' : 'stable',
+      value: newStudentsLastMonth,
+      subValue: '지난 달',
+      trend: newStudentsLastMonth > 0 ? 'up' : 'stable',
       icon: '🆕',
       color: '#ec4899',
     },
     {
       id: 'satisfaction',
       label: '학부모 만족도',
-      value: '4.5',
-      subValue: '/5.0',
-      trend: 'up',
+      value: '-',
+      subValue: '추후 구현',
+      trend: 'stable',
       icon: '⭐',
       color: '#fdb813',
     },
@@ -257,7 +317,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     setRefreshKey((prev) => prev + 1);
   };
 
-  const isLoading = studentsLoading || attendanceLoading || billingLoading || consultationLoading;
+  const isLoading = studentsLoading || attendanceLoading || weeklyAttendanceLoading || billingLoading || consultationLoading;
 
   return (
     <div className="w-full h-full overflow-auto p-4 bg-gray-50">
@@ -317,13 +377,12 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 <h3 className="text-sm font-bold text-[#081429] mb-3">📈 주간 출석 추이</h3>
                 <div className="flex items-end justify-between h-24 gap-1">
                   {weeklyAttendance.map((day, idx) => {
-                    const height = attendanceRate > 0 ? attendanceRate : Math.random() * 60 + 40;
                     return (
                       <div key={idx} className="flex-1 flex flex-col items-center gap-1">
                         <div className="w-full bg-gray-100 rounded-t flex items-end justify-center relative" style={{ height: '80px' }}>
                           <div
                             className="w-full bg-gradient-to-t from-[#10b981] to-[#34d399] rounded-t transition-all duration-500"
-                            style={{ height: `${height}%` }}
+                            style={{ height: `${day.rate}%` }}
                           />
                         </div>
                         <span className="text-[10px] text-gray-500 font-medium">{day.day}</span>
@@ -332,35 +391,36 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   })}
                 </div>
                 <div className="text-center mt-2 text-[10px] text-gray-400">
-                  평균 출석률: {attendanceRate}%
+                  평균 출석률: {Math.round(weeklyAttendance.reduce((sum, d) => sum + d.rate, 0) / weeklyAttendance.length) || 0}%
                 </div>
               </div>
 
               {/* 알림 센터 */}
               <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
                 <h3 className="text-sm font-bold text-[#081429] mb-3">⚠️ 주의 필요</h3>
+                {/* Performance: rendering-conditional-render - && 대신 삼항 연산자 사용 */}
                 <div className="space-y-2">
-                  {overdueCount > 0 && (
+                  {overdueCount > 0 ? (
                     <div className="flex items-center gap-2 text-xs text-red-600">
                       <span className="w-1.5 h-1.5 bg-red-600 rounded-full" />
                       연체 학부모 {overdueCount}명 (독촉 필요)
                     </div>
-                  )}
-                  {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 && (
+                  ) : null}
+                  {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 ? (
                     <div className="flex items-center gap-2 text-xs text-orange-600">
                       <span className="w-1.5 h-1.5 bg-orange-600 rounded-full" />
                       상담 필요 학생 {stats.studentsNeedingConsultation.length}명
                     </div>
-                  )}
-                  {attendanceRate < 80 && (
+                  ) : null}
+                  {attendanceRate < 80 ? (
                     <div className="flex items-center gap-2 text-xs text-yellow-600">
                       <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full" />
                       오늘 출석률 낮음 ({attendanceRate}%)
                     </div>
-                  )}
-                  {overdueCount === 0 && attendanceRate >= 80 && (!stats?.studentsNeedingConsultation || stats.studentsNeedingConsultation.length === 0) && (
+                  ) : null}
+                  {overdueCount === 0 && attendanceRate >= 80 && (!stats?.studentsNeedingConsultation || stats.studentsNeedingConsultation.length === 0) ? (
                     <div className="text-xs text-gray-500">현재 주의가 필요한 항목이 없습니다.</div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>

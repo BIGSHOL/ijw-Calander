@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Edit, Trash2, Users, Clock, User, BookOpen, Calendar, MapPin, FileText } from 'lucide-react';
 import { ClassInfo } from '../../hooks/useClasses';
 import { useClassDetail } from '../../hooks/useClassDetail';
@@ -8,6 +8,7 @@ import EditClassModal from './EditClassModal';
 import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { formatScheduleCompact, SubjectForSchedule, ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
+import { useClassStats } from '../../hooks/useClassStats';
 
 interface ClassDetailModalProps {
   classInfo: ClassInfo;
@@ -23,6 +24,18 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
   const { data: classDetail, isLoading: detailLoading } = useClassDetail(className, subject);
   const deleteClassMutation = useDeleteClass();
   const { data: teachersData } = useTeachers();
+
+  // 학생 ID 목록 추출
+  const studentIds = useMemo(() => {
+    return classDetail?.students.map(s => s.id) || [];
+  }, [classDetail?.students]);
+
+  // 수업 통계 조회
+  const { attendanceRate, consultationRate, isLoading: statsLoading } = useClassStats(
+    className,
+    subject,
+    studentIds
+  );
 
   // Helper to display teacher name based on subject
   const getTeacherDisplayName = (teacherName: string) => {
@@ -91,17 +104,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
   return (
     <>
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-lg h-[600px] flex flex-col overflow-hidden relative" onClick={(e) => e.stopPropagation()}>
-          {/* 우측 상단 닫기 버튼 */}
-          <div className="absolute top-2 right-2 z-10">
-            <button
-              onClick={onClose}
-              className="p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl h-[680px] flex flex-col overflow-hidden relative" onClick={(e) => e.stopPropagation()}>
           {/* 컴팩트 헤더 - 학생 모달 스타일 */}
           <div className="bg-[#081429] text-white px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -125,17 +128,28 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                 <Trash2 className="w-3.5 h-3.5" />
                 삭제
               </button>
+              <button
+                onClick={onClose}
+                disabled={deleteClassMutation.isPending}
+                className="bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded font-semibold flex items-center gap-1 transition-colors text-xs disabled:opacity-50"
+              >
+                <X className="w-3.5 h-3.5" />
+                닫기
+              </button>
             </div>
           </div>
 
-          {/* 스크롤 가능한 컨텐츠 영역 */}
+          {/* 스크롤 가능한 컨텐츠 영역 - 2열 레이아웃 */}
           <div className="flex-1 overflow-y-auto p-4">
-            <div className="mb-4">
-              <div className="flex items-center gap-1.5 mb-2">
-                <BookOpen className="w-4 h-4 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-sm">수업 정보</h3>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+            <div className="grid grid-cols-2 gap-4">
+              {/* 좌측: 수업 정보 & 메모 */}
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <BookOpen className="w-4 h-4 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-sm">수업 정보</h3>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
                 {/* 수업명 & 과목 */}
                 <div className="flex items-center gap-2">
                   <span className="text-gray-500 min-w-[50px]">수업명:</span>
@@ -261,81 +275,108 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                     </div>
                   );
                 })()}
-              </div>
-            </div>
+                  </div>
+                </div>
 
-            {/* 메모 섹션 - 컴팩트 */}
-            {classDetail?.memo && (
-              <div className="mb-4">
+                {/* 메모 섹션 */}
+                {classDetail?.memo && (
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <FileText className="w-4 h-4 text-[#081429]" />
+                      <h3 className="text-[#081429] font-bold text-sm">메모</h3>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-gray-600 text-sm whitespace-pre-wrap">{classDetail.memo}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 통계 섹션 */}
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Calendar className="w-4 h-4 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-sm">통계</h3>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center">
+                        <p className="text-gray-500 text-xs mb-0.5">활성 학생</p>
+                        <p className="text-[#10b981] font-bold text-lg">
+                          {classDetail?.students.filter(s => !s.onHold).length || 0}명
+                        </p>
+                        <p className="text-[10px] text-gray-400">
+                          전체 {classDetail?.studentCount || 0}명
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-500 text-xs mb-0.5">대기 학생</p>
+                        <p className="text-[#f59e0b] font-bold text-lg">
+                          {classDetail?.students.filter(s => s.onHold).length || 0}명
+                        </p>
+                        <p className="text-[10px] text-gray-400">
+                          {classDetail?.students.filter(s => s.onHold).length > 0
+                            ? '휴원 중'
+                            : '휴원생 없음'}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-500 text-xs mb-0.5">이번 달 출석률</p>
+                        {statsLoading ? (
+                          <p className="text-gray-400 font-bold text-lg">...</p>
+                        ) : (
+                          <>
+                            <p className="text-[#3b82f6] font-bold text-lg">{attendanceRate}%</p>
+                            <p className="text-[10px] text-gray-400">
+                              {attendanceRate >= 90 ? '우수' : attendanceRate >= 80 ? '양호' : '개선 필요'}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <p className="text-gray-500 text-xs mb-0.5">이번 달 상담률</p>
+                        {statsLoading ? (
+                          <p className="text-gray-400 font-bold text-lg">...</p>
+                        ) : (
+                          <>
+                            <p className="text-[#8b5cf6] font-bold text-lg">{consultationRate}%</p>
+                            <p className="text-[10px] text-gray-400">
+                              {consultationRate >= 80 ? '우수' : consultationRate >= 50 ? '양호' : '개선 필요'}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 우측: 수강 학생 */}
+              <div>
                 <div className="flex items-center gap-1.5 mb-2">
-                  <FileText className="w-4 h-4 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-sm">메모</h3>
+                  <Users className="w-4 h-4 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-sm">
+                    등록 학생 ({classDetail?.studentCount || studentCount || 0}명)
+                  </h3>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-gray-600 text-sm whitespace-pre-wrap">{classDetail.memo}</p>
-                </div>
-              </div>
-            )}
 
-            {/* 수강 학생 섹션 - 컴팩트 */}
-            <div className="mb-4">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Users className="w-4 h-4 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-sm">
-                  등록 학생 ({classDetail?.studentCount || studentCount || 0}명)
-                </h3>
-              </div>
-
-              {detailLoading ? (
-                <div className="bg-gray-50 rounded-lg p-4 text-center">
-                  <p className="text-gray-500 text-sm">불러오는 중...</p>
-                </div>
-              ) : classDetail ? (
-                <ClassStudentList
-                  students={classDetail.students}
-                  onStudentClick={onStudentClick}
-                  classDays={classDays}
-                />
-              ) : (
-                <div className="bg-gray-50 rounded-lg p-4 text-center">
-                  <Users className="w-8 h-8 mx-auto mb-2 opacity-30 text-gray-400" />
-                  <p className="text-gray-500 text-sm">학생 정보를 불러올 수 없습니다.</p>
-                </div>
-              )}
-            </div>
-
-            {/* 통계 섹션 - 컴팩트 */}
-            <div>
-              <div className="flex items-center gap-1.5 mb-2">
-                <Calendar className="w-4 h-4 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-sm">통계</h3>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="text-center">
-                    <p className="text-gray-500 text-xs mb-0.5">평균 출석률</p>
-                    <p className="text-[#fdb813] font-bold text-lg">--%</p>
-                    <p className="text-[10px] text-gray-400">Phase 3 예정</p>
+                {detailLoading ? (
+                  <div className="bg-gray-50 rounded-lg p-4 text-center">
+                    <p className="text-gray-500 text-sm">불러오는 중...</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-gray-500 text-xs mb-0.5">이번 달 수업</p>
-                    <p className="text-[#fdb813] font-bold text-lg">--회</p>
-                    <p className="text-[10px] text-gray-400">Phase 3 예정</p>
+                ) : classDetail ? (
+                  <ClassStudentList
+                    students={classDetail.students}
+                    onStudentClick={onStudentClick}
+                    classDays={classDays}
+                  />
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-4 text-center">
+                    <Users className="w-8 h-8 mx-auto mb-2 opacity-30 text-gray-400" />
+                    <p className="text-gray-500 text-sm">학생 정보를 불러올 수 없습니다.</p>
                   </div>
-                </div>
+                )}
               </div>
             </div>
-          </div>
-
-          {/* 푸터 - 컴팩트 */}
-          <div className="bg-gray-50 px-4 py-3 flex items-center justify-end border-t border-gray-200">
-            <button
-              onClick={onClose}
-              disabled={deleteClassMutation.isPending}
-              className="px-4 py-1.5 bg-[#081429] text-white rounded font-semibold text-sm hover:bg-[#1e293b] transition-colors"
-            >
-              닫기
-            </button>
           </div>
         </div>
       </div>

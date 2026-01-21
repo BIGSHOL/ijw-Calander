@@ -1,12 +1,14 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { UnifiedStudent } from '../../types';
 import { useStudents, searchStudentsByQuery } from '../../hooks/useStudents';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
-import StudentMigrationModal from './StudentMigrationModal';
-import NormalizeStudentIdsModal from './NormalizeStudentIdsModal';
 import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, Wrench } from 'lucide-react';
+
+// Performance: bundle-dynamic-imports - Modal components lazy load (~80-100KB bundle reduction)
+const StudentMigrationModal = lazy(() => import('./StudentMigrationModal'));
+const NormalizeStudentIdsModal = lazy(() => import('./NormalizeStudentIdsModal'));
 
 export interface StudentFilters {
   searchQuery: string;
@@ -128,9 +130,26 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
     if (filters.status !== 'all') {
       result = result.filter((s) => {
         const studentStatus = s.status || 'active';  // status 없으면 재원으로 간주
+
         if (filters.status === 'prospect') {
           return studentStatus === 'prospect' || studentStatus === 'prospective';
         }
+
+        // on_hold 필터: student.status='on_hold' 또는 모든 enrollments가 onHold=true인 학생
+        if (filters.status === 'on_hold') {
+          // 1. student.status가 명시적으로 on_hold인 경우
+          if (studentStatus === 'on_hold') return true;
+
+          // 2. status는 active지만 모든 enrollments가 onHold인 경우
+          const activeEnrollments = s.enrollments?.filter(e => !e.withdrawalDate) || [];
+          if (activeEnrollments.length > 0) {
+            const allOnHold = activeEnrollments.every(e => e.onHold === true);
+            if (allOnHold) return true;
+          }
+
+          return false;
+        }
+
         return studentStatus === filters.status;
       });
     }

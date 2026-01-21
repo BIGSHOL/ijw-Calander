@@ -166,7 +166,6 @@ export const useClassStudents = (
                             grade: baseStudent.grade || '',
                             // Merge enrollment-specific data
                             underline: enrollmentData.underline ?? baseStudent.underline ?? false,
-                            // Priority: classHistory startDate > enrollment startDate
                             enrollmentDate: classEnrollmentDate,
                             withdrawalDate: enrollmentData.withdrawalDate,
                             onHold: enrollmentData.onHold,
