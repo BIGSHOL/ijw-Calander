@@ -302,40 +302,48 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
 
       setMyClasses(classes);
 
-      // 3. 내 학생 로드 (담임인 수업의 학생들만)
-      const mainTeacherClasses = classes.filter(c => c.isMainTeacher);
-      const mainClassNames = mainTeacherClasses.map(c => c.className);
-
-      if (mainClassNames.length === 0) {
-        setMyStudents([]);
-        return;
-      }
-
+      // 3. 내 학생 로드 (teacherId 기반 - 학생관리 탭과 동일한 방식)
       const studentsSet = new Set<string>();
       const students: MyStudent[] = [];
 
-      // enrollments 서브컬렉션에서 담임 수업에 속한 학생 ID 수집
+      // enrollments 서브컬렉션에서 내가 담임인 학생 ID 수집
+      // teacherId가 나인 enrollment를 찾되, 담임인 수업만 필터링
+      const mainTeacherClasses = classes.filter(c => c.isMainTeacher);
+      const mainClassNames = mainTeacherClasses.map(c => c.className);
+
       enrollmentsSnapshot.docs.forEach(doc => {
         const data = doc.data();
+        const enrollmentTeacherId = data.teacherId as string;
         const className = data.className as string;
         const studentId = doc.ref.parent.parent?.id;
 
-        if (mainClassNames.includes(className) && studentId && !studentsSet.has(studentId)) {
+        // teacherId로 매칭 (이름 비교) + 담임 수업인지 확인
+        const isMyTeacher =
+          enrollmentTeacherId === teacherName ||
+          enrollmentTeacherId === teacherKoreanName ||
+          enrollmentTeacherId === staffMember?.id;
+
+        // 담임 수업의 학생만 포함
+        if (isMyTeacher && mainClassNames.includes(className) && studentId && !studentsSet.has(studentId)) {
           studentsSet.add(studentId);
         }
       });
 
-      // 학생 정보 가져오기
+      // 학생 정보 가져오기 (청크 처리: 10명씩)
       if (studentsSet.size > 0) {
-        const studentsSnapshot = await getDocs(
-          query(
-            collection(db, 'students'),
-            where('status', '==', 'active')
-          )
-        );
+        const studentIdsArray = Array.from(studentsSet);
 
-        studentsSnapshot.docs.forEach(doc => {
-          if (studentsSet.has(doc.id)) {
+        for (let i = 0; i < studentIdsArray.length; i += 10) {
+          const chunk = studentIdsArray.slice(i, i + 10);
+          const studentsSnapshot = await getDocs(
+            query(
+              collection(db, 'students'),
+              where('__name__', 'in', chunk),
+              where('status', '==', 'active')
+            )
+          );
+
+          studentsSnapshot.docs.forEach(doc => {
             const data = doc.data();
             students.push({
               id: doc.id,
@@ -344,8 +352,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               grade: data.grade,
               school: data.school,
             });
-          }
-        });
+          });
+        }
       }
 
       setMyStudents(students);
