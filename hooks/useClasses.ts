@@ -13,6 +13,7 @@ export interface ClassInfo {
     subject: SubjectType;
     schedule?: string[];
     studentCount?: number;
+    /** @deprecated slotTeachers 사용 권장 */
     assistants?: string[];
     room?: string;
     slotTeachers?: Record<string, string>;

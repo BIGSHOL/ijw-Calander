@@ -192,79 +192,99 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
   const [myClasses, setMyClasses] = useState<MyClass[]>([]);
   const [myStudents, setMyStudents] = useState<MyStudent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
 
   // 강사 이름 (staffMember.name 또는 userProfile.name)
   const teacherName = staffMember?.name || userProfile.name;
   const teacherKoreanName = staffMember?.koreanName || userProfile.koreanName;
 
+  // 선생님 이름 비교 헬퍼 함수 (한글/영어 이름 모두 체크)
+  const isTeacherMatch = (teacherNameInClass: string, myName: string, myKoreanName?: string): boolean => {
+    if (!teacherNameInClass) return false;
+
+    // 정확히 일치하면 true
+    if (teacherNameInClass === myName || teacherNameInClass === myKoreanName) return true;
+
+    // staff 데이터에서 해당 선생님 찾기
+    const staffMember = staff?.find(s => s.name === teacherNameInClass || s.englishName === teacherNameInClass);
+    if (!staffMember) return false;
+
+    // 내 이름이 해당 staff의 한글 이름 또는 영어 이름과 일치하는지 확인
+    return staffMember.name === myName ||
+           staffMember.englishName === myName ||
+           staffMember.name === myKoreanName ||
+           staffMember.englishName === myKoreanName;
+  };
+
+  useEffect(() => {
+    loadStaffData();
+  }, []);
+
   useEffect(() => {
     loadTeacherData();
-  }, [teacherName, teacherKoreanName]);
+  }, [teacherName, teacherKoreanName, staff]);
+
+  const loadStaffData = async () => {
+    try {
+      const staffSnapshot = await getDocs(collection(db, 'staff'));
+      const staffData = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StaffMember));
+      setStaff(staffData);
+    } catch (error) {
+      console.error('Failed to load staff data:', error);
+    }
+  };
 
   const loadTeacherData = async () => {
     if (!teacherName) return;
 
     setLoading(true);
     try {
-      // 1. 내 수업 로드 (teacher, mainTeacher, assistants, 또는 slotTeachers에 포함된 수업)
+      // 1. 내 수업 로드 (teacher, mainTeacher 또는 slotTeachers에 포함된 수업)
+      // 모든 수업을 가져와서 클라이언트 측에서 필터링 (한글/영어 이름 매칭 위해)
       const classesRef = collection(db, 'classes');
-
-      // 영어 이름으로 검색 (teacher 필드)
-      const q1 = query(classesRef, where('teacher', '==', teacherName));
-      const snapshot1 = await getDocs(q1);
-
-      // 한글 이름으로 검색 (mainTeacher 필드)
-      let snapshot2: any = { docs: [] };
-      if (teacherKoreanName) {
-        const q2 = query(classesRef, where('mainTeacher', '==', teacherKoreanName));
-        snapshot2 = await getDocs(q2);
-      }
-
-      // assistants 배열에 포함된 수업 검색
-      const q3 = query(classesRef, where('assistants', 'array-contains', teacherName));
-      const snapshot3 = await getDocs(q3);
-
-      // 한글 이름도 assistants에 있을 수 있음
-      let snapshot4: any = { docs: [] };
-      if (teacherKoreanName) {
-        const q4 = query(classesRef, where('assistants', 'array-contains', teacherKoreanName));
-        snapshot4 = await getDocs(q4);
-      }
-
-      // slotTeachers는 객체이므로 Firestore 쿼리로 검색 불가
-      // 모든 수업을 가져와서 클라이언트 측에서 필터링
       const allClassesSnapshot = await getDocs(classesRef);
 
       const classesMap = new Map<string, MyClass>();
 
-      // 기본 쿼리 결과 처리 (teacher, mainTeacher, assistants)
-      [...snapshot1.docs, ...snapshot2.docs, ...snapshot3.docs, ...snapshot4.docs].forEach(doc => {
+      // 모든 수업을 순회하며 내가 담당하는 수업 찾기
+      allClassesSnapshot.docs.forEach(doc => {
         const data = doc.data();
-        if (!classesMap.has(doc.id)) {
-          // 담임 판별 로직:
-          // 1. mainTeacher 필드가 있으면 그것 사용
-          // 2. 없으면 teacher 필드 체크
-          // 3. slotTeachers나 assistants에만 있으면 부담임
 
-          let isMainTeacher = false;
+        // 담임 여부 체크
+        let isMainTeacher = false;
+        let isMyClass = false;
+        let matchReason = '';
 
-          // mainTeacher 필드 우선 체크
-          if (data.mainTeacher) {
-            isMainTeacher = data.mainTeacher === teacherKoreanName || data.mainTeacher === teacherName;
+        // 1. mainTeacher 필드 체크 (우선순위 높음)
+        if (data.mainTeacher && isTeacherMatch(data.mainTeacher, teacherName, teacherKoreanName)) {
+          isMainTeacher = true;
+          isMyClass = true;
+          matchReason = `mainTeacher(${data.mainTeacher})`;
+        }
+        // 2. teacher 필드 체크
+        else if (data.teacher && isTeacherMatch(data.teacher, teacherName, teacherKoreanName)) {
+          isMainTeacher = true;
+          isMyClass = true;
+          matchReason = `teacher(${data.teacher})`;
+        }
+
+        // 3. slotTeachers 체크 (부담임)
+        if (!isMyClass && data.slotTeachers) {
+          const slotTeacherNames = Object.values(data.slotTeachers) as string[];
+          const isInSlotTeachers = slotTeacherNames.some(name =>
+            isTeacherMatch(name, teacherName, teacherKoreanName)
+          );
+
+          if (isInSlotTeachers) {
+            isMyClass = true;
+            isMainTeacher = false; // slotTeachers에만 있으면 부담임
+            matchReason = `slotTeachers`;
           }
-          // mainTeacher가 없으면 teacher 필드 체크
-          else if (data.teacher) {
-            isMainTeacher = data.teacher === teacherKoreanName || data.teacher === teacherName;
-          }
+        }
 
-          // slotTeachers에만 있는지 체크 (부담임 판별)
-          if (!isMainTeacher && data.slotTeachers) {
-            const slotTeacherNames = Object.values(data.slotTeachers);
-            const isInSlotTeachers = slotTeacherNames.includes(teacherName) ||
-                                     (teacherKoreanName && slotTeacherNames.includes(teacherKoreanName));
-            // slotTeachers에 있으면 담임이 아님 (이미 false이므로 변경 없음)
-          }
-
+        // 내 수업이면 추가
+        if (isMyClass) {
+          console.log(`[TeacherDashboard] 수업 추가: ${data.className}, 이유: ${matchReason}, teacher: ${data.teacher}, mainTeacher: ${data.mainTeacher}`);
           classesMap.set(doc.id, {
             id: doc.id,
             className: data.className,
@@ -273,33 +293,6 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
             isMainTeacher,
             slotTeachers: data.slotTeachers,
           });
-        }
-      });
-
-      // slotTeachers에 포함된 수업 추가 (클라이언트 측 필터링)
-      allClassesSnapshot.docs.forEach(doc => {
-        const data = doc.data();
-
-        // 이미 추가된 수업은 건너뛰기
-        if (classesMap.has(doc.id)) return;
-
-        // slotTeachers 체크
-        if (data.slotTeachers) {
-          const slotTeacherNames = Object.values(data.slotTeachers) as string[];
-          const isInSlotTeachers = slotTeacherNames.includes(teacherName) ||
-                                   (teacherKoreanName && slotTeacherNames.includes(teacherKoreanName));
-
-          if (isInSlotTeachers) {
-            // slotTeachers에만 있으면 부담임
-            classesMap.set(doc.id, {
-              id: doc.id,
-              className: data.className,
-              subject: data.subject,
-              schedule: data.schedule || [],
-              isMainTeacher: false, // slotTeachers에만 있으면 무조건 부담임
-              slotTeachers: data.slotTeachers,
-            });
-          }
         }
       });
 
@@ -434,19 +427,24 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {myClasses.map(cls => {
-                // 내가 담당하는 스케줄만 필터링
+                // 내가 담당하는 스케줄만 필터링 (담임/부담임 구분 없이)
                 let mySchedule = cls.schedule;
 
-                // 담임이 아닌 경우에만 필터링
-                if (!cls.isMainTeacher && cls.slotTeachers) {
-                  // slotTeachers에 특정 교시만 있는 경우: 해당 교시만 필터링
+                // slotTeachers가 있으면 해당 교시만 필터링
+                if (cls.slotTeachers && Object.keys(cls.slotTeachers).length > 0) {
                   mySchedule = cls.schedule.filter(slot => {
                     const slotKey = `${slot.day}-${slot.periodId}`;
                     const slotTeacher = cls.slotTeachers?.[slotKey];
-                    return slotTeacher === teacherName || slotTeacher === teacherKoreanName;
+
+                    // slotTeacher가 지정되어 있으면 그것과 비교
+                    if (slotTeacher) {
+                      return isTeacherMatch(slotTeacher, teacherName, teacherKoreanName);
+                    }
+
+                    // slotTeacher가 없는 교시는 담임이 담당 (담임이면 표시, 아니면 숨김)
+                    return cls.isMainTeacher;
                   });
                 }
-                // assistants에 있는 경우는 모든 스케줄 표시 (이미 mySchedule = cls.schedule)
 
                 const scheduleEntries = formatSchedule(mySchedule, cls.subject);
                 // 오늘 수업인지 확인

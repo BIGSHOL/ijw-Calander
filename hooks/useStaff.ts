@@ -20,7 +20,7 @@ export const COL_STAFF = 'staff';
 
 /**
  * 직원 이름 변경 시 관련 데이터 자동 업데이트 (Cascade Update)
- * - unifiedClasses: teacher, assistants 필드 업데이트
+ * - unifiedClasses: teacher 필드 업데이트
  * - timetableClasses (math/english): teacher 필드 업데이트
  */
 async function cascadeNameUpdate(
@@ -48,20 +48,8 @@ async function cascadeNameUpdate(
         needsUpdate = true;
       }
 
-      // assistants 배열 확인
-      if (data.assistants && Array.isArray(data.assistants)) {
-        const updatedAssistants = data.assistants.map((assistant: string) => {
-          if (assistant === oldName || assistant === oldEnglishName) {
-            return newName;
-          }
-          return assistant;
-        });
-
-        if (JSON.stringify(updatedAssistants) !== JSON.stringify(data.assistants)) {
-          updates.assistants = updatedAssistants;
-          needsUpdate = true;
-        }
-      }
+      // assistants 필드는 deprecated (slotTeachers 사용)
+      // cascade update에서 제거
 
       if (needsUpdate) {
         batch.update(docSnap.ref, { ...updates, updatedAt: new Date().toISOString() });

@@ -35,7 +35,13 @@
       "Bash(firebase:*)",
       "Read(//c/Users/user/.claude/skills/vercel-react-best-practices/**)",
       "Bash(git reset:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(while read file)",
+      "Bash(do if ! grep -q \"TabSubNavigation\" \"$file\")",
+      "Bash(then echo \"$file\")",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(powershell -Command \"Get-ChildItem -Path components -Recurse -Filter *.tsx | Where-Object { \\(Select-String -Path $_FullName -Pattern ''bg-\\\\[#081429\\\\]'' -Quiet\\) -and -not \\(Select-String -Path $_FullName -Pattern ''TabSubNavigation'' -Quiet\\) } | Select-Object -First 15 -ExpandProperty Name\")"
     ]
   },
   "mcpServers": {

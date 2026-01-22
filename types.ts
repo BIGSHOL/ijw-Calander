@@ -49,7 +49,8 @@ export interface UnifiedClass {
   className: string;
   subject: SubjectType;
   teacher: string;              // 주 담당 강사
-  assistants?: string[];        // 보조 강사 (영어 원어민 등)
+  /** @deprecated slotTeachers 사용 권장 - 교시별 담당 선생님 배정 가능 */
+  assistants?: string[];        // DEPRECATED: 보조 강사 (slotTeachers로 대체)
   room?: string;                // 기본 강의실
   schedule: ScheduleSlot[];     // 통일된 스케줄
   color?: string;
