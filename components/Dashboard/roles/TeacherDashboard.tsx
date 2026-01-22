@@ -365,13 +365,51 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
     cls.schedule.some(s => s.day === dayOfWeek)
   );
 
-  // 수업 정렬: 오늘 수업 → 담임 수업 → 부담임 수업 → 요일순
+  // 내가 담당하는 스케줄만 반환하는 헬퍼 함수
+  const getMySchedule = (cls: MyClass): { day: string; periodId: string }[] => {
+    let mySchedule = cls.schedule;
+
+    // slotTeachers가 있으면 해당 교시만 필터링
+    if (cls.slotTeachers && Object.keys(cls.slotTeachers).length > 0) {
+      mySchedule = cls.schedule.filter(slot => {
+        const slotKey = `${slot.day}-${slot.periodId}`;
+
+        // slotTeacher가 지정되어 있으면 그것과 비교
+        if (isSlotTeacherMatch(cls.slotTeachers, slotKey, teacherName, teacherKoreanName, staff)) {
+          return true;
+        }
+
+        // slotTeacher가 없는 교시는 담임이 담당 (담임이면 표시, 아니면 숨김)
+        return cls.isMainTeacher && !cls.slotTeachers?.[slotKey];
+      });
+    }
+
+    return mySchedule;
+  };
+
+  // 수업 정렬: 오늘 수업 → 담임 수업 → (오늘이면 교시순) → 요일순 → 수업명순
   const sortedClasses = React.useMemo(() => {
     const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
 
+    // 오늘 교시의 가장 빠른 periodId 구하기 (숫자로 변환)
+    const getTodayFirstPeriod = (schedule: { day: string; periodId: string }[]): number => {
+      const todaySlots = schedule.filter(s => s.day === dayOfWeek);
+      if (todaySlots.length === 0) return Infinity;
+
+      // periodId에서 숫자 추출 (예: "4", "1-1" 등)
+      const periodNumbers = todaySlots.map(s => {
+        const match = s.periodId.match(/^(\d+)/);
+        return match ? parseInt(match[1], 10) : Infinity;
+      });
+      return Math.min(...periodNumbers);
+    };
+
     return [...myClasses].sort((a, b) => {
-      const aHasToday = a.schedule.some(s => s.day === dayOfWeek);
-      const bHasToday = b.schedule.some(s => s.day === dayOfWeek);
+      // 내가 담당하는 스케줄 기준으로 오늘 수업 여부 판단
+      const aMySchedule = getMySchedule(a);
+      const bMySchedule = getMySchedule(b);
+      const aHasToday = aMySchedule.some(s => s.day === dayOfWeek);
+      const bHasToday = bMySchedule.some(s => s.day === dayOfWeek);
 
       // 1. 오늘 수업 여부로 먼저 구분
       if (aHasToday !== bHasToday) {
@@ -383,9 +421,18 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         return a.isMainTeacher ? -1 : 1;
       }
 
-      // 3. 담임 여부도 같으면 요일순 정렬
-      const aFirstDay = a.schedule[0]?.day || '';
-      const bFirstDay = b.schedule[0]?.day || '';
+      // 3. 둘 다 오늘 수업이면 교시 순서로 정렬
+      if (aHasToday && bHasToday) {
+        const aPeriod = getTodayFirstPeriod(aMySchedule);
+        const bPeriod = getTodayFirstPeriod(bMySchedule);
+        if (aPeriod !== bPeriod) {
+          return aPeriod - bPeriod;
+        }
+      }
+
+      // 4. 요일순 정렬 (내 스케줄의 첫 요일 기준)
+      const aFirstDay = aMySchedule[0]?.day || '';
+      const bFirstDay = bMySchedule[0]?.day || '';
 
       const aIndex = dayOrder.indexOf(aFirstDay);
       const bIndex = dayOrder.indexOf(bFirstDay);
@@ -394,10 +441,10 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         return aIndex - bIndex;
       }
 
-      // 4. 요일도 같으면 수업명으로 정렬
+      // 5. 요일도 같으면 수업명으로 정렬
       return a.className.localeCompare(b.className, 'ko-KR');
     });
-  }, [myClasses, dayOfWeek]);
+  }, [myClasses, dayOfWeek, teacherName, teacherKoreanName, staff]);
 
   // 학생 정렬
   const sortedStudents = React.useMemo(() => {
@@ -539,203 +586,201 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                   </thead>
                   <tbody>
                     {sortedClasses.slice((classPage - 1) * 10, classPage * 10).map(cls => {
-                    // 내가 담당하는 스케줄만 필터링 (담임/부담임 구분 없이)
-                    let mySchedule = cls.schedule;
+                      // 내가 담당하는 스케줄만 필터링 (담임/부담임 구분 없이)
+                      let mySchedule = cls.schedule;
 
-                    // slotTeachers가 있으면 해당 교시만 필터링
-                    if (cls.slotTeachers && Object.keys(cls.slotTeachers).length > 0) {
-                      mySchedule = cls.schedule.filter(slot => {
-                        const slotKey = `${slot.day}-${slot.periodId}`;
+                      // slotTeachers가 있으면 해당 교시만 필터링
+                      if (cls.slotTeachers && Object.keys(cls.slotTeachers).length > 0) {
+                        mySchedule = cls.schedule.filter(slot => {
+                          const slotKey = `${slot.day}-${slot.periodId}`;
 
-                        // slotTeacher가 지정되어 있으면 그것과 비교
-                        if (isSlotTeacherMatch(cls.slotTeachers, slotKey, teacherName, teacherKoreanName, staff)) {
-                          return true;
-                        }
+                          // slotTeacher가 지정되어 있으면 그것과 비교
+                          if (isSlotTeacherMatch(cls.slotTeachers, slotKey, teacherName, teacherKoreanName, staff)) {
+                            return true;
+                          }
 
-                        // slotTeacher가 없는 교시는 담임이 담당 (담임이면 표시, 아니면 숨김)
-                        return cls.isMainTeacher && !cls.slotTeachers?.[slotKey];
-                      });
-                    }
+                          // slotTeacher가 없는 교시는 담임이 담당 (담임이면 표시, 아니면 숨김)
+                          return cls.isMainTeacher && !cls.slotTeachers?.[slotKey];
+                        });
+                      }
 
-                    const scheduleEntries = formatSchedule(mySchedule, cls.subject);
-                    // 오늘 수업인지 확인
-                    const isTodayClass = mySchedule.some(s => s.day === dayOfWeek);
+                      const scheduleEntries = formatSchedule(mySchedule, cls.subject);
+                      // 오늘 수업인지 확인
+                      const isTodayClass = mySchedule.some(s => s.day === dayOfWeek);
 
-                    return (
-                      <tr
-                        key={cls.id}
-                        className={`border-b border-gray-100 hover:bg-gray-50 ${
-                          isTodayClass ? 'bg-amber-50' : ''
-                        }`}
-                      >
-                        <td className="py-2 px-2">
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-medium text-[#081429]">{cls.className}</span>
-                            {isTodayClass && (
-                              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-200 text-amber-800 font-bold">
-                                오늘
+                      return (
+                        <tr
+                          key={cls.id}
+                          className={`border-b border-gray-100 hover:bg-gray-50 ${isTodayClass ? 'bg-amber-50' : ''
+                            }`}
+                        >
+                          <td className="py-2 px-2">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs font-medium text-[#081429]">{cls.className}</span>
+                              {isTodayClass && (
+                                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-200 text-amber-800 font-bold">
+                                  오늘
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2 px-2">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
+                              cls.subject === 'english' ? 'bg-green-100 text-green-700' :
+                                cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
+                                  'bg-orange-100 text-orange-700'
+                              }`}>
+                              {cls.subject === 'math' ? '수학' :
+                                cls.subject === 'english' ? '영어' :
+                                  cls.subject === 'science' ? '과학' : '국어'}
+                            </span>
+                          </td>
+                          <td className="py-2 px-2 text-center">
+                            {cls.isMainTeacher ? (
+                              <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
+                                담임
+                              </span>
+                            ) : (
+                              <span className="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-600 font-bold">
+                                부담임
                               </span>
                             )}
-                          </div>
-                        </td>
-                        <td className="py-2 px-2">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                            cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
-                            cls.subject === 'english' ? 'bg-green-100 text-green-700' :
-                            cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
-                            'bg-orange-100 text-orange-700'
-                          }`}>
-                            {cls.subject === 'math' ? '수학' :
-                             cls.subject === 'english' ? '영어' :
-                             cls.subject === 'science' ? '과학' : '국어'}
-                          </span>
-                        </td>
-                        <td className="py-2 px-2 text-center">
-                          {cls.isMainTeacher ? (
-                            <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
-                              담임
-                            </span>
-                          ) : (
-                            <span className="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-600 font-bold">
-                              부담임
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2 px-2 text-center text-xs text-gray-600">
-                          {cls.studentCount || 0}명
-                        </td>
-                        <td className="py-2 px-2">
-                          {scheduleEntries.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {scheduleEntries.map((entry, idx) => (
-                                <div key={idx} className="flex items-center gap-0.5">
-                                  {entry.days.map((day, dayIdx) => {
-                                    const colors = DAY_COLORS[day] || { bg: '#f3f4f6', text: '#374151' };
-                                    return (
-                                      <span
-                                        key={dayIdx}
-                                        className="text-[9px] px-1 py-0.5 rounded font-bold"
-                                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                                      >
-                                        {day}
-                                      </span>
-                                    );
-                                  })}
-                                  <span className="text-[10px] text-gray-500">{entry.label}</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-gray-400 italic">미지정</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* 내 학생 목록 */}
-        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#081429]" />
-              <h2 className="text-sm font-bold text-[#081429]">내 학생</h2>
-              <span className="text-xs text-gray-500">({myStudents.length}명)</span>
-            </div>
-            {myStudents.length > 10 && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setStudentPage(p => Math.max(1, p - 1))}
-                  disabled={studentPage === 1}
-                  className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-xs text-gray-600">
-                  {studentPage} / {Math.ceil(myStudents.length / 10)}
-                </span>
-                <button
-                  onClick={() => setStudentPage(p => Math.min(Math.ceil(myStudents.length / 10), p + 1))}
-                  disabled={studentPage === Math.ceil(myStudents.length / 10)}
-                  className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                          </td>
+                          <td className="py-2 px-2 text-center text-xs text-gray-600">
+                            {cls.studentCount || 0}명
+                          </td>
+                          <td className="py-2 px-2">
+                            {scheduleEntries.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {scheduleEntries.map((entry, idx) => (
+                                  <div key={idx} className="flex items-center gap-0.5">
+                                    {entry.days.map((day, dayIdx) => {
+                                      const colors = DAY_COLORS[day] || { bg: '#f3f4f6', text: '#374151' };
+                                      return (
+                                        <span
+                                          key={dayIdx}
+                                          className="text-[9px] px-1 py-0.5 rounded font-bold"
+                                          style={{ backgroundColor: colors.bg, color: colors.text }}
+                                        >
+                                          {day}
+                                        </span>
+                                      );
+                                    })}
+                                    <span className="text-[10px] text-gray-500">{entry.label}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-gray-400 italic">미지정</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
 
-          {myStudents.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-xs">담당 학생이 없습니다</p>
+          {/* 내 학생 목록 */}
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#081429]" />
+                <h2 className="text-sm font-bold text-[#081429]">내 학생</h2>
+                <span className="text-xs text-gray-500">({myStudents.length}명)</span>
+              </div>
+              {myStudents.length > 10 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setStudentPage(p => Math.max(1, p - 1))}
+                    disabled={studentPage === 1}
+                    className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs text-gray-600">
+                    {studentPage} / {Math.ceil(myStudents.length / 10)}
+                  </span>
+                  <button
+                    onClick={() => setStudentPage(p => Math.min(Math.ceil(myStudents.length / 10), p + 1))}
+                    disabled={studentPage === Math.ceil(myStudents.length / 10)}
+                    className="p-1 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="overflow-x-auto" style={{ minHeight: '400px' }}>
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
-                      <button
-                        onClick={() => handleSortChange('name')}
-                        className="flex items-center gap-1 hover:text-[#081429] transition-colors"
-                      >
-                        이름
-                        {studentSortBy === 'name' ? (
-                          studentSortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 opacity-30" />
-                        )}
-                      </button>
-                    </th>
-                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">영문명</th>
-                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
-                      <button
-                        onClick={() => handleSortChange('school')}
-                        className="flex items-center gap-1 hover:text-[#081429] transition-colors"
-                      >
-                        학교
-                        {studentSortBy === 'school' ? (
-                          studentSortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 opacity-30" />
-                        )}
-                      </button>
-                    </th>
-                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
-                      <button
-                        onClick={() => handleSortChange('grade')}
-                        className="flex items-center gap-1 hover:text-[#081429] transition-colors"
-                      >
-                        학년
-                        {studentSortBy === 'grade' ? (
-                          studentSortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 opacity-30" />
-                        )}
-                      </button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedStudents.slice((studentPage - 1) * 10, studentPage * 10).map(student => (
-                    <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-2 px-2 text-xs font-medium text-[#081429]">{student.name}</td>
-                      <td className="py-2 px-2 text-xs text-gray-600">{student.englishName || '-'}</td>
-                      <td className="py-2 px-2 text-xs text-gray-600">{student.school || '-'}</td>
-                      <td className="py-2 px-2 text-xs text-gray-600">{student.grade || '-'}</td>
+
+            {myStudents.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-xs">담당 학생이 없습니다</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto" style={{ minHeight: '400px' }}>
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
+                        <button
+                          onClick={() => handleSortChange('name')}
+                          className="flex items-center gap-1 hover:text-[#081429] transition-colors"
+                        >
+                          이름
+                          {studentSortBy === 'name' ? (
+                            studentSortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 opacity-30" />
+                          )}
+                        </button>
+                      </th>
+                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">영문명</th>
+                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
+                        <button
+                          onClick={() => handleSortChange('school')}
+                          className="flex items-center gap-1 hover:text-[#081429] transition-colors"
+                        >
+                          학교
+                          {studentSortBy === 'school' ? (
+                            studentSortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 opacity-30" />
+                          )}
+                        </button>
+                      </th>
+                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
+                        <button
+                          onClick={() => handleSortChange('grade')}
+                          className="flex items-center gap-1 hover:text-[#081429] transition-colors"
+                        >
+                          학년
+                          {studentSortBy === 'grade' ? (
+                            studentSortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                          ) : (
+                            <ArrowUpDown className="w-3 h-3 opacity-30" />
+                          )}
+                        </button>
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {sortedStudents.slice((studentPage - 1) * 10, studentPage * 10).map(student => (
+                      <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-2 px-2 text-xs font-medium text-[#081429]">{student.name}</td>
+                        <td className="py-2 px-2 text-xs text-gray-600">{student.englishName || '-'}</td>
+                        <td className="py-2 px-2 text-xs text-gray-600">{student.school || '-'}</td>
+                        <td className="py-2 px-2 text-xs text-gray-600">{student.grade || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );
