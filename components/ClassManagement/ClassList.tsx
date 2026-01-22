@@ -200,9 +200,10 @@ interface ClassListProps {
   classes: ClassInfo[];
   onClassClick: (classInfo: ClassInfo) => void;
   isLoading?: boolean;
+  currentTeacherFilter?: string; // 현재 필터링된 선생님 (있으면 해당 선생님 스케줄만 표시)
 }
 
-const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading }) => {
+const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading, currentTeacherFilter }) => {
   // 강사 데이터 가져오기 (영어 이름 매칭용)
   const { data: teachersData } = useTeachers();
 
@@ -214,6 +215,24 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading 
       return `${staffMember.name}(${staffMember.englishName})`;
     }
     return teacherName;
+  };
+
+  // 선생님 필터가 있으면 해당 선생님의 스케줄만 필터링하는 함수
+  const filterScheduleByTeacher = (schedule: string[] | undefined, teacher: string, slotTeachers?: Record<string, string>): string[] | undefined => {
+    if (!schedule || !currentTeacherFilter || currentTeacherFilter === 'all') {
+      return schedule;
+    }
+
+    return schedule.filter(item => {
+      const parts = item.split(' ');
+      if (parts.length < 2) return false;
+
+      const key = `${parts[0]}-${parts[1]}`;
+      const slotTeacher = slotTeachers?.[key];
+      const displayTeacher = slotTeacher || teacher;
+
+      return displayTeacher === currentTeacherFilter;
+    });
   };
 
   // 로딩 상태
@@ -261,6 +280,9 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading 
           const subjectLabel = SUBJECT_LABELS[subject as SubjectType] || subject;
           const subjectForSchedule: SubjectForSchedule = subject === 'english' ? 'english' : 'math';
 
+          // 선생님 필터가 적용되면 해당 선생님의 스케줄만 필터링
+          const filteredSchedule = filterScheduleByTeacher(schedule, teacher, classInfo.slotTeachers);
+
           return (
             <div
               key={classInfo.id}
@@ -293,8 +315,15 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading 
               {/* 부담임 */}
               <div className="text-[#373d41] text-sm truncate">
                 {classInfo.slotTeachers && Object.keys(classInfo.slotTeachers).length > 0 ? (
-                  <span className="text-gray-600">
-                    {Array.from(new Set(Object.values(classInfo.slotTeachers))).join(', ')}
+                  <span
+                    className="text-gray-600"
+                    title={Array.from(new Set(Object.values(classInfo.slotTeachers)))
+                      .map(name => getTeacherDisplayName(name))
+                      .join(', ')}
+                  >
+                    {Array.from(new Set(Object.values(classInfo.slotTeachers)))
+                      .map(name => getTeacherDisplayName(name))
+                      .join(', ')}
                   </span>
                 ) : (
                   <span className="text-gray-300">-</span>
@@ -303,7 +332,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading 
 
               {/* 스케줄 - 시각적 배지 컴포넌트 사용 */}
               <div className="overflow-hidden">
-                <ScheduleBadge schedule={schedule} subject={subjectForSchedule} />
+                <ScheduleBadge schedule={filteredSchedule} subject={subjectForSchedule} />
               </div>
 
               {/* 메모 */}
