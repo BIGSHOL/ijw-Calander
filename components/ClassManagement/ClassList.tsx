@@ -265,7 +265,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading 
             <div
               key={classInfo.id}
               onClick={() => onClassClick(classInfo)}
-              className="px-4 py-2.5 grid grid-cols-[80px_1fr_100px_1fr_1fr_70px_40px] gap-3 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
+              className="px-4 py-2.5 grid grid-cols-[80px_1fr_100px_100px_1fr_1fr_70px_40px] gap-3 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
             >
               {/* 과목 배지 */}
               <div className="flex justify-center">
@@ -288,6 +288,17 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading 
               {/* 담임 */}
               <div className="text-[#373d41] text-sm truncate">
                 {getTeacherDisplayName(teacher)}
+              </div>
+
+              {/* 부담임 */}
+              <div className="text-[#373d41] text-sm truncate">
+                {classInfo.slotTeachers && Object.keys(classInfo.slotTeachers).length > 0 ? (
+                  <span className="text-gray-600">
+                    {Array.from(new Set(Object.values(classInfo.slotTeachers))).join(', ')}
+                  </span>
+                ) : (
+                  <span className="text-gray-300">-</span>
+                )}
               </div>
 
               {/* 스케줄 - 시각적 배지 컴포넌트 사용 */}
