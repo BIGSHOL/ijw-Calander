@@ -56,8 +56,8 @@ export interface Student {
   endDate?: string;  // Unified uses optional string
   status?: 'active' | 'withdrawn';  // Student status for filtering
 
-  // Teacher Integration
-  teacherIds: string[];
+  // Teacher Integration (staffIds references staff collection)
+  staffIds: string[];
   subjects: AttendanceSubject[];  // Array support
   ownerId?: string;
   enrollments?: any[]; // For embedded enrollment data (Performance Optimization)
@@ -68,6 +68,8 @@ export interface Student {
 
   // 담임/부담임 여부 (출석부에서 [담임]/[부담임] 표시용)
   isSlotTeacher?: boolean;  // true면 부담임(slotTeacher) 수업의 학생
+  mainClasses?: string[];   // 담임 수업 목록
+  slotClasses?: string[];   // 부담임 수업 목록
 }
 
 export interface AppState {

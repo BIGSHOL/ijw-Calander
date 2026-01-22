@@ -289,8 +289,8 @@ export function useConsultationStats(
 
       // 담임 선생님별 학생 수 집계 맵 초기화 (숫자로 카운트)
       const teacherMainClassStudentsMap = new Map<string, Map<'math' | 'english', number>>();
-      teacherNameToIdMap.forEach((teacherId) => {
-        teacherMainClassStudentsMap.set(teacherId, new Map([
+      teacherNameToIdMap.forEach((staffId) => {
+        teacherMainClassStudentsMap.set(staffId, new Map([
           ['math', 0],
           ['english', 0]
         ]));
@@ -354,13 +354,13 @@ export function useConsultationStats(
 
         if (!normalizedSubject) return;
 
-        // 담임 이름 -> ID 변환
-        const teacherId = teacherNameToIdMap.get(teacherName);
-        if (!teacherId) return;
+        // 담임 이름 -> staff ID 변환
+        const staffId = teacherNameToIdMap.get(teacherName);
+        if (!staffId) return;
 
         // 이 수업의 학생 수를 담임 선생님에게 합산
         const studentCount = classStudentCount.get(className)?.size || 0;
-        const teacherMap = teacherMainClassStudentsMap.get(teacherId);
+        const teacherMap = teacherMainClassStudentsMap.get(staffId);
         if (teacherMap) {
           const currentCount = teacherMap.get(normalizedSubject) || 0;
           teacherMap.set(normalizedSubject, currentCount + studentCount);

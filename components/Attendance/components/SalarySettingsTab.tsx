@@ -10,12 +10,12 @@ interface Props {
 }
 
 const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
-    const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
-    const configId = selectedTeacherId ? `salary_${selectedTeacherId}` : 'salary';
+    const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+    const configId = selectedStaffId ? `salary_${selectedStaffId}` : 'salary';
 
     const { data: config, isLoading } = useAttendanceConfig(configId);
     // Also fetch global config for fallback reference
-    const { data: globalConfig } = useAttendanceConfig('salary', !!selectedTeacherId);
+    const { data: globalConfig } = useAttendanceConfig('salary', !!selectedStaffId);
 
     const { mutate: saveConfig, isPending: isSaving } = useSaveAttendanceConfig();
     const { mutate: deleteConfig, isPending: isDeleting } = useDeleteAttendanceConfig();
@@ -27,7 +27,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
     useEffect(() => {
         if (config) {
             setLocalConfig(config);
-        } else if (selectedTeacherId && globalConfig) {
+        } else if (selectedStaffId && globalConfig) {
             // If teacher selected but no specific config exists, load global config as starting point
             // But we don't save it yet, just show it as initial state
             // Or better: show it as is, but mark as "using default" until changed?
@@ -38,7 +38,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
             setLocalConfig(null);
         }
         setHasChanges(false);
-    }, [config, configId, globalConfig, selectedTeacherId]);
+    }, [config, configId, globalConfig, selectedStaffId]);
 
     const handleGlobalChange = (field: keyof SalaryConfig, value: string) => {
         if (!localConfig) return;
@@ -102,7 +102,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
     };
 
     const handleReset = () => {
-        if (!selectedTeacherId) return;
+        if (!selectedStaffId) return;
         if (confirm('이 선생님의 개별 설정을 삭제하고 전체 기본 설정을 따르도록 하시겠습니까?')) {
             deleteConfig(configId);
             setHasChanges(false);
@@ -115,21 +115,21 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
 
     // Helper: Is this a custom config?
     // If we are on teacher tab, and we have a config doc in Firestore (config is not null/undefined from useQuery)
-    const isCustomConfig = selectedTeacherId && !!config;
+    const isCustomConfig = selectedStaffId && !!config;
 
     return (
         <div className="space-y-3 max-w-3xl mx-auto pb-12">
             {/* Context Selector Bar */}
             <div className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-2 sticky top-0 z-20">
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    <div className={`p-1.5 rounded-md ${selectedTeacherId ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>
-                        {selectedTeacherId ? <User size={14} /> : <Users size={14} />}
+                    <div className={`p-1.5 rounded-md ${selectedStaffId ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>
+                        {selectedStaffId ? <User size={14} /> : <Users size={14} />}
                     </div>
                     <div className="flex-1">
                         <label className="block text-[10px] font-bold text-gray-500 mb-0.5">설정 적용 대상</label>
                         <select
-                            value={selectedTeacherId || ''}
-                            onChange={(e) => setSelectedTeacherId(e.target.value || null)}
+                            value={selectedStaffId || ''}
+                            onChange={(e) => setSelectedStaffId(e.target.value || null)}
                             className="w-full md:w-48 font-bold text-gray-800 bg-transparent border-none focus:ring-0 p-0 cursor-pointer text-xs"
                         >
                             <option value="">🌐 전체 기본 설정</option>
@@ -169,7 +169,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
                 </div>
 
                 <div className="flex items-center gap-1.5 w-full md:w-auto justify-end">
-                    {selectedTeacherId && (
+                    {selectedStaffId && (
                         <div className="mr-1">
                             {isCustomConfig ? (
                                 <span className="text-[10px] font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">개별 설정</span>
@@ -179,7 +179,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
                         </div>
                     )}
 
-                    {selectedTeacherId && isCustomConfig && (
+                    {selectedStaffId && isCustomConfig && (
                         <button
                             onClick={handleReset}
                             disabled={isDeleting}

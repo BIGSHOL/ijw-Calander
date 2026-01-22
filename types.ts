@@ -19,7 +19,11 @@ export interface Enrollment {
   subject: 'math' | 'english' | 'science' | 'korean' | 'other';
   classId: string;    // Document ID of the class
   className: string;  // Name of the class
-  teacherId: string;  // Teacher Name/ID
+
+  // Teacher identification (migration complete)
+  staffId?: string;   // Staff document ID (references staff collection)
+  teacherId_deprecated?: string; // Backup of original teacherId after migration (for rollback only)
+
   days: string[];     // Class schedule days (e.g., ['월', '수'])
   schedule?: string[]; // 스케줄 정보 (e.g., ['월 1교시', '수 3교시'])
   attendanceDays?: string[];  // 실제 등원 요일 (비어있거나 없으면 모든 수업 요일에 등원)
@@ -30,6 +34,10 @@ export interface Enrollment {
 
   // 수강 상태
   onHold?: boolean;  // 일시정지 여부
+
+  // Migration metadata
+  migrated?: boolean;
+  migratedAt?: string;
 }
 
 
@@ -672,8 +680,10 @@ export interface UserProfile {
   displayName?: string; // 이름 (표시명)
   jobTitle?: string; // 호칭
 
-  // Attendance: Link to Teacher Profile (for view_own filtering)
-  teacherId?: string; // ID from staff collection where role='teacher' (allows any role to be linked to a teacher)
+  // Attendance: Link to Staff Profile (for view_own filtering)
+  staffId?: string; // ID from staff collection (allows any role to be linked to a staff member)
+  /** @deprecated Use staffId instead */
+  teacherId?: string; // Legacy field, use staffId
 }
 
 export interface Holiday {
@@ -1414,8 +1424,8 @@ export interface SeminarAttendee {
   companions?: string[];       // 동석자 이름 목록
 
   // 담당 및 상태
-  assignedTeacherId?: string;  // 담당 선생님 ID
-  assignedTeacherName?: string; // 담당 선생님 이름
+  assignedStaffId?: string;  // 담당 선생님 staff ID (references staff collection)
+  assignedStaffName?: string; // 담당 선생님 이름
   status: 'registered' | 'confirmed' | 'attended' | 'cancelled' | 'no-show';
 
   // 메타 정보

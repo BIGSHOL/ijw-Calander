@@ -9,7 +9,7 @@ export interface EnrollmentInfo {
     studentName: string;
     subject: SubjectType;
     className: string;
-    teacherId: string;
+    staffId: string;   // Staff document ID (required after migration)
     days?: string[];
     period?: string | null;
     room?: string | null;
@@ -58,7 +58,7 @@ export const useEnrollmentsAsClasses = (subject?: SubjectType) => {
                     studentName: parsedStudent.name, // 이름만 추출
                     subject: data.subject || 'math',
                     className: data.className || '',
-                    teacherId: data.teacherId || data.teacher || '',
+                    staffId: data.staffId || '',  // Staff ID (required after migration)
                     days: data.days || [],
                     period: data.period || null,
                     room: data.room || null,
@@ -93,7 +93,7 @@ export const useEnrollmentsAsClasses = (subject?: SubjectType) => {
                 if (!classMap.has(key)) {
                     classMap.set(key, {
                         className: enrollment.className,
-                        teacher: enrollment.teacherId,
+                        teacher: enrollment.staffId,
                         subject: enrollment.subject,
                         studentList: [],
                         schedule: enrollment.schedule,
@@ -139,8 +139,8 @@ export const useEnrollmentsAsClasses = (subject?: SubjectType) => {
                 }
 
                 // 강사 정보가 비어있으면 보강
-                if (!classData.teacher && enrollment.teacherId) {
-                    classData.teacher = enrollment.teacherId;
+                if (!classData.teacher) {
+                    classData.teacher = enrollment.staffId;
                 }
             });
 
@@ -190,7 +190,7 @@ export const useStudentEnrollments = (studentId: string) => {
                     studentName: studentId,
                     subject: data.subject || 'math',
                     className: data.className || '',
-                    teacherId: data.teacherId || data.teacher || '',
+                    staffId: data.staffId || '',  // Staff ID (required after migration)
                     days: data.days || [],
                     period: data.period || null,
                     room: data.room || null,

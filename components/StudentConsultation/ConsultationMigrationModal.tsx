@@ -300,12 +300,12 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
 
                     if (candidateEnrollments.length === 1) {
                         // 수업이 1개면 해당 담당 선생님
-                        const teacherId = candidateEnrollments[0].teacherId;
-                        matchedHomeroom = staffMembers.find(s => s.id === teacherId || s.name === teacherId);
+                        const staffId = candidateEnrollments[0].staffId;
+                        matchedHomeroom = staffMembers.find(s => s.id === staffId);
                     } else if (candidateEnrollments.length > 1 && item.registrar) {
                         // 수업이 여러개면 registrar와 매칭되는 선생님 (한글/영어 이름 모두 지원)
                         const matchingEnrollment = candidateEnrollments.find(e => {
-                            const teacher = staffMembers.find(s => s.id === e.teacherId || s.name === e.teacherId);
+                            const teacher = staffMembers.find(s => s.id === e.staffId);
                             if (!teacher) return false;
                             const registrar = item.registrar.trim();
 
@@ -325,8 +325,8 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                         });
 
                         if (matchingEnrollment) {
-                            const teacherId = matchingEnrollment.teacherId;
-                            matchedHomeroom = staffMembers.find(s => s.id === teacherId || s.name === teacherId);
+                            const staffId = matchingEnrollment.staffId;
+                            matchedHomeroom = staffMembers.find(s => s.id === staffId);
                         }
                     }
                 }

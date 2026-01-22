@@ -131,8 +131,13 @@ const Table: React.FC<Props> = ({
         currentGroup = studentGroup;
 
         // 같은 그룹의 학생들 중 담임/부담임 여부 확인
+        // 그룹의 첫 번째 학생 정보로 판단 (mainClasses 또는 slotClasses 사용)
         const groupStudents = students.filter(s => s.group === currentGroup);
-        const isAssistantGroup = groupStudents.every(s => s.isSlotTeacher === true);
+        const firstStudent = groupStudents[0];
+        // 그룹이 부담임인지 확인: mainClasses가 비어있고 slotClasses에 현재 그룹이 포함된 경우
+        const isAssistantGroup = firstStudent ?
+          (!firstStudent.mainClasses?.includes(currentGroup) && firstStudent.slotClasses?.includes(currentGroup)) :
+          false;
 
         rows.push(
           <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">
@@ -528,7 +533,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
     onGroupOrderChange(currentOrder);
   };
 
-  // Sort students by group order
+  // Sort students by group order (담임 수업 우선, 부담임 수업 후순위)
   const sortedStudents = useMemo(() => {
     // Build effective group order
     const effectiveOrder = [...groupOrder];
@@ -539,6 +544,12 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
     return [...students].sort((a, b) => {
       const groupA = a.group || '그룹 없음';
       const groupB = b.group || '그룹 없음';
+
+      // 담임 vs 부담임 우선 정렬 (담임 수업 상단)
+      const aIsMain = (a.mainClasses?.length || 0) > 0;
+      const bIsMain = (b.mainClasses?.length || 0) > 0;
+      if (aIsMain && !bIsMain) return -1;
+      if (!aIsMain && bIsMain) return 1;
 
       // Sort by group order first
       const orderA = effectiveOrder.indexOf(groupA);
@@ -593,8 +604,13 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
       const studentCount = groupStudentCounts.get(currentGroup) || 0;
 
       // 같은 그룹의 학생들 중 담임/부담임 여부 확인
+      // 그룹의 첫 번째 학생 정보로 판단 (mainClasses 또는 slotClasses 사용)
       const groupStudents = students.filter(s => s.group === currentGroup);
-      const isAssistantGroup = groupStudents.every(s => s.isSlotTeacher === true);
+      const firstStudent = groupStudents[0];
+      // 그룹이 부담임인지 확인: mainClasses가 비어있고 slotClasses에 현재 그룹이 포함된 경우
+      const isAssistantGroup = firstStudent ?
+        (!firstStudent.mainClasses?.includes(currentGroup) && firstStudent.slotClasses?.includes(currentGroup)) :
+        false;
 
       rows.push(
         <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">

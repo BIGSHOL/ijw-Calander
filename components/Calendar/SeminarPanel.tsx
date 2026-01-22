@@ -77,8 +77,8 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
       registrationSource: newAttendee.registrationSource,
       parentAttending: newAttendee.parentAttending,
       companions: newAttendee.companions,
-      assignedTeacherId: newAttendee.assignedTeacherId,
-      assignedTeacherName: newAttendee.assignedTeacherName,
+      assignedStaffId: newAttendee.assignedStaffId,
+      assignedStaffName: newAttendee.assignedStaffName,
       status: 'registered',
       registeredAt: new Date().toISOString(),
       memo: newAttendee.memo
@@ -410,13 +410,13 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                   {/* 담당 선생님 - 재원생만 표시 */}
                   {newAttendee.isCurrentStudent && (
                     <select
-                      value={newAttendee.assignedTeacherId || ''}
+                      value={newAttendee.assignedStaffId || ''}
                       onChange={(e) => {
                         const teacher = users.find(u => u.uid === e.target.value);
                         setNewAttendee({
                           ...newAttendee,
-                          assignedTeacherId: e.target.value,
-                          assignedTeacherName: teacher ? teacher.email.split('@')[0] : undefined
+                          assignedStaffId: e.target.value,
+                          assignedStaffName: teacher ? teacher.email.split('@')[0] : undefined
                         });
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
@@ -478,9 +478,9 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                             )}
                           </div>
                           <div className="text-xs text-gray-500 mt-0.5">{attendee.phone}</div>
-                          {attendee.assignedTeacherName && (
+                          {attendee.assignedStaffName && (
                             <div className="text-xs text-purple-600 mt-1">
-                              담당: {attendee.assignedTeacherName}
+                              담당: {attendee.assignedStaffName}
                             </div>
                           )}
                         </div>

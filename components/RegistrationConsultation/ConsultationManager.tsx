@@ -157,7 +157,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                              consultation.subject === 'Science' ? 'science' : 'other',
                     classId: '', // 수업 ID는 나중에 배정
                     className: `미배정 (${consultation.subject})`, // 임시 수업명
-                    teacherId: '', // 강사는 나중에 배정
+                    staffId: '', // 강사는 나중에 배정
+                    teacher: '', // 호환성
                     days: [], // 요일은 나중에 배정
                     enrollmentDate: consultation.consultationDate,
                 }],

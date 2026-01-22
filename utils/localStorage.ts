@@ -21,10 +21,10 @@ export const STORAGE_KEYS = {
   TUITION_ENTRIES: 'ijw_tuition_entries',
 
   // Dynamic keys (functions)
-  attendanceGroupOrder: (teacherId: string, subject: string) =>
-    `ijw_attendance_group_order_${subject}_${teacherId}`,
-  attendanceCollapsedGroups: (teacherId: string, subject: string) =>
-    `ijw_attendance_collapsed_groups_${subject}_${teacherId}`,
+  attendanceGroupOrder: (staffId: string, subject: string) =>
+    `ijw_attendance_group_order_${subject}_${staffId}`,
+  attendanceCollapsedGroups: (staffId: string, subject: string) =>
+    `ijw_attendance_collapsed_groups_${subject}_${staffId}`,
 } as const;
 
 // Type-safe localStorage utilities

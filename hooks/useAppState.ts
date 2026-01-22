@@ -228,7 +228,7 @@ export function useAttendanceState(userProfile: UserProfile | null) {
   const { hasPermission } = usePermissions(userProfile);
 
   const [attendanceSubject, setAttendanceSubject] = useState<'math' | 'english'>('math');
-  const [attendanceTeacherId, setAttendanceTeacherId] = useState<string | undefined>(undefined);
+  const [attendanceStaffId, setAttendanceStaffId] = useState<string | undefined>(undefined);
   const [attendanceDate, setAttendanceDate] = useState(() => new Date());
 
   // Initialize attendance subject based on user's permissions
@@ -254,10 +254,10 @@ export function useAttendanceState(userProfile: UserProfile | null) {
 
   return {
     attendanceSubject,
-    attendanceTeacherId,
+    attendanceStaffId,
     attendanceDate,
     setAttendanceSubject,
-    setAttendanceTeacherId,
+    setAttendanceStaffId,
     setAttendanceDate,
   };
 }
