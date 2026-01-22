@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import GradesTab from '../StudentManagement/tabs/GradesTab';
+import { TabSubNavigation } from '../Common/TabSubNavigation';
+import { TabButton } from '../Common/TabButton';
 
 // 시험별 전체 성적 조회 Hook
 const useExamScores = (examId: string) => {
@@ -531,44 +533,33 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   return (
     <div className="h-full flex flex-col bg-gray-50">
       {/* 상단 네비게이션 바 - 반응형 레이아웃 */}
-      <div className="bg-[#081429] px-6 py-2 border-b border-white/10 text-xs">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <TabSubNavigation variant="compact" className="px-6 py-2 border-b border-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           <div className="flex flex-wrap items-center gap-3">
             {/* 과목 토글 */}
             <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
-              <button
+              <TabButton
+                active={subjectFilter === 'all'}
                 onClick={() => onSubjectFilterChange?.('all')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${subjectFilter === 'all'
-                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
+                icon={<BookOpen className="w-4 h-4" />}
+                className="px-3 py-1"
               >
-                <span className="inline-flex items-center gap-1.5">
-                  <BookOpen className="w-4 h-4" /> 전체
-                </span>
-              </button>
-              <button
+                전체
+              </TabButton>
+              <TabButton
+                active={subjectFilter === 'math'}
                 onClick={() => onSubjectFilterChange?.('math')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${subjectFilter === 'math'
-                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
+                className="px-3 py-1"
               >
-                <span className="inline-flex items-center gap-1.5">
-                  수학
-                </span>
-              </button>
-              <button
+                수학
+              </TabButton>
+              <TabButton
+                active={subjectFilter === 'english'}
                 onClick={() => onSubjectFilterChange?.('english')}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${subjectFilter === 'english'
-                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
+                className="px-3 py-1"
               >
-                <span className="inline-flex items-center gap-1.5">
-                  영어
-                </span>
-              </button>
+                영어
+              </TabButton>
             </div>
 
             {/* 구분선 */}
@@ -624,7 +615,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
             </button>
           </div>
         </div>
-      </div>
+      </TabSubNavigation>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
