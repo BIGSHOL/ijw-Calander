@@ -4,6 +4,7 @@ import { Inbox, ChevronRight, Users, FileText, Clock } from 'lucide-react';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { SubjectForSchedule, MATH_PERIOD_INFO, ENGLISH_PERIOD_INFO, MATH_GROUP_TIMES, WEEKEND_PERIOD_INFO } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
+import { useStaff } from '../../hooks/useStaff';
 
 // 요일별 색상 정의
 const DAY_COLORS: Record<string, { bg: string; text: string }> = {
@@ -206,6 +207,7 @@ interface ClassListProps {
 const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading, currentTeacherFilter }) => {
   // 강사 데이터 가져오기 (영어 이름 매칭용)
   const { data: teachersData } = useTeachers();
+  const { staff } = useStaff();
 
   // Helper to display teacher name as "한글(영어이름)"
   const getTeacherDisplayName = (teacherName: string) => {
@@ -215,6 +217,28 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
       return `${staffMember.name}(${staffMember.englishName})`;
     }
     return teacherName;
+  };
+
+  // 선생님 이름 비교 헬퍼 함수 (한글/영어 이름 모두 체크)
+  const isTeacherMatch = (teacherName: string, filterValue: string): boolean => {
+    if (!teacherName || !filterValue) return false;
+
+    // 정확히 일치하면 true
+    if (teacherName === filterValue) return true;
+
+    // staff 데이터에서 해당 선생님 찾기
+    const staffMember = staff?.find(s => s.name === teacherName || s.englishName === teacherName);
+    if (!staffMember) return teacherName === filterValue;
+
+    // 필터값이 한글 이름 또는 영어 이름과 일치하는지 확인
+    if (staffMember.name === filterValue || staffMember.englishName === filterValue) return true;
+
+    // "한글(영어)" 형식과 비교
+    const displayName = staffMember.englishName
+      ? `${staffMember.name}(${staffMember.englishName})`
+      : staffMember.name;
+
+    return displayName === filterValue;
   };
 
   // 선생님 필터가 있으면 해당 선생님의 스케줄만 필터링하는 함수
@@ -231,7 +255,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
       const slotTeacher = slotTeachers?.[key];
       const displayTeacher = slotTeacher || teacher;
 
-      return displayTeacher === currentTeacherFilter;
+      return isTeacherMatch(displayTeacher, currentTeacherFilter);
     });
   };
 

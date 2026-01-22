@@ -62,6 +62,28 @@ const ClassManagementTab: React.FC = () => {
   // 직원 데이터 조회
   const { staff } = useStaff();
 
+  // 선생님 이름 비교 헬퍼 함수 (한글/영어 이름 모두 체크)
+  const isTeacherMatch = (teacherName: string, filterValue: string): boolean => {
+    if (!teacherName || !filterValue) return false;
+
+    // 정확히 일치하면 true
+    if (teacherName === filterValue) return true;
+
+    // staff 데이터에서 해당 선생님 찾기
+    const staffMember = staff?.find(s => s.name === teacherName || s.englishName === teacherName);
+    if (!staffMember) return teacherName === filterValue;
+
+    // 필터값이 한글 이름 또는 영어 이름과 일치하는지 확인
+    if (staffMember.name === filterValue || staffMember.englishName === filterValue) return true;
+
+    // "한글(영어)" 형식과 비교
+    const displayName = staffMember.englishName
+      ? `${staffMember.name}(${staffMember.englishName})`
+      : staffMember.name;
+
+    return displayName === filterValue;
+  };
+
   // 강사 목록 추출 (필터용) - 수업에 할당된 강사만
   const teachers = useMemo(() => {
     if (!classes) return [];
@@ -121,12 +143,12 @@ const ClassManagementTab: React.FC = () => {
     if (filters.teacher !== 'all') {
       result = result.filter(c => {
         // 담임 체크
-        if (c.teacher === filters.teacher) return true;
+        if (isTeacherMatch(c.teacher, filters.teacher)) return true;
 
         // 부담임 체크 (slotTeachers)
         if (c.slotTeachers) {
           const slotTeacherNames = Object.values(c.slotTeachers);
-          if (slotTeacherNames.includes(filters.teacher)) return true;
+          if (slotTeacherNames.some(name => isTeacherMatch(name, filters.teacher))) return true;
         }
 
         return false;

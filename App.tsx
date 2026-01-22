@@ -1849,31 +1849,29 @@ const App: React.FC = () => {
             };
 
             return (
-              <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
+              <TabSubNavigation variant="compact" className="justify-between px-6 border-b border-white/10 z-30">
                 <div className="flex items-center gap-3">
                   {/* Subject Toggle */}
                   <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
                     {(canManageMath || isMasterOrAdmin) && (
-                      <button
+                      <TabButton
+                        active={attendanceSubject === 'math'}
                         onClick={() => setAttendanceSubject('math')}
-                        className={`px-2 py-0.5 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'math'
-                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
-                          }`}
+                        icon={<Calculator size={14} />}
+                        className="px-2 py-0.5"
                       >
-                        <Calculator size={14} className="inline" /> 수학
-                      </button>
+                        수학
+                      </TabButton>
                     )}
                     {(canManageEnglish || isMasterOrAdmin) && (
-                      <button
+                      <TabButton
+                        active={attendanceSubject === 'english'}
                         onClick={() => setAttendanceSubject('english')}
-                        className={`px-2 py-0.5 rounded-md text-xs font-bold transition-all ${attendanceSubject === 'english'
-                          ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
-                          }`}
+                        icon={<BookOpen size={14} />}
+                        className="px-2 py-0.5"
                       >
-                        <BookOpen size={14} className="inline" /> 영어
-                      </button>
+                        영어
+                      </TabButton>
                     )}
                   </div>
 
@@ -1928,7 +1926,7 @@ const App: React.FC = () => {
                     <span className="font-bold text-xs">학생 추가</span>
                   </button>
                 </div>
-              </div>
+              </TabSubNavigation>
             );
           })()}
 

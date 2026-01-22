@@ -57,6 +57,7 @@ export interface TimetableClass {
   className: string;
   subject: SubjectKey;
   teacher: string;
+  /** @deprecated slotTeachers 사용 권장 */
   assistants?: string[];
   room?: string;
   schedule?: string[];
