@@ -54,10 +54,17 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
     ? { ...userProfile, role: selectedStaff.systemRole || 'user' } as UserProfile
     : userProfile;
 
-  // 역할 결정 로직
+  // 강사 여부 확인 (직원 관리의 role 체크)
+  const isTeacher = displayStaffMember?.role === 'teacher' || displayStaffMember?.role === '강사';
+
+  // 역할 결정 로직 (직무 역할 우선, 시스템 역할 보조)
   const dashboardRole: DashboardRole = useMemo(() => {
     const systemRole = displayUserProfile?.role;
-    const jobRole = displayStaffMember?.role;
+
+    // 직원 관리에서 '강사'로 체크된 경우 무조건 teacher 대시보드
+    if (isTeacher) {
+      return 'teacher';
+    }
 
     // Master와 Admin은 같은 master 대시보드
     if (systemRole === 'master' || systemRole === 'admin') {
@@ -69,19 +76,41 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
       return 'manager';
     }
 
-    // 강사는 teacher 대시보드
-    if (jobRole === 'teacher' || jobRole === '강사') {
+    // Teacher 시스템 역할
+    if (systemRole === 'teacher') {
       return 'teacher';
     }
 
-    // 직원 (staff, admin 직무)
-    if (jobRole === 'staff' || jobRole === 'admin') {
+    // Staff 및 기타 역할
+    if (systemRole === 'staff' || systemRole === 'user') {
       return 'staff';
     }
 
     // 기본값: staff (역할이 명확하지 않은 경우)
     return 'staff';
-  }, [displayUserProfile?.role, displayStaffMember?.role]);
+  }, [displayUserProfile?.role, isTeacher]);
+
+  // 추가 대시보드 결정 (강사이면서 동시에 다른 시스템 역할인 경우)
+  const additionalRole: DashboardRole | null = useMemo(() => {
+    if (!isTeacher) return null;
+
+    const systemRole = displayUserProfile?.role;
+
+    // 강사이면서 동시에 다른 역할인 경우
+    if (systemRole === 'master' || systemRole === 'admin') {
+      return 'master';
+    }
+
+    if (systemRole && ['manager', 'senior_staff'].includes(systemRole)) {
+      return 'manager';
+    }
+
+    if (systemRole === 'staff' || systemRole === 'user') {
+      return 'staff';
+    }
+
+    return null;
+  }, [displayUserProfile?.role, isTeacher]);
 
   // 에러 바운더리: 렌더링 중 오류 발생 시 대체 UI
   try {
