@@ -1,0 +1,125 @@
+import React from 'react';
+
+export type TabButtonVariant =
+  | 'tab-active'
+  | 'tab-inactive'
+  | 'tab-toggle'
+  | 'tab-filter'
+  | 'tab-status-active'
+  | 'tab-status-pending'
+  | 'tab-status-completed'
+  | 'tab-status-cancelled';
+
+export type TabButtonSize = 'xs' | 'sm';
+
+export interface TabButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: TabButtonVariant;
+  size?: TabButtonSize;
+  active?: boolean;
+  icon?: React.ReactNode;
+  iconPosition?: 'left' | 'right';
+  children?: React.ReactNode;
+}
+
+/**
+ * TabButton - 탭 헤더 전용 버튼 컴포넌트
+ *
+ * 디자인 규격 (DESIGN_SYSTEM.md 준수):
+ * - 텍스트: text-xs font-bold
+ * - 패딩: px-3 py-1.5
+ * - 모서리: rounded-lg
+ * - 간격: gap-1.5 (아이콘과 텍스트)
+ *
+ * Variants:
+ * - tab-active: 활성 탭 (노란색 배경)
+ * - tab-inactive: 비활성 탭 (회색 텍스트)
+ * - tab-toggle: 토글 버튼 (반투명 배경)
+ * - tab-filter: 필터 버튼 (어두운 배경)
+ * - tab-status-*: 상태별 색상 버튼
+ *
+ * @example
+ * // 활성/비활성 탭
+ * <TabButton variant={isActive ? 'tab-active' : 'tab-inactive'}>
+ *   대시보드
+ * </TabButton>
+ *
+ * @example
+ * // 아이콘과 함께
+ * <TabButton variant="tab-filter" icon={<Search size={14} />}>
+ *   검색
+ * </TabButton>
+ */
+export const TabButton = React.forwardRef<HTMLButtonElement, TabButtonProps>(
+  (
+    {
+      variant = 'tab-inactive',
+      size = 'xs',
+      active,
+      icon,
+      iconPosition = 'left',
+      disabled,
+      className = '',
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    // active prop이 있으면 variant 자동 결정
+    const effectiveVariant = active !== undefined
+      ? (active ? 'tab-active' : 'tab-inactive')
+      : variant;
+
+    const baseStyles = 'inline-flex items-center justify-center font-bold rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-[#fdb813]/50 disabled:opacity-50 disabled:cursor-not-allowed';
+
+    const variantStyles: Record<TabButtonVariant, string> = {
+      'tab-active': 'bg-[#fdb813] text-[#081429] shadow-sm hover:bg-[#fdb813]/90',
+      'tab-inactive': 'text-gray-400 hover:text-white hover:bg-white/10',
+      'tab-toggle': 'bg-white/10 border border-white/10 text-white hover:bg-white/20',
+      'tab-filter': 'bg-[#1e293b] border border-gray-700 text-white hover:border-gray-500',
+      'tab-status-active': 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm',
+      'tab-status-pending': 'bg-yellow-500 text-[#081429] hover:bg-yellow-600 shadow-sm',
+      'tab-status-completed': 'bg-green-600 text-white hover:bg-green-700 shadow-sm',
+      'tab-status-cancelled': 'bg-gray-500 text-white hover:bg-gray-600 shadow-sm',
+    };
+
+    const sizeStyles: Record<TabButtonSize, string> = {
+      xs: 'px-3 py-1.5 text-xs gap-1.5',
+      sm: 'px-4 py-2 text-sm gap-2',
+    };
+
+    const iconSizeClass: Record<TabButtonSize, string> = {
+      xs: 'w-3.5 h-3.5',
+      sm: 'w-4 h-4',
+    };
+
+    const combinedClassName = `
+      ${baseStyles}
+      ${variantStyles[effectiveVariant]}
+      ${sizeStyles[size]}
+      ${className}
+    `.trim();
+
+    const iconElement = icon ? (
+      <span className={iconSizeClass[size]} aria-hidden="true">
+        {icon}
+      </span>
+    ) : null;
+
+    return (
+      <button
+        ref={ref}
+        className={combinedClassName}
+        disabled={disabled}
+        {...props}
+      >
+        {iconElement && iconPosition === 'left' && iconElement}
+        {children}
+        {iconElement && iconPosition === 'right' && iconElement}
+      </button>
+    );
+  }
+);
+
+TabButton.displayName = 'TabButton';
+
+export default TabButton;
