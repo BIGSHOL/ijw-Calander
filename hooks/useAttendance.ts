@@ -35,11 +35,8 @@ async function fetchEnrollmentsForAttendanceStudents(students: Student[]): Promi
 
     // 모든 학생이 이미 enrollments를 가지고 있으면 조기 종료
     if (studentsNeedingFetch.length === 0) {
-        console.log(`[Attendance] All ${students.length} students have enrollments in document`);
         return;
     }
-
-    console.log(`[Attendance] ${studentsNeedingFetch.length}/${students.length} students need subcollection fetch`);
 
     const CHUNK_SIZE = 50;
     const chunks: Student[][] = [];
@@ -106,8 +103,6 @@ export const useAttendanceStudents = (options?: {
     } = useQuery({
         queryKey: ['attendanceStudents', options?.teacherId, options?.subject],
         queryFn: async (): Promise<{ filtered: Student[], all: Student[] }> => {
-            console.time('[Attendance] Total load time');
-            console.time('[Attendance] 1. Fetch students');
             // === PERFORMANCE: teacherId가 있으면 teacherIds 필드로 필터링 ===
             let q;
             if (options?.teacherId) {
@@ -120,7 +115,6 @@ export const useAttendanceStudents = (options?: {
                 q = query(collection(db, STUDENTS_COLLECTION), orderBy('name'));
             }
             const snapshot = await getDocs(q);
-            console.timeEnd('[Attendance] 1. Fetch students');
 
             const allRaw = snapshot.docs.map(d => ({
                 id: d.id,
@@ -132,9 +126,7 @@ export const useAttendanceStudents = (options?: {
 
             // === FIX: enrollments 서브컬렉션에서 조회 (학생 관리/수업 관리와 동일) ===
             // 학생 문서 내 enrollments 배열이 아닌, 서브컬렉션 데이터 사용
-            console.time('[Attendance] 2. Fetch enrollments');
             await fetchEnrollmentsForAttendanceStudents(allRaw);
-            console.timeEnd('[Attendance] 2. Fetch enrollments');
 
             // slotTeachers 확인을 위해 classes와 staff 컬렉션 조회
             let classesMap: Map<string, any> = new Map();
@@ -143,7 +135,6 @@ export const useAttendanceStudents = (options?: {
             let staff: any[] = [];
 
             if (options?.teacherId) {
-                console.time('[Attendance] 3. Fetch classes & staff');
                 // Classes 데이터 로드
                 const classesSnapshot = await getDocs(collection(db, CLASSES_COLLECTION));
                 classesSnapshot.docs.forEach(doc => {
@@ -159,7 +150,6 @@ export const useAttendanceStudents = (options?: {
                     teacherName = staffData.englishName || staffData.name || '';
                     teacherKoreanName = staffData.name || '';
                 }
-                console.timeEnd('[Attendance] 3. Fetch classes & staff');
             }
 
             // 선생님 이름 매칭용 래퍼 함수
@@ -171,7 +161,6 @@ export const useAttendanceStudents = (options?: {
 
             // Client-side filtering (teacherId + slotTeachers 모두 고려)
             if (options?.teacherId) {
-                console.time('[Attendance] 4. Filter students');
                 data = data.filter(s => {
                     const enrollments = (s as any).enrollments || [];
 
@@ -190,10 +179,7 @@ export const useAttendanceStudents = (options?: {
 
                     return hasAsSlotTeacher;
                 });
-                console.timeEnd('[Attendance] 4. Filter students');
-                console.log(`[Attendance] Filtered ${data.length} students for teacher ${teacherName}`);
 
-                console.time('[Attendance] 5. Map student data');
                 data = data.map(s => {
                     const enrollments = (s as any).enrollments || [];
 
@@ -282,10 +268,8 @@ export const useAttendanceStudents = (options?: {
                         isSlotTeacher: isSlotTeacher,
                     };
                 });
-                console.timeEnd('[Attendance] 5. Map student data');
             }
             if (options?.subject) {
-                console.time('[Attendance] 6. Subject filter');
 
                 data = data.filter(s => {
                     const enrollments = (s as any).enrollments || [];
@@ -324,11 +308,8 @@ export const useAttendanceStudents = (options?: {
                         group: (s as any).group || subjectClasses.join(', '),
                     };
                 });
-                console.timeEnd('[Attendance] 6. Subject filter');
             }
 
-            console.timeEnd('[Attendance] Total load time');
-            console.log(`[Attendance] Final result: ${data.length} students`);
             return { filtered: data, all: allRaw };
         },
         enabled: options?.enabled !== false,
