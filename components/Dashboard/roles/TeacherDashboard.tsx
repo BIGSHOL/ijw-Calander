@@ -324,19 +324,18 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
 
       setMyClasses(classes);
 
-      // 3. 내 학생 로드 (담임인 수업의 학생들만)
-      const mainTeacherClasses = classes.filter(c => c.isMainTeacher);
-      const mainClassNames = mainTeacherClasses.map(c => c.className);
+      // 3. 내 학생 로드 (teacherId가 나인 enrollments만)
       const studentsSet = new Set<string>();
       const students: MyStudent[] = [];
 
-      // enrollments 서브컬렉션에서 담임 수업에 속한 학생 ID 수집
+      // enrollments 서브컬렉션에서 내 teacherId를 가진 학생 ID 수집
       enrollmentsSnapshot.docs.forEach(doc => {
         const data = doc.data();
-        const className = data.className as string;
+        const enrollmentTeacherId = data.teacherId as string;
         const studentId = doc.ref.parent.parent?.id;
 
-        if (mainClassNames.includes(className) && studentId && !studentsSet.has(studentId)) {
+        // teacherId가 나와 일치하는 enrollment만
+        if (enrollmentTeacherId === teacherId && studentId && !studentsSet.has(studentId)) {
           studentsSet.add(studentId);
         }
       });

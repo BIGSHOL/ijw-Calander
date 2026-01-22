@@ -101,9 +101,9 @@ const StaffSelector: React.FC<StaffSelectorProps> = ({
           </button>
 
           {showDropdown && (
-            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl z-50 min-w-[600px] max-h-[400px] overflow-y-auto">
+            <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-white/10 rounded-lg shadow-xl z-50 min-w-[600px] max-h-[400px] overflow-y-auto">
               {/* 내 대시보드 */}
-              <div className="p-1.5 border-b border-gray-200">
+              <div className="p-1.5 border-b border-white/10">
                 <TabButton
                   active={!selectedStaffId}
                   onClick={() => {
@@ -124,7 +124,7 @@ const StaffSelector: React.FC<StaffSelectorProps> = ({
 
                   return (
                     <div key={role} className="mb-2">
-                      <div className={`text-[10px] text-${roleColor}-600 font-bold px-1.5 py-0.5 border-b border-gray-200 mb-0.5`}>
+                      <div className={`text-[10px] text-${roleColor}-400 font-bold px-1.5 py-0.5 border-b border-white/10 mb-0.5`}>
                         {role}
                       </div>
                       <div className="grid grid-cols-5 gap-0.5">
