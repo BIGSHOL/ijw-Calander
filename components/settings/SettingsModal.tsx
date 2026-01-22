@@ -234,8 +234,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   // --- Teacher Drag and Drop Handlers ---
-  const handleTeacherDragStart = (e: React.DragEvent, teacherId: string) => {
-    setDraggedTeacherId(teacherId);
+  const handleTeacherDragStart = (e: React.DragEvent, staffId: string) => {
+    setDraggedTeacherId(staffId);
     e.dataTransfer.effectAllowed = 'move';
   };
 

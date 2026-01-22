@@ -250,8 +250,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
         if (groups.has(key)) {
           const existing = groups.get(key)!;
-          if (!existing.teachers.includes(enrollment.teacherId)) {
-            existing.teachers.push(enrollment.teacherId);
+          const staffId = enrollment.staffId;
+          if (staffId && !existing.teachers.includes(staffId)) {
+            existing.teachers.push(staffId);
           }
           enrollment.days?.forEach(day => {
             if (!existing.days.includes(day)) {
@@ -269,10 +270,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             existing.startDate = (enrollment as any).startDate;
           }
         } else {
+          const staffId = enrollment.staffId;
           groups.set(key, {
             className: enrollment.className,
             subject: enrollment.subject,
-            teachers: [enrollment.teacherId],
+            teachers: staffId ? [staffId] : [],
             days: [...(enrollment.days || [])],
             enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
             startDate: (enrollment as any).startDate,
@@ -301,8 +303,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
         if (groups.has(key)) {
           const existing = groups.get(key)!;
-          if (!existing.teachers.includes(enrollment.teacherId)) {
-            existing.teachers.push(enrollment.teacherId);
+          const staffId = enrollment.staffId;
+          if (staffId && !existing.teachers.includes(staffId)) {
+            existing.teachers.push(staffId);
           }
           enrollment.days?.forEach(day => {
             if (!existing.days.includes(day)) {
@@ -320,10 +323,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             existing.startDate = (enrollment as any).startDate;
           }
         } else {
+          const staffId = enrollment.staffId;
           groups.set(key, {
             className: enrollment.className,
             subject: enrollment.subject,
-            teachers: [enrollment.teacherId],
+            teachers: staffId ? [staffId] : [],
             days: [...(enrollment.days || [])],
             enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
             startDate: (enrollment as any).startDate,
@@ -335,6 +339,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     return Array.from(groups.values());
   }, [student.enrollments, today]);
 
+  // Build teacher Map for O(1) lookups (js-index-maps)
+  const teacherMap = useMemo(() => {
+    return new Map(teachers.map(t => [t.id, t]));
+  }, [teachers]);
+
   // 수업의 대표 강사 결정
   const getMainTeacher = (group: GroupedEnrollment): string | null => {
     const teacherCounts: Record<string, number> = {};
@@ -342,12 +351,13 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     student.enrollments
       .filter(e => e.subject === group.subject && e.className === group.className)
       .forEach(enrollment => {
-        const teacherName = enrollment.teacherId;
-        const teacherData = teachers.find(t => t.name === teacherName);
+        const staffId = enrollment.staffId;
+        if (!staffId) return;
+        const teacherData = teacherMap.get(staffId);
         if (teacherData?.isHidden) return;
 
         const dayCount = enrollment.days?.length || 0;
-        teacherCounts[teacherName] = (teacherCounts[teacherName] || 0) + dayCount;
+        teacherCounts[staffId] = (teacherCounts[staffId] || 0) + dayCount;
       });
 
     const teacherEntries = Object.entries(teacherCounts);
@@ -358,8 +368,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     if (topTeachers.length === 1) return topTeachers[0][0];
 
-    const nonNativeTeachers = topTeachers.filter(([name]) => {
-      const teacherData = teachers.find(t => t.name === name);
+    const nonNativeTeachers = topTeachers.filter(([staffId]) => {
+      const teacherData = teacherMap.get(staffId);
       return !teacherData?.isNative;
     });
 
@@ -467,8 +477,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
         if (groups.has(key)) {
           const existing = groups.get(key)!;
-          if (!existing.teachers.includes(enrollment.teacherId)) {
-            existing.teachers.push(enrollment.teacherId);
+          const staffId = enrollment.staffId;
+          if (staffId && !existing.teachers.includes(staffId)) {
+            existing.teachers.push(staffId);
           }
           // startDate는 가장 빠른 날짜, endDate는 가장 늦은 날짜 사용
           const existingStartDate = existing.startDate ? new Date(existing.startDate) : null;
@@ -483,10 +494,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             existing.endDate = (enrollment as any).endDate;
           }
         } else {
+          const staffId = enrollment.staffId;
           groups.set(key, {
             className: enrollment.className,
             subject: enrollment.subject as 'math' | 'english',
-            teachers: [enrollment.teacherId],
+            teachers: staffId ? [staffId] : [],
             days: [],
             enrollmentIds: [],
             startDate: (enrollment as any).startDate,
@@ -507,11 +519,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
   // 수업 행 렌더링 함수 (현재 수강 중)
   const renderClassRow = (group: GroupedEnrollment, index: number) => {
-    const mainTeacher = getMainTeacher(group);
-    const visibleTeachers = group.teachers.filter(name => {
-      const teacher = teachers.find(t => t.name === name);
+    const mainTeacherStaffId = getMainTeacher(group);
+    const mainTeacher = teacherMap.get(mainTeacherStaffId)?.name;
+    const visibleTeachers = group.teachers.filter(staffId => {
+      const teacher = teacherMap.get(staffId);
       return !teacher?.isHidden;
-    });
+    }).map(staffId => teacherMap.get(staffId)?.name).filter(Boolean);
     const subjectColor = SUBJECT_COLORS[group.subject];
     const key = `${group.subject}_${group.className}`;
     const isDeleting = deletingClass === key;
@@ -599,6 +612,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
   // 종료된 수업 행 렌더링 함수
   const renderCompletedClassRow = (group: GroupedEnrollment, index: number) => {
     const subjectColor = SUBJECT_COLORS[group.subject];
+    const firstTeacherStaffId = group.teachers[0];
+    const firstTeacherName = teacherMap.get(firstTeacherStaffId)?.name;
 
     return (
       <div
@@ -625,7 +640,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         <div className="w-14 shrink-0 flex items-center gap-0.5">
           <User className="w-3 h-3 text-gray-400" />
           <span className="text-xxs text-[#373d41] truncate">
-            {group.teachers[0] || '-'}
+            {firstTeacherName || '-'}
           </span>
         </div>
 
@@ -760,6 +775,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                 const actualClass = allClasses.find(
                   c => c.className === group.className && c.subject === group.subject
                 );
+                const key = `${group.subject}_${group.className}`;
+                const isDeleting = deletingClass === key;
 
                 return (
                   <div

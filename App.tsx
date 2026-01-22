@@ -139,7 +139,7 @@ const staffToUserProfile = (staff: StaffMember): UserProfile => {
     departmentPermissions: staff.departmentPermissions || {},
     favoriteDepartments: staff.favoriteDepartments || [],
     departmentId: staff.primaryDepartmentId,
-    teacherId: staff.teacherId,
+    staffId: staff.id, // Link to staff document
     allowedDepartments: [], // deprecated
     // 승인되었고 유효한 역할이 있는 경우에만 편집 권한 부여
     canEdit: isApproved && hasValidRole,
@@ -277,7 +277,7 @@ const App: React.FC = () => {
   const { students: globalStudents = [] } = useStudents(false);
   const { data: allClasses = [] } = useClasses();
 
-  // 선생님 목록 추출 (학생 enrollments에서 teacherId 수집, 과목별 그룹화)
+  // 선생님 목록 추출 (학생 enrollments에서 staffId 수집, 과목별 그룹화)
   const teachersBySubject = useMemo(() => {
     const subjectTeachers: Record<string, Set<string>> = {
       math: new Set(),
@@ -288,9 +288,9 @@ const App: React.FC = () => {
     };
     globalStudents.forEach(student => {
       student.enrollments?.forEach(enrollment => {
-        if (enrollment.teacherId && enrollment.subject) {
+        if (enrollment.staffId && enrollment.subject) {
           const subject = subjectTeachers[enrollment.subject] ? enrollment.subject : 'other';
-          subjectTeachers[subject].add(enrollment.teacherId);
+          subjectTeachers[subject].add(enrollment.staffId);
         }
       });
     });
@@ -314,7 +314,7 @@ const App: React.FC = () => {
 
   // Attendance State (depends on userProfile)
   const [attendanceSubject, setAttendanceSubject] = useState<'math' | 'english'>('math');
-  const [attendanceTeacherId, setAttendanceTeacherId] = useState<string | undefined>(undefined);
+  const [attendanceStaffId, setAttendanceStaffId] = useState<string | undefined>(undefined);
   const [attendanceDate, setAttendanceDate] = useState(() => new Date());
 
   // Permission Hook
@@ -1828,16 +1828,13 @@ const App: React.FC = () => {
               })
               : [];
 
-            // Determine user's teacherId for filtering
-            const currentTeacherId = userProfile?.teacherId
-              ? teachers.find(t => t.id === userProfile.teacherId)?.name
-              : undefined;
+            // Determine user's staffId for filtering
+            const currentStaffId = userProfile?.staffId;
 
-            // Determine which teacherId to filter by
-            const filterTeacherId = canManageCurrentSubject
-              ? (availableTeachers.some(t => t.name === attendanceTeacherId) && attendanceTeacherId) ||
-              (availableTeachers.length > 0 ? availableTeachers[0].name : undefined)
-              : currentTeacherId;
+            // Determine which staffId to filter by
+            const filterStaffId = canManageCurrentSubject
+              ? attendanceStaffId || (availableTeachers.length > 0 ? availableTeachers[0].id : undefined)
+              : currentStaffId;
 
             // Month navigation functions
             const changeMonth = (delta: number) => {
@@ -1879,12 +1876,12 @@ const App: React.FC = () => {
                   {canManageCurrentSubject && availableTeachers.length > 0 && (
                     <div className="relative">
                       <select
-                        value={filterTeacherId || ''}
-                        onChange={(e) => setAttendanceTeacherId(e.target.value || undefined)}
+                        value={attendanceStaffId || ''}
+                        onChange={(e) => setAttendanceStaffId(e.target.value || undefined)}
                         className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
                       >
                         {availableTeachers.map(t => (
-                          <option key={t.id} value={t.name}>{t.name}</option>
+                          <option key={t.id} value={t.id}>{t.name}</option>
                         ))}
                       </select>
                       <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -2666,7 +2663,7 @@ const App: React.FC = () => {
                   userProfile={userProfile}
                   teachers={teachers}
                   selectedSubject={attendanceSubject}
-                  selectedTeacherId={attendanceTeacherId}
+                  selectedStaffId={attendanceStaffId}
                   currentDate={attendanceDate}
                   isAddStudentModalOpen={isAttendanceAddStudentModalOpen}
                   onCloseAddStudentModal={() => setIsAttendanceAddStudentModalOpen(false)}

@@ -9,7 +9,7 @@ import {
   ENGLISH_PERIOD_INFO,
   WEEKEND_PERIOD_INFO,
 } from '../../Timetable/constants';
-import { isTeacherMatch, isTeacherInSlotTeachers, isSlotTeacherMatch, isEnglishAssistantTeacher } from '../../../utils/teacherUtils';
+import { isTeacherMatch, isTeacherMatchWithStaffId, isTeacherInSlotTeachers, isSlotTeacherMatch, isEnglishAssistantTeacher } from '../../../utils/teacherUtils';
 
 interface TeacherDashboardProps {
   userProfile: UserProfile;
@@ -303,24 +303,25 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
 
       setMyClasses(classes);
 
-      // 3. 내 학생 로드 (teacherId 기반 - 학생관리 탭과 동일한 방식)
+      // 3. 내 학생 로드 (staffId 기반 - 학생관리 탭과 동일한 방식)
       const studentsSet = new Set<string>();
       const students: MyStudent[] = [];
 
       // enrollments 서브컬렉션에서 내가 담임인 학생 ID 수집
-      // teacherId가 나인 enrollment를 찾되, 담임인 수업만 필터링
+      // staffId로 enrollment를 찾되, 담임인 수업만 필터링
       const mainTeacherClasses = classes.filter(c => c.isMainTeacher);
       const mainClassNames = mainTeacherClasses.map(c => c.className);
 
       enrollmentsSnapshot.docs.forEach(doc => {
         const data = doc.data();
-        const enrollmentTeacherId = data.teacherId as string;
         const className = data.className as string;
         const studentId = doc.ref.parent.parent?.id;
 
-        // teacherId로 매칭 (실제로는 이름이 저장되어 있음)
-        // isTeacherMatch 유틸 함수를 사용하여 교차 검증
-        const isMyTeacher = isTeacherMatch(enrollmentTeacherId, teacherName, teacherKoreanName, staff);
+        // staffId로 매칭
+        const isMyTeacher = isTeacherMatchWithStaffId(
+          { staffId: data.staffId },
+          staffMember?.id
+        );
 
         // 담임 수업의 학생만 포함
         if (isMyTeacher && mainClassNames.includes(className) && studentId && !studentsSet.has(studentId)) {

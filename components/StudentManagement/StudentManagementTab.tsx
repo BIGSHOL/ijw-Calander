@@ -284,7 +284,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
     // 선생님 필터
     if (filters.teacher !== 'all') {
       result = result.filter((s) =>
-        s.enrollments.some((e) => e.teacherId === filters.teacher)
+        s.enrollments.some((e) => e.staffId === filters.teacher)
       );
     }
 

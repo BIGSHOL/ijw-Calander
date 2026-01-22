@@ -73,8 +73,8 @@ export const useCreateClass = () => {
         const enrollmentsRef = collection(db, COL_STUDENTS, studentId, 'enrollments');
         await addDoc(enrollmentsRef, {
           className,
-          teacherId: teacher,
-          teacher: teacher,
+          staffId: teacher, // teacher는 이제 staffId (문서 ID)
+          teacher: teacher,  // 호환성을 위해 유지
           subject,
           schedule,
           createdAt: new Date().toISOString(),
@@ -184,8 +184,8 @@ export const useUpdateClass = () => {
         const enrollmentPromises = enrollmentsSnapshot.docs.map(async (docSnap) => {
           await updateDoc(docSnap.ref, {
             className: newClassName,
-            teacherId: newTeacher,
-            teacher: newTeacher,
+            staffId: newTeacher, // newTeacher는 이제 staffId
+            teacher: newTeacher,  // 호환성을 위해 유지
             schedule: newSchedule,
             updatedAt: new Date().toISOString(),
           });
@@ -307,8 +307,8 @@ export const useManageClassStudents = () => {
           const enrollmentsRef = collection(db, COL_STUDENTS, studentId, 'enrollments');
           const enrollmentData: any = {
             className,
-            teacherId: teacher,
-            teacher: teacher,
+            staffId: teacher, // teacher는 이제 staffId
+            teacher: teacher,  // 호환성을 위해 유지
             subject,
             schedule,
             createdAt: new Date().toISOString(),

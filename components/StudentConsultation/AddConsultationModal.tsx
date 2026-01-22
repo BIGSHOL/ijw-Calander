@@ -89,8 +89,8 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
         if (!studentId || !selectedStudent || !subject || subject === 'other') return;
 
         const enrollment = selectedStudent.enrollments?.find(e => e.subject === subject);
-        if (enrollment?.teacherId) {
-            const teacher = staff.find(s => s.id === enrollment.teacherId || s.name === enrollment.teacherId);
+        if (enrollment?.staffId) {
+            const teacher = staff.find(s => s.id === enrollment.staffId);
             if (teacher) {
                 setConsultantId(teacher.id);
             }

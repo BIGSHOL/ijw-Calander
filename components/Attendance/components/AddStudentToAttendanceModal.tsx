@@ -11,7 +11,7 @@ interface StudentInfo {
     school?: string;
     grade?: string;
     enrollments?: Array<{
-        teacherId: string;
+        staffId: string;
         classId: string;
         className: string;
     }>;
@@ -21,7 +21,7 @@ interface Props {
     isOpen: boolean;
     onClose: () => void;
     allStudents: StudentInfo[];
-    currentTeacherId: string;
+    currentStaffId: string;
     currentTeacherName: string;
     existingStudentIds: string[]; // Already in this teacher's attendance
     onStudentAdded: () => void; // Callback to refresh data
@@ -31,7 +31,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
     isOpen,
     onClose,
     allStudents,
-    currentTeacherId,
+    currentStaffId,
     currentTeacherName,
     existingStudentIds,
     onStudentAdded,
@@ -86,7 +86,8 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
                     subject: 'english', // or determine based on context
                     classId: `manual-${today}`,
                     className: enrollmentType === 'temporary' ? '특강/보강' : '직접등록',
-                    teacherId: currentTeacherName,
+                    staffId: currentStaffId,
+                    teacher: currentStaffId,  // 호환성
                     days: [],
                     startDate: today,
                     endDate: enrollmentType === 'temporary' ? today : null,

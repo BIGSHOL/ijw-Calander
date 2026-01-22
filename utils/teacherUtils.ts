@@ -53,6 +53,24 @@ export const isTeacherMatch = (
 };
 
 /**
+ * staffId 기반 선생님 매칭 (마이그레이션 완료 후)
+ * - staffId로 직접 비교만 수행
+ *
+ * @param enrollment - enrollment 데이터 ({ staffId })
+ * @param currentStaffId - 현재 선생님의 staff ID
+ * @returns 매칭 여부
+ */
+export const isTeacherMatchWithStaffId = (
+  enrollment: { staffId?: string; [key: string]: any },
+  currentStaffId: string | undefined
+): boolean => {
+  if (!enrollment.staffId || !currentStaffId) {
+    return false;
+  }
+  return enrollment.staffId === currentStaffId;
+};
+
+/**
  * 수업의 slotTeachers에 특정 선생님이 포함되어 있는지 확인
  *
  * @param slotTeachers - 수업의 slotTeachers 객체

@@ -49,7 +49,7 @@ interface AttendanceManagerProps {
   userProfile: UserProfile | null;
   teachers?: Teacher[];
   selectedSubject: AttendanceSubject;
-  selectedTeacherId?: string;
+  selectedStaffId?: string;
   currentDate: Date;
   isAddStudentModalOpen?: boolean;
   onCloseAddStudentModal?: () => void;
@@ -81,7 +81,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   userProfile,
   teachers = [],
   selectedSubject,
-  selectedTeacherId,
+  selectedStaffId,
   currentDate,
   isAddStudentModalOpen,
   onCloseAddStudentModal
@@ -95,17 +95,13 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const canManageEnglish = hasPermission('attendance.manage_english');
   const isMasterOrAdmin = userProfile?.role === 'master' || userProfile?.role === 'admin';
 
-  // Determine user's teacherId for filtering (if they are a teacher)
+  // Determine user's staffId for filtering (if they are a teacher)
   // Uses explicit User-Teacher linking from user profile (set in System Settings -> Users)
-  const currentTeacherId = useMemo(() => {
+  const currentStaffId = useMemo(() => {
     if (!userProfile) return undefined;
-    // NEW: Use explicit teacherId from UserProfile (set via User Management UI)
-    if (userProfile.teacherId) {
-      const linkedTeacher = teachers.find(t => t.id === userProfile.teacherId);
-      return linkedTeacher?.name || undefined;  // Return teacher NAME for filtering (matches hook logic)
-    }
-    return undefined;
-  }, [userProfile, teachers]);
+    // Use staffId from UserProfile
+    return userProfile.staffId || undefined;
+  }, [userProfile]);
 
   // Determine if user can manage the current subject (for teacher dropdown access)
   const canManageCurrentSubject = useMemo(() => {
@@ -126,21 +122,15 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     });
   }, [teachers, selectedSubject, canManageCurrentSubject]);
 
-  // Determine which teacherId to filter by
-  const filterTeacherId = useMemo(() => {
+  // Determine which staffId to filter by
+  const filterStaffId = useMemo(() => {
     if (canManageCurrentSubject) {
-      // Validate selectedTeacherId against availableTeachers
-      const isValid = availableTeachers.some(t => t.name === selectedTeacherId);
-      if (isValid && selectedTeacherId) return selectedTeacherId;
-
-      // Fallback to first available teacher if selection is invalid/empty (e.g. after subject switch)
-      if (availableTeachers.length > 0) return availableTeachers[0].name;
-
-      return undefined;
+      // Use selectedStaffId directly
+      return selectedStaffId || (availableTeachers.length > 0 ? availableTeachers[0].id : undefined);
     }
     // Regular teacher - only show their own students
-    return currentTeacherId;
-  }, [canManageCurrentSubject, selectedTeacherId, currentTeacherId, availableTeachers]);
+    return currentStaffId;
+  }, [canManageCurrentSubject, selectedStaffId, currentStaffId, availableTeachers]);
 
   // Firebase Hooks - Pass yearMonth to load attendance records for current month
   const currentYearMonth = useMemo(() => {
@@ -148,7 +138,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   }, [currentDate]);
 
   const { students: allStudents, allStudents: rawAllStudents, isLoading: isLoadingStudents, refetch } = useAttendanceStudents({
-    teacherId: filterTeacherId,
+    staffId: filterStaffId,
     subject: selectedSubject,
     yearMonth: currentYearMonth,
     enabled: !!userProfile,
@@ -176,11 +166,11 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const examIds = useMemo(() => exams.map(e => e.id), [exams]);
   const { data: scoresByStudent } = useScoresByExams(studentIds, examIds);
 
-  // Resolve Teacher ID for Config
+  // Resolve Teacher by Staff ID for Config
   const targetTeacher = useMemo(() => {
-    if (!filterTeacherId) return undefined;
-    return teachers.find(t => t.name === filterTeacherId);
-  }, [filterTeacherId, teachers]);
+    if (!filterStaffId) return undefined;
+    return teachers.find(t => t.id === filterStaffId);
+  }, [filterStaffId, teachers]);
 
   const configId = targetTeacher ? `salary_${targetTeacher.id}` : 'salary';
 
@@ -214,7 +204,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
 
   // Group order state (per teacher, stored in localStorage)
-  const groupOrderKey = STORAGE_KEYS.attendanceGroupOrder(filterTeacherId || 'all', selectedSubject);
+  const groupOrderKey = STORAGE_KEYS.attendanceGroupOrder(filterStaffId || 'all', selectedSubject);
   const [groupOrder, setGroupOrder] = useState<string[]>(() => {
     try {
       return storage.getJSON<string[]>(groupOrderKey, []);
@@ -228,7 +218,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   };
 
   // Collapsed groups state (per teacher, stored in localStorage)
-  const collapsedGroupsKey = STORAGE_KEYS.attendanceCollapsedGroups(filterTeacherId || 'all', selectedSubject);
+  const collapsedGroupsKey = STORAGE_KEYS.attendanceCollapsedGroups(filterStaffId || 'all', selectedSubject);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
     try {
       const saved = storage.getJSON<string[]>(collapsedGroupsKey, []);
@@ -401,7 +391,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     // Ensure new fields are set
     const studentWithDefaults: Student = {
       ...student,
-      teacherIds: student.teacherIds || (currentTeacherId ? [currentTeacherId] : []),
+      teacherIds: student.teacherIds || (currentStaffId ? [currentStaffId] : []),
       subjects: student.subjects || [selectedSubject],
       ownerId: student.ownerId || userProfile?.uid,
     };
@@ -686,8 +676,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         isOpen={isAddStudentOpen}
         onClose={closeAddStudent}
         allStudents={rawAllStudents as any[] || []}
-        currentTeacherId={filterTeacherId || ''}
-        currentTeacherName={filterTeacherId || ''}
+        currentStaffId={filterStaffId || ''}
+        currentTeacherName={teachers.find(t => t.id === filterStaffId)?.name || ''}
         existingStudentIds={visibleStudents.map(s => s.id)}
         onStudentAdded={() => refetch()}
       />

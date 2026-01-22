@@ -168,10 +168,10 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
     };
 
     // Drag and Drop Handlers
-    const handleTeacherDragStart = (e: React.DragEvent, teacherId: string) => {
-        setDraggedTeacherId(teacherId);
+    const handleTeacherDragStart = (e: React.DragEvent, staffId: string) => {
+        setDraggedTeacherId(staffId);
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', teacherId);
+        e.dataTransfer.setData('text/plain', staffId);
     };
 
     const handleTeacherDragOver = (e: React.DragEvent) => {
@@ -275,7 +275,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                 <button
                                     onClick={() => setShowMigrationModal(true)}
                                     className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700 flex items-center gap-1"
-                                    title="teacherId → staffId 마이그레이션"
+                                    title="Enrollment 데이터 마이그레이션 (완료됨)"
                                 >
                                     <Database size={16} /> DB 마이그레이션
                                 </button>

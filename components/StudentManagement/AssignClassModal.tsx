@@ -95,7 +95,8 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                 classId: selectedClass.id,
                 subject: selectedSubject,
                 className: selectedClass.className,
-                teacherId: selectedClass.teacher,
+                staffId: selectedClass.teacher, // Staff document ID
+                teacher: selectedClass.teacher, // 호환성
                 schedule: selectedClass.schedule || [],
                 days: [], // 기본값 (나중에 수정 가능)
                 period: null,

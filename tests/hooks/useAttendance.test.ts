@@ -41,7 +41,7 @@ describe('useAttendance Hook', () => {
       teacherIds: ['teacher1'],
       enrollments: [
         {
-          teacherId: 'teacher1',
+          staffId: 'teacher1',
           className: '수학 A반',
           subject: 'math',
           days: ['월', '수'],
@@ -56,7 +56,7 @@ describe('useAttendance Hook', () => {
       teacherIds: ['teacher2'],
       enrollments: [
         {
-          teacherId: 'teacher2',
+          staffId: 'teacher2',
           className: '영어 B반',
           subject: 'english',
           days: ['화', '목'],
@@ -71,13 +71,13 @@ describe('useAttendance Hook', () => {
       teacherIds: ['teacher1', 'teacher2'],
       enrollments: [
         {
-          teacherId: 'teacher1',
+          staffId: 'teacher1',
           className: '수학 A반',
           subject: 'math',
           days: ['월', '수'],
         },
         {
-          teacherId: 'teacher2',
+          staffId: 'teacher2',
           className: '영어 C반',
           subject: 'english',
           days: ['금'],
@@ -130,7 +130,7 @@ describe('useAttendance Hook', () => {
     // Note: These tests are commented out due to complex mock state management
     // The hook has two-phase querying (students + attendance records) with dependencies
     // Main functionality is covered by other tests
-    it.skip('should filter students by teacherId - SKIPPED (complex internal behavior)', () => {
+    it.skip('should filter students by staffId - SKIPPED (complex internal behavior)', () => {
       // This test requires detailed understanding of enrollment filtering logic
       // which is an implementation detail rather than public API
     });

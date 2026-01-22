@@ -1,9 +1,9 @@
 // hooks/useAttendance.ts - Firebase hooks for Attendance data
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, doc, getDocs, getDoc, setDoc, deleteDoc, query, where, orderBy, deleteField } from 'firebase/firestore';
+import { collection, collectionGroup, doc, getDocs, getDoc, setDoc, deleteDoc, query, where, orderBy, deleteField } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Student, SalaryConfig, MonthlySettlement, AttendanceSubject } from '../components/Attendance/types';
-import { isTeacherMatch, isTeacherInSlotTeachers, isSlotTeacherMatch, isAssistantTeacher } from '../utils/teacherUtils';
+import { isTeacherMatch, isTeacherMatchWithStaffId, isTeacherInSlotTeachers, isSlotTeacherMatch, isAssistantTeacher } from '../utils/teacherUtils';
 
 // Classes collection for checking assistants
 const CLASSES_COLLECTION = 'classes';
@@ -89,7 +89,7 @@ async function fetchEnrollmentsForAttendanceStudents(students: Student[]): Promi
  * - ✅ All existing features 100% preserved
  */
 export const useAttendanceStudents = (options?: {
-    teacherId?: string;
+    staffId?: string;  // Staff document ID
     subject?: AttendanceSubject;
     yearMonth?: string; // YYYY-MM format, e.g. "2026-01"
     enabled?: boolean;
@@ -101,7 +101,7 @@ export const useAttendanceStudents = (options?: {
         error: studentsError,
         refetch: refetchStudents
     } = useQuery({
-        queryKey: ['attendanceStudents', options?.teacherId, options?.subject],
+        queryKey: ['attendanceStudents', options?.staffId, options?.subject],
         queryFn: async (): Promise<{ filtered: Student[], all: Student[] }> => {
             // === PERFORMANCE: 수업 기준으로 학생 찾기 ===
 
@@ -111,21 +111,13 @@ export const useAttendanceStudents = (options?: {
 
             let teacherName = '';
             let teacherKoreanName = '';
-            if (options?.teacherId) {
-                // teacherId로 staff 찾기 (ID 또는 이름으로 검색)
-                const staffMember = staffSnapshot.docs.find(doc =>
-                    doc.id === options.teacherId ||
-                    doc.data().name === options.teacherId ||
-                    doc.data().englishName === options.teacherId
-                );
+            if (options?.staffId) {
+                // staffId로 staff 찾기 (문서 ID만 사용)
+                const staffMember = staffSnapshot.docs.find(doc => doc.id === options.staffId);
                 if (staffMember) {
                     const staffData = staffMember.data();
                     teacherName = staffData.englishName || staffData.name || '';
                     teacherKoreanName = staffData.name || '';
-                } else {
-                    // staff를 못 찾으면 teacherId를 그대로 이름으로 사용
-                    teacherName = options.teacherId;
-                    teacherKoreanName = options.teacherId;
                 }
             }
 
@@ -148,49 +140,41 @@ export const useAttendanceStudents = (options?: {
 
             // Step 3: 해당 선생님의 수업만 필터링 (담임 또는 slotTeachers)
             let myClasses = allClasses;
-            console.log('[Attendance] Step 3: Total classes:', allClasses.length);
-            console.log('[Attendance] Teacher info:', { teacherId: options?.teacherId, teacherName, teacherKoreanName });
 
-            if (options?.teacherId) {
+            if (options?.staffId) {
                 myClasses = allClasses.filter(cls => {
                     // 담임인 경우
                     const isMain = isTeacherMatch(cls.teacher || '', teacherName, teacherKoreanName, staff);
                     // 부담임인 경우 (slotTeachers에 포함)
                     const isSlot = isTeacherInSlotTeachers(cls.slotTeachers, teacherName, teacherKoreanName, staff);
-
-                    console.log('[Attendance] Class check:', {
-                        className: cls.className,
-                        teacher: cls.teacher,
-                        isMain,
-                        isSlot,
-                        slotTeachers: cls.slotTeachers
-                    });
-
                     return isMain || isSlot;
                 });
             }
 
-            console.log('[Attendance] My classes:', myClasses.length, myClasses.map(c => c.className));
-
             // Step 4: 그 수업들의 className 목록
             const myClassNames = myClasses.map(cls => cls.className);
+            const myClassIds = myClasses.map(cls => cls.id);
             if (myClassNames.length === 0) {
-                console.log('[Attendance] No classes found for this teacher!');
                 return { filtered: [], all: [] };
             }
 
-            // Step 5: 해당 수업의 모든 enrollments 조회 (collectionGroup 1번)
-            const enrollmentsQuery = query(
-                collectionGroup(db, 'enrollments'),
-                where('className', 'in', myClassNames.slice(0, 10)) // Firestore 'in' 제한: 최대 10개
-            );
+            // Step 5: 해당 과목의 모든 enrollments 조회 (subject 기반 - useClasses와 동일한 방식)
+            // className 필터 대신 subject 필터 사용 (Firestore 복합 인덱스 호환)
+            const enrollmentsQuery = options?.subject
+                ? query(collectionGroup(db, 'enrollments'), where('subject', '==', options.subject))
+                : collectionGroup(db, 'enrollments');
             const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
 
-            // Step 6: 학생 ID 목록 수집 (중복 제거)
+            // Step 6: 학생 ID 목록 수집 - 클라이언트에서 className 필터링
             const studentIdsSet = new Set<string>();
             enrollmentsSnapshot.docs.forEach(doc => {
+                const data = doc.data();
+                const enrollmentClassName = data.className as string;
+                const enrollmentClassId = data.classId as string;
                 const studentId = doc.ref.parent.parent?.id;
-                if (studentId) {
+
+                // className 또는 classId로 필터링 (내 클래스에 속하는 학생만)
+                if (studentId && (myClassNames.includes(enrollmentClassName) || myClassIds.includes(enrollmentClassId))) {
                     studentIdsSet.add(studentId);
                 }
             });
@@ -230,31 +214,46 @@ export const useAttendanceStudents = (options?: {
                 const enrollments = (s as any).enrollments || [];
 
                 // 담임 또는 부담임으로 배정된 수업 필터링
-                const teacherEnrollments = options?.teacherId
+                // Step 3에서 이미 담임/부담임 수업을 myClasses로 필터링했으므로,
+                // 여기서는 myClassIds/myClassNames에 포함된 수업만 필터링
+                const teacherEnrollments = options?.staffId
                     ? enrollments.filter((e: any) => {
-                        // 1. 담임인 경우
-                        if (e.teacherId === options.teacherId) return true;
-
-                        // 2. 부담임인 경우 (slotTeachers 확인)
-                        const classData = classesMap.get(e.classId);
-                        return isTeacherInSlotTeachers(classData?.slotTeachers, teacherName, teacherKoreanName, staff);
+                        // myClasses에 포함된 수업인지 확인 (classId 또는 className으로)
+                        return myClassIds.includes(e.classId) || myClassNames.includes(e.className);
                     })
                     : enrollments;
 
-                // 수업명 목록
-                const teacherClasses = teacherEnrollments.map((e: any) => e.className);
+                // 수업별 담임/부담임 여부 확인 (myClasses에서 직접 체크)
+                const mainClasses: string[] = [];  // 담임 수업들
+                const slotClasses: string[] = [];  // 부담임 수업들
 
-                // slotTeacher 여부 확인
-                const isSlotTeacher = teacherEnrollments.every((e: any) => {
-                    const classData = classesMap.get(e.classId);
-                    return isAssistantTeacher(classData, e, teacherName, teacherKoreanName, staff);
+                teacherEnrollments.forEach((e: any) => {
+                    const classData = myClasses.find(c => c.id === e.classId || c.className === e.className);
+                    if (!classData) return;
+
+                    // 담임인지 확인 (수업의 teacher 필드가 현재 선생님인 경우)
+                    const isMain = isTeacherMatch(classData.teacher || '', teacherName, teacherKoreanName, staff);
+
+                    if (isMain) {
+                        if (!mainClasses.includes(e.className)) mainClasses.push(e.className);
+                    } else {
+                        if (!slotClasses.includes(e.className)) slotClasses.push(e.className);
+                    }
                 });
+
+                // 전체 수업이 모두 부담임인 경우
+                const isSlotTeacher = mainClasses.length === 0 && slotClasses.length > 0;
 
                 // 요일 추출
                 const teacherDays: string[] = [];
                 teacherEnrollments.forEach((e: any) => {
                     const classData = classesMap.get(e.classId);
-                    const isSlotTeacherForThisClass = e.teacherId !== options.teacherId;
+                    // staffId로 슬롯 선생님 여부 확인
+                    const isMainTeacherForThisClass = isTeacherMatchWithStaffId(
+                        { staffId: e.staffId },
+                        options.staffId
+                    );
+                    const isSlotTeacherForThisClass = !isMainTeacherForThisClass;
 
                     if (e.schedule && Array.isArray(e.schedule)) {
                         e.schedule.forEach((slot: string) => {
@@ -296,9 +295,14 @@ export const useAttendanceStudents = (options?: {
                     }
                 }
 
+                // 그룹명: 담임 수업 먼저, 부담임 수업 나중에 (담임/부담임 라벨 없음 - UI에서 표시)
+                const allClasses = [...mainClasses, ...slotClasses];
+
                 return {
                     ...s,
-                    group: teacherClasses.join(', '),
+                    group: allClasses.join(', '),
+                    mainClasses,      // 담임 수업 목록
+                    slotClasses,      // 부담임 수업 목록
                     days: teacherDays,
                     startDate: enrollmentStartDate,
                     endDate: enrollmentEndDate,
@@ -322,13 +326,13 @@ export const useAttendanceStudents = (options?: {
     // Phase 2: Fetch attendance records for current month
     // === 성능 최적화: 캐시 키에서 학생 ID 배열 제거 ===
     // 기존: studentData.filtered.map(s => s.id).join(',') -> 학생 1명 추가 시 캐시 미스
-    // 개선: yearMonth + teacherId + subject만 사용 -> 안정적인 캐시 히트
+    // 개선: yearMonth + staffId + subject만 사용 -> 안정적인 캐시 히트
     const {
         data: mergedStudents = studentData.filtered, // Use filtered list for merging
         isLoading: isLoadingRecords,
         refetch: refetchRecords
     } = useQuery({
-        queryKey: ['attendanceRecords', options?.yearMonth, options?.teacherId, options?.subject],
+        queryKey: ['attendanceRecords', options?.yearMonth, options?.staffId, options?.subject],
         queryFn: async (): Promise<Student[]> => {
             // If no students or no month, return basic students
             if (studentData.filtered.length === 0 || !options?.yearMonth) {

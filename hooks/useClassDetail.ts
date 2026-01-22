@@ -144,7 +144,7 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
           // classes에서 못 가져왔으면 enrollment에서 fallback
           if (!teacher) {
             const data = doc.data();
-            teacher = data.teacherId || data.teacher || '';
+            teacher = data.staffId || '';
             schedule = data.schedule || [];
           }
         });

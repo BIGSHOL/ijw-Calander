@@ -187,7 +187,8 @@ async function assignEnglishClasses(dryRun: boolean = false): Promise<void> {
                 const enrollmentData = {
                     subject: 'english',
                     className: className,
-                    teacherId: '', // 강사는 수동 지정 필요
+                    staffId: '', // 강사는 수동 지정 필요
+                    teacher: '', // 호환성
                     days: [],     // 스케줄은 수동 지정 필요
                     createdAt: new Date().toISOString(),
                     source: 'excel_migration', // 마이그레이션 소스 표시

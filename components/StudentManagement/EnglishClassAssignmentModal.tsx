@@ -499,7 +499,8 @@ const EnglishClassAssignmentModal: React.FC<EnglishClassAssignmentModalProps> = 
                         subject: 'english',
                         classId: item.matchedClassId,
                         className: item.matchedClassName,
-                        teacherId: '',
+                        staffId: '',
+                        teacher: '', // 호환성
                         days: [],
                         createdAt: new Date().toISOString(),
                         source: 'excel_import'

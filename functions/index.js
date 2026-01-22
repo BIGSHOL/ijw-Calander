@@ -150,7 +150,7 @@ exports.syncStudentsOnClassChange = functions
                 subject,
                 classId,
                 className,
-                teacherId: teacher,
+                staffId: teacher,  // Changed from teacherId to staffId (migration to staff collection)
                 days,
                 startDate: student.enrollmentDate || now.split("T")[0],
                 endDate: student.withdrawalDate || null,
