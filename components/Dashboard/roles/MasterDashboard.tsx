@@ -322,8 +322,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const isLoading = studentsLoading || attendanceLoading || weeklyAttendanceLoading || billingLoading || consultationLoading;
 
   return (
-    <div className="w-full h-full overflow-auto p-4 bg-gray-50">
-      <div className="max-w-[1600px] mx-auto">
+    <div className="w-full h-full overflow-auto p-3 bg-gray-50">
+      <div className="max-w-[1800px] mx-auto">
         {/* 헤더 */}
         <DashboardHeader
           userProfile={userProfile}
@@ -342,27 +342,27 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         ) : (
           <>
             {/* KPI 카드 그리드 - 더 컴팩트하게 */}
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-4">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
               {kpiCards.map((card) => (
                 <KPICard key={card.id} data={card} />
               ))}
             </div>
 
             {/* 차트 영역과 알림 센터 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
               {/* 과목별 학생 분포 */}
-              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-bold text-[#081429] mb-3">📊 과목별 학생 분포</h3>
-                <div className="space-y-3">
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                <h3 className="text-xs font-bold text-[#081429] mb-2">📊 과목별 학생 분포</h3>
+                <div className="space-y-2">
                   {subjectDistribution.map((item, idx) => (
                     <div key={idx}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-gray-700">{item.subject}</span>
-                        <span className="text-xs font-bold" style={{ color: item.color }}>{item.count}명</span>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[10px] font-medium text-gray-700">{item.subject}</span>
+                        <span className="text-[10px] font-bold" style={{ color: item.color }}>{item.count}명</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
                         <div
-                          className="h-2 rounded-full transition-all duration-500"
+                          className="h-1.5 rounded-full transition-all duration-500"
                           style={{
                             width: `${activeStudents > 0 ? (item.count / activeStudents) * 100 : 0}%`,
                             backgroundColor: item.color
@@ -375,53 +375,53 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               </div>
 
               {/* 주간 출석 추이 */}
-              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-bold text-[#081429] mb-3">📈 주간 출석 추이</h3>
-                <div className="flex items-end justify-between h-24 gap-1">
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                <h3 className="text-xs font-bold text-[#081429] mb-2">📈 주간 출석 추이</h3>
+                <div className="flex items-end justify-between h-20 gap-1">
                   {weeklyAttendance.map((day, idx) => {
                     return (
-                      <div key={idx} className="flex-1 flex flex-col items-center gap-1">
-                        <div className="w-full bg-gray-100 rounded-t flex items-end justify-center relative" style={{ height: '80px' }}>
+                      <div key={idx} className="flex-1 flex flex-col items-center gap-0.5">
+                        <div className="w-full bg-gray-100 rounded-t flex items-end justify-center relative" style={{ height: '60px' }}>
                           <div
                             className="w-full bg-gradient-to-t from-[#10b981] to-[#34d399] rounded-t transition-all duration-500"
                             style={{ height: `${day.rate}%` }}
                           />
                         </div>
-                        <span className="text-[10px] text-gray-500 font-medium">{day.day}</span>
+                        <span className="text-[9px] text-gray-500 font-medium">{day.day}</span>
                       </div>
                     );
                   })}
                 </div>
-                <div className="text-center mt-2 text-[10px] text-gray-400">
+                <div className="text-center mt-1.5 text-[9px] text-gray-400">
                   평균 출석률: {Math.round(weeklyAttendance.reduce((sum, d) => sum + d.rate, 0) / weeklyAttendance.length) || 0}%
                 </div>
               </div>
 
               {/* 알림 센터 */}
-              <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-bold text-[#081429] mb-3">⚠️ 주의 필요</h3>
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+                <h3 className="text-xs font-bold text-[#081429] mb-2">⚠️ 주의 필요</h3>
                 {/* Performance: rendering-conditional-render - && 대신 삼항 연산자 사용 */}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {overdueCount > 0 ? (
-                    <div className="flex items-center gap-2 text-xs text-red-600">
-                      <span className="w-1.5 h-1.5 bg-red-600 rounded-full" />
+                    <div className="flex items-center gap-1.5 text-[10px] text-red-600">
+                      <span className="w-1 h-1 bg-red-600 rounded-full" />
                       연체 학부모 {overdueCount}명 (독촉 필요)
                     </div>
                   ) : null}
                   {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 ? (
-                    <div className="flex items-center gap-2 text-xs text-orange-600">
-                      <span className="w-1.5 h-1.5 bg-orange-600 rounded-full" />
+                    <div className="flex items-center gap-1.5 text-[10px] text-orange-600">
+                      <span className="w-1 h-1 bg-orange-600 rounded-full" />
                       상담 필요 학생 {stats.studentsNeedingConsultation.length}명
                     </div>
                   ) : null}
                   {attendanceRate < 80 ? (
-                    <div className="flex items-center gap-2 text-xs text-yellow-600">
-                      <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full" />
+                    <div className="flex items-center gap-1.5 text-[10px] text-yellow-600">
+                      <span className="w-1 h-1 bg-yellow-600 rounded-full" />
                       오늘 출석률 낮음 ({attendanceRate}%)
                     </div>
                   ) : null}
                   {overdueCount === 0 && attendanceRate >= 80 && (!stats?.studentsNeedingConsultation || stats.studentsNeedingConsultation.length === 0) ? (
-                    <div className="text-xs text-gray-500">현재 주의가 필요한 항목이 없습니다.</div>
+                    <div className="text-[10px] text-gray-500">현재 주의가 필요한 항목이 없습니다.</div>
                   ) : null}
                 </div>
               </div>

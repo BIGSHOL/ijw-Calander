@@ -194,16 +194,18 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
   const [loading, setLoading] = useState(true);
   const [staff, setStaff] = useState<StaffMember[]>([]);
 
-  // 강사 이름 (staffMember.name 또는 userProfile.name)
-  const teacherName = staffMember?.name || userProfile.name;
-  const teacherKoreanName = staffMember?.koreanName || userProfile.koreanName;
+  // 강사 이름 (영어 이름 우선, 없으면 한글 이름)
+  const teacherName = staffMember?.englishName || staffMember?.name || userProfile.name;
+  const teacherKoreanName = staffMember?.name || userProfile.koreanName;
 
   // 선생님 이름 비교 헬퍼 함수 (한글/영어 이름 모두 체크)
   const isTeacherMatch = (teacherNameInClass: string, myName: string, myKoreanName?: string): boolean => {
     if (!teacherNameInClass) return false;
 
     // 정확히 일치하면 true
-    if (teacherNameInClass === myName || teacherNameInClass === myKoreanName) return true;
+    if (teacherNameInClass === myName || teacherNameInClass === myKoreanName) {
+      return true;
+    }
 
     // staff 데이터에서 해당 선생님 찾기
     const staffMember = staff?.find(s => s.name === teacherNameInClass || s.englishName === teacherNameInClass);
@@ -237,6 +239,9 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
   const loadTeacherData = async () => {
     if (!teacherName) return;
 
+    // staff 데이터가 로드될 때까지 대기
+    if (staff.length === 0) return;
+
     setLoading(true);
     try {
       // 1. 내 수업 로드 (teacher, mainTeacher 또는 slotTeachers에 포함된 수업)
@@ -253,19 +258,16 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         // 담임 여부 체크
         let isMainTeacher = false;
         let isMyClass = false;
-        let matchReason = '';
 
         // 1. mainTeacher 필드 체크 (우선순위 높음)
         if (data.mainTeacher && isTeacherMatch(data.mainTeacher, teacherName, teacherKoreanName)) {
           isMainTeacher = true;
           isMyClass = true;
-          matchReason = `mainTeacher(${data.mainTeacher})`;
         }
         // 2. teacher 필드 체크
         else if (data.teacher && isTeacherMatch(data.teacher, teacherName, teacherKoreanName)) {
           isMainTeacher = true;
           isMyClass = true;
-          matchReason = `teacher(${data.teacher})`;
         }
 
         // 3. slotTeachers 체크 (부담임)
@@ -278,13 +280,11 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
           if (isInSlotTeachers) {
             isMyClass = true;
             isMainTeacher = false; // slotTeachers에만 있으면 부담임
-            matchReason = `slotTeachers`;
           }
         }
 
         // 내 수업이면 추가
         if (isMyClass) {
-          console.log(`[TeacherDashboard] 수업 추가: ${data.className}, 이유: ${matchReason}, teacher: ${data.teacher}, mainTeacher: ${data.mainTeacher}`);
           classesMap.set(doc.id, {
             id: doc.id,
             className: data.className,
@@ -369,63 +369,63 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
   }
 
   return (
-    <div className="w-full h-full overflow-auto p-6 bg-gray-50">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full h-full overflow-auto p-3 bg-gray-50">
+      <div className="max-w-[1800px] mx-auto space-y-3">
         <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
 
         {/* 통계 카드 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500">전체 수업</h3>
-              <BookOpen className="w-5 h-5 text-blue-500" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-medium text-gray-500">전체 수업</h3>
+              <BookOpen className="w-4 h-4 text-blue-500" />
             </div>
-            <p className="text-3xl font-bold text-[#081429]">{myClasses.length}</p>
-            <p className="text-xs text-gray-400 mt-1">담당 중인 수업</p>
+            <p className="text-2xl font-bold text-[#081429]">{myClasses.length}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">담당 중인 수업</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500">오늘 수업</h3>
-              <Calendar className="w-5 h-5 text-green-500" />
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-medium text-gray-500">오늘 수업</h3>
+              <Calendar className="w-4 h-4 text-green-500" />
             </div>
-            <p className="text-3xl font-bold text-[#081429]">{todayClasses.length}</p>
-            <p className="text-xs text-gray-400 mt-1">{dayOfWeek}요일 수업</p>
+            <p className="text-2xl font-bold text-[#081429]">{todayClasses.length}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{dayOfWeek}요일 수업</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500">내 학생</h3>
-              <Users className="w-5 h-5 text-purple-500" />
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-medium text-gray-500">내 학생</h3>
+              <Users className="w-4 h-4 text-purple-500" />
             </div>
-            <p className="text-3xl font-bold text-[#081429]">{myStudents.length}</p>
-            <p className="text-xs text-gray-400 mt-1">담당 학생 수</p>
+            <p className="text-2xl font-bold text-[#081429]">{myStudents.length}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">담당 학생 수</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500">상담 예정</h3>
-              <Clock className="w-5 h-5 text-orange-500" />
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-medium text-gray-500">상담 예정</h3>
+              <Clock className="w-4 h-4 text-orange-500" />
             </div>
-            <p className="text-3xl font-bold text-[#081429]">0</p>
-            <p className="text-xs text-gray-400 mt-1">예정된 상담</p>
+            <p className="text-2xl font-bold text-[#081429]">0</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">예정된 상담</p>
           </div>
         </div>
 
         {/* 내 수업 목록 */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-4">
-            <BookOpen className="w-5 h-5 text-[#081429]" />
-            <h2 className="text-lg font-bold text-[#081429]">내 수업</h2>
+        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen className="w-4 h-4 text-[#081429]" />
+            <h2 className="text-sm font-bold text-[#081429]">내 수업</h2>
           </div>
 
           {myClasses.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>담당 중인 수업이 없습니다</p>
+            <div className="text-center py-8 text-gray-400">
+              <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">담당 중인 수업이 없습니다</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {myClasses.map(cls => {
                 // 내가 담당하는 스케줄만 필터링 (담임/부담임 구분 없이)
                 let mySchedule = cls.schedule;
@@ -453,26 +453,26 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                 return (
                   <div
                     key={cls.id}
-                    className={`border rounded-lg p-4 transition-all ${
+                    className={`border rounded-lg p-2 transition-all ${
                       isTodayClass
                         ? 'border-[#fdb813] bg-amber-50 shadow-md ring-2 ring-[#fdb813]/20'
                         : 'border-gray-200 hover:border-[#fdb813] hover:shadow-md'
                     }`}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-[#081429]">{cls.className}</h3>
+                    <div className="flex items-start justify-between mb-1">
+                      <div className="flex items-center gap-1">
+                        <h3 className="text-sm font-bold text-[#081429]">{cls.className}</h3>
                         {cls.isMainTeacher ? (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
+                          <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
                             담임
                           </span>
                         ) : (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-bold">
+                          <span className="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-600 font-bold">
                             부담임
                           </span>
                         )}
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                         cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
                         cls.subject === 'english' ? 'bg-green-100 text-green-700' :
                         cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
@@ -484,15 +484,15 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                       </span>
                     </div>
 
-                    <div className="space-y-2 text-sm text-gray-600">
+                    <div className="space-y-1 text-xs text-gray-600">
                       <div className="flex items-center gap-1">
-                        <Users className="w-4 h-4" />
+                        <Users className="w-3 h-3" />
                         <span>{cls.studentCount || 0}명</span>
                       </div>
 
                       {/* 스케줄 표시 */}
                       {scheduleEntries.length > 0 ? (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-0.5">
                           {scheduleEntries.map((entry, idx) => (
                             <div key={idx} className="flex items-center gap-1">
                               <div className="flex gap-0.5">
@@ -501,7 +501,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                                   return (
                                     <span
                                       key={dayIdx}
-                                      className="text-[10px] px-1.5 py-0.5 rounded font-bold"
+                                      className="text-[9px] px-1 py-0.5 rounded font-bold"
                                       style={{ backgroundColor: colors.bg, color: colors.text }}
                                     >
                                       {day}
@@ -509,14 +509,14 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                                   );
                                 })}
                               </div>
-                              <span className="text-xs text-gray-500">{entry.label}</span>
+                              <span className="text-[10px] text-gray-500">{entry.label}</span>
                             </div>
                           ))}
                         </div>
                       ) : (
                         <div className="flex items-center gap-1 text-gray-400 italic">
-                          <Calendar className="w-4 h-4" />
-                          <span className="text-xs">시간표 미지정</span>
+                          <Calendar className="w-3 h-3" />
+                          <span className="text-[10px]">시간표 미지정</span>
                         </div>
                       )}
                     </div>
@@ -528,29 +528,29 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         </div>
 
         {/* 내 학생 목록 */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="w-5 h-5 text-[#081429]" />
-            <h2 className="text-lg font-bold text-[#081429]">내 학생</h2>
+        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-2">
+            <Users className="w-4 h-4 text-[#081429]" />
+            <h2 className="text-sm font-bold text-[#081429]">내 학생</h2>
           </div>
 
           {myStudents.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>담당 학생이 없습니다</p>
+            <div className="text-center py-8 text-gray-400">
+              <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">담당 학생이 없습니다</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
               {myStudents.slice(0, 20).map(student => (
                 <div
                   key={student.id}
-                  className="border border-gray-200 rounded-lg p-3 hover:border-[#fdb813] hover:shadow-sm transition-all"
+                  className="border border-gray-200 rounded-lg p-2 hover:border-[#fdb813] hover:shadow-sm transition-all"
                 >
-                  <div className="font-medium text-[#081429]">{student.name}</div>
+                  <div className="text-xs font-medium text-[#081429]">{student.name}</div>
                   {student.englishName && (
-                    <div className="text-xs text-gray-500">{student.englishName}</div>
+                    <div className="text-[10px] text-gray-500">{student.englishName}</div>
                   )}
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="text-[10px] text-gray-400 mt-0.5">
                     {student.school} {student.grade}
                   </div>
                 </div>
@@ -559,7 +559,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
           )}
 
           {myStudents.length > 20 && (
-            <div className="text-center mt-4 text-sm text-gray-500">
+            <div className="text-center mt-2 text-xs text-gray-500">
               외 {myStudents.length - 20}명
             </div>
           )}

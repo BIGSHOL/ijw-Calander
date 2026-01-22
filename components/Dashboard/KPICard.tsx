@@ -21,11 +21,11 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
 
     switch (trend) {
       case 'up':
-        return <TrendingUp className="w-4 h-4 text-green-600" />;
+        return <TrendingUp className="w-3 h-3 text-green-600" />;
       case 'down':
-        return <TrendingDown className="w-4 h-4 text-red-600" />;
+        return <TrendingDown className="w-3 h-3 text-red-600" />;
       case 'stable':
-        return <Minus className="w-4 h-4 text-gray-400" />;
+        return <Minus className="w-3 h-3 text-gray-400" />;
       default:
         return null;
     }
@@ -48,38 +48,38 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
 
   return (
     <div
-      className={`bg-white rounded-xl p-6 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
+      className={`bg-white rounded-lg p-3 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
         onClick ? 'cursor-pointer hover:border-gray-300' : ''
       }`}
       onClick={onClick}
     >
       {/* 아이콘과 라벨 */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-medium text-gray-600">{label}</span>
-        {icon && <span className="text-2xl">{icon}</span>}
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-xs font-medium text-gray-600">{label}</span>
+        {icon && <span className="text-lg">{icon}</span>}
       </div>
 
       {/* 메인 값 */}
-      <div className="mb-2">
-        <span className="text-3xl font-bold" style={{ color }}>
+      <div className="mb-1">
+        <span className="text-2xl font-bold" style={{ color }}>
           {value}
         </span>
       </div>
 
       {/* 서브 값 및 트렌드 */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {trend && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             {getTrendIcon(trend)}
             {trendValue && (
-              <span className={`text-sm font-medium ${getTrendColor(trend)}`}>
+              <span className={`text-[10px] font-medium ${getTrendColor(trend)}`}>
                 {trendValue}
               </span>
             )}
           </div>
         )}
         {subValue && (
-          <span className="text-sm text-gray-500">{subValue}</span>
+          <span className="text-[10px] text-gray-500">{subValue}</span>
         )}
       </div>
     </div>

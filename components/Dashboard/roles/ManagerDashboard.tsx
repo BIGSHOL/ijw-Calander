@@ -18,6 +18,7 @@ interface ClassInfo {
   mainTeacher?: string;
   studentCount?: number;
   schedule?: { day: string; periodId: string; }[];
+  slotTeachers?: Record<string, string>;
 }
 
 interface TeacherStats {
@@ -40,6 +41,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [teacherStats, setTeacherStats] = useState<TeacherStats[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTeacher, setSelectedTeacher] = useState<string>('all');
 
   useEffect(() => {
     loadDashboardData();
@@ -79,6 +81,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
           mainTeacher: data.mainTeacher,
           studentCount: enrollmentsSnapshot.size,
           schedule: data.schedule || [],
+          slotTeachers: data.slotTeachers,
         });
       }
 
@@ -120,8 +123,57 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
   const today = new Date();
   const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][today.getDay()];
 
+  // 선생님 필터링 함수
+  const isTeacherInClass = (cls: ClassInfo, teacherFilter: string): boolean => {
+    if (teacherFilter === 'all') return true;
+
+    // 담임 체크
+    if (cls.teacher === teacherFilter || cls.mainTeacher === teacherFilter) return true;
+
+    // 부담임 체크 (slotTeachers)
+    if (cls.slotTeachers) {
+      const slotTeacherNames = Object.values(cls.slotTeachers);
+      if (slotTeacherNames.includes(teacherFilter)) return true;
+    }
+
+    return false;
+  };
+
+  // 스케줄 필터링 함수 (선생님이 담당하는 교시만)
+  const filterScheduleByTeacher = (
+    schedule: { day: string; periodId: string; }[] | undefined,
+    teacher: string | undefined,
+    mainTeacher: string | undefined,
+    slotTeachers: Record<string, string> | undefined,
+    teacherFilter: string
+  ): { day: string; periodId: string; }[] | undefined => {
+    if (!schedule || teacherFilter === 'all') return schedule;
+
+    // slotTeachers가 있으면 교시별로 필터링
+    if (slotTeachers && Object.keys(slotTeachers).length > 0) {
+      return schedule.filter(slot => {
+        const slotKey = `${slot.day}-${slot.periodId}`;
+        const slotTeacher = slotTeachers[slotKey];
+
+        // slotTeacher가 지정되어 있으면 그것과 비교
+        if (slotTeacher) {
+          return slotTeacher === teacherFilter;
+        }
+
+        // slotTeacher가 없는 교시는 담임이 담당
+        return (teacher === teacherFilter || mainTeacher === teacherFilter);
+      });
+    }
+
+    // slotTeachers가 없으면 전체 스케줄 반환 (담임이면)
+    return schedule;
+  };
+
+  // 필터링된 수업 목록
+  const filteredClasses = classes.filter(cls => isTeacherInClass(cls, selectedTeacher));
+
   // 오늘 수업
-  const todayClasses = classes.filter(cls =>
+  const todayClasses = filteredClasses.filter(cls =>
     cls.schedule?.some(s => s.day === dayOfWeek)
   );
 
@@ -139,85 +191,85 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
   }
 
   return (
-    <div className="w-full h-full overflow-auto p-6 bg-gray-50">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full h-full overflow-auto p-3 bg-gray-50">
+      <div className="max-w-[1800px] mx-auto space-y-3">
         <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
 
         {/* 통계 카드 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500">전체 학생</h3>
-              <Users className="w-5 h-5 text-blue-500" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-medium text-gray-500">전체 학생</h3>
+              <Users className="w-4 h-4 text-blue-500" />
             </div>
-            <p className="text-3xl font-bold text-[#081429]">{totalStudents}</p>
-            <p className="text-xs text-gray-400 mt-1">재원 {activeStudents}명</p>
+            <p className="text-2xl font-bold text-[#081429]">{totalStudents}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">재원 {activeStudents}명</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500">전체 수업</h3>
-              <BookOpen className="w-5 h-5 text-green-500" />
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-medium text-gray-500">전체 수업</h3>
+              <BookOpen className="w-4 h-4 text-green-500" />
             </div>
-            <p className="text-3xl font-bold text-[#081429]">{totalClasses}</p>
-            <p className="text-xs text-gray-400 mt-1">운영 중인 수업</p>
+            <p className="text-2xl font-bold text-[#081429]">{totalClasses}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">운영 중인 수업</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500">오늘 수업</h3>
-              <Calendar className="w-5 h-5 text-purple-500" />
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-medium text-gray-500">오늘 수업</h3>
+              <Calendar className="w-4 h-4 text-purple-500" />
             </div>
-            <p className="text-3xl font-bold text-[#081429]">{todayClasses.length}</p>
-            <p className="text-xs text-gray-400 mt-1">{dayOfWeek}요일 수업</p>
+            <p className="text-2xl font-bold text-[#081429]">{todayClasses.length}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{dayOfWeek}요일 수업</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500">강사</h3>
-              <UserCheck className="w-5 h-5 text-orange-500" />
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-xs font-medium text-gray-500">강사</h3>
+              <UserCheck className="w-4 h-4 text-orange-500" />
             </div>
-            <p className="text-3xl font-bold text-[#081429]">{teacherStats.length}</p>
-            <p className="text-xs text-gray-400 mt-1">활동 중인 강사</p>
+            <p className="text-2xl font-bold text-[#081429]">{teacherStats.length}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">활동 중인 강사</p>
           </div>
         </div>
 
         {/* 강사별 성과 */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-[#081429]" />
-            <h2 className="text-lg font-bold text-[#081429]">강사별 성과</h2>
+        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4 text-[#081429]" />
+            <h2 className="text-sm font-bold text-[#081429]">강사별 성과</h2>
           </div>
 
           {teacherStats.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <UserCheck className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>강사 데이터가 없습니다</p>
+            <div className="text-center py-8 text-gray-400">
+              <UserCheck className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">강사 데이터가 없습니다</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-bold text-gray-700">강사명</th>
-                    <th className="text-center py-3 px-4 text-sm font-bold text-gray-700">담당 수업</th>
-                    <th className="text-center py-3 px-4 text-sm font-bold text-gray-700">담당 학생</th>
-                    <th className="text-center py-3 px-4 text-sm font-bold text-gray-700">평균 학생/수업</th>
+                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">강사명</th>
+                    <th className="text-center py-2 px-2 text-xs font-bold text-gray-700">담당 수업</th>
+                    <th className="text-center py-2 px-2 text-xs font-bold text-gray-700">담당 학생</th>
+                    <th className="text-center py-2 px-2 text-xs font-bold text-gray-700">평균 학생/수업</th>
                   </tr>
                 </thead>
                 <tbody>
                   {teacherStats.map((teacher, index) => (
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-[#081429]">{teacher.name}</div>
+                      <td className="py-2 px-2">
+                        <div className="text-xs font-medium text-[#081429]">{teacher.name}</div>
                       </td>
-                      <td className="text-center py-3 px-4 text-gray-600">
+                      <td className="text-center py-2 px-2 text-xs text-gray-600">
                         {teacher.classCount}개
                       </td>
-                      <td className="text-center py-3 px-4 text-gray-600">
+                      <td className="text-center py-2 px-2 text-xs text-gray-600">
                         {teacher.studentCount}명
                       </td>
-                      <td className="text-center py-3 px-4 text-gray-600">
+                      <td className="text-center py-2 px-2 text-xs text-gray-600">
                         {teacher.classCount > 0
                           ? (teacher.studentCount / teacher.classCount).toFixed(1)
                           : '0'}명
@@ -231,27 +283,53 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
         </div>
 
         {/* 수업 현황 */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-4">
-            <BookOpen className="w-5 h-5 text-[#081429]" />
-            <h2 className="text-lg font-bold text-[#081429]">수업 현황</h2>
+        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-[#081429]" />
+              <h2 className="text-sm font-bold text-[#081429]">수업 현황</h2>
+            </div>
+
+            {/* 선생님 필터 */}
+            <select
+              value={selectedTeacher}
+              onChange={(e) => setSelectedTeacher(e.target.value)}
+              className="px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+            >
+              <option value="all">전체 선생님</option>
+              {teacherStats.map(teacher => (
+                <option key={teacher.name} value={teacher.name}>
+                  {teacher.name} ({teacher.classCount}개 수업)
+                </option>
+              ))}
+            </select>
           </div>
 
-          {classes.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>수업 데이터가 없습니다</p>
+          {filteredClasses.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">수업 데이터가 없습니다</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {classes.slice(0, 12).map(cls => (
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {filteredClasses.slice(0, 12).map(cls => {
+                // 선택된 선생님이 담당하는 스케줄만 필터링
+                const filteredSchedule = filterScheduleByTeacher(
+                  cls.schedule,
+                  cls.teacher,
+                  cls.mainTeacher,
+                  cls.slotTeachers,
+                  selectedTeacher
+                );
+
+                return (
                 <div
                   key={cls.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-[#fdb813] hover:shadow-md transition-all"
+                  className="border border-gray-200 rounded-lg p-2 hover:border-[#fdb813] hover:shadow-md transition-all"
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-bold text-[#081429]">{cls.className}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className="text-sm font-bold text-[#081429]">{cls.className}</h3>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                       cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
                       cls.subject === 'english' ? 'bg-green-100 text-green-700' :
                       cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
@@ -263,32 +341,33 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
                     </span>
                   </div>
 
-                  <div className="space-y-1 text-sm text-gray-600">
+                  <div className="space-y-0.5 text-xs text-gray-600">
                     <div className="flex items-center gap-1">
-                      <UserCheck className="w-4 h-4" />
+                      <UserCheck className="w-3 h-3" />
                       <span>{cls.teacher || cls.mainTeacher || '미지정'}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
+                      <Users className="w-3 h-3" />
                       <span>{cls.studentCount || 0}명</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {cls.schedule && cls.schedule.length > 0
-                          ? cls.schedule.map(s => s.day).join(', ')
+                      <Calendar className="w-3 h-3" />
+                      <span className="text-[10px]">
+                        {filteredSchedule && filteredSchedule.length > 0
+                          ? filteredSchedule.map(s => s.day).join(', ')
                           : '시간표 미지정'}
                       </span>
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
-          {classes.length > 12 && (
-            <div className="text-center mt-4 text-sm text-gray-500">
-              외 {classes.length - 12}개 수업
+          {filteredClasses.length > 12 && (
+            <div className="text-center mt-2 text-xs text-gray-500">
+              외 {filteredClasses.length - 12}개 수업
             </div>
           )}
         </div>
