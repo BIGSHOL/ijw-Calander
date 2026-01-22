@@ -1,9 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { UserProfile, StaffMember, DashboardRole } from '../../types';
 import MasterDashboard from './roles/MasterDashboard';
 import TeacherDashboard from './roles/TeacherDashboard';
 import StaffDashboard from './roles/StaffDashboard';
 import ManagerDashboard from './roles/ManagerDashboard';
+import StaffSelector from './StaffSelector';
+import { useStaff } from '../../hooks/useStaff';
 
 interface DashboardTabProps {
   userProfile: UserProfile;
@@ -19,6 +21,10 @@ interface DashboardTabProps {
  * - 역할이 불명확해도 기본 대시보드 제공
  */
 const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember }) => {
+  // 다른 직원 대시보드 보기 상태 (MASTER, Admin만 가능)
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const { staff: allStaff, loading: staffLoading } = useStaff();
+
   // userProfile이 없는 경우 (로딩 중이거나 오류)
   if (!userProfile) {
     return (
@@ -31,10 +37,27 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
     );
   }
 
+  // 다른 직원 대시보드 보기 권한 확인 (MASTER, Admin만)
+  const canViewOtherDashboards = useMemo(() => {
+    return userProfile.role === 'master' || userProfile.role === 'admin';
+  }, [userProfile.role]);
+
+  // 선택된 직원 정보 가져오기
+  const selectedStaff = useMemo(() => {
+    if (!selectedStaffId || !allStaff) return null;
+    return allStaff.find(s => s.id === selectedStaffId);
+  }, [selectedStaffId, allStaff]);
+
+  // 표시할 직원 정보 결정 (선택된 직원 또는 본인)
+  const displayStaffMember = selectedStaff || staffMember;
+  const displayUserProfile = selectedStaff
+    ? { ...userProfile, role: selectedStaff.systemRole || 'user' } as UserProfile
+    : userProfile;
+
   // 역할 결정 로직
   const dashboardRole: DashboardRole = useMemo(() => {
-    const systemRole = userProfile?.role;
-    const jobRole = staffMember?.role;
+    const systemRole = displayUserProfile?.role;
+    const jobRole = displayStaffMember?.role;
 
     // Master와 Admin은 같은 master 대시보드
     if (systemRole === 'master' || systemRole === 'admin') {
@@ -47,7 +70,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
     }
 
     // 강사는 teacher 대시보드
-    if (jobRole === 'teacher') {
+    if (jobRole === 'teacher' || jobRole === '강사') {
       return 'teacher';
     }
 
@@ -58,28 +81,49 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
 
     // 기본값: staff (역할이 명확하지 않은 경우)
     return 'staff';
-  }, [userProfile?.role, staffMember?.role]);
+  }, [displayUserProfile?.role, displayStaffMember?.role]);
 
   // 에러 바운더리: 렌더링 중 오류 발생 시 대체 UI
   try {
     // 역할별 대시보드 렌더링
-    switch (dashboardRole) {
-      case 'master':
-        return <MasterDashboard userProfile={userProfile} staffMember={staffMember} />;
+    const dashboardContent = (() => {
+      switch (dashboardRole) {
+        case 'master':
+          return <MasterDashboard userProfile={displayUserProfile} staffMember={displayStaffMember} />;
 
-      case 'teacher':
-        return <TeacherDashboard userProfile={userProfile} staffMember={staffMember} />;
+        case 'teacher':
+          return <TeacherDashboard userProfile={displayUserProfile} staffMember={displayStaffMember} />;
 
-      case 'staff':
-        return <StaffDashboard userProfile={userProfile} staffMember={staffMember} />;
+        case 'staff':
+          return <StaffDashboard userProfile={displayUserProfile} staffMember={displayStaffMember} />;
 
-      case 'manager':
-        return <ManagerDashboard userProfile={userProfile} staffMember={staffMember} />;
+        case 'manager':
+          return <ManagerDashboard userProfile={displayUserProfile} staffMember={displayStaffMember} />;
 
-      default:
-        // 알 수 없는 역할인 경우 기본 화면
-        return <StaffDashboard userProfile={userProfile} staffMember={staffMember} />;
+        default:
+          // 알 수 없는 역할인 경우 기본 화면
+          return <StaffDashboard userProfile={displayUserProfile} staffMember={displayStaffMember} />;
+      }
+    })();
+
+    // MASTER/Admin은 직원 선택기와 함께 렌더링
+    if (canViewOtherDashboards) {
+      return (
+        <div className="w-full h-full overflow-auto bg-gray-50">
+          <StaffSelector
+            allStaff={allStaff || []}
+            selectedStaffId={selectedStaffId}
+            onSelectStaff={setSelectedStaffId}
+            currentUserName={staffMember?.name}
+            loading={staffLoading}
+          />
+          {dashboardContent}
+        </div>
+      );
     }
+
+    // 일반 사용자는 본인 대시보드만
+    return dashboardContent;
   } catch (error) {
     console.error('Dashboard 렌더링 오류:', error);
 

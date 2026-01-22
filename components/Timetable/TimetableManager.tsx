@@ -522,17 +522,17 @@ const TimetableManager = ({
     // Math Timetable Inner Component (uses simulation context)
     const MathTimetableContent = () => {
         const simulation = useMathSimulation();
-        const { isSimulationMode, enterSimulationMode, exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName } = simulation;
+        const { isScenarioMode, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive, setCurrentScenarioName } = simulation;
         const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
         const [loading, setLoading] = useState(false);
 
         const handleToggleSimulation = async () => {
-            if (isSimulationMode) {
-                exitSimulationMode();
+            if (isScenarioMode) {
+                exitScenarioMode();
             } else {
                 setLoading(true);
                 try {
-                    await enterSimulationMode();
+                    await enterScenarioMode();
                 } catch (e) {
                     console.error('시뮬레이션 모드 진입 실패:', e);
                     alert('시뮬레이션 모드 진입에 실패했습니다.');
@@ -609,7 +609,7 @@ const TimetableManager = ({
                         mode={mode}
                         setMode={setMode}
                         canEdit={canEditMath}
-                        isSimulationMode={isSimulationMode}
+                        isSimulationMode={isScenarioMode}
                         onToggleSimulation={handleToggleSimulation}
                         onCopyLiveToDraft={handleCopyLiveToDraft}
                         onPublishDraftToLive={handlePublishDraftToLive}

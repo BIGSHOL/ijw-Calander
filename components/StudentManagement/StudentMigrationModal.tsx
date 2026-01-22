@@ -11,6 +11,7 @@ import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { UnifiedStudent } from '../../types';
 import { read, utils } from 'xlsx';
+import { generateAttendanceNumber } from '../../utils/attendanceNumberGenerator';
 
 interface StudentMigrationModalProps {
   onClose: () => void;
@@ -97,27 +98,36 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
       setRawData(data);
       setTotalCount(data.length);
 
-      // 기존 학생과 매칭 분석 (문서 ID 기준)
+      // 기존 학생과 매칭 분석 (출결번호 기준)
       const studentsRef = collection(db, 'students');
       const existingSnapshot = await getDocs(studentsRef);
-      const existingDocIds = new Set<string>();
+      const existingAttendanceNumbers = new Set<string>();
+      const existingStudents = new Map<string, any>();
 
       existingSnapshot.forEach(docSnap => {
-        // 문서 ID를 기준으로 체크
-        existingDocIds.add(docSnap.id);
+        const student = docSnap.data() as UnifiedStudent;
+        if (student.attendanceNumber) {
+          existingAttendanceNumbers.add(student.attendanceNumber);
+        }
+        existingStudents.set(docSnap.id, student);
       });
 
-      // 신규/업데이트 카운트 (문서 ID 기준으로 판단)
+      // 신규/업데이트 카운트 (출결번호 기준으로 판단)
       let newCnt = 0;
       let updateCnt = 0;
 
       data.forEach(item => {
-        // 문서 ID 생성: 이름_학교_학년 형식
-        const docId = `${item.이름}_${item.학교 || '미정'}_${item.학년 || '0'}`;
-        if (existingDocIds.has(docId)) {
+        // Excel에 출결번호가 있으면 그것 사용, 없으면 전화번호로 생성
+        let attendanceNumber = item.출결번호;
+        if (!attendanceNumber) {
+          attendanceNumber = generateAttendanceNumber(item.보호자연락처, existingAttendanceNumbers);
+        }
+
+        if (existingAttendanceNumbers.has(attendanceNumber)) {
           updateCnt++;
         } else {
           newCnt++;
+          existingAttendanceNumbers.add(attendanceNumber);
         }
       });
 
@@ -151,18 +161,21 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
     setProgress(0);
 
     try {
-      // 기존 학생 데이터 로드 (문서 ID 기준)
+      // 기존 학생 데이터 로드 (출결번호 기준)
       const studentsRef = collection(db, 'students');
       const existingSnapshot = await getDocs(studentsRef);
-      const existingStudentsMap = new Map<string, any>();
+      const existingStudentsByAttendance = new Map<string, any>();
+      const existingAttendanceNumbers = new Set<string>();
 
       existingSnapshot.forEach(docSnap => {
         const student = docSnap.data() as UnifiedStudent;
-        // 문서 ID를 키로 사용하여 매핑
-        existingStudentsMap.set(docSnap.id, {
-          ...student,
-          _firestoreDocId: docSnap.id
-        });
+        if (student.attendanceNumber) {
+          existingStudentsByAttendance.set(student.attendanceNumber, {
+            ...student,
+            _firestoreDocId: docSnap.id
+          });
+          existingAttendanceNumbers.add(student.attendanceNumber);
+        }
       });
 
       // 데이터 변환 및 배치 저장
@@ -178,14 +191,18 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
         batchData.forEach(excelData => {
           const now = new Date().toISOString();
 
-          // 문서 ID 생성: 이름_학교_학년 형식 (항상 이 패턴 사용)
-          const docId = `${excelData.이름}_${excelData.학교 || '미정'}_${excelData.학년 || '0'}`;
+          // 출결번호 생성 또는 Excel에서 가져오기
+          let attendanceNumber = excelData.출결번호;
+          if (!attendanceNumber) {
+            attendanceNumber = generateAttendanceNumber(excelData.보호자연락처, existingAttendanceNumbers);
+            existingAttendanceNumbers.add(attendanceNumber);
+          }
 
-          // 기존 문서가 있으면 가져옴 (문서 ID 기준)
-          const existingStudent = existingStudentsMap.get(docId) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
+          // 기존 학생 찾기 (출결번호 기준)
+          const existingStudent = existingStudentsByAttendance.get(attendanceNumber) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
 
-          // ID는 항상 문서 ID와 동일
-          const id = docId;
+          // 문서 ID: 기존 학생이면 기존 ID 사용, 신규면 출결번호 사용
+          const id = existingStudent?._firestoreDocId || attendanceNumber;
 
           // 주소 통합
           const address = [excelData.주소1, excelData.주소2]
@@ -257,6 +274,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             school: excelData.학교 || existingStudent?.school,
             grade: grade || existingStudent?.grade,
             gender: excelData.성별 === '남' ? 'male' : excelData.성별 === '여' ? 'female' : existingStudent?.gender,
+            attendanceNumber,  // 출결번호 추가
 
             // 연락처 정보
             studentPhone: excelData.원생연락처 || existingStudent?.studentPhone,
