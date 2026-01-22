@@ -42,6 +42,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const [studentAttendanceDays, setStudentAttendanceDays] = useState<Record<string, string[]>>({});  // 학생별 등원 요일 (수학용)
   const [expandedStudentId, setExpandedStudentId] = useState<string | null>(null);  // 요일 설정 펼친 학생
   const [studentUnderlines, setStudentUnderlines] = useState<Record<string, boolean>>({});  // 학생별 밑줄 강조 (영어용)
+  const [studentSlotTeachers, setStudentSlotTeachers] = useState<Record<string, boolean>>({});  // 학생별 부담임 여부 (수학용)
 
   const [error, setError] = useState('');
 
@@ -186,11 +187,12 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     }
   }, [classDetail?.memo]);
 
-  // classDetail에서 기존 학생 attendanceDays, underline 로드
+  // classDetail에서 기존 학생 attendanceDays, underline, isSlotTeacher 로드
   useEffect(() => {
     if (classDetail?.students) {
       const existingDays: Record<string, string[]> = {};
       const existingUnderlines: Record<string, boolean> = {};
+      const existingSlotTeachers: Record<string, boolean> = {};
       classDetail.students.forEach(student => {
         if (student.attendanceDays && student.attendanceDays.length > 0) {
           existingDays[student.id] = student.attendanceDays;
@@ -198,9 +200,13 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         if (student.underline) {
           existingUnderlines[student.id] = student.underline;
         }
+        if (student.isSlotTeacher) {
+          existingSlotTeachers[student.id] = student.isSlotTeacher;
+        }
       });
       setStudentAttendanceDays(existingDays);
       setStudentUnderlines(existingUnderlines);
+      setStudentSlotTeachers(existingSlotTeachers);
     }
   }, [classDetail?.students]);
 
@@ -396,8 +402,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       // 1. 수업 정보 업데이트
       await updateClassMutation.mutateAsync(updateData);
 
-      // 2. 학생 추가/제거/등원요일/밑줄 변경이 있으면 처리
-      const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0;
+      // 2. 학생 추가/제거/등원요일/밑줄/부담임 변경이 있으면 처리
+      const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0;
       if (hasStudentChanges) {
         await manageStudentsMutation.mutateAsync({
           className: className.trim(),
@@ -408,6 +414,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
           removeStudentIds: Array.from(studentsToRemove),
           studentAttendanceDays,
           studentUnderlines,
+          studentSlotTeachers,
         });
       }
 
@@ -770,7 +777,10 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                     <span>현재 등록된 학생 ({currentStudents.length - studentsToRemove.size}명)</span>
                     {/* 수학: 등원 요일 설정 안내, 영어: 밑줄 강조 안내 */}
                     {classInfo.subject === 'math' && classDays.length > 1 && (
-                      <span className="text-[10px] text-blue-500 font-normal">클릭하여 등원 요일 설정</span>
+                      <span className="text-[10px] text-blue-500 font-normal">클릭하여 등원 요일 설정 · 체크박스: 부담임</span>
+                    )}
+                    {classInfo.subject === 'math' && classDays.length <= 1 && (
+                      <span className="text-[10px] text-blue-500 font-normal">체크박스: 부담임</span>
                     )}
                     {classInfo.subject === 'english' && (
                       <span className="text-[10px] text-blue-500 font-normal">U: 밑줄 강조</span>
@@ -804,6 +814,23 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                 {/* 수학: Calendar 아이콘 */}
                                 {isMath && classDays.length > 1 && !isMarkedForRemoval && (
                                   <Calendar size={12} className="text-gray-400 flex-shrink-0" />
+                                )}
+                                {/* 수학: 부담임 체크박스 */}
+                                {isMath && !isMarkedForRemoval && (
+                                  <input
+                                    type="checkbox"
+                                    checked={studentSlotTeachers[student.id] || false}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      setStudentSlotTeachers(prev => ({
+                                        ...prev,
+                                        [student.id]: e.target.checked
+                                      }));
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813] flex-shrink-0"
+                                    title="부담임으로 지정"
+                                  />
                                 )}
                                 {/* 영어: 밑줄 토글 버튼 */}
                                 {isEnglish && !isMarkedForRemoval && (
@@ -903,6 +930,23 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                           <div className="flex items-center gap-2">
                             <span className="text-green-800">{student.name}</span>
                             <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                            {/* 부담임 체크박스 (수학만) */}
+                            {classInfo.subject === 'math' && (
+                              <label className="flex items-center gap-1 ml-2 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={studentSlotTeachers[student.id] || false}
+                                  onChange={(e) => {
+                                    setStudentSlotTeachers(prev => ({
+                                      ...prev,
+                                      [student.id]: e.target.checked
+                                    }));
+                                  }}
+                                  className="w-3 h-3 text-[#fdb813] rounded focus:ring-[#fdb813]"
+                                />
+                                <span className="text-[10px] text-gray-600">부담임</span>
+                              </label>
+                            )}
                           </div>
                           <button
                             type="button"

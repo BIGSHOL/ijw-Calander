@@ -273,11 +273,12 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
       });
     }
 
-    // 수강 과목 필터 (여러 과목 선택 가능)
+    // 수강 과목 필터 (AND 조건: 선택된 모든 과목을 수강하는 학생만 표시)
     if (filters.subjects.length > 0) {
-      result = result.filter((s) =>
-        s.enrollments.some((e) => filters.subjects.includes(e.subject))
-      );
+      result = result.filter((s) => {
+        const studentSubjects = s.enrollments.map((e) => e.subject);
+        return filters.subjects.every((subject) => studentSubjects.includes(subject));
+      });
     }
 
     // 선생님 필터

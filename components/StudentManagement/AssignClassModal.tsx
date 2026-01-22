@@ -26,6 +26,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
         // 기본값: 오늘 날짜
         return new Date().toISOString().split('T')[0];
     });
+    const [isSlotTeacher, setIsSlotTeacher] = useState(false); // 부담임 여부 (주로 수학 과목)
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
 
@@ -102,6 +103,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                 startDate: startDate, // YYYY-MM-DD 문자열
                 endDate: null, // 배정 취소 시 업데이트
                 color: null,
+                isSlotTeacher: isSlotTeacher, // 부담임 여부 (수학 과목용)
                 createdAt: Timestamp.now(),
             });
 
@@ -114,6 +116,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
 
             // 폼 초기화
             setSelectedClassName('');
+            setIsSlotTeacher(false);
         } catch (err) {
             console.error('수업 배정 오류:', err);
             setError('수업 배정 중 오류가 발생했습니다');
@@ -225,6 +228,23 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                             <p className="mt-1 text-xxs text-gray-500">
                                 💡 미래 날짜를 선택하면 해당 날짜부터 수업이 시작됩니다
                             </p>
+                        </div>
+
+                        {/* 부담임 여부 (수학 과목용) */}
+                        <div className="flex items-start gap-2">
+                            <input
+                                type="checkbox"
+                                id="isSlotTeacher"
+                                checked={isSlotTeacher}
+                                onChange={(e) => setIsSlotTeacher(e.target.checked)}
+                                className="mt-0.5 w-4 h-4 text-[#fdb813] bg-gray-100 border-gray-300 rounded focus:ring-[#fdb813] focus:ring-2"
+                            />
+                            <label htmlFor="isSlotTeacher" className="flex-1 cursor-pointer">
+                                <div className="text-xs font-bold text-gray-700">부담임으로 배정</div>
+                                <p className="text-xxs text-gray-500 mt-0.5">
+                                    수학 과목에서 별도 수업으로 생성된 부담임 수업인 경우 체크
+                                </p>
+                            </label>
                         </div>
 
                         {/* 수업 선택 - Compact */}

@@ -17,6 +17,8 @@ interface AddClassModalProps {
     toggleScheduleSlot: (day: string, period: string) => void;
     handleAddClass: () => void;
     teacherNames: string[];
+    isAssistant: boolean;
+    setIsAssistant: (value: boolean) => void;
 }
 
 const AddClassModal: React.FC<AddClassModalProps> = ({
@@ -33,7 +35,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({
     newSchedule,
     toggleScheduleSlot,
     handleAddClass,
-    teacherNames
+    teacherNames,
+    isAssistant,
+    setIsAssistant
 }) => {
     if (!isOpen) return null;
 
@@ -100,6 +104,20 @@ const AddClassModal: React.FC<AddClassModalProps> = ({
                                 placeholder="301호"
                             />
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={isAssistant}
+                                onChange={(e) => setIsAssistant(e.target.checked)}
+                                className="w-4 h-4 text-[#fdb813] border-gray-300 rounded focus:ring-[#fdb813]"
+                            />
+                            <span className="text-sm text-gray-700 font-medium">
+                                부담임 수업 (선택한 교시에만 이 선생님이 배정됩니다)
+                            </span>
+                        </label>
                     </div>
 
                     <div>

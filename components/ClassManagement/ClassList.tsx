@@ -5,6 +5,7 @@ import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUt
 import { SubjectForSchedule, MATH_PERIOD_INFO, ENGLISH_PERIOD_INFO, MATH_GROUP_TIMES, WEEKEND_PERIOD_INFO } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
+import { isTeacherMatch, isSlotTeacherMatch } from '../../utils/teacherUtils';
 
 // 요일별 색상 정의
 const DAY_COLORS: Record<string, { bg: string; text: string }> = {
@@ -219,26 +220,21 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
     return teacherName;
   };
 
-  // 선생님 이름 비교 헬퍼 함수 (한글/영어 이름 모두 체크)
-  const isTeacherMatch = (teacherName: string, filterValue: string): boolean => {
+  // 선생님 이름 비교 (공통 함수 + displayName 형식 지원)
+  const matchTeacher = (teacherName: string, filterValue: string): boolean => {
     if (!teacherName || !filterValue) return false;
 
-    // 정확히 일치하면 true
-    if (teacherName === filterValue) return true;
+    // 공통 함수로 기본 매칭
+    if (isTeacherMatch(teacherName, filterValue, undefined, staff || [])) return true;
 
-    // staff 데이터에서 해당 선생님 찾기
+    // ClassList 전용: "한글(영어)" 형식과 비교
     const staffMember = staff?.find(s => s.name === teacherName || s.englishName === teacherName);
-    if (!staffMember) return teacherName === filterValue;
+    if (staffMember && staffMember.englishName) {
+      const displayName = `${staffMember.name}(${staffMember.englishName})`;
+      if (displayName === filterValue) return true;
+    }
 
-    // 필터값이 한글 이름 또는 영어 이름과 일치하는지 확인
-    if (staffMember.name === filterValue || staffMember.englishName === filterValue) return true;
-
-    // "한글(영어)" 형식과 비교
-    const displayName = staffMember.englishName
-      ? `${staffMember.name}(${staffMember.englishName})`
-      : staffMember.name;
-
-    return displayName === filterValue;
+    return false;
   };
 
   // 선생님 필터가 있으면 해당 선생님의 스케줄만 필터링하는 함수
@@ -252,10 +248,14 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
       if (parts.length < 2) return false;
 
       const key = `${parts[0]}-${parts[1]}`;
-      const slotTeacher = slotTeachers?.[key];
-      const displayTeacher = slotTeacher || teacher;
 
-      return isTeacherMatch(displayTeacher, currentTeacherFilter);
+      // slotTeacher가 있으면 그것과 비교
+      if (isSlotTeacherMatch(slotTeachers, key, currentTeacherFilter, undefined, staff || [])) {
+        return true;
+      }
+
+      // slotTeacher가 없으면 담임과 비교
+      return !slotTeachers?.[key] && matchTeacher(teacher, currentTeacherFilter);
     });
   };
 

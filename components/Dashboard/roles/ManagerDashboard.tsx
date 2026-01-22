@@ -4,6 +4,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import DashboardHeader from '../DashboardHeader';
 import { Users, BookOpen, TrendingUp, Calendar, DollarSign, UserCheck, Clock } from 'lucide-react';
+import { isTeacherMatch, isTeacherInSlotTeachers, isSlotTeacherMatch } from '../../../utils/teacherUtils';
 
 interface ManagerDashboardProps {
   userProfile: UserProfile;
@@ -127,13 +128,15 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
   const isTeacherInClass = (cls: ClassInfo, teacherFilter: string): boolean => {
     if (teacherFilter === 'all') return true;
 
-    // 담임 체크
-    if (cls.teacher === teacherFilter || cls.mainTeacher === teacherFilter) return true;
+    // 담임 체크 (유틸 함수 사용)
+    if (isTeacherMatch(cls.teacher || '', teacherFilter) ||
+        isTeacherMatch(cls.mainTeacher || '', teacherFilter)) {
+      return true;
+    }
 
-    // 부담임 체크 (slotTeachers)
-    if (cls.slotTeachers) {
-      const slotTeacherNames = Object.values(cls.slotTeachers);
-      if (slotTeacherNames.includes(teacherFilter)) return true;
+    // 부담임 체크 (유틸 함수 사용)
+    if (isTeacherInSlotTeachers(cls.slotTeachers, teacherFilter)) {
+      return true;
     }
 
     return false;
@@ -153,15 +156,17 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
     if (slotTeachers && Object.keys(slotTeachers).length > 0) {
       return schedule.filter(slot => {
         const slotKey = `${slot.day}-${slot.periodId}`;
-        const slotTeacher = slotTeachers[slotKey];
 
-        // slotTeacher가 지정되어 있으면 그것과 비교
-        if (slotTeacher) {
-          return slotTeacher === teacherFilter;
+        // slotTeacher가 지정되어 있으면 그것과 비교 (유틸 함수 사용)
+        if (isSlotTeacherMatch(slotTeachers, slotKey, teacherFilter)) {
+          return true;
         }
 
-        // slotTeacher가 없는 교시는 담임이 담당
-        return (teacher === teacherFilter || mainTeacher === teacherFilter);
+        // slotTeacher가 없는 교시는 담임이 담당 (유틸 함수 사용)
+        return !slotTeachers[slotKey] && (
+          isTeacherMatch(teacher || '', teacherFilter) ||
+          isTeacherMatch(mainTeacher || '', teacherFilter)
+        );
       });
     }
 

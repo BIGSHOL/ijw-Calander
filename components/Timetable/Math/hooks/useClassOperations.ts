@@ -42,10 +42,11 @@ export const useClassOperations = () => {
             room: string;
             subject: string;
             schedule: string[];
+            isAssistant?: boolean;
         },
         currentPeriods: string[]
     ) => {
-        const { className, teacher, room, subject, schedule } = newClassData;
+        const { className, teacher, room, subject, schedule, isAssistant } = newClassData;
 
         if (!className.trim() || !teacher.trim()) {
             throw new Error('수업명과 담당 강사를 입력해주세요.');
@@ -73,10 +74,20 @@ export const useClassOperations = () => {
             return { day, periodId };
         });
 
-        const newClass = {
+        // 부담임일 경우 slotTeachers 생성
+        const slotTeachers: Record<string, string> | undefined = isAssistant
+            ? schedule.reduce((acc, slot) => {
+                // "월 1-1" -> "월-1-1"
+                const key = slot.replace(' ', '-');
+                acc[key] = teacher.trim();
+                return acc;
+            }, {} as Record<string, string>)
+            : undefined;
+
+        const newClass: any = {
             id: classId,
             className: className.trim(),
-            teacher: teacher.trim(),
+            teacher: isAssistant ? '' : teacher.trim(), // 부담임이면 teacher 필드는 비움
             room: room.trim(),
             subject: subjectKey,
             schedule: scheduleObjects,
@@ -86,6 +97,11 @@ export const useClassOperations = () => {
             createdAt: new Date().toISOString(),
             order: classes.length + 1
         };
+
+        // slotTeachers가 있으면 추가
+        if (slotTeachers) {
+            newClass.slotTeachers = slotTeachers;
+        }
 
         await setDoc(doc(db, COL_CLASSES, classId), newClass);
         return newClass;
