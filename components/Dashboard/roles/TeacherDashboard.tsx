@@ -3,7 +3,12 @@ import { UserProfile, StaffMember } from '../../../types';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import DashboardHeader from '../DashboardHeader';
-import { BookOpen, Users, Calendar, CheckSquare, Clock } from 'lucide-react';
+import { BookOpen, Users, Calendar, CheckSquare, Clock, User } from 'lucide-react';
+import {
+  MATH_PERIOD_INFO,
+  ENGLISH_PERIOD_INFO,
+  WEEKEND_PERIOD_INFO,
+} from '../../Timetable/constants';
 
 interface TeacherDashboardProps {
   userProfile: UserProfile;
@@ -16,6 +21,7 @@ interface MyClass {
   subject: 'math' | 'english' | 'science' | 'korean';
   schedule: { day: string; periodId: string; }[];
   studentCount?: number;
+  isMainTeacher: boolean; // 담임 여부
 }
 
 interface MyStudent {
@@ -24,6 +30,154 @@ interface MyStudent {
   englishName?: string;
   grade?: string;
   school?: string;
+}
+
+// 요일별 색상 정의
+const DAY_COLORS: Record<string, { bg: string; text: string }> = {
+  '월': { bg: '#fef3c7', text: '#92400e' },
+  '화': { bg: '#fce7f3', text: '#9d174d' },
+  '수': { bg: '#dbeafe', text: '#1e40af' },
+  '목': { bg: '#d1fae5', text: '#065f46' },
+  '금': { bg: '#e0e7ff', text: '#3730a3' },
+  '토': { bg: '#fee2e2', text: '#991b1b' },
+  '일': { bg: '#f3e8ff', text: '#6b21a8' },
+};
+
+// 수학 교시 라벨 포맷팅
+function formatMathLabel(periods: string[]): string {
+  const completeGroups: number[] = [];
+  const usedPeriods = new Set<string>();
+
+  for (let group = 1; group <= 4; group++) {
+    const first = String(group * 2 - 1);
+    const second = String(group * 2);
+
+    if (periods.includes(first) && periods.includes(second)) {
+      completeGroups.push(group);
+      usedPeriods.add(first);
+      usedPeriods.add(second);
+    }
+  }
+
+  const allPeriodsUsed = periods.every(p => usedPeriods.has(p));
+
+  if (allPeriodsUsed && completeGroups.length > 0) {
+    return completeGroups.map(g => `${g}교시`).join(', ');
+  } else {
+    const times = periods.map(p => MATH_PERIOD_INFO[p]).filter(Boolean);
+    if (times.length === 0) return '시간 미정';
+
+    const startTime = times[0].startTime;
+    const endTime = times[times.length - 1].endTime;
+    return `${startTime}~${endTime}`;
+  }
+}
+
+// 주말 교시 라벨 포맷팅
+function formatWeekendLabel(periods: string[]): string {
+  if (periods.length === 0) return '시간 미정';
+
+  const times = periods
+    .map(p => WEEKEND_PERIOD_INFO[p])
+    .filter(Boolean)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+  if (times.length === 0) return '시간 미정';
+
+  const startTime = times[0].startTime;
+  const endTime = times[times.length - 1].endTime;
+  return `${startTime}~${endTime}`;
+}
+
+// 영어 교시 라벨 포맷팅
+function formatEnglishLabel(periods: string[]): string {
+  if (periods.length === 0) return '시간 미정';
+
+  const nums = periods.map(Number).sort((a, b) => a - b);
+
+  if (nums.length === 1) {
+    return `${nums[0]}교시`;
+  }
+
+  const isConsecutive = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
+
+  if (isConsecutive) {
+    return `${nums[0]}~${nums[nums.length - 1]}교시`;
+  } else {
+    return nums.map(n => `${n}교시`).join(', ');
+  }
+}
+
+// 스케줄을 포맷팅하는 함수
+function formatSchedule(
+  schedule: { day: string; periodId: string; }[],
+  subject: 'math' | 'english' | 'science' | 'korean'
+): Array<{ days: string[]; label: string }> {
+  if (!schedule || schedule.length === 0) {
+    return [];
+  }
+
+  const getPeriodInfoForDay = (day: string) => {
+    if (day === '토' || day === '일') {
+      return WEEKEND_PERIOD_INFO;
+    }
+    return subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
+  };
+
+  const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+  const dayPeriods: Map<string, string[]> = new Map();
+
+  for (const item of schedule) {
+    const day = item.day;
+    const periodId = item.periodId || '';
+    const periodInfo = getPeriodInfoForDay(day);
+    if (!periodId || !periodInfo[periodId]) continue;
+
+    if (!dayPeriods.has(day)) {
+      dayPeriods.set(day, []);
+    }
+    dayPeriods.get(day)!.push(periodId);
+  }
+
+  if (dayPeriods.size === 0) {
+    return [];
+  }
+
+  const dayLabels: Map<string, string> = new Map();
+
+  for (const [day, periods] of dayPeriods) {
+    const sortedPeriods = periods.sort((a, b) => Number(a) - Number(b));
+    const isWeekend = day === '토' || day === '일';
+
+    let label: string;
+    if (isWeekend) {
+      label = formatWeekendLabel(sortedPeriods);
+    } else if (subject === 'english') {
+      label = formatEnglishLabel(sortedPeriods);
+    } else {
+      label = formatMathLabel(sortedPeriods);
+    }
+    dayLabels.set(day, label);
+  }
+
+  const labelToDays: Map<string, string[]> = new Map();
+
+  for (const [day, label] of dayLabels) {
+    if (!labelToDays.has(label)) {
+      labelToDays.set(label, []);
+    }
+    labelToDays.get(label)!.push(day);
+  }
+
+  const entries: Array<{ days: string[]; label: string }> = [];
+  for (const [label, days] of labelToDays) {
+    days.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+    entries.push({ days, label });
+  }
+
+  entries.sort((a, b) => dayOrder.indexOf(a.days[0]) - dayOrder.indexOf(b.days[0]));
+
+  return entries;
 }
 
 /**
@@ -70,11 +224,15 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
       [...snapshot1.docs, ...snapshot2.docs].forEach(doc => {
         const data = doc.data();
         if (!classesMap.has(doc.id)) {
+          // teacher 필드로 매칭되면 부담임, mainTeacher로 매칭되면 담임
+          const isMainTeacher = data.mainTeacher === teacherKoreanName;
+
           classesMap.set(doc.id, {
             id: doc.id,
             className: data.className,
             subject: data.subject,
             schedule: data.schedule || [],
+            isMainTeacher,
           });
         }
       });
@@ -209,41 +367,78 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {myClasses.map(cls => (
-                <div
-                  key={cls.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-[#fdb813] hover:shadow-md transition-all"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-bold text-[#081429]">{cls.className}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
-                      cls.subject === 'english' ? 'bg-green-100 text-green-700' :
-                      cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
-                      'bg-orange-100 text-orange-700'
-                    }`}>
-                      {cls.subject === 'math' ? '수학' :
-                       cls.subject === 'english' ? '영어' :
-                       cls.subject === 'science' ? '과학' : '국어'}
-                    </span>
-                  </div>
+              {myClasses.map(cls => {
+                const scheduleEntries = formatSchedule(cls.schedule, cls.subject);
 
-                  <div className="space-y-1 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      <span>{cls.studentCount || 0}명</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {cls.schedule.length > 0
-                          ? cls.schedule.map(s => s.day).join(', ')
-                          : '시간표 미지정'}
+                return (
+                  <div
+                    key={cls.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-[#fdb813] hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-[#081429]">{cls.className}</h3>
+                        {cls.isMainTeacher ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
+                            담임
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-bold">
+                            부담임
+                          </span>
+                        )}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
+                        cls.subject === 'english' ? 'bg-green-100 text-green-700' :
+                        cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
+                        'bg-orange-100 text-orange-700'
+                      }`}>
+                        {cls.subject === 'math' ? '수학' :
+                         cls.subject === 'english' ? '영어' :
+                         cls.subject === 'science' ? '과학' : '국어'}
                       </span>
                     </div>
+
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        <span>{cls.studentCount || 0}명</span>
+                      </div>
+
+                      {/* 스케줄 표시 */}
+                      {scheduleEntries.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {scheduleEntries.map((entry, idx) => (
+                            <div key={idx} className="flex items-center gap-1">
+                              <div className="flex gap-0.5">
+                                {entry.days.map((day, dayIdx) => {
+                                  const colors = DAY_COLORS[day] || { bg: '#f3f4f6', text: '#374151' };
+                                  return (
+                                    <span
+                                      key={dayIdx}
+                                      className="text-[10px] px-1.5 py-0.5 rounded font-bold"
+                                      style={{ backgroundColor: colors.bg, color: colors.text }}
+                                    >
+                                      {day}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                              <span className="text-xs text-gray-500">{entry.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-gray-400 italic">
+                          <Calendar className="w-4 h-4" />
+                          <span className="text-xs">시간표 미지정</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
