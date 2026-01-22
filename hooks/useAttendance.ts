@@ -103,212 +103,211 @@ export const useAttendanceStudents = (options?: {
     } = useQuery({
         queryKey: ['attendanceStudents', options?.teacherId, options?.subject],
         queryFn: async (): Promise<{ filtered: Student[], all: Student[] }> => {
-            // === PERFORMANCE: teacherId가 있으면 teacherIds 필드로 필터링 ===
-            let q;
-            if (options?.teacherId) {
-                q = query(
-                    collection(db, STUDENTS_COLLECTION),
-                    where('teacherIds', 'array-contains', options.teacherId),
-                    orderBy('name')
-                );
-            } else {
-                q = query(collection(db, STUDENTS_COLLECTION), orderBy('name'));
-            }
-            const snapshot = await getDocs(q);
+            // === PERFORMANCE: 수업 기준으로 학생 찾기 ===
 
-            const allRaw = snapshot.docs.map(d => ({
-                id: d.id,
-                ...d.data(),
-                attendance: {},
-                memos: {},
-                teacherIds: d.data().teacherIds || [],
-            } as Student));
+            // Step 1: Staff 데이터 로드
+            const staffSnapshot = await getDocs(collection(db, 'staff'));
+            const staff = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // === FIX: enrollments 서브컬렉션에서 조회 (학생 관리/수업 관리와 동일) ===
-            // 학생 문서 내 enrollments 배열이 아닌, 서브컬렉션 데이터 사용
-            await fetchEnrollmentsForAttendanceStudents(allRaw);
-
-            // slotTeachers 확인을 위해 classes와 staff 컬렉션 조회
-            let classesMap: Map<string, any> = new Map();
             let teacherName = '';
             let teacherKoreanName = '';
-            let staff: any[] = [];
-
             if (options?.teacherId) {
-                // Classes 데이터 로드
-                const classesSnapshot = await getDocs(collection(db, CLASSES_COLLECTION));
-                classesSnapshot.docs.forEach(doc => {
-                    classesMap.set(doc.id, doc.data());
-                });
-
-                // Staff 데이터에서 선생님 이름 찾기
-                const staffSnapshot = await getDocs(collection(db, 'staff'));
-                staff = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                const staffMember = staffSnapshot.docs.find(doc => doc.id === options.teacherId);
+                // teacherId로 staff 찾기 (ID 또는 이름으로 검색)
+                const staffMember = staffSnapshot.docs.find(doc =>
+                    doc.id === options.teacherId ||
+                    doc.data().name === options.teacherId ||
+                    doc.data().englishName === options.teacherId
+                );
                 if (staffMember) {
                     const staffData = staffMember.data();
                     teacherName = staffData.englishName || staffData.name || '';
                     teacherKoreanName = staffData.name || '';
+                } else {
+                    // staff를 못 찾으면 teacherId를 그대로 이름으로 사용
+                    teacherName = options.teacherId;
+                    teacherKoreanName = options.teacherId;
                 }
             }
 
-            // 선생님 이름 매칭용 래퍼 함수
-            const matchTeacher = (nameInClass: string): boolean => {
-                return isTeacherMatch(nameInClass, teacherName, teacherKoreanName, staff);
-            };
+            // Step 2: Classes 데이터 로드
+            let classesQuery;
+            if (options?.subject) {
+                classesQuery = query(
+                    collection(db, CLASSES_COLLECTION),
+                    where('subject', '==', options.subject),
+                    where('isActive', '==', true)
+                );
+            } else {
+                classesQuery = query(
+                    collection(db, CLASSES_COLLECTION),
+                    where('isActive', '==', true)
+                );
+            }
+            const classesSnapshot = await getDocs(classesQuery);
+            const allClasses = classesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            let data = [...allRaw];
+            // Step 3: 해당 선생님의 수업만 필터링 (담임 또는 slotTeachers)
+            let myClasses = allClasses;
+            console.log('[Attendance] Step 3: Total classes:', allClasses.length);
+            console.log('[Attendance] Teacher info:', { teacherId: options?.teacherId, teacherName, teacherKoreanName });
 
-            // Client-side filtering (teacherId + slotTeachers 모두 고려)
             if (options?.teacherId) {
-                data = data.filter(s => {
-                    const enrollments = (s as any).enrollments || [];
+                myClasses = allClasses.filter(cls => {
+                    // 담임인 경우
+                    const isMain = isTeacherMatch(cls.teacher || '', teacherName, teacherKoreanName, staff);
+                    // 부담임인 경우 (slotTeachers에 포함)
+                    const isSlot = isTeacherInSlotTeachers(cls.slotTeachers, teacherName, teacherKoreanName, staff);
 
-                    // 1. 담임으로 배정된 경우 (enrollment의 teacherId가 일치)
-                    const hasAsMainTeacher = enrollments.some((e: any) =>
-                        e.teacherId === options.teacherId
-                    );
-
-                    if (hasAsMainTeacher) return true;
-
-                    // 2. 부담임으로 배정된 경우 (slotTeachers에 포함)
-                    const hasAsSlotTeacher = enrollments.some((e: any) => {
-                        const classData = classesMap.get(e.classId);
-                        return isTeacherInSlotTeachers(classData?.slotTeachers, teacherName, teacherKoreanName, staff);
+                    console.log('[Attendance] Class check:', {
+                        className: cls.className,
+                        teacher: cls.teacher,
+                        isMain,
+                        isSlot,
+                        slotTeachers: cls.slotTeachers
                     });
 
-                    return hasAsSlotTeacher;
+                    return isMain || isSlot;
                 });
+            }
 
-                data = data.map(s => {
-                    const enrollments = (s as any).enrollments || [];
+            console.log('[Attendance] My classes:', myClasses.length, myClasses.map(c => c.className));
 
-                    // 담임 또는 부담임으로 배정된 수업 필터링
-                    const teacherEnrollments = enrollments.filter((e: any) => {
+            // Step 4: 그 수업들의 className 목록
+            const myClassNames = myClasses.map(cls => cls.className);
+            if (myClassNames.length === 0) {
+                console.log('[Attendance] No classes found for this teacher!');
+                return { filtered: [], all: [] };
+            }
+
+            // Step 5: 해당 수업의 모든 enrollments 조회 (collectionGroup 1번)
+            const enrollmentsQuery = query(
+                collectionGroup(db, 'enrollments'),
+                where('className', 'in', myClassNames.slice(0, 10)) // Firestore 'in' 제한: 최대 10개
+            );
+            const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+
+            // Step 6: 학생 ID 목록 수집 (중복 제거)
+            const studentIdsSet = new Set<string>();
+            enrollmentsSnapshot.docs.forEach(doc => {
+                const studentId = doc.ref.parent.parent?.id;
+                if (studentId) {
+                    studentIdsSet.add(studentId);
+                }
+            });
+
+            const studentIds = Array.from(studentIdsSet);
+            if (studentIds.length === 0) {
+                return { filtered: [], all: [] };
+            }
+
+            // Step 7: 해당 학생들만 조회 (청크 처리: 10명씩)
+            const allRaw: Student[] = [];
+            for (let i = 0; i < studentIds.length; i += 10) {
+                const chunk = studentIds.slice(i, i + 10);
+                const studentsQuery = query(
+                    collection(db, STUDENTS_COLLECTION),
+                    where('__name__', 'in', chunk)
+                );
+                const studentsSnapshot = await getDocs(studentsQuery);
+                studentsSnapshot.docs.forEach(doc => {
+                    allRaw.push({
+                        id: doc.id,
+                        ...doc.data(),
+                        attendance: {},
+                        memos: {},
+                        teacherIds: doc.data().teacherIds || [],
+                    } as Student);
+                });
+            }
+
+            // Step 8: Enrollments 서브컬렉션 로드
+            await fetchEnrollmentsForAttendanceStudents(allRaw);
+
+            // Step 9: 클라이언트 사이드 필터링 및 데이터 매핑 (기존 로직)
+            const classesMap = new Map(allClasses.map(cls => [cls.id, cls]));
+
+            let data = allRaw.map(s => {
+                const enrollments = (s as any).enrollments || [];
+
+                // 담임 또는 부담임으로 배정된 수업 필터링
+                const teacherEnrollments = options?.teacherId
+                    ? enrollments.filter((e: any) => {
                         // 1. 담임인 경우
                         if (e.teacherId === options.teacherId) return true;
 
                         // 2. 부담임인 경우 (slotTeachers 확인)
                         const classData = classesMap.get(e.classId);
                         return isTeacherInSlotTeachers(classData?.slotTeachers, teacherName, teacherKoreanName, staff);
-                    });
+                    })
+                    : enrollments;
 
-                    // 수업명 목록
-                    const teacherClasses = teacherEnrollments.map((e: any) => e.className);
+                // 수업명 목록
+                const teacherClasses = teacherEnrollments.map((e: any) => e.className);
 
-                    // slotTeacher 여부 확인 (통합 유틸 함수 사용)
-                    const isSlotTeacher = teacherEnrollments.every((e: any) => {
-                        const classData = classesMap.get(e.classId);
-                        return isAssistantTeacher(classData, e, teacherName, teacherKoreanName, staff);
-                    });
+                // slotTeacher 여부 확인
+                const isSlotTeacher = teacherEnrollments.every((e: any) => {
+                    const classData = classesMap.get(e.classId);
+                    return isAssistantTeacher(classData, e, teacherName, teacherKoreanName, staff);
+                });
 
-                    const teacherDays: string[] = [];
-                    teacherEnrollments.forEach((e: any) => {
-                        const classData = classesMap.get(e.classId);
-                        const isSlotTeacherForThisClass = e.teacherId !== options.teacherId;
+                // 요일 추출
+                const teacherDays: string[] = [];
+                teacherEnrollments.forEach((e: any) => {
+                    const classData = classesMap.get(e.classId);
+                    const isSlotTeacherForThisClass = e.teacherId !== options.teacherId;
 
-                        // schedule 배열에서 요일 추출 (형식: "요일 교시", 예: "월 5", "목 6")
-                        if (e.schedule && Array.isArray(e.schedule)) {
-                            e.schedule.forEach((slot: string) => {
-                                // 부담임이면 slotTeachers에 해당 교시가 있는지 확인
-                                if (isSlotTeacherForThisClass && classData?.slotTeachers) {
-                                    // slot 형식: "월 1-1" -> key: "월-1-1"
-                                    const slotKey = slot.replace(' ', '-');
-
-                                    // 이 교시의 담당 선생님이 현재 선생님이 아니면 스킵
-                                    if (!isSlotTeacherMatch(classData.slotTeachers, slotKey, teacherName, teacherKoreanName, staff)) return;
-                                }
-
-                                const day = slot.split(' ')[0]; // "월 5" → "월"
-                                if (day && !teacherDays.includes(day)) teacherDays.push(day);
-                            });
-                        }
-                        // 레거시: days 필드가 있는 경우도 지원
-                        if (e.days && Array.isArray(e.days)) {
-                            e.days.forEach((d: string) => {
-                                if (!teacherDays.includes(d)) teacherDays.push(d);
-                            });
-                        }
-                    });
-
-                    // Extract date range from enrollments for this teacher
-                    let enrollmentStartDate = typeof (s as any).startDate === 'string'
-                        ? (s as any).startDate
-                        : '1970-01-01';
-                    let enrollmentEndDate = typeof (s as any).endDate === 'string'
-                        ? (s as any).endDate
-                        : null;
-
-                    if (teacherEnrollments.length > 0) {
-                        const startDates = teacherEnrollments
-                            .map((e: any) => e.startDate)
-                            .filter((d: string) => d);
-                        const endDates = teacherEnrollments
-                            .map((e: any) => e.endDate)
-                            .filter((d: string | null) => d !== null && d !== undefined) as string[];
-
-                        if (startDates.length > 0) {
-                            enrollmentStartDate = startDates.sort()[0]; // Earliest start
-                        }
-                        if (endDates.length > 0) {
-                            enrollmentEndDate = endDates.sort().reverse()[0]; // Latest end
-                        }
-                        // If any enrollment has no endDate (still active), set to null
-                        if (teacherEnrollments.some((e: any) => !e.endDate)) {
-                            enrollmentEndDate = null;
-                        }
+                    if (e.schedule && Array.isArray(e.schedule)) {
+                        e.schedule.forEach((slot: string) => {
+                            if (isSlotTeacherForThisClass && classData?.slotTeachers) {
+                                const slotKey = slot.replace(' ', '-');
+                                if (!isSlotTeacherMatch(classData.slotTeachers, slotKey, teacherName, teacherKoreanName, staff)) return;
+                            }
+                            const day = slot.split(' ')[0];
+                            if (day && !teacherDays.includes(day)) teacherDays.push(day);
+                        });
                     }
-
-                    return {
-                        ...s,
-                        group: teacherClasses.join(', '),
-                        days: teacherDays,
-                        startDate: enrollmentStartDate,
-                        endDate: enrollmentEndDate,
-                        isSlotTeacher: isSlotTeacher,
-                    };
+                    if (e.days && Array.isArray(e.days)) {
+                        e.days.forEach((d: string) => {
+                            if (!teacherDays.includes(d)) teacherDays.push(d);
+                        });
+                    }
                 });
-            }
-            if (options?.subject) {
 
-                data = data.filter(s => {
-                    const enrollments = (s as any).enrollments || [];
-                    return enrollments.some((e: any) => e.subject === options.subject);
-                });
-                // 과목 필터 시 해당 과목의 enrollments에서 days 병합
-                data = data.map(s => {
-                    const enrollments = (s as any).enrollments || [];
-                    const subjectEnrollments = enrollments.filter((e: any) => e.subject === options.subject);
+                // 날짜 범위 추출
+                let enrollmentStartDate = '1970-01-01';
+                let enrollmentEndDate: string | null = null;
 
-                    // 해당 과목의 모든 수업 요일 병합
-                    const subjectDays: string[] = [];
-                    subjectEnrollments.forEach((e: any) => {
-                        // schedule 배열에서 요일 추출 (형식: "요일 교시", 예: "월 5", "목 6")
-                        if (e.schedule && Array.isArray(e.schedule)) {
-                            e.schedule.forEach((slot: string) => {
-                                const day = slot.split(' ')[0]; // "월 5" → "월"
-                                if (day && !subjectDays.includes(day)) subjectDays.push(day);
-                            });
-                        }
-                        // 레거시: days 필드가 있는 경우도 지원
-                        if (e.days && Array.isArray(e.days)) {
-                            e.days.forEach((d: string) => {
-                                if (!subjectDays.includes(d)) subjectDays.push(d);
-                            });
-                        }
-                    });
+                if (teacherEnrollments.length > 0) {
+                    const startDates = teacherEnrollments
+                        .map((e: any) => e.startDate)
+                        .filter((d: string) => d);
+                    const endDates = teacherEnrollments
+                        .map((e: any) => e.endDate)
+                        .filter((d: string | null) => d !== null && d !== undefined) as string[];
 
-                    // 해당 과목의 수업명 그룹화
-                    const subjectClasses = subjectEnrollments.map((e: any) => e.className);
+                    if (startDates.length > 0) {
+                        enrollmentStartDate = startDates.sort()[0];
+                    }
+                    if (endDates.length > 0) {
+                        enrollmentEndDate = endDates.sort().reverse()[0];
+                    }
+                    if (teacherEnrollments.some((e: any) => !e.endDate)) {
+                        enrollmentEndDate = null;
+                    }
+                }
 
-                    return {
-                        ...s,
-                        // teacherId 필터로 이미 days가 설정된 경우 유지, 아니면 과목 기반으로 설정
-                        days: (s as any).days?.length ? (s as any).days : subjectDays,
-                        group: (s as any).group || subjectClasses.join(', '),
-                    };
-                });
-            }
+                return {
+                    ...s,
+                    group: teacherClasses.join(', '),
+                    days: teacherDays,
+                    startDate: enrollmentStartDate,
+                    endDate: enrollmentEndDate,
+                    isSlotTeacher: isSlotTeacher,
+                };
+            });
+
+            // 이름순 정렬
+            data.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
             return { filtered: data, all: allRaw };
         },
