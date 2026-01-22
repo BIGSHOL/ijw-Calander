@@ -13,6 +13,7 @@ import { TabButton } from '../Common/TabButton';
 export interface ClassFilters {
   subject: 'all' | SubjectType;
   teacher: string; // 'all' or teacher name
+  teacherRole: 'all' | 'main' | 'sub'; // 전체/담임/부담임
   searchQuery: string;
   sortBy: 'name' | 'studentCount' | 'teacher';
   selectedDays: string[]; // 선택된 요일들 (월~일)
@@ -23,6 +24,7 @@ const ClassManagementTab: React.FC = () => {
   const [filters, setFilters] = useState<ClassFilters>({
     subject: 'all',
     teacher: 'all',
+    teacherRole: 'all',
     searchQuery: '',
     sortBy: 'name',
     selectedDays: [], // 빈 배열 = 전체 요일
@@ -155,6 +157,32 @@ const ClassManagementTab: React.FC = () => {
       });
     }
 
+    // 담임/부담임 역할 필터
+    if (filters.teacherRole !== 'all') {
+      result = result.filter(c => {
+        // teacher 필드가 선택된 강사인지 확인
+        const isMainTeacher = filters.teacher !== 'all'
+          ? isTeacherMatch(c.teacher, filters.teacher)
+          : true; // 강사 필터가 'all'이면 모든 수업의 teacher를 담임으로 간주
+
+        // slotTeachers에 선택된 강사가 있는지 확인
+        const isSubTeacher = filters.teacher !== 'all' && c.slotTeachers
+          ? Object.values(c.slotTeachers).some(name => isTeacherMatch(name, filters.teacher))
+          : false;
+
+        if (filters.teacherRole === 'main') {
+          // 담임만: teacher 필드에 선택된 강사가 있거나, 강사 필터가 'all'이면 모든 수업의 담임
+          return filters.teacher === 'all' ? true : isMainTeacher;
+        } else if (filters.teacherRole === 'sub') {
+          // 부담임만: slotTeachers에 선택된 강사가 있거나, 강사 필터가 'all'이고 slotTeachers가 있는 수업
+          return filters.teacher === 'all'
+            ? (c.slotTeachers && Object.keys(c.slotTeachers).length > 0)
+            : isSubTeacher;
+        }
+        return true;
+      });
+    }
+
     // 검색어 필터
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
@@ -226,6 +254,40 @@ const ClassManagementTab: React.FC = () => {
                     {label}
                   </TabButton>
                 ))}
+              </div>
+
+              {/* 담임/부담임 필터 */}
+              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                <button
+                  onClick={() => setFilters({ ...filters, teacherRole: 'all' })}
+                  className={`px-3 py-1 rounded text-xs font-bold transition-all ${
+                    filters.teacherRole === 'all'
+                      ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  전체
+                </button>
+                <button
+                  onClick={() => setFilters({ ...filters, teacherRole: 'main' })}
+                  className={`px-3 py-1 rounded text-xs font-bold transition-all ${
+                    filters.teacherRole === 'main'
+                      ? 'bg-blue-500 text-white shadow-sm'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  담임
+                </button>
+                <button
+                  onClick={() => setFilters({ ...filters, teacherRole: 'sub' })}
+                  className={`px-3 py-1 rounded text-xs font-bold transition-all ${
+                    filters.teacherRole === 'sub'
+                      ? 'bg-gray-500 text-white shadow-sm'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  부담임
+                </button>
               </div>
 
               {/* 강사 필터 - 그리드 드롭다운 */}

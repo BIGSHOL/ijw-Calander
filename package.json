@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "migrate": "tsx --env-file=.env.local scripts/migrateToEnrollments.ts",
     "validate": "tsx --env-file=.env.local scripts/validateMigration.ts",
-    "migrate:teachers": "tsx --env-file=.env.local scripts/migrate-teachers-to-staff.ts"
+    "migrate:teachers": "tsx --env-file=.env.local scripts/migrate-teachers-to-staff.ts",
+    "migrate:teacher-id": "tsx --env-file=.env.local scripts/migrateTeacherIdToStaffId.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
