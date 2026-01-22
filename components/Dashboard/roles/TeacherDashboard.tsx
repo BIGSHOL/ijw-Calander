@@ -198,6 +198,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
   const [studentPage, setStudentPage] = useState(1);
   const [studentSortBy, setStudentSortBy] = useState<'name' | 'school' | 'grade'>('name');
   const [studentSortOrder, setStudentSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [classFilter, setClassFilter] = useState<'all' | 'main' | 'sub'>('all');
 
   // 강사 이름 (영어 이름 우선, 없으면 한글 이름)
   const teacherName = staffMember?.englishName || staffMember?.name || userProfile.name;
@@ -317,11 +318,9 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         const className = data.className as string;
         const studentId = doc.ref.parent.parent?.id;
 
-        // teacherId로 매칭 (이름 비교) + 담임 수업인지 확인
-        const isMyTeacher =
-          enrollmentTeacherId === teacherName ||
-          enrollmentTeacherId === teacherKoreanName ||
-          enrollmentTeacherId === staffMember?.id;
+        // teacherId로 매칭 (실제로는 이름이 저장되어 있음)
+        // isTeacherMatch 유틸 함수를 사용하여 교차 검증
+        const isMyTeacher = isTeacherMatch(enrollmentTeacherId, teacherName, teacherKoreanName, staff);
 
         // 담임 수업의 학생만 포함
         if (isMyTeacher && mainClassNames.includes(className) && studentId && !studentsSet.has(studentId)) {
@@ -395,6 +394,14 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
     return mySchedule;
   };
 
+  // 필터링된 수업 목록
+  const filteredClasses = React.useMemo(() => {
+    if (classFilter === 'all') return myClasses;
+    if (classFilter === 'main') return myClasses.filter(cls => cls.isMainTeacher);
+    if (classFilter === 'sub') return myClasses.filter(cls => !cls.isMainTeacher);
+    return myClasses;
+  }, [myClasses, classFilter]);
+
   // 수업 정렬: 오늘 수업 → 담임 수업 → (오늘이면 교시순) → 요일순 → 수업명순
   const sortedClasses = React.useMemo(() => {
     const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
@@ -412,7 +419,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
       return Math.min(...periodNumbers);
     };
 
-    return [...myClasses].sort((a, b) => {
+    return [...filteredClasses].sort((a, b) => {
       // 내가 담당하는 스케줄 기준으로 오늘 수업 여부 판단
       const aMySchedule = getMySchedule(a);
       const bMySchedule = getMySchedule(b);
@@ -452,7 +459,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
       // 5. 요일도 같으면 수업명으로 정렬
       return a.className.localeCompare(b.className, 'ko-KR');
     });
-  }, [myClasses, dayOfWeek, teacherName, teacherKoreanName, staff]);
+  }, [filteredClasses, dayOfWeek, teacherName, teacherKoreanName, staff]);
 
   // 학생 정렬
   const sortedStudents = React.useMemo(() => {
@@ -573,6 +580,49 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                   </button>
                 </div>
               )}
+            </div>
+
+            {/* 필터 버튼 */}
+            <div className="flex gap-1 mb-3">
+              <button
+                onClick={() => {
+                  setClassFilter('all');
+                  setClassPage(1);
+                }}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  classFilter === 'all'
+                    ? 'bg-[#081429] text-white font-bold'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                전체
+              </button>
+              <button
+                onClick={() => {
+                  setClassFilter('main');
+                  setClassPage(1);
+                }}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  classFilter === 'main'
+                    ? 'bg-blue-600 text-white font-bold'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                담임
+              </button>
+              <button
+                onClick={() => {
+                  setClassFilter('sub');
+                  setClassPage(1);
+                }}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  classFilter === 'sub'
+                    ? 'bg-gray-600 text-white font-bold'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                부담임
+              </button>
             </div>
 
             {sortedClasses.length === 0 ? (
