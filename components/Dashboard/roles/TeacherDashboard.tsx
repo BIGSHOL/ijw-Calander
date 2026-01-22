@@ -625,25 +625,30 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               </button>
             </div>
 
-            {sortedClasses.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-xs">담당 중인 수업이 없습니다</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto" style={{ minHeight: '400px' }}>
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">수업명</th>
-                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">과목</th>
-                      <th className="text-center py-2 px-2 text-xs font-bold text-gray-700">담임</th>
-                      <th className="text-center py-2 px-2 text-xs font-bold text-gray-700">학생수</th>
-                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">시간표</th>
+            {/* 테이블 - 헤더는 항상 고정 */}
+            <div className="overflow-x-auto" style={{ minHeight: '400px' }}>
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">수업명</th>
+                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">과목</th>
+                    <th className="text-center py-2 px-2 text-xs font-bold text-gray-700">담임</th>
+                    <th className="text-center py-2 px-2 text-xs font-bold text-gray-700">학생수</th>
+                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">시간표</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedClasses.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-8 text-gray-400">
+                        <div className="flex flex-col items-center">
+                          <BookOpen className="w-8 h-8 mb-2 opacity-50" />
+                          <p className="text-xs">담당 중인 수업이 없습니다</p>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {sortedClasses.slice((classPage - 1) * 10, classPage * 10).map(cls => {
+                  ) : (
+                    sortedClasses.slice((classPage - 1) * 10, classPage * 10).map(cls => {
                       // 내가 담당하는 스케줄만 필터링 (담임/부담임 구분 없이)
                       let mySchedule = cls.schedule;
 
@@ -734,11 +739,11 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                           </td>
                         </tr>
                       );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* 내 학생 목록 */}

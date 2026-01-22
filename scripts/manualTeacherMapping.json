@@ -1,0 +1,10 @@
+{
+  "_comment": "Manual mapping for teacherIds that don't auto-match to staff",
+  "_instructions": [
+    "After running preview, add mappings here for unmatched teacherIds",
+    "Format: { 'teacherId_from_enrollment': 'staffId_from_staff_collection' }",
+    "Run preview again to verify mappings before actual migration"
+  ],
+  "mappings": {
+  }
+}
