@@ -1944,7 +1944,7 @@ const App: React.FC = () => {
                     전체
                   </TabButton>
                   <TabButton
-                    active={studentFilters.subjects.includes('math')}
+                    active={studentFilters.subjects.length > 0 && studentFilters.subjects.includes('math')}
                     onClick={() => {
                       const hasSubject = studentFilters.subjects.includes('math');
                       setStudentFilters(prev => ({
@@ -1954,13 +1954,12 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'math']
                       }));
                     }}
-                    variant="tab-status-active"
                     className="px-3 py-1"
                   >
                     수학
                   </TabButton>
                   <TabButton
-                    active={studentFilters.subjects.includes('english')}
+                    active={studentFilters.subjects.length > 0 && studentFilters.subjects.includes('english')}
                     onClick={() => {
                       const hasSubject = studentFilters.subjects.includes('english');
                       setStudentFilters(prev => ({
@@ -1970,12 +1969,12 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'english']
                       }));
                     }}
-                    className="px-3 py-1 bg-purple-500 text-white shadow-sm hover:bg-purple-600"
+                    className="px-3 py-1"
                   >
                     영어
                   </TabButton>
                   <TabButton
-                    active={studentFilters.subjects.includes('korean')}
+                    active={studentFilters.subjects.length > 0 && studentFilters.subjects.includes('korean')}
                     onClick={() => {
                       const hasSubject = studentFilters.subjects.includes('korean');
                       setStudentFilters(prev => ({
@@ -1985,12 +1984,12 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'korean']
                       }));
                     }}
-                    className="px-3 py-1 bg-green-500 text-white shadow-sm hover:bg-green-600"
+                    className="px-3 py-1"
                   >
                     국어
                   </TabButton>
                   <TabButton
-                    active={studentFilters.subjects.includes('science')}
+                    active={studentFilters.subjects.length > 0 && studentFilters.subjects.includes('science')}
                     onClick={() => {
                       const hasSubject = studentFilters.subjects.includes('science');
                       setStudentFilters(prev => ({
@@ -2000,7 +1999,7 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'science']
                       }));
                     }}
-                    className="px-3 py-1 bg-orange-500 text-white shadow-sm hover:bg-orange-600"
+                    className="px-3 py-1"
                   >
                     과학
                   </TabButton>
