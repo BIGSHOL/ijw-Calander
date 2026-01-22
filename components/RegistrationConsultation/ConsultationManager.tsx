@@ -7,6 +7,8 @@ import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
 import { ConsultationForm } from './ConsultationForm';
 import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, ClipboardList, Upload, Loader2 } from 'lucide-react';
+import { TabSubNavigation } from '../Common/TabSubNavigation';
+import { TabButton } from '../Common/TabButton';
 
 const RegistrationMigrationModal = lazy(() => import('./RegistrationMigrationModal'));
 
@@ -256,44 +258,39 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
     return (
         <div className="flex flex-col h-full bg-slate-50 font-sans text-slate-900">
             {/* Desktop Header - Dark Theme to match Main Calendar */}
-            <header className="hidden md:flex bg-[#081429] border-b border-white/10 px-6 h-10 justify-between items-center z-10 shadow-lg relative">
+            <TabSubNavigation
+                variant="compact"
+                showBorder={false}
+                className="hidden md:flex justify-between border-b border-white/10 px-6 relative"
+            >
                 <div className="flex items-center gap-4">
                     {/* Consistent Title Style (Optional, or remove) */}
                     {/* <h2 className="text-sm font-bold text-white tracking-wide">상담 관리</h2>
                     <div className="h-4 w-px bg-white/10"></div> */}
 
-                    {/* View Switcher Tabs - Adjusted sizing */}
+                    {/* View Switcher Tabs */}
                     <div className="flex bg-white/10 p-0.5 rounded-lg border border-white/10">
-                        <button
+                        <TabButton
+                            active={view === 'dashboard'}
                             onClick={() => setView('dashboard')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${view === 'dashboard'
-                                ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                }`}
+                            icon={<LayoutDashboard size={12} />}
                         >
-                            <LayoutDashboard size={12} />
                             대시보드
-                        </button>
-                        <button
+                        </TabButton>
+                        <TabButton
+                            active={view === 'table'}
                             onClick={() => setView('table')}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all ${view === 'table'
-                                ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                }`}
+                            icon={<List size={12} />}
                         >
-                            <List size={12} />
                             상담목록
-                        </button>
-                        <button
+                        </TabButton>
+                        <TabButton
+                            active={view === 'yearly'}
                             onClick={() => setView('yearly')}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all ${view === 'yearly'
-                                ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                }`}
+                            icon={<Calendar size={12} />}
                         >
-                            <Calendar size={12} />
                             연간뷰
-                        </button>
+                        </TabButton>
                     </div>
 
                     {/* Year/Month Filter - Show based on view */}
@@ -306,10 +303,11 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                                     value={selectedYear}
                                     onChange={(e) => setSelectedYear(e.target.value)}
                                     className="px-2 py-0.5 rounded bg-[#1e293b] border border-gray-600 text-white text-xs font-bold focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                    style={{ color: 'white' }}
                                 >
-                                    <option value="all" className="text-black">전체 연도</option>
+                                    <option value="all" style={{ backgroundColor: 'white', color: 'black' }}>전체 연도</option>
                                     {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                                        <option key={year} value={year} className="text-black">{year}년</option>
+                                        <option key={year} value={year} style={{ backgroundColor: 'white', color: 'black' }}>{year}년</option>
                                     ))}
                                 </select>
 
@@ -327,10 +325,11 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                                         onChange={(e) => setSelectedMonth(e.target.value)}
                                         disabled={selectedYear === 'all'}
                                         className="bg-transparent text-white text-xs font-bold px-2 py-1 outline-none text-center min-w-[60px] cursor-pointer disabled:opacity-50"
+                                        style={{ color: 'white' }}
                                     >
-                                        <option value="all" className="text-black">전체</option>
+                                        <option value="all" style={{ backgroundColor: 'white', color: 'black' }}>전체</option>
                                         {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                                            <option key={m} value={String(m)} className="text-black">{m}월</option>
+                                            <option key={m} value={String(m)} style={{ backgroundColor: 'white', color: 'black' }}>{m}월</option>
                                         ))}
                                     </select>
                                     <button
@@ -351,19 +350,13 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     {view === 'yearly' && (
                         <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
                             {([1, 2] as const).map((cols) => (
-                                <button
+                                <TabButton
                                     key={cols}
+                                    active={viewColumns === cols}
                                     onClick={() => setViewColumns(cols)}
-                                    className={`
-                                    px-2 py-0.5 rounded-md text-xs font-bold transition-all
-                                    ${viewColumns === cols
-                                            ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                            : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                        }
-                                `}
                                 >
                                     {cols}단
-                                </button>
+                                </TabButton>
                             ))}
                         </div>
                     )}
@@ -384,7 +377,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                         상담 등록
                     </button>
                 </div>
-            </header>
+            </TabSubNavigation>
 
             {/* Mobile Header */}
             <div className="md:hidden sticky top-0 z-20 bg-slate-50 pt-2 pb-2 px-4">
@@ -527,6 +520,10 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                 </div>}>
                     <RegistrationMigrationModal
                         onClose={() => setShowMigrationModal(false)}
+                        onSuccess={() => {
+                            setShowMigrationModal(false);
+                            // 마이그레이션 성공 시 데이터 새로고침은 react-query가 자동으로 처리
+                        }}
                     />
                 </Suspense>
             )}
