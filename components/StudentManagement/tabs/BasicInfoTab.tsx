@@ -150,6 +150,7 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
       name: student.name || '',
       englishName: student.englishName || '',
       gender: student.gender,
+      attendanceNumber: student.attendanceNumber || '',
       school: student.school || '',
       grade: student.grade || '',
       status: student.status,
@@ -216,6 +217,7 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
       name: student.name || '',
       englishName: student.englishName || '',
       gender: student.gender,
+      attendanceNumber: student.attendanceNumber || '',
       school: student.school || '',
       grade: student.grade || '',
       status: student.status,
@@ -321,6 +323,22 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
         <div className="divide-y divide-gray-100">
           <InputField label="이름" value={formData.name} onChange={(v) => handleChange('name', v)} isEditing={isEditing} />
           <InputField label="영어 이름" value={formData.englishName ?? ''} onChange={(v) => handleChange('englishName', v)} isEditing={isEditing} />
+          <div className="flex items-center gap-2 px-2 py-1 bg-yellow-50">
+            <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">출결번호</label>
+            {isEditing ? (
+              <input
+                type="text"
+                value={formData.attendanceNumber ?? ''}
+                onChange={(e) => handleChange('attendanceNumber', e.target.value)}
+                placeholder="자동 생성됨"
+                className="flex-1 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
+              />
+            ) : (
+              <span className="flex-1 text-xs font-mono font-bold text-[#fdb813]">
+                {formData.attendanceNumber || '-'}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2 px-2 py-1">
             <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">성별</label>
             {isEditing ? (

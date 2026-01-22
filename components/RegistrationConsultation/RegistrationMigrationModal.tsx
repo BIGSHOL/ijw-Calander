@@ -14,6 +14,8 @@ interface ParsedRecord extends Omit<ConsultationRecord, 'id'> {
   _isDuplicate?: boolean;
   _rowNumber?: number;
   _sheetName?: string;
+  _matchedStudentId?: string; // 매칭된 학생 ID
+  _matchedStudentName?: string; // 매칭된 학생 이름 (표시용)
 }
 
 // Performance: js-hoist-regexp - RegExp를 모듈 레벨로 호이스팅
@@ -114,14 +116,15 @@ function parseDate(raw: any, yearMonth: string): string {
 const TABLE_HEADERS = (
   <thead className="bg-gray-100 sticky top-0">
     <tr>
-      <th className="px-2 py-1 text-left">시트</th>
-      <th className="px-2 py-1 text-left">행</th>
-      <th className="px-2 py-1 text-left">이름</th>
-      <th className="px-2 py-1 text-left">학교학년</th>
-      <th className="px-2 py-1 text-left">상담일</th>
-      <th className="px-2 py-1 text-left">과목</th>
-      <th className="px-2 py-1 text-left">등록여부</th>
-      <th className="px-2 py-1 text-left">상태</th>
+      <th className="px-2 py-1 text-left text-xxs">시트</th>
+      <th className="px-2 py-1 text-left text-xxs">행</th>
+      <th className="px-2 py-1 text-left text-xxs">이름</th>
+      <th className="px-2 py-1 text-left text-xxs">학교학년</th>
+      <th className="px-2 py-1 text-left text-xxs">상담일</th>
+      <th className="px-2 py-1 text-left text-xxs">과목</th>
+      <th className="px-2 py-1 text-left text-xxs">학생연동</th>
+      <th className="px-2 py-1 text-left text-xxs">등록여부</th>
+      <th className="px-2 py-1 text-left text-xxs">상태</th>
     </tr>
   </thead>
 );
@@ -132,12 +135,16 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [parsedRecords, setParsedRecords] = useState<ParsedRecord[]>([]);
   const [progress, setProgress] = useState(0);
-  const [stats, setStats] = useState({ total: 0, new: 0, duplicate: 0 });
+  const [stats, setStats] = useState({ total: 0, new: 0, duplicate: 0, matched: 0 });
 
   // 시트 선택 상태
   const [availableSheets, setAvailableSheets] = useState<string[]>([]);
   const [selectedSheets, setSelectedSheets] = useState<Set<string>>(new Set());
   const [workbookData, setWorkbookData] = useState<any>(null);
+
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const RECORDS_PER_PAGE = 50;
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -186,7 +193,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
     try {
       const workbook = workbookData;
 
-      // Performance: js-set-map-lookups - Set을 사용한 O(1) 중복 검색
+      // 1. 기존 상담 기록 중복 검사
       const existingSnapshot = await getDocs(collection(db, 'consultations'));
       const existingKeys = new Set<string>();
 
@@ -195,6 +202,20 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
         // 중복 키: 이름_상담일_내용앞50자
         const key = `${data.studentName}_${data.consultationDate.substring(0, 10)}_${(data.notes || '').substring(0, 50)}`;
         existingKeys.add(key);
+      });
+
+      // 2. 기존 학생 DB 조회 (자동 매칭용)
+      const studentsSnapshot = await getDocs(collection(db, 'students'));
+      const studentMatchMap = new Map<string, { id: string; name: string }>();
+
+      studentsSnapshot.docs.forEach(docSnap => {
+        const student = docSnap.data();
+        // 매칭 키: 이름_보호자연락처
+        const matchKey = `${student.name}_${student.parentPhone || ''}`;
+        studentMatchMap.set(matchKey, {
+          id: docSnap.id,
+          name: student.name
+        });
       });
 
       const allRecords: ParsedRecord[] = [];
@@ -224,13 +245,18 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
           const key = `${studentName}_${consultationDate}_${notes.substring(0, 50)}`;
           const isDuplicate = existingKeys.has(key);
 
+          // 학생 매칭 체크 (이름 + 보호자 연락처)
+          const parentPhone = String(row[10] || '').trim(); // 보호자 연락처는 10번 컬럼
+          const matchKey = `${studentName}_${parentPhone}`;
+          const matchedStudent = studentMatchMap.get(matchKey);
+
           const record: ParsedRecord = {
             // 학생 정보
             studentName,
             schoolName: extractSchool(row[4]),
             grade: mapGrade(row[4]),
             address: String(row[5] || '').trim(),
-            parentPhone: '', // 엑셀에 없음
+            parentPhone,
 
             // 상담 정보
             consultationDate: consultationDate + 'T00:00:00.000Z',
@@ -255,24 +281,31 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
             createdAt: parseDate(row[1], yearMonth) + 'T00:00:00.000Z',
             updatedAt: new Date().toISOString(),
 
-            // 중복 여부 및 행 번호, 시트 이름
+            // 중복 여부, 행 번호, 시트 이름, 학생 매칭 정보
             _isDuplicate: isDuplicate,
             _rowNumber: idx + 3, // Row 2부터 시작이므로 +3
             _sheetName: sheetName,
+            _matchedStudentId: matchedStudent?.id,
+            _matchedStudentName: matchedStudent?.name,
           };
 
           allRecords.push(record);
         });
       }
 
-      // Performance: js-combine-iterations - filter 2번을 단일 루프로 결합
+      // 통계 계산: 전체, 신규, 중복, 학생 매칭
       let newCount = 0;
       let duplicateCount = 0;
+      let matchedCount = 0;
+
       for (let i = 0; i < allRecords.length; i++) {
         if (allRecords[i]._isDuplicate) {
           duplicateCount++;
         } else {
           newCount++;
+        }
+        if (allRecords[i]._matchedStudentId) {
+          matchedCount++;
         }
       }
 
@@ -280,9 +313,11 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
         total: allRecords.length,
         new: newCount,
         duplicate: duplicateCount,
+        matched: matchedCount,
       });
 
       setParsedRecords(allRecords);
+      setCurrentPage(1); // 페이지 초기화
       setStep('preview');
       setLoading(false);
 
@@ -319,11 +354,16 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
           const dateStr = record.consultationDate.substring(0, 10).replace(/-/g, '');
           const docId = `${dateStr}_${record.studentName}_${timestamp}`;
 
-          // _isDuplicate, _rowNumber, _sheetName 제거
-          const { _isDuplicate, _rowNumber, _sheetName, ...cleanRecord } = record;
+          // 메타데이터 필드 제거하고, 매칭된 학생 ID는 registeredStudentId로 설정
+          const { _isDuplicate, _rowNumber, _sheetName, _matchedStudentId, _matchedStudentName, ...cleanRecord } = record;
+
+          // 학생 매칭이 있으면 registeredStudentId 자동 설정
+          const finalRecord = _matchedStudentId
+            ? { ...cleanRecord, registeredStudentId: _matchedStudentId }
+            : cleanRecord;
 
           const docRef = doc(db, 'consultations', docId);
-          batch.set(docRef, cleanRecord);
+          batch.set(docRef, finalRecord);
         });
 
         await batch.commit();
@@ -509,7 +549,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
             <div>
               <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <h3 className="font-bold text-blue-900 mb-2">📊 마이그레이션 통계</h3>
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-4 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600">전체 레코드:</span>
                     <span className="ml-2 font-bold text-blue-900">{stats.total}개</span>
@@ -522,20 +562,31 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                     <span className="text-gray-600">중복 스킵:</span>
                     <span className="ml-2 font-bold text-orange-600">{stats.duplicate}개</span>
                   </div>
+                  <div>
+                    <span className="text-gray-600">🔗 학생 연동:</span>
+                    <span className="ml-2 font-bold text-emerald-600">{stats.matched}개</span>
+                  </div>
                 </div>
               </div>
 
               {/* 미리보기 테이블 */}
               <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200">
-                  <h4 className="text-sm font-bold text-[#081429]">데이터 미리보기 (최대 20개)</h4>
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-[#081429]">
+                    데이터 미리보기 (전체 {stats.total}개)
+                  </h4>
+                  <div className="text-xs text-gray-600">
+                    페이지 {currentPage} / {Math.ceil(stats.total / RECORDS_PER_PAGE)}
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto max-h-96">
                   <table className="w-full text-xs">
                     {TABLE_HEADERS}
                     <tbody>
-                      {parsedRecords.slice(0, 20).map((record, idx) => (
+                      {parsedRecords
+                        .slice((currentPage - 1) * RECORDS_PER_PAGE, currentPage * RECORDS_PER_PAGE)
+                        .map((record, idx) => (
                         <tr
                           key={idx}
                           className={`border-b border-gray-100 ${record._isDuplicate ? 'bg-orange-50' : ''}`}
@@ -559,6 +610,17 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                             </span>
                           </td>
                           <td className="px-2 py-1">
+                            {record._matchedStudentId ? (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium flex items-center gap-1 w-fit">
+                                🔗 연결됨
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium flex items-center gap-1 w-fit">
+                                🆕 신규
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2 py-1">
                             <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                               record.status.includes('등록') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                             }`}>
@@ -577,6 +639,29 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                     </tbody>
                   </table>
                 </div>
+
+                {/* 페이지네이션 컨트롤 */}
+                {stats.total > RECORDS_PER_PAGE && (
+                  <div className="bg-gray-50 px-3 py-2 border-t border-gray-200 flex items-center justify-between">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      이전
+                    </button>
+                    <span className="text-xs text-gray-600">
+                      {(currentPage - 1) * RECORDS_PER_PAGE + 1} - {Math.min(currentPage * RECORDS_PER_PAGE, stats.total)} / {stats.total}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(stats.total / RECORDS_PER_PAGE), prev + 1))}
+                      disabled={currentPage === Math.ceil(stats.total / RECORDS_PER_PAGE)}
+                      className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      다음
+                    </button>
+                  </div>
+                )}
               </div>
 
               {error && (

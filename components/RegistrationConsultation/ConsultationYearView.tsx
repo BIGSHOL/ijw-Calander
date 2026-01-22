@@ -51,21 +51,30 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
         data.forEach(record => {
             // 접수일
             if (record.createdAt) {
-                const key = format(new Date(record.createdAt), 'yyyy-MM-dd');
-                if (!map[key]) map[key] = { createdAt: 0, consultationDate: 0, paymentDate: 0 };
-                map[key].createdAt += 1;
+                const date = new Date(record.createdAt);
+                if (!isNaN(date.getTime())) {
+                    const key = format(date, 'yyyy-MM-dd');
+                    if (!map[key]) map[key] = { createdAt: 0, consultationDate: 0, paymentDate: 0 };
+                    map[key].createdAt += 1;
+                }
             }
             // 상담일
             if (record.consultationDate) {
-                const key = format(new Date(record.consultationDate), 'yyyy-MM-dd');
-                if (!map[key]) map[key] = { createdAt: 0, consultationDate: 0, paymentDate: 0 };
-                map[key].consultationDate += 1;
+                const date = new Date(record.consultationDate);
+                if (!isNaN(date.getTime())) {
+                    const key = format(date, 'yyyy-MM-dd');
+                    if (!map[key]) map[key] = { createdAt: 0, consultationDate: 0, paymentDate: 0 };
+                    map[key].consultationDate += 1;
+                }
             }
             // 결제일
             if (record.paymentDate) {
-                const key = format(new Date(record.paymentDate), 'yyyy-MM-dd');
-                if (!map[key]) map[key] = { createdAt: 0, consultationDate: 0, paymentDate: 0 };
-                map[key].paymentDate += 1;
+                const date = new Date(record.paymentDate);
+                if (!isNaN(date.getTime())) {
+                    const key = format(date, 'yyyy-MM-dd');
+                    if (!map[key]) map[key] = { createdAt: 0, consultationDate: 0, paymentDate: 0 };
+                    map[key].paymentDate += 1;
+                }
             }
         });
 
@@ -349,7 +358,9 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                     <div className="p-2">
                                         <div className="flex items-center justify-between mb-1">
                                             <span className="text-xxs font-bold text-gray-500">
-                                                {record.consultationDate ? format(new Date(record.consultationDate), 'M/d') : '-'}
+                                                {record.consultationDate && !isNaN(new Date(record.consultationDate).getTime())
+                                                    ? format(new Date(record.consultationDate), 'M/d')
+                                                    : '-'}
                                             </span>
                                             <span
                                                 className="text-[8px] px-1 py-0.5 rounded font-bold"
