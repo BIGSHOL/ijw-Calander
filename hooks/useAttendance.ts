@@ -146,7 +146,7 @@ export const useAttendanceStudents = (options?: {
 
             // 선생님 이름 매칭용 래퍼 함수
             const matchTeacher = (nameInClass: string): boolean => {
-                return isTeacherMatch(nameInClass, teacherName, teacherKoreanName);
+                return isTeacherMatch(nameInClass, teacherName, teacherKoreanName, staff);
             };
 
             let data = [...allRaw];
@@ -166,7 +166,7 @@ export const useAttendanceStudents = (options?: {
                     // 2. 부담임으로 배정된 경우 (slotTeachers에 포함)
                     const hasAsSlotTeacher = enrollments.some((e: any) => {
                         const classData = classesMap.get(e.classId);
-                        return isTeacherInSlotTeachers(classData?.slotTeachers, teacherName, teacherKoreanName);
+                        return isTeacherInSlotTeachers(classData?.slotTeachers, teacherName, teacherKoreanName, staff);
                     });
 
                     return hasAsSlotTeacher;
@@ -181,7 +181,7 @@ export const useAttendanceStudents = (options?: {
 
                         // 2. 부담임인 경우 (slotTeachers 확인)
                         const classData = classesMap.get(e.classId);
-                        return isTeacherInSlotTeachers(classData?.slotTeachers, teacherName, teacherKoreanName);
+                        return isTeacherInSlotTeachers(classData?.slotTeachers, teacherName, teacherKoreanName, staff);
                     });
 
                     // 수업명 목록
@@ -207,7 +207,7 @@ export const useAttendanceStudents = (options?: {
                                     const slotKey = slot.replace(' ', '-');
 
                                     // 이 교시의 담당 선생님이 현재 선생님이 아니면 스킵
-                                    if (!isSlotTeacherMatch(classData.slotTeachers, slotKey, teacherName, teacherKoreanName)) return;
+                                    if (!isSlotTeacherMatch(classData.slotTeachers, slotKey, teacherName, teacherKoreanName, staff)) return;
                                 }
 
                                 const day = slot.split(' ')[0]; // "월 5" → "월"
