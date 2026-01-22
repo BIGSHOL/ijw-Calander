@@ -7,6 +7,8 @@ import ClassList from './ClassList';
 import ClassDetailModal from './ClassDetailModal';
 import AddClassModal from './AddClassModal';
 import ClassSettingsModal from './ClassSettingsModal';
+import { TabSubNavigation } from '../Common/TabSubNavigation';
+import { TabButton } from '../Common/TabButton';
 
 export interface ClassFilters {
   subject: 'all' | SubjectType;
@@ -115,9 +117,20 @@ const ClassManagementTab: React.FC = () => {
 
     let result = [...classes];
 
-    // 강사 필터
+    // 강사 필터 (담임 + 부담임 모두 포함)
     if (filters.teacher !== 'all') {
-      result = result.filter(c => c.teacher === filters.teacher);
+      result = result.filter(c => {
+        // 담임 체크
+        if (c.teacher === filters.teacher) return true;
+
+        // 부담임 체크 (slotTeachers)
+        if (c.slotTeachers) {
+          const slotTeacherNames = Object.values(c.slotTeachers);
+          if (slotTeacherNames.includes(filters.teacher)) return true;
+        }
+
+        return false;
+      });
     }
 
     // 검색어 필터
@@ -174,25 +187,22 @@ const ClassManagementTab: React.FC = () => {
       {/* 상단 고정 영역 - flex-shrink-0으로 절대 줄어들지 않음 */}
       <div className="flex-shrink-0">
         {/* 상단 네비게이션 바 - 반응형 레이아웃 */}
-        <div className="bg-[#081429] px-6 py-2 border-b border-white/10 text-xs">
+        <TabSubNavigation variant="compact" className="px-6 py-2 border-b border-white/10">
           {/* 단일 행 - 화면이 좁으면 자동으로 wrap */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 w-full">
             <div className="flex flex-wrap items-center gap-3">
               {/* 과목 토글 */}
               <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
                 {subjectFilters.map(({ value, label, icon }) => (
-                  <button
+                  <TabButton
                     key={value}
+                    active={filters.subject === value}
                     onClick={() => setFilters({ ...filters, subject: value })}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filters.subject === value
-                      ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      }`}
+                    icon={icon}
+                    className="px-3 py-1"
                   >
-                    <span className="inline-flex items-center gap-1.5">
-                      {icon} {label}
-                    </span>
-                  </button>
+                    {label}
+                  </TabButton>
                 ))}
               </div>
 
@@ -449,7 +459,7 @@ const ClassManagementTab: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </TabSubNavigation>
 
         {/* 테이블 헤더 */}
         <div className="bg-gray-50 border-b border-gray-200 px-6 py-2 grid grid-cols-[80px_1fr_100px_1fr_1fr_70px_40px] gap-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
