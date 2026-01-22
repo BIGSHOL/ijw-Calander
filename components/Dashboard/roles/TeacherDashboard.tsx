@@ -3,7 +3,7 @@ import { UserProfile, StaffMember } from '../../../types';
 import { collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import DashboardHeader from '../DashboardHeader';
-import { BookOpen, Users, Calendar, CheckSquare, Clock, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, Users, Calendar, CheckSquare, Clock, User, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import {
   MATH_PERIOD_INFO,
   ENGLISH_PERIOD_INFO,
@@ -196,6 +196,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [classPage, setClassPage] = useState(1);
   const [studentPage, setStudentPage] = useState(1);
+  const [studentSortBy, setStudentSortBy] = useState<'name' | 'school' | 'grade'>('name');
+  const [studentSortOrder, setStudentSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // 강사 이름 (영어 이름 우선, 없으면 한글 이름)
   const teacherName = staffMember?.englishName || staffMember?.name || userProfile.name;
@@ -363,7 +365,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
     cls.schedule.some(s => s.day === dayOfWeek)
   );
 
-  // 수업 정렬: 오늘 수업 우선, 나머지는 요일 순
+  // 수업 정렬: 오늘 수업 → 담임 수업 → 부담임 수업 → 요일순
   const sortedClasses = React.useMemo(() => {
     const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -371,20 +373,62 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
       const aHasToday = a.schedule.some(s => s.day === dayOfWeek);
       const bHasToday = b.schedule.some(s => s.day === dayOfWeek);
 
-      // 오늘 수업 우선
-      if (aHasToday && !bHasToday) return -1;
-      if (!aHasToday && bHasToday) return 1;
+      // 1. 오늘 수업 여부로 먼저 구분
+      if (aHasToday !== bHasToday) {
+        return aHasToday ? -1 : 1;
+      }
 
-      // 나머지는 첫 번째 요일 기준 정렬
+      // 2. 오늘 수업 여부가 같으면 담임/부담임으로 구분
+      if (a.isMainTeacher !== b.isMainTeacher) {
+        return a.isMainTeacher ? -1 : 1;
+      }
+
+      // 3. 담임 여부도 같으면 요일순 정렬
       const aFirstDay = a.schedule[0]?.day || '';
       const bFirstDay = b.schedule[0]?.day || '';
 
       const aIndex = dayOrder.indexOf(aFirstDay);
       const bIndex = dayOrder.indexOf(bFirstDay);
 
-      return aIndex - bIndex;
+      if (aIndex !== bIndex) {
+        return aIndex - bIndex;
+      }
+
+      // 4. 요일도 같으면 수업명으로 정렬
+      return a.className.localeCompare(b.className, 'ko-KR');
     });
   }, [myClasses, dayOfWeek]);
+
+  // 학생 정렬
+  const sortedStudents = React.useMemo(() => {
+    return [...myStudents].sort((a, b) => {
+      let compareValue = 0;
+
+      if (studentSortBy === 'name') {
+        compareValue = (a.name || '').localeCompare(b.name || '', 'ko-KR');
+      } else if (studentSortBy === 'school') {
+        compareValue = (a.school || '').localeCompare(b.school || '', 'ko-KR');
+      } else if (studentSortBy === 'grade') {
+        compareValue = (a.grade || '').localeCompare(b.grade || '', 'ko-KR');
+      }
+
+      return studentSortOrder === 'asc' ? compareValue : -compareValue;
+    });
+  }, [myStudents, studentSortBy, studentSortOrder]);
+
+  // 정렬 토글 함수
+  const handleSortChange = (sortBy: 'name' | 'school' | 'grade') => {
+    if (studentSortBy === sortBy) {
+      // 같은 컬럼을 클릭하면 정렬 순서 토글
+      setStudentSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 다른 컬럼을 클릭하면 해당 컬럼으로 오름차순 정렬
+      setStudentSortBy(sortBy);
+      setStudentSortOrder('asc');
+    }
+    // 페이지를 첫 페이지로 리셋
+    setStudentPage(1);
+  };
 
   if (loading) {
     return (
@@ -401,7 +445,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
 
   return (
     <div className="w-full h-full overflow-auto p-3 bg-gray-50">
-      <div className="max-w-[1800px] mx-auto space-y-3">
+      <div className="max-w-[2000px] mx-auto space-y-3">
         <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
 
         {/* 통계 카드 */}
@@ -635,14 +679,50 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">이름</th>
+                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
+                      <button
+                        onClick={() => handleSortChange('name')}
+                        className="flex items-center gap-1 hover:text-[#081429] transition-colors"
+                      >
+                        이름
+                        {studentSortBy === 'name' ? (
+                          studentSortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-30" />
+                        )}
+                      </button>
+                    </th>
                     <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">영문명</th>
-                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">학교</th>
-                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">학년</th>
+                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
+                      <button
+                        onClick={() => handleSortChange('school')}
+                        className="flex items-center gap-1 hover:text-[#081429] transition-colors"
+                      >
+                        학교
+                        {studentSortBy === 'school' ? (
+                          studentSortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-30" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
+                      <button
+                        onClick={() => handleSortChange('grade')}
+                        className="flex items-center gap-1 hover:text-[#081429] transition-colors"
+                      >
+                        학년
+                        {studentSortBy === 'grade' ? (
+                          studentSortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-30" />
+                        )}
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {myStudents.slice((studentPage - 1) * 10, studentPage * 10).map(student => (
+                  {sortedStudents.slice((studentPage - 1) * 10, studentPage * 10).map(student => (
                     <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-2 px-2 text-xs font-medium text-[#081429]">{student.name}</td>
                       <td className="py-2 px-2 text-xs text-gray-600">{student.englishName || '-'}</td>
