@@ -458,11 +458,12 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       if (s.status === 'withdrawn') return false;
 
       // Exclude if startDate is in the future (after this month)
-      if (s.startDate > monthLastDay) return false;
+      // startDate가 없거나 문자열이 아니면 포함
+      if (s.startDate && typeof s.startDate === 'string' && s.startDate > monthLastDay) return false;
 
       // Exclude if endDate exists AND is before the first day of current month (already withdrawn)
       // This means: if endDate < monthFirstDay, the student left before this month started
-      if (s.endDate && s.endDate < monthFirstDay) return false;
+      if (s.endDate && typeof s.endDate === 'string' && s.endDate < monthFirstDay) return false;
 
       return true;
     });

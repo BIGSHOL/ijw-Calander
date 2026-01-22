@@ -291,6 +291,7 @@ export interface ManageClassStudentsData {
   removeStudentIds?: string[];  // 제거할 학생 IDs
   studentAttendanceDays?: Record<string, string[]>;  // { studentId: ['월', '목'] } 학생별 등원 요일 (수학용)
   studentUnderlines?: Record<string, boolean>;  // { studentId: true } 학생별 밑줄 강조 (영어용)
+  studentSlotTeachers?: Record<string, boolean>;  // { studentId: true } 학생별 부담임 여부 (수학용)
 }
 
 export const useManageClassStudents = () => {
@@ -298,7 +299,7 @@ export const useManageClassStudents = () => {
 
   return useMutation({
     mutationFn: async (data: ManageClassStudentsData) => {
-      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {}, studentUnderlines = {} } = data;
+      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {}, studentUnderlines = {}, studentSlotTeachers = {} } = data;
 
       // 학생 추가
       if (addStudentIds.length > 0) {
@@ -319,6 +320,10 @@ export const useManageClassStudents = () => {
           // 신규 학생에게 underline이 설정되어 있으면 추가 (영어용)
           if (studentUnderlines[studentId]) {
             enrollmentData.underline = true;
+          }
+          // 신규 학생에게 slotTeacher 여부가 설정되어 있으면 추가 (수학용 부담임)
+          if (studentSlotTeachers[studentId]) {
+            enrollmentData.isSlotTeacher = true;
           }
           await addDoc(enrollmentsRef, enrollmentData);
         });
@@ -401,6 +406,30 @@ export const useManageClassStudents = () => {
           await Promise.all(updateOps);
         });
         await Promise.all(underlinePromises);
+      }
+
+      // 기존 학생 isSlotTeacher 업데이트 (추가/제거 대상이 아닌 학생들) - 수학용
+      const slotTeacherStudentIds = Object.keys(studentSlotTeachers).filter(
+        id => !addStudentIds.includes(id) && !removeStudentIds.includes(id)
+      );
+
+      if (slotTeacherStudentIds.length > 0) {
+        const slotTeacherPromises = slotTeacherStudentIds.map(async (studentId) => {
+          const enrollmentsQuery = query(
+            collection(db, COL_STUDENTS, studentId, 'enrollments'),
+            where('subject', '==', subject),
+            where('className', '==', className)
+          );
+          const snapshot = await getDocs(enrollmentsQuery);
+
+          const updateOps = snapshot.docs.map(async (docSnap) => {
+            const isSlotTeacher = studentSlotTeachers[studentId];
+            await updateDoc(docSnap.ref, { isSlotTeacher: isSlotTeacher || false });
+          });
+
+          await Promise.all(updateOps);
+        });
+        await Promise.all(slotTeacherPromises);
       }
     },
     onSuccess: () => {

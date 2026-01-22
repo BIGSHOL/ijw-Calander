@@ -129,10 +129,24 @@ const Table: React.FC<Props> = ({
       const studentGroup = student.group || '그룹 없음'; // Default name for no group
       if (student.group && studentGroup !== currentGroup) {
         currentGroup = studentGroup;
+
+        // 같은 그룹의 학생들 중 담임/부담임 여부 확인
+        const groupStudents = students.filter(s => s.group === currentGroup);
+        const isAssistantGroup = groupStudents.every(s => s.isSlotTeacher === true);
+
         rows.push(
           <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">
             <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
               <div className="flex items-center gap-2">
+                {isAssistantGroup ? (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold">
+                    부담임
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">
+                    담임
+                  </span>
+                )}
                 <FolderOpen size={14} className="text-slate-400" />
                 {currentGroup}
               </div>
@@ -578,6 +592,10 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
       const isCollapsed = collapsedGroups.has(currentGroup);
       const studentCount = groupStudentCounts.get(currentGroup) || 0;
 
+      // 같은 그룹의 학생들 중 담임/부담임 여부 확인
+      const groupStudents = students.filter(s => s.group === currentGroup);
+      const isAssistantGroup = groupStudents.every(s => s.isSlotTeacher === true);
+
       rows.push(
         <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">
           <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
@@ -594,6 +612,16 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
                   <ChevronDown size={14} className="text-slate-500" />
                 )}
               </button>
+              {/* 담임/부담임 배지 */}
+              {isAssistantGroup ? (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold">
+                  부담임
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">
+                  담임
+                </span>
+              )}
               {isCollapsed ? (
                 <Folder size={14} className="text-slate-400" />
               ) : (

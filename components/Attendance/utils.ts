@@ -87,16 +87,24 @@ export const calculateClassRate = (item: SalarySettingItem | undefined, academyF
 
 // Check if a specific date key (YYYY-MM-DD) is valid within student's start/end range
 export const isDateValidForStudent = (dateKey: string, student: Student): boolean => {
-  if (dateKey < student.startDate) return false;
-  if (student.endDate && dateKey > student.endDate) return false;
+  // startDate가 문자열이 아니면 항상 유효한 것으로 간주
+  if (typeof student.startDate === 'string' && dateKey < student.startDate) return false;
+  if (student.endDate && typeof student.endDate === 'string' && dateKey > student.endDate) return false;
   return true;
 };
 
 // Helper to determine student status based on Date Range (Badge Logic)
 export const getStudentStatus = (student: Student, currentMonth: Date) => {
   const currentMonthStr = currentMonth.toISOString().slice(0, 7); // "YYYY-MM"
-  const startMonthStr = student.startDate.slice(0, 7);
-  const endMonthStr = student.endDate ? student.endDate.slice(0, 7) : null;
+
+  // startDate가 문자열이 아니면 기본값 사용
+  const startMonthStr = typeof student.startDate === 'string'
+    ? student.startDate.slice(0, 7)
+    : '1970-01';
+
+  const endMonthStr = student.endDate && typeof student.endDate === 'string'
+    ? student.endDate.slice(0, 7)
+    : null;
 
   // Logic: Joined THIS month
   const isNew = startMonthStr === currentMonthStr;

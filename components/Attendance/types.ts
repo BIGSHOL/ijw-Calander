@@ -67,7 +67,7 @@ export interface Student {
   updatedAt?: string;
 
   // 담임/부담임 여부 (출석부에서 [담임]/[부담임] 표시용)
-  isAssistantClass?: boolean;  // true면 부담임 수업의 학생
+  isSlotTeacher?: boolean;  // true면 부담임(slotTeacher) 수업의 학생
 }
 
 export interface AppState {

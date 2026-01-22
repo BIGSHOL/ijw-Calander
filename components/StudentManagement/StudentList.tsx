@@ -162,17 +162,40 @@ const StudentList: React.FC<StudentListProps> = ({
                   {/* 2번째 줄: 과목 */}
                   {student.enrollments && student.enrollments.length > 0 && (
                     <div className="flex items-center gap-1 pl-0.5">
-                      {Array.from(new Set(student.enrollments.map(e => e.subject))).map((subject) => (
-                        <span
-                          key={subject}
-                          className={`text-micro px-1 rounded font-medium ${subject === 'math'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-purple-100 text-purple-700'
-                            }`}
-                        >
-                          {subject === 'math' ? '수학' : '영어'}
-                        </span>
-                      ))}
+                      {Array.from(new Set(student.enrollments.map(e => e.subject)))
+                        .sort((a, b) => {
+                          // 과목 정렬 순서: math, english, korean, science, 기타
+                          const order: Record<string, number> = {
+                            math: 1,
+                            english: 2,
+                            korean: 3,
+                            science: 4,
+                          };
+                          return (order[a] || 99) - (order[b] || 99);
+                        })
+                        .map((subject) => {
+                          // 과목명 매핑
+                          const subjectNames: Record<string, string> = {
+                            math: '수학',
+                            english: '영어',
+                            korean: '국어',
+                            science: '과학',
+                          };
+                          const subjectColors: Record<string, string> = {
+                            math: 'bg-blue-100 text-blue-700',
+                            english: 'bg-purple-100 text-purple-700',
+                            korean: 'bg-green-100 text-green-700',
+                            science: 'bg-orange-100 text-orange-700',
+                          };
+                          return (
+                            <span
+                              key={subject}
+                              className={`text-micro px-1 rounded font-medium ${subjectColors[subject] || 'bg-gray-100 text-gray-700'}`}
+                            >
+                              {subjectNames[subject] || subject}
+                            </span>
+                          );
+                        })}
                     </div>
                   )}
                 </div>

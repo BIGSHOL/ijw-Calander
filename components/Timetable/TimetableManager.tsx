@@ -250,6 +250,7 @@ const TimetableManager = ({
     const [newRoom, setNewRoom] = useState('');
     const [newSubject, setNewSubject] = useState('수학');
     const [newSchedule, setNewSchedule] = useState<string[]>([]);
+    const [isAssistant, setIsAssistant] = useState(false);
 
     // Timetable View Mode: 'day-based' (월화수목금토일) vs 'teacher-based' (월목/화금/주말/수요일)
     const [internalTimetableViewMode, setInternalTimetableViewMode] = useState<'day-based' | 'teacher-based'>(
@@ -425,7 +426,8 @@ const TimetableManager = ({
                 teacher: newTeacher,
                 room: newRoom,
                 subject: newSubject,
-                schedule: newSchedule
+                schedule: newSchedule,
+                isAssistant: isAssistant
             }, currentPeriods);
 
             setNewClassName('');
@@ -433,6 +435,7 @@ const TimetableManager = ({
             setNewRoom('');
             setNewSubject(currentSubjectFilter);
             setNewSchedule([]);
+            setIsAssistant(false);
             setIsAddClassOpen(false);
         } catch (e: any) {
             console.error(e);
@@ -450,6 +453,7 @@ const TimetableManager = ({
     const openAddModal = () => {
         setNewSubject(currentSubjectFilter);
         setNewSchedule([]);
+        setIsAssistant(false);
         setIsAddClassOpen(true);
     };
 
@@ -686,6 +690,8 @@ const TimetableManager = ({
                 toggleScheduleSlot={toggleScheduleSlot}
                 handleAddClass={handleAddClass}
                 teacherNames={sortedTeachers}
+                isAssistant={isAssistant}
+                setIsAssistant={setIsAssistant}
             />
 
             {/* Class Detail Modal - 수업 관리와 동일한 상세 모달 사용 */}
