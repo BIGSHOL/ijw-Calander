@@ -205,27 +205,41 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
 
     setLoading(true);
     try {
-      // 1. 내 수업 로드 (teacher 또는 mainTeacher가 나인 수업)
+      // 1. 내 수업 로드 (teacher, mainTeacher, 또는 assistants에 포함된 수업)
       const classesRef = collection(db, 'classes');
 
-      // 영어 이름으로 검색
+      // 영어 이름으로 검색 (teacher 필드)
       const q1 = query(classesRef, where('teacher', '==', teacherName));
       const snapshot1 = await getDocs(q1);
 
-      // 한글 이름으로도 검색 (mainTeacher에 한글 이름이 저장될 수 있음)
+      // 한글 이름으로 검색 (mainTeacher 필드)
       let snapshot2: any = { docs: [] };
       if (teacherKoreanName) {
         const q2 = query(classesRef, where('mainTeacher', '==', teacherKoreanName));
         snapshot2 = await getDocs(q2);
       }
 
+      // assistants 배열에 포함된 수업 검색
+      const q3 = query(classesRef, where('assistants', 'array-contains', teacherName));
+      const snapshot3 = await getDocs(q3);
+
+      // 한글 이름도 assistants에 있을 수 있음
+      let snapshot4: any = { docs: [] };
+      if (teacherKoreanName) {
+        const q4 = query(classesRef, where('assistants', 'array-contains', teacherKoreanName));
+        snapshot4 = await getDocs(q4);
+      }
+
       const classesMap = new Map<string, MyClass>();
 
-      [...snapshot1.docs, ...snapshot2.docs].forEach(doc => {
+      [...snapshot1.docs, ...snapshot2.docs, ...snapshot3.docs, ...snapshot4.docs].forEach(doc => {
         const data = doc.data();
         if (!classesMap.has(doc.id)) {
-          // teacher 필드로 매칭되면 부담임, mainTeacher로 매칭되면 담임
-          const isMainTeacher = data.mainTeacher === teacherKoreanName;
+          // mainTeacher가 내 이름과 일치하면 담임
+          // assistants 배열에만 포함되어 있거나 teacher 필드만 일치하면 부담임
+          const isMainTeacher =
+            data.mainTeacher === teacherKoreanName ||
+            data.mainTeacher === teacherName;
 
           classesMap.set(doc.id, {
             id: doc.id,
