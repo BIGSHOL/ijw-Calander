@@ -13,6 +13,7 @@ interface RegistrationMigrationModalProps {
 interface ParsedRecord extends Omit<ConsultationRecord, 'id'> {
   _isDuplicate?: boolean;
   _rowNumber?: number;
+  _sheetName?: string;
 }
 
 // Performance: js-hoist-regexp - RegExp를 모듈 레벨로 호이스팅
@@ -113,6 +114,7 @@ function parseDate(raw: any, yearMonth: string): string {
 const TABLE_HEADERS = (
   <thead className="bg-gray-100 sticky top-0">
     <tr>
+      <th className="px-2 py-1 text-left">시트</th>
       <th className="px-2 py-1 text-left">행</th>
       <th className="px-2 py-1 text-left">이름</th>
       <th className="px-2 py-1 text-left">학교학년</th>
@@ -125,12 +127,17 @@ const TABLE_HEADERS = (
 );
 
 const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({ onClose, onSuccess }) => {
-  const [step, setStep] = useState<'upload' | 'preview' | 'migrating' | 'done'>('upload');
+  const [step, setStep] = useState<'upload' | 'sheet-select' | 'preview' | 'migrating' | 'done'>('upload');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [parsedRecords, setParsedRecords] = useState<ParsedRecord[]>([]);
   const [progress, setProgress] = useState(0);
   const [stats, setStats] = useState({ total: 0, new: 0, duplicate: 0 });
+
+  // 시트 선택 상태
+  const [availableSheets, setAvailableSheets] = useState<string[]>([]);
+  const [selectedSheets, setSelectedSheets] = useState<Set<string>>(new Set());
+  const [workbookData, setWorkbookData] = useState<any>(null);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -151,7 +158,33 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
         throw new Error('월별 시트가 없습니다. (예: 1월, 2월, ...)');
       }
 
-      console.log(`📋 처리할 시트: ${monthSheets.join(', ')}`);
+      console.log(`📋 사용 가능한 시트: ${monthSheets.join(', ')}`);
+
+      // 워크북과 시트 목록 저장
+      setWorkbookData(workbook);
+      setAvailableSheets(monthSheets);
+      setSelectedSheets(new Set(monthSheets)); // 기본값: 전체 선택
+      setStep('sheet-select');
+      setLoading(false);
+
+    } catch (err: any) {
+      console.error('파일 업로드 오류:', err);
+      setError(err.message || '파일 처리 중 오류가 발생했습니다.');
+      setLoading(false);
+    }
+  };
+
+  const handleParseSelectedSheets = async () => {
+    if (!workbookData || selectedSheets.size === 0) {
+      setError('시트를 선택해주세요.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const workbook = workbookData;
 
       // Performance: js-set-map-lookups - Set을 사용한 O(1) 중복 검색
       const existingSnapshot = await getDocs(collection(db, 'consultations'));
@@ -166,8 +199,9 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
 
       const allRecords: ParsedRecord[] = [];
 
-      // 모든 월별 시트 처리
-      for (const sheetName of monthSheets) {
+      // 선택된 시트만 처리
+      const sheetsToProcess = Array.from(selectedSheets);
+      for (const sheetName of sheetsToProcess) {
         const sheet = workbook.Sheets[sheetName];
         const rawData = utils.sheet_to_json(sheet, { defval: '', header: 1 }) as any[][];
 
@@ -221,9 +255,10 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
             createdAt: parseDate(row[1], yearMonth) + 'T00:00:00.000Z',
             updatedAt: new Date().toISOString(),
 
-            // 중복 여부 및 행 번호
+            // 중복 여부 및 행 번호, 시트 이름
             _isDuplicate: isDuplicate,
             _rowNumber: idx + 3, // Row 2부터 시작이므로 +3
+            _sheetName: sheetName,
           };
 
           allRecords.push(record);
@@ -284,8 +319,8 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
           const dateStr = record.consultationDate.substring(0, 10).replace(/-/g, '');
           const docId = `${dateStr}_${record.studentName}_${timestamp}`;
 
-          // _isDuplicate, _rowNumber 제거
-          const { _isDuplicate, _rowNumber, ...cleanRecord } = record;
+          // _isDuplicate, _rowNumber, _sheetName 제거
+          const { _isDuplicate, _rowNumber, _sheetName, ...cleanRecord } = record;
 
           const docRef = doc(db, 'consultations', docId);
           batch.set(docRef, cleanRecord);
@@ -361,7 +396,115 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
             </div>
           )}
 
-          {/* Step 2: 미리보기 */}
+          {/* Step 2: 시트 선택 */}
+          {step === 'sheet-select' && (
+            <div>
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-[#081429] mb-2">📋 불러올 시트 선택</h3>
+                <p className="text-sm text-gray-600">
+                  마이그레이션할 월별 시트를 선택하세요. (기본값: 전체 선택)
+                </p>
+              </div>
+
+              {/* 전체 선택/해제 버튼 */}
+              <div className="mb-4 flex gap-2">
+                <button
+                  onClick={() => setSelectedSheets(new Set(availableSheets))}
+                  className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                >
+                  전체 선택
+                </button>
+                <button
+                  onClick={() => setSelectedSheets(new Set())}
+                  className="px-3 py-1.5 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
+                >
+                  전체 해제
+                </button>
+              </div>
+
+              {/* 시트 선택 그리드 */}
+              <div className="grid grid-cols-4 gap-3 mb-6">
+                {availableSheets.map(sheetName => (
+                  <button
+                    key={sheetName}
+                    onClick={() => {
+                      const newSelected = new Set(selectedSheets);
+                      if (newSelected.has(sheetName)) {
+                        newSelected.delete(sheetName);
+                      } else {
+                        newSelected.add(sheetName);
+                      }
+                      setSelectedSheets(newSelected);
+                    }}
+                    className={`px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm ${
+                      selectedSheets.has(sheetName)
+                        ? 'bg-[#fdb813] border-[#fdb813] text-[#081429] shadow-md'
+                        : 'bg-white border-gray-300 text-gray-700 hover:border-[#fdb813]/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{sheetName}</span>
+                      {selectedSheets.has(sheetName) && (
+                        <Check size={16} className="ml-2" />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* 선택된 시트 개수 */}
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-900">
+                  <strong>{selectedSheets.size}개</strong> 시트가 선택되었습니다.
+                  {selectedSheets.size > 0 && (
+                    <span className="ml-2 text-blue-700">
+                      ({Array.from(selectedSheets).join(', ')})
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+
+              {/* 액션 버튼 */}
+              <div className="flex justify-between gap-3">
+                <button
+                  onClick={() => {
+                    setStep('upload');
+                    setWorkbookData(null);
+                    setAvailableSheets([]);
+                    setSelectedSheets(new Set());
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  ← 다른 파일 선택
+                </button>
+                <button
+                  onClick={handleParseSelectedSheets}
+                  disabled={selectedSheets.size === 0 || loading}
+                  className="px-6 py-2 bg-[#fdb813] text-[#081429] rounded-lg font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      데이터 분석 중...
+                    </>
+                  ) : (
+                    <>
+                      다음 단계 →
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: 미리보기 */}
           {step === 'preview' && (
             <div>
               <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -397,6 +540,11 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                           key={idx}
                           className={`border-b border-gray-100 ${record._isDuplicate ? 'bg-orange-50' : ''}`}
                         >
+                          <td className="px-2 py-1">
+                            <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">
+                              {record._sheetName}
+                            </span>
+                          </td>
                           <td className="px-2 py-1 text-gray-500">{record._rowNumber}</td>
                           <td className="px-2 py-1 font-medium">{record.studentName}</td>
                           <td className="px-2 py-1 text-gray-600">

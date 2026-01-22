@@ -9,6 +9,13 @@ export default {
     "./hooks/**/*.{ts,tsx}",
   ],
   theme: {
+    // Responsive Breakpoints - 명시적 정의
+    screens: {
+      'sm': '640px',   // 모바일 가로/작은 태블릿
+      'md': '768px',   // 태블릿
+      'lg': '1024px',  // 데스크톱
+      'xl': '1280px',  // 큰 데스크톱
+    },
     extend: {
       // Brand Colors - Addresses Issue #9
       colors: {
