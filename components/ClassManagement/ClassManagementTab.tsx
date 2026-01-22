@@ -462,10 +462,11 @@ const ClassManagementTab: React.FC = () => {
         </TabSubNavigation>
 
         {/* 테이블 헤더 */}
-        <div className="bg-gray-50 border-b border-gray-200 px-6 py-2 grid grid-cols-[80px_1fr_100px_1fr_1fr_70px_40px] gap-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="bg-gray-50 border-b border-gray-200 px-6 py-2 grid grid-cols-[80px_1fr_100px_100px_1fr_1fr_70px_40px] gap-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
           <div className="text-center">과목</div>
           <div>수업명</div>
           <div>담임</div>
+          <div>부담임</div>
           <div>스케줄</div>
           <div>메모</div>
           <div className="text-center">학생</div>

@@ -20,6 +20,8 @@ import { generateReportInsight } from '../../services/geminiService';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { TuitionEntry } from '../../types';
 import ReactMarkdown from 'react-markdown';
+import { TabSubNavigation } from '../Common/TabSubNavigation';
+import { TabButton } from '../Common/TabButton';
 
 type TuitionHistory = Record<string, TuitionEntry[]>;
 
@@ -236,8 +238,8 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
     return (
         <div className="min-h-screen bg-gray-50 text-[#373d41] font-sans pb-20 print:bg-white print:pb-0">
             {/* Header */}
-            <header className="bg-[#081429] border-b border-white/10 sticky top-0 z-30 print:hidden">
-                <div className="w-full px-4 sm:px-6 h-10 flex items-center justify-between">
+            <TabSubNavigation variant="compact" className="border-b border-white/10 sticky top-0 z-30 print:hidden">
+                <div className="w-full px-4 sm:px-6 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="bg-[#fdb813] p-1.5 rounded-lg hidden sm:block">
                             <FileText className="text-[#081429] h-3.5 w-3.5" />
@@ -274,18 +276,15 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-
-                        <button
+                        <TabButton
+                            active={viewMode === 'report'}
                             onClick={handleToggleViewMode}
-                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewMode === 'report'
-                                ? "bg-[#fdb813] text-[#081429]"
-                                : "text-gray-300 hover:bg-white/10"
-                                }`}
+                            icon={viewMode === 'report' ? <LayoutDashboard size={14} /> : <Printer size={14} />}
+                            className="px-3 py-1"
                             aria-label={viewMode === 'report' ? '대시보드 보기' : '인쇄용 뷰 보기'}
                         >
-                            {viewMode === 'report' ? <LayoutDashboard size={14} /> : <Printer size={14} />}
                             {viewMode === 'report' ? '대시보드' : '인쇄용 뷰'}
-                        </button>
+                        </TabButton>
                         {viewMode === 'dashboard' && (
                             <button
                                 onClick={handleOpenForm}
@@ -298,7 +297,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                         )}
                     </div>
                 </div>
-            </header>
+            </TabSubNavigation>
 
             {/* Main Content */}
             <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 print:max-w-none print:p-0 print:m-0">
