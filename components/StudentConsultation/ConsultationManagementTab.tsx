@@ -10,6 +10,9 @@ import { useStudents } from '../../hooks/useStudents';
 import { useStaff } from '../../hooks/useStaff';
 import { ConsultationDashboard } from '../Dashboard';
 import { getMonthRangeKST, getTodayKST } from '../../utils/dateUtils';
+import { TabSubNavigation } from '../Common/TabSubNavigation';
+import { TabButton } from '../Common/TabButton';
+import { GridDropdown, GridDropdownOption } from '../Common/GridDropdown';
 
 /**
  * 상담 관리 메인 탭
@@ -220,30 +223,30 @@ const ConsultationManagementTab: React.FC = () => {
     return (
         <div className="h-full flex flex-col overflow-hidden">
             {/* 상단 네비게이션 바 (다른 탭과 동일한 스타일) - 모바일 대응을 위해 h-auto 및 flex-wrap 적용 */}
-            <div className="bg-[#081429] min-h-10 h-auto flex flex-wrap items-center justify-between px-6 py-2 border-b border-white/10 text-xs z-30 gap-2">
+            <TabSubNavigation
+                variant="compact"
+                showBorder={false}
+                className="min-h-10 h-auto flex-wrap justify-between px-6 py-2 border-b border-white/10 z-30"
+            >
                 <div className="flex flex-wrap items-center gap-3">
                     {/* 뷰 모드 토글 */}
                     <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10">
-                        <button
+                        <TabButton
+                            active={viewMode === 'list'}
                             onClick={() => handleViewModeChange('list')}
-                            className={`p-1.5 rounded-md transition-all ${viewMode === 'list'
-                                ? 'bg-[#fdb813] text-[#081429]'
-                                : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                }`}
                             title="목록 보기"
+                            className="p-1.5"
                         >
                             <List size={14} />
-                        </button>
-                        <button
+                        </TabButton>
+                        <TabButton
+                            active={viewMode === 'dashboard'}
                             onClick={() => handleViewModeChange('dashboard')}
-                            className={`p-1.5 rounded-md transition-all ${viewMode === 'dashboard'
-                                ? 'bg-[#fdb813] text-[#081429]'
-                                : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                }`}
                             title="대시보드 보기"
+                            className="p-1.5"
                         >
                             <LayoutDashboard size={14} />
-                        </button>
+                        </TabButton>
                     </div>
 
                     {/* 공통 필터들 (목록/대시보드 모두에 표시) */}
@@ -253,62 +256,50 @@ const ConsultationManagementTab: React.FC = () => {
 
                         {/* 날짜 범위 버튼 */}
                         <div className="flex gap-1">
-                            <button
+                            <TabButton
+                                active={activeDatePreset === 'today'}
                                 onClick={() => applyDatePreset('today')}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'today'
-                                    ? 'bg-[#fdb813] text-[#081429]'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
+                                className="px-2 py-1"
                             >
                                 오늘
-                            </button>
-                            <button
+                            </TabButton>
+                            <TabButton
+                                active={activeDatePreset === 'week'}
                                 onClick={() => applyDatePreset('week')}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'week'
-                                    ? 'bg-[#fdb813] text-[#081429]'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
+                                className="px-2 py-1"
                             >
                                 최근 7일
-                            </button>
-                            <button
+                            </TabButton>
+                            <TabButton
+                                active={activeDatePreset === 'thisMonth'}
                                 onClick={() => applyDatePreset('thisMonth')}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'thisMonth'
-                                    ? 'bg-[#fdb813] text-[#081429]'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
+                                className="px-2 py-1"
                             >
                                 이번 달
-                            </button>
-                            <button
+                            </TabButton>
+                            <TabButton
+                                active={activeDatePreset === 'lastMonth'}
                                 onClick={() => applyDatePreset('lastMonth')}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'lastMonth'
-                                    ? 'bg-[#fdb813] text-[#081429]'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
+                                className="px-2 py-1"
                             >
                                 지난 달
-                            </button>
-                            <button
+                            </TabButton>
+                            <TabButton
+                                active={activeDatePreset === 'last3Months'}
                                 onClick={() => applyDatePreset('last3Months')}
-                                className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'last3Months'
-                                    ? 'bg-[#fdb813] text-[#081429]'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                    }`}
+                                className="px-2 py-1"
                             >
                                 3개월
-                            </button>
+                            </TabButton>
                             {/* 전체 버튼은 목록뷰에서만 표시 */}
                             {viewMode === 'list' && (
-                                <button
+                                <TabButton
+                                    active={activeDatePreset === 'all'}
                                     onClick={() => applyDatePreset('all')}
-                                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeDatePreset === 'all'
-                                        ? 'bg-[#fdb813] text-[#081429]'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                        }`}
+                                    className="px-2 py-1"
                                 >
                                     전체
-                                </button>
+                                </TabButton>
                             )}
                         </div>
                     </>
@@ -321,34 +312,28 @@ const ConsultationManagementTab: React.FC = () => {
 
                             {/* 상담 유형 토글 */}
                             <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
-                                <button
+                                <TabButton
+                                    active={!filters.type}
                                     onClick={() => setFilters(prev => ({ ...prev, type: undefined }))}
-                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${!filters.type
-                                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                        }`}
+                                    className="px-3 py-1"
                                 >
                                     💬 전체
-                                </button>
-                                <button
+                                </TabButton>
+                                <TabButton
+                                    active={filters.type === 'parent'}
                                     onClick={() => setFilters(prev => ({ ...prev, type: 'parent' }))}
-                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filters.type === 'parent'
-                                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                        }`}
+                                    className="px-3 py-1"
                                 >
                                     👨‍👩‍👧 학부모
-                                </button>
-                                <button
+                                </TabButton>
+                                <TabButton
+                                    active={filters.type === 'student'}
                                     onClick={() => setFilters(prev => ({ ...prev, type: 'student' }))}
-                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${filters.type === 'student'
-                                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
-                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                        }`}
+                                    className="px-3 py-1"
                                 >
                                     <GraduationCap className="inline-block w-4 h-4 mr-1" />
                                     학생
-                                </button>
+                                </TabButton>
                             </div>
 
                             {/* 구분선 */}
@@ -598,7 +583,7 @@ const ConsultationManagementTab: React.FC = () => {
                         <span>새 상담</span>
                     </button>
                 </div>
-            </div>
+            </TabSubNavigation>
 
             {/* 메인 콘텐츠 영역 */}
             <div className="flex-1 overflow-auto bg-gray-50 p-6">
