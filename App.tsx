@@ -31,6 +31,8 @@ import Sidebar from './components/Navigation/Sidebar';
 import Breadcrumb, { BreadcrumbItem } from './components/Common/Breadcrumb';
 import SkipLink from './components/Common/SkipLink';
 import GlobalSearch, { SearchResult } from './components/Common/GlobalSearch';
+import { TabSubNavigation } from './components/Common/TabSubNavigation';
+import { TabButton } from './components/Common/TabButton';
 
 // 탭별 컴포넌트 (lazy loading - 해당 탭 진입 시 로딩)
 const TimetableManager = lazy(() => import('./components/Timetable/TimetableManager'));
@@ -1932,17 +1934,19 @@ const App: React.FC = () => {
 
           {/* Row 4: Students Navigation Bar - Only show in students mode */}
           {appMode === 'students' && (
-            <div className="bg-[#081429] h-10 flex items-center justify-between px-6 border-b border-white/10 text-xs z-30">
+            <TabSubNavigation variant="compact" className="justify-between px-6 border-b border-white/10 z-30">
               <div className="flex items-center gap-3 flex-1">
                 {/* Subject Filter - Grid View */}
                 <div className="grid grid-cols-5 gap-1 bg-white/10 rounded-lg p-1 border border-white/10 shadow-sm">
-                  <button
+                  <TabButton
+                    active={studentFilters.subjects.length === 0}
                     onClick={() => setStudentFilters(prev => ({ ...prev, subjects: [] }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.length === 0 ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className="px-3 py-1"
                   >
                     전체
-                  </button>
-                  <button
+                  </TabButton>
+                  <TabButton
+                    active={studentFilters.subjects.includes('math')}
                     onClick={() => {
                       const hasSubject = studentFilters.subjects.includes('math');
                       setStudentFilters(prev => ({
@@ -1952,11 +1956,13 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'math']
                       }));
                     }}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('math') ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    variant="tab-status-active"
+                    className="px-3 py-1"
                   >
                     수학
-                  </button>
-                  <button
+                  </TabButton>
+                  <TabButton
+                    active={studentFilters.subjects.includes('english')}
                     onClick={() => {
                       const hasSubject = studentFilters.subjects.includes('english');
                       setStudentFilters(prev => ({
@@ -1966,11 +1972,12 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'english']
                       }));
                     }}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('english') ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className="px-3 py-1 bg-purple-500 text-white shadow-sm hover:bg-purple-600"
                   >
                     영어
-                  </button>
-                  <button
+                  </TabButton>
+                  <TabButton
+                    active={studentFilters.subjects.includes('korean')}
                     onClick={() => {
                       const hasSubject = studentFilters.subjects.includes('korean');
                       setStudentFilters(prev => ({
@@ -1980,11 +1987,12 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'korean']
                       }));
                     }}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('korean') ? 'bg-green-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className="px-3 py-1 bg-green-500 text-white shadow-sm hover:bg-green-600"
                   >
                     국어
-                  </button>
-                  <button
+                  </TabButton>
+                  <TabButton
+                    active={studentFilters.subjects.includes('science')}
                     onClick={() => {
                       const hasSubject = studentFilters.subjects.includes('science');
                       setStudentFilters(prev => ({
@@ -1994,44 +2002,53 @@ const App: React.FC = () => {
                           : [...prev.subjects, 'science']
                       }));
                     }}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.subjects.includes('science') ? 'bg-orange-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className="px-3 py-1 bg-orange-500 text-white shadow-sm hover:bg-orange-600"
                   >
                     과학
-                  </button>
+                  </TabButton>
                 </div>
 
                 {/* Status Toggle */}
                 <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
-                  <button
+                  <TabButton
+                    active={studentFilters.status === 'all'}
                     onClick={() => setStudentFilters(prev => ({ ...prev, status: 'all' }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'all' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    className="px-3 py-1"
                   >
                     전체
-                  </button>
-                  <button
+                  </TabButton>
+                  <TabButton
+                    active={studentFilters.status === 'prospect'}
                     onClick={() => setStudentFilters(prev => ({ ...prev, status: 'prospect' }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'prospect' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    variant="tab-status-active"
+                    className="px-3 py-1"
                   >
                     예비
-                  </button>
-                  <button
+                  </TabButton>
+                  <TabButton
+                    active={studentFilters.status === 'active'}
                     onClick={() => setStudentFilters(prev => ({ ...prev, status: 'active' }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'active' ? 'bg-green-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    variant="tab-status-completed"
+                    className="px-3 py-1"
                   >
                     재원
-                  </button>
-                  <button
+                  </TabButton>
+                  <TabButton
+                    active={studentFilters.status === 'on_hold'}
                     onClick={() => setStudentFilters(prev => ({ ...prev, status: 'on_hold' }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'on_hold' ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    variant="tab-status-pending"
+                    className="px-3 py-1"
                   >
                     휴원
-                  </button>
-                  <button
+                  </TabButton>
+                  <TabButton
+                    active={studentFilters.status === 'withdrawn'}
                     onClick={() => setStudentFilters(prev => ({ ...prev, status: 'withdrawn' }))}
-                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${studentFilters.status === 'withdrawn' ? 'bg-gray-500 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    variant="tab-status-cancelled"
+                    className="px-3 py-1"
                   >
                     퇴원
-                  </button>
+                  </TabButton>
                 </div>
 
                 {/* Search Field Selector */}
@@ -2295,7 +2312,7 @@ const App: React.FC = () => {
                   </button>
                 )}
               </div>
-            </div>
+            </TabSubNavigation>
           )}
 
           {/* Filter Popover Panel */}
