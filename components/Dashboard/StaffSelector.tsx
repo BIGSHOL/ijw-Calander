@@ -87,9 +87,9 @@ const StaffSelector: React.FC<StaffSelectorProps> = ({
 
   return (
     <TabSubNavigation variant="compact" className="px-4 py-3 sticky top-0 z-10 shadow-sm">
-      <div className="max-w-7xl mx-auto flex items-center gap-3">
-        <Users className="w-5 h-5 text-[#081429]" />
-        <span className="text-sm font-medium text-gray-600">대시보드 보기:</span>
+      <div className="flex items-center gap-3">
+        <Users className="w-5 h-5 text-white" />
+        <span className="text-sm font-medium text-white">대시보드 보기:</span>
 
         <div className="relative" ref={dropdownRef}>
           <button
@@ -129,21 +129,18 @@ const StaffSelector: React.FC<StaffSelectorProps> = ({
                       </div>
                       <div className="grid grid-cols-5 gap-0.5">
                         {members.map(staff => (
-                          <button
+                          <TabButton
                             key={staff.id}
+                            active={selectedStaffId === staff.id}
                             onClick={() => {
                               onSelectStaff(staff.id);
                               setShowDropdown(false);
                             }}
-                            className={`px-1.5 py-1 rounded text-[11px] text-left truncate ${
-                              selectedStaffId === staff.id
-                                ? `bg-${roleColor}-500 text-white font-bold`
-                                : 'text-gray-700 hover:bg-gray-100'
-                            }`}
+                            className="px-1.5 py-1 text-[11px] text-left truncate"
                             title={`${staff.name}${staff.englishName ? ` (${staff.englishName})` : ''}`}
                           >
                             <div className="font-medium truncate">{staff.name}</div>
-                          </button>
+                          </TabButton>
                         ))}
                       </div>
                     </div>
