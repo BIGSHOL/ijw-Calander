@@ -437,14 +437,16 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                 // 내가 담당하는 스케줄만 필터링
                 let mySchedule = cls.schedule;
 
-                if (cls.slotTeachers && !cls.isMainTeacher) {
-                  // 부담임인 경우: 내가 담당하는 교시만 필터링
+                // 담임이 아닌 경우에만 필터링
+                if (!cls.isMainTeacher && cls.slotTeachers) {
+                  // slotTeachers에 특정 교시만 있는 경우: 해당 교시만 필터링
                   mySchedule = cls.schedule.filter(slot => {
                     const slotKey = `${slot.day}-${slot.periodId}`;
                     const slotTeacher = cls.slotTeachers?.[slotKey];
                     return slotTeacher === teacherName || slotTeacher === teacherKoreanName;
                   });
                 }
+                // assistants에 있는 경우는 모든 스케줄 표시 (이미 mySchedule = cls.schedule)
 
                 const scheduleEntries = formatSchedule(mySchedule, cls.subject);
                 // 오늘 수업인지 확인

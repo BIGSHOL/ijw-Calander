@@ -497,6 +497,7 @@ const ClassManagementTab: React.FC = () => {
           classes={filteredClasses}
           onClassClick={setSelectedClass}
           isLoading={isLoading}
+          currentTeacherFilter={filters.teacher}
         />
       </div>
 
