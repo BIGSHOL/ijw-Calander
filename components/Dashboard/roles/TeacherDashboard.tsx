@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, StaffMember } from '../../../types';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import DashboardHeader from '../DashboardHeader';
 import { BookOpen, Users, Calendar, CheckSquare, Clock, User } from 'lucide-react';
@@ -298,35 +298,61 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
 
       const classes = Array.from(classesMap.values());
 
-      // 2. 각 수업의 학생 수 계산
+      // 2. 각 수업의 학생 수 계산 (enrollments 서브컬렉션 사용)
+      const enrollmentsSnapshot = await getDocs(collectionGroup(db, 'enrollments'));
+
+      // 수업명별 학생 수 집계 (중복 학생 제거)
+      const classStudentCount = new Map<string, Set<string>>();
+
+      enrollmentsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const className = data.className as string;
+        const studentId = doc.ref.parent.parent?.id;
+
+        if (className && studentId) {
+          if (!classStudentCount.has(className)) {
+            classStudentCount.set(className, new Set());
+          }
+          classStudentCount.get(className)!.add(studentId);
+        }
+      });
+
+      // 각 수업에 학생 수 할당
       for (const cls of classes) {
-        const enrollmentsSnapshot = await getDocs(
-          query(
-            collection(db, 'students'),
-            where(`enrollments`, 'array-contains', { className: cls.className, subject: cls.subject })
-          )
-        );
-        cls.studentCount = enrollmentsSnapshot.size;
+        cls.studentCount = classStudentCount.get(cls.className)?.size || 0;
       }
 
       setMyClasses(classes);
 
-      // 3. 내 학생 로드 (내 수업에 등록된 학생들)
-      const classNames = classes.map(c => c.className);
+      // 3. 내 학생 로드 (담임인 수업의 학생들만)
+      const mainTeacherClasses = classes.filter(c => c.isMainTeacher);
+      const mainClassNames = mainTeacherClasses.map(c => c.className);
       const studentsSet = new Set<string>();
       const students: MyStudent[] = [];
 
-      for (const className of classNames) {
-        const studentsSnapshot = await getDocs(collection(db, 'students'));
+      // enrollments 서브컬렉션에서 담임 수업에 속한 학생 ID 수집
+      enrollmentsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const className = data.className as string;
+        const studentId = doc.ref.parent.parent?.id;
+
+        if (mainClassNames.includes(className) && studentId && !studentsSet.has(studentId)) {
+          studentsSet.add(studentId);
+        }
+      });
+
+      // 학생 정보 가져오기
+      if (studentsSet.size > 0) {
+        const studentsSnapshot = await getDocs(
+          query(
+            collection(db, 'students'),
+            where('status', '==', 'active')
+          )
+        );
+
         studentsSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          const enrollments = data.enrollments || [];
-
-          // 해당 수업에 등록된 학생인지 확인
-          const hasEnrollment = enrollments.some((e: any) => e.className === className);
-
-          if (hasEnrollment && !studentsSet.has(doc.id) && data.status === 'active') {
-            studentsSet.add(doc.id);
+          if (studentsSet.has(doc.id)) {
+            const data = doc.data();
             students.push({
               id: doc.id,
               name: data.name,
