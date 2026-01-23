@@ -46,6 +46,7 @@ interface EnglishClassTabProps {
     onPublishToLive?: () => void;
     onOpenScenarioModal?: () => void;
     canPublish?: boolean;
+    onClassRenamed?: (oldName: string, newName: string) => void;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -67,6 +68,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     onPublishToLive,
     onOpenScenarioModal,
     canPublish = false,
+    onClassRenamed,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -568,6 +570,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                         setSelectedStudent(student as UnifiedStudent);
                                                     }
                                                 }}
+                                                onClassRenamed={onClassRenamed}
                                             />
                                         ))}
                                     </div>

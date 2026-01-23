@@ -98,6 +98,7 @@ interface ClassCardProps {
     useInjaePeriod?: boolean; // 뷰 설정에서 인재원 시간표 사용 여부
     onClassClick?: () => void; // 수업 상세 모달 열기
     onStudentClick?: (studentId: string) => void; // 학생 상세 모달 열기
+    onClassRenamed?: (oldName: string, newName: string) => void;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -122,7 +123,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     hideTime = false,
     useInjaePeriod = false,
     onClassClick,
-    onStudentClick
+    onStudentClick,
+    onClassRenamed,
 }) => {
     // Width Logic:
     // Normal: 190px (includes 48px time + 142px days) -> Update logic if needed, but for now only changing hideTime width
@@ -681,8 +683,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 onClose={() => setLevelUpModal({ ...levelUpModal, isOpen: false })}
                 onSuccess={() => {
                     console.log('[EnglishClassTab] Level-up succeeded for', classInfo.name, '→', levelUpModal.newName);
-                    // onSnapshot subscription will automatically update scheduleData
-                    // Optional: Add user notification here if needed
+                    onClassRenamed?.(classInfo.name, levelUpModal.newName);
                 }}
                 oldClassName={classInfo.name}
                 newClassName={levelUpModal.newName}
