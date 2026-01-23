@@ -236,13 +236,11 @@ const ClassManagementTab: React.FC = () => {
     <div className="flex flex-col h-full min-h-0 bg-gray-50">
       {/* 상단 고정 영역 - flex-shrink-0으로 절대 줄어들지 않음 */}
       <div className="flex-shrink-0">
-        {/* 상단 네비게이션 바 - 2행 레이아웃 */}
+        {/* 상단 네비게이션 바 */}
         <TabSubNavigation variant="compact" className="px-6 py-2 border-b border-white/10">
-          <div className="flex flex-col gap-2 w-full">
-            {/* 1행: 필터 버튼들 */}
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full">
               {/* 과목 토글 */}
-              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm flex-shrink-0">
                 {subjectFilters.map(({ value, label, icon }) => (
                   <TabButton
                     key={value}
@@ -257,7 +255,7 @@ const ClassManagementTab: React.FC = () => {
               </div>
 
               {/* 담임/부담임 필터 */}
-              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm flex-shrink-0">
                 <button
                   onClick={() => setFilters({ ...filters, teacherRole: 'all' })}
                   className={`px-3 py-1 rounded text-xs font-bold transition-all ${
@@ -452,7 +450,7 @@ const ClassManagementTab: React.FC = () => {
               )}
 
               {/* 요일 필터 */}
-              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm flex-shrink-0">
                 {ALL_DAYS.map(day => {
                   const isSelected = filters.selectedDays.includes(day);
                   const toggleDay = () => {
@@ -485,42 +483,37 @@ const ClassManagementTab: React.FC = () => {
                   </button>
                 )}
               </div>
-            </div>
 
-            {/* 2행: 정렬, 검색, 결과 카운트, 액션 버튼 */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                {/* 정렬 */}
-                <select
-                  value={filters.sortBy}
-                  onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
-                  className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
-                >
-                  <option value="name">수업명순</option>
-                  <option value="studentCount">학생수순</option>
-                  <option value="teacher">강사명순</option>
-                </select>
+              {/* 정렬 */}
+              <select
+                value={filters.sortBy}
+                onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
+                className="flex-shrink-0 appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+              >
+                <option value="name">수업명순</option>
+                <option value="studentCount">학생수순</option>
+                <option value="teacher">강사명순</option>
+              </select>
 
-                {/* 검색 */}
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="수업명, 강사명 검색..."
-                    value={filters.searchQuery}
-                    onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                    className="bg-[#1e293b] border border-gray-700 rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
-                  />
-                </div>
-
-                {/* 결과 카운트 */}
-                <span className="text-gray-400 text-xs">
-                  총 <span className="text-[#fdb813] font-bold">{filteredClasses.length}</span>개 수업
-                </span>
+              {/* 검색 */}
+              <div className="relative flex-shrink-0">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="수업명, 강사명 검색..."
+                  value={filters.searchQuery}
+                  onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
+                  className="bg-[#1e293b] border border-gray-700 rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
+                />
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* 설정 버튼 */}
+              {/* 결과 카운트 */}
+              <span className="text-gray-400 text-xs flex-shrink-0">
+                총 <span className="text-[#fdb813] font-bold">{filteredClasses.length}</span>개
+              </span>
+
+              {/* 우측 버튼들 */}
+              <div className="flex items-center gap-2 ml-auto flex-shrink-0">
                 <button
                   onClick={() => setShowSettingsModal(true)}
                   className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gray-700 text-white hover:bg-gray-600 transition-colors shadow-sm font-bold"
@@ -529,8 +522,6 @@ const ClassManagementTab: React.FC = () => {
                   <Settings size={14} />
                   <span>설정</span>
                 </button>
-
-                {/* 새 수업 추가 버튼 */}
                 <button
                   onClick={() => setShowAddModal(true)}
                   className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
@@ -539,7 +530,6 @@ const ClassManagementTab: React.FC = () => {
                   <span>새 수업</span>
                 </button>
               </div>
-            </div>
           </div>
         </TabSubNavigation>
 
