@@ -159,31 +159,43 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 }) => {
     // 수정 모드일 때만 실제 canEdit 적용
     const effectiveCanEdit = canEdit && mode === 'edit';
+    // 표시 옵션에 따른 너비 보정 계수
+    // 학교/학년을 숨기면 학생명만 표시되므로 셀 폭을 줄임
+    const widthFactor = useMemo(() => {
+        if (!showStudents) return 0.4; // 학생 목록 숨김 → 수업명만
+        if (!showSchool && !showGrade) return 0.4; // 이름만
+        if (!showSchool || !showGrade) return 0.45; // 하나만 표시
+        return 1; // 전부 표시
+    }, [showStudents, showSchool, showGrade]);
+
     // Helper to get column width style
     // 병합 셀용 (월/목 같이 여러 요일 병합) - 각 요일당 좁은 너비
     const getMergedCellWidthStyle = (colspan: number) => {
-        const perDayWidth = columnWidth === 'compact' ? 50 :
-                           columnWidth === 'narrow' ? 70 :
-                           columnWidth === 'wide' ? 130 :
-                           columnWidth === 'x-wide' ? 180 : 100;
+        const basePerDay = columnWidth === 'compact' ? 35 :
+            columnWidth === 'narrow' ? 50 :
+                columnWidth === 'wide' ? 90 :
+                    columnWidth === 'x-wide' ? 125 : 70;
+        const perDayWidth = Math.round(basePerDay * widthFactor);
         return { width: `${colspan * perDayWidth}px`, minWidth: `${colspan * perDayWidth}px` };
     };
 
     // 단일 셀용 (수, 토, 일 등 병합 안 된 셀) - 수업명이 한 줄에 보이도록 넓게
     const getSingleCellWidthStyle = () => {
-        const baseWidth = columnWidth === 'compact' ? 100 :
-                         columnWidth === 'narrow' ? 130 :
-                         columnWidth === 'wide' ? 210 :
-                         columnWidth === 'x-wide' ? 280 : 160;
+        const base = columnWidth === 'compact' ? 70 :
+            columnWidth === 'narrow' ? 90 :
+                columnWidth === 'wide' ? 150 :
+                    columnWidth === 'x-wide' ? 200 : 110;
+        const baseWidth = Math.round(base * widthFactor);
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 
     // 날짜별 뷰용 - 더 넓은 너비로 강의명이 한줄에 표시되도록
     const getDayBasedCellWidthStyle = () => {
-        const baseWidth = columnWidth === 'compact' ? 100 :
-                         columnWidth === 'narrow' ? 130 :
-                         columnWidth === 'wide' ? 210 :
-                         columnWidth === 'x-wide' ? 280 : 160;
+        const base = columnWidth === 'compact' ? 70 :
+            columnWidth === 'narrow' ? 90 :
+                columnWidth === 'wide' ? 150 :
+                    columnWidth === 'x-wide' ? 200 : 110;
+        const baseWidth = Math.round(base * widthFactor);
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
     };
 

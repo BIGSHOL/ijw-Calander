@@ -89,6 +89,7 @@ interface ClassCardProps {
     currentUser: any;
     englishLevels: EnglishLevel[];
     isSimulationMode?: boolean;
+    onSimulationLevelUp?: (oldName: string, newName: string) => void;
     moveChanges?: Map<string, MoveChange>;
     onMoveStudent?: (student: TimetableStudent, fromClass: string, toClass: string) => void;
     studentMap: Record<string, any>;
@@ -98,7 +99,6 @@ interface ClassCardProps {
     useInjaePeriod?: boolean; // 뷰 설정에서 인재원 시간표 사용 여부
     onClassClick?: () => void; // 수업 상세 모달 열기
     onStudentClick?: (studentId: string) => void; // 학생 상세 모달 열기
-    onClassRenamed?: (oldName: string, newName: string) => void;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -115,6 +115,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     currentUser: _currentUser,
     englishLevels,
     isSimulationMode = false,
+    onSimulationLevelUp,
     moveChanges,
     onMoveStudent,
     studentMap: _studentMap,
@@ -124,7 +125,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
     useInjaePeriod = false,
     onClassClick,
     onStudentClick,
-    onClassRenamed,
 }) => {
     // Width Logic:
     // Normal: 190px (includes 48px time + 142px days) -> Update logic if needed, but for now only changing hideTime width
@@ -483,37 +483,38 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         </div>
                     )}
 
-                    <div className="border-b border-gray-300 flex-none">
-                        {/* Grid Header */}
-                        <div className="flex bg-gray-200 text-xxs font-bold border-b border-gray-400 h-[24px]">
-                            {!hideTime && (
-                                <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
-                            )}
-                            {/* If TimeOnly, don't show days header or keep it blank? TimeOnly usually implies just the time labels on the left. */}
-                            {!isTimeColumnOnly && classInfo.finalDays.map((d) => (
-                                <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
-                                    {d}
-                                </div>
-                            ))}
-                        </div>
+                    {displayOptions?.showSchedule !== false && (
+                        <div className="border-b border-gray-300 flex-none">
+                            {/* Grid Header */}
+                            <div className="flex bg-gray-200 text-xxs font-bold border-b border-gray-400 h-[24px]">
+                                {!hideTime && (
+                                    <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
+                                )}
+                                {!isTimeColumnOnly && classInfo.finalDays.map((d) => (
+                                    <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
+                                        {d}
+                                    </div>
+                                ))}
+                            </div>
 
-                        {/* Grid Rows */}
-                        <div className="bg-white">
-                            {classInfo.visiblePeriods.map(p => (
-                                <MiniGridRow
-                                    key={p.id}
-                                    period={p}
-                                    scheduleMap={classInfo.scheduleMap}
-                                    weekendShift={classInfo.weekendShift}
-                                    teachersData={teachersData}
-                                    displayDays={classInfo.finalDays}
-                                    hiddenTeachers={hiddenTeacherList}
-                                    hideTime={hideTime}
-                                    onlyTime={isTimeColumnOnly}
-                                />
-                            ))}
+                            {/* Grid Rows */}
+                            <div className="bg-white">
+                                {classInfo.visiblePeriods.map(p => (
+                                    <MiniGridRow
+                                        key={p.id}
+                                        period={p}
+                                        scheduleMap={classInfo.scheduleMap}
+                                        weekendShift={classInfo.weekendShift}
+                                        teachersData={teachersData}
+                                        displayDays={classInfo.finalDays}
+                                        hiddenTeachers={hiddenTeacherList}
+                                        hideTime={hideTime}
+                                        onlyTime={isTimeColumnOnly}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
                 {/* 수업 상세 클릭 영역 끝 */}
 
@@ -666,15 +667,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             </div>
                         </div>
                     )
-                ) : (
-                    // When Students are hidden, fill space or show placeholder
-                    !isTimeColumnOnly && !displayOptions?.showTeacher && !displayOptions?.showRoom && (
-                        <div className="flex-1 flex flex-col items-center justify-center min-h-[100px] text-gray-300 gap-1 bg-white">
-                            <EyeOff size={20} />
-                            <span className="text-xxs">정보 숨김</span>
-                        </div>
-                    )
-                )}
+                ) : null}
             </div>
 
             {/* Level Up Confirm Modal */}
@@ -683,11 +676,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 onClose={() => setLevelUpModal({ ...levelUpModal, isOpen: false })}
                 onSuccess={() => {
                     console.log('[EnglishClassTab] Level-up succeeded for', classInfo.name, '→', levelUpModal.newName);
-                    onClassRenamed?.(classInfo.name, levelUpModal.newName);
                 }}
                 oldClassName={classInfo.name}
                 newClassName={levelUpModal.newName}
                 type={levelUpModal.type}
+                isSimulationMode={isSimulationMode}
+                onSimulationLevelUp={onSimulationLevelUp}
             />
         </>
     );

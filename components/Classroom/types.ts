@@ -22,15 +22,21 @@ export interface TimeConfig {
   start: number;
   end: number;
   range: number;
+  totalHeight: number; // 전체 높이 (픽셀)
 }
 
-export const WEEKDAY_CONFIG: TimeConfig = { start: 540, end: 1320, range: 780 }; // 09:00~22:00
-export const WEEKEND_CONFIG: TimeConfig = { start: 540, end: 1320, range: 780 }; // 09:00~22:00
+// 시간당 픽셀 높이 (1시간 = 120px)
+export const PIXELS_PER_HOUR = 120;
+
+export const WEEKDAY_CONFIG: TimeConfig = { start: 540, end: 1320, range: 780, totalHeight: 780 / 60 * PIXELS_PER_HOUR }; // 09:00~22:00
+export const WEEKEND_CONFIG: TimeConfig = { start: 540, end: 1320, range: 780, totalHeight: 780 / 60 * PIXELS_PER_HOUR }; // 09:00~22:00
 
 export function makeTimeConfig(startHour: number, endHour: number): TimeConfig {
   const start = startHour * 60;
   const end = endHour * 60;
-  return { start, end, range: end - start };
+  const range = end - start;
+  const totalHeight = (range / 60) * PIXELS_PER_HOUR;
+  return { start, end, range, totalHeight };
 }
 
 export function parseTimeToMinutes(time: string): number {

@@ -26,10 +26,13 @@ interface EnglishTimetableProps {
 
 interface ScheduleCell {
     className?: string;
+    classId?: string;
     room?: string;
     teacher?: string;
     note?: string;
-    merged?: { className: string; room?: string; underline?: boolean }[];
+    merged?: { className: string; classId?: string; room: string; underline?: boolean; lastMovedAt?: string }[];
+    underline?: boolean;
+    lastMovedAt?: string;
 }
 
 type ScheduleData = Record<string, ScheduleCell>;
@@ -88,7 +91,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         // scenarioClasses를 scheduleData 형식으로 변환
         const scheduleData: ScheduleData = {};
 
-        Object.values(simulation.scenarioClasses).forEach((cls) => {
+        Object.entries(simulation.scenarioClasses).forEach(([classId, cls]) => {
             if (!cls.schedule || !Array.isArray(cls.schedule)) return;
 
             cls.schedule.forEach((slot: { day: string; periodId: string; room?: string }) => {
@@ -96,7 +99,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                 // 부담임이 있으면 그대로 사용, 없으면 담임 → 영어 이름으로 정규화
                 const rawTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
                 const slotTeacher = normalizeTeacherName(rawTeacher);
-                const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room;
+                const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room || '';
 
                 const key = `${slotTeacher}-${slot.periodId}-${slot.day}`;
 
@@ -116,12 +119,14 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     }
                     existing.merged.push({
                         className: cls.className,
+                        classId,
                         room: slotRoom,
                         underline: cls.underline || false
                     });
                 } else {
                     scheduleData[key] = {
                         className: cls.className,
+                        classId,
                         room: slotRoom,
                         teacher: slotTeacher,
                         merged: []
@@ -159,7 +164,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         const rawTeacher = cls.slotTeachers?.[slotKey] || cls.teacher;
                         // 영어 이름으로 정규화 (강사뷰 teachers 배열과 일치시키기 위해)
                         const slotTeacher = normalizeTeacherName(rawTeacher);
-                        const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room;
+                        const slotRoom = cls.slotRooms?.[slotKey] || cls.room || slot.room || '';
 
                         const key = `${slotTeacher}-${slot.periodId}-${slot.day}`;
 
@@ -179,12 +184,14 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             }
                             existing.merged.push({
                                 className: cls.className,
+                                classId: docSnap.id,
                                 room: slotRoom,
                                 underline: cls.underline || false
                             });
                         } else {
                             scheduleData[key] = {
                                 className: cls.className,
+                                classId: docSnap.id,
                                 room: slotRoom,
                                 teacher: slotTeacher,
                                 merged: []
@@ -209,24 +216,6 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const handleRefresh = useCallback(() => {
         // Optional: Force re-fetch logic if needed, but snapshot handles it.
         // We can just log or show a toast.
-    }, []);
-
-    // 레벨업 시 scheduleData를 즉시 업데이트 (onSnapshot보다 먼저 반영하여 레이스 컨디션 방지)
-    const handleClassRenamed = useCallback((oldName: string, newName: string) => {
-        setScheduleData(prev => {
-            const next: ScheduleData = {};
-            Object.entries(prev).forEach(([key, cell]) => {
-                const updated = { ...cell };
-                if (updated.className === oldName) updated.className = newName;
-                if (updated.merged) {
-                    updated.merged = updated.merged.map(m =>
-                        m.className === oldName ? { ...m, className: newName } : m
-                    );
-                }
-                next[key] = updated;
-            });
-            return next;
-        });
     }, []);
 
     // Filter teachers for English from props and set local state
@@ -350,6 +339,10 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         }
     }, [publishToLive, currentUser]);
 
+    const handleSimulationLevelUp = useCallback((oldName: string, newName: string) => {
+        simulation.renameScenarioClass(oldName, newName);
+    }, [simulation]);
+
     return (
         <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
             {/* Header - Row 1: Title only */}
@@ -414,7 +407,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 onPublishToLive={handlePublishDraftToLive}
                                 onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
                                 canPublish={isMaster || hasPermission('timetable.english.simulation')}
-                                onClassRenamed={handleClassRenamed}
+                                onSimulationLevelUp={isSimulationMode ? handleSimulationLevelUp : undefined}
                             />
                         )}
                         {viewType === 'room' && (

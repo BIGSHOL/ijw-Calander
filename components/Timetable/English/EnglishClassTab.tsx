@@ -2,7 +2,7 @@
 // 영어 통합 시간표 탭 - 수업별 컬럼 뷰 (Refactored to match academy-app style with Logic Port)
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Settings, Eye, ChevronDown, Users, Home, User, Edit, ArrowRightLeft, Copy, Upload, Save } from 'lucide-react';
+import { Search, Settings, Eye, ChevronDown, Users, Home, User, Edit, ArrowRightLeft, Copy, Upload, Save, CalendarDays } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -46,7 +46,7 @@ interface EnglishClassTabProps {
     onPublishToLive?: () => void;
     onOpenScenarioModal?: () => void;
     canPublish?: boolean;
-    onClassRenamed?: (oldName: string, newName: string) => void;
+    onSimulationLevelUp?: (oldName: string, newName: string) => void;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -68,7 +68,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     onPublishToLive,
     onOpenScenarioModal,
     canPublish = false,
-    onClassRenamed,
+    onSimulationLevelUp,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -137,11 +137,11 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             // --- Custom Group Mode ---
             const assignedClasses = new Set<string>();
 
-            // 1. Defined Groups
+            // 1. Defined Groups (classId 기반 매칭, 하위호환: className도 지원)
             settings.customGroups.forEach((g, idx) => {
                 const groupClasses: ClassInfo[] = [];
-                g.classes.forEach(cName => {
-                    const cls = classes.find(c => c.name === cName);
+                g.classes.forEach(classRef => {
+                    const cls = classes.find(c => c.classId === classRef) || classes.find(c => c.name === classRef);
                     if (cls) {
                         if (hiddenClasses.has(cls.name) && mode === 'view') return;
                         groupClasses.push(cls);
@@ -385,6 +385,23 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                     <User size={14} className="text-gray-500" />
                                     <span className="text-xs text-gray-700">담임 정보</span>
                                 </label>
+
+                                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.displayOptions?.showSchedule ?? true}
+                                        onChange={(e) => updateSettings({
+                                            ...settings,
+                                            displayOptions: {
+                                                ...settings.displayOptions!,
+                                                showSchedule: e.target.checked
+                                            }
+                                        })}
+                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <CalendarDays size={14} className="text-gray-500" />
+                                    <span className="text-xs text-gray-700">스케줄</span>
+                                </label>
                             </div>
                         )}
                     </div>
@@ -458,7 +475,12 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             {/* Teacher Legend */}
             <div className="px-4 py-2 bg-white border-b flex flex-wrap gap-2 items-center flex-shrink-0">
                 <span className="text-xs font-bold text-gray-400 mr-1">강사 목록:</span>
-                {teachers.filter(t => !settings.hiddenLegendTeachers?.includes(t)).map(teacher => {
+                {teachers.filter(t => {
+                    if (settings.hiddenLegendTeachers?.includes(t)) return false;
+                    const td = teachersData.find(td => td.name === t || td.englishName === t);
+                    if (td?.isHidden) return false;
+                    return true;
+                }).map(teacher => {
                     const colors = getTeacherColor(teacher, teachersData);
                     // 영어이름(한글이름) 형식으로 표시
                     const staffMember = teachersData?.find(t => t.name === teacher || t.englishName === teacher);
@@ -544,6 +566,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 currentUser={currentUser}
                                                 englishLevels={englishLevels}
                                                 isSimulationMode={isSimulationMode}
+                                                onSimulationLevelUp={onSimulationLevelUp}
                                                 // Drag & Drop Props
                                                 moveChanges={moveChanges}
                                                 onMoveStudent={handleMoveStudent}
@@ -556,6 +579,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 onClassClick={mode === 'edit' && !isSimulationMode ? () => {
                                                     // ClassInfo (from englishClasses hook) -> ClassInfoFromHook 변환
                                                     const classDetail: ClassInfoFromHook = {
+                                                        id: cls.classId,
                                                         className: cls.name,
                                                         subject: 'english',
                                                         teacher: cls.mainTeacher,
@@ -570,7 +594,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                         setSelectedStudent(student as UnifiedStudent);
                                                     }
                                                 }}
-                                                onClassRenamed={onClassRenamed}
                                             />
                                         ))}
                                     </div>
@@ -585,7 +608,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 onClose={() => setIsSettingsOpen(false)}
                 settings={settings}
                 onChange={updateSettings}
-                allClasses={classes.map(c => c.name)}
+                allClasses={classes.map(c => ({ classId: c.classId, className: c.name }))}
                 teachers={teachers}
                 teachersData={teachersData}
             />

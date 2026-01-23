@@ -787,7 +787,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'dashboard' | 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing' | 'role-management';
+export type AppTab = 'dashboard' | 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'classroom-assignment' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing' | 'role-management';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -809,6 +809,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   grades: { label: '성적 관리', icon: '📊' },
   classes: { label: '수업 관리', icon: '📚' },
   classroom: { label: '강의실', icon: '🏫' },
+  'classroom-assignment': { label: '강의실 배정', icon: '🏗️' },
   'student-consultations': { label: '학생 상담', icon: '💬' },
   staff: { label: '직원 관리', icon: '👔' },
   billing: { label: '수납 관리', icon: '💰' },
@@ -844,7 +845,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'class',
     label: '수업',
     icon: '📚',
-    tabs: ['timetable', 'attendance', 'daily-attendance', 'classes', 'classroom'],
+    tabs: ['timetable', 'attendance', 'daily-attendance', 'classes', 'classroom', 'classroom-assignment'],
     order: 2,
   },
   {
@@ -885,11 +886,11 @@ export type TabPermissionConfig = {
 // Default Tab Permissions (Fallback)
 // Note: master always has access to all tabs (handled in code)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'student-consultations', 'staff', 'billing', 'role-management'],
-  admin: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'student-consultations', 'staff', 'billing', 'role-management'],
-  manager: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'student-consultations', 'staff', 'billing'],
-  math_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'student-consultations'],
-  english_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'student-consultations'],
+  master: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'role-management'],
+  admin: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'role-management'],
+  manager: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing'],
+  math_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations'],
+  english_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations'],
   math_teacher: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
   english_teacher: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
   user: ['dashboard', 'calendar', 'attendance', 'daily-attendance'],

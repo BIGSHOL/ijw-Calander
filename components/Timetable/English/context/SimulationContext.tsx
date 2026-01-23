@@ -96,6 +96,7 @@ export interface ScenarioContextValue extends ScenarioState {
 
   // Edit operations
   updateScenarioClass: (classId: string, updates: Partial<ScenarioClass>) => void;
+  renameScenarioClass: (oldClassName: string, newClassName: string) => void;
   addStudentToClass: (className: string, studentId: string, enrollmentData?: Partial<ScenarioEnrollment>) => void;
   removeStudentFromClass: (className: string, studentId: string) => void;
   moveStudent: (fromClass: string, toClass: string, studentId: string) => void;
@@ -331,6 +332,38 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       },
       isDirty: true,
     }));
+  }, []);
+
+  const renameScenarioClass = useCallback((oldClassName: string, newClassName: string) => {
+    setState(prev => {
+      // 1. Find the class by old name and update className
+      const updatedClasses = { ...prev.scenarioClasses };
+      const classEntry = Object.entries(updatedClasses).find(([, c]) => c.className === oldClassName);
+      if (classEntry) {
+        const [classId, classData] = classEntry;
+        updatedClasses[classId] = { ...classData, className: newClassName };
+      }
+
+      // 2. Move enrollments from old className key to new className key
+      const updatedEnrollments = { ...prev.scenarioEnrollments };
+      const oldEnrollments = updatedEnrollments[oldClassName];
+      if (oldEnrollments) {
+        // Update each enrollment's className field
+        const renamedEnrollments: Record<string, ScenarioEnrollment> = {};
+        Object.entries(oldEnrollments).forEach(([studentId, enrollment]) => {
+          renamedEnrollments[studentId] = { ...enrollment, className: newClassName };
+        });
+        updatedEnrollments[newClassName] = renamedEnrollments;
+        delete updatedEnrollments[oldClassName];
+      }
+
+      return {
+        ...prev,
+        scenarioClasses: updatedClasses,
+        scenarioEnrollments: updatedEnrollments,
+        isDirty: true,
+      };
+    });
   }, []);
 
   const addStudentToClass = useCallback((
@@ -593,6 +626,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     getScenarioClass,
     getScenarioClassByName,
     updateScenarioClass,
+    renameScenarioClass,
     addStudentToClass,
     removeStudentFromClass,
     moveStudent,
@@ -609,6 +643,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     getScenarioClass,
     getScenarioClassByName,
     updateScenarioClass,
+    renameScenarioClass,
     addStudentToClass,
     removeStudentFromClass,
     moveStudent,

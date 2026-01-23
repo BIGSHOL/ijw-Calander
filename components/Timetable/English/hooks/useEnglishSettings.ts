@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
-import { IntegrationSettings, DisplayOptions } from '../IntegrationViewSettings';
+import { IntegrationSettings, DisplayOptions, CustomGroup } from '../IntegrationViewSettings';
 import { EnglishLevel } from '../../../../types';
 import { DEFAULT_ENGLISH_LEVELS } from '../englishUtils';
 import { storage, STORAGE_KEYS } from '../../../../utils/localStorage';
 
+// Firebase auto-generated doc ID: 20자 alphanumeric
+const isFirebaseDocId = (str: string) => /^[a-zA-Z0-9]{15,30}$/.test(str);
+
 const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
     showStudents: true,
     showRoom: true,
-    showTeacher: true
+    showTeacher: true,
+    showSchedule: true
 };
 
 export const useEnglishSettings = () => {
@@ -84,6 +88,57 @@ export const useEnglishSettings = () => {
         });
         return () => unsub();
     }, []);
+
+    // Migration: className 기반 customGroups → classId 기반으로 자동 변환
+    const classIdMigrationDone = useRef(false);
+    useEffect(() => {
+        if (settingsLoading || classIdMigrationDone.current) return;
+        const customGroups = firebaseSettings.customGroups;
+        if (!customGroups || customGroups.length === 0) return;
+
+        // 모든 classes 항목이 이미 Firebase doc ID 형식인지 확인
+        const allClassRefs = customGroups.flatMap(g => g.classes || []);
+        if (allClassRefs.length === 0) return;
+        const needsMigration = allClassRefs.some(ref => !isFirebaseDocId(ref));
+        if (!needsMigration) return;
+
+        classIdMigrationDone.current = true;
+
+        // 마이그레이션 실행: className으로 classes 컬렉션 조회 → docId 매핑
+        (async () => {
+            try {
+                const classesSnapshot = await getDocs(
+                    query(collection(db, 'classes'), where('subject', '==', 'english'))
+                );
+                const nameToId: Record<string, string> = {};
+                classesSnapshot.docs.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.className) {
+                        nameToId[data.className] = docSnap.id;
+                    }
+                });
+
+                const migratedGroups: CustomGroup[] = customGroups.map(g => ({
+                    ...g,
+                    classes: (g.classes || []).map(ref => {
+                        if (isFirebaseDocId(ref)) return ref; // 이미 ID
+                        return nameToId[ref] || ref; // 이름 → ID 변환 (매핑 없으면 그대로)
+                    })
+                }));
+
+                // 변경 사항이 있을 때만 저장
+                if (JSON.stringify(migratedGroups) !== JSON.stringify(customGroups)) {
+                    console.log('[Settings Migration] className → classId 변환 완료:', migratedGroups);
+                    await setDoc(doc(db, 'settings', 'english_class_integration'), {
+                        ...firebaseSettings,
+                        customGroups: migratedGroups,
+                    }, { merge: true });
+                }
+            } catch (err) {
+                console.error('[Settings Migration] Failed:', err);
+            }
+        })();
+    }, [settingsLoading, firebaseSettings]);
 
     // Merged settings object (same shape as before for consumers)
     const settings: IntegrationSettings = {

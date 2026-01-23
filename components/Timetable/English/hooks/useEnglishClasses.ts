@@ -6,10 +6,11 @@ import { ClassInfo as ClassInfoFromDB } from '../../../../hooks/useClasses';
 
 export interface ScheduleCell {
     className?: string;
+    classId?: string;
     room?: string;
     teacher?: string;
     note?: string;
-    merged?: { className: string; room?: string, teacher?: string, underline?: boolean }[];
+    merged?: { className: string; classId?: string; room?: string, teacher?: string, underline?: boolean }[];
     underline?: boolean;
 }
 
@@ -17,6 +18,7 @@ type ScheduleData = Record<string, ScheduleCell>;
 
 export interface ClassInfo {
     name: string;
+    classId: string;
     mainTeacher: string;
     mainRoom: string;
     startPeriod: number;
@@ -95,10 +97,12 @@ export const useEnglishClasses = (
             const pNum = parseInt(periodId);
             if (isNaN(pNum)) return;
 
-            const processClassEntry = (cName: string, cRoom: string, cTeacher: string, currentDay: string, cUnderline?: boolean) => {
+            const processClassEntry = (cName: string, cRoom: string, cTeacher: string, currentDay: string, cClassId?: string, cUnderline?: boolean) => {
                 // 인재원 수업 시간표 압축 매핑 (그룹 설정 기반)
                 let mappedPeriodId = periodId;
-                const classGroup = settings.customGroups?.find(g => g.classes.includes(cName));
+                const classGroup = settings.customGroups?.find(g =>
+                    (cClassId && g.classes.includes(cClassId)) || g.classes.includes(cName)
+                );
                 if (classGroup?.useInjaePeriod) {
                     if (periodId === '5' || periodId === '6') {
                         mappedPeriodId = '5'; // 6교시를 5교시로 병합
@@ -106,14 +110,15 @@ export const useEnglishClasses = (
                 }
 
                 // isHidden 강사(LAB 등)인지 체크
-                const teacherData = teachersData.find(t => t.name === cTeacher);
+                const teacherData = teachersData.find(t => t.name === cTeacher || t.englishName === cTeacher);
                 const isHiddenTeacher = teacherData?.isHidden || false;
 
                 if (!classMap.has(cName)) {
                     classMap.set(cName, {
                         name: cName,
+                        classId: '',
                         mainTeacher: '',
-                        mainRoom: cRoom || '',
+                        mainRoom: (!isHiddenTeacher && cRoom) ? cRoom : '',
                         startPeriod: 0,
                         scheduleMap: {},
                         weekendShift: 0,
@@ -128,6 +133,11 @@ export const useEnglishClasses = (
                     });
                 }
                 const info = classMap.get(cName)!;
+
+                // classId 할당 (첫 번째로 발견된 값 사용)
+                if (cClassId && !info.classId) {
+                    info.classId = cClassId;
+                }
 
                 // 교시-요일별 강의실 추적 (isHidden 강사의 강의실은 무시)
                 const slotKey = `${mappedPeriodId}-${currentDay}`;
@@ -172,13 +182,13 @@ export const useEnglishClasses = (
                 info.minPeriod = Math.min(info.minPeriod, mappedPNum);
             };
 
-            processClassEntry(clsName, cell.room || '', cell.teacher || '', day, cell.underline);
+            processClassEntry(clsName, cell.room || '', cell.teacher || '', day, cell.classId, cell.underline);
 
             if (cell.merged && cell.merged.length > 0) {
                 cell.merged.forEach(m => {
                     if (m.className) {
                         // merged 수업은 자체 teacher가 있으면 사용, 없으면 메인 셀의 teacher 사용
-                        processClassEntry(m.className, m.room || '', m.teacher || cell.teacher || '', day, m.underline);
+                        processClassEntry(m.className, m.room || '', m.teacher || cell.teacher || '', day, m.classId, m.underline);
                     }
                 });
             }
@@ -249,7 +259,9 @@ export const useEnglishClasses = (
             }
 
             // 그룹 설정에 따른 시간대 선택
-            const classGroup = settings.customGroups?.find(g => g.classes.includes(c.name));
+            const classGroup = settings.customGroups?.find(g =>
+                (c.classId && g.classes.includes(c.classId)) || g.classes.includes(c.name)
+            );
             const useInjaePeriod = classGroup?.useInjaePeriod || false;
             // NOTE: Injae periods need to be imported or handled. 
             // Assuming INJAE_PERIODS is available from englishUtils, but we need to import it. 

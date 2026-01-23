@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 export interface ScheduleCell {
     className?: string;
+    classId?: string;
     room?: string;
     teacher?: string;
     note?: string;
