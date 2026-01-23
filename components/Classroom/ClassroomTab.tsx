@@ -4,6 +4,7 @@ import ClassroomToolbar from './components/ClassroomToolbar';
 import ClassroomGrid from './components/ClassroomGrid';
 
 const IGNORED_ROOMS_KEY = 'classroom_ignored_rooms';
+const TIME_RANGE_KEY = 'classroom_time_range';
 
 function getInitialDay(): string {
   const dayIndex = new Date().getDay();
@@ -21,10 +22,20 @@ const ClassroomTab: React.FC = () => {
       return saved ? new Set(JSON.parse(saved)) : new Set();
     } catch { return new Set(); }
   });
+  const [timeRange, setTimeRange] = useState<{ start: number; end: number }>(() => {
+    try {
+      const saved = localStorage.getItem(TIME_RANGE_KEY);
+      return saved ? JSON.parse(saved) : { start: 9, end: 22 };
+    } catch { return { start: 9, end: 22 }; }
+  });
 
   useEffect(() => {
     localStorage.setItem(IGNORED_ROOMS_KEY, JSON.stringify([...ignoredRooms]));
   }, [ignoredRooms]);
+
+  useEffect(() => {
+    localStorage.setItem(TIME_RANGE_KEY, JSON.stringify(timeRange));
+  }, [timeRange]);
 
   const { blocksByRoom, rooms, loading } = useClassroomData(selectedDay, selectedRooms, ignoredRooms);
   const isWeekend = selectedDay === '토' || selectedDay === '일';
@@ -84,6 +95,8 @@ const ClassroomTab: React.FC = () => {
         rooms={rooms}
         ignoredRooms={ignoredRooms}
         onIgnoredRoomToggle={handleIgnoredRoomToggle}
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
       />
       <ClassroomGrid
         blocksByRoom={blocksByRoom}
@@ -91,6 +104,7 @@ const ClassroomTab: React.FC = () => {
         isWeekend={isWeekend}
         selectedRooms={selectedRooms}
         ignoredRooms={ignoredRooms}
+        timeRange={timeRange}
       />
     </div>
   );

@@ -1,15 +1,20 @@
 import React from 'react';
-import { ClassroomBlock, getBlockPosition } from '../types';
+import { ClassroomBlock, TimeConfig, parseTimeToMinutes } from '../types';
 import { SUBJECT_LABELS } from '../../../utils/styleUtils';
 import { CLASSROOM_COLORS } from '../constants';
 
 interface ClassBlockProps {
   block: ClassroomBlock;
-  isWeekend: boolean;
+  config: TimeConfig;
 }
 
-const ClassBlock: React.FC<ClassBlockProps> = ({ block, isWeekend }) => {
-  const pos = getBlockPosition(block.startTime, block.endTime, isWeekend);
+const ClassBlock: React.FC<ClassBlockProps> = ({ block, config }) => {
+  const startMin = parseTimeToMinutes(block.startTime);
+  const endMin = parseTimeToMinutes(block.endTime);
+  const pos = {
+    top: ((startMin - config.start) / config.range) * 100,
+    height: ((endMin - startMin) / config.range) * 100,
+  };
   const colors = CLASSROOM_COLORS[block.subject] || CLASSROOM_COLORS.math;
 
   // 충돌 시 나란히 배치: 가로 영역을 conflictTotal 등분

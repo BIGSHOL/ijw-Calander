@@ -1,5 +1,5 @@
-import React from 'react';
-import { ClassroomBlock, TimeConfig, WEEKDAY_CONFIG, WEEKEND_CONFIG } from '../types';
+import React, { useMemo } from 'react';
+import { ClassroomBlock, TimeConfig, makeTimeConfig } from '../types';
 import ClassBlock from './ClassBlock';
 
 interface ClassroomGridProps {
@@ -8,24 +8,36 @@ interface ClassroomGridProps {
   isWeekend: boolean;
   selectedRooms: Set<string> | null;
   ignoredRooms: Set<string>;
+  timeRange: { start: number; end: number };
 }
 
-function getHourMarkers(config: TimeConfig): { label: string; topPercent: number }[] {
-  const markers: { label: string; topPercent: number }[] = [];
-  const firstHour = Math.ceil(config.start / 60);
-  const lastHour = Math.floor(config.end / 60);
-  for (let h = firstHour; h <= lastHour; h++) {
-    const minutes = h * 60;
-    if (minutes <= config.start || minutes >= config.end) continue;
-    const topPercent = ((minutes - config.start) / config.range) * 100;
-    markers.push({ label: `${h}:00`, topPercent });
+interface TimeMarker {
+  label: string;
+  topPercent: number;
+  isHour: boolean;
+}
+
+function getTimeMarkers(config: TimeConfig): TimeMarker[] {
+  const markers: TimeMarker[] = [];
+  // 시작점을 10분 단위로 올림
+  const firstTick = Math.ceil((config.start + 1) / 10) * 10;
+  for (let m = firstTick; m < config.end; m += 10) {
+    const topPercent = ((m - config.start) / config.range) * 100;
+    const hour = Math.floor(m / 60);
+    const min = m % 60;
+    const isHour = min === 0;
+    markers.push({
+      label: `${hour}:${String(min).padStart(2, '0')}`,
+      topPercent,
+      isHour,
+    });
   }
   return markers;
 }
 
-const ClassroomGrid: React.FC<ClassroomGridProps> = ({ blocksByRoom, rooms, isWeekend, selectedRooms, ignoredRooms }) => {
-  const config = isWeekend ? WEEKEND_CONFIG : WEEKDAY_CONFIG;
-  const hourMarkers = getHourMarkers(config);
+const ClassroomGrid: React.FC<ClassroomGridProps> = ({ blocksByRoom, rooms, isWeekend, selectedRooms, ignoredRooms, timeRange }) => {
+  const config = useMemo(() => makeTimeConfig(timeRange.start, timeRange.end), [timeRange]);
+  const timeMarkers = useMemo(() => getTimeMarkers(config), [config]);
 
   const displayRooms = selectedRooms ? rooms.filter(r => selectedRooms.has(r)) : rooms;
 
@@ -37,26 +49,27 @@ const ClassroomGrid: React.FC<ClassroomGridProps> = ({ blocksByRoom, rooms, isWe
     );
   }
 
-  const startLabel = `${Math.floor(config.start / 60)}:${String(config.start % 60).padStart(2, '0')}`;
-  const endLabel = `${Math.floor(config.end / 60)}:${String(config.end % 60).padStart(2, '0')}`;
-
   return (
     <div className="flex flex-1 min-h-0 overflow-hidden bg-white">
       {/* 시간 축 (고정) */}
-      <div className="relative w-14 flex-shrink-0 border-r border-gray-300 bg-gray-50">
+      <div className="relative w-12 flex-shrink-0 border-r border-gray-300 bg-gray-50">
         <div className="h-9 border-b border-gray-300" />
         <div className="relative flex-1 h-[calc(100%-2.25rem)]">
-          <div className="absolute top-0.5 left-1 text-[10px] font-medium text-gray-600">{startLabel}</div>
-          {hourMarkers.map(m => (
+          {timeMarkers.map(m => (
             <div
               key={m.label}
               className="absolute left-0 w-full"
               style={{ top: `${m.topPercent}%` }}
             >
-              <span className="absolute -top-2 left-1 text-[10px] font-medium text-gray-600">{m.label}</span>
+              <span className={`absolute left-1 ${
+                m.isHour
+                  ? '-top-2.5 text-[10px] font-semibold text-gray-700'
+                  : '-top-1.5 text-[8px] text-gray-400'
+              }`}>
+                {m.label}
+              </span>
             </div>
           ))}
-          <div className="absolute bottom-0.5 left-1 text-[10px] font-medium text-gray-600">{endLabel}</div>
         </div>
       </div>
 
@@ -75,16 +88,18 @@ const ClassroomGrid: React.FC<ClassroomGridProps> = ({ blocksByRoom, rooms, isWe
             {/* 그리드 본체 */}
             <div className="relative flex-1 border-r border-gray-200 bg-white">
               {/* 시간 가이드 라인 */}
-              {hourMarkers.map(m => (
+              {timeMarkers.map(m => (
                 <div
                   key={m.label}
-                  className="absolute left-0 w-full border-t border-gray-300"
+                  className={`absolute left-0 w-full border-t ${
+                    m.isHour ? 'border-gray-300' : 'border-gray-100'
+                  }`}
                   style={{ top: `${m.topPercent}%` }}
                 />
               ))}
               {/* 수업 블록들 */}
               {(blocksByRoom.get(room) || []).map(block => (
-                <ClassBlock key={block.id} block={block} isWeekend={isWeekend} />
+                <ClassBlock key={block.id} block={block} config={config} />
               ))}
             </div>
           </div>
