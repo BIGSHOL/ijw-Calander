@@ -211,6 +211,24 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         // We can just log or show a toast.
     }, []);
 
+    // 레벨업 시 scheduleData를 즉시 업데이트 (onSnapshot보다 먼저 반영하여 레이스 컨디션 방지)
+    const handleClassRenamed = useCallback((oldName: string, newName: string) => {
+        setScheduleData(prev => {
+            const next: ScheduleData = {};
+            Object.entries(prev).forEach(([key, cell]) => {
+                const updated = { ...cell };
+                if (updated.className === oldName) updated.className = newName;
+                if (updated.merged) {
+                    updated.merged = updated.merged.map(m =>
+                        m.className === oldName ? { ...m, className: newName } : m
+                    );
+                }
+                next[key] = updated;
+            });
+            return next;
+        });
+    }, []);
+
     // Filter teachers for English from props and set local state
     useEffect(() => {
         const filtered = propsTeachers.filter(t =>
@@ -396,6 +414,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 onPublishToLive={handlePublishDraftToLive}
                                 onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
                                 canPublish={isMaster || hasPermission('timetable.english.simulation')}
+                                onClassRenamed={handleClassRenamed}
                             />
                         )}
                         {viewType === 'room' && (
