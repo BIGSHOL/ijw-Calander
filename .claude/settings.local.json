@@ -41,7 +41,11 @@
       "Bash(then echo \"$file\")",
       "Bash(fi)",
       "Bash(done)",
-      "Bash(powershell -Command \"Get-ChildItem -Path components -Recurse -Filter *.tsx | Where-Object { \\(Select-String -Path $_FullName -Pattern ''bg-\\\\[#081429\\\\]'' -Quiet\\) -and -not \\(Select-String -Path $_FullName -Pattern ''TabSubNavigation'' -Quiet\\) } | Select-Object -First 15 -ExpandProperty Name\")"
+      "Bash(powershell -Command \"Get-ChildItem -Path components -Recurse -Filter *.tsx | Where-Object { \\(Select-String -Path $_FullName -Pattern ''bg-\\\\[#081429\\\\]'' -Quiet\\) -and -not \\(Select-String -Path $_FullName -Pattern ''TabSubNavigation'' -Quiet\\) } | Select-Object -First 15 -ExpandProperty Name\")",
+      "Bash(npx grep:*)",
+      "Bash(npx vite build:*)",
+      "mcp__ide__getDiagnostics",
+      "Read(//d/**)"
     ]
   },
   "mcpServers": {
