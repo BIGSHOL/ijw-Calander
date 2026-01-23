@@ -1600,7 +1600,9 @@ const App: React.FC = () => {
                   )}
                   {/* Name */}
                   <span className="text-xs font-bold text-white whitespace-nowrap">
-                    {(userProfile?.email || currentUser?.email)?.split('@')[0]}
+                    {currentStaffMember
+                      ? (currentStaffMember.englishName ? `${currentStaffMember.name}(${currentStaffMember.englishName})` : currentStaffMember.name)
+                      : (userProfile?.displayName || (userProfile?.email || currentUser?.email)?.split('@')[0])}
                   </span>
                   {/* Job Title Badge */}
                   <span className={`text-xxs px-1.5 py-0.5 rounded flex items-center justify-center font-bold tracking-tight whitespace-nowrap ${getJobTitleStyle(userProfile?.jobTitle)}`}>
@@ -2789,7 +2791,11 @@ const App: React.FC = () => {
               style={{ display: isProfileMenuOpen ? 'block' : 'none' }}
             >
               <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-                <p className="font-bold text-gray-800">{userProfile?.email?.split('@')[0]}</p>
+                <p className="font-bold text-gray-800">
+                  {currentStaffMember
+                    ? (currentStaffMember.englishName ? `${currentStaffMember.name}(${currentStaffMember.englishName})` : currentStaffMember.name)
+                    : (userProfile?.displayName || userProfile?.email?.split('@')[0])}
+                </p>
                 <p className="text-xs text-gray-500 mt-0.5">{userProfile?.jobTitle || '직급 미설정'}</p>
                 <p className="text-xs text-blue-600 font-medium mt-1">{ROLE_LABELS[userProfile?.role || 'guest']}</p>
               </div>
