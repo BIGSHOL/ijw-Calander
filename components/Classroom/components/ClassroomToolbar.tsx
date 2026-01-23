@@ -21,12 +21,19 @@ function groupRooms(rooms: string[]): RoomGroup[] {
   };
 
   for (const room of rooms) {
-    if (/^2\d{2}/.test(room)) groups['2층'].push(room);
+    if (/^2\d{2}/.test(room) || room.includes('SKY')) groups['2층'].push(room);
     else if (/^3\d{2}/.test(room)) groups['3층'].push(room);
     else if (/^6\d{2}/.test(room)) groups['6층'].push(room);
     else if (room.includes('프리미엄') || room.includes('LAB')) groups['프리미엄관'].push(room);
     else groups['기타'].push(room);
   }
+
+  // SKY 강의실을 2층 그룹 맨 앞으로
+  groups['2층'].sort((a, b) => {
+    const aIsSky = a.includes('SKY') ? 0 : 1;
+    const bIsSky = b.includes('SKY') ? 0 : 1;
+    return aIsSky - bIsSky || a.localeCompare(b, 'ko');
+  });
 
   return Object.entries(groups)
     .filter(([, rooms]) => rooms.length > 0)
@@ -45,6 +52,8 @@ interface ClassroomToolbarProps {
   onIgnoredRoomToggle: (room: string) => void;
   timeRange: { start: number; end: number };
   onTimeRangeChange: (range: { start: number; end: number }) => void;
+  selectedSubjects: Set<SubjectType> | null;
+  onSubjectToggle: (subject: SubjectType) => void;
 }
 
 function getTodayDay(): string {
@@ -65,6 +74,8 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
   onIgnoredRoomToggle,
   timeRange,
   onTimeRangeChange,
+  selectedSubjects,
+  onSubjectToggle,
 }) => {
   const today = getTodayDay();
   const allSelected = !selectedRooms || (rooms.length > 0 && rooms.every(r => selectedRooms.has(r)));
@@ -237,20 +248,33 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
         )}
       </div>
 
-      {/* 과목 범례 */}
-      <div className="flex items-center gap-2 ml-auto">
-        {SUBJECTS.map(subject => (
-          <div key={subject} className="flex items-center gap-1">
-            <div
-              className="w-3 h-3 rounded-sm border"
+      {/* 과목 필터 */}
+      <div className="flex items-center gap-1 ml-auto">
+        {SUBJECTS.map(subject => {
+          const isActive = !selectedSubjects || selectedSubjects.has(subject);
+          return (
+            <button
+              key={subject}
+              onClick={() => onSubjectToggle(subject)}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] transition-colors ${
+                isActive
+                  ? 'border-opacity-100 font-medium'
+                  : 'border-gray-600 opacity-30'
+              }`}
               style={{
-                backgroundColor: CLASSROOM_COLORS[subject].light,
-                borderColor: CLASSROOM_COLORS[subject].bg,
+                backgroundColor: isActive ? CLASSROOM_COLORS[subject].light : 'transparent',
+                borderColor: isActive ? CLASSROOM_COLORS[subject].bg : undefined,
+                color: isActive ? CLASSROOM_COLORS[subject].bg : '#9ca3af',
               }}
-            />
-            <span className="text-[10px] text-gray-400">{SUBJECT_LABELS[subject]}</span>
-          </div>
-        ))}
+            >
+              <div
+                className="w-2.5 h-2.5 rounded-sm"
+                style={{ backgroundColor: CLASSROOM_COLORS[subject].bg }}
+              />
+              {SUBJECT_LABELS[subject]}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

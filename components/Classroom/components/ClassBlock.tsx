@@ -6,9 +6,10 @@ import { CLASSROOM_COLORS } from '../constants';
 interface ClassBlockProps {
   block: ClassroomBlock;
   config: TimeConfig;
+  onClick?: (block: ClassroomBlock) => void;
 }
 
-const ClassBlock: React.FC<ClassBlockProps> = ({ block, config }) => {
+const ClassBlock: React.FC<ClassBlockProps> = ({ block, config, onClick }) => {
   const startMin = parseTimeToMinutes(block.startTime);
   const endMin = parseTimeToMinutes(block.endTime);
   const pos = {
@@ -25,12 +26,13 @@ const ClassBlock: React.FC<ClassBlockProps> = ({ block, config }) => {
 
   return (
     <div
-      className="absolute rounded px-1.5 py-1 cursor-default select-none shadow-sm overflow-hidden"
+      className={`absolute rounded px-1.5 py-1 ${onClick ? 'cursor-pointer hover:brightness-95' : 'cursor-default'} select-none shadow-sm overflow-hidden`}
+      onClick={onClick ? () => onClick(block) : undefined}
       style={{
         top: `${pos.top}%`,
         height: `${pos.height}%`,
-        left: totalCols > 1 ? `${leftPercent}%` : '4px',
-        width: totalCols > 1 ? `${colWidthPercent}%` : 'calc(100% - 8px)',
+        left: totalCols > 1 ? `calc(${leftPercent}% + 4px)` : '4px',
+        width: totalCols > 1 ? `calc(${colWidthPercent}% - 8px)` : 'calc(100% - 8px)',
         minHeight: '20px',
         backgroundColor: block.hasConflict ? '#fffbeb' : colors.light,
         borderLeft: `3px solid ${block.hasConflict ? '#f59e0b' : colors.bg}`,

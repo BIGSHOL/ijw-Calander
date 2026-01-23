@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ClassroomBlock, TimeConfig, makeTimeConfig } from '../types';
+import { SubjectType } from '../../../types';
 import ClassBlock from './ClassBlock';
 
 interface ClassroomGridProps {
@@ -9,6 +10,8 @@ interface ClassroomGridProps {
   selectedRooms: Set<string> | null;
   ignoredRooms: Set<string>;
   timeRange: { start: number; end: number };
+  onBlockClick?: (block: ClassroomBlock) => void;
+  selectedSubjects: Set<SubjectType> | null;
 }
 
 interface TimeMarker {
@@ -35,7 +38,7 @@ function getTimeMarkers(config: TimeConfig): TimeMarker[] {
   return markers;
 }
 
-const ClassroomGrid: React.FC<ClassroomGridProps> = ({ blocksByRoom, rooms, isWeekend, selectedRooms, ignoredRooms, timeRange }) => {
+const ClassroomGrid: React.FC<ClassroomGridProps> = ({ blocksByRoom, rooms, isWeekend, selectedRooms, ignoredRooms, timeRange, onBlockClick, selectedSubjects }) => {
   const config = useMemo(() => makeTimeConfig(timeRange.start, timeRange.end), [timeRange]);
   const timeMarkers = useMemo(() => getTimeMarkers(config), [config]);
 
@@ -86,7 +89,7 @@ const ClassroomGrid: React.FC<ClassroomGridProps> = ({ blocksByRoom, rooms, isWe
               <span className="text-xs font-bold text-gray-800 truncate">{room}</span>
             </div>
             {/* 그리드 본체 */}
-            <div className="relative flex-1 border-r border-gray-200 bg-white">
+            <div className="relative flex-1 border-r border-gray-200 bg-white overflow-hidden">
               {/* 시간 가이드 라인 */}
               {timeMarkers.map(m => (
                 <div
@@ -97,9 +100,12 @@ const ClassroomGrid: React.FC<ClassroomGridProps> = ({ blocksByRoom, rooms, isWe
                   style={{ top: `${m.topPercent}%` }}
                 />
               ))}
-              {/* 수업 블록들 */}
-              {(blocksByRoom.get(room) || []).map(block => (
-                <ClassBlock key={block.id} block={block} config={config} />
+              {/* 수업 블록들 (시간 범위 + 과목 필터) */}
+              {(blocksByRoom.get(room) || [])
+                .filter(b => b.endMinutes > config.start && b.startMinutes < config.end)
+                .filter(b => !selectedSubjects || selectedSubjects.has(b.subject))
+                .map(block => (
+                <ClassBlock key={block.id} block={block} config={config} onClick={onBlockClick} />
               ))}
             </div>
           </div>

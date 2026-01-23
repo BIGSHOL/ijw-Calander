@@ -2,6 +2,10 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useClassroomData } from './hooks/useClassroomData';
 import ClassroomToolbar from './components/ClassroomToolbar';
 import ClassroomGrid from './components/ClassroomGrid';
+import ClassDetailModal from '../ClassManagement/ClassDetailModal';
+import { ClassInfo } from '../../hooks/useClasses';
+import { ClassroomBlock } from './types';
+import { SubjectType } from '../../types';
 
 const IGNORED_ROOMS_KEY = 'classroom_ignored_rooms';
 const TIME_RANGE_KEY = 'classroom_time_range';
@@ -37,7 +41,10 @@ const ClassroomTab: React.FC = () => {
     localStorage.setItem(TIME_RANGE_KEY, JSON.stringify(timeRange));
   }, [timeRange]);
 
-  const { blocksByRoom, rooms, loading } = useClassroomData(selectedDay, selectedRooms, ignoredRooms);
+  const [selectedSubjects, setSelectedSubjects] = useState<Set<SubjectType> | null>(null); // null = 전체
+  const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
+
+  const { blocksByRoom, rooms, loading, classes } = useClassroomData(selectedDay, selectedRooms, ignoredRooms);
   const isWeekend = selectedDay === '토' || selectedDay === '일';
 
   const handleRoomToggle = useCallback((room: string) => {
@@ -75,6 +82,42 @@ const ClassroomTab: React.FC = () => {
     });
   }, []);
 
+  const handleSubjectToggle = useCallback((subject: SubjectType) => {
+    setSelectedSubjects(prev => {
+      if (!prev) {
+        // 전체 → 해당 과목만 해제
+        const next = new Set<SubjectType>(['math', 'english', 'science', 'korean']);
+        next.delete(subject);
+        return next;
+      }
+      const next = new Set(prev);
+      if (next.has(subject)) {
+        next.delete(subject);
+        if (next.size === 0) return null; // 전부 해제 → 전체로
+      } else {
+        next.add(subject);
+        if (next.size === 4) return null; // 전부 선택 → 전체로
+      }
+      return next;
+    });
+  }, []);
+
+  const handleBlockClick = useCallback((block: ClassroomBlock) => {
+    const cls = classes.find(c => c.id === block.classId);
+    if (cls) {
+      setSelectedClass({
+        id: cls.id,
+        className: cls.className,
+        teacher: cls.teacher,
+        subject: cls.subject,
+        schedule: cls.schedule,
+        room: cls.room,
+        slotTeachers: cls.slotTeachers,
+        slotRooms: cls.slotRooms,
+      });
+    }
+  }, [classes]);
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-gray-400">
@@ -97,6 +140,8 @@ const ClassroomTab: React.FC = () => {
         onIgnoredRoomToggle={handleIgnoredRoomToggle}
         timeRange={timeRange}
         onTimeRangeChange={setTimeRange}
+        selectedSubjects={selectedSubjects}
+        onSubjectToggle={handleSubjectToggle}
       />
       <ClassroomGrid
         blocksByRoom={blocksByRoom}
@@ -105,7 +150,15 @@ const ClassroomTab: React.FC = () => {
         selectedRooms={selectedRooms}
         ignoredRooms={ignoredRooms}
         timeRange={timeRange}
+        onBlockClick={handleBlockClick}
+        selectedSubjects={selectedSubjects}
       />
+      {selectedClass && (
+        <ClassDetailModal
+          classInfo={selectedClass}
+          onClose={() => setSelectedClass(null)}
+        />
+      )}
     </div>
   );
 };
