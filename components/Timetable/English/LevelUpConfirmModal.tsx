@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, TrendingUp, ArrowUpCircle, AlertTriangle, Loader } from 'lucide-react';
-import { collection, getDocs, getDoc, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../firebaseConfig';
 import { CLASS_COLLECTION } from './englishUtils';
@@ -12,6 +12,8 @@ interface LevelUpConfirmModalProps {
     oldClassName: string;
     newClassName: string;
     type: 'number' | 'class';
+    isSimulationMode?: boolean;
+    onSimulationLevelUp?: (oldName: string, newName: string) => void;
 }
 
 const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
@@ -20,7 +22,9 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
     onSuccess,
     oldClassName,
     newClassName,
-    type
+    type,
+    isSimulationMode = false,
+    onSimulationLevelUp,
 }) => {
     const queryClient = useQueryClient();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -32,9 +36,20 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
         setError(null);
 
         try {
+            // 시뮬레이션 모드: 메모리 상태만 변경 (Firebase 미사용)
+            if (isSimulationMode && onSimulationLevelUp) {
+                console.log('[LevelUp-Simulation] Renaming:', oldClassName, '→', newClassName);
+                onSimulationLevelUp(oldClassName, newClassName);
+                setUpdateCount(1);
+                setTimeout(() => {
+                    onSuccess();
+                    onClose();
+                }, 1500);
+                return;
+            }
+
             console.log('[LevelUp] Starting:', oldClassName, '→', newClassName);
             const batch = writeBatch(db);
-            let groupsUpdated = false;
 
             // 1. Update classes 컬렉션 (시간표 데이터)
             const classesRef = collection(db, CLASS_COLLECTION);
@@ -67,33 +82,10 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
 
             console.log('[LevelUp] Classes updated:', classesCount, 'Enrollments updated:', enrollmentsCount);
 
-            // 3. Update integration_settings customGroups (CORRECT PATH)
-            const settingsRef = doc(db, 'settings', 'english_class_integration');
-            const settingsSnap = await getDoc(settingsRef);
+            // customGroups는 classId 기반이므로 레벨업 시 settings 업데이트 불필요
 
-            if (settingsSnap.exists()) {
-                const settings = settingsSnap.data();
-                const customGroups = settings.customGroups || [];
-
-                const updatedGroups = customGroups.map((group: any) => ({
-                    ...group,
-                    classes: (group.classes || []).map((cls: string) =>
-                        cls === oldClassName ? newClassName : cls
-                    )
-                }));
-
-                // Check if any change was made
-                if (JSON.stringify(customGroups) !== JSON.stringify(updatedGroups)) {
-                    console.log('[LevelUp] CustomGroups updated in settings/english_class_integration');
-                    batch.update(settingsRef, { customGroups: updatedGroups });
-                    groupsUpdated = true;
-                }
-            } else {
-                console.log('[LevelUp] Integration settings document not found');
-            }
-
-            const totalUpdates = classesCount + enrollmentsCount + (groupsUpdated ? 1 : 0);
-            console.log('[LevelUp] Total updates:', { classesCount, enrollmentsCount, groupsUpdated });
+            const totalUpdates = classesCount + enrollmentsCount;
+            console.log('[LevelUp] Total updates:', { classesCount, enrollmentsCount });
 
             if (totalUpdates === 0) {
                 setError('업데이트할 데이터가 없습니다.');

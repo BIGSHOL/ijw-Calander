@@ -12,9 +12,10 @@ interface ClassBlockProps {
 const ClassBlock: React.FC<ClassBlockProps> = ({ block, config, onClick }) => {
   const startMin = parseTimeToMinutes(block.startTime);
   const endMin = parseTimeToMinutes(block.endTime);
+  // 픽셀 기반 위치 계산 (시간당 고정 높이)
   const pos = {
-    top: ((startMin - config.start) / config.range) * 100,
-    height: ((endMin - startMin) / config.range) * 100,
+    top: ((startMin - config.start) / config.range) * config.totalHeight,
+    height: ((endMin - startMin) / config.range) * config.totalHeight,
   };
   const colors = CLASSROOM_COLORS[block.subject] || CLASSROOM_COLORS.math;
 
@@ -29,8 +30,8 @@ const ClassBlock: React.FC<ClassBlockProps> = ({ block, config, onClick }) => {
       className={`absolute rounded px-1.5 py-1 ${onClick ? 'cursor-pointer hover:brightness-95' : 'cursor-default'} select-none shadow-sm overflow-hidden`}
       onClick={onClick ? () => onClick(block) : undefined}
       style={{
-        top: `${pos.top}%`,
-        height: `${pos.height}%`,
+        top: `${pos.top}px`,
+        height: `${pos.height}px`,
         left: totalCols > 1 ? `calc(${leftPercent}% + 4px)` : '4px',
         width: totalCols > 1 ? `calc(${colWidthPercent}% - 8px)` : 'calc(100% - 8px)',
         minHeight: '20px',

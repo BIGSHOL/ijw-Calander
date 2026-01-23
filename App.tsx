@@ -46,6 +46,7 @@ const StudentManagementTab = lazy(() => import('./components/StudentManagement/S
 const GradesManager = lazy(() => import('./components/Grades/GradesManager'));
 const ClassManagementTab = lazy(() => import('./components/ClassManagement').then(m => ({ default: m.ClassManagementTab })));
 const ClassroomTab = lazy(() => import('./components/Classroom').then(m => ({ default: m.ClassroomTab })));
+const ClassroomAssignmentTab = lazy(() => import('./components/ClassroomAssignment').then(m => ({ default: m.ClassroomAssignmentTab })));
 const StudentConsultationTab = lazy(() => import('./components/StudentConsultation').then(m => ({ default: m.ConsultationManagementTab })));
 
 // 신규 탭 (lazy loading)
@@ -187,7 +188,7 @@ const createNewStaffMember = async (user: User, isMaster: boolean): Promise<Staf
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'classroom-assignment' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
 
   // ============================================
   // Custom Hooks (Vercel Best Practices: rerender-derived-state)
@@ -2700,6 +2701,13 @@ const App: React.FC = () => {
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 min-h-0 overflow-hidden">
                 <ClassroomTab />
+              </div>
+            </Suspense>
+          ) : appMode === 'classroom-assignment' ? (
+            /* Classroom Auto-Assignment View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 min-h-0 overflow-hidden">
+                <ClassroomAssignmentTab />
               </div>
             </Suspense>
           ) : appMode === 'student-consultations' ? (

@@ -4,6 +4,7 @@ import { Trash2, Check, X, Plus } from 'lucide-react';
 
 export interface MergedClass {
     className: string;
+    classId?: string;
     room: string;
     underline?: boolean;
     lastMovedAt?: string; // ISO Date String

@@ -65,10 +65,7 @@ const MiniGridRow: React.FC<MiniGridRowProps> = ({
 
                 // Get style based on teacher
                 let teacherStyle = {};
-                const isHidden = cell?.teacher && (
-                    hiddenTeachers?.includes(cell.teacher) ||
-                    teachersData.find(t => t.name === cell.teacher || t.englishName === cell.teacher)?.isHidden
-                );
+                const isHidden = cell?.teacher && hiddenTeachers?.includes(cell.teacher);
 
                 // Get display name (영어 이름 우선)
                 const teacherData = cell?.teacher ? teachersData.find(t => t.name === cell.teacher) : null;

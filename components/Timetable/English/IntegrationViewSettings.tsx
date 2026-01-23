@@ -27,6 +27,12 @@ export interface DisplayOptions {
     showStudents: boolean;
     showRoom: boolean;
     showTeacher: boolean;
+    showSchedule: boolean;
+}
+
+export interface ClassEntry {
+    classId: string;
+    className: string;
 }
 
 interface IntegrationViewSettingsProps {
@@ -34,7 +40,7 @@ interface IntegrationViewSettingsProps {
     onClose: () => void;
     settings: IntegrationSettings;
     onChange: (nextSettings: IntegrationSettings) => void;
-    allClasses: String[]; // List of all class names
+    allClasses: ClassEntry[];
     teachers?: string[];
     teachersData?: Teacher[];
 }
@@ -70,12 +76,12 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
         return safeSettings.customGroups || [];
     }, [safeSettings.customGroups]);
 
-    // Map class -> group ID
+    // Map classId -> group ID
     const classToGroupId = useMemo(() => {
         const map: Record<string, string> = {};
         customGroups.forEach((g) => {
-            (g.classes || []).forEach((c) => {
-                map[c] = g.id;
+            (g.classes || []).forEach((classRef) => {
+                map[classRef] = g.id;
             });
         });
         return map;
@@ -143,16 +149,16 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
         onChange(next as IntegrationSettings);
     };
 
-    const handleToggleClassInGroup = (groupId: string, className: string, checked: boolean) => {
+    const handleToggleClassInGroup = (groupId: string, classId: string, checked: boolean) => {
         // Remove from all groups first (one class -> one group rule)
         let nextGroups = customGroups.map((g) => ({
             ...g,
-            classes: (g.classes || []).filter((c) => c !== className),
+            classes: (g.classes || []).filter((c) => c !== classId),
         }));
 
         if (checked) {
             nextGroups = nextGroups.map((g) =>
-                g.id === groupId ? { ...g, classes: [...g.classes, className] } : g
+                g.id === groupId ? { ...g, classes: [...g.classes, classId] } : g
             );
         }
 
@@ -369,7 +375,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                                 allClasses={allClasses}
                                 classToGroupId={classToGroupId}
                                 onTitleChange={(title) => handleGroupTitleChange(group.id, title)}
-                                onToggleClass={(className, checked) => handleToggleClassInGroup(group.id, className, checked)}
+                                onToggleClass={(classId, checked) => handleToggleClassInGroup(group.id, classId, checked)}
                                 onDelete={() => handleRemoveGroup(group.id)}
                                 isFirst={index === 0}
                                 isLast={index === customGroups.length - 1}
@@ -499,10 +505,10 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
 
 interface GroupCardProps {
     group: CustomGroup;
-    allClasses: String[];
+    allClasses: ClassEntry[];
     classToGroupId: Record<string, string>;
     onTitleChange: (title: string) => void;
-    onToggleClass: (className: string, checked: boolean) => void;
+    onToggleClass: (classId: string, checked: boolean) => void;
     onDelete: () => void;
     isFirst: boolean;
     isLast: boolean;
@@ -536,13 +542,21 @@ const GroupCard = React.memo<GroupCardProps>(({
         setLocalTitle(group.title || "");
     }, [group.title]);
 
+    // classId → className 매핑
+    const classIdToName = useMemo(() => {
+        const map: Record<string, string> = {};
+        allClasses.forEach(c => { map[c.classId] = c.className; });
+        return map;
+    }, [allClasses]);
+
     const filteredClasses = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
         if (!term) return allClasses;
-        return allClasses.filter((c) => c.toString().toLowerCase().includes(term));
+        return allClasses.filter((c) => c.className.toLowerCase().includes(term));
     }, [searchTerm, allClasses]);
 
-    const checkedClasses = group.classes || [];
+    // group.classes에 저장된 classId 배열
+    const checkedClassIds = group.classes || [];
 
     return (
         <div className="border border-gray-200 rounded-md p-2 space-y-2 bg-white">
@@ -605,14 +619,14 @@ const GroupCard = React.memo<GroupCardProps>(({
                 <div className="text-xxs text-gray-500 font-bold mb-1">
                     선택된 수업 (순서 변경 가능)
                 </div>
-                {checkedClasses.length === 0 && (
+                {checkedClassIds.length === 0 && (
                     <div className="text-xs text-gray-400 italic text-center py-2">
                         선택된 수업이 없습니다. 아래에서 검색하여 추가하세요.
                     </div>
                 )}
-                {checkedClasses.map((cls, idx) => (
-                    <div key={`${cls}-${idx}`} className="flex items-center justify-between text-xs bg-white px-2 py-1.5 rounded border border-gray-200 shadow-sm">
-                        <span className="font-medium text-gray-700 truncate flex-1">{cls}</span>
+                {checkedClassIds.map((classId, idx) => (
+                    <div key={`${classId}-${idx}`} className="flex items-center justify-between text-xs bg-white px-2 py-1.5 rounded border border-gray-200 shadow-sm">
+                        <span className="font-medium text-gray-700 truncate flex-1">{classIdToName[classId] || classId}</span>
                         <div className="flex items-center gap-1 ml-2">
                             <button
                                 onClick={() => onMoveClass(idx, 'up')}
@@ -624,14 +638,14 @@ const GroupCard = React.memo<GroupCardProps>(({
                             </button>
                             <button
                                 onClick={() => onMoveClass(idx, 'down')}
-                                disabled={idx === checkedClasses.length - 1}
-                                className={`p-0.5 rounded ${idx === checkedClasses.length - 1 ? 'text-gray-200' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                                disabled={idx === checkedClassIds.length - 1}
+                                className={`p-0.5 rounded ${idx === checkedClassIds.length - 1 ? 'text-gray-200' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
                                 title="아래로"
                             >
                                 ▼
                             </button>
                             <button
-                                onClick={() => onToggleClass(cls, false)}
+                                onClick={() => onToggleClass(classId, false)}
                                 className="ml-1 text-gray-400 hover:text-red-500 px-1"
                                 title="제거"
                             >
@@ -659,7 +673,7 @@ const GroupCard = React.memo<GroupCardProps>(({
             {/* Class Checkbox List */}
             <div className="max-h-32 overflow-auto space-y-0.5 mt-1">
                 {(() => {
-                    const displayedClasses = filteredClasses.filter(c => !checkedClasses.includes(c.toString()));
+                    const displayedClasses = filteredClasses.filter(c => !checkedClassIds.includes(c.classId));
 
                     if (displayedClasses.length === 0) {
                         return (
@@ -669,20 +683,19 @@ const GroupCard = React.memo<GroupCardProps>(({
                         );
                     }
 
-                    return displayedClasses.map((className) => {
-                        const strClass = className.toString();
-                        const assignedToOther = classToGroupId[strClass] && classToGroupId[strClass] !== group.id;
+                    return displayedClasses.map((entry) => {
+                        const assignedToOther = classToGroupId[entry.classId] && classToGroupId[entry.classId] !== group.id;
 
                         return (
                             <label
-                                key={strClass}
+                                key={entry.classId}
                                 className="flex items-center gap-2 cursor-pointer px-1 py-0.5 hover:bg-gray-50 rounded"
                             >
                                 <input
                                     type="checkbox"
-                                    checked={false} // Always unchecked as it's an "Add" list now
-                                    onChange={(e) =>
-                                        onToggleClass(strClass, true) // Only allow adding here
+                                    checked={false}
+                                    onChange={() =>
+                                        onToggleClass(entry.classId, true)
                                     }
                                     className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-3 w-3"
                                 />
@@ -691,9 +704,9 @@ const GroupCard = React.memo<GroupCardProps>(({
                                         ? "text-gray-400 line-through"
                                         : "text-gray-700"
                                         }`}
-                                    title={strClass}
+                                    title={entry.className}
                                 >
-                                    {strClass}
+                                    {entry.className}
                                 </span>
                             </label>
                         );
