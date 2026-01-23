@@ -116,6 +116,7 @@ export function useClassroomData(selectedDay: string, selectedRooms: Set<string>
           startMinutes: parseTimeToMinutes(period.startTime),
           endMinutes: parseTimeToMinutes(period.endTime),
           hasConflict: false,
+          isMerged: false,
           conflictIndex: 0,
           conflictTotal: 1,
         });
@@ -192,6 +193,26 @@ export function useClassroomData(selectedDay: string, selectedRooms: Set<string>
         for (let g = 0; g < group.length; g++) {
           allBlocks[group[g]] = { ...allBlocks[group[g]], conflictIndex: g, conflictTotal: total };
         }
+      }
+    }
+
+    // 합반 감지: 같은 강의실 + 같은 교시 + 다른 수업 (충돌 무시 강의실 제외)
+    const mergedGroups = new Map<string, number[]>(); // key: "room-periodId"
+    for (let i = 0; i < allBlocks.length; i++) {
+      if (allBlocks[i].conflictTotal > 1) continue; // 이미 충돌 그룹에 속한 블록은 제외
+      const key = `${allBlocks[i].room}-${allBlocks[i].periodId}`;
+      if (!mergedGroups.has(key)) mergedGroups.set(key, []);
+      mergedGroups.get(key)!.push(i);
+    }
+    for (const [, indices] of mergedGroups) {
+      if (indices.length < 2) continue;
+      // 같은 classId끼리는 제외 (중복 슬롯)
+      const uniqueClassIds = new Set(indices.map(i => allBlocks[i].classId));
+      if (uniqueClassIds.size < 2) continue;
+      const total = indices.length;
+      indices.sort((a, b) => allBlocks[a].className.localeCompare(allBlocks[b].className, 'ko'));
+      for (let g = 0; g < indices.length; g++) {
+        allBlocks[indices[g]] = { ...allBlocks[indices[g]], isMerged: true, conflictIndex: g, conflictTotal: total };
       }
     }
 
