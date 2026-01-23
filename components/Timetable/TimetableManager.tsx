@@ -626,145 +626,186 @@ const TimetableManager = ({
                         onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
                     />
 
-            {/* Timetable Grid - 외부 스크롤 제거, 내부 그리드 스크롤만 사용 */}
-            <div className="flex-1 overflow-hidden border-t border-gray-200 p-4">
-                <TimetableGrid
-                    filteredClasses={filteredClasses}
-                    allResources={allResources}
-                    orderedSelectedDays={orderedSelectedDays}
-                    weekDates={weekDates}
-                    viewType={viewType}
-                    currentPeriods={currentPeriods}
-                    teachers={teachers}
-                    searchQuery={searchQuery}
-                    canEdit={canEditMath}
-                    mode={mode}
-                    columnWidth={columnWidth}
-                    rowHeight={rowHeight}
-                    fontSize={fontSize}
-                    showClassName={showClassName}
-                    showSchool={showSchool}
-                    showGrade={showGrade}
-                    showEmptyRooms={showEmptyRooms}
-                    showStudents={showStudents}
-                    showHoldStudents={showHoldStudents}
-                    showWithdrawnStudents={showWithdrawnStudents}
-                    dragOverClassId={dragOverClassId}
-                    onClassClick={(cls) => {
-                        if (!canEditMath) return;
-                        // TimetableClass -> ClassInfo 변환
-                        const classInfo: ClassInfo = {
-                            className: cls.className,
-                            subject: cls.subject === '수학' ? 'math' : 'english',
-                            teacher: cls.teacher,
-                            room: cls.room,
-                            schedule: cls.schedule,
-                            studentCount: cls.studentIds?.length || cls.studentList?.length || 0,
-                        };
-                        setSelectedClassInfo(classInfo);
-                    }}
-                    onDragStart={(e, sId, cId) => canEditMath && handleDragStart(e, sId, cId)}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    currentSubjectFilter={currentSubjectFilter}
-                    studentMap={studentMap}
-                    timetableViewMode={timetableViewMode}
-                    classKeywords={classKeywords}
-                    onStudentClick={(studentId) => {
-                        const student = studentMap[studentId];
-                        if (student) {
-                            setSelectedStudentForModal(student);
-                        }
-                    }}
-                />
-            </div>
+                    {/* Timetable Grid - 외부 스크롤 제거, 내부 그리드 스크롤만 사용 */}
+                    <div className="flex-1 overflow-hidden border-t border-gray-200 p-4">
+                        <TimetableGrid
+                            filteredClasses={filteredClasses}
+                            allResources={allResources}
+                            orderedSelectedDays={orderedSelectedDays}
+                            weekDates={weekDates}
+                            viewType={viewType}
+                            currentPeriods={currentPeriods}
+                            teachers={teachers}
+                            searchQuery={searchQuery}
+                            canEdit={canEditMath}
+                            mode={isScenarioMode ? 'edit' : mode}
+                            columnWidth={columnWidth}
+                            rowHeight={rowHeight}
+                            fontSize={fontSize}
+                            showClassName={showClassName}
+                            showSchool={showSchool}
+                            showGrade={showGrade}
+                            showEmptyRooms={showEmptyRooms}
+                            showStudents={showStudents}
+                            showHoldStudents={showHoldStudents}
+                            showWithdrawnStudents={showWithdrawnStudents}
+                            dragOverClassId={dragOverClassId}
+                            onClassClick={(cls) => {
+                                if (!canEditMath) return;
+                                // TimetableClass -> ClassInfo 변환
+                                const classInfo: ClassInfo = {
+                                    className: cls.className,
+                                    subject: cls.subject === '수학' ? 'math' : 'english',
+                                    teacher: cls.teacher,
+                                    room: cls.room,
+                                    schedule: cls.schedule,
+                                    studentCount: cls.studentIds?.length || cls.studentList?.length || 0,
+                                    id: cls.id,
+                                };
+                                setSelectedClassInfo(classInfo);
+                            }}
+                            onDragStart={(e, sId, cId) => {
+                                if (isScenarioMode) {
+                                    // 시뮬레이션 모드 드래그 시작
+                                    e.dataTransfer.setData('studentId', sId);
+                                    e.dataTransfer.setData('fromClassId', cId);
+                                    e.dataTransfer.effectAllowed = 'move';
+                                } else if (canEditMath) {
+                                    // 라이브 모드 드래그 시작
+                                    handleDragStart(e, sId, cId);
+                                }
+                            }}
+                            onDragOver={(e, classId) => {
+                                if (isScenarioMode) {
+                                    e.preventDefault();
+                                    // 시뮬레이션 모드에서는 별도 상태 없이 브라우저 기본 드래그 효과 사용하거나 필요한 경우 상태 추가
+                                } else {
+                                    handleDragOver(e, classId);
+                                }
+                            }}
+                            onDragLeave={(e) => {
+                                if (!isScenarioMode) {
+                                    handleDragLeave(e);
+                                }
+                            }}
+                            onDrop={(e, toClassId) => {
+                                if (isScenarioMode) {
+                                    e.preventDefault();
+                                    const studentId = e.dataTransfer.getData('studentId');
+                                    const fromClassId = e.dataTransfer.getData('fromClassId');
 
-            {/* Add Class Modal */}
-            <AddClassModal
-                isOpen={isAddClassOpen}
-                onClose={() => setIsAddClassOpen(false)}
-                newClassName={newClassName}
-                setNewClassName={setNewClassName}
-                newTeacher={newTeacher}
-                setNewTeacher={setNewTeacher}
-                newRoom={newRoom}
-                setNewRoom={setNewRoom}
-                newSubject={newSubject}
-                setNewSubject={setNewSubject}
-                newSchedule={newSchedule}
-                toggleScheduleSlot={toggleScheduleSlot}
-                handleAddClass={handleAddClass}
-                teacherNames={sortedTeachers}
-                isAssistant={isAssistant}
-                setIsAssistant={setIsAssistant}
-            />
+                                    if (!studentId || !fromClassId) return;
+                                    if (fromClassId === toClassId) return;
 
-            {/* Class Detail Modal - 수업 관리와 동일한 상세 모달 사용 */}
-            {selectedClassInfo && (
-                <ClassDetailModal
-                    classInfo={selectedClassInfo}
-                    onClose={() => setSelectedClassInfo(null)}
-                />
-            )}
+                                    // classId로 className 찾기 (SimulationContext 사용)
+                                    const fromClass = simulation.getScenarioClass(fromClassId);
+                                    const toClass = simulation.getScenarioClass(toClassId);
 
-            {/* Student Detail Modal - 학생 클릭 시 표시 */}
-            {selectedStudentForModal && (
-                <StudentDetailModal
-                    student={selectedStudentForModal}
-                    onClose={() => setSelectedStudentForModal(null)}
-                    readOnly={subjectTab !== 'math' || mode === 'view'}
-                />
-            )}
-
-            {/* Teacher Order Modal (Math) */}
-            <TeacherOrderModal
-                isOpen={isTeacherOrderModalOpen}
-                onClose={() => setIsTeacherOrderModalOpen(false)}
-                currentOrder={mathConfig.teacherOrder}
-                allTeachers={sortedTeachers}
-                onSave={handleSaveTeacherOrder}
-            />
-
-            {/* View Settings Modal (Math) */}
-            <SimpleViewSettingsModal
-                isOpen={isViewSettingsOpen}
-                onClose={() => setIsViewSettingsOpen(false)}
-                columnWidth={columnWidth}
-                setColumnWidth={setColumnWidth}
-                rowHeight={rowHeight}
-                setRowHeight={setRowHeight}
-                fontSize={fontSize}
-                setFontSize={setFontSize}
-                selectedDays={selectedDays}
-                setSelectedDays={setSelectedDays}
-                showStudents={showStudents}
-                setShowStudents={setShowStudents}
-                showClassName={showClassName}
-                setShowClassName={setShowClassName}
-                showSchool={showSchool}
-                setShowSchool={setShowSchool}
-                showGrade={showGrade}
-                setShowGrade={setShowGrade}
-            />
-
-            {/* Scenario Management Modal */}
-            {/* TODO: Create Math-specific ScenarioManagementModal */}
-            {isScenarioModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/50" onClick={() => setIsScenarioModalOpen(false)} />
-                    <div className="relative bg-white rounded-lg p-6 max-w-md">
-                        <h3 className="text-lg font-bold mb-4">시나리오 관리</h3>
-                        <p className="text-gray-600 mb-4">수학 시나리오 관리 기능은 개발 중입니다.</p>
-                        <button
-                            onClick={() => setIsScenarioModalOpen(false)}
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        >
-                            닫기
-                        </button>
+                                    if (fromClass && toClass) {
+                                        simulation.moveStudent(fromClass.className, toClass.className, studentId);
+                                    }
+                                } else {
+                                    handleDrop(e, toClassId);
+                                }
+                            }}
+                            currentSubjectFilter={currentSubjectFilter}
+                            studentMap={studentMap}
+                            timetableViewMode={timetableViewMode}
+                            classKeywords={classKeywords}
+                            onStudentClick={(studentId) => {
+                                const student = studentMap[studentId];
+                                if (student) {
+                                    setSelectedStudentForModal(student);
+                                }
+                            }}
+                        />
                     </div>
-                </div>
-            )}
+
+                    {/* Add Class Modal */}
+                    <AddClassModal
+                        isOpen={isAddClassOpen}
+                        onClose={() => setIsAddClassOpen(false)}
+                        newClassName={newClassName}
+                        setNewClassName={setNewClassName}
+                        newTeacher={newTeacher}
+                        setNewTeacher={setNewTeacher}
+                        newRoom={newRoom}
+                        setNewRoom={setNewRoom}
+                        newSubject={newSubject}
+                        setNewSubject={setNewSubject}
+                        newSchedule={newSchedule}
+                        toggleScheduleSlot={toggleScheduleSlot}
+                        handleAddClass={handleAddClass}
+                        teacherNames={sortedTeachers}
+                        isAssistant={isAssistant}
+                        setIsAssistant={setIsAssistant}
+                    />
+
+                    {/* Class Detail Modal - 수업 관리와 동일한 상세 모달 사용 */}
+                    {selectedClassInfo && (
+                        <ClassDetailModal
+                            classInfo={selectedClassInfo}
+                            onClose={() => setSelectedClassInfo(null)}
+                        />
+                    )}
+
+                    {/* Student Detail Modal - 학생 클릭 시 표시 */}
+                    {selectedStudentForModal && (
+                        <StudentDetailModal
+                            student={selectedStudentForModal}
+                            onClose={() => setSelectedStudentForModal(null)}
+                            readOnly={subjectTab !== 'math' || mode === 'view'}
+                        />
+                    )}
+
+                    {/* Teacher Order Modal (Math) */}
+                    <TeacherOrderModal
+                        isOpen={isTeacherOrderModalOpen}
+                        onClose={() => setIsTeacherOrderModalOpen(false)}
+                        currentOrder={mathConfig.teacherOrder}
+                        allTeachers={sortedTeachers}
+                        onSave={handleSaveTeacherOrder}
+                    />
+
+                    {/* View Settings Modal (Math) */}
+                    <SimpleViewSettingsModal
+                        isOpen={isViewSettingsOpen}
+                        onClose={() => setIsViewSettingsOpen(false)}
+                        columnWidth={columnWidth}
+                        setColumnWidth={setColumnWidth}
+                        rowHeight={rowHeight}
+                        setRowHeight={setRowHeight}
+                        fontSize={fontSize}
+                        setFontSize={setFontSize}
+                        selectedDays={selectedDays}
+                        setSelectedDays={setSelectedDays}
+                        showStudents={showStudents}
+                        setShowStudents={setShowStudents}
+                        showClassName={showClassName}
+                        setShowClassName={setShowClassName}
+                        showSchool={showSchool}
+                        setShowSchool={setShowSchool}
+                        showGrade={showGrade}
+                        setShowGrade={setShowGrade}
+                    />
+
+                    {/* Scenario Management Modal */}
+                    {/* TODO: Create Math-specific ScenarioManagementModal */}
+                    {isScenarioModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/50" onClick={() => setIsScenarioModalOpen(false)} />
+                            <div className="relative bg-white rounded-lg p-6 max-w-md">
+                                <h3 className="text-lg font-bold mb-4">시나리오 관리</h3>
+                                <p className="text-gray-600 mb-4">수학 시나리오 관리 기능은 개발 중입니다.</p>
+                                <button
+                                    onClick={() => setIsScenarioModalOpen(false)}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                >
+                                    닫기
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </>
         );
