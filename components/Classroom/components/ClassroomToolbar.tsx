@@ -258,13 +258,13 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
               onClick={() => onSubjectToggle(subject)}
               className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] transition-colors ${
                 isActive
-                  ? 'border-opacity-100 font-medium'
-                  : 'border-gray-600 opacity-30'
+                  ? 'font-medium'
+                  : 'opacity-60'
               }`}
               style={{
-                backgroundColor: isActive ? CLASSROOM_COLORS[subject].light : 'transparent',
-                borderColor: isActive ? CLASSROOM_COLORS[subject].bg : undefined,
-                color: isActive ? CLASSROOM_COLORS[subject].bg : '#9ca3af',
+                backgroundColor: isActive ? CLASSROOM_COLORS[subject].light : '#1f2937',
+                borderColor: isActive ? CLASSROOM_COLORS[subject].bg : '#4b5563',
+                color: isActive ? CLASSROOM_COLORS[subject].bg : '#6b7280',
               }}
             >
               <div
