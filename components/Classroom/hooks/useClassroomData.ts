@@ -205,7 +205,19 @@ export function useClassroomData(selectedDay: string, selectedRooms: Set<string>
       if (cls.room) roomSet.add(cls.room);
       Object.values(cls.slotRooms).forEach(r => { if (r) roomSet.add(r); });
     }
-    const roomList = Array.from(roomSet).sort((a, b) => a.localeCompare(b, 'ko'));
+    const roomList = Array.from(roomSet).sort((a, b) => {
+      const getGroup = (r: string) => {
+        if (r.includes('SKY')) return 0;
+        if (/^2\d{2}/.test(r)) return 1;
+        if (/^3\d{2}/.test(r)) return 2;
+        if (/^6\d{2}/.test(r)) return 3;
+        if (r.includes('프리미엄') || r.includes('LAB')) return 4;
+        return 5;
+      };
+      const ga = getGroup(a), gb = getGroup(b);
+      if (ga !== gb) return ga - gb;
+      return a.localeCompare(b, 'ko');
+    });
 
     return { blocks: filtered, rooms: roomList };
   }, [classes, selectedDay, selectedRooms, ignoredRooms]);
