@@ -499,7 +499,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${localStorage.getItem('dark_mode') === 'true' ? 'translate-x-6' : 'translate-x-1'
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${storage.getBoolean(STORAGE_KEYS.DARK_MODE, false) ? 'translate-x-6' : 'translate-x-1'
                           }`}
                       />
                     </button>

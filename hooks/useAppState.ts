@@ -32,12 +32,28 @@ export interface CalendarState {
 export function useCalendarState() {
   const [baseDate, setBaseDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    const saved = localStorage.getItem('calendar_view_mode');
-    return (saved as ViewMode) || 'yearly';
+    const saved = storage.getString(STORAGE_KEYS.CALENDAR_VIEW_MODE);
+    if (saved) return saved as ViewMode;
+    // Migration from old key
+    const old = localStorage.getItem('calendar_view_mode');
+    if (old) {
+      storage.setString(STORAGE_KEYS.CALENDAR_VIEW_MODE, old);
+      localStorage.removeItem('calendar_view_mode');
+      return old as ViewMode;
+    }
+    return 'yearly';
   });
   const [viewColumns, setViewColumns] = useState<1 | 2 | 3>(() => {
-    const saved = localStorage.getItem('calendar_view_columns');
-    return saved ? (parseInt(saved) as 1 | 2 | 3) : 2;
+    const saved = storage.getString(STORAGE_KEYS.CALENDAR_VIEW_COLUMNS);
+    if (saved) return parseInt(saved) as 1 | 2 | 3;
+    // Migration from old key
+    const old = localStorage.getItem('calendar_view_columns');
+    if (old) {
+      storage.setString(STORAGE_KEYS.CALENDAR_VIEW_COLUMNS, old);
+      localStorage.removeItem('calendar_view_columns');
+      return parseInt(old) as 1 | 2 | 3;
+    }
+    return 2;
   });
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedEndDate, setSelectedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -47,17 +63,29 @@ export function useCalendarState() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [hiddenDeptIds, setHiddenDeptIds] = useState<string[]>(() => {
-    return storage.getJSON<string[]>(STORAGE_KEYS.DEPT_HIDDEN_IDS, []);
+    const saved = storage.getJSON<string[]>(STORAGE_KEYS.DEPT_HIDDEN_IDS, []);
+    if (saved.length > 0) return saved;
+    // Migration from old key
+    const old = localStorage.getItem('dept_hidden_ids');
+    if (old) {
+      try {
+        const parsed = JSON.parse(old) as string[];
+        storage.setJSON(STORAGE_KEYS.DEPT_HIDDEN_IDS, parsed);
+        localStorage.removeItem('dept_hidden_ids');
+        return parsed;
+      } catch { /* ignore */ }
+    }
+    return [];
   });
 
   // Persist viewMode to localStorage
   useEffect(() => {
-    localStorage.setItem('calendar_view_mode', viewMode);
+    storage.setString(STORAGE_KEYS.CALENDAR_VIEW_MODE, viewMode);
   }, [viewMode]);
 
   // Persist viewColumns to localStorage
   useEffect(() => {
-    localStorage.setItem('calendar_view_columns', viewColumns.toString());
+    storage.setString(STORAGE_KEYS.CALENDAR_VIEW_COLUMNS, viewColumns.toString());
   }, [viewColumns]);
 
   // Force viewColumns to 2 if currently 3 when switching to yearly view
@@ -345,7 +373,16 @@ export function useGradesFilterState() {
 // ============================================
 export function useDarkMode() {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
-    return storage.getBoolean(STORAGE_KEYS.DARK_MODE, false);
+    const saved = storage.getString(STORAGE_KEYS.DARK_MODE);
+    if (saved !== null) return saved === 'true';
+    // Migration from old key
+    const old = localStorage.getItem('dark_mode');
+    if (old) {
+      storage.setBoolean(STORAGE_KEYS.DARK_MODE, old === 'true');
+      localStorage.removeItem('dark_mode');
+      return old === 'true';
+    }
+    return false;
   });
 
   // Apply dark mode class to document

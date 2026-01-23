@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List, ChevronDown, X, Loader2 } from 'lucide-react';
-import { usePaginatedConsultations, StudentConsultationFilters, DEFAULT_PAGE_SIZE } from '../../hooks/useStudentConsultations';
+import { usePaginatedConsultations, StudentConsultationFilters } from '../../hooks/useStudentConsultations';
 import { ConsultationCategory, CATEGORY_CONFIG } from '../../types';
 import ConsultationList from './ConsultationList';
 // Lazy load modals for better code splitting
@@ -13,6 +13,7 @@ import { getMonthRangeKST, getTodayKST } from '../../utils/dateUtils';
 import { TabSubNavigation } from '../Common/TabSubNavigation';
 import { TabButton } from '../Common/TabButton';
 import { GridDropdown, GridDropdownOption } from '../Common/GridDropdown';
+import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 
 /**
  * 상담 관리 메인 탭
@@ -24,8 +25,16 @@ type ViewMode = 'list' | 'dashboard';
 
 const ConsultationManagementTab: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
-        const saved = localStorage.getItem('consultation_viewMode');
-        return (saved as ViewMode) || 'list';
+        const saved = storage.getString(STORAGE_KEYS.CONSULTATION_VIEW_MODE);
+        if (saved) return saved as ViewMode;
+        // Migration from old key
+        const old = localStorage.getItem('consultation_viewMode');
+        if (old) {
+            storage.setString(STORAGE_KEYS.CONSULTATION_VIEW_MODE, old);
+            localStorage.removeItem('consultation_viewMode');
+            return old as ViewMode;
+        }
+        return 'list';
     });
     const [filters, setFilters] = useState<StudentConsultationFilters>({});
     const [showAddModal, setShowAddModal] = useState(false);
@@ -35,8 +44,16 @@ const ConsultationManagementTab: React.FC = () => {
     // 페이지네이션 상태
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(() => {
-        const saved = localStorage.getItem('consultation_pageSize');
-        return saved ? Number(saved) : DEFAULT_PAGE_SIZE;
+        const saved = storage.getString(STORAGE_KEYS.CONSULTATION_PAGE_SIZE);
+        if (saved) return Number(saved);
+        // Migration from old key
+        const old = localStorage.getItem('consultation_pageSize');
+        if (old) {
+            storage.setString(STORAGE_KEYS.CONSULTATION_PAGE_SIZE, old);
+            localStorage.removeItem('consultation_pageSize');
+            return Number(old);
+        }
+        return 10;
     });
 
     // 페이지네이션 적용된 상담 조회
@@ -141,22 +158,29 @@ const ConsultationManagementTab: React.FC = () => {
     const handlePageSizeChange = (newSize: number) => {
         setPageSize(newSize);
         setCurrentPage(1);
-        localStorage.setItem('consultation_pageSize', String(newSize));
+        storage.setString(STORAGE_KEYS.CONSULTATION_PAGE_SIZE, String(newSize));
     };
 
     // 뷰 모드 변경 핸들러
     const handleViewModeChange = (mode: ViewMode) => {
         setViewMode(mode);
-        localStorage.setItem('consultation_viewMode', mode);
+        storage.setString(STORAGE_KEYS.CONSULTATION_VIEW_MODE, mode);
     };
 
     // 현재 활성화된 날짜 프리셋 (localStorage에서 복원)
     const [activeDatePreset, setActiveDatePreset] = useState<'today' | 'week' | 'thisMonth' | 'lastMonth' | 'last3Months' | 'all'>(() => {
-        const saved = localStorage.getItem('consultation_datePreset');
+        const saved = storage.getString(STORAGE_KEYS.CONSULTATION_DATE_PRESET);
         if (saved && ['today', 'week', 'thisMonth', 'lastMonth', 'last3Months', 'all'].includes(saved)) {
             return saved as 'today' | 'week' | 'thisMonth' | 'lastMonth' | 'last3Months' | 'all';
         }
-        return 'thisMonth';
+        // Migration from old key
+        const old = localStorage.getItem('consultation_datePreset');
+        if (old && ['today', 'week', 'thisMonth', 'lastMonth', 'last3Months', 'all'].includes(old)) {
+            storage.setString(STORAGE_KEYS.CONSULTATION_DATE_PRESET, old);
+            localStorage.removeItem('consultation_datePreset');
+            return old as 'today' | 'week' | 'thisMonth' | 'lastMonth' | 'last3Months' | 'all';
+        }
+        return 'week';
     });
 
     // 로컬 날짜 포맷 헬퍼 (UTC 문제 방지)
@@ -173,7 +197,7 @@ const ConsultationManagementTab: React.FC = () => {
         const todayStr = getTodayKST();
 
         setActiveDatePreset(preset);
-        localStorage.setItem('consultation_datePreset', preset);
+        storage.setString(STORAGE_KEYS.CONSULTATION_DATE_PRESET, preset);
 
         if (preset === 'today') {
             setFilters(prev => ({ ...prev, dateRange: { start: todayStr, end: todayStr } }));

@@ -553,7 +553,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         {/* 내 수업 | 내 학생 2단 레이아웃 */}
         <div className="grid grid-cols-2 gap-3">
           {/* 내 수업 목록 */}
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-[#081429]" />
@@ -584,7 +584,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
             </div>
 
             {/* 필터 버튼 */}
-            <div className="flex gap-1 mb-3">
+            <div className="flex gap-1 mb-2 h-[28px]">
               <button
                 onClick={() => {
                   setClassFilter('all');
@@ -627,15 +627,15 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
             </div>
 
             {/* 테이블 - 헤더는 항상 고정 */}
-            <div className="overflow-x-auto" style={{ minHeight: '400px' }}>
+            <div className="overflow-x-auto flex-1">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">수업명</th>
-                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">과목</th>
-                    <th className="text-center py-2 px-2 text-xs font-bold text-gray-700">담임</th>
-                    <th className="text-center py-2 px-2 text-xs font-bold text-gray-700">학생수</th>
-                    <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">시간표</th>
+                  <tr className="border-b border-gray-200 h-[36px]">
+                    <th className="text-left px-2 text-xs font-bold text-gray-700">수업명</th>
+                    <th className="text-left px-2 text-xs font-bold text-gray-700">과목</th>
+                    <th className="text-center px-2 text-xs font-bold text-gray-700">담임</th>
+                    <th className="text-center px-2 text-xs font-bold text-gray-700">학생수</th>
+                    <th className="text-left px-2 text-xs font-bold text-gray-700">시간표</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -675,10 +675,10 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                       return (
                         <tr
                           key={cls.id}
-                          className={`border-b border-gray-100 hover:bg-gray-50 ${isTodayClass ? 'bg-amber-50' : ''
+                          className={`border-b border-gray-100 hover:bg-gray-50 h-[36px] ${isTodayClass ? 'bg-amber-50' : ''
                             }`}
                         >
-                          <td className="py-2 px-2">
+                          <td className="px-2">
                             <div className="flex items-center gap-1">
                               <span className="text-xs font-medium text-[#081429]">{cls.className}</span>
                               {isTodayClass && (
@@ -688,7 +688,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                               )}
                             </div>
                           </td>
-                          <td className="py-2 px-2">
+                          <td className="px-2">
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
                               cls.subject === 'english' ? 'bg-green-100 text-green-700' :
                                 cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
@@ -699,7 +699,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                                   cls.subject === 'science' ? '과학' : '국어'}
                             </span>
                           </td>
-                          <td className="py-2 px-2 text-center">
+                          <td className="px-2 text-center">
                             {cls.isMainTeacher ? (
                               <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
                                 담임
@@ -710,10 +710,10 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                               </span>
                             )}
                           </td>
-                          <td className="py-2 px-2 text-center text-xs text-gray-600">
+                          <td className="px-2 text-center text-xs text-gray-600">
                             {cls.studentCount || 0}명
                           </td>
-                          <td className="py-2 px-2">
+                          <td className="px-2">
                             {scheduleEntries.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
                                 {scheduleEntries.map((entry, idx) => (
@@ -748,7 +748,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
           </div>
 
           {/* 내 학생 목록 */}
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-[#081429]" />
@@ -778,17 +778,20 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               )}
             </div>
 
+            {/* 왼쪽 필터 버튼 영역과 높이 맞춤 */}
+            <div className="h-[28px] mb-2" />
+
             {myStudents.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-xs">담당 학생이 없습니다</p>
               </div>
             ) : (
-              <div className="overflow-x-auto" style={{ minHeight: '400px' }}>
+              <div className="overflow-x-auto flex-1">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
+                    <tr className="border-b border-gray-200 h-[36px]">
+                      <th className="text-left px-2 text-xs font-bold text-gray-700">
                         <button
                           onClick={() => handleSortChange('name')}
                           className="flex items-center gap-1 hover:text-[#081429] transition-colors"
@@ -801,8 +804,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                           )}
                         </button>
                       </th>
-                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">영문명</th>
-                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
+                      <th className="text-left px-2 text-xs font-bold text-gray-700">영문명</th>
+                      <th className="text-left px-2 text-xs font-bold text-gray-700">
                         <button
                           onClick={() => handleSortChange('school')}
                           className="flex items-center gap-1 hover:text-[#081429] transition-colors"
@@ -815,7 +818,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                           )}
                         </button>
                       </th>
-                      <th className="text-left py-2 px-2 text-xs font-bold text-gray-700">
+                      <th className="text-left px-2 text-xs font-bold text-gray-700">
                         <button
                           onClick={() => handleSortChange('grade')}
                           className="flex items-center gap-1 hover:text-[#081429] transition-colors"
@@ -832,11 +835,11 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                   </thead>
                   <tbody>
                     {sortedStudents.slice((studentPage - 1) * 10, studentPage * 10).map(student => (
-                      <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-2 px-2 text-xs font-medium text-[#081429]">{student.name}</td>
-                        <td className="py-2 px-2 text-xs text-gray-600">{student.englishName || '-'}</td>
-                        <td className="py-2 px-2 text-xs text-gray-600">{student.school || '-'}</td>
-                        <td className="py-2 px-2 text-xs text-gray-600">{student.grade || '-'}</td>
+                      <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50 h-[36px]">
+                        <td className="px-2 text-xs font-medium text-[#081429]">{student.name}</td>
+                        <td className="px-2 text-xs text-gray-600">{student.englishName || '-'}</td>
+                        <td className="px-2 text-xs text-gray-600">{student.school || '-'}</td>
+                        <td className="px-2 text-xs text-gray-600">{student.grade || '-'}</td>
                       </tr>
                     ))}
                   </tbody>

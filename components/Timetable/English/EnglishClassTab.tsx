@@ -2,7 +2,7 @@
 // 영어 통합 시간표 탭 - 수업별 컬럼 뷰 (Refactored to match academy-app style with Logic Port)
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Settings, Eye, ChevronDown, Users, Home, User, Edit } from 'lucide-react';
+import { Search, Settings, Eye, ChevronDown, Users, Home, User, Edit, ArrowRightLeft, Copy, Upload, Save } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -39,6 +39,13 @@ interface EnglishClassTabProps {
     isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
     studentMap: Record<string, any>;
     classesData?: ClassInfoFromHook[];  // classes 컬렉션에서 담임 정보
+    // Simulation controls
+    canSimulation?: boolean;
+    onToggleSimulation?: () => void;
+    onCopyLiveToDraft?: () => void;
+    onPublishToLive?: () => void;
+    onOpenScenarioModal?: () => void;
+    canPublish?: boolean;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -50,11 +57,16 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     scheduleData,
     teachersData = [],
     classKeywords = [],
-
     currentUser,
     isSimulationMode = false,
     studentMap,
-    classesData = []
+    classesData = [],
+    canSimulation = false,
+    onToggleSimulation,
+    onCopyLiveToDraft,
+    onPublishToLive,
+    onOpenScenarioModal,
+    canPublish = false,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -62,6 +74,9 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     // 시뮬레이션 모드에서는 항상 수정모드 (조회모드 불필요)
     const [mode, setMode] = useState<'view' | 'edit'>(isSimulationMode ? 'edit' : 'view');
+    useEffect(() => {
+        if (isSimulationMode) setMode('edit');
+    }, [isSimulationMode]);
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
 
     // UI States
@@ -390,8 +405,53 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                             레벨 설정
                         </button>
                     )}
+
+                    {/* Simulation Mode Toggle */}
+                    {canSimulation && (
+                        <div
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                            onClick={onToggleSimulation}
+                        >
+                            <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
+                            <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
+                                {isSimulationMode ? '시뮬레이션' : '실시간'}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* Row 3: Simulation Action Bar */}
+            {isSimulationMode && canEditEnglish && (
+                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
+                    <button
+                        onClick={onCopyLiveToDraft}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
+                        title="현재 실시간 시간표를 복사해옵니다 (기존 시뮬레이션 데이터 덮어쓰기)"
+                    >
+                        <Copy size={12} />
+                        현재 상태 가져오기
+                    </button>
+                    {canPublish && (
+                        <button
+                            onClick={onPublishToLive}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
+                            title="시뮬레이션 내용을 실제 시간표에 적용합니다 (주의)"
+                        >
+                            <Upload size={12} />
+                            실제 반영
+                        </button>
+                    )}
+                    <button
+                        onClick={onOpenScenarioModal}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
+                        title="시나리오 저장/불러오기"
+                    >
+                        <Save size={12} />
+                        시나리오 관리
+                    </button>
+                </div>
+            )}
 
             {/* Teacher Legend */}
             <div className="px-4 py-2 bg-white border-b flex flex-wrap gap-2 items-center flex-shrink-0">

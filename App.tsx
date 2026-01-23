@@ -8,6 +8,7 @@ import { useGanttProjects } from './hooks/useGanttProjects';
 import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
 import { useTabPermissions } from './hooks/useTabPermissions';
 import { storage, STORAGE_KEYS } from './utils/localStorage';
+
 import { useStudents } from './hooks/useStudents';
 import { useClasses } from './hooks/useClasses';
 // State management hooks (Vercel React Best Practices: rerender-derived-state)
@@ -44,6 +45,7 @@ const ConsultationManager = lazy(() => import('./components/RegistrationConsulta
 const StudentManagementTab = lazy(() => import('./components/StudentManagement/StudentManagementTab'));
 const GradesManager = lazy(() => import('./components/Grades/GradesManager'));
 const ClassManagementTab = lazy(() => import('./components/ClassManagement').then(m => ({ default: m.ClassManagementTab })));
+const ClassroomTab = lazy(() => import('./components/Classroom').then(m => ({ default: m.ClassroomTab })));
 const StudentConsultationTab = lazy(() => import('./components/StudentConsultation').then(m => ({ default: m.ConsultationManagementTab })));
 
 // 신규 탭 (lazy loading)
@@ -185,7 +187,7 @@ const createNewStaffMember = async (user: User, isMaster: boolean): Promise<Staf
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
 
   // ============================================
   // Custom Hooks (Vercel Best Practices: rerender-derived-state)
@@ -418,22 +420,13 @@ const App: React.FC = () => {
     // Priority order for tabs (dashboard first!)
     const priority: AppTab[] = ['dashboard', 'calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students'];
 
-    // Initial setup: if appMode is null, set to first accessible tab (or user's preferred tab)
+    // Initial setup: if appMode is null, set to first accessible tab
     if (appMode === null) {
-      // Check for user's preferred default tab
-      const preferredTab = storage.getString(STORAGE_KEYS.DEFAULT_MAIN_TAB);
-
-      if (preferredTab && preferredTab !== 'auto' && canAccessTab(preferredTab as AppTab)) {
-        setAppMode(preferredTab as AppTab);
+      const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
+      if (firstAccessibleTab) {
+        setAppMode(firstAccessibleTab);
       } else {
-        // Fallback to first accessible tab (dashboard will be first if accessible)
-        const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
-        if (firstAccessibleTab) {
-          setAppMode(firstAccessibleTab);
-        } else {
-          // Fallback: no accessible tab, show dashboard (will display error)
-          setAppMode('dashboard');
-        }
+        setAppMode('dashboard');
       }
       return;
     }
@@ -577,7 +570,7 @@ const App: React.FC = () => {
   const handleLogout = async () => {
     await signOut(auth);
     setUserProfile(null);
-    localStorage.removeItem('dept_hidden_ids'); // Reset local visibility settings
+    storage.remove(STORAGE_KEYS.DEPT_HIDDEN_IDS); // Reset local visibility settings
     window.location.reload(); // Clean state reset
   };
 
@@ -789,7 +782,7 @@ const App: React.FC = () => {
 
 
   useEffect(() => {
-    localStorage.setItem('dept_hidden_ids', JSON.stringify(hiddenDeptIds));
+    storage.setJSON(STORAGE_KEYS.DEPT_HIDDEN_IDS, hiddenDeptIds);
   }, [hiddenDeptIds]);
 
   const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
@@ -2698,6 +2691,13 @@ const App: React.FC = () => {
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 min-h-0 overflow-hidden">
                 <ClassManagementTab />
+              </div>
+            </Suspense>
+          ) : appMode === 'classroom' ? (
+            /* Classroom Usage Grid View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 min-h-0 overflow-hidden">
+                <ClassroomTab />
               </div>
             </Suspense>
           ) : appMode === 'student-consultations' ? (

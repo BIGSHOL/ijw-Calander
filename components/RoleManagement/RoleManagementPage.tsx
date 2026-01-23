@@ -17,6 +17,7 @@ import { setDoc, doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { listenerRegistry } from '../../utils/firebaseCleanup';
 import { RotateCcw, Save, Shield, Layout, ChevronDown, ChevronRight, Check, X } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 
 interface RoleManagementPageProps {
   currentUser: UserProfile | null;
@@ -166,8 +167,6 @@ const PERMISSION_CATEGORIES = [
 
 const ROLES_TO_SHOW = ROLE_HIERARCHY.filter(r => r !== 'master') as UserRole[];
 
-const STORAGE_KEY_EXPANDED = 'roleManagement_expandedCategories';
-
 const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
   currentUser
 }) => {
@@ -187,14 +186,19 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
   // 로컬 스토리지에서 열린 카테고리 로드 (기본값: 모두 접힘)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_EXPANDED);
-      if (saved) {
-        return new Set(JSON.parse(saved));
+      const saved = storage.getString(STORAGE_KEYS.ROLE_MANAGEMENT_EXPANDED);
+      if (saved) return new Set(JSON.parse(saved));
+      // Migration from old key
+      const old = localStorage.getItem('roleManagement_expandedCategories');
+      if (old) {
+        storage.setString(STORAGE_KEYS.ROLE_MANAGEMENT_EXPANDED, old);
+        localStorage.removeItem('roleManagement_expandedCategories');
+        return new Set(JSON.parse(old));
       }
     } catch (e) {
       console.error('Failed to load expanded categories:', e);
     }
-    return new Set(); // 기본값: 모두 접힘
+    return new Set();
   });
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -336,12 +340,7 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
       } else {
         next.add(catId);
       }
-      // 로컬 스토리지에 저장
-      try {
-        localStorage.setItem(STORAGE_KEY_EXPANDED, JSON.stringify([...next]));
-      } catch (e) {
-        console.error('Failed to save expanded categories:', e);
-      }
+      storage.setJSON(STORAGE_KEYS.ROLE_MANAGEMENT_EXPANDED, [...next]);
       return next;
     });
   };

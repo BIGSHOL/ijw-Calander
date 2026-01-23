@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Hash, X, Plus, ChevronDown } from 'lucide-react';
 import { EventTag } from '../../types';
+import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 
 interface HashtagComboboxProps {
   availableTags: EventTag[];
@@ -17,7 +18,6 @@ interface RecentTag {
   lastUsed: number;
 }
 
-const STORAGE_KEY = 'ijw_recent_hashtags';
 const MAX_RECENT_TAGS = 20;
 const MAX_TAG_LENGTH = 15;
 
@@ -37,14 +37,9 @@ const HashtagCombobox: React.FC<HashtagComboboxProps> = ({
 
   // Load recent tags from localStorage
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setRecentTags(parsed);
-      }
-    } catch (error) {
-      console.error('Failed to load recent tags:', error);
+    const loaded = storage.getJSON<RecentTag[]>(STORAGE_KEYS.RECENT_HASHTAGS, []);
+    if (loaded.length > 0) {
+      setRecentTags(loaded);
     }
   }, []);
 
@@ -93,7 +88,7 @@ const HashtagCombobox: React.FC<HashtagComboboxProps> = ({
         .slice(0, MAX_RECENT_TAGS);
 
       setRecentTags(updated);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      storage.setJSON(STORAGE_KEYS.RECENT_HASHTAGS, updated);
     } catch (error) {
       console.error('Failed to save recent tag:', error);
     }

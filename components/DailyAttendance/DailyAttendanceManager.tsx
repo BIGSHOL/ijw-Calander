@@ -1,7 +1,7 @@
 // components/DailyAttendance/DailyAttendanceManager.tsx
 // Main component for daily attendance management
 import React, { useState, useMemo } from 'react';
-import { Calendar, Users, BarChart3, RefreshCw, LayoutGrid } from 'lucide-react';
+import { Calendar, Users, BarChart3, LayoutGrid } from 'lucide-react';
 import { UserProfile, TimetableClass, DailyAttendanceRecord, AttendanceStatus } from '../../types';
 import { useDailyAttendanceByDate } from '../../hooks/useDailyAttendance';
 import { useClasses } from '../../hooks/useClasses';
@@ -248,14 +248,6 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
               </span>
             </div>
 
-            <button
-              onClick={() => refetchAttendance()}
-              disabled={isLoadingAttendance}
-              className="px-2.5 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1.5 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingAttendance ? 'animate-spin' : ''}`} />
-              <span className="text-xs font-medium">새로고침</span>
-            </button>
           </div>
 
           {/* Content */}
