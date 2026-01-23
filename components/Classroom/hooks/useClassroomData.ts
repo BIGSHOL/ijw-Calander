@@ -133,6 +133,10 @@ export function useClassroomData(selectedDay: string, selectedRooms: Set<string>
         if (a.classId === b.classId) continue;
         if (a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes) {
           overlappingPairs.push([i, j]);
+          // 같은 수업명인데 다른 ID면 DB 중복 가능성 경고
+          if (a.className === b.className) {
+            console.warn(`[강의실] DB 중복 의심: "${a.className}" (${a.classId} vs ${b.classId}) - ${a.room} ${a.startTime}~${a.endTime}`);
+          }
           // 충돌 무시 강의실이 아닌 경우에만 경고 표시
           if (!ignoredRooms.has(a.room)) {
             allBlocks[i] = { ...a, hasConflict: true };
