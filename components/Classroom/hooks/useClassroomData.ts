@@ -217,5 +217,5 @@ export function useClassroomData(selectedDay: string, selectedRooms: Set<string>
     return map;
   }, [blocks]);
 
-  return { blocksByRoom, rooms, loading, blocks };
+  return { blocksByRoom, rooms, loading, blocks, classes };
 }
