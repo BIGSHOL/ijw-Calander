@@ -13,8 +13,9 @@ export interface ClassroomBlock {
   startMinutes: number;
   endMinutes: number;
   hasConflict: boolean;
-  conflictIndex: number;  // 충돌 그룹 내 순번 (0-based)
-  conflictTotal: number;  // 충돌 그룹의 총 블록 수
+  isMerged: boolean;      // 합반 여부
+  conflictIndex: number;  // 충돌/합반 그룹 내 순번 (0-based)
+  conflictTotal: number;  // 충돌/합반 그룹의 총 블록 수
 }
 
 export interface TimeConfig {

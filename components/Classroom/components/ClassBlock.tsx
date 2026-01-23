@@ -42,6 +42,11 @@ const ClassBlock: React.FC<ClassBlockProps> = ({ block, config, onClick }) => {
         zIndex: block.hasConflict ? 10 : 1,
       }}
     >
+      {block.isMerged && (
+        <div className="absolute top-0.5 right-0.5 bg-blue-500 text-white text-[8px] font-bold px-1 rounded-sm leading-tight">
+          합반
+        </div>
+      )}
       <div className="flex flex-col justify-start h-full gap-0.5">
         <div className="text-[11px] font-bold leading-tight line-clamp-2" style={{ color: block.hasConflict ? '#b45309' : colors.bg }}>
           {block.hasConflict && <span className="mr-0.5">⚠</span>}
