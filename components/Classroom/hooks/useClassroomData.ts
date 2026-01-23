@@ -131,7 +131,7 @@ export function useClassroomData(selectedDay: string, selectedRooms: Set<string>
         const b = allBlocks[j];
         if (a.room !== b.room) continue;
         if (a.classId === b.classId) continue;
-        if (a.periodId === b.periodId) continue; // 같은 교시 = 합반 (의도적 배치)
+        if (a.periodId === b.periodId && !ignoredRooms.has(a.room)) continue; // 같은 교시 = 합반 (충돌 무시 강의실 제외)
         if (a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes) {
           overlappingPairs.push([i, j]);
           // 같은 수업명인데 다른 ID면 DB 중복 가능성 경고
