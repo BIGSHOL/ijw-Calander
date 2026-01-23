@@ -159,17 +159,22 @@ export const useEnglishClassUpdater = () => {
         const scn = scenarioRef.current;
         if (!scn?.scenarioClasses) return [];
         const results: { id: string; data: any }[] = [];
+        const slotKey = `${day}-${periodId}`;
 
         Object.entries(scn.scenarioClasses).forEach(([id, cls]) => {
             const classData = cls as any;
             if (classData.isActive === false) return;
-            if (classData.teacher !== teacher) return;
 
             const schedule = classData.schedule || [];
             const hasSlot = schedule.some((s: any) => s.day === day && s.periodId === periodId);
-            if (hasSlot) {
-                results.push({ id, data: classData });
-            }
+            if (!hasSlot) return;
+
+            // slotTeachers에 해당 슬롯의 선생님이 지정되어 있으면 그것으로 비교
+            const slotTeacher = classData.slotTeachers?.[slotKey];
+            const effectiveTeacher = slotTeacher || classData.teacher;
+            if (effectiveTeacher !== teacher) return;
+
+            results.push({ id, data: classData });
         });
 
         return results;
@@ -483,8 +488,22 @@ export const useEnglishClassUpdater = () => {
 
         // === 시나리오 모드 ===
         if (isScenarioMode) {
+            // 새로 배치할 수업 이름 목록
+            const newClassNames = new Set<string>([cellData.className]);
+            if (hasMerged && cellData.merged) {
+                cellData.merged.forEach(m => newClassNames.add(m.className));
+            }
+
+            // 기존에 이 슬롯에 있던 수업 중, 새 목록에 없는 수업은 슬롯에서 제거
+            const existingAtSlot = findScenarioClassesAtSlot(teacher, day, periodId);
+            for (const { id, data } of existingAtSlot) {
+                if (!newClassNames.has(data.className)) {
+                    removeSlotFromScenarioClass(id, data, day, periodId);
+                }
+            }
+
             // 메인 수업
-            const mainClassId = upsertScenarioClass(
+            upsertScenarioClass(
                 cellData.className,
                 teacher,
                 day,
@@ -520,6 +539,18 @@ export const useEnglishClassUpdater = () => {
         }
 
         // === 실시간 모드 ===
+        // 0. 기존 슬롯의 수업 중 새 목록에 없는 수업 정리
+        const newClassNames = new Set<string>([cellData.className]);
+        if (hasMerged && cellData.merged) {
+            cellData.merged.forEach(m => newClassNames.add(m.className));
+        }
+        const existingAtSlot = await findClassesAtSlot(teacher, day, periodId);
+        for (const classDoc of existingAtSlot) {
+            if (!newClassNames.has(classDoc.data().className)) {
+                await removeSlotFromClass(classDoc.id, classDoc.data(), day, periodId);
+            }
+        }
+
         // 1. 메인 수업 생성/업데이트
         const mainClassId = await upsertSingleClass(
             cellData.className,
@@ -565,7 +596,7 @@ export const useEnglishClassUpdater = () => {
 
         // 캐시 무효화
         queryClient.invalidateQueries({ queryKey: ['classes'] });
-    }, [isScenarioMode, queryClient, upsertScenarioClass]);
+    }, [isScenarioMode, queryClient, upsertScenarioClass, findScenarioClassesAtSlot, removeSlotFromScenarioClass]);
 
     /**
      * 셀에서 수업 제거 (스케줄에서 해당 슬롯 삭제)
