@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, onSnapshot, getDocs, doc, setDoc, writeBatch, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
-import { Copy, Upload, ArrowRightLeft, Save } from 'lucide-react';
 import { CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -335,61 +334,12 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
     return (
         <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
-            {/* Header */}
-            <div className={`text-center py-3 border-b shrink-0 relative transition-colors duration-300 ${isSimulationMode ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
+            {/* Header - Row 1: Title only */}
+            <div className={`text-center py-3 border-b shrink-0 transition-colors duration-300 ${isSimulationMode ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
                 <h1 className="text-2xl font-black text-gray-800 tracking-tight flex items-center justify-center gap-2">
                     <span>인재원 본원 {new Date().getMonth() + 1}월 통합 영어시간표</span>
                     {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">SIMULATION</span>}
                 </h1>
-
-                {/* Simulation Control Panel */}
-                <div className="absolute top-1/2 -translate-y-1/2 right-4 flex items-center gap-2">
-                    {/* Toggle Switch - only visible to users with simulation permission */}
-                    {canSimulation && (
-                        <div
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
-                            onClick={handleToggleSimulationMode}
-                        >
-                            <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
-                            <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
-                                {isSimulationMode ? '시뮬레이션 모드' : '실시간 모드'}
-                            </span>
-                        </div>
-                    )}
-
-                    {isSimulationMode && canEditEnglish && (
-                        <>
-                            <div className="h-6 w-px bg-orange-300 mx-1"></div>
-                            <button
-                                onClick={handleCopyLiveToDraft}
-                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
-                                title="현재 실시간 시간표를 복사해옵니다 (기존 시뮬레이션 데이터 덮어쓰기)"
-                            >
-                                <Copy size={12} />
-                                현재 상태 가져오기
-                            </button>
-                            {(isMaster || hasPermission('timetable.english.simulation')) && (
-                                <button
-                                    onClick={handlePublishDraftToLive}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
-                                    title="시뮬레이션 내용을 실제 시간표에 적용합니다 (주의)"
-                                >
-                                    <Upload size={12} />
-                                    실제 반영
-                                </button>
-                            )}
-
-                            <button
-                                onClick={() => setIsScenarioModalOpen(true)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
-                                title="시나리오 저장/불러오기"
-                            >
-                                <Save size={12} />
-                                시나리오 관리
-                            </button>
-                        </>
-                    )}
-                </div>
             </div>
 
             {/* Content */}
@@ -413,6 +363,12 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     currentUser={currentUser}
                                     targetCollection={isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION}
                                     isSimulationMode={isSimulationMode}
+                                    canSimulation={canSimulation}
+                                    onToggleSimulation={handleToggleSimulationMode}
+                                    onCopyLiveToDraft={handleCopyLiveToDraft}
+                                    onPublishToLive={handlePublishDraftToLive}
+                                    onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+                                    canPublish={isMaster || hasPermission('timetable.english.simulation')}
                                 />
 
                                 <TeacherOrderModal
@@ -434,6 +390,12 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 isSimulationMode={isSimulationMode}
                                 studentMap={studentMap}
                                 classesData={classesData}
+                                canSimulation={canSimulation}
+                                onToggleSimulation={handleToggleSimulationMode}
+                                onCopyLiveToDraft={handleCopyLiveToDraft}
+                                onPublishToLive={handlePublishDraftToLive}
+                                onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+                                canPublish={isMaster || hasPermission('timetable.english.simulation')}
                             />
                         )}
                         {viewType === 'room' && (

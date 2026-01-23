@@ -3,6 +3,7 @@ import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
 import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, Settings2, X, ClipboardList, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 
 interface ConsultationTableProps {
     data: ConsultationRecord[];
@@ -52,15 +53,29 @@ const COLUMNS: ColumnConfig[] = [
     { key: 'followUpContent', label: '후속조치 내용', defaultVisible: true, minWidth: '150px' },
     { key: 'consultationPath', label: '상담경로', defaultVisible: true, minWidth: '100px' },
 ];
-const STORAGE_KEY = 'consultation_table_columns';
+// 핵심 8개 컬럼 (새 디폴트)
+const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = [
+    'studentName', 'schoolGrade', 'parentPhone', 'consultationDate',
+    'subject', 'counselor', 'status', 'notes'
+];
 
 // localStorage에서 저장된 컬럼 설정 로드
 const loadSavedColumns = (): Set<ColumnKey> => {
     try {
-        const saved = localStorage.getItem(STORAGE_KEY);
+        const saved = storage.getString(STORAGE_KEYS.CONSULTATION_TABLE_COLUMNS);
         if (saved) {
             const parsed = JSON.parse(saved) as ColumnKey[];
-            // 유효한 컬럼만 필터링
+            const validKeys = parsed.filter(key => COLUMNS.some(c => c.key === key));
+            if (validKeys.length > 0) {
+                return new Set(validKeys);
+            }
+        }
+        // Migration from old key
+        const old = localStorage.getItem('consultation_table_columns');
+        if (old) {
+            storage.setString(STORAGE_KEYS.CONSULTATION_TABLE_COLUMNS, old);
+            localStorage.removeItem('consultation_table_columns');
+            const parsed = JSON.parse(old) as ColumnKey[];
             const validKeys = parsed.filter(key => COLUMNS.some(c => c.key === key));
             if (validKeys.length > 0) {
                 return new Set(validKeys);
@@ -69,11 +84,7 @@ const loadSavedColumns = (): Set<ColumnKey> => {
     } catch (e) {
         console.warn('Failed to load column settings:', e);
     }
-    // Performance: js-combine-iterations - filter + map을 단일 루프로 결합
-    return new Set(COLUMNS.reduce<string[]>((acc, c) => {
-        if (c.defaultVisible) acc.push(c.key);
-        return acc;
-    }, []));
+    return new Set(DEFAULT_VISIBLE_COLUMNS);
 };
 
 export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEdit, onDelete, onConvertToStudent }) => {
@@ -86,11 +97,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
     // visibleColumns 변경 시 localStorage에 저장
     const updateVisibleColumns = (newColumns: Set<ColumnKey>) => {
         setVisibleColumns(newColumns);
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify([...newColumns]));
-        } catch (e) {
-            console.warn('Failed to save column settings:', e);
-        }
+        storage.setJSON(STORAGE_KEYS.CONSULTATION_TABLE_COLUMNS, [...newColumns]);
     };
 
     const filteredData = useMemo(() => {
@@ -127,11 +134,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
     };
 
     const resetColumns = () => {
-        // Performance: js-combine-iterations - filter + map을 단일 루프로 결합
-        updateVisibleColumns(new Set(COLUMNS.reduce<string[]>((acc, c) => {
-            if (c.defaultVisible) acc.push(c.key);
-            return acc;
-        }, [])));
+        updateVisibleColumns(new Set(DEFAULT_VISIBLE_COLUMNS));
     };
 
     const formatDate = (dateStr: string | undefined) => {

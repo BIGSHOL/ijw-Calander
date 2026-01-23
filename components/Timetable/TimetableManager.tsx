@@ -24,6 +24,7 @@ const SimpleViewSettingsModal = lazy(() => import('./Math/components/Modals/Simp
 import { ClassInfo } from '../../hooks/useClasses';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 import { MathSimulationProvider, useMathSimulation } from './Math/context/SimulationContext';
+import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
@@ -197,9 +198,6 @@ const TimetableManager = ({
     // Loading State
     const loading = classesLoading;
 
-    // 로컬 스토리지 키 정의
-    const VIEW_SETTINGS_KEY = 'timetable_view_settings';
-
     // Week State (for date display)
     const [currentMonday, setCurrentMonday] = useState(() => {
         const today = new Date();
@@ -210,8 +208,16 @@ const TimetableManager = ({
     // localStorage를 한 번만 읽고 파싱하여 모든 설정값 초기화 (9회 읽기 → 1회 읽기)
     const [viewSettings] = useState(() => {
         try {
-            const saved = localStorage.getItem(VIEW_SETTINGS_KEY);
-            return saved ? JSON.parse(saved) : {};
+            const saved = storage.getString(STORAGE_KEYS.TIMETABLE_VIEW_SETTINGS);
+            if (saved) return JSON.parse(saved);
+            // Migration from old key
+            const old = localStorage.getItem('timetable_view_settings');
+            if (old) {
+                storage.setString(STORAGE_KEYS.TIMETABLE_VIEW_SETTINGS, old);
+                localStorage.removeItem('timetable_view_settings');
+                return JSON.parse(old);
+            }
+            return {};
         } catch (e) {
             console.warn('Failed to load view settings from localStorage:', e);
             return {};
@@ -293,7 +299,7 @@ const TimetableManager = ({
             showWithdrawnStudents
         };
         try {
-            localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(settings));
+            storage.setString(STORAGE_KEYS.TIMETABLE_VIEW_SETTINGS, JSON.stringify(settings));
         } catch (e) {
             console.warn('Failed to save view settings to localStorage:', e);
         }

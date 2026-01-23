@@ -17,7 +17,6 @@ import {
 import { EntryForm } from './EntryForm';
 import { TuitionChart } from './TuitionChart';
 import { generateReportInsight } from '../../services/geminiService';
-import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { TuitionEntry } from '../../types';
 import ReactMarkdown from 'react-markdown';
 import { TabSubNavigation } from '../Common/TabSubNavigation';
@@ -53,26 +52,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
         return new Date().toISOString().slice(0, 7);
     });
 
-    const [history, setHistory] = useState<TuitionHistory>(() => {
-        try {
-            const savedHistory = storage.getJSON<TuitionHistory>(STORAGE_KEYS.TUITION_HISTORY, {});
-            if (Object.keys(savedHistory).length > 0) {
-                return savedHistory;
-            }
-            // Migration: Check old key
-            const oldData = storage.getJSON<TuitionEntry[]>(STORAGE_KEYS.TUITION_ENTRIES, []);
-            if (oldData.length > 0) {
-                const currentMonth = new Date().toISOString().slice(0, 7);
-                return { [currentMonth]: oldData };
-            }
-            return {};
-        } catch (error) {
-            console.error('Failed to parse localStorage data:', error);
-            storage.remove(STORAGE_KEYS.TUITION_HISTORY);
-            storage.remove(STORAGE_KEYS.TUITION_ENTRIES);
-            return {};
-        }
-    });
+    const [history, setHistory] = useState<TuitionHistory>({});
 
     const [entries, setEntries] = useState<TuitionEntry[]>([]);
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -90,15 +70,6 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
     const updateHistory = useCallback((newEntries: TuitionEntry[]) => {
         const newHistory = { ...history, [currentPeriod]: newEntries };
         setHistory(newHistory);
-
-        queueMicrotask(() => {
-            try {
-                storage.setJSON(STORAGE_KEYS.TUITION_HISTORY, newHistory);
-                storage.setJSON(STORAGE_KEYS.TUITION_ENTRIES, newEntries);
-            } catch (error) {
-                console.error('Failed to save to localStorage:', error);
-            }
-        });
     }, [history, currentPeriod]);
 
     const totalRevenue = useMemo(() => entries.reduce((acc, curr) => acc + curr.projectedFee, 0), [entries]);

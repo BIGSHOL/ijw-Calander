@@ -217,13 +217,15 @@ const StaffManager: React.FC<StaffManagerProps> = ({
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={refreshStaff}
-              className="p-1.5 text-gray-500 hover:text-[#081429] hover:bg-gray-100 rounded transition-colors"
-              title="새로고침"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
+            {error && (
+              <button
+                onClick={refreshStaff}
+                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                title="데이터 로드 실패 - 다시 시도"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            )}
             {isMaster && (
               <button
                 onClick={() => setShowMigrationModal(true)}

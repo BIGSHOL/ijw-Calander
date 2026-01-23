@@ -1,40 +1,73 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
-import { IntegrationSettings } from '../IntegrationViewSettings';
+import { IntegrationSettings, DisplayOptions } from '../IntegrationViewSettings';
 import { EnglishLevel } from '../../../../types';
 import { DEFAULT_ENGLISH_LEVELS } from '../englishUtils';
+import { storage, STORAGE_KEYS } from '../../../../utils/localStorage';
+
+const DEFAULT_DISPLAY_OPTIONS: DisplayOptions = {
+    showStudents: true,
+    showRoom: true,
+    showTeacher: true
+};
 
 export const useEnglishSettings = () => {
     const [settingsLoading, setSettingsLoading] = useState(true);
     const [englishLevels, setEnglishLevels] = useState<EnglishLevel[]>(DEFAULT_ENGLISH_LEVELS);
-    const [settings, setSettings] = useState<IntegrationSettings>({
-        viewMode: 'CUSTOM_GROUP',
-        customGroups: [],
+
+    // Firebase state (shared group settings)
+    const [firebaseSettings, setFirebaseSettings] = useState({
+        viewMode: 'CUSTOM_GROUP' as IntegrationSettings['viewMode'],
+        customGroups: [] as IntegrationSettings['customGroups'],
         showOthersGroup: true,
         othersGroupTitle: '기타 수업',
-        displayOptions: {
-            showStudents: true,
-            showRoom: true,
-            showTeacher: true
-        },
-        hiddenTeachers: [],
-        hiddenLegendTeachers: []
     });
 
-    // Load Settings
+    // localStorage state (personal display settings)
+    const [localDisplayOptions, setLocalDisplayOptions] = useState<DisplayOptions>(() =>
+        storage.getJSON<DisplayOptions>(STORAGE_KEYS.ENGLISH_DISPLAY_OPTIONS, DEFAULT_DISPLAY_OPTIONS)
+    );
+    const [localHiddenTeachers, setLocalHiddenTeachers] = useState<string[]>(() =>
+        storage.getJSON<string[]>(STORAGE_KEYS.ENGLISH_HIDDEN_TEACHERS, [])
+    );
+    const [localHiddenLegendTeachers, setLocalHiddenLegendTeachers] = useState<string[]>(() =>
+        storage.getJSON<string[]>(STORAGE_KEYS.ENGLISH_HIDDEN_LEGEND_TEACHERS, [])
+    );
+
+    const migrationDone = useRef(false);
+
+    // Load Settings from Firebase (group-related only)
     useEffect(() => {
-        const unsub = onSnapshot(doc(db, 'settings', 'english_class_integration'), (doc) => {
-            if (doc.exists()) {
-                const data = doc.data() as IntegrationSettings;
-                setSettings({
-                    ...data,
-                    displayOptions: data.displayOptions || {
-                        showStudents: true,
-                        showRoom: true,
-                        showTeacher: true
-                    }
+        const unsub = onSnapshot(doc(db, 'settings', 'english_class_integration'), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data() as IntegrationSettings;
+                setFirebaseSettings({
+                    viewMode: data.viewMode || 'CUSTOM_GROUP',
+                    customGroups: data.customGroups || [],
+                    showOthersGroup: data.showOthersGroup ?? true,
+                    othersGroupTitle: data.othersGroupTitle || '기타 수업',
                 });
+
+                // Migration: if Firebase has display settings but localStorage doesn't
+                if (!migrationDone.current) {
+                    migrationDone.current = true;
+                    const hasLocalDisplay = storage.getString(STORAGE_KEYS.ENGLISH_DISPLAY_OPTIONS) !== null;
+                    if (!hasLocalDisplay && data.displayOptions) {
+                        setLocalDisplayOptions(data.displayOptions);
+                        storage.setJSON(STORAGE_KEYS.ENGLISH_DISPLAY_OPTIONS, data.displayOptions);
+                    }
+                    const hasLocalHidden = storage.getString(STORAGE_KEYS.ENGLISH_HIDDEN_TEACHERS) !== null;
+                    if (!hasLocalHidden && data.hiddenTeachers && data.hiddenTeachers.length > 0) {
+                        setLocalHiddenTeachers(data.hiddenTeachers);
+                        storage.setJSON(STORAGE_KEYS.ENGLISH_HIDDEN_TEACHERS, data.hiddenTeachers);
+                    }
+                    const hasLocalLegend = storage.getString(STORAGE_KEYS.ENGLISH_HIDDEN_LEGEND_TEACHERS) !== null;
+                    if (!hasLocalLegend && data.hiddenLegendTeachers && data.hiddenLegendTeachers.length > 0) {
+                        setLocalHiddenLegendTeachers(data.hiddenLegendTeachers);
+                        storage.setJSON(STORAGE_KEYS.ENGLISH_HIDDEN_LEGEND_TEACHERS, data.hiddenLegendTeachers);
+                    }
+                }
             }
             setSettingsLoading(false);
         });
@@ -52,17 +85,60 @@ export const useEnglishSettings = () => {
         return () => unsub();
     }, []);
 
-    const updateSettings = async (newSettings: IntegrationSettings) => {
+    // Merged settings object (same shape as before for consumers)
+    const settings: IntegrationSettings = {
+        ...firebaseSettings,
+        displayOptions: localDisplayOptions,
+        hiddenTeachers: localHiddenTeachers,
+        hiddenLegendTeachers: localHiddenLegendTeachers,
+    };
+
+    const updateSettings = useCallback(async (newSettings: IntegrationSettings) => {
         // 안전장치: customGroups가 비어있고 기존 데이터가 있다면 보존
         const safeSettings = { ...newSettings };
         if ((!safeSettings.customGroups || safeSettings.customGroups.length === 0) &&
-            settings.customGroups && settings.customGroups.length > 0) {
-            safeSettings.customGroups = settings.customGroups;
+            firebaseSettings.customGroups && firebaseSettings.customGroups.length > 0) {
+            safeSettings.customGroups = firebaseSettings.customGroups;
         }
 
-        setSettings(safeSettings);
-        await setDoc(doc(db, 'settings', 'english_class_integration'), safeSettings, { merge: true });
-    };
+        // Route display settings to localStorage
+        const displayChanged = JSON.stringify(safeSettings.displayOptions) !== JSON.stringify(localDisplayOptions);
+        const hiddenChanged = JSON.stringify(safeSettings.hiddenTeachers) !== JSON.stringify(localHiddenTeachers);
+        const legendChanged = JSON.stringify(safeSettings.hiddenLegendTeachers) !== JSON.stringify(localHiddenLegendTeachers);
+
+        if (displayChanged && safeSettings.displayOptions) {
+            setLocalDisplayOptions(safeSettings.displayOptions);
+            storage.setJSON(STORAGE_KEYS.ENGLISH_DISPLAY_OPTIONS, safeSettings.displayOptions);
+        }
+        if (hiddenChanged) {
+            const val = safeSettings.hiddenTeachers || [];
+            setLocalHiddenTeachers(val);
+            storage.setJSON(STORAGE_KEYS.ENGLISH_HIDDEN_TEACHERS, val);
+        }
+        if (legendChanged) {
+            const val = safeSettings.hiddenLegendTeachers || [];
+            setLocalHiddenLegendTeachers(val);
+            storage.setJSON(STORAGE_KEYS.ENGLISH_HIDDEN_LEGEND_TEACHERS, val);
+        }
+
+        // Route group settings to Firebase
+        const firebaseChanged =
+            safeSettings.viewMode !== firebaseSettings.viewMode ||
+            JSON.stringify(safeSettings.customGroups) !== JSON.stringify(firebaseSettings.customGroups) ||
+            safeSettings.showOthersGroup !== firebaseSettings.showOthersGroup ||
+            safeSettings.othersGroupTitle !== firebaseSettings.othersGroupTitle;
+
+        if (firebaseChanged) {
+            const firebaseData = {
+                viewMode: safeSettings.viewMode,
+                customGroups: safeSettings.customGroups,
+                showOthersGroup: safeSettings.showOthersGroup,
+                othersGroupTitle: safeSettings.othersGroupTitle,
+            };
+            setFirebaseSettings(firebaseData);
+            await setDoc(doc(db, 'settings', 'english_class_integration'), firebaseData, { merge: true });
+        }
+    }, [firebaseSettings, localDisplayOptions, localHiddenTeachers, localHiddenLegendTeachers]);
 
     return {
         settings,

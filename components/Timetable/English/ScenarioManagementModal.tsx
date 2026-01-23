@@ -116,7 +116,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
         try {
             // 새 구조: SimulationContext 사용
-            if (simulation?.isSimulationMode) {
+            if (simulation?.isScenarioMode) {
                 const scenarioId = await simulation.saveToScenario(
                     newScenarioName.trim(),
                     newScenarioDesc.trim(),
@@ -222,7 +222,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
         try {
             // 새 구조: SimulationContext 사용
-            if (isNewStructure && simulation?.isSimulationMode) {
+            if (isNewStructure && simulation?.isScenarioMode) {
                 await simulation.loadFromScenario(scenario.id);
                 alert(`✅ 시나리오 "${scenario.name}"를 불러왔습니다.`);
                 onLoadScenario?.(scenario.name);

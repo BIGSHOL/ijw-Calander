@@ -4,11 +4,10 @@ import { useStudents, searchStudentsByQuery } from '../../hooks/useStudents';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
-import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, Wrench } from 'lucide-react';
+import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database } from 'lucide-react';
 
 // Performance: bundle-dynamic-imports - Modal components lazy load (~80-100KB bundle reduction)
 const StudentMigrationModal = lazy(() => import('./StudentMigrationModal'));
-const NormalizeStudentIdsModal = lazy(() => import('./NormalizeStudentIdsModal'));
 
 export type SearchField =
   | 'all'           // 전체
@@ -43,7 +42,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const [isSearchingOld, setIsSearchingOld] = useState(false);
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [showMigrationModal, setShowMigrationModal] = useState(false);
-  const [showNormalizeIdsModal, setShowNormalizeIdsModal] = useState(false);
 
   // 선택된 학생 자동 업데이트 (students 배열 변경 시)
   useEffect(() => {
@@ -355,13 +353,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
           </div>
           <div className="flex items-center gap-1.5 md:gap-2">
             <button
-              onClick={() => setShowNormalizeIdsModal(true)}
-              className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
-              title="학생 ID 정규화"
-            >
-              <Wrench className="w-3.5 h-3.5" />
-            </button>
-            <button
               onClick={() => setShowMigrationModal(true)}
               className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
               title="데이터 가져오기"
@@ -471,17 +462,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         </Suspense>
       )}
 
-      {/* 학생 ID 정규화 모달 */}
-      {showNormalizeIdsModal && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
-          <NormalizeStudentIdsModal
-            onClose={() => {
-              refreshStudents();
-              setShowNormalizeIdsModal(false);
-            }}
-          />
-        </Suspense>
-      )}
     </div>
   );
 };

@@ -10,15 +10,30 @@ export const STORAGE_KEYS = {
   // User Preferences
   DEPT_HIDDEN_IDS: 'ijw_dept_hidden_ids',
   DARK_MODE: 'ijw_dark_mode',
-  DEFAULT_VIEW_MODE: 'ijw_default_view_mode',
-  DEFAULT_MAIN_TAB: 'ijw_default_main_tab',
 
-  // Guide/Tutorial Flags
-  ENGLISH_TIMETABLE_GUIDE_SHOWN: 'ijw_english_timetable_guide_shown',
+  // Calendar
+  CALENDAR_VIEW_MODE: 'ijw_calendar_view_mode',
+  CALENDAR_VIEW_COLUMNS: 'ijw_calendar_view_columns',
 
-  // Data Storage
-  TUITION_HISTORY: 'ijw_tuition_history',
-  TUITION_ENTRIES: 'ijw_tuition_entries',
+  // Timetable
+  TIMETABLE_VIEW_SETTINGS: 'ijw_timetable_view_settings',
+
+  // Consultation
+  CONSULTATION_VIEW_MODE: 'ijw_consultation_view_mode',
+  CONSULTATION_PAGE_SIZE: 'ijw_consultation_page_size',
+  CONSULTATION_DATE_PRESET: 'ijw_consultation_date_preset',
+  CONSULTATION_TABLE_COLUMNS: 'ijw_consultation_table_columns',
+
+  // Role Management
+  ROLE_MANAGEMENT_EXPANDED: 'ijw_role_management_expanded',
+
+  // Calendar Tags
+  RECENT_HASHTAGS: 'ijw_recent_hashtags',
+
+  // English Timetable Display (personal/local)
+  ENGLISH_DISPLAY_OPTIONS: 'ijw_english_display_options',
+  ENGLISH_HIDDEN_TEACHERS: 'ijw_english_hidden_teachers',
+  ENGLISH_HIDDEN_LEGEND_TEACHERS: 'ijw_english_hidden_legend_teachers',
 
   // Dynamic keys (functions)
   attendanceGroupOrder: (staffId: string, subject: string) =>

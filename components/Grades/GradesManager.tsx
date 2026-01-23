@@ -9,7 +9,7 @@ import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, w
 import { db, auth } from '../../firebaseConfig';
 import {
   GraduationCap, Plus, Trash2, Edit, Save, X, ChevronDown, ChevronRight,
-  Users, Calendar, BookOpen, BarChart3, Search, Filter, RefreshCw, Loader2,
+  Users, Calendar, BookOpen, BarChart3, Search, Filter, Loader2,
   TrendingUp, TrendingDown, Minus, AlertCircle, Check, Tag, Building2, Eye
 } from 'lucide-react';
 import { formatSchoolGrade } from '../../utils/studentUtils';
@@ -584,15 +584,6 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
             <span className="text-gray-400 text-xs">
               총 <span className="text-[#fdb813] font-bold">{filteredExams.length}</span>개 시험
             </span>
-
-            {/* 새로고침 버튼 */}
-            <button
-              onClick={() => refetchExams()}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
-              title="새로고침"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
 
             {/* 통계 갱신 버튼 */}
             <button
