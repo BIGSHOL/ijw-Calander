@@ -27,17 +27,17 @@ const ClassBlock: React.FC<ClassBlockProps> = ({ block, isWeekend }) => {
         left: totalCols > 1 ? `${leftPercent}%` : '4px',
         width: totalCols > 1 ? `${colWidthPercent}%` : 'calc(100% - 8px)',
         minHeight: '20px',
-        backgroundColor: block.hasConflict ? '#fef2f2' : colors.light,
-        borderLeft: `3px solid ${block.hasConflict ? '#ef4444' : colors.bg}`,
-        borderTop: `1px solid ${block.hasConflict ? '#ef4444' : colors.border}`,
-        borderBottom: `1px solid ${block.hasConflict ? '#ef4444' : colors.border}`,
-        borderRight: `1px solid ${block.hasConflict ? '#ef4444' : colors.border}`,
+        backgroundColor: block.hasConflict ? '#fffbeb' : colors.light,
+        borderLeft: `3px solid ${block.hasConflict ? '#f59e0b' : colors.bg}`,
+        borderTop: `1px solid ${block.hasConflict ? '#fbbf24' : colors.border}`,
+        borderBottom: `1px solid ${block.hasConflict ? '#fbbf24' : colors.border}`,
+        borderRight: `1px solid ${block.hasConflict ? '#fbbf24' : colors.border}`,
         zIndex: block.hasConflict ? 10 : 1,
       }}
     >
       <div className="flex flex-col justify-start h-full gap-0.5">
-        <div className="text-[11px] font-bold leading-tight line-clamp-2" style={{ color: colors.bg }}>
-          {block.hasConflict && <span className="mr-0.5 text-red-500">!!</span>}
+        <div className="text-[11px] font-bold leading-tight line-clamp-2" style={{ color: block.hasConflict ? '#b45309' : colors.bg }}>
+          {block.hasConflict && <span className="mr-0.5">⚠</span>}
           {block.className}
         </div>
         <div className="text-[9px] text-gray-500 leading-tight truncate">
@@ -47,7 +47,7 @@ const ClassBlock: React.FC<ClassBlockProps> = ({ block, isWeekend }) => {
           {block.startTime}~{block.endTime}
         </div>
         {block.hasConflict && (
-          <div className="text-[9px] text-red-500 font-semibold">충돌</div>
+          <div className="text-[9px] text-amber-600 font-semibold">충돌</div>
         )}
       </div>
     </div>
