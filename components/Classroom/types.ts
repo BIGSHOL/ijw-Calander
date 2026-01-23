@@ -23,8 +23,14 @@ export interface TimeConfig {
   range: number;
 }
 
-export const WEEKDAY_CONFIG: TimeConfig = { start: 860, end: 1320, range: 460 }; // 14:20~22:00
-export const WEEKEND_CONFIG: TimeConfig = { start: 540, end: 1020, range: 480 }; // 09:00~17:00
+export const WEEKDAY_CONFIG: TimeConfig = { start: 540, end: 1320, range: 780 }; // 09:00~22:00
+export const WEEKEND_CONFIG: TimeConfig = { start: 540, end: 1320, range: 780 }; // 09:00~22:00
+
+export function makeTimeConfig(startHour: number, endHour: number): TimeConfig {
+  const start = startHour * 60;
+  const end = endHour * 60;
+  return { start, end, range: end - start };
+}
 
 export function parseTimeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);

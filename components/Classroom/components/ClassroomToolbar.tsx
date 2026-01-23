@@ -43,6 +43,8 @@ interface ClassroomToolbarProps {
   rooms: string[];
   ignoredRooms: Set<string>;
   onIgnoredRoomToggle: (room: string) => void;
+  timeRange: { start: number; end: number };
+  onTimeRangeChange: (range: { start: number; end: number }) => void;
 }
 
 function getTodayDay(): string {
@@ -61,6 +63,8 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
   rooms,
   ignoredRooms,
   onIgnoredRoomToggle,
+  timeRange,
+  onTimeRangeChange,
 }) => {
   const today = getTodayDay();
   const allSelected = !selectedRooms || (rooms.length > 0 && rooms.every(r => selectedRooms.has(r)));
@@ -171,11 +175,38 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
               : 'bg-gray-700 text-gray-400 hover:bg-gray-600 border border-gray-600'
           }`}
         >
-          충돌무시{ignoredRooms.size > 0 && ` (${ignoredRooms.size})`}
+          설정
         </button>
 
         {showSettings && (
           <div className="absolute top-full left-0 mt-1 z-50 bg-[#0d1f3c] border border-gray-600 rounded-lg shadow-xl p-3 min-w-[280px]">
+            {/* 시간대 설정 */}
+            <div className="mb-3 pb-2 border-b border-gray-700">
+              <div className="text-[10px] font-bold text-[#fdb813] mb-1.5">표시 시간대</div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={timeRange.start}
+                  onChange={e => onTimeRangeChange({ ...timeRange, start: Number(e.target.value) })}
+                  className="bg-gray-800 text-gray-200 text-[11px] rounded px-1.5 py-0.5 border border-gray-600"
+                >
+                  {Array.from({ length: 15 }, (_, i) => i + 7).map(h => (
+                    <option key={h} value={h}>{h}:00</option>
+                  ))}
+                </select>
+                <span className="text-gray-400 text-[10px]">~</span>
+                <select
+                  value={timeRange.end}
+                  onChange={e => onTimeRangeChange({ ...timeRange, end: Number(e.target.value) })}
+                  className="bg-gray-800 text-gray-200 text-[11px] rounded px-1.5 py-0.5 border border-gray-600"
+                >
+                  {Array.from({ length: 15 }, (_, i) => i + 9).map(h => (
+                    <option key={h} value={h}>{h}:00</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 충돌 무시 강의실 */}
             <div className="text-[10px] text-gray-400 mb-2">
               충돌 무시 강의실은 경고 없이 수업을 나란히 표시합니다 (3배 가로폭)
             </div>
