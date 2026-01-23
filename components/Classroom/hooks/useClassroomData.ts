@@ -84,8 +84,11 @@ export function useClassroomData(selectedDay: string, selectedRooms: Set<string>
 
     for (const cls of classes) {
       const periodInfo = getPeriodInfoForSubject(cls.subject, isWeekend);
+      const seenSlots = new Set<string>();
 
       for (const slot of cls.schedule) {
+        if (seenSlots.has(slot)) continue;
+        seenSlots.add(slot);
         const parts = slot.split(' ');
         if (parts.length < 2) continue;
         const [day, periodId] = parts;
