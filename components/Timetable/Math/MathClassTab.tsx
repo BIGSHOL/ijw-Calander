@@ -12,7 +12,7 @@ import { useMathIntegrationClasses, MathClassInfo } from './hooks/useMathIntegra
 import { useMathClassStudents } from './hooks/useMathClassStudents';
 
 // Components
-import MathIntegrationClassCard from './MathIntegrationClassCard';
+import IntegrationClassCard from '../shared/IntegrationClassCard';
 import MathIntegrationViewSettings, { MathClassEntry } from './MathIntegrationViewSettings';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
 import StudentDetailModal from '../../StudentManagement/StudentDetailModal';
@@ -478,9 +478,10 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                                         {/* Sticky Time Column */}
                                         {group.classes.length > 0 && (
                                             <div className="sticky left-0 z-20 shadow-[4px_0_12px_-2px_rgba(0,0,0,0.1)] self-stretch">
-                                                <MathIntegrationClassCard
+                                                <IntegrationClassCard
                                                     classInfo={group.classes[0]}
                                                     mode={'view'}
+                                                    subject="math"
                                                     displayOptions={settings.displayOptions}
                                                     teachersData={teachersData}
                                                     classKeywords={[]}
@@ -493,10 +494,11 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                                         )}
 
                                         {group.classes.map(cls => (
-                                            <MathIntegrationClassCard
+                                            <IntegrationClassCard
                                                 key={cls.name}
                                                 classInfo={cls}
                                                 mode={mode}
+                                                subject="math"
                                                 isHidden={hiddenClasses.has(cls.name)}
                                                 onToggleHidden={() => toggleHidden(cls.name)}
                                                 displayOptions={settings.displayOptions}
@@ -534,7 +536,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                 <ClassDetailModal
                     classInfo={selectedClassDetail}
                     onClose={() => setSelectedClassDetail(null)}
-                    currentUser={currentUser}
                 />
             )}
 
