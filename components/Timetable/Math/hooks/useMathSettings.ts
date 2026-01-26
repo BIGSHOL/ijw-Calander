@@ -41,7 +41,7 @@ export const useMathSettings = () => {
 
     // Firebase state (shared group settings)
     const [firebaseSettings, setFirebaseSettings] = useState({
-        viewMode: 'CUSTOM_GROUP' as MathIntegrationSettings['viewMode'],
+        viewMode: 'START_PERIOD' as MathIntegrationSettings['viewMode'],
         customGroups: [] as MathIntegrationSettings['customGroups'],
         showOthersGroup: true,
         othersGroupTitle: '기타 수업',
@@ -63,7 +63,7 @@ export const useMathSettings = () => {
             if (docSnap.exists()) {
                 const data = docSnap.data() as MathIntegrationSettings;
                 setFirebaseSettings({
-                    viewMode: data.viewMode || 'CUSTOM_GROUP',
+                    viewMode: data.viewMode || 'START_PERIOD',
                     customGroups: data.customGroups || [],
                     showOthersGroup: data.showOthersGroup ?? true,
                     othersGroupTitle: data.othersGroupTitle || '기타 수업',

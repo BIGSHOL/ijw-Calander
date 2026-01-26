@@ -44,7 +44,7 @@ interface GroupedClass {
 
 // 강사 색상 가져오기
 const getTeacherColor = (teacherName: string, teachersData: Teacher[]): { bg: string; text: string } => {
-    const teacher = teachersData.find(t => t.name === teacherName);
+    const teacher = teachersData.find(t => t.name === teacherName || t.englishName === teacherName);
     if (teacher?.color) {
         return { bg: teacher.color, text: '#fff' };
     }
