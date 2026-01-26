@@ -401,6 +401,7 @@ export type PermissionId =
   | 'attendance.manage_math' | 'attendance.manage_english'
   | 'attendance.manage_science' | 'attendance.manage_korean'
   | 'attendance.edit_student_info'
+  | 'attendance.manage_sessions'  // 세션 기간 설정 (관리자 전용)
   // Students (NEW)
   | 'students.view' | 'students.edit' | 'students.delete'
   | 'students.enrollment.manage'  // 수강 배정 관리
@@ -447,6 +448,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'attendance.manage_math': true, 'attendance.manage_english': true,
     'attendance.manage_science': true, 'attendance.manage_korean': true,
     'attendance.edit_student_info': true,
+    'attendance.manage_sessions': true,  // 세션 설정 권한 (관리자)
     // Students
     'students.view': true, 'students.edit': true, 'students.delete': true,
     'students.enrollment.manage': true,

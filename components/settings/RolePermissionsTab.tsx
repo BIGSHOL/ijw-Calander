@@ -160,6 +160,7 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
         { id: 'attendance.manage_math' as PermissionId, label: '수학 출석부 관리', desc: '수학 전체 조회 + 강사 선택 가능' },
         { id: 'attendance.manage_english' as PermissionId, label: '영어 출석부 관리', desc: '영어 전체 조회 + 강사 선택 가능' },
         { id: 'attendance.edit_student_info' as PermissionId, label: '학생 정보 수정', desc: '학생 상세 정보(이름, 학교, 학년 등) 수정' },
+        { id: 'attendance.manage_sessions' as PermissionId, label: '세션 기간 설정', desc: '월별/세션 모드의 세션 기간 설정 (관리자 전용)' },
     ];
 
     // --- Render Permission Row ---

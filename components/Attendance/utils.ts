@@ -1,4 +1,4 @@
-import { Student, SalaryConfig, SalarySettingItem } from './types';
+import { Student, SalaryConfig, SalarySettingItem, SessionPeriod, DateRange } from './types';
 
 // Color Palette Constants
 export const COLORS = {
@@ -302,4 +302,134 @@ export const getBadgeStyle = (color: string) => {
     backgroundColor: bg,
     borderColor: border,
   };
+};
+
+// ========================================
+// 세션 기반 출석부 유틸리티 함수
+// ========================================
+
+/**
+ * 로컬 날짜 문자열(YYYY-MM-DD)을 Date 객체로 파싱
+ * 시간대 문제 없이 로컬 날짜로 처리
+ */
+export const parseLocalDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+/**
+ * 세션의 날짜 범위 내 모든 날짜를 반환
+ * @param session - 세션 기간 객체
+ * @returns Date[] - 세션 범위 내 모든 날짜 배열 (정렬됨)
+ */
+export const getDaysInSessionRanges = (session: SessionPeriod): Date[] => {
+  const days: Date[] = [];
+
+  for (const range of session.ranges) {
+    let current = parseLocalDate(range.startDate);
+    const end = parseLocalDate(range.endDate);
+
+    while (current <= end) {
+      days.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+  }
+
+  // 날짜순 정렬 후 중복 제거
+  const uniqueDays = Array.from(
+    new Map(days.map(d => [formatDateKey(d), d])).values()
+  );
+
+  return uniqueDays.sort((a, b) => a.getTime() - b.getTime());
+};
+
+/**
+ * 특정 날짜가 세션 범위 내에 있는지 확인
+ * @param dateStr - YYYY-MM-DD 형식의 날짜 문자열
+ * @param ranges - DateRange 배열
+ * @returns boolean
+ */
+export const isDateInSessionRanges = (dateStr: string, ranges: DateRange[]): boolean => {
+  for (const range of ranges) {
+    if (dateStr >= range.startDate && dateStr <= range.endDate) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * 세션의 총 일수 계산
+ * @param session - 세션 기간 객체
+ * @returns number - 세션 범위 내 총 날짜 수
+ */
+export const getSessionDayCount = (session: SessionPeriod): number => {
+  return getDaysInSessionRanges(session).length;
+};
+
+/**
+ * 세션 기간을 읽기 쉬운 문자열로 포맷
+ * @param session - 세션 기간 객체
+ * @returns string - "1/5~1/15, 1/20~1/30" 형식
+ */
+export const formatSessionRanges = (session: SessionPeriod): string => {
+  if (!session.ranges || session.ranges.length === 0) {
+    return '미설정';
+  }
+
+  return session.ranges.map(range => {
+    const start = parseLocalDate(range.startDate);
+    const end = parseLocalDate(range.endDate);
+    const startStr = `${start.getMonth() + 1}/${start.getDate()}`;
+    const endStr = `${end.getMonth() + 1}/${end.getDate()}`;
+    return `${startStr}~${endStr}`;
+  }).join(', ');
+};
+
+/**
+ * 카테고리 한글 이름 반환
+ */
+export const getCategoryLabel = (category: 'math' | 'english' | 'eie'): string => {
+  const labels: Record<string, string> = {
+    math: '수학',
+    english: '영어',
+    eie: 'EiE',
+  };
+  return labels[category] || category;
+};
+
+/**
+ * 날짜 범위 병합 (겹치거나 연속된 범위 자동 병합)
+ * @param ranges - DateRange 배열
+ * @returns DateRange[] - 병합된 범위 배열
+ */
+export const mergeOverlappingRanges = (ranges: DateRange[]): DateRange[] => {
+  if (ranges.length === 0) return [];
+
+  // 시작 날짜 기준 정렬
+  const sorted = [...ranges].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const merged: DateRange[] = [{ ...sorted[0] }];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const current = sorted[i];
+    const last = merged[merged.length - 1];
+
+    // 날짜가 겹치거나 연속인지 확인 (연속 = 다음날)
+    const lastEndDate = parseLocalDate(last.endDate);
+    const nextDay = new Date(lastEndDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const nextDayStr = formatDateKey(nextDay);
+
+    if (current.startDate <= last.endDate || current.startDate === nextDayStr) {
+      // 병합: 더 늦은 종료일로 업데이트
+      if (current.endDate > last.endDate) {
+        last.endDate = current.endDate;
+      }
+    } else {
+      // 새 범위 추가
+      merged.push({ ...current });
+    }
+  }
+
+  return merged;
 };

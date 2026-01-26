@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Student, SalaryConfig } from '../types';
-import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting } from '../utils';
+import { Student, SalaryConfig, AttendanceViewMode, SessionPeriod } from '../types';
+import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getDaysInSessionRanges } from '../utils';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save, ChevronUp, ChevronDown, ChevronRight, GripVertical, Check, X } from 'lucide-react';
 import { Exam, StudentScore, GRADE_COLORS } from '../../../types';
@@ -24,6 +24,9 @@ interface Props {
   // Group collapse props
   collapsedGroups?: Set<string>;
   onCollapsedGroupsChange?: (newCollapsed: Set<string>) => void;
+  // Session mode props
+  viewMode?: AttendanceViewMode;
+  selectedSession?: SessionPeriod | null;
 }
 
 interface ContextMenuState {
@@ -50,9 +53,17 @@ const Table: React.FC<Props> = ({
   groupOrder = [],
   onGroupOrderChange,
   collapsedGroups,
-  onCollapsedGroupsChange
+  onCollapsedGroupsChange,
+  viewMode = 'monthly',
+  selectedSession
 }) => {
-  const days = useMemo(() => getDaysInMonth(currentDate), [currentDate]);
+  // 세션 모드에 따라 표시할 날짜 결정
+  const days = useMemo(() => {
+    if (viewMode === 'session' && selectedSession) {
+      return getDaysInSessionRanges(selectedSession);
+    }
+    return getDaysInMonth(currentDate);
+  }, [currentDate, viewMode, selectedSession]);
   const memoInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Context Menu State
