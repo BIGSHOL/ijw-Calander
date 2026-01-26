@@ -2458,36 +2458,49 @@ const App: React.FC = () => {
                     )}
                   </select>
 
-                  {/* View Type Toggle Button - 영어만 */}
+                  {/* View Type Toggle Button - 영어: 통합 → 강사뷰 → 강의실뷰 */}
                   {timetableSubject === 'english' && (
                     <button
                       onClick={() => {
-                        // 영어: 통합 → 강사별 → 교실별 → 통합 (권한 없으면 통합 스킵)
                         const canViewIntegrated = hasPermission('timetable.integrated.view');
                         setTimetableViewType(prev => {
                           if (prev === 'class') return 'teacher';
                           if (prev === 'teacher') return 'room';
-                          // room -> integrated (if permitted) or teacher
                           return canViewIntegrated ? 'class' : 'teacher';
                         });
                       }}
                       className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
                       title="클릭하여 보기방식 전환"
                     >
-                      {timetableViewType === 'teacher' ? <><UserIcon size={12} className="inline" /> 강사별</> : (timetableViewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합</> : <><Building size={12} className="inline" /> 교실별</>)}
+                      {timetableViewType === 'class'
+                        ? <><ClipboardList size={12} className="inline" /> 통합</>
+                        : timetableViewType === 'teacher'
+                          ? <><UserIcon size={12} className="inline" /> 강사</>
+                          : <><Building size={12} className="inline" /> 강의실</>}
                     </button>
                   )}
 
-                  {/* Math View Mode Toggle Button - 수학만 */}
+                  {/* Math View Mode Toggle Button - 수학: 통합 → 강사 → 날짜 */}
                   {timetableSubject === 'math' && (
                     <button
                       onClick={() => {
-                        setMathViewMode(prev => prev === 'day-based' ? 'teacher-based' : 'day-based');
+                        if (timetableViewType === 'class') {
+                          setTimetableViewType('teacher');
+                          setMathViewMode('teacher-based');
+                        } else if (mathViewMode === 'teacher-based') {
+                          setMathViewMode('day-based');
+                        } else {
+                          setTimetableViewType('class');
+                        }
                       }}
                       className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
-                      title="클릭하여 뷰 모드 전환"
+                      title="클릭하여 보기방식 전환"
                     >
-                      {mathViewMode === 'day-based' ? <><CalendarIcon size={12} className="inline" /> 날짜별</> : <><UserIcon size={12} className="inline" /> 강사별</>}
+                      {timetableViewType === 'class'
+                        ? <><ClipboardList size={12} className="inline" /> 통합</>
+                        : mathViewMode === 'teacher-based'
+                          ? <><UserIcon size={12} className="inline" /> 강사</>
+                          : <><CalendarIcon size={12} className="inline" /> 날짜</>}
                     </button>
                   )}
 

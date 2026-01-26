@@ -35,6 +35,10 @@ export const STORAGE_KEYS = {
   ENGLISH_HIDDEN_TEACHERS: 'ijw_english_hidden_teachers',
   ENGLISH_HIDDEN_LEGEND_TEACHERS: 'ijw_english_hidden_legend_teachers',
 
+  // Math Timetable Display (personal/local)
+  MATH_DISPLAY_OPTIONS: 'ijw_math_display_options',
+  MATH_HIDDEN_TEACHERS: 'ijw_math_hidden_teachers',
+
   // Dynamic keys (functions)
   attendanceGroupOrder: (staffId: string, subject: string) =>
     `ijw_attendance_group_order_${subject}_${staffId}`,

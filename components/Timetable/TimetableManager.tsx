@@ -15,6 +15,7 @@ import { useStudents } from '../../hooks/useStudents';
 import { UnifiedStudent } from '../../types';
 import TimetableHeader from './Math/components/TimetableHeader';
 import TimetableGrid from './Math/components/TimetableGrid';
+import MathClassTab from './Math/MathClassTab';
 
 // Performance: bundle-dynamic-imports - Modal components lazy load (~150-200KB bundle reduction)
 const AddClassModal = lazy(() => import('./Math/components/Modals/AddClassModal'));
@@ -323,9 +324,9 @@ const TimetableManager = ({
     // Search State
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Reset viewType when switching to math - math only supports 'teacher' view
+    // Reset viewType when switching to math - math supports 'teacher' and 'class', but not 'room'
     useEffect(() => {
-        if (subjectTab === 'math' && (viewType === 'class' || viewType === 'room')) {
+        if (subjectTab === 'math' && viewType === 'room') {
             setViewType('teacher');
         }
     }, [subjectTab, viewType, setViewType]);
@@ -626,7 +627,8 @@ const TimetableManager = ({
                         onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
                     />
 
-                    {/* Timetable Grid - 외부 스크롤 제거, 내부 그리드 스크롤만 사용 */}
+                    {/* Timetable Content - viewType에 따라 분기 */}
+                    {viewType === 'teacher' && (
                     <div className="flex-1 overflow-hidden border-t border-gray-200 p-4">
                         <TimetableGrid
                             filteredClasses={filteredClasses}
@@ -720,6 +722,28 @@ const TimetableManager = ({
                             }}
                         />
                     </div>
+                    )}
+
+                    {/* Math Class Tab - 통합뷰 */}
+                    {viewType === 'class' && (
+                        <div className="flex-1 overflow-hidden border-t border-gray-200">
+                            <MathClassTab
+                                classes={filteredClasses}
+                                teachers={sortedTeachers}
+                                teachersData={teachers}
+                                classKeywords={classKeywords}
+                                currentUser={currentUser}
+                                studentMap={studentMap}
+                                isSimulationMode={isScenarioMode}
+                                canSimulation={canEditMath}
+                                onToggleSimulation={handleToggleSimulation}
+                                onCopyLiveToDraft={handleCopyLiveToDraft}
+                                onPublishToLive={handlePublishDraftToLive}
+                                onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+                                canPublish={canEditMath}
+                            />
+                        </div>
+                    )}
 
                     {/* Add Class Modal */}
                     <AddClassModal
