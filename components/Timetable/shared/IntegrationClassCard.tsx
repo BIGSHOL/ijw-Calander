@@ -43,6 +43,7 @@ interface StudentItemProps {
     showEnglishName?: boolean;
     onStudentClick?: (studentId: string) => void;
     onDragStart?: (e: React.DragEvent, student: TimetableStudent) => void;
+    classDays?: string[];  // 수업의 모든 요일 (수학 부분등원 뱃지용)
 }
 
 const StudentItem: React.FC<StudentItemProps> = ({
@@ -51,7 +52,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
     mode,
     showEnglishName = false,
     onStudentClick,
-    onDragStart
+    onDragStart,
+    classDays = []
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     const isClickable = !!onStudentClick;
@@ -62,6 +64,25 @@ const StudentItem: React.FC<StudentItemProps> = ({
         color: '#1e40af',
         fontWeight: 600
     } : {};
+
+    // 부분등원 뱃지 계산 (수학용)
+    // - classDays: 수업의 모든 요일 (예: ['월', '목'])
+    // - student.attendanceDays: 학생이 등원하는 요일 (예: ['월'])
+    // - 모든 요일에 등원하면 뱃지 없음, 부분만 등원하면 해당 요일 뱃지 표시
+    const partialDaysBadge = useMemo(() => {
+        if (!classDays || classDays.length <= 1) return null;
+        const attendanceDays = student.attendanceDays;
+        if (!attendanceDays || attendanceDays.length === 0) return null;  // 설정 없으면 전체 등원
+
+        // 수업 요일 중 학생이 등원하는 요일
+        const studentDays = classDays.filter(d => attendanceDays.includes(d));
+
+        // 모든 수업 요일에 등원하면 뱃지 없음
+        if (studentDays.length === classDays.length) return null;
+
+        // 부분 등원: 등원하는 요일만 표시
+        return studentDays;
+    }, [classDays, student.attendanceDays]);
 
     return (
         <div
@@ -78,11 +99,16 @@ const StudentItem: React.FC<StudentItemProps> = ({
             className={`flex items-center justify-between text-[12px] py-0.5 px-1 transition-all duration-150 ${style.className} ${isClickable ? 'cursor-pointer' : ''}`}
             style={hoverStyle}
         >
-            <span className={`font-medium truncate max-w-[90px] ${isHovered && isClickable ? '' : style.textClass}`}>
-                {student.name}
+            <span className={`font-medium truncate flex items-center gap-0.5 ${isHovered && isClickable ? '' : style.textClass}`}>
+                <span className="truncate max-w-[70px]">{student.name}</span>
                 {showEnglishName && student.englishName && (
-                    <span className={`font-normal ml-0.5 ${isHovered && isClickable ? '' : (style.englishTextClass || 'text-gray-500')}`}>
+                    <span className={`font-normal ${isHovered && isClickable ? '' : (style.englishTextClass || 'text-gray-500')}`}>
                         ({student.englishName})
+                    </span>
+                )}
+                {partialDaysBadge && (
+                    <span className="text-[9px] font-bold text-orange-600 bg-orange-100 px-0.5 rounded shrink-0">
+                        {partialDaysBadge.join('')}
                     </span>
                 )}
             </span>
@@ -583,6 +609,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 showEnglishName={isEnglish}
                                                 onStudentClick={onStudentClick}
                                                 onDragStart={onMoveStudent ? handleDragStart : undefined}
+                                                classDays={!isEnglish ? classInfo.finalDays : undefined}
                                             />
                                         ))}
                                         {sortedActiveStudents.length > 12 && (
