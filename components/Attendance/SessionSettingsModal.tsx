@@ -1,18 +1,15 @@
 import React from 'react';
-import { X, DollarSign, Settings } from 'lucide-react';
-import { Teacher } from '../../types';
-import SalarySettingsTab from './components/SalarySettingsTab';
+import { X, Calendar } from 'lucide-react';
+import SessionSettingsTab from './components/SessionSettingsTab';
 
-interface AttendanceSettingsModalProps {
+interface SessionSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  teachers?: Teacher[];
 }
 
-const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
+const SessionSettingsModal: React.FC<SessionSettingsModalProps> = ({
   isOpen,
   onClose,
-  teachers = [],
 }) => {
   if (!isOpen) return null;
 
@@ -28,8 +25,9 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
         {/* Header */}
         <div className="bg-[#081429] px-4 py-2.5 flex justify-between items-center text-white shrink-0">
           <h2 className="text-sm font-bold flex items-center gap-1.5">
-            <DollarSign size={16} className="text-[#fdb813]" />
-            급여 설정
+            <Calendar size={16} className="text-[#fdb813]" />
+            세션 기간 설정
+            <span className="ml-2 px-1.5 py-0.5 bg-yellow-500 text-[10px] font-bold rounded">관리자</span>
           </h2>
           <button
             onClick={onClose}
@@ -41,11 +39,11 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3">
-          <SalarySettingsTab teachers={teachers} />
+          <SessionSettingsTab />
         </div>
       </div>
     </div>
   );
 };
 
-export default AttendanceSettingsModal;
+export default SessionSettingsModal;

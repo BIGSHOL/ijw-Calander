@@ -77,3 +77,28 @@ export interface AppState {
   students: Student[];
   salaryConfig: SalaryConfig;
 }
+
+// ========================================
+// 세션 기반 출석부 타입 (Session-based Attendance)
+// ========================================
+
+// 날짜 범위
+export interface DateRange {
+  startDate: string; // "YYYY-MM-DD"
+  endDate: string;   // "YYYY-MM-DD"
+}
+
+// 세션 기간 (월별 세션 설정)
+export interface SessionPeriod {
+  id: string;           // "2026-math-1" (year-category-month)
+  year: number;
+  category: 'math' | 'english' | 'eie';
+  month: number;        // 1-12
+  ranges: DateRange[];  // 여러 날짜 범위 지원
+  sessions: number;     // 기본 12회
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// 출석부 보기 모드
+export type AttendanceViewMode = 'monthly' | 'session';
