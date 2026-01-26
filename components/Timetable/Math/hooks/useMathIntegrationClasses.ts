@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { TimetableClass, Teacher } from '../../../../types';
 import { MathIntegrationSettings } from './useMathSettings';
-import { MATH_PERIOD_INFO, UNIFIED_TO_LEGACY_PERIOD_MAP } from '../../constants';
+import { MATH_PERIOD_INFO, WEEKEND_PERIOD_INFO } from '../../constants';
 
 // 수학 통합뷰용 교시 정보
 export interface MathPeriodInfo {
@@ -32,6 +32,7 @@ export interface MathClassInfo {
     roomBySlot: Record<string, string>;  // 교시-요일별 강의실 (key: "periodId-day")
     teacherCounts: Record<string, number>;  // 강사별 수업 횟수
     schedule: string[];  // 원본 스케줄 배열
+    isWeekendOnly: boolean;  // 주말 전용 수업 여부
 }
 
 const DAYS_ORDER = ['월', '화', '수', '목', '금', '토', '일'];
@@ -60,6 +61,8 @@ export const useMathIntegrationClasses = (
             const teacherCounts: Record<string, number> = {};
             const daysWithClass = new Set<string>();
             let minPeriod = 99;
+            let hasWeekday = false;
+            let hasWeekend = false;
 
             // 스케줄 파싱 (형식: "월 1-1" 또는 "월 1")
             (cls.schedule || []).forEach(slot => {
@@ -68,6 +71,13 @@ export const useMathIntegrationClasses = (
 
                 const day = parts[0];
                 const periodPart = parts[1];
+
+                // 주말/평일 감지
+                if (day === '토' || day === '일') {
+                    hasWeekend = true;
+                } else {
+                    hasWeekday = true;
+                }
 
                 // 레거시 형식 (1-1) -> 통일 형식 (1) 변환
                 let periodId = periodPart;
@@ -117,6 +127,9 @@ export const useMathIntegrationClasses = (
                 roomBySlot[`${periodId}-${day}`] = slotRoom || '';
             });
 
+            // 주말 전용 수업 여부 판단
+            const isWeekendOnly = hasWeekend && !hasWeekday;
+
             // 표시할 요일 정렬
             const finalDays = Array.from(daysWithClass).sort(
                 (a, b) => DAYS_ORDER.indexOf(a) - DAYS_ORDER.indexOf(b)
@@ -129,9 +142,12 @@ export const useMathIntegrationClasses = (
                 startPeriod + 3  // 최소 4교시
             );
 
+            // 주말 전용 수업은 WEEKEND_PERIOD_INFO 사용
+            const periodInfoSource = isWeekendOnly ? WEEKEND_PERIOD_INFO : MATH_PERIOD_INFO;
+
             const visiblePeriods: MathPeriodInfo[] = [];
             for (let i = startPeriod; i <= Math.min(maxPeriod, 8); i++) {
-                const periodInfo = MATH_PERIOD_INFO[String(i)];
+                const periodInfo = periodInfoSource[String(i)];
                 if (periodInfo) {
                     visiblePeriods.push({
                         id: String(i),
@@ -154,8 +170,13 @@ export const useMathIntegrationClasses = (
                 roomBySlot,
                 teacherCounts,
                 schedule: cls.schedule || [],
+                isWeekendOnly,
             };
         }).sort((a, b) => {
+            // 주말 전용 수업은 뒤로
+            if (a.isWeekendOnly !== b.isWeekendOnly) {
+                return a.isWeekendOnly ? 1 : -1;
+            }
             // 시작 교시 순으로 정렬, 같으면 이름순
             if (a.startPeriod !== b.startPeriod) {
                 return a.startPeriod - b.startPeriod;
