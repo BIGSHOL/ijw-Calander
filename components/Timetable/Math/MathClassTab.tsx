@@ -40,13 +40,14 @@ interface GroupedClass {
     periodIndex: number;
     label: string;
     classes: MathClassInfo[];
+    isWeekend?: boolean;  // 주말 전용 그룹 여부
 }
 
-// 강사 색상 가져오기
+// 강사 색상 가져오기 - bgColor 사용
 const getTeacherColor = (teacherName: string, teachersData: Teacher[]): { bg: string; text: string } => {
     const teacher = teachersData.find(t => t.name === teacherName || t.englishName === teacherName);
-    if (teacher?.color) {
-        return { bg: teacher.color, text: '#fff' };
+    if (teacher?.bgColor) {
+        return { bg: teacher.bgColor, text: teacher.textColor || '#fff' };
     }
     return { bg: '#e5e7eb', text: '#374151' };
 };
@@ -173,9 +174,14 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                 }
             }
         } else {
+            // 평일 수업과 주말 전용 수업 분리
+            const weekdayClasses = filteredClasses.filter(c => !c.isWeekendOnly);
+            const weekendClasses = filteredClasses.filter(c => c.isWeekendOnly);
+
+            // 평일 수업: 시작 교시별 그룹화
             const periodMap = new Map<number, MathClassInfo[]>();
 
-            filteredClasses.forEach(cls => {
+            weekdayClasses.forEach(cls => {
                 if (hiddenClasses.has(cls.name) && mode === 'view') return;
                 const period = cls.startPeriod;
                 if (!periodMap.has(period)) {
@@ -193,6 +199,32 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                         classes,
                     });
                 });
+
+            // 주말 전용 수업: 별도 그룹
+            const visibleWeekendClasses = weekendClasses.filter(c => !(hiddenClasses.has(c.name) && mode === 'view'));
+            if (visibleWeekendClasses.length > 0) {
+                // 주말 수업도 시작 교시별로 그룹화
+                const weekendPeriodMap = new Map<number, MathClassInfo[]>();
+
+                visibleWeekendClasses.forEach(cls => {
+                    const period = cls.startPeriod;
+                    if (!weekendPeriodMap.has(period)) {
+                        weekendPeriodMap.set(period, []);
+                    }
+                    weekendPeriodMap.get(period)!.push(cls);
+                });
+
+                Array.from(weekendPeriodMap.entries())
+                    .sort((a, b) => a[0] - b[0])
+                    .forEach(([period, classes]) => {
+                        groups.push({
+                            periodIndex: 100 + period,  // 주말은 100+로 구분
+                            label: `🗓️ 주말 ${period}교시 시작`,
+                            classes,
+                            isWeekend: true,
+                        });
+                    });
+            }
         }
 
         return groups;
