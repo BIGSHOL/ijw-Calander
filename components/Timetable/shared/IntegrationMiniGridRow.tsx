@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { Teacher } from '../../../types';
+import { getTeacherColor } from '../English/englishUtils';
 
 // 공용 교시 정보 타입
 export interface PeriodInfo {
@@ -30,15 +31,6 @@ interface IntegrationMiniGridRowProps {
     onlyTime?: boolean;
     weekendShift?: number;  // 영어 전용 (기본값 0)
 }
-
-// 강사 색상 가져오기
-const getTeacherColor = (teacherName: string, teachersData: Teacher[]): { bg: string; text: string } => {
-    const teacher = teachersData.find(t => t.name === teacherName || t.englishName === teacherName);
-    if (teacher?.color) {
-        return { bg: teacher.color, text: '#fff' };
-    }
-    return { bg: '#e5e7eb', text: '#374151' };
-};
 
 const IntegrationMiniGridRow: React.FC<IntegrationMiniGridRowProps> = ({
     period,
