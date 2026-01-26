@@ -309,8 +309,12 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
     // 학생 정렬 및 스타일
     const sortedActiveStudents = useMemo(() => {
+        const classDays = classInfo.finalDays || [];
+        const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+
         return [...activeStudents].sort((a, b) => {
             if (isEnglish) {
+                // 영어: 기존 정렬 (underline → 일반 → 신입생)
                 const getWeight = (s: TimetableStudent) => {
                     if (s.underline) return 0;
                     if (s.enrollmentDate) {
@@ -323,9 +327,25 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 const wA = getWeight(a), wB = getWeight(b);
                 return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
             }
-            return a.name.localeCompare(b.name, 'ko');
+
+            // 수학: 전체등원 → 부분등원 (요일별 그룹화)
+            const getAttendanceWeight = (s: TimetableStudent): number => {
+                if (!s.attendanceDays || s.attendanceDays.length === 0 || classDays.length <= 1) {
+                    return 0; // 전체 등원 (설정 없거나 단일 요일 수업)
+                }
+                const studentDays = classDays.filter(d => s.attendanceDays!.includes(d));
+                if (studentDays.length === classDays.length) {
+                    return 0; // 모든 수업 요일 등원
+                }
+                // 부분 등원: 첫 번째 등원 요일 기준으로 정렬
+                const firstDay = studentDays.sort((x, y) => dayOrder.indexOf(x) - dayOrder.indexOf(y))[0];
+                return 10 + dayOrder.indexOf(firstDay); // 10+ 로 전체등원보다 뒤로
+            };
+
+            const wA = getAttendanceWeight(a), wB = getAttendanceWeight(b);
+            return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
         });
-    }, [activeStudents, isEnglish]);
+    }, [activeStudents, isEnglish, classInfo.finalDays]);
 
     const getRowStyle = (student: TimetableStudent & { isTempMoved?: boolean; isMoved?: boolean }) => {
         if (student.isTempMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
