@@ -20,7 +20,7 @@ import { useEnglishStats } from './hooks/useEnglishStats';
 import { useEnglishChanges, MoveChange } from './hooks/useEnglishChanges';
 import { useEnglishClasses, ScheduleCell, ClassInfo } from './hooks/useEnglishClasses';
 import { useClassStudents } from './hooks/useClassStudents';
-import ClassCard from './ClassCard';
+import IntegrationClassCard from '../shared/IntegrationClassCard';
 import { ClassInfo as ClassInfoFromHook } from '../../../hooks/useClasses';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
 import StudentDetailModal from '../../StudentManagement/StudentDetailModal';
@@ -84,7 +84,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     // UI States
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isLevelSettingsOpen, setIsLevelSettingsOpen] = useState(false);
-    const [openMenuClass, setOpenMenuClass] = useState<string | null>(null);
     const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
@@ -529,55 +528,45 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                         {/* Sticky Time Column */}
                                         {group.classes.length > 0 && (
                                             <div className="sticky left-0 z-20 shadow-[4px_0_12px_-2px_rgba(0,0,0,0.1)] self-stretch">
-                                                <ClassCard
+                                                <IntegrationClassCard
                                                     classInfo={group.classes[0]}
                                                     mode={'view'}
-                                                    isHidden={false}
-                                                    onToggleHidden={() => { }}
+                                                    subject="english"
+                                                    displayOptions={settings.displayOptions}
                                                     teachersData={teachersData}
                                                     classKeywords={[]}
-                                                    isMenuOpen={false}
-                                                    onMenuToggle={() => { }}
-                                                    displayOptions={settings.displayOptions}
-                                                    hiddenTeacherList={settings.hiddenTeachers}
                                                     currentUser={currentUser}
-                                                    englishLevels={englishLevels}
                                                     isSimulationMode={isSimulationMode}
-                                                    studentMap={studentMap}
                                                     classStudentData={classDataMap[group.classes[0].name]}
                                                     isTimeColumnOnly={true}
+                                                    englishLevels={englishLevels}
+                                                    hiddenTeacherList={settings.hiddenTeachers}
                                                 />
                                             </div>
                                         )}
 
                                         {group.classes.map(cls => (
-                                            <ClassCard
+                                            <IntegrationClassCard
                                                 key={cls.name}
                                                 classInfo={cls}
                                                 mode={mode}
+                                                subject="english"
                                                 isHidden={hiddenClasses.has(cls.name)}
                                                 onToggleHidden={() => toggleHidden(cls.name)}
+                                                displayOptions={settings.displayOptions}
                                                 teachersData={teachersData}
                                                 classKeywords={classKeywords}
-                                                isMenuOpen={openMenuClass === cls.name}
-                                                onMenuToggle={(open) => setOpenMenuClass(open ? cls.name : null)}
-                                                displayOptions={settings.displayOptions}
-                                                hiddenTeacherList={settings.hiddenTeachers}
                                                 currentUser={currentUser}
                                                 englishLevels={englishLevels}
                                                 isSimulationMode={isSimulationMode}
                                                 onSimulationLevelUp={onSimulationLevelUp}
-                                                // Drag & Drop Props
                                                 moveChanges={moveChanges}
                                                 onMoveStudent={handleMoveStudent}
-                                                studentMap={studentMap}
-                                                // Cost Optimization: Centralized student data
                                                 classStudentData={classDataMap[cls.name]}
                                                 hideTime={true}
                                                 useInjaePeriod={group.useInjaePeriod}
-                                                // 수정 모드에서만 수업 상세 모달 열기 (시뮬레이션 모드에서는 비활성화)
+                                                hiddenTeacherList={settings.hiddenTeachers}
                                                 onClassClick={mode === 'edit' && !isSimulationMode ? () => {
-                                                    // ClassInfo (from englishClasses hook) -> ClassInfoFromHook 변환
                                                     const classDetail: ClassInfoFromHook = {
                                                         id: cls.classId,
                                                         className: cls.name,
