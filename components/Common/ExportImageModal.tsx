@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Download, Loader2, Image as ImageIcon, ZoomIn, ZoomOut } from 'lucide-react';
-// html2canvas는 동적 import로 로드 (bundle-dynamic-imports: ~500KB 절약)
+// html-to-image는 동적 import로 로드 (한글 폰트 렌더링이 html2canvas보다 우수)
 
 interface ExportImageModalProps {
   isOpen: boolean;
@@ -36,8 +36,8 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
     setError(null);
 
     try {
-      // html2canvas 동적 import (~500KB - 사용할 때만 로드)
-      const html2canvas = (await import('html2canvas')).default;
+      // html-to-image 동적 import (한글 폰트 렌더링이 html2canvas보다 우수)
+      const { toPng } = await import('html-to-image');
 
       // 스크롤 위치 저장
       const scrollContainer = targetRef.current.closest('.overflow-auto');
@@ -50,19 +50,27 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
         scrollContainer.scrollTop = 0;
       }
 
-      // 잠시 대기 (스크롤 적용 후)
+      // 폰트 로딩 대기
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+
+      // 잠시 대기 (스크롤 적용 및 폰트 렌더링 후)
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // html2canvas 옵션
-      const canvas = await html2canvas(targetRef.current, {
-        scale: 2, // 고해상도
-        useCORS: true,
-        allowTaint: true,
+      // html-to-image로 PNG 생성
+      const dataUrl = await toPng(targetRef.current, {
+        quality: 1.0,
+        pixelRatio: 2, // 고해상도
         backgroundColor: '#ffffff',
-        logging: false,
-        // 전체 캡처
-        windowWidth: targetRef.current.scrollWidth,
-        windowHeight: targetRef.current.scrollHeight,
+        // 스타일 필터: 불필요한 요소 제외
+        filter: (node) => {
+          // 숨겨진 요소는 제외
+          if (node instanceof HTMLElement && node.style.display === 'none') {
+            return false;
+          }
+          return true;
+        },
       });
 
       // 스크롤 위치 복원
@@ -71,7 +79,6 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
         scrollContainer.scrollTop = originalScrollTop;
       }
 
-      const dataUrl = canvas.toDataURL('image/png');
       setPreviewImage(dataUrl);
     } catch (err) {
       console.error('이미지 생성 실패:', err);
