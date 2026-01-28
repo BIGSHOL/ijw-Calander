@@ -150,11 +150,13 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   // ============ INTERNAL LOAD FROM LIVE ============
 
   const loadFromLiveInternal = useCallback(async () => {
-    // 1. Load classes (math only)
-    const classesSnapshot = await getDocs(
-      query(collection(db, 'classes'), where('subject', '==', 'math'))
-    );
+    // [async-parallel] Load classes and enrollments in parallel
+    const [classesSnapshot, enrollmentsSnapshot] = await Promise.all([
+      getDocs(query(collection(db, 'classes'), where('subject', '==', 'math'))),
+      getDocs(query(collectionGroup(db, 'enrollments'), where('subject', '==', 'math')))
+    ]);
 
+    // 1. Process classes
     const scenarioClasses: Record<string, ScenarioClass> = {};
     classesSnapshot.docs.forEach(docSnap => {
       const data = docSnap.data();
@@ -172,10 +174,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       };
     });
 
-    // 2. Load enrollments (math only)
-    const enrollmentsSnapshot = await getDocs(
-      query(collectionGroup(db, 'enrollments'), where('subject', '==', 'math'))
-    );
+    // 2. Process enrollments
 
     const scenarioEnrollments: Record<string, Record<string, ScenarioEnrollment>> = {};
     enrollmentsSnapshot.docs.forEach(docSnap => {
@@ -184,7 +183,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       const studentId = docSnap.ref.parent.parent?.id;
 
       if (!studentId || !className) return;
-      if (data.withdrawalDate || data.onHold) return;  // Skip withdrawn/on-hold
+      if (data.withdrawalDate) return;  // Skip withdrawn only (onHold는 포함)
 
       if (!scenarioEnrollments[className]) {
         scenarioEnrollments[className] = {};
@@ -208,7 +207,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         underline: data.underline,
         enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
         withdrawalDate: convertTimestampToDate(data.withdrawalDate),
-        onHold: data.onHold,
+        onHold: data.onHold || false,  // onHold 상태 유지
         attendanceDays: data.attendanceDays || [],
       };
     });
@@ -491,78 +490,87 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       return;
     }
 
-    // 1. 백업 생성
-    const backupId = `backup_${Date.now()}`;
-    const { scenarioClasses: liveClasses, scenarioEnrollments: liveEnrollments } = await loadFromLiveInternal();
+    let backupId = '';
 
-    await setDoc(doc(db, SCENARIO_COLLECTION, backupId), {
-      id: backupId,
-      name: `백업_${new Date().toLocaleString()}`,
-      description: '[자동백업] 실제 반영 전 자동 생성',
-      classes: sanitizeForFirestore(liveClasses),
-      enrollments: sanitizeForFirestore(liveEnrollments),
-      createdAt: new Date().toISOString(),
-      createdBy: `${userName} (자동)`,
-      createdByUid: userId,
-      version: 2,
-    });
+    try {
+      // 1. 백업 생성
+      backupId = `backup_${Date.now()}`;
+      const { scenarioClasses: liveClasses, scenarioEnrollments: liveEnrollments } = await loadFromLiveInternal();
 
-    // 2. classes 업데이트
-    const classBatch = writeBatch(db);
-    Object.entries(scenarioClasses).forEach(([classId, classData]) => {
-      classBatch.set(doc(db, 'classes', classId), sanitizeForFirestore(classData));
-    });
-    await classBatch.commit();
-
-    // 3. enrollments 업데이트
-    const existingEnrollmentsSnapshot = await getDocs(
-      query(collectionGroup(db, 'enrollments'), where('subject', '==', 'math'))
-    );
-
-    // 삭제 배치
-    const docsToDelete = existingEnrollmentsSnapshot.docs;
-    for (let i = 0; i < docsToDelete.length; i += 500) {
-      const batch = writeBatch(db);
-      const chunk = docsToDelete.slice(i, i + 500);
-      chunk.forEach(docSnap => {
-        batch.delete(docSnap.ref);
+      await setDoc(doc(db, SCENARIO_COLLECTION, backupId), {
+        id: backupId,
+        name: `백업_${new Date().toLocaleString()}`,
+        description: '[자동백업] 실제 반영 전 자동 생성',
+        classes: sanitizeForFirestore(liveClasses),
+        enrollments: sanitizeForFirestore(liveEnrollments),
+        createdAt: new Date().toISOString(),
+        createdBy: `${userName} (자동)`,
+        createdByUid: userId,
+        version: 2,
       });
-      await batch.commit();
-      console.log(`✅ Deleted enrollments batch: ${i + chunk.length}/${docsToDelete.length}`);
-    }
 
-    // 생성 배치
-    const enrollmentsToCreate: { ref: any; data: any }[] = [];
-    Object.entries(scenarioEnrollments).forEach(([className, students]) => {
-      Object.entries(students).forEach(([studentId, enrollment]) => {
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
-        enrollmentsToCreate.push({
-          ref: enrollmentRef,
-          data: sanitizeForFirestore({
-            ...enrollment,
-            subject: 'math',
-            className,
-          }),
+      // 2. classes 업데이트
+      const classBatch = writeBatch(db);
+      Object.entries(scenarioClasses).forEach(([classId, classData]) => {
+        classBatch.set(doc(db, 'classes', classId), sanitizeForFirestore(classData));
+      });
+      await classBatch.commit();
+
+      // 3. enrollments 업데이트
+      const existingEnrollmentsSnapshot = await getDocs(
+        query(collectionGroup(db, 'enrollments'), where('subject', '==', 'math'))
+      );
+
+      // 삭제 배치
+      const docsToDelete = existingEnrollmentsSnapshot.docs;
+      for (let i = 0; i < docsToDelete.length; i += 500) {
+        const batch = writeBatch(db);
+        const chunk = docsToDelete.slice(i, i + 500);
+        chunk.forEach(docSnap => {
+          batch.delete(docSnap.ref);
+        });
+        await batch.commit();
+        console.log(`✅ Deleted enrollments batch: ${i + chunk.length}/${docsToDelete.length}`);
+      }
+
+      // 생성 배치
+      const enrollmentsToCreate: { ref: any; data: any }[] = [];
+      Object.entries(scenarioEnrollments).forEach(([className, students]) => {
+        Object.entries(students).forEach(([studentId, enrollment]) => {
+          const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+          enrollmentsToCreate.push({
+            ref: enrollmentRef,
+            data: sanitizeForFirestore({
+              ...enrollment,
+              subject: 'math',
+              className,
+            }),
+          });
         });
       });
-    });
 
-    for (let i = 0; i < enrollmentsToCreate.length; i += 500) {
-      const batch = writeBatch(db);
-      const chunk = enrollmentsToCreate.slice(i, i + 500);
-      chunk.forEach(item => {
-        batch.set(item.ref, item.data);
-      });
-      await batch.commit();
-      console.log(`✅ Created enrollments batch: ${i + chunk.length}/${enrollmentsToCreate.length}`);
+      for (let i = 0; i < enrollmentsToCreate.length; i += 500) {
+        const batch = writeBatch(db);
+        const chunk = enrollmentsToCreate.slice(i, i + 500);
+        chunk.forEach(item => {
+          batch.set(item.ref, item.data);
+        });
+        await batch.commit();
+        console.log(`✅ Created enrollments batch: ${i + chunk.length}/${enrollmentsToCreate.length}`);
+      }
+
+      setState(prev => ({
+        ...prev,
+        isDirty: false,
+      }));
+
+      alert(`✅ 성공적으로 반영되었습니다.\n(백업 ID: ${backupId})`);
+    } catch (error) {
+      console.error('publishToLive 오류:', error);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      alert(`❌ 실제 반영 중 오류가 발생했습니다.\n${errorMessage}\n\n${backupId ? `백업이 생성되었습니다: ${backupId}` : ''}`);
+      throw error;
     }
-
-    setState(prev => ({
-      ...prev,
-      isDirty: false,
-    }));
-
-    alert(`✅ 성공적으로 반영되었습니다.\n(백업 ID: ${backupId})`);
   }, []);
 
   const setCurrentScenarioName = useCallback((name: string | null) => {

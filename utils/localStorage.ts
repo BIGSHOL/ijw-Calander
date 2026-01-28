@@ -42,8 +42,11 @@ export const STORAGE_KEYS = {
 
   // Resource Favorites (personal/local)
   RESOURCE_FAVORITES: 'ijw_resource_favorites',
+  RESOURCE_CATEGORY_ORDER: 'ijw_resource_category_order',
 
   // Dynamic keys (functions)
+  resourceSubCategoryOrder: (mainCategory: string) =>
+    `ijw_resource_sub_category_order_${mainCategory}`,
   attendanceGroupOrder: (staffId: string, subject: string) =>
     `ijw_attendance_group_order_${subject}_${staffId}`,
   attendanceCollapsedGroups: (staffId: string, subject: string) =>
