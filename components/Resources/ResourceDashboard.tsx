@@ -3,7 +3,7 @@ import { Resource, UserProfile, RESOURCE_CATEGORY_TREE, CATEGORY_SEPARATOR } fro
 import { useResources, useCreateResource, useUpdateResource, useDeleteResource } from '../../hooks/useResources';
 import ResourceCard, { ResourceTableHeader, SortField, SortDirection } from './ResourceCard';
 import ResourceAddModal from './ResourceAddModal';
-import { FolderOpen, Folder, Plus, Loader2, RefreshCw, Home, ChevronRight, Search, X, Clock, Trash2, CheckSquare, Star } from 'lucide-react';
+import { FolderOpen, Folder, Plus, Loader2, RefreshCw, Home, ChevronRight, Search, X, Clock, Trash2, CheckSquare, Star, RotateCcw, GripVertical } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 
 interface ResourceDashboardProps {
@@ -38,6 +38,15 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
   });
   // 즐겨찾기 필터 상태
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  // 카테고리 순서 (로컬스토리지에서 로드)
+  const [categoryOrder, setCategoryOrder] = useState<string[]>(() => {
+    return storage.getJSON<string[]>(STORAGE_KEYS.RESOURCE_CATEGORY_ORDER, []);
+  });
+  // 드래그 상태
+  const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
+  const [draggedSubCategory, setDraggedSubCategory] = useState<string | null>(null);
+  // 중분류 순서 (대분류별로 로컬스토리지에서 로드)
+  const [subCategoryOrders, setSubCategoryOrders] = useState<Record<string, string[]>>({});
 
   // 관리자 여부 체크
   const canEdit = userProfile?.role === 'master' || userProfile?.role === 'admin';
@@ -48,15 +57,51 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
     return Array.from(categories);
   }, [resources]);
 
-  // 대분류 목록 (기본 + 리소스에서 추출)
+  // 대분류 목록 (기본 + 리소스에서 추출 + 정렬)
   const mainCategories = useMemo(() => {
     const defaultMains = Object.keys(RESOURCE_CATEGORY_TREE);
     const resourceMains = new Set(resources.map(r => {
       const parts = r.category.split(CATEGORY_SEPARATOR);
       return parts[0] || '기타';
     }));
-    return Array.from(new Set([...defaultMains, ...resourceMains]));
-  }, [resources]);
+    const allCategories = Array.from(new Set([...defaultMains, ...resourceMains]));
+
+    // 정렬 로직: 저장된 순서 우선, 없으면 가나다 순 (기타는 맨 끝)
+    if (categoryOrder.length > 0) {
+      // 저장된 순서대로 정렬
+      const ordered: string[] = [];
+      const remaining: string[] = [];
+
+      // 저장된 순서에 있는 것들 먼저
+      categoryOrder.forEach(cat => {
+        if (allCategories.includes(cat)) {
+          ordered.push(cat);
+        }
+      });
+
+      // 저장된 순서에 없는 새로운 카테고리들 (가나다 순, 기타 제외)
+      allCategories.forEach(cat => {
+        if (!ordered.includes(cat) && cat !== '기타') {
+          remaining.push(cat);
+        }
+      });
+      remaining.sort((a, b) => a.localeCompare(b, 'ko'));
+
+      // 기타는 항상 맨 끝
+      const result = [...ordered, ...remaining];
+      if (allCategories.includes('기타') && !result.includes('기타')) {
+        result.push('기타');
+      }
+      return result;
+    }
+
+    // 기본: 가나다 순 (기타는 맨 끝)
+    const sorted = allCategories.filter(c => c !== '기타').sort((a, b) => a.localeCompare(b, 'ko'));
+    if (allCategories.includes('기타')) {
+      sorted.push('기타');
+    }
+    return sorted;
+  }, [resources, categoryOrder]);
 
   // 중분류 목록 (선택된 대분류 기준)
   const subCategories = useMemo(() => {
@@ -244,6 +289,47 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
       storage.setJSON(STORAGE_KEYS.RESOURCE_FAVORITES, Array.from(newSet));
       return newSet;
     });
+  }, []);
+
+  // 카테고리 드래그 핸들러
+  const handleDragStart = useCallback((category: string) => {
+    setDraggedCategory(category);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, targetCategory: string) => {
+    e.preventDefault();
+    if (!draggedCategory || draggedCategory === targetCategory) return;
+  }, [draggedCategory]);
+
+  const handleDrop = useCallback((e: React.DragEvent, targetCategory: string) => {
+    e.preventDefault();
+    if (!draggedCategory || draggedCategory === targetCategory) return;
+
+    // 새로운 순서 계산
+    const newOrder = [...mainCategories];
+    const dragIndex = newOrder.indexOf(draggedCategory);
+    const dropIndex = newOrder.indexOf(targetCategory);
+
+    if (dragIndex !== -1 && dropIndex !== -1) {
+      newOrder.splice(dragIndex, 1);
+      newOrder.splice(dropIndex, 0, draggedCategory);
+
+      // 저장
+      setCategoryOrder(newOrder);
+      storage.setJSON(STORAGE_KEYS.RESOURCE_CATEGORY_ORDER, newOrder);
+    }
+
+    setDraggedCategory(null);
+  }, [draggedCategory, mainCategories]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedCategory(null);
+  }, []);
+
+  // 카테고리 순서 초기화
+  const handleResetCategoryOrder = useCallback(() => {
+    setCategoryOrder([]);
+    storage.remove(STORAGE_KEYS.RESOURCE_CATEGORY_ORDER);
   }, []);
 
   // 전체 선택 상태 계산
@@ -491,19 +577,44 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
         {/* 1단: 대분류 폴더 (홈일 때만) */}
         {!currentMain && (
           <div className="p-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-gray-400">드래그하여 순서 변경</span>
+              {categoryOrder.length > 0 && (
+                <button
+                  onClick={handleResetCategoryOrder}
+                  className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-[#fdb813] transition-colors"
+                  title="가나다 순으로 초기화"
+                >
+                  <RotateCcw size={10} />
+                  순서 초기화
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-3 overflow-x-auto pb-2">
               {mainCategories.map(main => (
-                <button
+                <div
                   key={main}
+                  draggable
+                  onDragStart={() => handleDragStart(main)}
+                  onDragOver={(e) => handleDragOver(e, main)}
+                  onDrop={(e) => handleDrop(e, main)}
+                  onDragEnd={handleDragEnd}
                   onClick={() => handleMainClick(main)}
-                  className="flex flex-col items-center gap-2 p-4 min-w-[100px] rounded-xl border-2 border-gray-200 hover:border-[#fdb813] hover:bg-[#fdb813]/5 transition-all group"
+                  className={`flex flex-col items-center gap-2 p-4 min-w-[100px] rounded-xl border-2 cursor-pointer transition-all group ${
+                    draggedCategory === main
+                      ? 'border-[#fdb813] opacity-50'
+                      : 'border-gray-200 hover:border-[#fdb813] hover:bg-[#fdb813]/5'
+                  }`}
                 >
-                  <Folder size={32} className="text-[#fdb813] group-hover:scale-110 transition-transform" />
+                  <div className="relative">
+                    <GripVertical size={12} className="absolute -left-5 top-2 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
+                    <Folder size={32} className="text-[#fdb813] group-hover:scale-110 transition-transform" />
+                  </div>
                   <span className="text-xs font-bold text-[#081429]">{main}</span>
                   {mainCounts[main] > 0 && (
                     <span className="text-[10px] text-gray-500">{mainCounts[main]}개</span>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           </div>
