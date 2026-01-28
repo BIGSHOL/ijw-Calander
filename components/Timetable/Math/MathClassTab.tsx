@@ -1,8 +1,8 @@
 // Math Class Integration Tab
 // 수학 통합 시간표 탭 - 수업별 컬럼 뷰 (영어 통합뷰와 동일한 디자인)
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Settings, Eye, Edit, ArrowRightLeft, Copy, Upload, Save, ChevronDown, Users, Home, User, CalendarDays, Image } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Settings, Eye, Edit, ArrowRightLeft, Copy, Upload, Save, ChevronDown, Users, Home, User, CalendarDays } from 'lucide-react';
 import { Teacher, TimetableStudent, ClassKeywordColor, TimetableClass } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 
@@ -16,7 +16,6 @@ import IntegrationClassCard from '../shared/IntegrationClassCard';
 import MathIntegrationViewSettings, { MathClassEntry } from './MathIntegrationViewSettings';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
 import StudentDetailModal from '../../StudentManagement/StudentDetailModal';
-import ExportImageModal from '../../Common/ExportImageModal';
 import { ClassInfo as ClassInfoFromHook } from '../../../hooks/useClasses';
 import { UnifiedStudent } from '../../../types';
 
@@ -82,10 +81,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
-
-    // 이미지 내보내기 상태
-    const [isExportModalOpen, setExportModalOpen] = useState(false);
-    const gridContainerRef = useRef<HTMLDivElement>(null);
 
     // 시뮬레이션 모드에서는 항상 수정모드
     useEffect(() => {
@@ -435,16 +430,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                             </span>
                         </div>
                     )}
-
-                    {/* 이미지 내보내기 버튼 */}
-                    <button
-                        onClick={() => setExportModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm"
-                        title="시간표 이미지로 내보내기"
-                    >
-                        <Image size={14} />
-                        이미지 저장
-                    </button>
                 </div>
             </div>
 
@@ -502,7 +487,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
             </div>
 
             {/* Classes Grid */}
-            <div ref={gridContainerRef} className="flex-1 overflow-auto p-4 bg-gray-100 custom-scrollbar">
+            <div className="flex-1 overflow-auto p-4 bg-gray-100 custom-scrollbar">
                 {groupedClasses.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-gray-400 text-sm">
                         데이터가 없습니다.
@@ -594,16 +579,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                     readOnly={mode === 'view'}
                 />
             )}
-
-            {/* 이미지 내보내기 모달 */}
-            <ExportImageModal
-                isOpen={isExportModalOpen}
-                onClose={() => setExportModalOpen(false)}
-                targetRef={gridContainerRef as React.RefObject<HTMLElement>}
-                title="수학 시간표 이미지 내보내기"
-                subtitle={`총 ${filteredClasses.length}개 수업`}
-                fileName={`수학시간표_${new Date().toISOString().slice(0, 10)}`}
-            />
         </div>
     );
 };
