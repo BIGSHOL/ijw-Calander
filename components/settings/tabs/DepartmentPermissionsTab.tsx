@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Department, UserProfile } from '../../../types';
-import { Search, Users, Shield, ShieldCheck, ChevronDown, ChevronRight, Eye, Edit3, Ban } from 'lucide-react';
+import { Search, Users, Shield, ShieldCheck, ChevronDown, ChevronRight, Eye, Ban, FolderOpen, Folder } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useStaffWithAccounts } from '../../../hooks/useFirebaseQueries';
@@ -25,7 +25,9 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
   currentUser,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [deptSearchTerm, setDeptSearchTerm] = useState('');
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
@@ -78,6 +80,56 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
       u.jobTitle?.toLowerCase().includes(q)
     );
   }, [approvedUsers, searchTerm]);
+
+  // 부서 검색 필터
+  const filteredDepartments = useMemo(() => {
+    if (!deptSearchTerm) return departments;
+    const q = deptSearchTerm.toLowerCase();
+    return departments.filter(d =>
+      d.name.toLowerCase().includes(q) ||
+      d.category?.toLowerCase().includes(q)
+    );
+  }, [departments, deptSearchTerm]);
+
+  // 카테고리별 부서 그룹화
+  const departmentsByCategory = useMemo(() => {
+    const grouped = new Map<string, Department[]>();
+    filteredDepartments.forEach(dept => {
+      const category = dept.category || '미분류';
+      if (!grouped.has(category)) {
+        grouped.set(category, []);
+      }
+      grouped.get(category)!.push(dept);
+    });
+    // 카테고리 이름 순으로 정렬, '미분류'는 마지막
+    return Array.from(grouped.entries()).sort((a, b) => {
+      if (a[0] === '미분류') return 1;
+      if (b[0] === '미분류') return -1;
+      return a[0].localeCompare(b[0]);
+    });
+  }, [filteredDepartments]);
+
+  // 카테고리 토글
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
+
+  // 모든 카테고리 펼치기/접기
+  const toggleAllCategories = (expand: boolean) => {
+    if (expand) {
+      setExpandedCategories(new Set(departmentsByCategory.map(([cat]) => cat)));
+    } else {
+      setExpandedCategories(new Set());
+    }
+  };
 
   // 권한 요약 계산 (가시성만)
   const getPermissionSummary = (user: UserProfile) => {
@@ -287,73 +339,150 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
               {/* 펼쳐진 내용 */}
               {isExpanded && !isUserMaster && (
                 <div className="border-t border-gray-100 p-2 bg-gray-50/50">
-                  {/* 일괄 설정 버튼 - 차단 / 보기 */}
-                  {canEdit && !isCurrentUser && (
-                    <div className="flex gap-1 mb-2">
+                  {/* 상단 컨트롤: 일괄 설정 + 부서 검색 */}
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {/* 일괄 설정 버튼 - 차단 / 보기 */}
+                    {canEdit && !isCurrentUser && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleBulkPermission(user.uid, 'none'); }}
+                          disabled={isSaving}
+                          className="px-2 py-1 text-[10px] font-bold bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-colors"
+                        >
+                          전체 차단
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleBulkPermission(user.uid, 'view'); }}
+                          disabled={isSaving}
+                          className="px-2 py-1 text-[10px] font-bold bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                        >
+                          전체 보기
+                        </button>
+                      </div>
+                    )}
+
+                    {/* 부서 검색 */}
+                    <div className="relative flex-1 min-w-[120px]">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={10} />
+                      <input
+                        type="text"
+                        placeholder="부서 검색..."
+                        value={deptSearchTerm}
+                        onChange={(e) => { e.stopPropagation(); setDeptSearchTerm(e.target.value); }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full pl-6 pr-2 py-1 bg-white border border-gray-200 rounded text-[10px] focus:border-[#fdb813] outline-none"
+                      />
+                    </div>
+
+                    {/* 전체 펼치기/접기 */}
+                    <div className="flex gap-1">
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleBulkPermission(user.uid, 'none'); }}
-                        disabled={isSaving}
-                        className="px-2 py-1 text-[10px] font-bold bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); toggleAllCategories(true); }}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                        title="모두 펼치기"
                       >
-                        전체 차단
+                        <FolderOpen size={12} />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleBulkPermission(user.uid, 'view'); }}
-                        disabled={isSaving}
-                        className="px-2 py-1 text-[10px] font-bold bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); toggleAllCategories(false); }}
+                        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                        title="모두 접기"
                       >
-                        전체 보기
+                        <Folder size={12} />
                       </button>
                     </div>
-                  )}
+                  </div>
 
-                  {/* 부서별 권한 그리드 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                    {departments.map(dept => {
-                      const current = user.departmentPermissions?.[dept.id];
+                  {/* 카테고리별 부서 권한 */}
+                  <div className="space-y-1">
+                    {departmentsByCategory.map(([category, depts]) => {
+                      const isCategoryExpanded = expandedCategories.has(category);
+                      const categoryViewCount = depts.filter(d => user.departmentPermissions?.[d.id] === 'view').length;
 
                       return (
-                        <div
-                          key={dept.id}
-                          className="flex items-center justify-between p-1.5 rounded bg-white border border-gray-100"
-                        >
-                          <div className="flex items-center gap-1 min-w-0 flex-1">
-                            <div
-                              className="w-2 h-2 rounded-full shrink-0"
-                              style={{ backgroundColor: dept.color }}
-                            />
-                            <span className="text-[10px] font-medium text-gray-600 truncate">
-                              {dept.name}
-                            </span>
-                          </div>
+                        <div key={category} className="bg-white rounded border border-gray-100 overflow-hidden">
+                          {/* 카테고리 헤더 */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleCategory(category); }}
+                            className="w-full flex items-center justify-between p-1.5 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              {isCategoryExpanded ? (
+                                <ChevronDown size={12} className="text-gray-400" />
+                              ) : (
+                                <ChevronRight size={12} className="text-gray-400" />
+                              )}
+                              <span className="text-[10px] font-bold text-gray-700">{category}</span>
+                              <span className="text-[9px] text-gray-400">({depts.length})</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[9px]">
+                              <span className="text-blue-500">{categoryViewCount}</span>
+                              <span className="text-gray-300">/</span>
+                              <span className="text-gray-400">{depts.length}</span>
+                            </div>
+                          </button>
 
-                          <div className="flex bg-gray-50 rounded p-0.5 shrink-0">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handlePermissionChange(user.uid, dept.id, 'none'); }}
-                              disabled={!canEdit || isCurrentUser || isSaving}
-                              className={`w-5 h-5 flex items-center justify-center rounded transition-all ${!current
-                                  ? 'bg-gray-300 text-white'
-                                  : 'text-gray-300 hover:bg-gray-200'
-                                } ${(!canEdit || isCurrentUser) ? 'cursor-not-allowed' : ''}`}
-                              title={PERMISSION_LABELS.none}
-                            >
-                              <Ban size={10} />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handlePermissionChange(user.uid, dept.id, 'view'); }}
-                              disabled={!canEdit || isCurrentUser || isSaving}
-                              className={`w-5 h-5 flex items-center justify-center rounded transition-all ${current === 'view'
-                                  ? 'bg-blue-500 text-white'
-                                  : 'text-gray-300 hover:bg-gray-200'
-                                } ${(!canEdit || isCurrentUser) ? 'cursor-not-allowed' : ''}`}
-                              title={PERMISSION_LABELS.view}
-                            >
-                              <Eye size={10} />
-                            </button>
-                          </div>
+                          {/* 부서 목록 */}
+                          {isCategoryExpanded && (
+                            <div className="border-t border-gray-50 p-1.5 bg-gray-50/30">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                                {depts.map(dept => {
+                                  const current = user.departmentPermissions?.[dept.id];
+
+                                  return (
+                                    <div
+                                      key={dept.id}
+                                      className="flex items-center justify-between p-1.5 rounded bg-white border border-gray-100"
+                                    >
+                                      <div className="flex items-center gap-1 min-w-0 flex-1">
+                                        <div
+                                          className="w-2 h-2 rounded-full shrink-0"
+                                          style={{ backgroundColor: dept.color }}
+                                        />
+                                        <span className="text-[10px] font-medium text-gray-600 truncate">
+                                          {dept.name}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex bg-gray-50 rounded p-0.5 shrink-0">
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handlePermissionChange(user.uid, dept.id, 'none'); }}
+                                          disabled={!canEdit || isCurrentUser || isSaving}
+                                          className={`w-5 h-5 flex items-center justify-center rounded transition-all ${!current
+                                              ? 'bg-gray-300 text-white'
+                                              : 'text-gray-300 hover:bg-gray-200'
+                                            } ${(!canEdit || isCurrentUser) ? 'cursor-not-allowed' : ''}`}
+                                          title={PERMISSION_LABELS.none}
+                                        >
+                                          <Ban size={10} />
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handlePermissionChange(user.uid, dept.id, 'view'); }}
+                                          disabled={!canEdit || isCurrentUser || isSaving}
+                                          className={`w-5 h-5 flex items-center justify-center rounded transition-all ${current === 'view'
+                                              ? 'bg-blue-500 text-white'
+                                              : 'text-gray-300 hover:bg-gray-200'
+                                            } ${(!canEdit || isCurrentUser) ? 'cursor-not-allowed' : ''}`}
+                                          title={PERMISSION_LABELS.view}
+                                        >
+                                          <Eye size={10} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
+
+                    {departmentsByCategory.length === 0 && deptSearchTerm && (
+                      <div className="text-center py-2 text-gray-400 text-[10px]">
+                        검색 결과가 없습니다.
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

@@ -55,6 +55,8 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
+    // 조회 권한이 있으면 이미지 저장 가능 (편집 권한 포함)
+    const canViewEnglish = hasPermission('timetable.english.view') || canEditEnglish;
     const queryClient = useQueryClient();
 
     // classes 컬렉션 사용 (마이그레이션 완료)
@@ -710,15 +712,17 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         </>
                     )}
 
-                    {/* 이미지 내보내기 버튼 */}
-                    <button
-                        onClick={() => setExportModalOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm"
-                        title="시간표 이미지로 내보내기"
-                    >
-                        <Image size={14} />
-                        이미지 저장
-                    </button>
+                    {/* 이미지 내보내기 버튼 (조회 권한 있으면 표시) */}
+                    {canViewEnglish && (
+                        <button
+                            onClick={() => setExportModalOpen(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm"
+                            title="시간표 이미지로 내보내기"
+                        >
+                            <Image size={14} />
+                            이미지 저장
+                        </button>
+                    )}
                 </div>
             </div>
 

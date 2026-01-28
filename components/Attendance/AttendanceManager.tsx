@@ -11,7 +11,6 @@ import StudentListModal from './components/StudentListModal';
 import AddStudentToAttendanceModal from './components/AddStudentToAttendanceModal';
 import AttendanceSettingsModal from './AttendanceSettingsModal';
 import SessionSettingsModal from './SessionSettingsModal';
-import ExportImageModal from '../Common/ExportImageModal';
 
 import {
   useAttendanceStudents,
@@ -118,6 +117,17 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     return false;
   }, [selectedSubject, canManageMath, canManageEnglish, isMasterOrAdmin]);
 
+  // 이미지 저장 가능 여부 (조회 권한이 있으면 저장 가능)
+  const canExportImage = useMemo(() => {
+    // 마스터/관리자는 항상 가능
+    if (isMasterOrAdmin) return true;
+    // 해당 과목 관리 권한이 있으면 가능
+    if (canManageCurrentSubject) return true;
+    // 본인 출석부 관리 권한 + 연결된 강사가 있으면 본인 출석부만 저장 가능
+    if (canManageOwn && currentStaffId) return true;
+    return false;
+  }, [isMasterOrAdmin, canManageCurrentSubject, canManageOwn, currentStaffId]);
+
   // Available teachers for filter dropdown (based on manage permission for current subject)
   const availableTeachers = useMemo(() => {
     if (!canManageCurrentSubject) return [];
@@ -210,12 +220,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const [isSettlementModalOpen, setSettlementModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
-  const [isExportModalOpen, setExportModalOpen] = useState(false);
 
   // 테이블 ref (이미지 내보내기용)
   const tableRef = useRef<HTMLTableElement>(null);
-  // 내보내기 시 원래 접힘 상태 저장용
-  const savedCollapsedGroupsRef = useRef<Set<string> | null>(null);
 
   // Group order state (per teacher, stored in localStorage)
   const groupOrderKey = STORAGE_KEYS.attendanceGroupOrder(filterStaffId || 'all', selectedSubject);
@@ -422,6 +429,52 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     }
   };
 
+  // 이미지 내보내기 상태
+  const [isExporting, setIsExporting] = useState(false);
+
+  // 직접 이미지 다운로드 (모달 없이)
+  const handleDirectExport = async () => {
+    if (!tableRef.current || isExporting) return;
+
+    setIsExporting(true);
+
+    // 그룹 펼치기
+    const savedCollapsed = new Set(collapsedGroups);
+    setCollapsedGroups(new Set());
+
+    // DOM 업데이트 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    try {
+      const { toJpeg } = await import('html-to-image');
+
+      const dataUrl = await toJpeg(tableRef.current, {
+        quality: 0.92,
+        pixelRatio: 1,
+        backgroundColor: '#ffffff',
+        skipFonts: true,
+      });
+
+      // 다운로드
+      const teacherName = teachers.find(t => t.id === filterStaffId)?.name || '';
+      const fileName = `${teacherName}_${currentDate.getFullYear()}년${String(currentDate.getMonth() + 1).padStart(2, '0')}월_출석부.jpg`;
+
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('이미지 저장 실패:', err);
+      alert('이미지 저장에 실패했습니다.');
+    } finally {
+      // 그룹 상태 복원
+      setCollapsedGroups(savedCollapsed);
+      setIsExporting(false);
+    }
+  };
+
   const handleEditStudent = (student: Student) => {
     setEditingStudent(student);
     setStudentModalOpen(true);
@@ -619,28 +672,32 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </button>
         )}
 
-        <button
-          onClick={() => {
-            // 내보내기 전 현재 접힘 상태 저장 후 모든 그룹 펼치기
-            savedCollapsedGroupsRef.current = new Set(collapsedGroups);
-            setCollapsedGroups(new Set());
-            setExportModalOpen(true);
-          }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm flex-shrink-0"
-          title="출석부 이미지로 내보내기"
-        >
-          <Image size={14} />
-          이미지 저장
-        </button>
+        {canExportImage && (
+          <button
+            onClick={handleDirectExport}
+            disabled={isExporting}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
+              isExporting
+                ? 'bg-gray-400 text-white cursor-wait'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700'
+            }`}
+            title="출석부 이미지로 내보내기"
+          >
+            <Image size={14} className={isExporting ? 'animate-pulse' : ''} />
+            {isExporting ? '저장 중...' : '이미지 저장'}
+          </button>
+        )}
 
-        <button
-          onClick={() => setSettingsModalOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 text-white rounded-lg font-bold text-xs hover:bg-gray-600 transition-colors shadow-sm flex-shrink-0"
-          title="급여 설정"
-        >
-          <Settings size={14} />
-          설정
-        </button>
+{canManageSessions && (
+          <button
+            onClick={() => setSettingsModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 text-white rounded-lg font-bold text-xs hover:bg-gray-600 transition-colors shadow-sm flex-shrink-0"
+            title="급여 설정"
+          >
+            <Settings size={14} />
+            설정
+          </button>
+        )}
       </div>
 
       {/* Main Table Area - Fixed height with sticky horizontal scrollbar at bottom */}
@@ -730,6 +787,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         isOpen={isSettingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
         teachers={teachers}
+        canEdit={canManageSessions}
       />
 
       {/* 세션 설정 모달 - 관리자 전용 */}
@@ -738,22 +796,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         onClose={() => setSessionSettingsModalOpen(false)}
       />
 
-      {/* 이미지 내보내기 모달 */}
-      <ExportImageModal
-        isOpen={isExportModalOpen}
-        onClose={() => {
-          setExportModalOpen(false);
-          // 저장해둔 접힘 상태 복원
-          if (savedCollapsedGroupsRef.current) {
-            setCollapsedGroups(savedCollapsedGroupsRef.current);
-            savedCollapsedGroupsRef.current = null;
-          }
-        }}
-        targetRef={tableRef as React.RefObject<HTMLElement>}
-        title="출석부 이미지 내보내기"
-        subtitle={`${teachers.find(t => t.id === filterStaffId)?.name || ''} 선생님 · ${currentDate.getFullYear()}년 ${currentDate.getMonth() + 1}월`}
-        fileName={`${teachers.find(t => t.id === filterStaffId)?.name || ''}_${currentDate.getFullYear()}년${String(currentDate.getMonth() + 1).padStart(2, '0')}월_출석부`}
-      />
     </div>
   );
 }

@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Calendar, RefreshCw, FileText, Users, UserCheck, AlertTriangle, X, ChevronRight, AlertCircle, Search } from 'lucide-react';
 import { useConsultationStats, getDateRangeFromPreset, DatePreset, StaffSubjectStat, StudentNeedingConsultation } from '../../hooks/useConsultationStats';
 import { useStaff } from '../../hooks/useStaff';
+import { usePermissions } from '../../hooks/usePermissions';
+import { UserProfile } from '../../types';
 import CounselingOverview from './CounselingOverview';
 import CategoryStats from './CategoryStats';
 import StaffSubjectStats from './StaffSubjectStats';
@@ -28,23 +30,79 @@ interface ConsultationDashboardProps {
   dateRange?: { start: string; end: string };
   /** 날짜 범위 변경 핸들러 */
   onDateRangeChange?: (range: { start: string; end: string } | undefined) => void;
+  /** 현재 로그인 사용자 (권한 체크용) */
+  currentUser?: UserProfile | null;
 }
 
 const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
   dateRange: externalDateRange,
   onDateRangeChange,
+  currentUser,
 }) => {
   const [internalDatePreset, setInternalDatePreset] = useState<DatePreset>('thisMonth');
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [showNeedingConsultationModal, setShowNeedingConsultationModal] = useState(false);
 
+  // 권한 체크
+  const { hasPermission } = usePermissions(currentUser || null);
+  const isMasterOrAdmin = currentUser?.role === 'master' || currentUser?.role === 'admin';
+  const canManageAll = isMasterOrAdmin || hasPermission('consultation.manage');
+  const currentStaffId = currentUser?.staffId;
+
   // 외부 dateRange가 있으면 사용, 없으면 내부 preset 사용
   const dateRange = externalDateRange || getDateRangeFromPreset(internalDatePreset);
   const { staff } = useStaff();
-  const { stats, loading, refetch } = useConsultationStats(
+  const { stats: rawStats, loading, refetch } = useConsultationStats(
     { dateRange },
     staff
   );
+
+  // 권한에 따른 통계 필터링
+  const stats = useMemo(() => {
+    // 관리 권한이 있으면 전체 통계 표시
+    if (canManageAll || !currentStaffId) {
+      return rawStats;
+    }
+
+    // 관리 권한이 없으면 본인 담당 학생만 표시
+    // 본인 담당 통계만 필터링
+    const filteredStaffSubjectStats = rawStats.staffSubjectStats.filter(
+      s => s.id === currentStaffId
+    );
+
+    // 본인 담당 학생의 상담 필요 수 계산
+    // staffSubjectStats에서 본인의 수학/영어 담당 학생 수를 기준으로 계산
+    const myStats = filteredStaffSubjectStats[0];
+    const myTotalNeeded = myStats?.totalNeeded || 0;
+    const myTotalCount = myStats?.totalCount || 0;
+    const myNeedingCount = Math.max(0, myTotalNeeded - myTotalCount);
+
+    // 상담 필요 학생 목록은 비워둠 (정확한 필터링이 불가능)
+    // 대신 상담 필요 카드에서 숫자만 표시
+    const filteredStudentsNeedingConsultation: typeof rawStats.studentsNeedingConsultation = [];
+
+    // 본인의 상담 필요 건수만큼 placeholder 생성 (카드에 숫자 표시용)
+    for (let i = 0; i < myNeedingCount; i++) {
+      filteredStudentsNeedingConsultation.push({
+        studentId: `placeholder-${i}`,
+        studentName: '담당 학생',
+        subject: 'math',
+        lastConsultationDate: undefined,
+      });
+    }
+
+    return {
+      ...rawStats,
+      // 본인 담당만 표시
+      staffSubjectStats: filteredStaffSubjectStats,
+      studentsNeedingConsultation: filteredStudentsNeedingConsultation,
+      // 전체 통계는 본인 것만
+      totalSubjectEnrollments: myTotalNeeded,
+      totalConsultations: myTotalCount,
+      parentConsultations: Math.round(myTotalCount * (rawStats.parentConsultations / Math.max(rawStats.totalConsultations, 1))),
+      studentConsultations: Math.round(myTotalCount * (rawStats.studentConsultations / Math.max(rawStats.totalConsultations, 1))),
+    };
+  }, [rawStats, canManageAll, currentStaffId]);
 
   // 상담 완료율용: 항상 이번 달 기준 (필터와 무관)
   const thisMonthRange = useMemo(() => getDateRangeFromPreset('thisMonth'), []);
@@ -63,14 +121,30 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
   };
 
   // 상담 완료율: 항상 이번 달 기준 (필터와 무관)
-  // 과목별 카운트 기준: (총 과목 수강 건수 - 상담 필요 항목 수) / 총 과목 수강 건수 * 100
-  // 예: 수학+영어 동시 수강생 10명 = 총 20건, 상담 필요 5건 → (20-5)/20 = 75%
-  const totalSubjectEnrollments = thisMonthStats?.totalSubjectEnrollments || 0;
-  const needingConsultationCount = thisMonthStats?.studentsNeedingConsultation?.length || 0;
-  const consultedSubjectCount = Math.max(0, totalSubjectEnrollments - needingConsultationCount);
-  const percentage = totalSubjectEnrollments > 0
-    ? Math.round((consultedSubjectCount / totalSubjectEnrollments) * 100)
-    : 0;
+  // 관리 권한에 따라 전체 또는 본인 담당만 표시
+  const { totalSubjectEnrollments, consultedSubjectCount, percentage } = useMemo(() => {
+    if (canManageAll || !currentStaffId) {
+      // 관리 권한이 있으면 전체 통계
+      const total = thisMonthStats?.totalSubjectEnrollments || 0;
+      const needing = thisMonthStats?.studentsNeedingConsultation?.length || 0;
+      const consulted = Math.max(0, total - needing);
+      return {
+        totalSubjectEnrollments: total,
+        consultedSubjectCount: consulted,
+        percentage: total > 0 ? Math.round((consulted / total) * 100) : 0,
+      };
+    }
+
+    // 관리 권한이 없으면 본인 담당만
+    const myStats = thisMonthStats?.staffSubjectStats?.find(s => s.id === currentStaffId);
+    const total = myStats?.totalNeeded || 0;
+    const consulted = myStats?.totalCount || 0;
+    return {
+      totalSubjectEnrollments: total,
+      consultedSubjectCount: consulted,
+      percentage: total > 0 ? Math.round((consulted / total) * 100) : 0,
+    };
+  }, [thisMonthStats, canManageAll, currentStaffId]);
 
   // 상담 완료율 제목: yy.mm월 상담 완료율
   const now = new Date();
@@ -212,6 +286,7 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
         <NeedingConsultationModal
           students={stats.studentsNeedingConsultation}
           onClose={() => setShowNeedingConsultationModal(false)}
+          canManageAll={canManageAll}
         />
       )}
     </div>
@@ -375,11 +450,15 @@ const StaffStatsModal: React.FC<StaffStatsModalProps> = ({ stats, onClose }) => 
 interface NeedingConsultationModalProps {
   students: StudentNeedingConsultation[];
   onClose: () => void;
+  canManageAll?: boolean;
 }
 
-const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ students, onClose }) => {
+const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ students, onClose, canManageAll = true }) => {
   const [subjectFilter, setSubjectFilter] = useState<'all' | 'math' | 'english'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // 관리 권한이 없으면 placeholder 데이터인지 확인
+  const hasPlaceholderData = students.length > 0 && students[0]?.studentId?.startsWith('placeholder-');
 
   // 필터링된 학생 목록 (과목별로 분리된 항목)
   const filteredStudents = useMemo(() => {
@@ -413,51 +492,64 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
           </button>
         </div>
 
-        {/* 필터 영역 */}
-        <div className="px-4 py-2 border-b border-[#081429]/10 bg-[#081429]/5 flex items-center gap-2">
-          {/* 과목 필터 */}
-          <div className="flex bg-white rounded-md p-0.5 border border-[#081429]/10">
-            <button
-              onClick={() => setSubjectFilter('all')}
-              className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
-                subjectFilter === 'all' ? 'bg-[#081429] text-white' : 'text-[#373d41] hover:bg-[#081429]/10'
-              }`}
-            >
-              전체
-            </button>
-            <button
-              onClick={() => setSubjectFilter('math')}
-              className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
-                subjectFilter === 'math' ? 'bg-[#081429] text-white' : 'text-[#373d41] hover:bg-[#081429]/10'
-              }`}
-            >
-              수학
-            </button>
-            <button
-              onClick={() => setSubjectFilter('english')}
-              className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
-                subjectFilter === 'english' ? 'bg-[#fdb813] text-[#081429]' : 'text-[#373d41] hover:bg-[#081429]/10'
-              }`}
-            >
-              영어
-            </button>
-          </div>
+        {/* 필터 영역 (관리 권한이 있을 때만 표시) */}
+        {!hasPlaceholderData && (
+          <div className="px-4 py-2 border-b border-[#081429]/10 bg-[#081429]/5 flex items-center gap-2">
+            {/* 과목 필터 */}
+            <div className="flex bg-white rounded-md p-0.5 border border-[#081429]/10">
+              <button
+                onClick={() => setSubjectFilter('all')}
+                className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                  subjectFilter === 'all' ? 'bg-[#081429] text-white' : 'text-[#373d41] hover:bg-[#081429]/10'
+                }`}
+              >
+                전체
+              </button>
+              <button
+                onClick={() => setSubjectFilter('math')}
+                className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                  subjectFilter === 'math' ? 'bg-[#081429] text-white' : 'text-[#373d41] hover:bg-[#081429]/10'
+                }`}
+              >
+                수학
+              </button>
+              <button
+                onClick={() => setSubjectFilter('english')}
+                className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                  subjectFilter === 'english' ? 'bg-[#fdb813] text-[#081429]' : 'text-[#373d41] hover:bg-[#081429]/10'
+                }`}
+              >
+                영어
+              </button>
+            </div>
 
-          {/* 이름 검색 */}
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#373d41]/50" />
-            <input
-              type="text"
-              placeholder="이름 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-6 pr-2 py-1 text-xs border border-[#081429]/10 rounded-md focus:outline-none focus:border-[#fdb813] bg-white"
-            />
+            {/* 이름 검색 */}
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#373d41]/50" />
+              <input
+                type="text"
+                placeholder="이름 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-6 pr-2 py-1 text-xs border border-[#081429]/10 rounded-md focus:outline-none focus:border-[#fdb813] bg-white"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="max-h-72 overflow-y-auto">
-          {filteredStudents.length === 0 ? (
+          {hasPlaceholderData ? (
+            // 관리 권한이 없으면 본인 담당 학생 수만 표시
+            <div className="text-center py-8">
+              <AlertCircle className="w-12 h-12 text-[#fdb813] mx-auto mb-3" />
+              <p className="text-base font-medium text-[#081429] mb-1">
+                본인 담당 상담 필요: {students.length}건
+              </p>
+              <p className="text-xs text-[#373d41]">
+                전체 목록을 보려면 관리자 권한이 필요합니다
+              </p>
+            </div>
+          ) : filteredStudents.length === 0 ? (
             <div className="text-center py-6">
               <AlertCircle className="w-10 h-10 text-[#373d41]/30 mx-auto mb-2" />
               <p className="text-sm text-[#373d41]">

@@ -14,6 +14,7 @@ import { TabSubNavigation } from '../Common/TabSubNavigation';
 import { TabButton } from '../Common/TabButton';
 import { GridDropdown, GridDropdownOption } from '../Common/GridDropdown';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
+import { UserProfile } from '../../types';
 
 /**
  * 상담 관리 메인 탭
@@ -23,7 +24,11 @@ import { storage, STORAGE_KEYS } from '../../utils/localStorage';
  */
 type ViewMode = 'list' | 'dashboard';
 
-const ConsultationManagementTab: React.FC = () => {
+interface ConsultationManagementTabProps {
+  currentUser?: UserProfile | null;
+}
+
+const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ currentUser }) => {
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         const saved = storage.getString(STORAGE_KEYS.CONSULTATION_VIEW_MODE);
         if (saved) return saved as ViewMode;
@@ -622,6 +627,7 @@ const ConsultationManagementTab: React.FC = () => {
                                 setActiveDatePreset('all');
                             }
                         }}
+                        currentUser={currentUser}
                     />
                 ) : (
                     /* 목록 뷰 */

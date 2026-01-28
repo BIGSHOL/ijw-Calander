@@ -1,0 +1,640 @@
+import React, { useState, useMemo, useCallback } from 'react';
+import { Resource, UserProfile, RESOURCE_CATEGORY_TREE, CATEGORY_SEPARATOR } from '../../types';
+import { useResources, useCreateResource, useUpdateResource, useDeleteResource } from '../../hooks/useResources';
+import ResourceCard, { ResourceTableHeader, SortField, SortDirection } from './ResourceCard';
+import ResourceAddModal from './ResourceAddModal';
+import { FolderOpen, Folder, Plus, Loader2, RefreshCw, Home, ChevronRight, Search, X, Clock, Trash2, CheckSquare, Star } from 'lucide-react';
+import { storage, STORAGE_KEYS } from '../../utils/localStorage';
+
+interface ResourceDashboardProps {
+  userProfile: UserProfile | null;
+}
+
+const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) => {
+  const { data: resources = [], isLoading, refetch } = useResources();
+  const createResource = useCreateResource();
+  const updateResource = useUpdateResource();
+  const deleteResource = useDeleteResource();
+
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  // 폴더 탐색 상태
+  const [currentMain, setCurrentMain] = useState<string | null>(null);
+  const [currentSub, setCurrentSub] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  // 정렬 상태
+  const [sortField, setSortField] = useState<SortField | undefined>(undefined);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  // 검색 상태
+  const [searchQuery, setSearchQuery] = useState('');
+  // 다중 선택 상태
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  // 즐겨찾기 상태 (로컬스토리지에서 로드)
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    const saved = storage.getJSON<string[]>(STORAGE_KEYS.RESOURCE_FAVORITES, []);
+    return new Set(saved);
+  });
+  // 즐겨찾기 필터 상태
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+
+  // 관리자 여부 체크
+  const canEdit = userProfile?.role === 'master' || userProfile?.role === 'admin';
+
+  // 기존 카테고리 추출 (모달에 전달용)
+  const existingCategories = useMemo(() => {
+    const categories = new Set(resources.map(r => r.category));
+    return Array.from(categories);
+  }, [resources]);
+
+  // 대분류 목록 (기본 + 리소스에서 추출)
+  const mainCategories = useMemo(() => {
+    const defaultMains = Object.keys(RESOURCE_CATEGORY_TREE);
+    const resourceMains = new Set(resources.map(r => {
+      const parts = r.category.split(CATEGORY_SEPARATOR);
+      return parts[0] || '기타';
+    }));
+    return Array.from(new Set([...defaultMains, ...resourceMains]));
+  }, [resources]);
+
+  // 중분류 목록 (선택된 대분류 기준)
+  const subCategories = useMemo(() => {
+    if (!currentMain) return [];
+
+    // 기본 트리에서
+    const defaultSubs = RESOURCE_CATEGORY_TREE[currentMain]
+      ? Object.keys(RESOURCE_CATEGORY_TREE[currentMain])
+      : [];
+
+    // 리소스에서 추출
+    const resourceSubs = new Set(
+      resources
+        .filter(r => r.category.startsWith(currentMain + CATEGORY_SEPARATOR) || r.category === currentMain)
+        .map(r => {
+          const parts = r.category.split(CATEGORY_SEPARATOR);
+          return parts[1] || '';
+        })
+        .filter(Boolean)
+    );
+
+    return Array.from(new Set([...defaultSubs, ...resourceSubs]));
+  }, [currentMain, resources]);
+
+  // 현재 경로의 리소스 (필터링 + 검색 + 정렬)
+  const currentResources = useMemo(() => {
+    let filtered = resources;
+
+    // 카테고리 필터
+    if (currentMain) {
+      filtered = filtered.filter(r => {
+        const parts = r.category.split(CATEGORY_SEPARATOR);
+        const resourceMain = parts[0] || '';
+        const resourceSub = parts[1] || '';
+
+        if (resourceMain !== currentMain) return false;
+        if (currentSub && resourceSub !== currentSub) return false;
+
+        return true;
+      });
+    }
+
+    // 검색 필터
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(r =>
+        r.title.toLowerCase().includes(query) ||
+        (r.description?.toLowerCase().includes(query)) ||
+        r.url.toLowerCase().includes(query) ||
+        (r.createdByName?.toLowerCase().includes(query)) ||
+        r.category.toLowerCase().includes(query) ||
+        r.type.toLowerCase().includes(query)
+      );
+    }
+
+    // 즐겨찾기 필터
+    if (showOnlyFavorites) {
+      filtered = filtered.filter(r => favorites.has(r.id));
+    }
+
+    // 정렬 적용
+    if (sortField) {
+      const sorted = [...filtered].sort((a, b) => {
+        let aVal: string;
+        let bVal: string;
+
+        switch (sortField) {
+          case 'title':
+            aVal = a.title || '';
+            bVal = b.title || '';
+            break;
+          case 'type':
+            aVal = a.type || '';
+            bVal = b.type || '';
+            break;
+          case 'category':
+            aVal = a.category || '';
+            bVal = b.category || '';
+            break;
+          case 'createdByName':
+            aVal = a.createdByName || '';
+            bVal = b.createdByName || '';
+            break;
+          case 'createdAt':
+            aVal = a.createdAt || '';
+            bVal = b.createdAt || '';
+            break;
+          default:
+            return 0;
+        }
+
+        const cmp = aVal.localeCompare(bVal, 'ko');
+        return sortDirection === 'asc' ? cmp : -cmp;
+      });
+
+      // 고정된 항목은 항상 맨 위에
+      const pinned = sorted.filter(r => r.isPinned);
+      const unpinned = sorted.filter(r => !r.isPinned);
+      return [...pinned, ...unpinned];
+    }
+
+    return filtered;
+  }, [resources, currentMain, currentSub, searchQuery, showOnlyFavorites, favorites, sortField, sortDirection]);
+
+  // 정렬 핸들러
+  const handleSort = useCallback((field: SortField) => {
+    if (sortField === field) {
+      // 같은 필드 클릭 시 방향 토글
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // 새 필드 선택 시 오름차순으로 시작
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  }, [sortField]);
+
+  // 고정 토글 핸들러
+  const handleTogglePin = useCallback(async (resource: Resource) => {
+    try {
+      await updateResource.mutateAsync({
+        id: resource.id,
+        updates: { isPinned: !resource.isPinned },
+      });
+    } catch (error) {
+      console.error('고정 토글 실패:', error);
+    }
+  }, [updateResource]);
+
+  // 다중 선택 관련 핸들러
+  const handleCheckChange = useCallback((resource: Resource, checked: boolean) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(resource.id);
+      } else {
+        newSet.delete(resource.id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleToggleAll = useCallback(() => {
+    if (selectedIds.size === currentResources.length) {
+      // 모두 선택됨 -> 모두 해제
+      setSelectedIds(new Set());
+    } else {
+      // 일부 또는 없음 -> 모두 선택
+      setSelectedIds(new Set(currentResources.map(r => r.id)));
+    }
+  }, [currentResources, selectedIds.size]);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+
+    if (!confirm(`선택한 ${selectedIds.size}개의 리소스를 삭제하시겠습니까?`)) return;
+
+    try {
+      // 순차적으로 삭제
+      for (const id of selectedIds) {
+        await deleteResource.mutateAsync(id);
+      }
+      setSelectedIds(new Set());
+      setIsSelectionMode(false);
+    } catch (error) {
+      console.error('일괄 삭제 실패:', error);
+      alert('일부 리소스 삭제에 실패했습니다.');
+    }
+  }, [selectedIds, deleteResource]);
+
+  const handleCancelSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setIsSelectionMode(false);
+  }, []);
+
+  // 즐겨찾기 토글 핸들러
+  const handleToggleFavorite = useCallback((resource: Resource) => {
+    setFavorites(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(resource.id)) {
+        newSet.delete(resource.id);
+      } else {
+        newSet.add(resource.id);
+      }
+      // 로컬스토리지에 저장
+      storage.setJSON(STORAGE_KEYS.RESOURCE_FAVORITES, Array.from(newSet));
+      return newSet;
+    });
+  }, []);
+
+  // 전체 선택 상태 계산
+  const isAllChecked = currentResources.length > 0 && selectedIds.size === currentResources.length;
+  const isIndeterminate = selectedIds.size > 0 && selectedIds.size < currentResources.length;
+
+  // 각 대분류별 리소스 개수
+  const mainCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    resources.forEach(r => {
+      const main = r.category.split(CATEGORY_SEPARATOR)[0] || '기타';
+      counts[main] = (counts[main] || 0) + 1;
+    });
+    return counts;
+  }, [resources]);
+
+  // 최근 추가 리소스 (최신 5개)
+  const recentResources = useMemo(() => {
+    return [...resources]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+  }, [resources]);
+
+  // 각 중분류별 리소스 개수
+  const subCounts = useMemo(() => {
+    if (!currentMain) return {};
+    const counts: Record<string, number> = {};
+    resources.forEach(r => {
+      const parts = r.category.split(CATEGORY_SEPARATOR);
+      if (parts[0] === currentMain && parts[1]) {
+        counts[parts[1]] = (counts[parts[1]] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [resources, currentMain]);
+
+  // 리소스 생성/수정
+  const handleSubmit = async (data: Omit<Resource, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (editingResource) {
+      await updateResource.mutateAsync({
+        id: editingResource.id,
+        updates: data,
+      });
+    } else {
+      await createResource.mutateAsync(data);
+    }
+  };
+
+  // 리소스 삭제
+  const handleDelete = async (resource: Resource) => {
+    if (!confirm(`"${resource.title}" 리소스를 삭제하시겠습니까?`)) return;
+
+    try {
+      await deleteResource.mutateAsync(resource.id);
+      if (selectedResource?.id === resource.id) {
+        setSelectedResource(null);
+      }
+    } catch (error) {
+      console.error('삭제 실패:', error);
+      alert('삭제에 실패했습니다.');
+    }
+  };
+
+  // 수정 모달 열기
+  const handleEdit = (resource: Resource) => {
+    setEditingResource(resource);
+    setIsAddModalOpen(true);
+  };
+
+  // 새로고침
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setIsRefreshing(false);
+  };
+
+  // 폴더 클릭 핸들러
+  const handleMainClick = (main: string) => {
+    setCurrentMain(main);
+    setCurrentSub(null);
+    setSelectedResource(null);
+  };
+
+  const handleSubClick = (sub: string) => {
+    setCurrentSub(sub);
+    setSelectedResource(null);
+  };
+
+  const handleHomeClick = () => {
+    setCurrentMain(null);
+    setCurrentSub(null);
+    setSelectedResource(null);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-[#081429] animate-spin mx-auto mb-2" />
+          <p className="text-sm text-gray-500">리소스를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full bg-gray-50">
+      {/* 헤더 */}
+      <div className="bg-[#081429] px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <FolderOpen size={18} className="text-[#fdb813]" />
+            <h1 className="text-sm font-bold text-white">자료실</h1>
+          </div>
+
+          {/* 브레드크럼 네비게이션 */}
+          <div className="flex items-center gap-1 text-xs">
+            <button
+              onClick={handleHomeClick}
+              className={`px-2 py-1 rounded transition-colors ${
+                !currentMain ? 'bg-[#fdb813] text-[#081429] font-bold' : 'text-gray-400 hover:text-white hover:bg-white/10'
+              }`}
+            >
+              <Home size={14} />
+            </button>
+            {currentMain && (
+              <>
+                <ChevronRight size={14} className="text-gray-500" />
+                <button
+                  onClick={() => { setCurrentSub(null); setSelectedResource(null); }}
+                  className={`px-2 py-1 rounded transition-colors ${
+                    !currentSub ? 'bg-[#fdb813] text-[#081429] font-bold' : 'text-gray-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {currentMain}
+                </button>
+              </>
+            )}
+            {currentSub && (
+              <>
+                <ChevronRight size={14} className="text-gray-500" />
+                <span className="px-2 py-1 bg-[#fdb813] text-[#081429] font-bold rounded">
+                  {currentSub}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* 검색 */}
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="검색..."
+              className="w-48 pl-9 pr-8 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder-gray-400 focus:bg-white/20 focus:border-[#fdb813] focus:outline-none transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* 즐겨찾기 필터 */}
+          <button
+            onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+            className={`p-2 transition-colors ${
+              showOnlyFavorites
+                ? 'text-yellow-500 hover:text-yellow-400'
+                : 'text-gray-400 hover:text-white'
+            }`}
+            title={showOnlyFavorites ? '전체 보기' : '즐겨찾기만 보기'}
+          >
+            <Star size={14} className={showOnlyFavorites ? 'fill-yellow-500' : ''} />
+          </button>
+
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="p-2 text-gray-400 hover:text-white transition-colors"
+            title="새로고침"
+          >
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+          </button>
+
+          {/* 다중 선택 모드 버튼들 */}
+          {canEdit && (
+            <>
+              {isSelectionMode ? (
+                <>
+                  <span className="text-xs text-gray-400">
+                    {selectedIds.size}개 선택됨
+                  </span>
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={selectedIds.size === 0}
+                    className="flex items-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 size={14} />
+                    삭제
+                  </button>
+                  <button
+                    onClick={handleCancelSelection}
+                    className="px-3 py-2 text-gray-400 hover:text-white transition-colors text-xs"
+                  >
+                    취소
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setIsSelectionMode(true)}
+                  className="p-2 text-gray-400 hover:text-white transition-colors"
+                  title="다중 선택"
+                >
+                  <CheckSquare size={14} />
+                </button>
+              )}
+            </>
+          )}
+
+          {canEdit && !isSelectionMode && (
+            <button
+              onClick={() => {
+                setEditingResource(null);
+                setIsAddModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg text-xs font-bold hover:bg-[#fdb813]/90 transition-colors"
+            >
+              <Plus size={14} />
+              추가
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 콘텐츠 */}
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {/* 1단: 대분류 폴더 (홈일 때만) */}
+        {!currentMain && (
+          <div className="p-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center gap-3 overflow-x-auto pb-2">
+              {mainCategories.map(main => (
+                <button
+                  key={main}
+                  onClick={() => handleMainClick(main)}
+                  className="flex flex-col items-center gap-2 p-4 min-w-[100px] rounded-xl border-2 border-gray-200 hover:border-[#fdb813] hover:bg-[#fdb813]/5 transition-all group"
+                >
+                  <Folder size={32} className="text-[#fdb813] group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold text-[#081429]">{main}</span>
+                  {mainCounts[main] > 0 && (
+                    <span className="text-[10px] text-gray-500">{mainCounts[main]}개</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 최근 추가 리소스 (홈일 때만) */}
+        {!currentMain && recentResources.length > 0 && (
+          <div className="p-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={14} className="text-[#fdb813]" />
+              <h3 className="text-xs font-bold text-[#081429]">최근 추가</h3>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="divide-y divide-gray-100">
+                {recentResources.map(resource => (
+                  <ResourceCard
+                    key={resource.id}
+                    resource={resource}
+                    isSelected={selectedResource?.id === resource.id}
+                    onClick={() => setSelectedResource(resource)}
+                    onTogglePin={canEdit ? handleTogglePin : undefined}
+                    onEdit={canEdit ? handleEdit : undefined}
+                    onDelete={canEdit ? handleDelete : undefined}
+                    isFavorite={favorites.has(resource.id)}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 2단: 중분류 폴더 (대분류 선택 시) */}
+        {currentMain && !currentSub && subCategories.length > 0 && (
+          <div className="p-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center gap-3 overflow-x-auto pb-2">
+              {subCategories.map(sub => (
+                <button
+                  key={sub}
+                  onClick={() => handleSubClick(sub)}
+                  className="flex flex-col items-center gap-2 p-3 min-w-[90px] rounded-xl border-2 border-gray-200 hover:border-[#081429] hover:bg-[#081429]/5 transition-all group"
+                >
+                  <Folder size={28} className="text-[#081429] group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-medium text-[#081429]">{sub}</span>
+                  {subCounts[sub] > 0 && (
+                    <span className="text-[10px] text-gray-500">{subCounts[sub]}개</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 3단: 카드 그리드 + 미리보기 */}
+        <div className="flex-1 overflow-hidden p-4">
+          {currentResources.length === 0 ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <FolderOpen size={48} className="mx-auto mb-4 text-gray-300" />
+                <p className="text-gray-500 mb-4">
+                  {currentMain
+                    ? `"${currentMain}${currentSub ? ` > ${currentSub}` : ''}" 폴더가 비어있습니다`
+                    : '등록된 리소스가 없습니다'}
+                </p>
+                {canEdit && (
+                  <button
+                    onClick={() => {
+                      setEditingResource(null);
+                      setIsAddModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-medium hover:bg-[#081429]/90 transition-colors"
+                  >
+                    <Plus size={14} />
+                    리소스 추가하기
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="h-full overflow-y-auto">
+              {/* 리소스 테이블 */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <ResourceTableHeader
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                  showCheckbox={isSelectionMode}
+                  isAllChecked={isAllChecked}
+                  isIndeterminate={isIndeterminate}
+                  onToggleAll={handleToggleAll}
+                />
+                <div className="divide-y divide-gray-100">
+                  {currentResources.map(resource => (
+                    <ResourceCard
+                      key={resource.id}
+                      resource={resource}
+                      isSelected={selectedResource?.id === resource.id}
+                      onClick={() => setSelectedResource(resource)}
+                      onTogglePin={canEdit ? handleTogglePin : undefined}
+                      onEdit={canEdit ? handleEdit : undefined}
+                      onDelete={canEdit ? handleDelete : undefined}
+                      showCheckbox={isSelectionMode}
+                      isChecked={selectedIds.has(resource.id)}
+                      onCheckChange={handleCheckChange}
+                      isFavorite={favorites.has(resource.id)}
+                      onToggleFavorite={handleToggleFavorite}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 추가/수정 모달 */}
+      <ResourceAddModal
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditingResource(null);
+        }}
+        onSubmit={handleSubmit}
+        editingResource={editingResource}
+        existingCategories={existingCategories}
+        existingUrls={resources.map(r => r.url)}
+        currentUserName={userProfile?.displayName || userProfile?.email || ''}
+        currentUserId={userProfile?.uid || ''}
+      />
+    </div>
+  );
+};
+
+export default ResourceDashboard;
