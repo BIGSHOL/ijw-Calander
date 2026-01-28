@@ -64,11 +64,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const canChangeRole = hasPermission('users.change_role');
   const canChangePermissions = hasPermission('users.change_permissions');
 
+  // 시스템 설정 권한
+  const canViewTeachers = hasPermission('system.teachers.view');
+  const canEditTeachers = hasPermission('system.teachers.edit');
+  const canViewClasses = hasPermission('system.classes.view');
+  const canEditClasses = hasPermission('system.classes.edit');
+
   const isMaster = currentUserProfile?.role === 'master';
   const isAdmin = currentUserProfile?.role === 'admin';
   // Legacy helpers mapped to permissions
   const canManageMenus = canViewDepartments;
-  // canManageUsers, canViewTeachers, canViewClasses 제거됨 - 각 페이지에서 관리
 
   // Get accessible tabs for current user
   const { accessibleTabs } = useTabPermissions(currentUserProfile || null);
@@ -320,17 +325,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     localDepartments.forEach(dept => {
       const original = originalDeptMap.get(dept.id);
       if (JSON.stringify(original) !== JSON.stringify(dept)) {
-        const ref = doc(db, "부서목록", dept.id);
-        batch.update(ref, {
-          부서명: dept.name,
-          순서: dept.order,
-          색상: dept.color,
-          기본색상: dept.defaultColor || '#fee2e2',
-          기본글자색: dept.defaultTextColor || '#000000',
-          기본테두리색: dept.defaultBorderColor || '#fee2e2',
-          카테고리: dept.category || '', // Save Category
-          설명: ''
-        });
+        const ref = doc(db, "departments", dept.id);
+        // undefined 필드 제거
+        const updateData: Record<string, any> = {
+          id: dept.id,
+          name: dept.name,
+          order: dept.order,
+          color: dept.color,
+          defaultColor: dept.defaultColor || '#fee2e2',
+          defaultTextColor: dept.defaultTextColor || '#000000',
+          defaultBorderColor: dept.defaultBorderColor || '#fee2e2',
+          defaultPermission: dept.defaultPermission || 'view',
+        };
+        if (dept.category) updateData.category = dept.category;
+        batch.set(ref, updateData);
         changesCount++;
       }
     });
@@ -380,16 +388,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       defaultBorderColor: newDepartmentForm.defaultBorderColor,
     };
     try {
-      await setDoc(doc(db, "부서목록", newDept.id), {
-        부서명: newDept.name,
-        순서: newDept.order,
-        색상: newDept.color,
-        기본색상: newDept.defaultColor,
-        기본글자색: newDept.defaultTextColor,
-        기본테두리색: newDept.defaultBorderColor,
-        카테고리: newDept.category || '',
-        설명: ''
-      });
+      // departments 컬렉션에 영문 필드명으로 저장
+      const deptData: Record<string, any> = {
+        id: newDept.id,
+        name: newDept.name,
+        order: newDept.order,
+        color: newDept.color,
+        defaultColor: newDept.defaultColor,
+        defaultTextColor: newDept.defaultTextColor,
+        defaultBorderColor: newDept.defaultBorderColor,
+        defaultPermission: newDepartmentForm.defaultPermission || 'view',
+      };
+      if (newDept.category) deptData.category = newDept.category;
+      await setDoc(doc(db, "departments", newDept.id), deptData);
 
       // Apply default permission to all staff with accounts
       const batch = writeBatch(db);
@@ -434,7 +445,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleDelete = async (id: string) => {
     if (confirm('삭제하시겠습니까? (즉시 반영)')) {
       try {
-        await deleteDoc(doc(db, "부서목록", id));
+        await deleteDoc(doc(db, "departments", id));
         // Remove from local state immediately to prevents 'Save Changes' from trying to update a deleted doc
         setLocalDepartments(prev => prev.filter(d => d.id !== id));
       } catch (e) { console.error(e); }

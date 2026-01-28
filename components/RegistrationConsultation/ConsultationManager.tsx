@@ -2,6 +2,7 @@ import React, { useState, useCallback, Suspense, lazy } from 'react';
 import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade } from '../../types';
 import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation } from '../../hooks/useConsultations';
 import { useStudents } from '../../hooks/useStudents';
+import { usePermissions } from '../../hooks/usePermissions';
 import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
@@ -17,6 +18,16 @@ interface ConsultationManagerProps {
 }
 
 const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }) => {
+    const { hasPermission } = usePermissions(userProfile);
+    const isMaster = userProfile?.role === 'master';
+
+    // 권한 체크
+    const canView = isMaster || hasPermission('consultation.view') || hasPermission('consultation.manage');
+    const canCreate = isMaster || hasPermission('consultation.create');
+    const canEdit = isMaster || hasPermission('consultation.edit') || hasPermission('consultation.manage');
+    const canManage = isMaster || hasPermission('consultation.manage'); // 모든 상담 관리 가능
+    const canConvert = isMaster || hasPermission('consultation.convert');
+
     const [view, setView] = useState<'dashboard' | 'table' | 'yearly'>('dashboard');
     const [viewColumns, setViewColumns] = useState<1 | 2>(1); // 1단/2단 보기 상태
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
@@ -362,21 +373,27 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                         </div>
                     )}
 
-                    <button
-                        onClick={() => setShowMigrationModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg shadow-lg hover:shadow-green-500/30 transition-all text-xs font-bold"
-                    >
-                        <Upload size={16} />
-                        DB 불러오기
-                    </button>
+                    {/* DB 불러오기: 전환 또는 관리 권한 필요 */}
+                    {(canConvert || canManage) && (
+                        <button
+                            onClick={() => setShowMigrationModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg shadow-lg hover:shadow-green-500/30 transition-all text-xs font-bold"
+                        >
+                            <Upload size={16} />
+                            DB 불러오기
+                        </button>
+                    )}
 
-                    <button
-                        onClick={openAddModal}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all text-xs font-bold"
-                    >
-                        <Plus size={16} />
-                        상담 등록
-                    </button>
+                    {/* 상담 등록: 생성 권한 필요 */}
+                    {canCreate && (
+                        <button
+                            onClick={openAddModal}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all text-xs font-bold"
+                        >
+                            <Plus size={16} />
+                            상담 등록
+                        </button>
+                    )}
                 </div>
             </TabSubNavigation>
 
@@ -451,6 +468,10 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                             onEdit={openEditModal}
                             onDelete={handleDeleteRecord}
                             onConvertToStudent={handleConvertToStudent}
+                            currentUserId={userProfile?.uid}
+                            canEdit={canEdit}
+                            canManage={canManage}
+                            canConvert={canConvert}
                         />
                     )}
 
@@ -480,13 +501,15 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                 </div>
             </main>
 
-            {/* Mobile Floating Action Button */}
-            <button
-                onClick={openAddModal}
-                className="md:hidden fixed bottom-24 right-5 bg-indigo-600 text-white p-4 rounded-full shadow-lg shadow-indigo-400/50 z-40 hover:scale-105 active:scale-95 transition-all"
-            >
-                <Plus size={28} strokeWidth={2.5} />
-            </button>
+            {/* Mobile Floating Action Button - 생성 권한 필요 */}
+            {canCreate && (
+                <button
+                    onClick={openAddModal}
+                    className="md:hidden fixed bottom-24 right-5 bg-indigo-600 text-white p-4 rounded-full shadow-lg shadow-indigo-400/50 z-40 hover:scale-105 active:scale-95 transition-all"
+                >
+                    <Plus size={28} strokeWidth={2.5} />
+                </button>
+            )}
 
             {/* Mobile Bottom Navigation */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center h-20 pb-4 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">

@@ -63,6 +63,7 @@ const PERMISSION_CATEGORIES = [
       { id: 'attendance.manage_math' as PermissionId, label: '수학관리' },
       { id: 'attendance.manage_english' as PermissionId, label: '영어관리' },
       { id: 'attendance.edit_student_info' as PermissionId, label: '학생정보' },
+      { id: 'attendance.manage_sessions' as PermissionId, label: '세션설정' },
     ]
   },
   {
@@ -96,6 +97,7 @@ const PERMISSION_CATEGORIES = [
       { id: 'consultation.create' as PermissionId, label: '생성' },
       { id: 'consultation.edit' as PermissionId, label: '수정' },
       { id: 'consultation.convert' as PermissionId, label: '전환' },
+      { id: 'consultation.manage' as PermissionId, label: '관리' },
     ]
   },
   {

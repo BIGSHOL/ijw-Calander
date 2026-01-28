@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UnifiedStudent } from '../../types';
+import { UnifiedStudent, UserProfile } from '../../types';
 import BasicInfoTab from './tabs/BasicInfoTab';
 import CoursesTab from './tabs/CoursesTab';
 import GradesTab from './tabs/GradesTab';
@@ -7,21 +7,29 @@ import ConsultationsTab from './tabs/ConsultationsTab';
 import AttendanceTab from './tabs/AttendanceTab';
 import WithdrawalModal from './WithdrawalModal';
 import { useStudents } from '../../hooks/useStudents';
+import { usePermissions } from '../../hooks/usePermissions';
 import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar } from 'lucide-react';
 
 interface StudentDetailProps {
   student: UnifiedStudent;
   compact?: boolean;  // 모달에서 사용 시 컴팩트 모드
   readOnly?: boolean; // 조회 전용 모드 (수정 버튼 숨김)
+  currentUser?: UserProfile | null; // 권한 체크용
   // compact 모드(모달)에서는 퇴원처리 버튼이 항상 숨겨짐 - 학생관리에서만 처리
 }
 
 type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations';
 
-const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false, readOnly = false }) => {
+const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false, readOnly = false, currentUser }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const { updateStudent, deleteStudent } = useStudents();
+
+  // 권한 체크
+  const { hasPermission } = usePermissions(currentUser || null);
+  const isMaster = currentUser?.role === 'master';
+  const canDeleteStudent = isMaster || hasPermission('students.delete');
+  const canManageEnrollment = isMaster || hasPermission('students.enrollment.manage');
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'basic', label: '기본정보', icon: <User className="w-3 h-3" /> },
@@ -96,13 +104,15 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
                   <span>퇴원 처리</span>
                 </button>
               )}
-              <button
-                onClick={handleDelete}
-                className="flex items-center gap-1 p-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-red-100 hover:text-red-700 transition-colors"
-                title="학생 삭제"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
+              {canDeleteStudent && (
+                <button
+                  onClick={handleDelete}
+                  className="flex items-center gap-1 p-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-red-100 hover:text-red-700 transition-colors"
+                  title="학생 삭제"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -130,7 +140,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
       {/* 탭 컨텐츠 */}
       <div className="flex-1 overflow-y-auto p-3">
         {activeTab === 'basic' && <BasicInfoTab student={student} readOnly={readOnly} />}
-        {activeTab === 'courses' && <CoursesTab student={student} compact={compact} readOnly={readOnly} />}
+        {activeTab === 'courses' && <CoursesTab student={student} compact={compact} readOnly={readOnly || !canManageEnrollment} />}
         {activeTab === 'grades' && <GradesTab student={student} readOnly={readOnly} />}
         {activeTab === 'attendance' && <AttendanceTab student={student} readOnly={readOnly} />}
         {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly} />}

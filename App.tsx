@@ -57,6 +57,7 @@ const BillingManager = lazy(() => import('./components/Billing').then(m => ({ de
 const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
 const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
 const RoleManagementPage = lazy(() => import('./components/RoleManagement/RoleManagementPage'));
+const ResourceDashboard = lazy(() => import('./components/Resources').then(m => ({ default: m.ResourceDashboard })));
 const CalendarSettingsModal = lazy(() => import('./components/Calendar/CalendarSettingsModal'));
 // ProspectManagementTab removed - merged into ConsultationManager
 import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit, Calculator, BookOpen, Library, Building, ClipboardList, MessageCircle, BarChart3, Check, DollarSign } from 'lucide-react';
@@ -69,7 +70,7 @@ import { StaffMember } from './types';
 type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 // Import Firestore Converters from separate file
-import { departmentConverter, eventConverter } from './converters';
+import { eventConverter } from './converters';
 
 // Import Style Utilities
 import { INJAEWON_LOGO, getJobTitleStyle } from './utils/styleUtils';
@@ -190,7 +191,7 @@ const createNewStaffMember = async (user: User, isMaster: boolean): Promise<Staf
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'classroom-assignment' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | null>(null);
+  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'classroom-assignment' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | 'resources' | null>(null);
 
   // ============================================
   // Custom Hooks (Vercel Best Practices: rerender-derived-state)
@@ -798,7 +799,7 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [lookbackYears]);
 
-  // Note: 부서목록, 강사(staff 컬렉션), 휴일, classKeywords, systemConfig are now handled by React Query hooks
+  // Note: departments, staff, holidays, classKeywords, systemConfig are now handled by React Query hooks
 
 
   useEffect(() => {
@@ -1518,8 +1519,10 @@ const App: React.FC = () => {
     if (!userProfile) return false;
     if (userProfile.role === 'master' || userProfile.role === 'admin') return true;
     if (hasPermission('departments.manage')) return true;
+    // 부서 가시성 체크 - 'view' 권한이 있으면 해당 부서의 일정을 편집할 수 있음
+    // 실제 일정 편집 권한은 events.manage_own/events.manage_others로 별도 체크됨
     const permission = userProfile.departmentPermissions?.[deptId];
-    return permission === 'edit';
+    return permission === 'view';
   };
 
   // Fetch Gantt Projects for Calendar Integration (Phase 7.3)
@@ -2551,7 +2554,8 @@ const App: React.FC = () => {
                   {timetableSubject === 'english' && (
                     <button
                       onClick={() => {
-                        const canViewIntegrated = hasPermission('timetable.integrated.view');
+                        // 통합뷰는 timetable.integrated.view 또는 timetable.english.view 권한 필요
+                        const canViewIntegrated = hasPermission('timetable.integrated.view') || hasPermission('timetable.english.view');
                         setTimetableViewType(prev => {
                           if (prev === 'class') return 'teacher';
                           if (prev === 'teacher') return 'room';
@@ -2777,6 +2781,7 @@ const App: React.FC = () => {
                 <StudentManagementTab
                   filters={studentFilters}
                   sortBy={studentSortBy}
+                  currentUser={userProfile}
                 />
               </div>
             </Suspense>
@@ -2790,6 +2795,7 @@ const App: React.FC = () => {
                   searchQuery={gradesSearchQuery}
                   onSearchChange={setGradesSearchQuery}
                   onSubjectFilterChange={setGradesSubjectFilter}
+                  currentUser={userProfile}
                 />
               </div>
             </Suspense>
@@ -2797,7 +2803,7 @@ const App: React.FC = () => {
             /* Class Management View */
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 min-h-0 overflow-hidden">
-                <ClassManagementTab />
+                <ClassManagementTab currentUser={userProfile} />
               </div>
             </Suspense>
           ) : appMode === 'classroom' ? (
@@ -2818,7 +2824,7 @@ const App: React.FC = () => {
             /* Student Consultation Management View */
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto">
-                <StudentConsultationTab />
+                <StudentConsultationTab currentUser={userProfile} />
               </div>
             </Suspense>
           ) : appMode === 'billing' ? (
@@ -2850,6 +2856,15 @@ const App: React.FC = () => {
               <div className="w-full flex-1 overflow-hidden">
                 <RoleManagementPage
                   currentUser={userProfile}
+                />
+              </div>
+            </Suspense>
+          ) : appMode === 'resources' ? (
+            /* Resources Dashboard View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-hidden">
+                <ResourceDashboard
+                  userProfile={userProfile}
                 />
               </div>
             </Suspense>
