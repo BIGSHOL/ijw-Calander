@@ -14,11 +14,13 @@ interface ClassDetailModalProps {
   classInfo: ClassInfo;
   onClose: () => void;
   onStudentClick?: (studentId: string) => void;
+  canEdit?: boolean;  // 수업 수정 권한
+  canDelete?: boolean;  // 수업 삭제 권한
 }
 
 type TabType = 'info' | 'students' | 'stats';
 
-const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose, onStudentClick }) => {
+const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose, onStudentClick, canEdit = true, canDelete = true }) => {
   const { className, subject, studentCount } = classInfo;
   const [showEditModal, setShowEditModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('info');
@@ -118,20 +120,24 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
                 </span>
               </div>
               <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setShowEditModal(true)}
-                  disabled={deleteClassMutation.isPending}
-                  className="bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-3 py-1.5 rounded font-semibold text-xs disabled:opacity-50 transition-colors"
-                >
-                  편집
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleteClassMutation.isPending}
-                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded font-semibold text-xs disabled:opacity-50 transition-colors"
-                >
-                  삭제
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => setShowEditModal(true)}
+                    disabled={deleteClassMutation.isPending}
+                    className="bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-3 py-1.5 rounded font-semibold text-xs disabled:opacity-50 transition-colors"
+                  >
+                    편집
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleteClassMutation.isPending}
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded font-semibold text-xs disabled:opacity-50 transition-colors"
+                  >
+                    삭제
+                  </button>
+                )}
                 <button
                   onClick={onClose}
                   disabled={deleteClassMutation.isPending}

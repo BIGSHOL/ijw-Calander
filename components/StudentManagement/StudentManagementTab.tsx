@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
-import { UnifiedStudent } from '../../types';
+import { UnifiedStudent, UserProfile } from '../../types';
 import { useStudents, searchStudentsByQuery } from '../../hooks/useStudents';
+import { usePermissions } from '../../hooks/usePermissions';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
@@ -32,9 +33,16 @@ export interface StudentFilters {
 interface StudentManagementTabProps {
   filters: StudentFilters;
   sortBy: 'name' | 'grade' | 'startDate';
+  currentUser?: UserProfile | null;
 }
 
-const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, sortBy }) => {
+const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, sortBy, currentUser }) => {
+  const { hasPermission } = usePermissions(currentUser);
+  const isMaster = currentUser?.role === 'master';
+  const canView = isMaster || hasPermission('students.view');
+  const canEdit = isMaster || hasPermission('students.edit');
+  const canManageEnrollment = isMaster || hasPermission('students.enrollment.manage');
+
   const { students, loading, error, refreshStudents } = useStudents(true); // includeWithdrawn: true
   const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -352,20 +360,24 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             <span className="text-sm font-bold text-white">학생 목록</span>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2">
-            <button
-              onClick={() => setShowMigrationModal(true)}
-              className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
-              title="데이터 가져오기"
-            >
-              <Database className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setIsAddStudentModalOpen(true)}
-              className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
-              title="학생 추가"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-            </button>
+            {canEdit && (
+              <>
+                <button
+                  onClick={() => setShowMigrationModal(true)}
+                  className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                  title="데이터 가져오기"
+                >
+                  <Database className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setIsAddStudentModalOpen(true)}
+                  className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                  title="학생 추가"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
             <button
               onClick={async () => {
                 setIsRefreshing(true);
@@ -427,7 +439,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 <span className="text-sm font-medium">목록으로</span>
               </button>
             </div>
-            <StudentDetail student={selectedStudent} />
+            <StudentDetail student={selectedStudent} readOnly={!canEdit} currentUser={currentUser} />
           </>
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400">

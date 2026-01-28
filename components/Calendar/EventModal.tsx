@@ -103,6 +103,7 @@ const EventModal: React.FC<EventModalProps> = ({
   const isAuthor = existingEvent?.authorId === currentUser?.uid;
   const canEdit = hasPermission(isAuthor ? 'events.manage_own' : 'events.manage_others');
   const canDelete = hasPermission(isAuthor ? 'events.manage_own' : 'events.manage_others');
+  const canManageAttendance = hasPermission('events.attendance'); // 타인의 참가현황 변경 권한
 
   const isMaster = currentUser?.role === 'master';
   const isAdmin = currentUser?.role === 'admin';
@@ -672,7 +673,7 @@ const EventModal: React.FC<EventModalProps> = ({
                       const displayName = u.jobTitle ? `${name} (${u.jobTitle})` : name;
                       const isSelected = participants.includes(displayName);
                       const currentStatus = attendance[u.uid] || 'pending';
-                      const canEditStatus = currentUser?.uid === u.uid || isMaster || isAdmin;
+                      const canEditStatus = currentUser?.uid === u.uid || isMaster || isAdmin || canManageAttendance;
                       const cycleStatus = () => {
                         const next: Record<string, 'pending' | 'joined' | 'declined'> = {
                           'pending': 'joined',

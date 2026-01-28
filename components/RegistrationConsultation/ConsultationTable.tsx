@@ -10,6 +10,10 @@ interface ConsultationTableProps {
     onEdit: (record: ConsultationRecord) => void;
     onDelete: (id: string) => void;
     onConvertToStudent?: (record: ConsultationRecord) => void; // 원생 전환 콜백
+    currentUserId?: string; // 현재 로그인 사용자 ID
+    canEdit?: boolean; // 상담 수정 권한 (본인 상담 또는 전체 상담)
+    canManage?: boolean; // 모든 상담 관리 권한 (true면 모든 상담 수정/삭제 가능)
+    canConvert?: boolean; // 원생 전환 권한
 }
 
 // 색상 테마
@@ -87,12 +91,24 @@ const loadSavedColumns = (): Set<ColumnKey> => {
     return new Set(DEFAULT_VISIBLE_COLUMNS);
 };
 
-export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEdit, onDelete, onConvertToStudent }) => {
+export const ConsultationTable: React.FC<ConsultationTableProps> = ({
+    data, onEdit, onDelete, onConvertToStudent,
+    currentUserId, canEdit = false, canManage = false, canConvert = false
+}) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [showSettings, setShowSettings] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(loadSavedColumns);
     const itemsPerPage = 15;
+
+    // 특정 상담에 대한 수정/삭제 권한 확인
+    // canManage=true면 모든 상담 수정/삭제 가능
+    // canEdit=true면 본인 작성 상담만 수정 가능
+    const canEditRecord = (record: ConsultationRecord): boolean => {
+        if (canManage) return true;
+        if (canEdit && record.authorId === currentUserId) return true;
+        return false;
+    };
 
     // visibleColumns 변경 시 localStorage에 저장
     const updateVisibleColumns = (newColumns: Set<ColumnKey>) => {
@@ -354,16 +370,19 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                         ))}
                                         <td className="px-3 py-2.5 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-inherit" style={{ minWidth: '70px' }}>
                                             <div className="flex justify-end space-x-1">
-                                                <button
-                                                    onClick={() => onEdit(record)}
-                                                    className="p-1.5 rounded-md transition-colors"
-                                                    style={{ color: COLORS.navy }}
-                                                    title="수정"
-                                                >
-                                                    <Edit2 size={14} />
-                                                </button>
-                                                {/* 원생 전환 버튼 - 이미 전환된 경우 비활성화 */}
-                                                {onConvertToStudent && !record.registeredStudentId && (
+                                                {/* 수정 버튼 - canManage 또는 본인 작성 상담만 */}
+                                                {canEditRecord(record) && (
+                                                    <button
+                                                        onClick={() => onEdit(record)}
+                                                        className="p-1.5 rounded-md transition-colors"
+                                                        style={{ color: COLORS.navy }}
+                                                        title="수정"
+                                                    >
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                )}
+                                                {/* 원생 전환 버튼 - canConvert 권한 + 이미 전환된 경우 비활성화 */}
+                                                {canConvert && onConvertToStudent && !record.registeredStudentId && (
                                                     <button
                                                         onClick={() => onConvertToStudent(record)}
                                                         className="p-1.5 rounded-md transition-colors text-green-600 hover:bg-green-50"
@@ -378,15 +397,18 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                                         ✓ 전환완료
                                                     </span>
                                                 )}
-                                                <button
-                                                    onClick={() => {
-                                                        if (window.confirm('정말로 삭제하시겠습니까?')) onDelete(record.id);
-                                                    }}
-                                                    className="text-red-500 p-1.5 hover:bg-red-50 rounded-md transition-colors"
-                                                    title="삭제"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
+                                                {/* 삭제 버튼 - canManage 또는 본인 작성 상담만 */}
+                                                {canEditRecord(record) && (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (window.confirm('정말로 삭제하시겠습니까?')) onDelete(record.id);
+                                                        }}
+                                                        className="text-red-500 p-1.5 hover:bg-red-50 rounded-md transition-colors"
+                                                        title="삭제"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -452,21 +474,27 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({ data, onEd
                                     )}
                                 </div>
                                 <div className="flex gap-2">
-                                    <button
-                                        onClick={() => onEdit(record)}
-                                        className="p-2 rounded-lg"
-                                        style={{ backgroundColor: `${COLORS.yellow}20`, color: COLORS.navy }}
-                                    >
-                                        <Edit2 size={16} />
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            if (window.confirm('삭제하시겠습니까?')) onDelete(record.id);
-                                        }}
-                                        className="p-2 text-red-500 bg-red-50 rounded-lg"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
+                                    {/* 수정 버튼 - canManage 또는 본인 작성 상담만 */}
+                                    {canEditRecord(record) && (
+                                        <button
+                                            onClick={() => onEdit(record)}
+                                            className="p-2 rounded-lg"
+                                            style={{ backgroundColor: `${COLORS.yellow}20`, color: COLORS.navy }}
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                    )}
+                                    {/* 삭제 버튼 - canManage 또는 본인 작성 상담만 */}
+                                    {canEditRecord(record) && (
+                                        <button
+                                            onClick={() => {
+                                                if (window.confirm('삭제하시겠습니까?')) onDelete(record.id);
+                                            }}
+                                            className="p-2 text-red-500 bg-red-50 rounded-lg"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>

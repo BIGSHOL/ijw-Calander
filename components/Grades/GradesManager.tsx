@@ -1,16 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { UnifiedStudent, Exam, StudentScore, ExamType, ExamScope, EXAM_TYPE_LABELS, EXAM_SCOPE_LABELS, GRADE_COLORS, calculateGrade } from '../../types';
+import { UnifiedStudent, Exam, StudentScore, ExamType, ExamScope, EXAM_TYPE_LABELS, EXAM_SCOPE_LABELS, GRADE_COLORS, calculateGrade, UserProfile } from '../../types';
 import { useStudents } from '../../hooks/useStudents';
 import { useExams, useCreateExam, useUpdateExam, useDeleteExam } from '../../hooks/useExams';
 import { useClasses, GRADE_OPTIONS } from '../../hooks/useClasses';
 import { useExamSeries, useCreateExamSeries } from '../../hooks/useExamSeries';
+import { usePermissions } from '../../hooks/usePermissions';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { db, auth } from '../../firebaseConfig';
 import {
   GraduationCap, Plus, Trash2, Edit, Save, X, ChevronDown, ChevronRight,
   Users, Calendar, BookOpen, BarChart3, Search, Filter, Loader2,
-  TrendingUp, TrendingDown, Minus, AlertCircle, Check, Tag, Building2, Eye
+  TrendingUp, TrendingDown, Minus, AlertCircle, Check, Tag, Building2, Eye, Lock
 } from 'lucide-react';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import GradesTab from '../StudentManagement/tabs/GradesTab';
@@ -60,11 +61,19 @@ interface GradesManagerProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onSubjectFilterChange?: (filter: 'all' | 'math' | 'english') => void;
+  currentUser?: UserProfile | null;
 }
 
-const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuery, onSearchChange, onSubjectFilterChange }) => {
+const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuery, onSearchChange, onSubjectFilterChange, currentUser }) => {
   const user = auth.currentUser;
   const queryClient = useQueryClient();
+
+  // 권한 체크
+  const { hasPermission } = usePermissions(currentUser || null);
+  const isMaster = currentUser?.role === 'master';
+  const canViewGrades = isMaster || hasPermission('grades.view');
+  const canEditGrades = isMaster || hasPermission('grades.edit');
+  const canManageExams = isMaster || hasPermission('grades.manage_exams');
 
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('exams');
@@ -596,14 +605,21 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
               <span>통계 갱신</span>
             </button>
 
-            {/* 새 시험 등록 버튼 */}
-            <button
-              onClick={() => setIsCreatingExam(true)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
-            >
-              <Plus size={14} />
-              <span>시험 등록</span>
-            </button>
+            {/* 새 시험 등록 버튼 - 권한 체크 */}
+            {canManageExams ? (
+              <button
+                onClick={() => setIsCreatingExam(true)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+              >
+                <Plus size={14} />
+                <span>시험 등록</span>
+              </button>
+            ) : (
+              <span className="flex items-center gap-1 px-3 py-1 text-xs text-gray-400" title="시험 관리 권한이 필요합니다">
+                <Lock size={12} />
+                시험 등록
+              </span>
+            )}
           </div>
         </div>
       </TabSubNavigation>
@@ -627,18 +643,25 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                 >
                   취소
                 </button>
-                <button
-                  onClick={handleBatchSaveScores}
-                  disabled={batchAddScores.isPending}
-                  className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                >
-                  {batchAddScores.isPending ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Save className="w-3 h-3" />
-                  )}
-                  <span>저장</span>
-                </button>
+                {canEditGrades ? (
+                  <button
+                    onClick={handleBatchSaveScores}
+                    disabled={batchAddScores.isPending}
+                    className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {batchAddScores.isPending ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Save className="w-3 h-3" />
+                    )}
+                    <span>저장</span>
+                  </button>
+                ) : (
+                  <span className="flex items-center gap-1 px-2 py-1 text-xs text-gray-400" title="성적 수정 권한이 필요합니다">
+                    <Lock className="w-3 h-3" />
+                    저장
+                  </span>
+                )}
               </div>
             </div>
 
@@ -884,25 +907,37 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                         {stats.count > 0 ? stats.min : '-'}
                       </span>
 
-                      {/* 액션 버튼들 */}
+                      {/* 액션 버튼들 - 권한 체크 */}
                       <div className="flex items-center gap-1.5 w-24 shrink-0 justify-end">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); startScoreInput(exam); }}
-                          className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
-                        >
-                          입력
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm('이 시험을 삭제하시겠습니까?')) {
-                              deleteExamMutation.mutate(exam.id);
-                            }
-                          }}
-                          className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canEditGrades ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); startScoreInput(exam); }}
+                            className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                          >
+                            입력
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); startScoreInput(exam); }}
+                            className="px-2 py-0.5 text-xs bg-gray-50 text-gray-400 rounded"
+                            title="조회만 가능합니다"
+                          >
+                            조회
+                          </button>
+                        )}
+                        {canManageExams && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('이 시험을 삭제하시겠습니까?')) {
+                                deleteExamMutation.mutate(exam.id);
+                              }
+                            }}
+                            className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         {isExpanded ? (
                           <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
                         ) : (

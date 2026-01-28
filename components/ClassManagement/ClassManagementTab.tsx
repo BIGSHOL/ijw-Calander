@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { BookOpen, Search, Plus, Calculator, Settings, Microscope, Book, ChevronDown, X } from 'lucide-react';
+import { BookOpen, Search, Plus, Calculator, Settings, Microscope, Book, ChevronDown, X, Lock } from 'lucide-react';
 import { useClasses, ClassInfo } from '../../hooks/useClasses';
 import { useStaff } from '../../hooks/useStaff';
+import { usePermissions } from '../../hooks/usePermissions';
+import { UserProfile } from '../../types';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import ClassList from './ClassList';
 import ClassDetailModal from './ClassDetailModal';
@@ -19,7 +21,18 @@ export interface ClassFilters {
   selectedDays: string[]; // 선택된 요일들 (월~일)
 }
 
-const ClassManagementTab: React.FC = () => {
+interface ClassManagementTabProps {
+  currentUser?: UserProfile | null;
+}
+
+const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) => {
+  // 권한 체크
+  const { hasPermission } = usePermissions(currentUser || null);
+  const isMaster = currentUser?.role === 'master';
+  const canViewClasses = isMaster || hasPermission('classes.view');
+  const canCreateClass = isMaster || hasPermission('classes.create');
+  const canEditClass = isMaster || hasPermission('classes.edit');
+  const canDeleteClass = isMaster || hasPermission('classes.delete');
   // 필터 상태
   const [filters, setFilters] = useState<ClassFilters>({
     subject: 'all',
@@ -512,23 +525,32 @@ const ClassManagementTab: React.FC = () => {
                 총 <span className="text-[#fdb813] font-bold">{filteredClasses.length}</span>개
               </span>
 
-              {/* 우측 버튼들 */}
+              {/* 우측 버튼들 - 권한 체크 */}
               <div className="flex items-center gap-2 ml-auto flex-shrink-0">
-                <button
-                  onClick={() => setShowSettingsModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gray-700 text-white hover:bg-gray-600 transition-colors shadow-sm font-bold"
-                  title="수업 설정"
-                >
-                  <Settings size={14} />
-                  <span>설정</span>
-                </button>
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
-                >
-                  <Plus size={14} />
-                  <span>새 수업</span>
-                </button>
+                {canEditClass && (
+                  <button
+                    onClick={() => setShowSettingsModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gray-700 text-white hover:bg-gray-600 transition-colors shadow-sm font-bold"
+                    title="수업 설정"
+                  >
+                    <Settings size={14} />
+                    <span>설정</span>
+                  </button>
+                )}
+                {canCreateClass ? (
+                  <button
+                    onClick={() => setShowAddModal(true)}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+                  >
+                    <Plus size={14} />
+                    <span>새 수업</span>
+                  </button>
+                ) : (
+                  <span className="flex items-center gap-1 px-3 py-1 text-xs text-gray-400" title="수업 생성 권한이 필요합니다">
+                    <Lock size={12} />
+                    새 수업
+                  </span>
+                )}
               </div>
           </div>
         </TabSubNavigation>
@@ -578,23 +600,25 @@ const ClassManagementTab: React.FC = () => {
         <ClassDetailModal
           classInfo={selectedClass}
           onClose={() => setSelectedClass(null)}
+          canEdit={canEditClass}
+          canDelete={canDeleteClass}
         />
       )}
 
-      {/* 새 수업 추가 모달 */}
-      {showAddModal && (
+      {/* 새 수업 추가 모달 - 권한 체크 */}
+      {showAddModal && canCreateClass && (
         <AddClassModal
           onClose={() => setShowAddModal(false)}
           defaultSubject={filters.subject === 'all' ? 'math' : filters.subject}
         />
       )}
 
-      {/* 수업 설정 모달 */}
+      {/* 수업 설정 모달 - 권한 체크 */}
       {showSettingsModal && (
         <ClassSettingsModal
           isOpen={showSettingsModal}
           onClose={() => setShowSettingsModal(false)}
-          canEdit={true}
+          canEdit={canEditClass}
         />
       )}
 

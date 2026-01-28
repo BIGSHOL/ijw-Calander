@@ -399,7 +399,7 @@ export type PermissionId =
   // Attendance
   | 'attendance.manage_own' | 'attendance.edit_all'
   | 'attendance.manage_math' | 'attendance.manage_english'
-  | 'attendance.manage_science' | 'attendance.manage_korean'
+  | 'attendance.manage_science' | 'attendance.manage_korean'  // Reserved: 과학/국어 출석부 기능 추가 시 사용
   | 'attendance.edit_student_info'
   | 'attendance.manage_sessions'  // 세션 기간 설정 (관리자 전용)
   // Students (NEW)
@@ -408,7 +408,7 @@ export type PermissionId =
   // Classes Management (NEW)
   | 'classes.view' | 'classes.create' | 'classes.edit' | 'classes.delete'
   // Consultation (NEW)
-  | 'consultation.view' | 'consultation.create' | 'consultation.edit' | 'consultation.convert'  // convert: 예비원생→재원생
+  | 'consultation.view' | 'consultation.create' | 'consultation.edit' | 'consultation.convert' | 'consultation.manage'  // manage: 모든 상담 조회/수정 가능
   // Grades (NEW)
   | 'grades.view' | 'grades.edit' | 'grades.manage_exams'
   // Billing (NEW)
@@ -455,7 +455,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Classes
     'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': true,
     // Consultation
-    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true,
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true, 'consultation.manage': true,
     // Grades
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
     // Billing
@@ -491,7 +491,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Classes
     'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': false,
     // Consultation
-    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true,
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true, 'consultation.manage': true,
     // Grades
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
     // Billing
@@ -526,7 +526,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Classes
     'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': false,
     // Consultation
-    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true,
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true, 'consultation.manage': true,
     // Grades
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
     // Billing
@@ -563,7 +563,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Classes
     'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': false,
     // Consultation
-    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true,
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true, 'consultation.manage': true,
     // Grades
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
     // Billing
@@ -596,8 +596,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'students.enrollment.manage': false,
     // Classes (view only)
     'classes.view': true, 'classes.create': false, 'classes.edit': false, 'classes.delete': false,
-    // Consultation
-    'consultation.view': true, 'consultation.create': true, 'consultation.edit': false, 'consultation.convert': false,
+    // Consultation (본인 상담만 수정 가능)
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': false, 'consultation.manage': false,
     // Grades (view & edit own)
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': false,
     // Billing
@@ -630,8 +630,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'students.enrollment.manage': false,
     // Classes (view only)
     'classes.view': true, 'classes.create': false, 'classes.edit': false, 'classes.delete': false,
-    // Consultation
-    'consultation.view': true, 'consultation.create': true, 'consultation.edit': false, 'consultation.convert': false,
+    // Consultation (본인 상담만 수정 가능)
+    'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': false, 'consultation.manage': false,
     // Grades (view & edit own)
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': false,
     // Billing
@@ -651,7 +651,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Students (view only)
     'students.view': true, 'students.edit': false, 'students.delete': false,
     // Consultation (view only)
-    'consultation.view': true, 'consultation.create': false, 'consultation.edit': false, 'consultation.convert': false,
+    'consultation.view': true, 'consultation.create': false, 'consultation.edit': false, 'consultation.convert': false, 'consultation.manage': false,
     // Grades (view only)
     'grades.view': true, 'grades.edit': false, 'grades.manage_exams': false,
   },
@@ -789,7 +789,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'dashboard' | 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'classroom-assignment' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing' | 'role-management';
+export type AppTab = 'dashboard' | 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'classroom-assignment' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing' | 'role-management' | 'resources';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -816,6 +816,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   staff: { label: '직원 관리', icon: '👔' },
   billing: { label: '수납 관리', icon: '💰' },
   'role-management': { label: '역할 관리', icon: '🔐' },
+  resources: { label: '자료실', icon: '📁' },
 };
 
 // Tab Group 구조 - 무한 확장 가능
@@ -861,7 +862,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'admin',
     label: '관리',
     icon: '⚙️',
-    tabs: ['payment', 'staff', 'billing'],
+    tabs: ['payment', 'staff', 'billing', 'resources'],
     order: 4,
   },
   {
@@ -888,9 +889,9 @@ export type TabPermissionConfig = {
 // Default Tab Permissions (Fallback)
 // Note: master always has access to all tabs (handled in code)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'role-management'],
-  admin: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'role-management'],
-  manager: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing'],
+  master: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'role-management', 'resources'],
+  admin: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'role-management', 'resources'],
+  manager: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'resources'],
   math_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations'],
   english_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations'],
   math_teacher: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
@@ -1777,3 +1778,112 @@ export interface KPICardData {
  * 대시보드 역할 타입
  */
 export type DashboardRole = 'master' | 'teacher' | 'staff' | 'manager';
+
+// ============ RESOURCE TYPES (자료실) ============
+
+/**
+ * 리소스 타입 (노션, 구글 드라이브 등) - 기본 타입 + 커스텀 타입 지원
+ */
+export type ResourceType = 'notion' | 'google_drive' | 'google_docs' | 'google_sheets' | 'youtube' | 'other' | string;
+
+/**
+ * 리소스 인터페이스
+ */
+export interface Resource {
+  id: string;
+  title: string;
+  description?: string;
+  url: string;
+
+  // 분류
+  type: string; // ResourceType + custom types
+  category: string;
+
+  // 표시
+  icon?: string;
+  color?: string;
+  order: number;
+  isPinned: boolean;
+
+  // 메타데이터
+  createdBy: string;
+  createdByName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 리소스 타입 라벨
+ */
+export const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
+  notion: '노션',
+  google_drive: '구글 드라이브',
+  google_docs: '구글 문서',
+  google_sheets: '구글 시트',
+  youtube: '유튜브',
+  other: '기타',
+};
+
+/**
+ * 리소스 타입 아이콘
+ */
+export const RESOURCE_TYPE_ICONS: Record<string, string> = {
+  notion: '📝',
+  google_drive: '📁',
+  google_docs: '📄',
+  google_sheets: '📊',
+  youtube: '🎬',
+  other: '🔗',
+};
+
+/**
+ * 이모지 선택 목록 (자주 사용하는 이모지)
+ */
+export const EMOJI_LIST = [
+  // 문서/파일
+  '📁', '📂', '📄', '📝', '📋', '📊', '📈', '📉', '🗂️', '🗃️',
+  // 미디어
+  '🎬', '🎥', '📹', '🎵', '🎶', '🖼️', '📷', '📸', '🎨', '🎮',
+  // 웹/링크
+  '🔗', '🌐', '💻', '🖥️', '📱', '⚙️', '🔧', '🛠️', '🔑', '🔒',
+  // 학습/교육
+  '📚', '📖', '✏️', '🖊️', '📐', '📏', '🎓', '🏫', '👨‍🏫', '👩‍🏫',
+  // 업무/비즈니스
+  '💼', '📌', '📍', '🏷️', '💡', '⭐', '🌟', '✅', '❗', '❓',
+  // 커뮤니케이션
+  '💬', '📢', '📣', '📧', '✉️', '📞', '☎️', '📲', '🔔', '🔕',
+  // 시간/캘린더
+  '📅', '📆', '⏰', '⏱️', '⏲️', '🕐', '🗓️', '📌', '⏳', '⌛',
+  // 기타
+  '🎯', '🚀', '💎', '🏆', '🎁', '🎉', '🎊', '❤️', '💚', '💙',
+];
+
+/**
+ * 계층형 카테고리 구조 (대분류 > 중분류 > 소분류)
+ */
+export const RESOURCE_CATEGORY_TREE: Record<string, Record<string, string[]>> = {
+  '업무': {
+    '매뉴얼': ['신입 가이드', '시스템 사용법', '기타'],
+    '서류': ['행정', '계약', '보고서', '기타'],
+    '기타': [],
+  },
+  '수업': {
+    '교안': ['영어', '수학', '기타'],
+    '자료': ['영어', '수학', '기타'],
+    '기타': [],
+  },
+  '회의': {
+    '회의록': ['정기회의', '특별회의', '기타'],
+    '공지': ['전체공지', '부서공지', '기타'],
+    '기타': [],
+  },
+  '기타': {
+    '기타': [],
+  },
+};
+
+// 카테고리 경로 구분자 (예: "업무 > 매뉴얼 > 신입 가이드")
+export const CATEGORY_SEPARATOR = ' > ';
+
+// 대분류 목록
+export const DEFAULT_RESOURCE_CATEGORIES = Object.keys(RESOURCE_CATEGORY_TREE);
