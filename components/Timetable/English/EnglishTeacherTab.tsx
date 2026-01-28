@@ -3,7 +3,7 @@
 // 영어 강사별 시간표 탭
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Edit3, Move, Eye, Settings, ArrowRightLeft, Copy, Upload, Save } from 'lucide-react';
+import { Edit3, Move, Eye, Settings, ArrowRightLeft, Copy, Upload, Save, Image } from 'lucide-react';
 import { EN_PERIODS, EN_WEEKDAYS, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks, isExcludedStudent } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { Teacher, ClassKeywordColor } from '../../../types';
@@ -11,6 +11,7 @@ import BatchInputBar, { InputData, MergedClass, ClassSuggestion } from './BatchI
 import MoveConfirmBar from './MoveConfirmBar';
 import MoveSelectionModal from './MoveSelectionModal';
 import PortalTooltip from '../../Common/PortalTooltip';
+import ExportImageModal from '../../Common/ExportImageModal';
 import { useEnglishClassUpdater } from '../../../hooks/useEnglishClassUpdater';
 import { useClasses } from '../../../hooks/useClasses';
 import { useQueryClient } from '@tanstack/react-query';
@@ -99,6 +100,10 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     const [hasChanges, setHasChanges] = useState(false);
     const [pendingMove, setPendingMove] = useState<{ source: any, target: any, sourceData: ScheduleCell } | null>(null);
     const dragSource = useRef<{ tIdx: number, pIdx: number, dIdx: number } | null>(null);
+
+    // 이미지 내보내기 상태
+    const [isExportModalOpen, setExportModalOpen] = useState(false);
+    const tableRef = useRef<HTMLTableElement>(null);
 
     // Initialize/Sync Local State
     useEffect(() => {
@@ -705,6 +710,16 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                             </div>
                         </>
                     )}
+
+                    {/* 이미지 내보내기 버튼 */}
+                    <button
+                        onClick={() => setExportModalOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm"
+                        title="시간표 이미지로 내보내기"
+                    >
+                        <Image size={14} />
+                        이미지 저장
+                    </button>
                 </div>
             </div>
 
@@ -750,7 +765,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             {/* Schedule Grid */}
             <div className="flex-1 overflow-auto bg-gray-100 select-none">
                 <div className="p-2">
-                    <table className="border-collapse bg-white shadow w-max table-fixed">
+                    <table ref={tableRef} className="border-collapse bg-white shadow w-max table-fixed">
                         <thead className="sticky top-0 z-10">
                             <tr>
                                 <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
@@ -977,6 +992,16 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                 pendingMove={pendingMove}
                 setPendingMove={setPendingMove}
                 performMove={performMove}
+            />
+
+            {/* 이미지 내보내기 모달 */}
+            <ExportImageModal
+                isOpen={isExportModalOpen}
+                onClose={() => setExportModalOpen(false)}
+                targetRef={tableRef as React.RefObject<HTMLElement>}
+                title="영어 시간표 이미지 내보내기"
+                subtitle={filterTeacher === 'all' ? '전체 강사' : `${filterTeacher} 선생님`}
+                fileName={`영어시간표_${filterTeacher === 'all' ? '전체' : filterTeacher}`}
             />
         </div>
     );
