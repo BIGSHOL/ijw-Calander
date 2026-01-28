@@ -7,9 +7,10 @@ import { useAttendanceConfig, useSaveAttendanceConfig, useDeleteAttendanceConfig
 
 interface Props {
     teachers?: Teacher[];
+    canEdit?: boolean;  // 권한 체크: false이면 읽기 전용
 }
 
-const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
+const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) => {
     const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
     const configId = selectedStaffId ? `salary_${selectedStaffId}` : 'salary';
 
@@ -179,7 +180,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
                         </div>
                     )}
 
-                    {selectedStaffId && isCustomConfig && (
+                    {canEdit && selectedStaffId && isCustomConfig && (
                         <button
                             onClick={handleReset}
                             disabled={isDeleting}
@@ -190,17 +191,19 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
                         </button>
                     )}
 
-                    <button
-                        onClick={handleSave}
-                        disabled={!hasChanges || isSaving}
-                        className={`px-3 py-1 rounded-md font-bold flex items-center gap-1 transition-all shadow-sm text-xs ${hasChanges
-                            ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            }`}
-                    >
-                        <Save size={12} />
-                        {isSaving ? '저장 중...' : '저장'}
-                    </button>
+                    {canEdit && (
+                        <button
+                            onClick={handleSave}
+                            disabled={!hasChanges || isSaving}
+                            className={`px-3 py-1 rounded-md font-bold flex items-center gap-1 transition-all shadow-sm text-xs ${hasChanges
+                                ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                }`}
+                        >
+                            <Save size={12} />
+                            {isSaving ? '저장 중...' : '저장'}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -289,12 +292,14 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
                     <div className="space-y-2">
                         <div className="flex justify-between items-center px-1">
                             <h3 className="font-bold text-gray-800 text-xs">과정별 정산 설정</h3>
-                            <button
-                                onClick={handleAddItem}
-                                className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold hover:bg-blue-100 transition-colors"
-                            >
-                                <Plus size={12} /> 항목 추가
-                            </button>
+                            {canEdit && (
+                                <button
+                                    onClick={handleAddItem}
+                                    className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold hover:bg-blue-100 transition-colors"
+                                >
+                                    <Plus size={12} /> 항목 추가
+                                </button>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-1 gap-2">
@@ -303,13 +308,15 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [] }) => {
 
                                 return (
                                     <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow relative group">
-                                        <button
-                                            onClick={() => handleRemoveItem(item.id)}
-                                            className="absolute right-2 top-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded-full"
-                                            title="삭제"
-                                        >
-                                            <Trash2 size={12} />
-                                        </button>
+                                        {canEdit && (
+                                            <button
+                                                onClick={() => handleRemoveItem(item.id)}
+                                                className="absolute right-2 top-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded-full"
+                                                title="삭제"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        )}
 
                                         <div className="flex flex-wrap gap-3 items-center mb-3 pr-6">
                                             {/* Name Input */}

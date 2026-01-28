@@ -37,7 +37,7 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
 
     try {
       // html-to-image 동적 import (한글 폰트 렌더링이 html2canvas보다 우수)
-      const { toPng } = await import('html-to-image');
+      const { toJpeg } = await import('html-to-image');
 
       // 스크롤 위치 저장
       const scrollContainer = targetRef.current.closest('.overflow-auto');
@@ -50,27 +50,15 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
         scrollContainer.scrollTop = 0;
       }
 
-      // 폰트 로딩 대기
-      if (document.fonts && document.fonts.ready) {
-        await document.fonts.ready;
-      }
+      // 잠시 대기 (스크롤 적용)
+      await new Promise(resolve => setTimeout(resolve, 50));
 
-      // 잠시 대기 (스크롤 적용 및 폰트 렌더링 후)
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // html-to-image로 PNG 생성
-      const dataUrl = await toPng(targetRef.current, {
-        quality: 1.0,
-        pixelRatio: 2, // 고해상도
+      // html-to-image로 JPEG 생성 (PNG보다 빠름)
+      const dataUrl = await toJpeg(targetRef.current, {
+        quality: 0.92, // JPEG 품질 (0.92 = 좋은 품질)
+        pixelRatio: 1, // 속도 최적화 (1.5 -> 1)
         backgroundColor: '#ffffff',
-        // 스타일 필터: 불필요한 요소 제외
-        filter: (node) => {
-          // 숨겨진 요소는 제외
-          if (node instanceof HTMLElement && node.style.display === 'none') {
-            return false;
-          }
-          return true;
-        },
+        skipFonts: true, // 폰트 임베딩 스킵 (속도 향상)
       });
 
       // 스크롤 위치 복원
@@ -108,7 +96,7 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
 
     const link = document.createElement('a');
     link.href = previewImage;
-    link.download = fileName.endsWith('.png') ? fileName : `${fileName}.png`;
+    link.download = fileName.endsWith('.jpg') ? fileName : `${fileName}.jpg`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

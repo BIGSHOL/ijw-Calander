@@ -9,6 +9,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useDepartments, useSystemConfig, useStaffWithAccounts } from '../../hooks/useFirebaseQueries';
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
 
 // StaffMember를 UserProfile처럼 사용하기 위한 변환 헬퍼
 const staffToUserLike = (staff: StaffMember): UserProfile => ({
@@ -36,6 +37,7 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
   currentUser,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('departments');
+  const queryClient = useQueryClient();
 
   // Permissions
   const { hasPermission } = usePermissions(currentUser);
@@ -129,20 +131,34 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
         id,
         name: newDepartmentForm.name.trim(),
         color: newDepartmentForm.defaultColor,
-        category: newDepartmentForm.category || undefined,
         order: localDepartments.length + 1,
         defaultColor: newDepartmentForm.defaultColor,
         defaultTextColor: newDepartmentForm.defaultTextColor,
         defaultBorderColor: newDepartmentForm.defaultBorderColor,
         defaultPermission: newDepartmentForm.defaultPermission,
+        category: newDepartmentForm.category || undefined,
       };
 
-      await setDoc(doc(db, 'departments', id), newDept);
+      console.log('Creating department:', newDept);
+      // departments 컬렉션에 영문 필드명으로 저장
+      // undefined 필드 제거 (Firestore에서 에러 발생)
+      const firestoreData: Record<string, any> = { ...newDept };
+      Object.keys(firestoreData).forEach(key => {
+        if (firestoreData[key] === undefined) delete firestoreData[key];
+      });
+      await setDoc(doc(db, 'departments', id), firestoreData);
+
+      // 로컬 상태 즉시 업데이트
+      setLocalDepartments(prev => [...prev, newDept]);
+      // React Query 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+
       setNewDepartmentForm(INITIAL_DEPARTMENT_FORM);
       setDepartmentFilterState({ ...departmentFilterState, isCreating: false });
-    } catch (e) {
-      console.error(e);
-      alert('부서 추가 실패');
+      console.log('Department created successfully!');
+    } catch (e: any) {
+      console.error('부서 추가 에러:', e);
+      alert(`부서 추가 실패: ${e?.message || e?.code || '알 수 없는 오류'}`);
     }
   };
 
@@ -150,6 +166,10 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
     if (!window.confirm('이 부서를 삭제하시겠습니까?')) return;
     try {
       await deleteDoc(doc(db, 'departments', id));
+      // 로컬 상태 업데이트
+      setLocalDepartments(prev => prev.filter(d => d.id !== id));
+      // React Query 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
     } catch (e) {
       console.error(e);
       alert('부서 삭제 실패');
@@ -165,9 +185,16 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
     try {
       const batch = writeBatch(db);
       localDepartments.forEach(dept => {
-        batch.set(doc(db, 'departments', dept.id), dept);
+        // undefined 필드 제거
+        const firestoreData: Record<string, any> = { ...dept };
+        Object.keys(firestoreData).forEach(key => {
+          if (firestoreData[key] === undefined) delete firestoreData[key];
+        });
+        batch.set(doc(db, 'departments', dept.id), firestoreData);
       });
       await batch.commit();
+      // React Query 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
       setHasChanges(false);
       alert('변경사항이 저장되었습니다.');
     } catch (e) {

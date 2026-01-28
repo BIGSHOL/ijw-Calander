@@ -3,19 +3,33 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, orderBy, query, doc, getDoc, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Department, Teacher, Holiday, ClassKeywordColor, SystemConfig, StaffMember } from '../types';
-import { departmentConverter } from '../converters';
 
-// 부서목록 - 30분 캐시 (거의 변경 안됨)
+// departments 컬렉션 - 30분 캐시 (거의 변경 안됨)
+// 영문 필드명 사용: name, order, color, defaultColor, defaultTextColor, defaultBorderColor, category
 export const useDepartments = (enabled: boolean = true) => {
     return useQuery({
         queryKey: ['departments'],
         queryFn: async () => {
-            const q = query(
-                collection(db, '부서목록').withConverter(departmentConverter),
-                orderBy('순서')
-            );
-            const snapshot = await getDocs(q);
-            return snapshot.docs.map(doc => doc.data());
+            // orderBy 없이 전체 조회 후 클라이언트에서 정렬 (order 필드 없는 문서도 포함)
+            const snapshot = await getDocs(collection(db, 'departments'));
+            const departments = snapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                // name 필드가 없으면 문서 ID 사용, 한글 필드(부서명)도 fallback으로 확인
+                const name = data.name || data.부서명 || docSnap.id;
+                return {
+                    id: docSnap.id,
+                    name,
+                    order: data.order ?? data.순서 ?? 999, // order가 없으면 순서 확인, 둘 다 없으면 맨 뒤
+                    color: data.color || data.색상 || '#ffffff',
+                    defaultColor: data.defaultColor || data.기본색상 || data.color || '#ffffff',
+                    defaultTextColor: data.defaultTextColor || data.기본글자색 || '#000000',
+                    defaultBorderColor: data.defaultBorderColor || data.기본테두리색 || '#fee2e2',
+                    defaultPermission: data.defaultPermission || 'view',
+                    category: data.category || data.카테고리 || undefined,
+                } as Department;
+            });
+            // 클라이언트에서 order로 정렬
+            return departments.sort((a, b) => a.order - b.order);
         },
         staleTime: 1000 * 60 * 30, // 30분
         gcTime: 1000 * 60 * 60, // 1시간

@@ -380,6 +380,12 @@ service cloud.firestore {
     // Note: 수업목록 is handled by specific match groups above
     // 강사목록 is DEPRECATED - use staff collection instead
 
+    // === Departments (부서 관리) ===
+    match /departments/{departmentId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('departments.manage');
+    }
+
     // === Class Keywords ===
     match /classKeywords/{keywordId} {
       allow read: if isAuthenticated();

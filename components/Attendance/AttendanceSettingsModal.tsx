@@ -7,12 +7,14 @@ interface AttendanceSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   teachers?: Teacher[];
+  canEdit?: boolean;  // 권한 체크: false이면 읽기 전용
 }
 
 const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
   isOpen,
   onClose,
   teachers = [],
+  canEdit = true,
 }) => {
   if (!isOpen) return null;
 
@@ -41,7 +43,7 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3">
-          <SalarySettingsTab teachers={teachers} />
+          <SalarySettingsTab teachers={teachers} canEdit={canEdit} />
         </div>
       </div>
     </div>

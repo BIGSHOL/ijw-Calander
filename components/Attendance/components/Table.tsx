@@ -331,7 +331,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
 
   return (
     <>
-      <table ref={ref} className="border-separate border-spacing-0 w-full text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm table-fixed">
+      <table ref={ref} className="border-separate border-spacing-0 w-full min-w-full text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm table-fixed">
         <thead className="bg-[#081429] text-white font-medium sticky top-0 z-[100] shadow-md">
           <tr>
             {/* Sticky Left Columns - Compact width */}
@@ -349,7 +349,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               return (
                 <th
                   key={day.toISOString()}
-                  className={`p-1 sticky top-0 bg-[#081429] border-r border-b border-[#ffffff]/10 text-center align-middle ${isWeekend ? 'text-red-300' : 'text-gray-300'
+                  className={`p-1 sticky top-0 bg-[#081429] border-r border-b border-[#ffffff]/10 text-center align-middle min-w-[40px] ${isWeekend ? 'text-red-300' : 'text-gray-300'
                     }`}
                 >
                   <div className="flex flex-col items-center justify-center leading-tight">

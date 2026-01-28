@@ -6,6 +6,7 @@ import { CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useClasses } from '../../../hooks/useClasses';
+import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import EnglishTeacherTab from './EnglishTeacherTab';
 import EnglishClassTab from './EnglishClassTab';
 import EnglishRoomTab from './EnglishRoomTab';
@@ -44,7 +45,10 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const [loading, setLoading] = useState(true);
     const [teachers, setTeachers] = useState<string[]>([]);
     const [teachersData, setTeachersData] = useState<Teacher[]>([]);  // 색상 정보 포함
-    const [teacherOrder, setTeacherOrder] = useState<string[]>([]);
+    // localStorage 캐시에서 초기값 로드 (깜빡임 방지)
+    const [teacherOrder, setTeacherOrder] = useState<string[]>(() =>
+        storage.getJSON<string[]>(STORAGE_KEYS.ENGLISH_TEACHER_ORDER_CACHE, [])
+    );
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
 
@@ -245,9 +249,12 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
     // Subscribe to Order Config only
     useEffect(() => {
-        const unsubscribeOrder = onSnapshot(doc(db, 'settings', 'english_config'), (doc) => {
-            if (doc.exists()) {
-                setTeacherOrder(doc.data().teacherOrder || []);
+        const unsubscribeOrder = onSnapshot(doc(db, 'settings', 'english_config'), (docSnap) => {
+            if (docSnap.exists()) {
+                const order = docSnap.data().teacherOrder || [];
+                setTeacherOrder(order);
+                // localStorage 캐시 업데이트 (다음 접속 시 즉시 로드)
+                storage.setJSON(STORAGE_KEYS.ENGLISH_TEACHER_ORDER_CACHE, order);
             }
         });
         return listenerRegistry.register('EnglishTimetable(config)', unsubscribeOrder);
