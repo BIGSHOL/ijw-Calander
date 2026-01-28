@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Users, UserMinus, UserPlus, Settings, Calendar, List, Image } from 'lucide-react';
+import { Users, UserMinus, UserPlus, Settings, Calendar, Image } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
 import { formatCurrency, calculateStats, getCategoryLabel } from './utils';
@@ -11,7 +11,6 @@ import StudentListModal from './components/StudentListModal';
 import AddStudentToAttendanceModal from './components/AddStudentToAttendanceModal';
 import AttendanceSettingsModal from './AttendanceSettingsModal';
 import SessionSettingsModal from './SessionSettingsModal';
-import SessionSelector from './components/SessionSelector';
 import ExportImageModal from '../Common/ExportImageModal';
 
 import {
@@ -26,7 +25,6 @@ import {
   useMonthlySettlement,
   useSaveMonthlySettlement
 } from '../../hooks/useAttendance';
-import { useSessionPeriods } from '../../hooks/useSessionPeriods';
 import { useExamsByDateMap, useScoresByExams } from '../../hooks/useExamsByDate';
 import { useCreateDailyAttendance } from '../../hooks/useDailyAttendance';
 import { UserProfile, Teacher } from '../../types';
@@ -57,6 +55,8 @@ interface AttendanceManagerProps {
   currentDate: Date;
   isAddStudentModalOpen?: boolean;
   onCloseAddStudentModal?: () => void;
+  viewMode?: AttendanceViewMode;
+  selectedSession?: SessionPeriod | null;
 }
 
 // Helper to group updates by student ID
@@ -88,7 +88,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   selectedStaffId,
   currentDate,
   isAddStudentModalOpen,
-  onCloseAddStudentModal
+  onCloseAddStudentModal,
+  viewMode = 'monthly',
+  selectedSession = null
 }) => {
   const { hasPermission } = usePermissions(userProfile);
 
@@ -197,34 +199,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const [isStudentModalOpen, setStudentModalOpen] = useState(false);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   const [isSessionSettingsModalOpen, setSessionSettingsModalOpen] = useState(false);
-
-  // 세션 모드 상태 (월별/세션 토글)
-  const [viewMode, setViewMode] = useState<AttendanceViewMode>('monthly');
-  const [selectedSession, setSelectedSession] = useState<SessionPeriod | null>(null);
-
-  // 세션 카테고리 매핑: selectedSubject -> session category
-  const sessionCategory = useMemo((): 'math' | 'english' | 'eie' => {
-    if (selectedSubject === 'math') return 'math';
-    if (selectedSubject === 'english') return 'english';
-    return 'math'; // 기본값
-  }, [selectedSubject]);
-
-  // 세션 데이터 조회
-  const { data: sessions = [], isLoading: isLoadingSessions } = useSessionPeriods(
-    currentDate.getFullYear(),
-    sessionCategory
-  );
-
-  // 현재 월에 맞는 세션 자동 선택
-  React.useEffect(() => {
-    if (viewMode === 'session' && sessions.length > 0 && !selectedSession) {
-      const currentMonth = currentDate.getMonth() + 1;
-      const matchingSession = sessions.find(s => s.month === currentMonth);
-      if (matchingSession) {
-        setSelectedSession(matchingSession);
-      }
-    }
-  }, [viewMode, sessions, currentDate, selectedSession]);
 
   // Use props if provided, otherwise default to closed (or local state if we strictly needed it, but here strict prop control is fine as App controls it)
   // Actually, we should allow local control if props aren't passed, but for now we assume App passes them.
@@ -568,47 +542,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white text-[#373d41]">
-      {/* Navigation is now handled in App.tsx header */}
-
-      {/* View Mode Toggle + Session Selector */}
-      <div className="px-4 py-2 flex items-center gap-3 flex-shrink-0 border-b border-gray-100">
-        {/* 모드 토글 */}
-        <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
-          <button
-            onClick={() => setViewMode('monthly')}
-            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
-              viewMode === 'monthly'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <List size={14} />
-            월별
-          </button>
-          <button
-            onClick={() => setViewMode('session')}
-            className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
-              viewMode === 'session'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Calendar size={14} />
-            세션
-          </button>
-        </div>
-
-        {/* 세션 선택 (세션 모드일 때만 표시) */}
-        {viewMode === 'session' && (
-          <SessionSelector
-            sessions={sessions}
-            selectedSession={selectedSession}
-            onSelectSession={setSelectedSession}
-            category={sessionCategory}
-            isLoading={isLoadingSessions}
-          />
-        )}
-      </div>
+      {/* Navigation and View Mode Toggle are now handled in App.tsx header */}
 
       {/* Stats Cards + Settings - Compact single row */}
       <div className="px-4 py-2 flex items-center gap-2 flex-shrink-0 border-b border-gray-100 overflow-x-auto">

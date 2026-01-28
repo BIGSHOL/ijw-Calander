@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
 import { addYears, subYears, format, isToday, isPast, isFuture, parseISO, startOfDay, addDays, addWeeks, addMonths, getDay, getDate, endOfMonth, differenceInDays } from 'date-fns';
 import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, TaskMemo, ClassKeywordColor, AppTab, TAB_META, TAB_GROUPS, SubjectType } from './types';
+import { AttendanceViewMode, SessionPeriod } from './components/Attendance/types';
 import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
 import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig, useStaffWithAccounts, useAllStaff } from './hooks/useFirebaseQueries';
 import { useGanttProjects } from './hooks/useGanttProjects';
+import { useSessionPeriods } from './hooks/useSessionPeriods';
 import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
 import { useTabPermissions } from './hooks/useTabPermissions';
 import { storage, STORAGE_KEYS } from './utils/localStorage';
@@ -319,6 +321,23 @@ const App: React.FC = () => {
   const [attendanceSubject, setAttendanceSubject] = useState<'math' | 'english'>('math');
   const [attendanceStaffId, setAttendanceStaffId] = useState<string | undefined>(undefined);
   const [attendanceDate, setAttendanceDate] = useState(() => new Date());
+
+  // 세션 모드 상태 (월별/세션 토글)
+  const [attendanceViewMode, setAttendanceViewMode] = useState<AttendanceViewMode>('monthly');
+  const [selectedSession, setSelectedSession] = useState<SessionPeriod | null>(null);
+
+  // 세션 카테고리 매핑: attendanceSubject -> session category
+  const sessionCategory = useMemo((): 'math' | 'english' | 'eie' => {
+    if (attendanceSubject === 'math') return 'math';
+    if (attendanceSubject === 'english') return 'english';
+    return 'math'; // 기본값
+  }, [attendanceSubject]);
+
+  // 세션 데이터 조회
+  const { data: sessions = [], isLoading: isLoadingSessions } = useSessionPeriods(
+    attendanceDate.getFullYear(),
+    sessionCategory
+  );
 
   // Permission Hook
   const { hasPermission, rolePermissions } = usePermissions(userProfile || null);
@@ -1841,6 +1860,47 @@ const App: React.FC = () => {
               });
             };
 
+            // Session navigation functions
+            const changeSession = (delta: number) => {
+              if (!sessions || sessions.length === 0) return;
+
+              // 현재 월의 세션 찾기
+              const currentMonth = attendanceDate.getMonth() + 1;
+              const currentIdx = sessions.findIndex(s => s.month === currentMonth);
+
+              if (currentIdx === -1) {
+                // 현재 월에 세션이 없으면 첫 세션으로
+                const firstSession = sessions[0];
+                setSelectedSession(firstSession);
+                setAttendanceDate(new Date(firstSession.year, firstSession.month - 1, 1));
+                return;
+              }
+
+              const newIdx = currentIdx + delta;
+              if (newIdx >= 0 && newIdx < sessions.length) {
+                const newSession = sessions[newIdx];
+                setSelectedSession(newSession);
+                // 날짜도 해당 월로 변경
+                setAttendanceDate(new Date(newSession.year, newSession.month - 1, 1));
+              } else if (newIdx < 0) {
+                // 이전 연도로 이동 (12월 세션으로)
+                const prevYear = attendanceDate.getFullYear() - 1;
+                setAttendanceDate(new Date(prevYear, 11, 1));
+                setSelectedSession(null); // 새 연도 데이터 로드 후 자동 선택
+              } else {
+                // 다음 연도로 이동 (1월 세션으로)
+                const nextYear = attendanceDate.getFullYear() + 1;
+                setAttendanceDate(new Date(nextYear, 0, 1));
+                setSelectedSession(null);
+              }
+            };
+
+            // 세션 모드에서 현재 월에 맞는 세션 자동 선택
+            const currentMonthSession = sessions.find(s => s.month === attendanceDate.getMonth() + 1);
+            if (attendanceViewMode === 'session' && !selectedSession && currentMonthSession) {
+              setSelectedSession(currentMonthSession);
+            }
+
             return (
               <TabSubNavigation variant="compact" className="justify-between px-6 border-b border-white/10 z-30">
                 <div className="flex items-center gap-3">
@@ -1887,19 +1947,48 @@ const App: React.FC = () => {
                   {/* Separator */}
                   <div className="w-px h-4 bg-white/20 mx-1"></div>
 
-                  {/* Month Navigation */}
+                  {/* View Mode Toggle (월별/세션) */}
+                  <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                    <TabButton
+                      active={attendanceViewMode === 'monthly'}
+                      onClick={() => setAttendanceViewMode('monthly')}
+                      icon={<List size={14} />}
+                      className="px-2 py-0.5"
+                    >
+                      월별
+                    </TabButton>
+                    <TabButton
+                      active={attendanceViewMode === 'session'}
+                      onClick={() => {
+                        setAttendanceViewMode('session');
+                        // 세션 모드 전환 시 현재 월의 세션 자동 선택
+                        if (currentMonthSession) {
+                          setSelectedSession(currentMonthSession);
+                        }
+                      }}
+                      icon={<CalendarIcon size={14} />}
+                      className="px-2 py-0.5"
+                    >
+                      세션
+                    </TabButton>
+                  </div>
+
+                  {/* Month/Session Navigation */}
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => changeMonth(-1)}
+                      onClick={() => attendanceViewMode === 'monthly' ? changeMonth(-1) : changeSession(-1)}
                       className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                     >
                       <ChevronLeft size={14} />
                     </button>
-                    <span className="px-2 font-bold text-white text-xs min-w-[100px] text-center">
-                      {attendanceDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
+                    <span className="px-2 font-bold text-white text-xs min-w-[120px] text-center">
+                      {attendanceViewMode === 'monthly'
+                        ? attendanceDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
+                        : `${attendanceDate.getFullYear()}년 ${attendanceDate.getMonth() + 1}월 세션`
+                      }
                     </span>
                     <button
-                      onClick={() => changeMonth(1)}
+                      onClick={() => attendanceViewMode === 'monthly' ? changeMonth(1) : changeSession(1)}
                       className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                     >
                       <ChevronRight size={14} />
@@ -2676,6 +2765,8 @@ const App: React.FC = () => {
                   currentDate={attendanceDate}
                   isAddStudentModalOpen={isAttendanceAddStudentModalOpen}
                   onCloseAddStudentModal={() => setIsAttendanceAddStudentModalOpen(false)}
+                  viewMode={attendanceViewMode}
+                  selectedSession={selectedSession}
                 />
               </div>
             </Suspense>

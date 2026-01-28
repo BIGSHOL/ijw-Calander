@@ -564,9 +564,13 @@ export const useUpdateAttendance = () => {
             return { studentId, yearMonth, dateKey, value };
         },
         onMutate: async ({ studentId, yearMonth, dateKey, value }) => {
-            await queryClient.cancelQueries({ queryKey: ['attendanceRecords', studentId, yearMonth] });
-            const previousRecord = queryClient.getQueryData(['attendanceRecords', studentId, yearMonth]);
+            // 관련된 모든 attendanceRecords 쿼리 취소
+            await queryClient.cancelQueries({ queryKey: ['attendanceRecords'] });
 
+            // 이전 상태 저장 (롤백용)
+            const previousData = queryClient.getQueriesData({ queryKey: ['attendanceRecords'] });
+
+            // 1. useAttendanceRecords용 캐시 업데이트 ['attendanceRecords', studentId, yearMonth]
             queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
                 if (!old) return { attendance: { [dateKey]: value }, memos: {} };
                 const newAttendance = { ...old.attendance };
@@ -575,14 +579,35 @@ export const useUpdateAttendance = () => {
                 return { ...old, attendance: newAttendance };
             });
 
-            return { previousRecord };
+            // 2. useAttendanceStudents용 캐시 업데이트 ['attendanceRecords', yearMonth, staffId, subject]
+            // 모든 관련 쿼리를 찾아서 업데이트
+            queryClient.setQueriesData(
+                { queryKey: ['attendanceRecords', yearMonth] },
+                (old: any) => {
+                    if (!old || !Array.isArray(old)) return old;
+                    return old.map((student: any) => {
+                        if (student.id !== studentId) return student;
+                        const newAttendance = { ...student.attendance };
+                        if (value === null) delete newAttendance[dateKey];
+                        else newAttendance[dateKey] = value;
+                        return { ...student, attendance: newAttendance };
+                    });
+                }
+            );
+
+            return { previousData };
         },
-        onError: (err, newTodo, context: any) => {
-            queryClient.setQueryData(['attendanceRecords', newTodo.studentId, newTodo.yearMonth], context.previousRecord);
+        onError: (err, variables, context: any) => {
+            // 에러 시 이전 상태로 롤백
+            if (context?.previousData) {
+                context.previousData.forEach(([queryKey, data]: [any, any]) => {
+                    queryClient.setQueryData(queryKey, data);
+                });
+            }
         },
-        onSettled: (data, error, variables) => {
-            queryClient.invalidateQueries({ queryKey: ['attendanceRecords', variables.studentId, variables.yearMonth] });
-        },
+        // onSettled에서 invalidateQueries 제거
+        // - onMutate에서 이미 optimistic update 완료
+        // - invalidate 시 Firebase 저장 완료 전에 fetch가 일어나면 이전 값으로 되돌아가는 버그 발생
     });
 };
 

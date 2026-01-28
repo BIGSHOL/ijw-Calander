@@ -331,7 +331,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
 
   return (
     <>
-      <table ref={ref} className="border-separate border-spacing-0 w-full min-w-max text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm">
+      <table ref={ref} className="border-separate border-spacing-0 w-full text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm table-fixed">
         <thead className="bg-[#081429] text-white font-medium sticky top-0 z-[100] shadow-md">
           <tr>
             {/* Sticky Left Columns - Compact width */}
@@ -349,7 +349,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               return (
                 <th
                   key={day.toISOString()}
-                  className={`p-1 sticky top-0 bg-[#081429] border-r border-b border-[#ffffff]/10 min-w-[36px] w-[36px] text-center align-middle ${isWeekend ? 'text-red-300' : 'text-gray-300'
+                  className={`p-1 sticky top-0 bg-[#081429] border-r border-b border-[#ffffff]/10 text-center align-middle ${isWeekend ? 'text-red-300' : 'text-gray-300'
                     }`}
                 >
                   <div className="flex flex-col items-center justify-center leading-tight">
@@ -926,7 +926,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
           >
             {isValid ? (
               // 4등분 레이아웃
-              <div className="grid grid-cols-2 grid-rows-2 w-full h-full" style={{ minWidth: '36px', minHeight: '36px' }}>
+              <div className="grid grid-cols-2 grid-rows-2 w-full h-full min-h-[36px]">
                 {/* Q1: 출석 (좌상단) - 11시 방향 */}
                 <div
                   onClick={() => onCellClick(student.id, dateKey, status, isValid)}
@@ -975,7 +975,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
                 </div>
               </div>
             ) : (
-              <div className="w-full h-full" style={{ minWidth: '36px', minHeight: '36px' }} />
+              <div className="w-full h-full min-h-[36px]" />
             )}
             {/* Memo Indicator: Red Triangle in top-right */}
             {memo && (
