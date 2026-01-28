@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Users, UserMinus, UserPlus, Settings, Calendar, List } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { Users, UserMinus, UserPlus, Settings, Calendar, List, Image } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
 import { formatCurrency, calculateStats, getCategoryLabel } from './utils';
@@ -12,6 +12,7 @@ import AddStudentToAttendanceModal from './components/AddStudentToAttendanceModa
 import AttendanceSettingsModal from './AttendanceSettingsModal';
 import SessionSettingsModal from './SessionSettingsModal';
 import SessionSelector from './components/SessionSelector';
+import ExportImageModal from './components/ExportImageModal';
 
 import {
   useAttendanceStudents,
@@ -235,6 +236,10 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const [isSettlementModalOpen, setSettlementModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
+  const [isExportModalOpen, setExportModalOpen] = useState(false);
+
+  // 테이블 ref (이미지 내보내기용)
+  const tableRef = useRef<HTMLTableElement>(null);
 
   // Group order state (per teacher, stored in localStorage)
   const groupOrderKey = STORAGE_KEYS.attendanceGroupOrder(filterStaffId || 'all', selectedSubject);
@@ -679,6 +684,15 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         )}
 
         <button
+          onClick={() => setExportModalOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm flex-shrink-0"
+          title="출석부 이미지로 내보내기"
+        >
+          <Image size={14} />
+          이미지 저장
+        </button>
+
+        <button
           onClick={() => setSettingsModalOpen(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 text-white rounded-lg font-bold text-xs hover:bg-gray-600 transition-colors shadow-sm flex-shrink-0"
           title="급여 설정"
@@ -699,6 +713,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           }}
         >
           <Table
+            ref={tableRef}
             currentDate={currentDate}
             students={visibleStudents}
             salaryConfig={salaryConfig}
@@ -780,6 +795,15 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       <SessionSettingsModal
         isOpen={isSessionSettingsModalOpen}
         onClose={() => setSessionSettingsModalOpen(false)}
+      />
+
+      {/* 이미지 내보내기 모달 */}
+      <ExportImageModal
+        isOpen={isExportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        tableRef={tableRef}
+        teacherName={teachers.find(t => t.id === filterStaffId)?.name}
+        currentDate={currentDate}
       />
     </div>
   );
