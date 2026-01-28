@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, forwardRef } from 'react';
 import { Student, SalaryConfig, AttendanceViewMode, SessionPeriod } from '../types';
 import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getDaysInSessionRanges } from '../utils';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
@@ -38,7 +38,7 @@ interface ContextMenuState {
   memoText: string;
 }
 
-const Table: React.FC<Props> = ({
+const Table = forwardRef<HTMLTableElement, Props>(({
   currentDate,
   students,
   salaryConfig,
@@ -56,7 +56,7 @@ const Table: React.FC<Props> = ({
   onCollapsedGroupsChange,
   viewMode = 'monthly',
   selectedSession
-}) => {
+}, ref) => {
   // 세션 모드에 따라 표시할 날짜 결정
   const days = useMemo(() => {
     if (viewMode === 'session' && selectedSession) {
@@ -331,7 +331,7 @@ const Table: React.FC<Props> = ({
 
   return (
     <>
-      <table className="border-separate border-spacing-0 w-full min-w-max text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm">
+      <table ref={ref} className="border-separate border-spacing-0 w-full min-w-max text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm">
         <thead className="bg-[#081429] text-white font-medium sticky top-0 z-[100] shadow-md">
           <tr>
             {/* Sticky Left Columns - Compact width */}
@@ -474,7 +474,9 @@ const Table: React.FC<Props> = ({
       )}
     </>
   );
-};
+});
+
+Table.displayName = 'Table';
 
 // Extracted & Memoized Components
 
