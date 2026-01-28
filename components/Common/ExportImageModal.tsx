@@ -5,17 +5,19 @@ import { X, Download, Loader2, Image as ImageIcon, ZoomIn, ZoomOut } from 'lucid
 interface ExportImageModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tableRef: React.RefObject<HTMLTableElement>;
-  teacherName?: string;
-  currentDate: Date;
+  targetRef: React.RefObject<HTMLElement>;
+  title: string;
+  subtitle?: string;
+  fileName: string;
 }
 
 const ExportImageModal: React.FC<ExportImageModalProps> = ({
   isOpen,
   onClose,
-  tableRef,
-  teacherName,
-  currentDate
+  targetRef,
+  title,
+  subtitle,
+  fileName
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -25,8 +27,8 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
 
   // html2canvas 동적 로드 및 이미지 생성 (bundle-dynamic-imports)
   const generatePreview = useCallback(async () => {
-    if (!tableRef.current) {
-      setError('테이블을 찾을 수 없습니다.');
+    if (!targetRef.current) {
+      setError('캡처할 요소를 찾을 수 없습니다.');
       return;
     }
 
@@ -38,26 +40,29 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
       const html2canvas = (await import('html2canvas')).default;
 
       // 스크롤 위치 저장
-      const scrollContainer = tableRef.current.closest('.overflow-auto');
+      const scrollContainer = targetRef.current.closest('.overflow-auto');
       const originalScrollLeft = scrollContainer?.scrollLeft || 0;
       const originalScrollTop = scrollContainer?.scrollTop || 0;
 
-      // 스크롤 초기화 (전체 테이블 캡처를 위해)
+      // 스크롤 초기화 (전체 캡처를 위해)
       if (scrollContainer) {
         scrollContainer.scrollLeft = 0;
         scrollContainer.scrollTop = 0;
       }
 
+      // 잠시 대기 (스크롤 적용 후)
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // html2canvas 옵션
-      const canvas = await html2canvas(tableRef.current, {
+      const canvas = await html2canvas(targetRef.current, {
         scale: 2, // 고해상도
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
-        // 전체 테이블 캡처
-        windowWidth: tableRef.current.scrollWidth,
-        windowHeight: tableRef.current.scrollHeight,
+        // 전체 캡처
+        windowWidth: targetRef.current.scrollWidth,
+        windowHeight: targetRef.current.scrollHeight,
       });
 
       // 스크롤 위치 복원
@@ -74,11 +79,11 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
     } finally {
       setIsGenerating(false);
     }
-  }, [tableRef]);
+  }, [targetRef]);
 
   // 모달이 열릴 때 이미지 생성
   useEffect(() => {
-    if (isOpen && tableRef.current) {
+    if (isOpen && targetRef.current) {
       generatePreview();
     }
     return () => {
@@ -96,14 +101,7 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
 
     const link = document.createElement('a');
     link.href = previewImage;
-
-    // 파일명 생성: 선생님이름_년월_출석부.png
-    const year = currentDate.getFullYear();
-    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const teacherPart = teacherName ? `${teacherName}_` : '';
-    const fileName = `${teacherPart}${year}년${month}월_출석부.png`;
-
-    link.download = fileName;
+    link.download = fileName.endsWith('.png') ? fileName : `${fileName}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -139,11 +137,10 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
               <ImageIcon size={20} className="text-blue-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">출석부 이미지 내보내기</h2>
-              <p className="text-sm text-gray-500">
-                {teacherName && `${teacherName} 선생님 · `}
-                {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
-              </p>
+              <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+              {subtitle && (
+                <p className="text-sm text-gray-500">{subtitle}</p>
+              )}
             </div>
           </div>
           <button
@@ -160,7 +157,7 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <Loader2 size={48} className="text-blue-500 animate-spin" />
               <p className="text-gray-600 font-medium">이미지 생성 중...</p>
-              <p className="text-sm text-gray-400">테이블 크기에 따라 시간이 걸릴 수 있습니다</p>
+              <p className="text-sm text-gray-400">크기에 따라 시간이 걸릴 수 있습니다</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -187,7 +184,7 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
             >
               <img
                 src={previewImage}
-                alt="출석부 미리보기"
+                alt="미리보기"
                 className="mx-auto shadow-lg rounded border border-gray-300"
                 style={{
                   width: `${zoom}%`,
@@ -200,7 +197,7 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
         </div>
 
         {/* 푸터 (컨트롤) */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white rounded-b-xl">
           {/* 줌 컨트롤 */}
           <div className="flex items-center gap-2">
             <button

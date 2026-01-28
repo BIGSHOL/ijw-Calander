@@ -12,7 +12,7 @@ import AddStudentToAttendanceModal from './components/AddStudentToAttendanceModa
 import AttendanceSettingsModal from './AttendanceSettingsModal';
 import SessionSettingsModal from './SessionSettingsModal';
 import SessionSelector from './components/SessionSelector';
-import ExportImageModal from './components/ExportImageModal';
+import ExportImageModal from '../Common/ExportImageModal';
 
 import {
   useAttendanceStudents,
@@ -240,6 +240,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
   // 테이블 ref (이미지 내보내기용)
   const tableRef = useRef<HTMLTableElement>(null);
+  // 내보내기 시 원래 접힘 상태 저장용
+  const savedCollapsedGroupsRef = useRef<Set<string> | null>(null);
 
   // Group order state (per teacher, stored in localStorage)
   const groupOrderKey = STORAGE_KEYS.attendanceGroupOrder(filterStaffId || 'all', selectedSubject);
@@ -684,7 +686,12 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         )}
 
         <button
-          onClick={() => setExportModalOpen(true)}
+          onClick={() => {
+            // 내보내기 전 현재 접힘 상태 저장 후 모든 그룹 펼치기
+            savedCollapsedGroupsRef.current = new Set(collapsedGroups);
+            setCollapsedGroups(new Set());
+            setExportModalOpen(true);
+          }}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm flex-shrink-0"
           title="출석부 이미지로 내보내기"
         >
@@ -800,10 +807,18 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       {/* 이미지 내보내기 모달 */}
       <ExportImageModal
         isOpen={isExportModalOpen}
-        onClose={() => setExportModalOpen(false)}
-        tableRef={tableRef}
-        teacherName={teachers.find(t => t.id === filterStaffId)?.name}
-        currentDate={currentDate}
+        onClose={() => {
+          setExportModalOpen(false);
+          // 저장해둔 접힘 상태 복원
+          if (savedCollapsedGroupsRef.current) {
+            setCollapsedGroups(savedCollapsedGroupsRef.current);
+            savedCollapsedGroupsRef.current = null;
+          }
+        }}
+        targetRef={tableRef as React.RefObject<HTMLElement>}
+        title="출석부 이미지 내보내기"
+        subtitle={`${teachers.find(t => t.id === filterStaffId)?.name || ''} 선생님 · ${currentDate.getFullYear()}년 ${currentDate.getMonth() + 1}월`}
+        fileName={`${teachers.find(t => t.id === filterStaffId)?.name || ''}_${currentDate.getFullYear()}년${String(currentDate.getMonth() + 1).padStart(2, '0')}월_출석부`}
       />
     </div>
   );
