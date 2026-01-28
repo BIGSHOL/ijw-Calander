@@ -28,8 +28,9 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
   // 권한 체크
   const { hasPermission } = usePermissions(currentUser || null);
   const isMaster = currentUser?.role === 'master';
+  const canEditStudent = isMaster || hasPermission('students.edit');
   const canDeleteStudent = isMaster || hasPermission('students.delete');
-  const canManageEnrollment = isMaster || hasPermission('students.enrollment.manage');
+  const canManageEnrollment = isMaster || hasPermission('classes.edit');  // 수강배정은 수업 관리 권한 필요
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'basic', label: '기본정보', icon: <User className="w-3 h-3" /> },
@@ -137,13 +138,13 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
         </div>
       </div>
 
-      {/* 탭 컨텐츠 */}
+      {/* 탭 컨텐츠 - 각 탭별 권한 체크 */}
       <div className="flex-1 overflow-y-auto p-3">
-        {activeTab === 'basic' && <BasicInfoTab student={student} readOnly={readOnly} />}
+        {activeTab === 'basic' && <BasicInfoTab student={student} readOnly={readOnly || !canEditStudent} />}
         {activeTab === 'courses' && <CoursesTab student={student} compact={compact} readOnly={readOnly || !canManageEnrollment} />}
-        {activeTab === 'grades' && <GradesTab student={student} readOnly={readOnly} />}
-        {activeTab === 'attendance' && <AttendanceTab student={student} readOnly={readOnly} />}
-        {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly} />}
+        {activeTab === 'grades' && <GradesTab student={student} readOnly={readOnly || !canEditStudent} />}
+        {activeTab === 'attendance' && <AttendanceTab student={student} readOnly={readOnly || !canEditStudent} />}
+        {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly || !canEditStudent} />}
       </div>
 
       {/* 퇴원 처리 모달 */}

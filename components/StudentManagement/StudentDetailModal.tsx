@@ -1,15 +1,16 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { UnifiedStudent } from '../../types';
+import { UnifiedStudent, UserProfile } from '../../types';
 import StudentDetail from './StudentDetail';
 
 interface StudentDetailModalProps {
   student: UnifiedStudent;
   onClose: () => void;
   readOnly?: boolean; // 조회 전용 모드 (퇴원/삭제 버튼 숨김)
+  currentUser?: UserProfile | null; // 권한 체크용
 }
 
-const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClose, readOnly = false }) => {
+const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClose, readOnly = false, currentUser }) => {
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
@@ -31,7 +32,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClos
 
         {/* StudentDetail 컴포넌트 */}
         <div className="flex-1 overflow-hidden">
-          <StudentDetail student={student} compact readOnly={readOnly} />
+          <StudentDetail student={student} compact readOnly={readOnly} currentUser={currentUser} />
         </div>
       </div>
     </div>

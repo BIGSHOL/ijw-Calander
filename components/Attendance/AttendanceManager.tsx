@@ -5,7 +5,7 @@ import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, Attendance
 import { formatCurrency, calculateStats, getCategoryLabel } from './utils';
 import Table from './components/Table';
 import SalarySettings from './components/SalarySettings';
-import StudentModal from './components/StudentModal';
+import StudentDetailModal from '../StudentManagement/StudentDetailModal';
 import SettlementModal from './components/SettlementModal';
 import StudentListModal from './components/StudentListModal';
 import AddStudentToAttendanceModal from './components/AddStudentToAttendanceModal';
@@ -15,8 +15,6 @@ import SessionSettingsModal from './SessionSettingsModal';
 import {
   useAttendanceStudents,
   useAttendanceConfig,
-  useAddStudent,
-  useDeleteStudent,
   useUpdateAttendance,
   useUpdateMemo,
   useUpdateHomework,
@@ -26,7 +24,7 @@ import {
 } from '../../hooks/useAttendance';
 import { useExamsByDateMap, useScoresByExams } from '../../hooks/useExamsByDate';
 import { useCreateDailyAttendance } from '../../hooks/useDailyAttendance';
-import { UserProfile, Teacher } from '../../types';
+import { UserProfile, Teacher, UnifiedStudent } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { mapAttendanceValueToStatus } from '../../utils/attendanceSync';
 import { secureLog, secureWarn } from '../../utils/secureLog';
@@ -195,8 +193,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const salaryConfig = firebaseConfig || INITIAL_SALARY_CONFIG;
 
   // Mutations
-  const addStudentMutation = useAddStudent();
-  const deleteStudentMutation = useDeleteStudent();
   const updateAttendanceMutation = useUpdateAttendance();
   const updateMemoMutation = useUpdateMemo();
   const updateHomeworkMutation = useUpdateHomework();
@@ -408,27 +404,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     });
   };
 
-  const handleSaveStudent = (student: Student) => {
-    // Ensure new fields are set
-    const studentWithDefaults: Student = {
-      ...student,
-      teacherIds: student.teacherIds || (currentStaffId ? [currentStaffId] : []),
-      subjects: student.subjects || [selectedSubject],
-      ownerId: student.ownerId || userProfile?.uid,
-    };
-    addStudentMutation.mutate(studentWithDefaults);
-    setEditingStudent(null);
-    setStudentModalOpen(false);
-  };
-
-  const handleDeleteStudent = (id: string) => {
-    if (window.confirm('정말 이 학생을 삭제하시겠습니까? (출석 기록을 포함한 모든 데이터가 삭제됩니다)')) {
-      deleteStudentMutation.mutate(id);
-      setStudentModalOpen(false);
-      setEditingStudent(null);
-    }
-  };
-
   // 이미지 내보내기 상태
   const [isExporting, setIsExporting] = useState(false);
 
@@ -570,14 +545,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     total += (currentSettlement.otherAmount || 0);
     return total;
   }, [stats.totalSalary, currentSettlement, salaryConfig.incentives]);
-
-  const existingGroups = useMemo(() => {
-    const groups = new Set<string>();
-    allStudents.forEach(s => {
-      if (s.group) groups.add(s.group);
-    });
-    return Array.from(groups).sort();
-  }, [allStudents]);
 
   // Loading state
   if (isLoadingStudents || isLoadingConfig) {
@@ -742,17 +709,17 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         readOnly={true} // AttendanceManager allows only viewing settings
       />
 
-      <StudentModal
-        isOpen={isStudentModalOpen}
-        onClose={() => { setStudentModalOpen(false); setEditingStudent(null); }}
-        onSave={handleSaveStudent}
-        onDelete={handleDeleteStudent}
-        initialData={editingStudent}
-        salaryConfig={salaryConfig}
-        currentViewDate={currentDate}
-        existingGroups={existingGroups}
-        canEdit={hasPermission('attendance.edit_student_info')}
-      />
+      {/* 학생 상세 정보 모달 - 학생관리와 동일한 모달 사용 */}
+      {isStudentModalOpen && editingStudent && (() => {
+        const unifiedStudent = (rawAllStudents as UnifiedStudent[] | undefined)?.find((s) => s.id === editingStudent.id);
+        return unifiedStudent ? (
+          <StudentDetailModal
+            student={unifiedStudent}
+            onClose={() => { setStudentModalOpen(false); setEditingStudent(null); }}
+            readOnly={!hasPermission('attendance.edit_student_info')}
+          />
+        ) : null;
+      })()}
 
       <SettlementModal
         isOpen={isSettlementModalOpen}

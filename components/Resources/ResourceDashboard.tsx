@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Resource, UserProfile, RESOURCE_CATEGORY_TREE, CATEGORY_SEPARATOR } from '../../types';
 import { useResources, useCreateResource, useUpdateResource, useDeleteResource } from '../../hooks/useResources';
 import ResourceCard, { ResourceTableHeader, SortField, SortDirection } from './ResourceCard';
@@ -47,6 +47,22 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
   const [draggedSubCategory, setDraggedSubCategory] = useState<string | null>(null);
   // 중분류 순서 (대분류별로 로컬스토리지에서 로드)
   const [subCategoryOrders, setSubCategoryOrders] = useState<Record<string, string[]>>({});
+
+  // 대분류 선택 시 해당 중분류 순서 로드
+  useEffect(() => {
+    if (currentMain) {
+      const savedOrder = storage.getJSON<string[]>(
+        STORAGE_KEYS.resourceSubCategoryOrder(currentMain),
+        []
+      );
+      if (savedOrder.length > 0) {
+        setSubCategoryOrders(prev => ({
+          ...prev,
+          [currentMain]: savedOrder,
+        }));
+      }
+    }
+  }, [currentMain]);
 
   // 관리자 여부 체크
   const canEdit = userProfile?.role === 'master' || userProfile?.role === 'admin';
@@ -103,7 +119,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
     return sorted;
   }, [resources, categoryOrder]);
 
-  // 중분류 목록 (선택된 대분류 기준)
+  // 중분류 목록 (선택된 대분류 기준 + 정렬)
   const subCategories = useMemo(() => {
     if (!currentMain) return [];
 
@@ -123,8 +139,44 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
         .filter(Boolean)
     );
 
-    return Array.from(new Set([...defaultSubs, ...resourceSubs]));
-  }, [currentMain, resources]);
+    const allSubs = Array.from(new Set([...defaultSubs, ...resourceSubs]));
+
+    // 정렬 로직: 저장된 순서 우선, 없으면 가나다 순 (기타는 맨 끝)
+    const savedOrder = subCategoryOrders[currentMain] || [];
+    if (savedOrder.length > 0) {
+      const ordered: string[] = [];
+      const remaining: string[] = [];
+
+      // 저장된 순서에 있는 것들 먼저
+      savedOrder.forEach(sub => {
+        if (allSubs.includes(sub)) {
+          ordered.push(sub);
+        }
+      });
+
+      // 저장된 순서에 없는 새로운 카테고리들 (가나다 순, 기타 제외)
+      allSubs.forEach(sub => {
+        if (!ordered.includes(sub) && sub !== '기타') {
+          remaining.push(sub);
+        }
+      });
+      remaining.sort((a, b) => a.localeCompare(b, 'ko'));
+
+      // 기타는 항상 맨 끝
+      const result = [...ordered, ...remaining];
+      if (allSubs.includes('기타') && !result.includes('기타')) {
+        result.push('기타');
+      }
+      return result;
+    }
+
+    // 기본: 가나다 순 (기타는 맨 끝)
+    const sorted = allSubs.filter(s => s !== '기타').sort((a, b) => a.localeCompare(b, 'ko'));
+    if (allSubs.includes('기타')) {
+      sorted.push('기타');
+    }
+    return sorted;
+  }, [currentMain, resources, subCategoryOrders]);
 
   // 현재 경로의 리소스 (필터링 + 검색 + 정렬)
   const currentResources = useMemo(() => {
@@ -331,6 +383,55 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
     setCategoryOrder([]);
     storage.remove(STORAGE_KEYS.RESOURCE_CATEGORY_ORDER);
   }, []);
+
+  // 중분류 드래그 핸들러
+  const handleSubDragStart = useCallback((subCategory: string) => {
+    setDraggedSubCategory(subCategory);
+  }, []);
+
+  const handleSubDragOver = useCallback((e: React.DragEvent, targetSub: string) => {
+    e.preventDefault();
+    if (!draggedSubCategory || draggedSubCategory === targetSub) return;
+  }, [draggedSubCategory]);
+
+  const handleSubDrop = useCallback((e: React.DragEvent, targetSub: string) => {
+    e.preventDefault();
+    if (!draggedSubCategory || draggedSubCategory === targetSub || !currentMain) return;
+
+    // 새로운 순서 계산
+    const newOrder = [...subCategories];
+    const dragIndex = newOrder.indexOf(draggedSubCategory);
+    const dropIndex = newOrder.indexOf(targetSub);
+
+    if (dragIndex !== -1 && dropIndex !== -1) {
+      newOrder.splice(dragIndex, 1);
+      newOrder.splice(dropIndex, 0, draggedSubCategory);
+
+      // 저장
+      setSubCategoryOrders(prev => ({
+        ...prev,
+        [currentMain]: newOrder,
+      }));
+      storage.setJSON(STORAGE_KEYS.resourceSubCategoryOrder(currentMain), newOrder);
+    }
+
+    setDraggedSubCategory(null);
+  }, [draggedSubCategory, subCategories, currentMain]);
+
+  const handleSubDragEnd = useCallback(() => {
+    setDraggedSubCategory(null);
+  }, []);
+
+  // 중분류 순서 초기화
+  const handleResetSubCategoryOrder = useCallback(() => {
+    if (!currentMain) return;
+    setSubCategoryOrders(prev => {
+      const newOrders = { ...prev };
+      delete newOrders[currentMain];
+      return newOrders;
+    });
+    storage.remove(STORAGE_KEYS.resourceSubCategoryOrder(currentMain));
+  }, [currentMain]);
 
   // 전체 선택 상태 계산
   const isAllChecked = currentResources.length > 0 && selectedIds.size === currentResources.length;
@@ -650,19 +751,44 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
         {/* 2단: 중분류 폴더 (대분류 선택 시) */}
         {currentMain && !currentSub && subCategories.length > 0 && (
           <div className="p-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] text-gray-400">드래그하여 순서 변경</span>
+              {subCategoryOrders[currentMain]?.length > 0 && (
+                <button
+                  onClick={handleResetSubCategoryOrder}
+                  className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-[#081429] transition-colors"
+                  title="가나다 순으로 초기화"
+                >
+                  <RotateCcw size={10} />
+                  순서 초기화
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-3 overflow-x-auto pb-2">
               {subCategories.map(sub => (
-                <button
+                <div
                   key={sub}
+                  draggable
+                  onDragStart={() => handleSubDragStart(sub)}
+                  onDragOver={(e) => handleSubDragOver(e, sub)}
+                  onDrop={(e) => handleSubDrop(e, sub)}
+                  onDragEnd={handleSubDragEnd}
                   onClick={() => handleSubClick(sub)}
-                  className="flex flex-col items-center gap-2 p-3 min-w-[90px] rounded-xl border-2 border-gray-200 hover:border-[#081429] hover:bg-[#081429]/5 transition-all group"
+                  className={`flex flex-col items-center gap-2 p-3 min-w-[90px] rounded-xl border-2 cursor-pointer transition-all group ${
+                    draggedSubCategory === sub
+                      ? 'border-[#081429] opacity-50'
+                      : 'border-gray-200 hover:border-[#081429] hover:bg-[#081429]/5'
+                  }`}
                 >
-                  <Folder size={28} className="text-[#081429] group-hover:scale-110 transition-transform" />
+                  <div className="relative">
+                    <GripVertical size={10} className="absolute -left-4 top-1.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
+                    <Folder size={28} className="text-[#081429] group-hover:scale-110 transition-transform" />
+                  </div>
                   <span className="text-xs font-medium text-[#081429]">{sub}</span>
                   {subCounts[sub] > 0 && (
                     <span className="text-[10px] text-gray-500">{subCounts[sub]}개</span>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           </div>

@@ -476,4 +476,110 @@ exports.archiveOldEvents = functions
         return null;
     });
 
+/**
+ * =========================================================
+ * Cloud Function: Set User Password (Admin Only)
+ * =========================================================
+ * Allows admin/master users to set a temporary password
+ * for another user directly.
+ *
+ * @param {string} uid - Target user's Firebase UID
+ * @param {string} password - New password (min 6 chars)
+ */
+exports.setUserPassword = functions
+    .region("asia-northeast3")
+    .https.onCall(async (data, context) => {
+        const logger = functions.logger;
+
+        // 1. Authentication check
+        if (!context.auth) {
+            throw new functions.https.HttpsError(
+                "unauthenticated",
+                "로그인이 필요합니다."
+            );
+        }
+
+        const callerUid = context.auth.uid;
+
+        // 2. Get caller's role from Firestore (users collection)
+        const callerDoc = await db.collection("users").doc(callerUid).get();
+        if (!callerDoc.exists) {
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "사용자 정보를 찾을 수 없습니다."
+            );
+        }
+
+        const callerRole = callerDoc.data().role;
+        const allowedRoles = ["master", "admin"];
+
+        if (!allowedRoles.includes(callerRole)) {
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "비밀번호 변경 권한이 없습니다. (관리자만 가능)"
+            );
+        }
+
+        // 3. Validate input
+        const { uid, password } = data;
+
+        if (!uid || typeof uid !== "string") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "대상 사용자 UID가 필요합니다."
+            );
+        }
+
+        if (!password || typeof password !== "string" || password.length < 6) {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "비밀번호는 최소 6자 이상이어야 합니다."
+            );
+        }
+
+        // 4. Get target user's role (prevent admin from changing master's password)
+        const targetUserDoc = await db.collection("users").doc(uid).get();
+        if (targetUserDoc.exists) {
+            const targetRole = targetUserDoc.data().role;
+            // Only master can change master's password
+            if (targetRole === "master" && callerRole !== "master") {
+                throw new functions.https.HttpsError(
+                    "permission-denied",
+                    "MASTER 계정의 비밀번호는 변경할 수 없습니다."
+                );
+            }
+            // Admin cannot change other admin's password
+            if (targetRole === "admin" && callerRole === "admin" && uid !== callerUid) {
+                throw new functions.https.HttpsError(
+                    "permission-denied",
+                    "다른 관리자의 비밀번호는 변경할 수 없습니다."
+                );
+            }
+        }
+
+        // 5. Update password using Admin SDK
+        try {
+            await admin.auth().updateUser(uid, {
+                password: password
+            });
+
+            logger.info(`[setUserPassword] Password updated for user: ${uid} by ${callerUid}`);
+
+            return { success: true, message: "비밀번호가 변경되었습니다." };
+        } catch (error) {
+            logger.error(`[setUserPassword] Error updating password:`, error);
+
+            if (error.code === "auth/user-not-found") {
+                throw new functions.https.HttpsError(
+                    "not-found",
+                    "대상 사용자를 찾을 수 없습니다."
+                );
+            }
+
+            throw new functions.https.HttpsError(
+                "internal",
+                "비밀번호 변경 중 오류가 발생했습니다."
+            );
+        }
+    });
 
