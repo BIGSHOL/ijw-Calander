@@ -71,6 +71,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditMath = hasPermission('timetable.math.edit') || isMaster;
+    const canManageStudents = isMaster || hasPermission('students.edit');
 
     const [searchTerm, setSearchTerm] = useState('');
     const [mode, setMode] = useState<'view' | 'edit'>(isSimulationMode ? 'edit' : 'view');
@@ -571,12 +572,13 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                 />
             )}
 
-            {/* Student Detail Modal */}
+            {/* Student Detail Modal - 학생관리 권한에 따라 조회/수정 모드 결정 */}
             {selectedStudent && (
                 <StudentDetailModal
                     student={selectedStudent}
                     onClose={() => setSelectedStudent(null)}
-                    readOnly={mode === 'view'}
+                    readOnly={!canManageStudents}
+                    currentUser={currentUser}
                 />
             )}
         </div>

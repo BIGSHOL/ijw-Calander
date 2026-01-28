@@ -402,9 +402,8 @@ export type PermissionId =
   | 'attendance.manage_science' | 'attendance.manage_korean'  // Reserved: 과학/국어 출석부 기능 추가 시 사용
   | 'attendance.edit_student_info'
   | 'attendance.manage_sessions'  // 세션 기간 설정 (관리자 전용)
-  // Students (NEW)
+  // Students (NEW) - students.edit 권한으로 수강배정 포함 모든 수정 가능
   | 'students.view' | 'students.edit' | 'students.delete'
-  | 'students.enrollment.manage'  // 수강 배정 관리
   // Classes Management (NEW)
   | 'classes.view' | 'classes.create' | 'classes.edit' | 'classes.delete'
   // Consultation (NEW)
@@ -451,8 +450,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'attendance.manage_sessions': true,  // 세션 설정 권한 (관리자)
     // Students
     'students.view': true, 'students.edit': true, 'students.delete': true,
-    'students.enrollment.manage': true,
-    // Classes
+        // Classes
     'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': true,
     // Consultation
     'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true, 'consultation.manage': true,
@@ -487,8 +485,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'attendance.edit_student_info': true,
     // Students
     'students.view': true, 'students.edit': true, 'students.delete': false,
-    'students.enrollment.manage': true,
-    // Classes
+        // Classes
     'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': false,
     // Consultation
     'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true, 'consultation.manage': true,
@@ -522,8 +519,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'attendance.edit_student_info': true,
     // Students
     'students.view': true, 'students.edit': true, 'students.delete': false,
-    'students.enrollment.manage': true,
-    // Classes
+        // Classes
     'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': false,
     // Consultation
     'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true, 'consultation.manage': true,
@@ -559,8 +555,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'attendance.edit_student_info': true,
     // Students
     'students.view': true, 'students.edit': true, 'students.delete': false,
-    'students.enrollment.manage': true,
-    // Classes
+        // Classes
     'classes.view': true, 'classes.create': true, 'classes.edit': true, 'classes.delete': false,
     // Consultation
     'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': true, 'consultation.manage': true,
@@ -593,8 +588,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'attendance.edit_student_info': false,
     // Students (view only)
     'students.view': true, 'students.edit': false, 'students.delete': false,
-    'students.enrollment.manage': false,
-    // Classes (view only)
+        // Classes (view only)
     'classes.view': true, 'classes.create': false, 'classes.edit': false, 'classes.delete': false,
     // Consultation (본인 상담만 수정 가능)
     'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': false, 'consultation.manage': false,
@@ -627,8 +621,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'attendance.edit_student_info': false,
     // Students (view only)
     'students.view': true, 'students.edit': false, 'students.delete': false,
-    'students.enrollment.manage': false,
-    // Classes (view only)
+        // Classes (view only)
     'classes.view': true, 'classes.create': false, 'classes.edit': false, 'classes.delete': false,
     // Consultation (본인 상담만 수정 가능)
     'consultation.view': true, 'consultation.create': true, 'consultation.edit': true, 'consultation.convert': false, 'consultation.manage': false,

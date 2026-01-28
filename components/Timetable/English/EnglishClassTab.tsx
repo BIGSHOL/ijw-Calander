@@ -73,6 +73,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
+    const canManageStudents = isMaster || hasPermission('students.edit');
     const [searchTerm, setSearchTerm] = useState('');
     // 시뮬레이션 모드에서는 항상 수정모드 (조회모드 불필요)
     const [mode, setMode] = useState<'view' | 'edit'>(isSimulationMode ? 'edit' : 'view');
@@ -614,12 +615,13 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 />
             )}
 
-            {/* 학생 상세 모달 - 조회모드에서는 readOnly, 수정모드에서만 수정 가능 */}
+            {/* 학생 상세 모달 - 학생관리 권한에 따라 조회/수정 모드 결정 */}
             {selectedStudent && (
                 <StudentDetailModal
                     student={selectedStudent}
                     onClose={() => setSelectedStudent(null)}
-                    readOnly={mode === 'view'}
+                    readOnly={!canManageStudents}
+                    currentUser={currentUser}
                 />
             )}
         </div>

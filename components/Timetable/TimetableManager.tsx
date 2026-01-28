@@ -75,6 +75,7 @@ const TimetableManager = ({
     const canViewEnglish = isMaster || hasPermission('timetable.english.view') || canEditEnglish;
     const canViewScience = isMaster || hasPermission('timetable.science.view') || canEditScience;
     const canViewKorean = isMaster || hasPermission('timetable.korean.view') || canEditKorean;
+    const canManageStudents = isMaster || hasPermission('students.edit');
 
     // Subject Tab (use external if provided)
     const [internalSubjectTab, setInternalSubjectTab] = useState<SubjectType>('math');
@@ -773,12 +774,13 @@ const TimetableManager = ({
                         />
                     )}
 
-                    {/* Student Detail Modal - 학생 클릭 시 표시 */}
+                    {/* Student Detail Modal - 학생관리 권한에 따라 조회/수정 모드 결정 */}
                     {selectedStudentForModal && (
                         <StudentDetailModal
                             student={selectedStudentForModal}
                             onClose={() => setSelectedStudentForModal(null)}
-                            readOnly={subjectTab !== 'math' || mode === 'view'}
+                            readOnly={!canManageStudents}
+                            currentUser={currentUser}
                         />
                     )}
 

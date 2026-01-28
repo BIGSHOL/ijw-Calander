@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { X, Edit, Trash2, Phone, Mail, Calendar, Shield, ShieldCheck, ShieldAlert, Building, User, CheckCircle, XCircle, Clock, Briefcase, Eye, EyeOff, Globe, AlertTriangle } from 'lucide-react';
+import { X, Edit, Trash2, Phone, Mail, Calendar, Shield, ShieldCheck, ShieldAlert, Building, User, CheckCircle, XCircle, Clock, Briefcase, Eye, EyeOff, Globe, AlertTriangle, KeyRound, Send, Loader2, Lock } from 'lucide-react';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserRole } from '../../types';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { auth } from '../../firebaseConfig';
 
 interface StaffViewModalProps {
   staff: StaffMember;
@@ -34,6 +37,12 @@ const APPROVAL_STYLES: Record<string, { label: string; bg: string; text: string;
 const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit, onDelete, canEdit = true, canDelete = true, currentUserUid }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // 비밀번호 재설정 관련 상태
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+  const [passwordResetMode, setPasswordResetMode] = useState<'email' | 'direct'>('email');
+  const [newPassword, setNewPassword] = useState('');
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetResult, setResetResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const systemRoleStyle = staff.systemRole ? SYSTEM_ROLE_STYLES[staff.systemRole] : null;
   const approvalStyle = staff.approvalStatus ? APPROVAL_STYLES[staff.approvalStatus] : null;
@@ -66,6 +75,70 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  // 비밀번호 재설정 이메일 발송
+  const handleSendPasswordResetEmail = async () => {
+    if (!staff.email) {
+      setResetResult({ success: false, message: '이메일 주소가 없습니다.' });
+      return;
+    }
+
+    setIsSendingReset(true);
+    setResetResult(null);
+
+    try {
+      await sendPasswordResetEmail(auth, staff.email);
+      setResetResult({ success: true, message: `${staff.email}로 비밀번호 재설정 이메일을 발송했습니다.` });
+    } catch (error: any) {
+      console.error('Password reset email error:', error);
+      let message = '이메일 발송에 실패했습니다.';
+      if (error.code === 'auth/user-not-found') {
+        message = '해당 이메일로 등록된 계정이 없습니다.';
+      } else if (error.code === 'auth/invalid-email') {
+        message = '유효하지 않은 이메일 주소입니다.';
+      }
+      setResetResult({ success: false, message });
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+  // 임시 비밀번호 직접 설정 (Cloud Function 호출)
+  const handleSetTempPassword = async () => {
+    if (!staff.uid) {
+      setResetResult({ success: false, message: '연동된 계정이 없습니다.' });
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setResetResult({ success: false, message: '비밀번호는 최소 6자 이상이어야 합니다.' });
+      return;
+    }
+
+    setIsSendingReset(true);
+    setResetResult(null);
+
+    try {
+      const functions = getFunctions(undefined, 'asia-northeast3');
+      const setUserPassword = httpsCallable(functions, 'setUserPassword');
+      await setUserPassword({ uid: staff.uid, password: newPassword });
+      setResetResult({ success: true, message: '비밀번호가 변경되었습니다. 임시 비밀번호를 직원에게 전달해주세요.' });
+      setNewPassword('');
+    } catch (error: any) {
+      console.error('Set password error:', error);
+      setResetResult({ success: false, message: error.message || '비밀번호 변경에 실패했습니다.' });
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
+  // 비밀번호 재설정 모달 초기화
+  const openPasswordResetModal = () => {
+    setShowPasswordResetModal(true);
+    setPasswordResetMode('email');
+    setNewPassword('');
+    setResetResult(null);
   };
 
   // 직책 뱃지 스타일
@@ -223,6 +296,19 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                   <span className="text-xs text-gray-400">-</span>
                 )}
               </div>
+
+              {/* 비밀번호 재설정 (연동된 계정만) */}
+              {staff.uid && canEdit && (
+                <div className="pt-3 border-t border-gray-200">
+                  <button
+                    onClick={openPasswordResetModal}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    비밀번호 재설정
+                  </button>
+                </div>
+              )}
 
             </div>
           </section>
@@ -393,6 +479,166 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                     삭제
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 비밀번호 재설정 모달 */}
+      {showPasswordResetModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* 헤더 */}
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <KeyRound className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">비밀번호 재설정</h3>
+                    <p className="text-xs text-amber-100">{staff.name} ({staff.email})</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPasswordResetModal(false)}
+                  className="p-1 hover:bg-white/20 rounded-lg transition-colors text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* 컨텐츠 */}
+            <div className="p-5 space-y-4">
+              {/* 모드 선택 탭 */}
+              <div className="flex rounded-lg bg-gray-100 p-1">
+                <button
+                  onClick={() => { setPasswordResetMode('email'); setResetResult(null); }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-md transition-colors ${
+                    passwordResetMode === 'email'
+                      ? 'bg-white text-[#081429] shadow'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  이메일 발송
+                </button>
+                <button
+                  onClick={() => { setPasswordResetMode('direct'); setResetResult(null); }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-md transition-colors ${
+                    passwordResetMode === 'direct'
+                      ? 'bg-white text-[#081429] shadow'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  직접 설정
+                </button>
+              </div>
+
+              {/* 이메일 발송 모드 */}
+              {passwordResetMode === 'email' && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>{staff.email}</strong>로 비밀번호 재설정 링크가 포함된 이메일을 발송합니다.
+                    </p>
+                    <p className="text-xs text-blue-600 mt-2">
+                      직원이 이메일의 링크를 클릭하여 새 비밀번호를 설정할 수 있습니다.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleSendPasswordResetEmail}
+                    disabled={isSendingReset || !staff.email}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSendingReset ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        발송 중...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        재설정 이메일 발송
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* 직접 설정 모드 */}
+              {passwordResetMode === 'direct' && (
+                <div className="space-y-4">
+                  <div className="bg-amber-50 rounded-lg p-4">
+                    <p className="text-sm text-amber-800">
+                      관리자가 직접 임시 비밀번호를 설정합니다.
+                    </p>
+                    <p className="text-xs text-amber-600 mt-2">
+                      설정된 비밀번호를 직원에게 안전하게 전달해주세요.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      새 비밀번호 (최소 6자)
+                    </label>
+                    <input
+                      type="text"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="임시 비밀번호 입력"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleSetTempPassword}
+                    disabled={isSendingReset || !newPassword || newPassword.length < 6}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSendingReset ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        설정 중...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4" />
+                        비밀번호 설정
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* 결과 메시지 */}
+              {resetResult && (
+                <div className={`rounded-lg p-4 ${resetResult.success ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                  <div className="flex items-start gap-3">
+                    {resetResult.success ? (
+                      <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                    )}
+                    <p className={`text-sm ${resetResult.success ? 'text-emerald-800' : 'text-red-800'}`}>
+                      {resetResult.message}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 푸터 */}
+            <div className="px-5 py-3 bg-gray-50 border-t border-gray-200">
+              <button
+                onClick={() => setShowPasswordResetModal(false)}
+                className="w-full py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                닫기
               </button>
             </div>
           </div>
