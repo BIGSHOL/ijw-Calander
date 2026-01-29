@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff } from 'lucide-react';
+import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, RefreshCw } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
 import { formatCurrency, calculateStats, getCategoryLabel } from './utils';
@@ -300,7 +300,30 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       return true;
     });
 
-    return filtered.sort((a, b) => {
+    // 학생을 클래스별로 확장 (한 학생이 여러 클래스에 있으면 여러 행으로 표시)
+    const expandedStudents: Student[] = [];
+    filtered.forEach(student => {
+      const mainClasses = student.mainClasses || [];
+      const slotClasses = student.slotClasses || [];
+      const allClasses = [...mainClasses, ...slotClasses];
+
+      if (allClasses.length === 0) {
+        // 클래스가 없는 학생은 그대로 추가
+        expandedStudents.push(student);
+      } else {
+        // 각 클래스별로 별도의 행 생성
+        allClasses.forEach(className => {
+          expandedStudents.push({
+            ...student,
+            group: className, // 단일 클래스명으로 설정
+            mainClasses: mainClasses.includes(className) ? [className] : [],
+            slotClasses: slotClasses.includes(className) ? [className] : [],
+          });
+        });
+      }
+    });
+
+    return expandedStudents.sort((a, b) => {
       if (!a.group && b.group) return 1;
       if (a.group && !b.group) return -1;
 
@@ -325,6 +348,12 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const pendingUpdatesByStudent = useMemo(() => groupUpdates(pendingUpdates), [pendingUpdates]);
   const pendingMemosByStudent = useMemo(() => groupUpdates(pendingMemos), [pendingMemos]);
 
+  // 고유 학생 수 계산 (중복 제거)
+  const uniqueStudentCount = useMemo(() => {
+    const uniqueIds = new Set(visibleStudents.map(s => s.id));
+    return uniqueIds.size;
+  }, [visibleStudents]);
+
   const stats = useMemo(() =>
     calculateStats(allStudents, visibleStudents, salaryConfig, currentDate),
     [allStudents, visibleStudents, salaryConfig, currentDate]
@@ -337,6 +366,21 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     total += (currentSettlement.otherAmount || 0);
     return total;
   }, [stats.totalSalary, currentSettlement, salaryConfig.incentives]);
+
+  // DEBUG: Log for simulation mode debugging
+  console.log('🔍 AttendanceManager Debug:', {
+    userProfile: !!userProfile,
+    userRole: userProfile?.role,
+    staffId: userProfile?.staffId,
+    currentStaffId,
+    filterStaffId,
+    canManageCurrentSubject,
+    isLoadingStudents,
+    isLoadingConfig,
+    availableTeachersCount: availableTeachers.length,
+    allStudentsCount: allStudents.length,
+    visibleStudentsCount: visibleStudents.length
+  });
 
   // IMPORTANT: Loading check moved here - AFTER all hooks to comply with React Hooks rules
   // Hooks must always be called in the same order, so early returns must come AFTER all hooks
@@ -598,7 +642,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </div>
           <div>
             <p className="text-[10px] text-gray-500 font-medium">전체 학생</p>
-            <p className="text-sm font-bold text-[#373d41]">{visibleStudents.length}명</p>
+            <p className="text-sm font-bold text-[#373d41]">{uniqueStudentCount}명</p>
           </div>
         </div>
 
@@ -653,6 +697,21 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             <span className="text-xs font-medium text-gray-600">주말 회색</span>
           </div>
         </label>
+
+        {/* 새로고침 버튼 */}
+        <button
+          onClick={() => refetch()}
+          disabled={isLoadingStudents}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
+            isLoadingStudents
+              ? 'bg-gray-400 text-white cursor-wait'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+          title="학생 목록 새로고침"
+        >
+          <RefreshCw size={14} className={isLoadingStudents ? 'animate-spin' : ''} />
+          {isLoadingStudents ? '불러오는 중...' : '새로고침'}
+        </button>
 
         {/* Settings Buttons - same row */}
         <div className="flex-1"></div>

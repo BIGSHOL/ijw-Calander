@@ -137,11 +137,15 @@ export const calculateStats = (
   const daysInMonth = getDaysInMonth(currentMonth);
   const todayKey = formatDateKey(new Date());
 
+  // 중복 학생 추적 (학생이 여러 클래스에 있을 경우)
+  const processedNewStudents = new Set<string>();
+
   visibleStudents.forEach(student => {
     // Check if student is NEW this month (startDate is in current month)
     const { isNew } = getStudentStatus(student, currentMonth);
-    if (isNew) {
+    if (isNew && !processedNewStudents.has(student.id)) {
       newStudents.push(student);
+      processedNewStudents.add(student.id);
     }
 
     // Salary Stats (Existing Logic)
@@ -245,7 +249,9 @@ export const calculateStats = (
   const droppedStudentsCount = droppedStudents.length;
 
   // Estimated Total Last Month = Current Total - New + Dropped
-  const currentTotal = visibleStudents.length;
+  // 중복 제거: 고유 학생 ID만 카운트
+  const uniqueStudentIds = new Set(visibleStudents.map(s => s.id));
+  const currentTotal = uniqueStudentIds.size;
   const estimatedPrevTotal = currentTotal - newStudentsCount + droppedStudentsCount;
 
   let newStudentRate = 0;
