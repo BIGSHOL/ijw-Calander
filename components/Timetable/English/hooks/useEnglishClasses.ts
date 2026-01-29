@@ -35,11 +35,20 @@ export interface ClassInfo {
     teacherCounts: Record<string, number>;
 }
 
+// 시뮬레이션용 클래스 데이터 타입 (SimulationContext의 ScenarioClass와 호환)
+interface ScenarioClassData {
+    className: string;
+    mainTeacher?: string;
+    [key: string]: any;
+}
+
 export const useEnglishClasses = (
     scheduleData: ScheduleData,
     settings: IntegrationSettings,
     teachersData: Teacher[],
-    classesData: ClassInfoFromDB[] = []
+    classesData: ClassInfoFromDB[] = [],
+    isSimulationMode: boolean = false,
+    scenarioClasses: Record<string, ScenarioClassData> = {}
 ) => {
     return useMemo(() => {
         const classMap = new Map<string, ClassInfo>();
@@ -204,9 +213,13 @@ export const useEnglishClasses = (
 
         // Pass 3: Calculate Logic (Weekend Shift & Visible Periods)
         return validClasses.map(c => {
-            // 0. 담임 결정: classes 컬렉션의 teacher 필드에서 가져옴
-            const classFromDB = classesData.find(cls => cls.className === c.name);
-            c.mainTeacher = classFromDB?.teacher || '';
+            // 0. 담임 결정: 시뮬레이션 모드면 scenarioClasses에서, 아니면 classes 컬렉션에서 가져옴 (classId 기준)
+            if (isSimulationMode && c.classId && scenarioClasses[c.classId]) {
+                c.mainTeacher = scenarioClasses[c.classId].mainTeacher || '';
+            } else {
+                const classFromDB = classesData.find(cls => cls.id === c.classId);
+                c.mainTeacher = classFromDB?.teacher || '';
+            }
 
             // 1. Weekend Shift Logic
             let weekendShift = 0;
@@ -312,5 +325,5 @@ export const useEnglishClasses = (
 
             return c;
         });
-    }, [scheduleData, settings, teachersData, classesData]);
+    }, [scheduleData, settings, teachersData, classesData, isSimulationMode, scenarioClasses]);
 };

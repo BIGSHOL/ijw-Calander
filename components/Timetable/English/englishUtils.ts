@@ -225,6 +225,76 @@ export const isValidLevel = (className: string, levelOrder: EnglishLevel[]): boo
     return levelExists;
 };
 
+// ============ LEVEL DOWN UTILITIES ============
+
+/**
+ * Number Level Down: DP4 → DP3 (decrement number, preserve suffix)
+ * @returns null if number is already 1
+ */
+export const numberLevelDown = (className: string): string | null => {
+    const parsed = parseClassName(className);
+    if (!parsed) return null;
+
+    // Can't go below 1
+    if (parsed.number <= 1) return null;
+
+    return buildClassName({
+        ...parsed,
+        number: parsed.number - 1
+    });
+};
+
+/**
+ * Class Level Down: PL1 → DP1 (move to previous level, reset number to 1, preserve suffix)
+ * @returns null if already at min level (first level) or invalid class
+ */
+export const classLevelDown = (className: string, levelOrder: EnglishLevel[]): string | null => {
+    const parsed = parseClassName(className);
+    if (!parsed) return null;
+
+    // Find current level index
+    const currentIndex = levelOrder.findIndex(
+        lvl => lvl.abbreviation.toUpperCase() === parsed.levelAbbr.toUpperCase()
+    );
+
+    // If not found or first level, return null
+    if (currentIndex === -1 || currentIndex === 0) {
+        return null;
+    }
+
+    const prevLevel = levelOrder[currentIndex - 1];
+
+    return buildClassName({
+        levelAbbr: prevLevel.abbreviation,
+        number: 1,
+        suffix: parsed.suffix
+    });
+};
+
+/**
+ * Check if class is at minimum level (first level, e.g., DP)
+ */
+export const isMinLevel = (className: string, levelOrder: EnglishLevel[]): boolean => {
+    const parsed = parseClassName(className);
+    if (!parsed) return false;
+
+    const currentIndex = levelOrder.findIndex(
+        lvl => lvl.abbreviation.toUpperCase() === parsed.levelAbbr.toUpperCase()
+    );
+
+    return currentIndex === 0;
+};
+
+/**
+ * Check if number level can be decremented (number > 1)
+ */
+export const canNumberLevelDown = (className: string): boolean => {
+    const parsed = parseClassName(className);
+    if (!parsed) return false;
+
+    return parsed.number > 1;
+};
+
 /**
  * Format class name with smart line breaks
  * Splits class names on spaces for better readability in cells

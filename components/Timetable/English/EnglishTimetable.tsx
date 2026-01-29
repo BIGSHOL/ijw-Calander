@@ -49,6 +49,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const [teacherOrder, setTeacherOrder] = useState<string[]>(() =>
         storage.getJSON<string[]>(STORAGE_KEYS.ENGLISH_TEACHER_ORDER_CACHE, [])
     );
+    const [publishedScenarioName, setPublishedScenarioName] = useState<string | null>(null);
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
 
@@ -247,14 +248,17 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         }).filter(Boolean));
     }, [propsTeachers, viewType]);
 
-    // Subscribe to Order Config only
+    // Subscribe to Order Config and Published Scenario Name
     useEffect(() => {
         const unsubscribeOrder = onSnapshot(doc(db, 'settings', 'english_config'), (docSnap) => {
             if (docSnap.exists()) {
-                const order = docSnap.data().teacherOrder || [];
+                const data = docSnap.data();
+                const order = data.teacherOrder || [];
                 setTeacherOrder(order);
                 // localStorage 캐시 업데이트 (다음 접속 시 즉시 로드)
                 storage.setJSON(STORAGE_KEYS.ENGLISH_TEACHER_ORDER_CACHE, order);
+                // 발행된 시나리오 이름 저장
+                setPublishedScenarioName(data.publishedScenarioName || null);
             }
         });
         return listenerRegistry.register('EnglishTimetable(config)', unsubscribeOrder);
@@ -355,7 +359,12 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             {/* Header - Row 1: Title only */}
             <div className={`text-center py-3 border-b shrink-0 transition-colors duration-300 ${isSimulationMode ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
                 <h1 className="text-2xl font-black text-gray-800 tracking-tight flex items-center justify-center gap-2">
-                    <span>인재원 본원 {new Date().getMonth() + 1}월 통합 영어시간표</span>
+                    <span>
+                        {isSimulationMode && currentScenarioName
+                            ? currentScenarioName
+                            : (publishedScenarioName || '인재원 본원 통합 영어시간표')
+                        }
+                    </span>
                     {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">SIMULATION</span>}
                 </h1>
             </div>

@@ -675,6 +675,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                             setShowAddModal(false);
                             // mutation의 onSuccess에서 캐시 무효화 완료됨 (staleTime: 0)
                         }}
+                        userProfile={currentUser}
                     />
                 )
             }

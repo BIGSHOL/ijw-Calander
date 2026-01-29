@@ -2,8 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useStudents } from '../../hooks/useStudents';
 import { useStaff } from '../../hooks/useStaff'; // Added
 import { useCreateConsultation, useUpdateConsultation } from '../../hooks/useConsultationMutations';
-import { Consultation, ConsultationCategory, CATEGORY_CONFIG } from '../../types';
-import { auth } from '../../firebaseConfig';
+import { Consultation, ConsultationCategory, CATEGORY_CONFIG, UserProfile } from '../../types';
 import { X, Search, Loader2, User, Users, Clock, Calendar, MessageSquare, Edit2 } from 'lucide-react';
 
 interface AddConsultationModalProps {
@@ -11,6 +10,7 @@ interface AddConsultationModalProps {
     onSuccess: () => void;
     preSelectedStudentId?: string;
     editingConsultation?: Consultation;
+    userProfile?: UserProfile | null; // 시뮬레이션 지원
 }
 
 // 현재 시간을 HH:MM 형식으로 반환
@@ -24,8 +24,14 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
     onSuccess,
     preSelectedStudentId,
     editingConsultation,
+    userProfile,
 }) => {
-    const currentUser = auth.currentUser;
+    // 시뮬레이션 지원: userProfile이 전달되면 사용, 아니면 null 처리
+    const currentUser = userProfile ? {
+        uid: userProfile.uid,
+        displayName: userProfile.displayName,
+        email: userProfile.email,
+    } : null;
     const { students, loading: studentsLoading } = useStudents(true);
     const { staff } = useStaff();
     const createConsultation = useCreateConsultation();

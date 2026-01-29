@@ -17,6 +17,14 @@ interface StudentMigrationModalProps {
   onClose: () => void;
 }
 
+// 변경 내역 타입
+interface StudentChangeInfo {
+  excelData: ExcelStudentData;
+  isNew: boolean;
+  existingData?: UnifiedStudent;
+  changedFields: string[];
+}
+
 // Excel 데이터 타입
 interface ExcelStudentData {
   이름: string;
@@ -49,6 +57,10 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
   const [newCount, setNewCount] = useState(0);
   const [updateCount, setUpdateCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+
+  // 상세 변경 내역 저장
+  const [changeDetails, setChangeDetails] = useState<StudentChangeInfo[]>([]);
+  const [detailFilter, setDetailFilter] = useState<'all' | 'new' | 'update'>('all');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,19 +114,33 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
       const studentsRef = collection(db, 'students');
       const existingSnapshot = await getDocs(studentsRef);
       const existingAttendanceNumbers = new Set<string>();
-      const existingStudents = new Map<string, any>();
+      const existingStudentsByAttendance = new Map<string, UnifiedStudent>();
 
       existingSnapshot.forEach(docSnap => {
         const student = docSnap.data() as UnifiedStudent;
         if (student.attendanceNumber) {
           existingAttendanceNumbers.add(student.attendanceNumber);
+          existingStudentsByAttendance.set(student.attendanceNumber, student);
         }
-        existingStudents.set(docSnap.id, student);
       });
 
-      // 신규/업데이트 카운트 (출결번호 기준으로 판단)
+      // 신규/업데이트 카운트 및 상세 변경 내역 (출결번호 기준으로 판단)
       let newCnt = 0;
       let updateCnt = 0;
+      const changes: StudentChangeInfo[] = [];
+
+      // 필드명 매핑 (Excel → 기존 데이터)
+      const fieldMapping: Record<string, { excelKey: keyof ExcelStudentData; existingKey: keyof UnifiedStudent; label: string }> = {
+        school: { excelKey: '학교', existingKey: 'school', label: '학교' },
+        grade: { excelKey: '학년', existingKey: 'grade', label: '학년' },
+        studentPhone: { excelKey: '원생연락처', existingKey: 'studentPhone', label: '원생연락처' },
+        parentPhone: { excelKey: '보호자연락처', existingKey: 'parentPhone', label: '보호자연락처' },
+        parentName: { excelKey: '보호자이름', existingKey: 'parentName', label: '보호자이름' },
+        parentRelation: { excelKey: '보호자구분', existingKey: 'parentRelation', label: '보호자구분' },
+        otherPhone: { excelKey: '기타보호자연락처', existingKey: 'otherPhone', label: '기타보호자연락처' },
+        address: { excelKey: '주소1', existingKey: 'address', label: '주소' },
+        memo: { excelKey: '메모', existingKey: 'memo', label: '메모' },
+      };
 
       data.forEach(item => {
         // Excel에 출결번호가 있으면 그것 사용, 없으면 전화번호로 생성
@@ -123,17 +149,41 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
           attendanceNumber = generateAttendanceNumber(item.보호자연락처, existingAttendanceNumbers);
         }
 
-        if (existingAttendanceNumbers.has(attendanceNumber)) {
+        const isNew = !existingAttendanceNumbers.has(attendanceNumber);
+        let existingData: UnifiedStudent | undefined;
+        const changedFields: string[] = [];
+
+        if (!isNew) {
+          // 기존 데이터와 비교하여 변경될 필드 찾기
+          existingData = existingStudentsByAttendance.get(attendanceNumber);
+
+          if (existingData) {
+            Object.values(fieldMapping).forEach(({ excelKey, existingKey, label }) => {
+              const excelValue = item[excelKey];
+              const existingValue = existingData?.[existingKey];
+              if (excelValue && excelValue !== existingValue) {
+                changedFields.push(label);
+              }
+            });
+          }
           updateCnt++;
         } else {
           newCnt++;
           existingAttendanceNumbers.add(attendanceNumber);
         }
+
+        changes.push({
+          excelData: item,
+          isNew,
+          existingData,
+          changedFields
+        });
       });
 
       // 상태 업데이트를 한 번에 처리
       setNewCount(newCnt);
       setUpdateCount(updateCnt);
+      setChangeDetails(changes);
       setLoading(false);
 
       // 다음 렌더링 사이클에서 step 변경
@@ -477,24 +527,127 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
                 </ul>
               </div>
 
-              {/* 샘플 데이터 미리보기 */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <p className="text-sm text-gray-700 font-medium mb-3">
-                  총 <span className="font-bold text-[#081429]">{totalCount}명</span>의 학생 데이터가 준비되었습니다.
-                </p>
-                <div className="text-xs text-gray-600">
-                  <p className="font-medium mb-2">샘플 데이터 (처음 5명):</p>
-                  <div className="space-y-1 ml-2">
-                    {rawData.slice(0, 5).map((student, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="text-gray-400">{idx + 1}.</span>
-                        <span className="font-medium">{student.이름}</span>
-                        <span className="text-gray-500">({student.학년})</span>
-                        <span className="text-gray-400 text-[10px]">{student.학교}</span>
-                      </div>
-                    ))}
+              {/* 전체 학생 상세 목록 */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                {/* 필터 탭 */}
+                <div className="flex items-center border-b border-gray-200 bg-white px-3 py-2">
+                  <span className="text-sm text-gray-600 mr-3">필터:</span>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => setDetailFilter('all')}
+                      className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                        detailFilter === 'all'
+                          ? 'bg-[#081429] text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      전체 ({totalCount})
+                    </button>
+                    <button
+                      onClick={() => setDetailFilter('new')}
+                      className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                        detailFilter === 'new'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-green-50 text-green-700 hover:bg-green-100'
+                      }`}
+                    >
+                      신규 ({newCount})
+                    </button>
+                    <button
+                      onClick={() => setDetailFilter('update')}
+                      className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                        detailFilter === 'update'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                      }`}
+                    >
+                      업데이트 ({updateCount})
+                    </button>
                   </div>
                 </div>
+
+                {/* 학생 목록 */}
+                <div className="max-h-[300px] overflow-y-auto">
+                  {changeDetails
+                    .filter(item => {
+                      if (detailFilter === 'new') return item.isNew;
+                      if (detailFilter === 'update') return !item.isNew;
+                      return true;
+                    })
+                    .map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-start gap-3 px-4 py-2 border-b border-gray-100 text-xs ${
+                          item.isNew ? 'bg-green-50/50' : 'bg-white'
+                        }`}
+                      >
+                        {/* 번호 */}
+                        <span className="text-gray-400 w-8 shrink-0 text-right">{idx + 1}.</span>
+
+                        {/* 상태 배지 */}
+                        <span
+                          className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                            item.isNew
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
+                          {item.isNew ? '신규' : '업데이트'}
+                        </span>
+
+                        {/* 학생 정보 */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-900">{item.excelData.이름}</span>
+                            <span className="text-gray-500">({item.excelData.학년})</span>
+                            <span className="text-gray-400 truncate">{item.excelData.학교}</span>
+                          </div>
+
+                          {/* 변경 내역 (업데이트의 경우) */}
+                          {!item.isNew && item.changedFields.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {item.changedFields.map((field, i) => (
+                                <span
+                                  key={i}
+                                  className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px]"
+                                >
+                                  {field} 변경
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* 신규 학생의 경우 주요 정보 표시 */}
+                          {item.isNew && (
+                            <div className="mt-1 text-[10px] text-gray-500">
+                              {item.excelData.보호자연락처 && (
+                                <span className="mr-2">📞 {item.excelData.보호자연락처}</span>
+                              )}
+                              {item.excelData.기타항목1 && (
+                                <span className="mr-2">📚 {item.excelData.기타항목1}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 출결번호 */}
+                        <span className="text-[10px] text-gray-400 shrink-0">
+                          {item.excelData.출결번호 || '자동생성'}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+
+                {/* 목록이 비어있을 때 */}
+                {changeDetails.filter(item => {
+                  if (detailFilter === 'new') return item.isNew;
+                  if (detailFilter === 'update') return !item.isNew;
+                  return true;
+                }).length === 0 && (
+                  <div className="py-8 text-center text-gray-400 text-sm">
+                    해당 조건의 학생이 없습니다.
+                  </div>
+                )}
               </div>
             </div>
           )}

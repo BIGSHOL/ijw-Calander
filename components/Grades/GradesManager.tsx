@@ -7,7 +7,7 @@ import { useExamSeries, useCreateExamSeries } from '../../hooks/useExamSeries';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
-import { db, auth } from '../../firebaseConfig';
+import { db } from '../../firebaseConfig';
 import {
   GraduationCap, Plus, Trash2, Edit, Save, X, ChevronDown, ChevronRight,
   Users, Calendar, BookOpen, BarChart3, Search, Filter, Loader2,
@@ -65,7 +65,6 @@ interface GradesManagerProps {
 }
 
 const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuery, onSearchChange, onSubjectFilterChange, currentUser }) => {
-  const user = auth.currentUser;
   const queryClient = useQueryClient();
 
   // 권한 체크
@@ -308,12 +307,12 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   }, [availableSchools, schoolSearchQuery]);
 
   const handleCreateExam = async () => {
-    if (!newExam.title || !user) return;
+    if (!newExam.title || !currentUser) return;
 
     await createExam.mutateAsync({
       ...newExam,
-      createdBy: user.uid,
-      createdByName: user.displayName || user.email || '',
+      createdBy: currentUser.uid,
+      createdByName: currentUser.displayName || currentUser.email || '',
     });
 
     setIsCreatingExam(false);
@@ -448,8 +447,8 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
         average: avgScore,
         rank: rankMap[entry.studentId],
         totalStudents: validEntries.length,
-        createdBy: user.uid,
-        createdByName: user.displayName || user.email || '',
+        createdBy: currentUser?.uid || '',
+        createdByName: currentUser?.displayName || currentUser?.email || '',
       };
     });
 

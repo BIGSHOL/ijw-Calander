@@ -104,6 +104,7 @@ export interface MathSimulationContextValue extends ScenarioState {
   // Scenario operations
   loadFromLive: () => Promise<void>;
   saveToScenario: (name: string, description: string, userId: string, userName: string) => Promise<string>;
+  updateScenario: (scenarioId: string, userId: string, userName: string) => Promise<void>;
   loadFromScenario: (scenarioId: string) => Promise<void>;
   publishToLive: (userId: string, userName: string) => Promise<void>;
 
@@ -459,6 +460,52 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     return scenarioId;
   }, []);
 
+  const updateScenario = useCallback(async (
+    scenarioId: string,
+    userId: string,
+    userName: string
+  ): Promise<void> => {
+    const { scenarioClasses, scenarioEnrollments } = stateRef.current;
+
+    // 기존 시나리오 정보 가져오기
+    const existingDoc = await getDoc(doc(db, SCENARIO_COLLECTION, scenarioId));
+    if (!existingDoc.exists()) {
+      throw new Error('시나리오를 찾을 수 없습니다.');
+    }
+
+    const existingData = existingDoc.data();
+
+    // Calculate stats
+    const classCount = Object.keys(scenarioClasses).length;
+    const studentCount = Object.values(scenarioEnrollments)
+      .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
+
+    const sanitizedClasses = sanitizeForFirestore(scenarioClasses);
+    const sanitizedEnrollments = sanitizeForFirestore(scenarioEnrollments);
+
+    // 기존 시나리오 업데이트
+    await setDoc(doc(db, SCENARIO_COLLECTION, scenarioId), {
+      ...existingData,
+      classes: sanitizedClasses,
+      enrollments: sanitizedEnrollments,
+      updatedAt: new Date().toISOString(),
+      updatedBy: userName,
+      updatedByUid: userId,
+      stats: {
+        classCount,
+        studentCount,
+        timetableDocCount: classCount,
+      },
+      version: 2,
+    });
+
+    setState(prev => ({
+      ...prev,
+      isDirty: false,
+      currentScenarioName: existingData.name,
+    }));
+  }, []);
+
   const loadFromScenario = useCallback(async (scenarioId: string) => {
     // Direct document read instead of full collection scan
     const docRef = doc(db, SCENARIO_COLLECTION, scenarioId);
@@ -595,6 +642,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     moveStudent,
     loadFromLive,
     saveToScenario,
+    updateScenario,
     loadFromScenario,
     publishToLive,
     setCurrentScenarioName,
@@ -611,6 +659,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     moveStudent,
     loadFromLive,
     saveToScenario,
+    updateScenario,
     loadFromScenario,
     publishToLive,
     setCurrentScenarioName,

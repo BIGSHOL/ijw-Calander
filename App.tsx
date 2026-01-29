@@ -36,6 +36,8 @@ import SkipLink from './components/Common/SkipLink';
 import GlobalSearch, { SearchResult } from './components/Common/GlobalSearch';
 import { TabSubNavigation } from './components/Common/TabSubNavigation';
 import { TabButton } from './components/Common/TabButton';
+import { RoleSimulationProvider, SimulationState, getEffectiveUserProfile } from './hooks/useRoleSimulation';
+import RoleSimulationBanner from './components/Common/RoleSimulationBanner';
 
 // 탭별 컴포넌트 (lazy loading - 해당 탭 진입 시 로딩)
 const TimetableManager = lazy(() => import('./components/Timetable/TimetableManager'));
@@ -60,7 +62,7 @@ const RoleManagementPage = lazy(() => import('./components/RoleManagement/RoleMa
 const ResourceDashboard = lazy(() => import('./components/Resources').then(m => ({ default: m.ResourceDashboard })));
 const CalendarSettingsModal = lazy(() => import('./components/Calendar/CalendarSettingsModal'));
 // ProspectManagementTab removed - merged into ConsultationManager
-import { Settings, Printer, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Bell, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit, Calculator, BookOpen, Library, Building, ClipboardList, MessageCircle, BarChart3, Check, DollarSign } from 'lucide-react';
+import { Settings, Plus, Eye, EyeOff, LayoutGrid, Calendar as CalendarIcon, List, CheckCircle2, XCircle, LogOut, LogIn, UserCircle, Lock as LockIcon, Filter, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User as UserIcon, Star, Mail, Send, Trash2, X, UserPlus, RefreshCw, Search, Save, GraduationCap, Tag, Edit, Calculator, BookOpen, Library, Building, ClipboardList, MessageCircle, BarChart3, Check, DollarSign } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, setDoc, doc, deleteDoc, writeBatch, query, orderBy, where, getDoc, updateDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
@@ -109,6 +111,7 @@ const staffToUserLike = (staff: StaffMember): UserProfile => ({
   departmentPermissions: staff.departmentPermissions || {},
   favoriteDepartments: staff.favoriteDepartments || [],
   jobTitle: staff.jobTitle,
+  staffId: staff.id, // 시뮬레이션 시 출석부 등에서 선생님 필터링용
 });
 
 // Helper: staff 데이터를 UserProfile 형태로 변환
@@ -257,6 +260,28 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // ========== 시뮬레이션 상태 (App 레벨 관리) ==========
+  const [simulationState, setSimulationState] = useState<SimulationState>({
+    simulationType: null,
+    simulatedRole: null,
+    simulatedUserProfile: null,
+  });
+
+  // 실효 사용자 프로필 (시뮬레이션 적용)
+  // UI 렌더링에 이 프로필을 사용하면 시뮬레이션이 완전히 적용됨
+  const effectiveProfile = useMemo(() => {
+    return getEffectiveUserProfile(
+      userProfile,
+      simulationState.simulatedRole,
+      simulationState.simulatedUserProfile,
+      simulationState.simulationType
+    );
+  }, [userProfile, simulationState]);
+
+  // 시뮬레이션 중 여부
+  const isSimulating = userProfile?.role === 'master' && simulationState.simulationType !== null;
+  // ====================================================
+
   // Firestore Data State - React Query for static data (cached 30-60min)
   const { data: departments = [] } = useDepartments(!!currentUser);
   const { data: teachers = [] } = useTeachers(!!currentUser);
@@ -278,6 +303,20 @@ const App: React.FC = () => {
     if (!currentUser || !userProfile) return undefined;
     return staffWithAccounts.find(s => s.uid === currentUser.uid || s.email === userProfile.email);
   }, [currentUser, userProfile, staffWithAccounts]);
+
+  // 시뮬레이션 적용된 StaffMember (시뮬레이션 시 해당 사용자의 StaffMember)
+  const effectiveStaffMember = useMemo(() => {
+    if (!effectiveProfile) return undefined;
+    // 시뮬레이션 중이 아니면 currentStaffMember 반환
+    if (!isSimulating) return currentStaffMember;
+    // 시뮬레이션 중이면 effectiveProfile에 해당하는 StaffMember 찾기
+    // uid 또는 id 또는 email로 매칭
+    return staffWithAccounts.find(s =>
+      s.uid === effectiveProfile.uid ||
+      s.id === effectiveProfile.uid ||
+      s.email === effectiveProfile.email
+    );
+  }, [effectiveProfile, isSimulating, currentStaffMember, staffWithAccounts]);
 
   // Students and Classes for Global Search
   const { students: globalStudents = [] } = useStudents(false);
@@ -341,7 +380,8 @@ const App: React.FC = () => {
   );
 
   // Permission Hook
-  const { hasPermission, rolePermissions } = usePermissions(userProfile || null);
+  // 시뮬레이션 적용된 프로필로 권한 체크
+  const { hasPermission, rolePermissions } = usePermissions(effectiveProfile || null);
 
   // TEMPORARY: Disabled auto-initialization based on permissions
   // TODO: Re-enable after fixing permission configuration
@@ -369,10 +409,10 @@ const App: React.FC = () => {
   //   }
   // }, [userProfile, hasPermission, timetableSubject]);
 
-  // Guard: Strictly enforce permission access to subjects
+  // Guard: Strictly enforce permission access to subjects (시뮬레이션 적용)
   // If a user somehow lands on a subject they don't have permission for, switch them.
   useEffect(() => {
-    if (!userProfile || appMode !== 'timetable') return;
+    if (!effectiveProfile || appMode !== 'timetable') return;
 
     const canViewMath = hasPermission('timetable.math.view') || hasPermission('timetable.math.edit');
     const canViewEnglish = hasPermission('timetable.english.view') || hasPermission('timetable.english.edit');
@@ -405,13 +445,13 @@ const App: React.FC = () => {
         setAppMode('dashboard');
       }
     }
-  }, [timetableSubject, userProfile, appMode, hasPermission]);
+  }, [timetableSubject, effectiveProfile, appMode, hasPermission]);
 
-  // Initialize attendance subject based on user's permissions
+  // Initialize attendance subject based on user's permissions (시뮬레이션 적용)
   useEffect(() => {
-    if (!userProfile) return;
+    if (!effectiveProfile) return;
 
-    const isMasterOrAdmin = userProfile.role === 'master' || userProfile.role === 'admin';
+    const isMasterOrAdmin = effectiveProfile.role === 'master' || effectiveProfile.role === 'admin';
     const canManageMath = hasPermission('attendance.manage_math');
     const canManageEnglish = hasPermission('attendance.manage_english');
 
@@ -426,17 +466,18 @@ const App: React.FC = () => {
     }
 
     setAttendanceSubject(initialSubject);
-  }, [userProfile, hasPermission]);
+  }, [effectiveProfile, hasPermission]);
 
   // Tab Permissions
   /* ----------------------------------------------------
      Tab Access Redirection Logic
      ---------------------------------------------------- */
-  const { canAccessTab, accessibleTabs, isLoading: isTabPermissionLoading } = useTabPermissions(userProfile);
+  // 시뮬레이션 적용된 프로필로 탭 권한 체크
+  const { canAccessTab, accessibleTabs, isLoading: isTabPermissionLoading } = useTabPermissions(effectiveProfile);
 
   useEffect(() => {
-    // Wait for permissions to load
-    if (isTabPermissionLoading || !userProfile) return;
+    // Wait for permissions to load (시뮬레이션 적용)
+    if (isTabPermissionLoading || !effectiveProfile) return;
 
     // Priority order for tabs (dashboard first!)
     const priority: AppTab[] = ['dashboard', 'calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students'];
@@ -460,7 +501,7 @@ const App: React.FC = () => {
         setAppMode(firstValidTab);
       }
     }
-  }, [appMode, canAccessTab, accessibleTabs, isTabPermissionLoading, userProfile]);
+  }, [appMode, canAccessTab, accessibleTabs, isTabPermissionLoading, effectiveProfile]);
 
   // Auth Listener
   // Auth Listener with Real-time Profile Sync
@@ -721,15 +762,15 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Derive Permissions
-  const isMaster = userProfile?.role === 'master';
-  const isAdmin = userProfile?.role === 'admin';
+  // Derive Permissions (시뮬레이션 적용된 프로필 기준)
+  const isMaster = effectiveProfile?.role === 'master';
+  const isAdmin = effectiveProfile?.role === 'admin';
   // canEdit is now derived/overridden by departmental permissions, but global override remains for Master
-  const canGlobalEdit = isMaster || isAdmin; // Admin generally has high privileges, but let's stick to granular? 
+  const canGlobalEdit = isMaster || isAdmin; // Admin generally has high privileges, but let's stick to granular?
   // User asked for "Admin" who can "give permissions". This implies Admin manages Users.
   // Docs say: "2. 마스터계정과 같이 '권한'들을 내려줄 수 있는 '어드민' 계정 지정"
 
-  // Filter Departments based on RBAC AND Local Toggles
+  // Filter Departments based on RBAC AND Local Toggles (시뮬레이션 적용)
   const visibleDepartments = departments.filter(d => {
     // 1. Access Control Check
     let hasAccess = false;
@@ -739,19 +780,19 @@ const App: React.FC = () => {
       hasAccess = true;
     }
     // Check Granular Permissions (by ID or by name for legacy compatibility)
-    else if (userProfile?.departmentPermissions?.[d.id] || userProfile?.departmentPermissions?.[d.name]) {
+    else if (effectiveProfile?.departmentPermissions?.[d.id] || effectiveProfile?.departmentPermissions?.[d.name]) {
       hasAccess = true;
     }
     // Legacy Fallback
-    else if (userProfile?.allowedDepartments?.includes(d.id)) {
+    else if (effectiveProfile?.allowedDepartments?.includes(d.id)) {
       hasAccess = true;
     }
 
     if (!hasAccess) return false;
 
-    // 2. Favorites Filter
-    if (showFavoritesOnly && userProfile?.favoriteDepartments) {
-      if (!userProfile.favoriteDepartments.includes(d.id)) return false;
+    // 2. Favorites Filter (시뮬레이션 적용)
+    if (showFavoritesOnly && effectiveProfile?.favoriteDepartments) {
+      if (!effectiveProfile.favoriteDepartments.includes(d.id)) return false;
     }
 
     // 3. Local Visibility Toggle Check
@@ -990,24 +1031,24 @@ const App: React.FC = () => {
     await setDoc(doc(db, "bucketItems", newItem.id), newItem);
   };
 
-  // Helper: Check if user's role is higher than author's role
+  // Helper: Check if user's role is higher than author's role (시뮬레이션 적용)
   const isHigherRole = (authorId: string | undefined): boolean => {
-    if (!userProfile || !authorId) return false;
+    if (!effectiveProfile || !authorId) return false;
     const hierarchy = ['master', 'admin', 'manager', 'math_lead', 'english_lead', 'math_teacher', 'english_teacher', 'user'];
     const author = usersFromStaff.find(u => u.uid === authorId);
     if (!author) return false;
-    const myIndex = hierarchy.indexOf(userProfile.role);
+    const myIndex = hierarchy.indexOf(effectiveProfile.role);
     const authorIndex = hierarchy.indexOf(author.role);
     return myIndex < authorIndex; // Lower index = higher role
   };
 
-  // Helper: Check if current user can edit/delete a bucket
+  // Helper: Check if current user can edit/delete a bucket (시뮬레이션 적용)
   const canModifyBucket = (bucket: BucketItem, action: 'edit' | 'delete'): boolean => {
-    if (!userProfile) return false;
+    if (!effectiveProfile) return false;
     // Master can do everything
-    if (userProfile.role === 'master') return true;
+    if (effectiveProfile.role === 'master') return true;
     // Author can always modify own bucket
-    if (bucket.authorId === userProfile.uid) return true;
+    if (bucket.authorId === effectiveProfile.uid) return true;
     // Check permission for lower roles (consolidated to events.bucket)
     if (hasPermission('events.bucket') && isHigherRole(bucket.authorId)) return true;
     return false;
@@ -1516,17 +1557,17 @@ const App: React.FC = () => {
   };
 
   const canEditDepartment = (deptId: string): boolean => {
-    if (!userProfile) return false;
-    if (userProfile.role === 'master' || userProfile.role === 'admin') return true;
+    if (!effectiveProfile) return false;
+    if (effectiveProfile.role === 'master' || effectiveProfile.role === 'admin') return true;
     if (hasPermission('departments.manage')) return true;
     // 부서 가시성 체크 - 'view' 권한이 있으면 해당 부서의 일정을 편집할 수 있음
     // 실제 일정 편집 권한은 events.manage_own/events.manage_others로 별도 체크됨
-    const permission = userProfile.departmentPermissions?.[deptId];
+    const permission = effectiveProfile.departmentPermissions?.[deptId];
     return permission === 'view';
   };
 
-  // Fetch Gantt Projects for Calendar Integration (Phase 7.3)
-  const { data: ganttProjects = [] } = useGanttProjects(userProfile?.uid);
+  // Fetch Gantt Projects for Calendar Integration (Phase 7.3) - 시뮬레이션 적용
+  const { data: ganttProjects = [] } = useGanttProjects(effectiveProfile?.uid);
   const ganttCalendarEvents = useMemo(() =>
     convertGanttProjectsToCalendarEvents(ganttProjects),
     [ganttProjects]);
@@ -1582,7 +1623,18 @@ const App: React.FC = () => {
   }
 
   return (
+    <RoleSimulationProvider
+      actualRole={userProfile?.role || null}
+      externalState={simulationState}
+      onStateChange={setSimulationState}
+    >
     <div className="h-screen overflow-hidden flex bg-[#f0f4f8]">
+      {/* Role Simulation Banner (마스터만 표시) */}
+      <RoleSimulationBanner
+        actualRole={userProfile?.role || null}
+        availableUsers={usersFromStaff}
+      />
+
       {/* Skip Link for Keyboard Navigation - Addresses Issue #7 */}
       <SkipLink targetId="main-content">메인 콘텐츠로 건너뛰기</SkipLink>
 
@@ -1644,18 +1696,14 @@ const App: React.FC = () => {
                   <Settings size={20} />
                 </button>
               )}
-              <button onClick={() => window.print()} className="text-gray-400 hover:text-white transition-colors">
-                <Printer size={20} />
-              </button>
-
-              {/* Memo Notification Bell */}
+              {/* Memo/Messenger */}
               {currentUser && (
                 <div className="relative">
                   <button
                     onClick={() => setIsMemoDropdownOpen(!isMemoDropdownOpen)}
                     className={`relative transition-colors mt-[5px] ${isMemoDropdownOpen ? 'text-[#fdb813]' : 'text-gray-400 hover:text-white'}`}
                   >
-                    <Bell size={20} />
+                    <MessageCircle size={20} />
                     {unreadMemoCount > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-red-500 text-white text-xxs font-bold rounded-full flex items-center justify-center">
                         {unreadMemoCount}
@@ -1830,7 +1878,8 @@ const App: React.FC = () => {
 
           {/* Row 3: Attendance Navigation Bar - Only show in attendance mode */}
           {appMode === 'attendance' && (() => {
-            const isMasterOrAdmin = userProfile?.role === 'master' || userProfile?.role === 'admin';
+            // 시뮬레이션 적용된 프로필 기준
+            const isMasterOrAdmin = effectiveProfile?.role === 'master' || effectiveProfile?.role === 'admin';
             const canManageMath = hasPermission('attendance.manage_math');
             const canManageEnglish = hasPermission('attendance.manage_english');
             const canManageCurrentSubject = isMasterOrAdmin ||
@@ -1846,8 +1895,8 @@ const App: React.FC = () => {
               })
               : [];
 
-            // Determine user's staffId for filtering
-            const currentStaffId = userProfile?.staffId;
+            // Determine user's staffId for filtering (시뮬레이션 적용)
+            const currentStaffId = effectiveProfile?.staffId;
 
             // Determine which staffId to filter by
             const filterStaffId = canManageCurrentSubject
@@ -2462,8 +2511,9 @@ const App: React.FC = () => {
                       .filter(d => !selectedCategory || d.category === selectedCategory)
                       .map(dept => {
                         const isHidden = hiddenDeptIds.includes(dept.id);
-                        const isAllowed = userProfile?.departmentPermissions?.[dept.id] || userProfile?.allowedDepartments?.includes(dept.id) || isMaster;
-                        const isFavorite = userProfile?.favoriteDepartments?.includes(dept.id);
+                        // 시뮬레이션 적용된 프로필 기준
+                        const isAllowed = effectiveProfile?.departmentPermissions?.[dept.id] || effectiveProfile?.allowedDepartments?.includes(dept.id) || isMaster;
+                        const isFavorite = effectiveProfile?.favoriteDepartments?.includes(dept.id);
 
                         if (!isAllowed) return null;
 
@@ -2633,7 +2683,7 @@ const App: React.FC = () => {
             /* Dashboard View */
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-hidden">
-                <DashboardTab userProfile={userProfile} staffMember={currentStaffMember} />
+                <DashboardTab userProfile={effectiveProfile} staffMember={effectiveStaffMember} />
               </div>
             </Suspense>
           ) : appMode === 'calendar' ? (
@@ -2652,7 +2702,7 @@ const App: React.FC = () => {
                   onEventClick={handleEventClick}
                   holidays={holidays}
                   viewMode={viewMode}
-                  currentUser={userProfile}
+                  currentUser={effectiveProfile}
                   onEventMove={handleEventMove}
                   canEditDepartment={canEditDepartment}
                   pendingEventIds={pendingEventIds}
@@ -2687,7 +2737,7 @@ const App: React.FC = () => {
                   isPrimaryView={false} // Hide My Events
                   onViewChange={setViewMode}
                   showSidePanel={false} // Always hide side panel for comparison views
-                  currentUser={userProfile}
+                  currentUser={effectiveProfile}
                   showArchived={showArchived} // Phase 9
                 />
               </div>
@@ -2711,7 +2761,7 @@ const App: React.FC = () => {
                   isPrimaryView={false} // Hide My Events
                   onViewChange={setViewMode}
                   showSidePanel={false}
-                  currentUser={userProfile}
+                  currentUser={effectiveProfile}
                   showArchived={showArchived} // Phase 9
                 />
               </div>
@@ -2725,7 +2775,7 @@ const App: React.FC = () => {
                   onSubjectChange={setTimetableSubject}
                   viewType={timetableViewType}
                   onViewTypeChange={setTimetableViewType}
-                  currentUser={userProfile}
+                  currentUser={effectiveProfile}
                   /* Removed global state props */
                   teachers={teachers}
                   classKeywords={classKeywords}
@@ -2745,7 +2795,7 @@ const App: React.FC = () => {
             /* Gantt Chart View */
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
-                <GanttManager userProfile={userProfile} allUsers={usersFromStaff} />
+                <GanttManager userProfile={effectiveProfile} allUsers={usersFromStaff} />
               </div>
             </Suspense>
           ) : appMode === 'consultation' ? (
@@ -2753,7 +2803,7 @@ const App: React.FC = () => {
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto">
                 <ConsultationManager
-                  userProfile={userProfile}
+                  userProfile={effectiveProfile}
                 />
               </div>
             </Suspense>
@@ -2762,7 +2812,7 @@ const App: React.FC = () => {
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 flex flex-col overflow-hidden">
                 <AttendanceManager
-                  userProfile={userProfile}
+                  userProfile={effectiveProfile}
                   teachers={teachers}
                   selectedSubject={attendanceSubject}
                   selectedStaffId={attendanceStaffId}
@@ -2781,7 +2831,7 @@ const App: React.FC = () => {
                 <StudentManagementTab
                   filters={studentFilters}
                   sortBy={studentSortBy}
-                  currentUser={userProfile}
+                  currentUser={effectiveProfile}
                 />
               </div>
             </Suspense>
@@ -2795,7 +2845,7 @@ const App: React.FC = () => {
                   searchQuery={gradesSearchQuery}
                   onSearchChange={setGradesSearchQuery}
                   onSubjectFilterChange={setGradesSubjectFilter}
-                  currentUser={userProfile}
+                  currentUser={effectiveProfile}
                 />
               </div>
             </Suspense>
@@ -2803,7 +2853,7 @@ const App: React.FC = () => {
             /* Class Management View */
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 min-h-0 overflow-hidden">
-                <ClassManagementTab currentUser={userProfile} />
+                <ClassManagementTab currentUser={effectiveProfile} />
               </div>
             </Suspense>
           ) : appMode === 'classroom' ? (
@@ -2824,21 +2874,21 @@ const App: React.FC = () => {
             /* Student Consultation Management View */
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto">
-                <StudentConsultationTab currentUser={userProfile} />
+                <StudentConsultationTab currentUser={effectiveProfile} />
               </div>
             </Suspense>
           ) : appMode === 'billing' ? (
             /* Billing Management View */
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto">
-                <BillingManager userProfile={userProfile} />
+                <BillingManager userProfile={effectiveProfile} />
               </div>
             </Suspense>
           ) : appMode === 'daily-attendance' ? (
             /* Daily Attendance Management View */
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto">
-                <DailyAttendanceManager userProfile={userProfile} />
+                <DailyAttendanceManager userProfile={effectiveProfile} />
               </div>
             </Suspense>
           ) : appMode === 'staff' ? (
@@ -2846,7 +2896,7 @@ const App: React.FC = () => {
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-auto">
                 <StaffManager
-                  currentUserProfile={userProfile}
+                  currentUserProfile={effectiveProfile}
                 />
               </div>
             </Suspense>
@@ -2855,7 +2905,7 @@ const App: React.FC = () => {
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-hidden">
                 <RoleManagementPage
-                  currentUser={userProfile}
+                  currentUser={effectiveProfile}
                 />
               </div>
             </Suspense>
@@ -2864,7 +2914,7 @@ const App: React.FC = () => {
             <Suspense fallback={<TabLoadingFallback />}>
               <div className="w-full flex-1 overflow-hidden">
                 <ResourceDashboard
-                  userProfile={userProfile}
+                  userProfile={effectiveProfile}
                 />
               </div>
             </Suspense>
@@ -3079,7 +3129,7 @@ const App: React.FC = () => {
         // EventModal will check `userProfile.departmentPermissions` vs `selectedDeptId`.
         readOnly={false}
         users={usersFromStaff}
-        currentUser={userProfile}
+        currentUser={effectiveProfile}
         allEvents={events}
         onBatchUpdateAttendance={handleBatchUpdateAttendance}
         onCopy={handleCopyEvent}
@@ -3090,7 +3140,7 @@ const App: React.FC = () => {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         departments={departments}
-        currentUserProfile={userProfile}
+        currentUserProfile={effectiveProfile}
         users={usersFromStaff}
         holidays={holidays}
         events={events}
@@ -3107,7 +3157,7 @@ const App: React.FC = () => {
             isOpen={isTimetableSettingsOpen}
             onClose={() => setIsTimetableSettingsOpen(false)}
             canEdit={hasPermission('timetable.math.edit') || hasPermission('timetable.english.edit')}
-            currentUser={userProfile}
+            currentUser={effectiveProfile}
           />
         </Suspense>
       )}
@@ -3118,7 +3168,7 @@ const App: React.FC = () => {
           <CalendarSettingsModal
             isOpen={isCalendarSettingsOpen}
             onClose={() => setIsCalendarSettingsOpen(false)}
-            currentUser={userProfile}
+            currentUser={effectiveProfile}
           />
         </Suspense>
       )}
@@ -3289,6 +3339,7 @@ const App: React.FC = () => {
         )
       }
     </div >
+    </RoleSimulationProvider>
   );
 };
 

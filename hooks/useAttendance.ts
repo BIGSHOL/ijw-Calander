@@ -351,7 +351,7 @@ export const useAttendanceStudents = (options?: {
                     chunks.push(expectedDocIds.slice(i, i + CHUNK_SIZE));
                 }
 
-                const recordsMap = new Map<string, { attendance: Record<string, number>; memos: Record<string, string> }>();
+                const recordsMap = new Map<string, { attendance: Record<string, number>; memos: Record<string, string>; cellColors: Record<string, string> }>();
 
                 // Parallel chunk processing
                 const chunkPromises = chunks.map(async (chunkDocIds) => {
@@ -370,7 +370,8 @@ export const useAttendanceStudents = (options?: {
 
                             recordsMap.set(extractedStudentId, {
                                 attendance: (docSnap.data().attendance || {}) as Record<string, number>,
-                                memos: (docSnap.data().memos || {}) as Record<string, string>
+                                memos: (docSnap.data().memos || {}) as Record<string, string>,
+                                cellColors: (docSnap.data().cellColors || {}) as Record<string, string>
                             });
                         });
                     } catch (e) {
@@ -386,7 +387,8 @@ export const useAttendanceStudents = (options?: {
                     return {
                         ...student,
                         attendance: record?.attendance || {},
-                        memos: record?.memos || {}
+                        memos: record?.memos || {},
+                        cellColors: record?.cellColors || {}
                     };
                 });
 
@@ -714,6 +716,82 @@ export const useUpdateHomework = () => {
         onSettled: (data, error, variables) => {
             queryClient.invalidateQueries({ queryKey: ['attendanceRecords', variables.studentId, variables.yearMonth] });
         },
+    });
+};
+
+/**
+ * Mutation to update cell background color
+ * Allows customizing individual attendance cell colors
+ */
+export const useUpdateCellColor = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            studentId,
+            yearMonth,
+            dateKey,
+            color
+        }: {
+            studentId: string;
+            yearMonth: string;
+            dateKey: string;
+            color: string | null;  // null to reset to default
+        }) => {
+            const docId = `${studentId}_${yearMonth}`;
+            const docRef = doc(db, RECORDS_COLLECTION, docId);
+
+            const payload = {
+                cellColors: {
+                    [dateKey]: color === null ? deleteField() : color
+                }
+            };
+
+            await setDoc(docRef, payload, { merge: true });
+            return { studentId, yearMonth, dateKey, color };
+        },
+        onMutate: async ({ studentId, yearMonth, dateKey, color }) => {
+            // 관련된 모든 attendanceRecords 쿼리 취소
+            await queryClient.cancelQueries({ queryKey: ['attendanceRecords'] });
+
+            // 이전 상태 저장 (롤백용)
+            const previousData = queryClient.getQueriesData({ queryKey: ['attendanceRecords'] });
+
+            // 1. useAttendanceRecords용 캐시 업데이트
+            queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
+                if (!old) return { attendance: {}, memos: {}, cellColors: { [dateKey]: color } };
+                const newCellColors = { ...(old.cellColors || {}) };
+                if (color === null) delete newCellColors[dateKey];
+                else newCellColors[dateKey] = color;
+                return { ...old, cellColors: newCellColors };
+            });
+
+            // 2. useAttendanceStudents용 캐시 업데이트 (학생 배열)
+            queryClient.setQueriesData(
+                { queryKey: ['attendanceRecords', yearMonth] },
+                (old: any) => {
+                    if (!old || !Array.isArray(old)) return old;
+                    return old.map((student: any) => {
+                        if (student.id !== studentId) return student;
+                        const newCellColors = { ...(student.cellColors || {}) };
+                        if (color === null) delete newCellColors[dateKey];
+                        else newCellColors[dateKey] = color;
+                        return { ...student, cellColors: newCellColors };
+                    });
+                }
+            );
+
+            return { previousData };
+        },
+        onError: (err, variables, context: any) => {
+            // 에러 시 이전 상태로 롤백
+            if (context?.previousData) {
+                context.previousData.forEach(([queryKey, data]: [any, any]) => {
+                    queryClient.setQueryData(queryKey, data);
+                });
+            }
+        },
+        // onSettled에서 invalidateQueries 제거 (optimistic update 사용)
     });
 };
 

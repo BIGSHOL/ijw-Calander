@@ -21,6 +21,7 @@ const staffToUserLike = (staff: StaffMember): UserProfile => ({
   departmentPermissions: staff.departmentPermissions || {},
   favoriteDepartments: staff.favoriteDepartments || [],
   jobTitle: staff.jobTitle,
+  staffId: staff.id, // 시뮬레이션 시 출석부 등에서 선생님 필터링용
 });
 
 interface CalendarSettingsModalProps {

@@ -104,6 +104,7 @@ export interface ScenarioContextValue extends ScenarioState {
   // Scenario operations
   loadFromLive: () => Promise<void>;
   saveToScenario: (name: string, description: string, userId: string, userName: string) => Promise<string>;
+  updateScenario: (scenarioId: string, userId: string, userName: string) => Promise<void>;
   loadFromScenario: (scenarioId: string) => Promise<void>;
   publishToLive: (userId: string, userName: string) => Promise<void>;
 
@@ -501,6 +502,55 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     return scenarioId;
   }, []);
 
+  const updateScenario = useCallback(async (
+    scenarioId: string,
+    userId: string,
+    userName: string
+  ): Promise<void> => {
+    const { scenarioClasses, scenarioEnrollments } = stateRef.current;
+
+    // 기존 시나리오 정보 가져오기
+    const existingDoc = await getDoc(doc(db, SCENARIO_COLLECTION, scenarioId));
+    if (!existingDoc.exists()) {
+      throw new Error('시나리오를 찾을 수 없습니다.');
+    }
+
+    const existingData = existingDoc.data();
+
+    // Calculate stats
+    const classCount = Object.keys(scenarioClasses).length;
+    const studentCount = Object.values(scenarioEnrollments)
+      .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
+
+    // Firebase에 저장 전 undefined 값 제거
+    const sanitizedClasses = sanitizeForFirestore(scenarioClasses);
+    const sanitizedEnrollments = sanitizeForFirestore(scenarioEnrollments);
+
+    // 기존 시나리오 업데이트
+    await setDoc(doc(db, SCENARIO_COLLECTION, scenarioId), {
+      ...existingData,
+      // 새 구조 데이터 (sanitized)
+      classes: sanitizedClasses,
+      enrollments: sanitizedEnrollments,
+      // 업데이트 정보
+      updatedAt: new Date().toISOString(),
+      updatedBy: userName,
+      updatedByUid: userId,
+      stats: {
+        classCount,
+        studentCount,
+        timetableDocCount: classCount,
+      },
+      version: 2,
+    });
+
+    setState(prev => ({
+      ...prev,
+      isDirty: false,
+      currentScenarioName: existingData.name,
+    }));
+  }, []);
+
   const loadFromScenario = useCallback(async (scenarioId: string) => {
     // [async-parallel] Direct document read instead of scanning collection
     const docSnap = await getDoc(doc(db, SCENARIO_COLLECTION, scenarioId));
@@ -529,7 +579,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
   }, []);
 
   const publishToLive = useCallback(async (userId: string, userName: string) => {
-    const { scenarioClasses, scenarioEnrollments } = stateRef.current;
+    const { scenarioClasses, scenarioEnrollments, currentScenarioName } = stateRef.current;
 
     if (!confirm('⚠️ 정말로 실제 시간표에 반영하시겠습니까?\n이 작업은 모든 사용자에게 즉시 반영됩니다.')) {
       return;
@@ -605,6 +655,17 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         console.log(`✅ Created enrollments batch: ${i + chunk.length}/${enrollmentsToCreate.length}`);
       }
 
+      // 4. 시나리오 이름을 english_config에 저장 (영구 저장)
+      if (currentScenarioName) {
+        await setDoc(doc(db, 'settings', 'english_config'), {
+          publishedScenarioName: currentScenarioName,
+          publishedAt: new Date().toISOString(),
+          publishedBy: userName,
+          publishedByUid: userId,
+        }, { merge: true });
+        console.log(`✅ Saved scenario name: ${currentScenarioName}`);
+      }
+
       setState(prev => ({
         ...prev,
         isDirty: false,
@@ -642,6 +703,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     moveStudent,
     loadFromLive,
     saveToScenario,
+    updateScenario,
     loadFromScenario,
     publishToLive,
     setCurrentScenarioName,
@@ -659,6 +721,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     moveStudent,
     loadFromLive,
     saveToScenario,
+    updateScenario,
     loadFromScenario,
     publishToLive,
     setCurrentScenarioName,

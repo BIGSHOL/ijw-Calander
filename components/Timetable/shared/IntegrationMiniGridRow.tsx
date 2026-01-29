@@ -99,12 +99,15 @@ const IntegrationMiniGridRow: React.FC<IntegrationMiniGridRowProps> = ({
                     } else {
                         cellStyle = { backgroundColor: colors.bg, color: colors.text };
                     }
+                } else if (isWeekend) {
+                    // 주말 빈 셀은 회색 배경
+                    cellStyle = { backgroundColor: '#f3f4f6' };
                 }
 
                 return (
                     <div
                         key={day}
-                        className="flex-1 border-r border-gray-100 last:border-r-0 flex flex-col justify-center items-center text-center px-0.5 overflow-hidden text-xxs"
+                        className={`flex-1 border-r border-gray-100 last:border-r-0 flex flex-col justify-center items-center text-center px-0.5 overflow-hidden text-xxs ${isWeekend && !cell?.teacher ? 'bg-gray-100' : ''}`}
                         style={cellStyle}
                         title={displayName}
                     >
