@@ -2,12 +2,12 @@
 // 영어/수학 통합뷰 공용 수업 카드
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Eye, EyeOff, Users, MoreVertical, TrendingUp, ArrowUpCircle, Clock } from 'lucide-react';
+import { Eye, EyeOff, Users, MoreVertical, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Clock } from 'lucide-react';
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
 import IntegrationMiniGridRow, { PeriodInfo, ScheduleCell } from './IntegrationMiniGridRow';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import LevelUpConfirmModal from '../English/LevelUpConfirmModal';
-import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, EN_PERIODS, INJAE_PERIODS } from '../English/englishUtils';
+import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, numberLevelDown, classLevelDown, isMinLevel, canNumberLevelDown, EN_PERIODS, INJAE_PERIODS } from '../English/englishUtils';
 
 // 공용 클래스 정보 타입
 export interface IntegrationClassInfo {
@@ -186,7 +186,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     const [displayStudents, setDisplayStudents] = useState<TimetableStudent[]>([]);
     const [studentCount, setStudentCount] = useState<number>(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [levelUpModal, setLevelUpModal] = useState<{ isOpen: boolean; type: 'number' | 'class'; newName: string }>({ isOpen: false, type: 'number', newName: '' });
+    const [levelUpModal, setLevelUpModal] = useState<{ isOpen: boolean; type: 'number' | 'class'; newName: string; direction: 'up' | 'down' }>({ isOpen: false, type: 'number', newName: '', direction: 'up' });
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
 
     // 키워드 색상 찾기
@@ -405,304 +405,350 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
     return (
         <>
-        <div
-            onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
-            onDrop={isTimeColumnOnly ? undefined : handleDrop}
-            className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white`}
-        >
-            {/* 수업 상세 클릭 영역 */}
             <div
-                onClick={handleClassDetailClick}
-                className={mode === 'edit' && !isTimeColumnOnly ? 'cursor-pointer hover:brightness-95' : ''}
+                onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
+                onDrop={isTimeColumnOnly ? undefined : handleDrop}
+                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white`}
             >
-                {/* Header - 수업명 */}
-                {(() => {
-                    if (isTimeColumnOnly) {
-                        return (
-                            <div className="p-2 text-center font-bold text-sm border-b border-orange-300 flex items-center justify-center h-[50px] bg-orange-200 text-orange-900 select-none">
-                                수업
-                            </div>
-                        );
-                    }
-
-                    return (
-                        <div
-                            className={`p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group ${mode === 'view' ? 'cursor-help' : ''}`}
-                            style={keywordColor ? { backgroundColor: keywordColor.bgColor, color: keywordColor.textColor } : { backgroundColor: '#EFF6FF', color: '#1F2937' }}
-                            onMouseEnter={() => isEnglish && mode !== 'edit' && setShowScheduleTooltip(true)}
-                            onMouseLeave={() => setShowScheduleTooltip(false)}
-                        >
-                            {classInfo.name}
-
-                            {/* Schedule Tooltip (영어 조회 모드에서만 마우스 오버 시 실제 스케줄 표시) */}
-                            {isEnglish && mode !== 'edit' && showScheduleTooltip && scheduleInfo.length > 0 && (
-                                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 p-2 min-w-[140px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
-                                    <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-700">
-                                        <Clock size={12} className="text-yellow-400" />
-                                        <span className="font-bold">수업 시간</span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        {scheduleInfo.map(({ day, timeRange }) => (
-                                            <div key={day} className="flex justify-between gap-3">
-                                                <span className={`font-bold ${day === '토' || day === '일' ? 'text-red-400' : 'text-blue-300'}`}>
-                                                    {day}
-                                                </span>
-                                                <span className="text-gray-200">{timeRange}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
-                                </div>
-                            )}
-
-                            {/* Edit Controls */}
-                            {mode === 'edit' && (
-                                <>
-                                    {onToggleHidden && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
-                                            className="absolute top-1 right-7 p-1 rounded hover:bg-black/10 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            title={isHidden ? "보이기" : "숨기기"}
-                                        >
-                                            {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
-                                        </button>
-                                    )}
-                                    {isEnglish && englishLevels.length > 0 && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-                                            className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <MoreVertical size={14} />
-                                        </button>
-                                    )}
-
-                                    {/* Level Up Dropdown (영어 전용) */}
-                                    {isEnglish && isMenuOpen && (
-                                        <div className="absolute top-8 right-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
-                                            <button
-                                                onClick={() => {
-                                                    if (!isValidLevel(classInfo.name, englishLevels)) {
-                                                        alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
-                                                        setIsMenuOpen(false);
-                                                        return;
-                                                    }
-                                                    const newName = numberLevelUp(classInfo.name);
-                                                    if (newName) {
-                                                        setLevelUpModal({ isOpen: true, type: 'number', newName });
-                                                    }
-                                                    setIsMenuOpen(false);
-                                                }}
-                                                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-indigo-50 text-gray-700"
-                                            >
-                                                <TrendingUp size={14} className="text-indigo-500" />
-                                                숫자 레벨업
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    if (!isValidLevel(classInfo.name, englishLevels)) {
-                                                        alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
-                                                        setIsMenuOpen(false);
-                                                        return;
-                                                    }
-                                                    const newName = classLevelUp(classInfo.name, englishLevels);
-                                                    if (newName) {
-                                                        setLevelUpModal({ isOpen: true, type: 'class', newName });
-                                                    }
-                                                    setIsMenuOpen(false);
-                                                }}
-                                                disabled={isMaxLevel(classInfo.name, englishLevels)}
-                                                className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-orange-50 text-gray-700'}`}
-                                            >
-                                                <ArrowUpCircle size={14} className={isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300' : 'text-orange-500'} />
-                                                클래스 레벨업
-                                            </button>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    );
-                })()}
-
-                {/* Info Summary (Teacher/Room) */}
-                {(displayOptions?.showTeacher || displayOptions?.showRoom) && (
-                    <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
-                        {displayOptions?.showTeacher && (() => {
-                            const mainTeacherData = teachersData.find(t => t.name === classInfo.mainTeacher || t.englishName === classInfo.mainTeacher);
-                            const displayTeacherName = isEnglish ? (mainTeacherData?.englishName || classInfo.mainTeacher) : classInfo.mainTeacher;
-
+                {/* 수업 상세 클릭 영역 */}
+                <div
+                    onClick={handleClassDetailClick}
+                    className={mode === 'edit' && !isTimeColumnOnly ? 'cursor-pointer hover:brightness-95' : ''}
+                >
+                    {/* Header - 수업명 */}
+                    {(() => {
+                        if (isTimeColumnOnly) {
                             return (
-                                <div className={`flex border-b border-orange-200 h-[26px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
-                                    {isTimeColumnOnly ? (
-                                        <span className="font-bold text-orange-800">담임</span>
-                                    ) : (
-                                        <div className="flex-1 p-0.5 text-center font-bold text-gray-900 flex items-center justify-center h-full">
-                                            {displayTeacherName || '-'}
-                                        </div>
-                                    )}
+                                <div className="p-2 text-center font-bold text-sm border-b border-orange-300 flex items-center justify-center h-[50px] bg-orange-200 text-orange-900 select-none">
+                                    수업
                                 </div>
                             );
-                        })()}
-                        {displayOptions?.showRoom && (
-                            <div className={`flex h-[32px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
-                                {isTimeColumnOnly ? (
-                                    <span className="font-bold text-orange-800">강의실</span>
-                                ) : (
-                                    <div className="flex-1 p-0.5 text-center font-bold text-navy flex items-center justify-center break-all h-full leading-tight text-xs">
-                                        {classInfo.formattedRoomStr || classInfo.mainRoom || '-'}
+                        }
+
+                        return (
+                            <div
+                                className={`p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group ${mode === 'view' ? 'cursor-help' : ''}`}
+                                style={keywordColor ? { backgroundColor: keywordColor.bgColor, color: keywordColor.textColor } : { backgroundColor: '#EFF6FF', color: '#1F2937' }}
+                                onMouseEnter={() => isEnglish && mode !== 'edit' && setShowScheduleTooltip(true)}
+                                onMouseLeave={() => setShowScheduleTooltip(false)}
+                            >
+                                {classInfo.name}
+
+                                {/* Schedule Tooltip (영어 조회 모드에서만 마우스 오버 시 실제 스케줄 표시) */}
+                                {isEnglish && mode !== 'edit' && showScheduleTooltip && scheduleInfo.length > 0 && (
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 p-2 min-w-[140px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
+                                        <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-700">
+                                            <Clock size={12} className="text-yellow-400" />
+                                            <span className="font-bold">수업 시간</span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            {scheduleInfo.map(({ day, timeRange }) => (
+                                                <div key={day} className="flex justify-between gap-3">
+                                                    <span className={`font-bold ${day === '토' || day === '일' ? 'text-red-400' : 'text-blue-300'}`}>
+                                                        {day}
+                                                    </span>
+                                                    <span className="text-gray-200">{timeRange}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
                                     </div>
                                 )}
-                            </div>
-                        )}
-                    </div>
-                )}
 
-                {/* Schedule Grid */}
-                {displayOptions?.showSchedule !== false && (
-                    <div className="border-b border-gray-300 flex-none">
-                        <div className="flex bg-gray-200 text-xxs font-bold border-b border-gray-400 h-[24px]">
-                            {!hideTime && (
-                                <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
-                            )}
-                            {!isTimeColumnOnly && classInfo.finalDays.map((d) => (
-                                <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
-                                    {d}
-                                </div>
-                            ))}
-                        </div>
-                        <div className="bg-white">
-                            {classInfo.visiblePeriods.map(p => (
-                                <IntegrationMiniGridRow
-                                    key={p.id}
-                                    period={p}
-                                    scheduleMap={classInfo.scheduleMap}
-                                    teachersData={teachersData}
-                                    displayDays={classInfo.finalDays}
-                                    hiddenTeachers={hiddenTeacherList}
-                                    hideTime={hideTime}
-                                    onlyTime={isTimeColumnOnly}
-                                    weekendShift={classInfo.weekendShift || 0}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Student List */}
-            {displayOptions?.showStudents ? (
-                isTimeColumnOnly ? (
-                    <div className="flex flex-col border-r border-gray-300">
-                        <div className="h-[190px] flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none border-b border-indigo-100">
-                            <span>재</span><span>원</span><span>생</span>
-                        </div>
-                        <div className="flex items-center justify-center bg-violet-100 text-violet-700 font-bold text-xs h-[40px] border-b border-violet-200 select-none">
-                            대기
-                        </div>
-                        <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs h-[80px] select-none">
-                            퇴원
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex flex-col bg-white border-r border-gray-300">
-                        {/* 재원생 Section */}
-                        <div className="h-[190px] flex flex-col border-b border-indigo-100">
-                            <div className="border-b border-gray-300 flex items-center justify-center h-[30px] shrink-0 bg-white">
-                                <div className="w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2">
-                                    <Users size={14} />
-                                    <span>{studentCount}명</span>
-                                </div>
-                            </div>
-                            <div className="flex-1 overflow-y-auto px-2 py-1.5 text-xxs flex flex-col custom-scrollbar">
-                                {sortedActiveStudents.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-gray-300">
-                                        <span>학생이 없습니다</span>
-                                    </div>
-                                ) : (
+                                {/* Edit Controls */}
+                                {mode === 'edit' && (
                                     <>
-                                        {sortedActiveStudents.slice(0, 12).map((student) => (
-                                            <StudentItem
-                                                key={student.id}
-                                                student={student}
-                                                style={getRowStyle(student)}
-                                                mode={mode}
-                                                showEnglishName={isEnglish}
-                                                onStudentClick={onStudentClick}
-                                                onDragStart={onMoveStudent ? handleDragStart : undefined}
-                                                classDays={!isEnglish ? classInfo.finalDays : undefined}
-                                            />
-                                        ))}
-                                        {sortedActiveStudents.length > 12 && (
-                                            <div className="text-indigo-500 font-bold mt-0.5 text-xs">
-                                                +{sortedActiveStudents.length - 12}명 더보기...
+                                        {onToggleHidden && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
+                                                className="absolute top-1 right-7 p-1 rounded hover:bg-black/10 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title={isHidden ? "보이기" : "숨기기"}
+                                            >
+                                                {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                                            </button>
+                                        )}
+                                        {isEnglish && englishLevels.length > 0 && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+                                                className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <MoreVertical size={14} />
+                                            </button>
+                                        )}
+
+                                        {/* Level Up/Down Dropdown (영어 전용) */}
+                                        {isEnglish && isMenuOpen && (
+                                            <div className="absolute top-8 right-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                                                {/* 레벨업 섹션 */}
+                                                <div className="px-2 py-1 text-[10px] text-gray-400 font-medium border-b border-gray-100">레벨업</div>
+                                                <button
+                                                    onClick={() => {
+                                                        if (!isValidLevel(classInfo.name, englishLevels)) {
+                                                            alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+                                                            setIsMenuOpen(false);
+                                                            return;
+                                                        }
+                                                        const newName = numberLevelUp(classInfo.name);
+                                                        if (newName) {
+                                                            setLevelUpModal({ isOpen: true, type: 'number', newName, direction: 'up' });
+                                                        }
+                                                        setIsMenuOpen(false);
+                                                    }}
+                                                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-indigo-50 text-gray-700"
+                                                >
+                                                    <TrendingUp size={14} className="text-indigo-500" />
+                                                    숫자 레벨업
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        if (!isValidLevel(classInfo.name, englishLevels)) {
+                                                            alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+                                                            setIsMenuOpen(false);
+                                                            return;
+                                                        }
+                                                        const newName = classLevelUp(classInfo.name, englishLevels);
+                                                        if (newName) {
+                                                            setLevelUpModal({ isOpen: true, type: 'class', newName, direction: 'up' });
+                                                        }
+                                                        setIsMenuOpen(false);
+                                                    }}
+                                                    disabled={isMaxLevel(classInfo.name, englishLevels)}
+                                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-orange-50 text-gray-700'}`}
+                                                >
+                                                    <ArrowUpCircle size={14} className={isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300' : 'text-orange-500'} />
+                                                    클래스 레벨업
+                                                </button>
+
+                                                {/* 레벨다운 섹션 */}
+                                                <div className="px-2 py-1 text-[10px] text-gray-400 font-medium border-t border-b border-gray-100 mt-1">레벨다운</div>
+                                                <button
+                                                    onClick={() => {
+                                                        if (!isValidLevel(classInfo.name, englishLevels)) {
+                                                            alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+                                                            setIsMenuOpen(false);
+                                                            return;
+                                                        }
+                                                        const newName = numberLevelDown(classInfo.name);
+                                                        if (newName) {
+                                                            setLevelUpModal({ isOpen: true, type: 'number', newName, direction: 'down' });
+                                                        } else {
+                                                            alert('숫자가 1이면 더 이상 레벨다운할 수 없습니다.');
+                                                        }
+                                                        setIsMenuOpen(false);
+                                                    }}
+                                                    disabled={!canNumberLevelDown(classInfo.name)}
+                                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${!canNumberLevelDown(classInfo.name) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-blue-50 text-gray-700'}`}
+                                                >
+                                                    <TrendingDown size={14} className={!canNumberLevelDown(classInfo.name) ? 'text-gray-300' : 'text-blue-500'} />
+                                                    숫자 레벨다운
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        if (!isValidLevel(classInfo.name, englishLevels)) {
+                                                            alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
+                                                            setIsMenuOpen(false);
+                                                            return;
+                                                        }
+                                                        const newName = classLevelDown(classInfo.name, englishLevels);
+                                                        if (newName) {
+                                                            setLevelUpModal({ isOpen: true, type: 'class', newName, direction: 'down' });
+                                                        }
+                                                        setIsMenuOpen(false);
+                                                    }}
+                                                    disabled={isMinLevel(classInfo.name, englishLevels)}
+                                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${isMinLevel(classInfo.name, englishLevels) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-red-50 text-gray-700'}`}
+                                                >
+                                                    <ArrowDownCircle size={14} className={isMinLevel(classInfo.name, englishLevels) ? 'text-gray-300' : 'text-red-500'} />
+                                                    클래스 레벨다운
+                                                </button>
                                             </div>
                                         )}
                                     </>
                                 )}
                             </div>
-                        </div>
+                        );
+                    })()}
 
-                        {/* 대기 Section */}
-                        <div className="h-[40px] flex items-center bg-violet-50 border-b border-violet-200 px-2 overflow-hidden">
-                            {holdStudents.length === 0 ? (
-                                <span className="text-xxs text-violet-300">-</span>
-                            ) : (
-                                <div className="flex flex-wrap gap-1 text-xxs">
-                                    {holdStudents.slice(0, 3).map(s => (
-                                        <span key={s.id} className="bg-violet-100 text-violet-800 px-1 rounded">{s.name}</span>
-                                    ))}
-                                    {holdStudents.length > 3 && <span className="text-violet-600">+{holdStudents.length - 3}</span>}
+                    {/* Info Summary (Teacher/Room) */}
+                    {(displayOptions?.showTeacher || displayOptions?.showRoom) && (
+                        <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
+                            {displayOptions?.showTeacher && (() => {
+                                const mainTeacherData = teachersData.find(t => t.name === classInfo.mainTeacher || t.englishName === classInfo.mainTeacher);
+                                const displayTeacherName = isEnglish ? (mainTeacherData?.englishName || classInfo.mainTeacher) : classInfo.mainTeacher;
+
+                                return (
+                                    <div className={`flex border-b border-orange-200 h-[26px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
+                                        {isTimeColumnOnly ? (
+                                            <span className="font-bold text-orange-800">담임</span>
+                                        ) : (
+                                            <div className="flex-1 p-0.5 text-center font-bold text-gray-900 flex items-center justify-center h-full">
+                                                {displayTeacherName || '-'}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                            {displayOptions?.showRoom && (
+                                <div className={`flex h-[32px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
+                                    {isTimeColumnOnly ? (
+                                        <span className="font-bold text-orange-800">강의실</span>
+                                    ) : (
+                                        <div className="flex-1 p-0.5 text-center font-bold text-navy flex items-center justify-center break-all h-full leading-tight text-xs">
+                                            {classInfo.formattedRoomStr || classInfo.mainRoom || '-'}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
+                    )}
 
-                        {/* 퇴원생 Section */}
-                        <div className="h-[80px] flex flex-col bg-gray-100 px-2 py-1 overflow-y-auto custom-scrollbar">
-                            {withdrawnStudents.length === 0 ? (
-                                <span className="text-xxs text-gray-500 flex items-center justify-center h-full">-</span>
-                            ) : (
-                                <>
-                                    {withdrawnStudents.slice(0, 3).map((student) => (
-                                        <div
-                                            key={student.id}
-                                            className="flex items-center justify-between text-[12px] py-0.5 px-1 bg-black rounded text-white mb-0.5"
-                                            title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
-                                        >
-                                            <div className="flex items-center truncate max-w-[90px]">
-                                                <span className="font-medium">{student.name}</span>
-                                                {isEnglish && student.englishName && <span className="ml-1 text-gray-400">({student.englishName})</span>}
-                                            </div>
-                                            <span className="text-xxs ml-1 shrink-0 text-gray-300 text-right leading-none">
-                                                {formatSchoolGrade(student.school, student.grade)}
-                                            </span>
-                                        </div>
-                                    ))}
-                                    {withdrawnStudents.length > 3 && (
-                                        <span className="text-micro text-gray-400">+{withdrawnStudents.length - 3}명</span>
-                                    )}
-                                </>
-                            )}
+                    {/* Schedule Grid */}
+                    {displayOptions?.showSchedule !== false && (
+                        <div className="border-b border-gray-300 flex-none">
+                            <div className="flex bg-gray-200 text-xxs font-bold border-b border-gray-400 h-[24px]">
+                                {!hideTime && (
+                                    <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
+                                )}
+                                {!isTimeColumnOnly && classInfo.finalDays.map((d) => (
+                                    <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
+                                        {d}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="bg-white">
+                                {classInfo.visiblePeriods.map(p => (
+                                    <IntegrationMiniGridRow
+                                        key={p.id}
+                                        period={p}
+                                        scheduleMap={classInfo.scheduleMap}
+                                        teachersData={teachersData}
+                                        displayDays={classInfo.finalDays}
+                                        hiddenTeachers={hiddenTeacherList}
+                                        hideTime={hideTime}
+                                        onlyTime={isTimeColumnOnly}
+                                        weekendShift={classInfo.weekendShift || 0}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )
-            ) : null}
-        </div>
+                    )}
+                </div>
 
-        {/* Level Up Confirm Modal (영어 전용) */}
-        {isEnglish && (
-            <LevelUpConfirmModal
-                isOpen={levelUpModal.isOpen}
-                onClose={() => setLevelUpModal({ ...levelUpModal, isOpen: false })}
-                onSuccess={() => {
-                    console.log('[IntegrationClassCard] Level-up succeeded for', classInfo.name, '→', levelUpModal.newName);
-                }}
-                oldClassName={classInfo.name}
-                newClassName={levelUpModal.newName}
-                type={levelUpModal.type}
-                isSimulationMode={isSimulationMode}
-                onSimulationLevelUp={onSimulationLevelUp}
-            />
-        )}
+                {/* Student List */}
+                {displayOptions?.showStudents ? (
+                    isTimeColumnOnly ? (
+                        <div className="flex flex-col border-r border-gray-300">
+                            <div className="h-[230px] flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none border-b border-indigo-100">
+                                <span>재</span><span>원</span><span>생</span>
+                            </div>
+                            <div className="flex items-center justify-center bg-violet-100 text-violet-700 font-bold text-xs h-[40px] border-b border-violet-200 select-none">
+                                대기
+                            </div>
+                            <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs h-[80px] select-none">
+                                퇴원
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col bg-white border-r border-gray-300">
+                            {/* 재원생 Section */}
+                            <div className="h-[230px] flex flex-col border-b border-indigo-100">
+                                <div className="border-b border-gray-300 flex items-center justify-center h-[30px] shrink-0 bg-white">
+                                    <div className="w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2">
+                                        <Users size={14} />
+                                        <span>{studentCount}명</span>
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto px-2 py-1.5 text-xxs flex flex-col custom-scrollbar">
+                                    {sortedActiveStudents.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-gray-300">
+                                            <span>학생이 없습니다</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {sortedActiveStudents.slice(0, 10).map((student) => (
+                                                <StudentItem
+                                                    key={student.id}
+                                                    student={student}
+                                                    style={getRowStyle(student)}
+                                                    mode={mode}
+                                                    showEnglishName={isEnglish}
+                                                    onStudentClick={onStudentClick}
+                                                    onDragStart={onMoveStudent ? handleDragStart : undefined}
+                                                    classDays={!isEnglish ? classInfo.finalDays : undefined}
+                                                />
+                                            ))}
+                                            {sortedActiveStudents.length > 10 && (
+                                                <div className="text-indigo-500 font-bold mt-0.5 text-xs">
+                                                    +{sortedActiveStudents.length - 10}명 더보기...
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 대기 Section */}
+                            <div className="h-[40px] flex items-center justify-center bg-violet-50 border-b border-violet-200 px-2 overflow-hidden">
+                                {holdStudents.length === 0 ? (
+                                    <span className="text-xxs text-violet-300">-</span>
+                                ) : (
+                                    <div className="flex flex-wrap gap-1 text-xxs">
+                                        {holdStudents.slice(0, 3).map(s => (
+                                            <span key={s.id} className="bg-violet-100 text-violet-800 px-1 rounded">{s.name}</span>
+                                        ))}
+                                        {holdStudents.length > 3 && <span className="text-violet-600">+{holdStudents.length - 3}</span>}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 퇴원생 Section */}
+                            <div className="h-[80px] flex flex-col bg-gray-100 px-2 py-1 overflow-y-auto custom-scrollbar">
+                                {withdrawnStudents.length === 0 ? (
+                                    <span className="text-xxs text-gray-500 flex items-center justify-center h-full">-</span>
+                                ) : (
+                                    <>
+                                        {withdrawnStudents.slice(0, 3).map((student) => (
+                                            <div
+                                                key={student.id}
+                                                className="flex items-center justify-between text-[12px] py-0.5 px-1 bg-black rounded text-white mb-0.5"
+                                                title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
+                                            >
+                                                <div className="flex items-center truncate max-w-[90px]">
+                                                    <span className="font-medium">{student.name}</span>
+                                                    {isEnglish && student.englishName && <span className="ml-1 text-gray-400">({student.englishName})</span>}
+                                                </div>
+                                                <span className="text-xxs ml-1 shrink-0 text-gray-300 text-right leading-none">
+                                                    {formatSchoolGrade(student.school, student.grade)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {withdrawnStudents.length > 3 && (
+                                            <span className="text-micro text-gray-400">+{withdrawnStudents.length - 3}명</span>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )
+                ) : null}
+            </div>
+
+            {/* Level Up/Down Confirm Modal (영어 전용) */}
+            {isEnglish && (
+                <LevelUpConfirmModal
+                    isOpen={levelUpModal.isOpen}
+                    onClose={() => setLevelUpModal({ ...levelUpModal, isOpen: false })}
+                    onSuccess={() => {
+                        console.log('[IntegrationClassCard] Level change succeeded for', classInfo.name, '→', levelUpModal.newName);
+                    }}
+                    oldClassName={classInfo.name}
+                    newClassName={levelUpModal.newName}
+                    type={levelUpModal.type}
+                    direction={levelUpModal.direction}
+                    isSimulationMode={isSimulationMode}
+                    onSimulationLevelUp={onSimulationLevelUp}
+                />
+            )}
         </>
     );
 };

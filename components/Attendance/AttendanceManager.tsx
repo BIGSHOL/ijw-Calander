@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Users, UserMinus, UserPlus, Settings, Calendar, Image } from 'lucide-react';
+import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
 import { formatCurrency, calculateStats, getCategoryLabel } from './utils';
@@ -18,6 +18,7 @@ import {
   useUpdateAttendance,
   useUpdateMemo,
   useUpdateHomework,
+  useUpdateCellColor,
   useSaveAttendanceConfig,
   useMonthlySettlement,
   useSaveMonthlySettlement
@@ -196,6 +197,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const updateAttendanceMutation = useUpdateAttendance();
   const updateMemoMutation = useUpdateMemo();
   const updateHomeworkMutation = useUpdateHomework();
+  const updateCellColorMutation = useUpdateCellColor();
   const saveConfigMutation = useSaveAttendanceConfig();
   const createDailyAttendanceMutation = useCreateDailyAttendance();
 
@@ -247,6 +249,18 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const handleCollapsedGroupsChange = (newCollapsed: Set<string>) => {
     setCollapsedGroups(newCollapsed);
     storage.setJSON(collapsedGroupsKey, Array.from(newCollapsed));
+  };
+
+  // 주말 회색 처리 상태 (localStorage에서 로드)
+  const [highlightWeekends, setHighlightWeekends] = useState<boolean>(() => {
+    return storage.getJSON<boolean>(STORAGE_KEYS.ATTENDANCE_HIGHLIGHT_WEEKENDS, false);
+  });
+
+  // 주말 회색 처리 토글
+  const handleToggleHighlightWeekends = () => {
+    const newValue = !highlightWeekends;
+    setHighlightWeekends(newValue);
+    storage.setJSON(STORAGE_KEYS.ATTENDANCE_HIGHLIGHT_WEEKENDS, newValue);
   };
 
 
@@ -400,6 +414,18 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       },
       onError: () => {
         alert('과제 상태 저장에 실패했습니다.');
+      }
+    });
+  };
+
+  const handleCellColorChange = async (studentId: string, dateKey: string, color: string | null) => {
+    const yearMonth = dateKey.substring(0, 7);
+    updateCellColorMutation.mutate({ studentId, yearMonth, dateKey, color }, {
+      onSuccess: () => {
+        // No need to refetch - optimistic update handled in mutation
+      },
+      onError: () => {
+        alert('셀 색상 저장에 실패했습니다.');
       }
     });
   };
@@ -624,6 +650,23 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </div>
         </div>
 
+        {/* 주말 회색 처리 체크박스 */}
+        <label
+          className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-gray-300 transition-colors flex-shrink-0"
+          title="체크하면 주말(토/일) 열이 회색으로 표시됩니다"
+        >
+          <input
+            type="checkbox"
+            checked={highlightWeekends}
+            onChange={handleToggleHighlightWeekends}
+            className="w-4 h-4 text-gray-600 rounded border-gray-300 focus:ring-gray-500 cursor-pointer"
+          />
+          <div className="flex items-center gap-1">
+            <CalendarOff size={14} className="text-gray-400" />
+            <span className="text-xs font-medium text-gray-600">주말 회색</span>
+          </div>
+        </label>
+
         {/* Settings Buttons - same row */}
         <div className="flex-1"></div>
 
@@ -686,6 +729,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             onEditStudent={handleEditStudent}
             onMemoChange={handleMemoChange}
             onHomeworkChange={handleHomeworkChange}
+            onCellColorChange={handleCellColorChange}
             pendingUpdatesByStudent={pendingUpdatesByStudent}
             pendingMemosByStudent={pendingMemosByStudent}
             examsByDate={examsByDate}
@@ -696,6 +740,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             onCollapsedGroupsChange={handleCollapsedGroupsChange}
             viewMode={viewMode}
             selectedSession={selectedSession}
+            highlightWeekends={highlightWeekends}
           />
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, TrendingUp, ArrowUpCircle, AlertTriangle, Loader } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Loader } from 'lucide-react';
 import { collection, getDocs, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../firebaseConfig';
@@ -12,6 +12,7 @@ interface LevelUpConfirmModalProps {
     oldClassName: string;
     newClassName: string;
     type: 'number' | 'class';
+    direction?: 'up' | 'down';  // 레벨업 또는 레벨다운
     isSimulationMode?: boolean;
     onSimulationLevelUp?: (oldName: string, newName: string) => void;
 }
@@ -23,9 +24,11 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
     oldClassName,
     newClassName,
     type,
+    direction = 'up',  // 기본값은 레벨업
     isSimulationMode = false,
     onSimulationLevelUp,
 }) => {
+    const isLevelDown = direction === 'down';
     const queryClient = useQueryClient();
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -122,11 +125,21 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
         <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center" onClick={onClose}>
             <div className="bg-white rounded-xl shadow-2xl w-[400px] overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
-                <div className={`flex justify-between items-center px-5 py-4 ${type === 'number' ? 'bg-indigo-600' : 'bg-orange-500'} text-white`}>
+                <div className={`flex justify-between items-center px-5 py-4 ${
+                    isLevelDown
+                        ? (type === 'number' ? 'bg-blue-600' : 'bg-red-500')
+                        : (type === 'number' ? 'bg-indigo-600' : 'bg-orange-500')
+                } text-white`}>
                     <div className="flex items-center gap-2">
-                        {type === 'number' ? <TrendingUp size={20} /> : <ArrowUpCircle size={20} />}
+                        {isLevelDown
+                            ? (type === 'number' ? <TrendingDown size={20} /> : <ArrowDownCircle size={20} />)
+                            : (type === 'number' ? <TrendingUp size={20} /> : <ArrowUpCircle size={20} />)
+                        }
                         <h2 className="text-lg font-bold">
-                            {type === 'number' ? '숫자 레벨업' : '클래스 레벨업'}
+                            {isLevelDown
+                                ? (type === 'number' ? '숫자 레벨다운' : '클래스 레벨다운')
+                                : (type === 'number' ? '숫자 레벨업' : '클래스 레벨업')
+                            }
                         </h2>
                     </div>
                     <button onClick={onClose} className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/20">
@@ -143,9 +156,17 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                             <div className="text-xl font-bold text-gray-700">{oldClassName}</div>
                         </div>
                         <div className="text-2xl text-gray-400">→</div>
-                        <div className={`px-4 py-3 rounded-lg text-center ${type === 'number' ? 'bg-indigo-50' : 'bg-orange-50'}`}>
+                        <div className={`px-4 py-3 rounded-lg text-center ${
+                            isLevelDown
+                                ? (type === 'number' ? 'bg-blue-50' : 'bg-red-50')
+                                : (type === 'number' ? 'bg-indigo-50' : 'bg-orange-50')
+                        }`}>
                             <div className="text-xs text-gray-500 mb-1">변경</div>
-                            <div className={`text-xl font-bold ${type === 'number' ? 'text-indigo-700' : 'text-orange-700'}`}>{newClassName}</div>
+                            <div className={`text-xl font-bold ${
+                                isLevelDown
+                                    ? (type === 'number' ? 'text-blue-700' : 'text-red-700')
+                                    : (type === 'number' ? 'text-indigo-700' : 'text-orange-700')
+                            }`}>{newClassName}</div>
                         </div>
                     </div>
 

@@ -43,6 +43,7 @@ export const STORAGE_KEYS = {
   // Resource Favorites (personal/local)
   RESOURCE_FAVORITES: 'ijw_resource_favorites',
   RESOURCE_CATEGORY_ORDER: 'ijw_resource_category_order',
+  ATTENDANCE_HIGHLIGHT_WEEKENDS: 'ijw_attendance_highlight_weekends',
 
   // Dynamic keys (functions)
   resourceSubCategoryOrder: (mainCategory: string) =>

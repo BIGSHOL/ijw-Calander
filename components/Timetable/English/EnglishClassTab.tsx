@@ -20,6 +20,7 @@ import { useEnglishStats } from './hooks/useEnglishStats';
 import { useEnglishChanges, MoveChange } from './hooks/useEnglishChanges';
 import { useEnglishClasses, ScheduleCell, ClassInfo } from './hooks/useEnglishClasses';
 import { useClassStudents } from './hooks/useClassStudents';
+import { useScenario } from './context/SimulationContext';
 import IntegrationClassCard from '../shared/IntegrationClassCard';
 import { ClassInfo as ClassInfoFromHook } from '../../../hooks/useClasses';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
@@ -99,10 +100,14 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     // 3. Move Changes
     const { moveChanges, isSaving, handleMoveStudent, handleCancelChanges, handleSaveChanges } = useEnglishChanges(isSimulationMode);
 
-    // 4. Classes Data Transformation (classesData로부터 담임 정보 전달)
-    const rawClasses = useEnglishClasses(scheduleData, settings, teachersData, classesData);
+    // 4. Scenario Context (시뮬레이션 모드용)
+    const scenario = useScenario();
+    const scenarioClasses = scenario?.state?.scenarioClasses || {};
 
-    // 5. Centralized Student Data Fetch (Cost Optimization)
+    // 5. Classes Data Transformation (classesData 또는 scenarioClasses로부터 담임 정보 전달)
+    const rawClasses = useEnglishClasses(scheduleData, settings, teachersData, classesData, isSimulationMode, scenarioClasses);
+
+    // 6. Centralized Student Data Fetch (Cost Optimization)
     const classNames = useMemo(() => rawClasses.map(c => c.name), [rawClasses]);
     const { classDataMap } = useClassStudents(classNames, isSimulationMode, studentMap);
 
@@ -415,7 +420,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                             뷰 설정
                         </button>
                     )}
-                    {mode === 'edit' && canEditEnglish && (
+                    {mode === 'edit' && canEditEnglish && !isSimulationMode && (
                         <button
                             onClick={() => setIsLevelSettingsOpen(true)}
                             className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"

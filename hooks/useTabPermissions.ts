@@ -1,15 +1,19 @@
 import { useMemo } from 'react';
 import { UserProfile, AppTab, DEFAULT_TAB_PERMISSIONS, TabPermissionConfig, TAB_META } from '../types';
 import { useSystemConfig } from './useFirebaseQueries';
+import { useRoleSimulation, getEffectiveRole, getEffectiveUserProfile } from './useRoleSimulation';
 
 // Extract to module level to avoid recreating on every render (rendering-hoist-jsx)
 const ALL_TABS = Object.keys(TAB_META) as AppTab[];
 
 /**
  * Hook to check if a user can access specific Top-Level Tabs
+ *
+ * Supports Role/User Simulation: Master can test with other roles/users' tab access
  */
 export const useTabPermissions = (userProfile: UserProfile | null) => {
     const { data: systemConfig, isLoading } = useSystemConfig();
+    const { simulatedRole, simulatedUserProfile, simulationType } = useRoleSimulation();
 
     return useMemo(() => {
         const canAccessTab = (tab: AppTab): boolean => {
@@ -17,13 +21,24 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
             if (!userProfile) return false;
 
             // Property access caching (js-cache-property-access)
-            const userRole = userProfile.role;
-            const userStatus = userProfile.status;
-            const userEmail = userProfile.email;
+            const actualRole = userProfile.role;
+
+            // 시뮬레이션 중이 아닌 마스터는 모든 탭 접근 가능
+            if (actualRole === 'master' && !simulatedRole) return true;
+
+            // 실효 사용자 프로필 계산 (사용자 시뮬레이션 시 해당 사용자의 전체 프로필)
+            const effectiveProfile = getEffectiveUserProfile(
+                userProfile, simulatedRole, simulatedUserProfile, simulationType
+            );
+
+            if (!effectiveProfile) return false;
+
+            const userStatus = effectiveProfile.status;
+            const userEmail = effectiveProfile.email;
+            const userRole = effectiveProfile.role;
 
             // Edge case: User not approved - block all access
             if (userStatus !== 'approved') {
-                // Conditional logging for production bundle size (bundle-conditional)
                 if (process.env.NODE_ENV !== 'production') {
                     console.warn('[Tab Access Denied] User not approved:', userEmail);
                 }
@@ -37,9 +52,6 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
                 }
                 return false;
             }
-
-            // Master always has access to everything
-            if (userRole === 'master') return true;
 
             // Property access caching for systemConfig
             const tabPermissions = systemConfig?.tabPermissions;
@@ -98,9 +110,10 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
         };
 
         // Pre-calculate accessible tabs for easy mapping
-        // Master gets ALL tabs automatically
-        const accessibleTabs: AppTab[] = userProfile?.role === 'master'
-            ? ALL_TABS  // Master gets everything
+        // 시뮬레이션 중이 아닌 마스터만 모든 탭 접근 가능
+        const isActualMasterWithoutSimulation = userProfile?.role === 'master' && !simulatedRole;
+        const accessibleTabs: AppTab[] = isActualMasterWithoutSimulation
+            ? ALL_TABS  // Master gets everything (시뮬레이션 중이 아닐 때)
             : ALL_TABS.filter((t) => canAccessTab(t));
 
         return {
@@ -108,5 +121,5 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
             accessibleTabs,
             isLoading,
         };
-    }, [userProfile, systemConfig]); // Removed isLoading from dependencies (rerender-dependencies)
+    }, [userProfile, systemConfig, simulatedRole, simulatedUserProfile, simulationType]);
 };

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, Info, BookOpen } from 'lucide-react';
-import { Exam, StudentScore, calculateGrade } from '../../types';
+import { Exam, StudentScore, calculateGrade, UserProfile } from '../../types';
 import { useExams, useCreateExam } from '../../hooks/useExams';
 import { useAddScore } from '../../hooks/useStudentGrades';
-import { auth, db } from '../../firebaseConfig';
+import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -18,6 +18,8 @@ interface AddScoreModalProps {
     preSelectedSubject?: 'math' | 'english';
     // 새 시험 생성 버튼 숨김 여부 (학생 상세에서는 true)
     hideCreateExam?: boolean;
+    // 현재 사용자 (시뮬레이션 지원)
+    currentUser?: UserProfile | null;
 }
 
 // 시험별 성적 조회 Hook
@@ -54,8 +56,8 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
     preSelectedExamId,
     preSelectedSubject,
     hideCreateExam = false,
+    currentUser,
 }) => {
-    const user = auth.currentUser;
     const queryClient = useQueryClient();
     const { data: exams = [], isLoading: loadingExams } = useExams();
     const addScore = useAddScore();
@@ -152,8 +154,8 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
             subject: formData.subject,
             score: parseFloat(formData.score),
             maxScore: parseFloat(formData.maxScore) || 100,
-            createdBy: user?.uid || '',
-            createdByName: user?.displayName || user?.email || '',
+            createdBy: currentUser?.uid || '',
+            createdByName: currentUser?.displayName || currentUser?.email || '',
         };
 
         // 선택적 필드는 값이 있을 때만 추가
@@ -182,8 +184,8 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
             subject: newExam.subject,
             maxScore: parseFloat(newExam.maxScore) || 100,
             scope: 'academy',
-            createdBy: user?.uid || '',
-            createdByName: user?.displayName || user?.email || '',
+            createdBy: currentUser?.uid || '',
+            createdByName: currentUser?.displayName || currentUser?.email || '',
         });
 
         // 새로 만든 시험 선택

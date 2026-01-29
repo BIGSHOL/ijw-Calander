@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { UnifiedStudent, Consultation, CATEGORY_CONFIG } from '../../../types';
+import { UnifiedStudent, Consultation, CATEGORY_CONFIG, UserProfile } from '../../../types';
 import { MessageSquare, Plus, ClipboardList } from 'lucide-react';
 import { useStudentConsultations, getFollowUpUrgency, getFollowUpDaysLeft } from '../../../hooks/useStudentConsultations';
 import { useStaff } from '../../../hooks/useStaff';
@@ -11,9 +11,10 @@ const AddConsultationModal = React.lazy(() => import('../../StudentConsultation/
 interface ConsultationsTabProps {
   student: UnifiedStudent;
   readOnly?: boolean; // 조회 전용 모드
+  currentUser?: UserProfile | null; // 시뮬레이션 지원
 }
 
-const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly = false }) => {
+const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly = false, currentUser }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
   const { staff } = useStaff();
@@ -201,6 +202,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
           onClose={() => setShowAddModal(false)}
           onSuccess={handleAddSuccess}
           preSelectedStudentId={student.id}
+          userProfile={currentUser}
         />
       )}
 

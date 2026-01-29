@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { UnifiedStudent, StudentScore, GRADE_COLORS, calculateGrade, LevelTest, GoalSetting, GradeComment, COMMENT_CATEGORY_LABELS, GradeCommentCategory } from '../../../types';
+import { UnifiedStudent, StudentScore, GRADE_COLORS, calculateGrade, LevelTest, GoalSetting, GradeComment, COMMENT_CATEGORY_LABELS, GradeCommentCategory, UserProfile } from '../../../types';
 import { useStudentScores, useDeleteScore, calculateScoreStats } from '../../../hooks/useStudentGrades';
 import { useExams } from '../../../hooks/useExams';
 import {
@@ -19,9 +19,10 @@ import {
 interface GradesTabProps {
     student: UnifiedStudent;
     readOnly?: boolean; // true일 때 모든 입력/수정/삭제 버튼 숨김
+    currentUser?: UserProfile | null; // 시뮬레이션 지원
 }
 
-const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false }) => {
+const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, currentUser }) => {
     const [subjectFilter, setSubjectFilter] = useState<'all' | 'math' | 'english'>('all');
     const [isAddingScore, setIsAddingScore] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -976,6 +977,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false }) => {
                     studentId={student.id}
                     studentName={student.name}
                     hideCreateExam={true}
+                    currentUser={currentUser}
                 />
             )}
         </div>

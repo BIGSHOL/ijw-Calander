@@ -142,9 +142,9 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
       <div className="flex-1 overflow-y-auto p-3">
         {activeTab === 'basic' && <BasicInfoTab student={student} readOnly={readOnly || !canEditStudent} />}
         {activeTab === 'courses' && <CoursesTab student={student} compact={compact} readOnly={readOnly || !canManageEnrollment} />}
-        {activeTab === 'grades' && <GradesTab student={student} readOnly={readOnly || !canEditStudent} />}
+        {activeTab === 'grades' && <GradesTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
         {activeTab === 'attendance' && <AttendanceTab student={student} readOnly={readOnly || !canEditStudent} />}
-        {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly || !canEditStudent} />}
+        {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
       </div>
 
       {/* 퇴원 처리 모달 */}

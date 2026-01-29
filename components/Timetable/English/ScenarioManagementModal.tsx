@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, getDocs, writeBatch, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
-import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, FileText, BarChart3 } from 'lucide-react';
+import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, FileText, GitCompare, Upload } from 'lucide-react';
 import { CLASS_DRAFT_COLLECTION, SCENARIO_COLLECTION } from './englishUtils';
 import { validateScenarioData, calculateScenarioStats, generateScenarioId } from './scenarioUtils';
 import { ScenarioEntry } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useSimulationOptional } from './context/SimulationContext';
+import ScenarioCompareModal from './ScenarioCompareModal';
 
 /**
  * Firebase에 저장 전 undefined 값을 제거합니다.
@@ -54,6 +55,10 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
     const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
     const [newScenarioName, setNewScenarioName] = useState('');
     const [newScenarioDesc, setNewScenarioDesc] = useState('');
+
+    // Compare State
+    const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set());
+    const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
 
     const { hasPermission } = usePermissions(currentUser);
     const canEdit = hasPermission('timetable.english.edit') || currentUser?.role === 'master';
@@ -364,6 +369,54 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         }
     };
 
+    // Overwrite existing scenario with current state
+    const handleOverwriteScenario = async (scenario: ScenarioEntry) => {
+        if (!canEdit) {
+            alert('저장 권한이 없습니다.');
+            return;
+        }
+
+        // 새 구조 시나리오만 덮어쓰기 가능
+        const isNewStructure = (scenario as any).version === 2;
+        if (!isNewStructure) {
+            alert('레거시 시나리오는 덮어쓰기할 수 없습니다. 새로운 시나리오를 생성해주세요.');
+            return;
+        }
+
+        if (!simulation?.isScenarioMode) {
+            alert('시뮬레이션 모드에서만 덮어쓰기가 가능합니다.');
+            return;
+        }
+
+        const confirmMsg = `시나리오 "${scenario.name}"에 현재 상태를 덮어쓰시겠습니까?
+
+⚠️ 기존 시나리오 데이터가 완전히 교체됩니다.
+이 작업은 되돌릴 수 없습니다.`;
+
+        if (!confirm(confirmMsg)) return;
+
+        setActiveOperation(`overwrite_${scenario.id}`);
+
+        try {
+            await simulation.updateScenario(
+                scenario.id,
+                currentUser?.uid || '',
+                currentUser?.displayName || currentUser?.email || 'Unknown'
+            );
+
+            const classCount = Object.keys(simulation.scenarioClasses).length;
+            const studentCount = Object.values(simulation.scenarioEnrollments)
+                .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
+
+            alert(`✅ 시나리오 "${scenario.name}"가 업데이트되었습니다.\n(수업: ${classCount}개, 학생: ${studentCount}명)`);
+        } catch (error) {
+            console.error('시나리오 덮어쓰기 실패:', error);
+            alert(`덮어쓰기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+        } finally {
+            setActiveOperation(null);
+        }
+    };
+
     // Delete scenario
     const handleDeleteScenario = async (scenario: ScenarioEntry) => {
         if (!canManageSimulation) {
@@ -375,13 +428,49 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
         try {
             await deleteDoc(doc(db, SCENARIO_COLLECTION, scenario.id));
+            // 삭제된 시나리오가 비교 선택에 있으면 제거
+            setSelectedForCompare(prev => {
+                const next = new Set(prev);
+                next.delete(scenario.id);
+                return next;
+            });
         } catch (error) {
             console.error('시나리오 삭제 실패:', error);
             alert('시나리오 삭제에 실패했습니다.');
         }
     };
 
+    // Toggle scenario for compare
+    const toggleCompareSelection = (scenarioId: string) => {
+        setSelectedForCompare(prev => {
+            const next = new Set(prev);
+            if (next.has(scenarioId)) {
+                next.delete(scenarioId);
+            } else if (next.size < 3) {
+                next.add(scenarioId);
+            } else {
+                alert('최대 3개까지 비교할 수 있습니다.');
+            }
+            return next;
+        });
+    };
+
+    // Get selected scenarios for comparison
+    const scenariosToCompare = scenarios.filter(s => selectedForCompare.has(s.id));
+
     if (!isOpen) return null;
+
+    // 비교 모드일 때는 관리 모달을 숨기고 비교 바만 표시
+    if (isCompareModalOpen) {
+        return (
+            <ScenarioCompareModal
+                isOpen={isCompareModalOpen}
+                onClose={() => setIsCompareModalOpen(false)}
+                scenarios={scenariosToCompare}
+                onLoadScenario={(id, name) => onLoadScenario?.(name)}
+            />
+        );
+    }
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -399,9 +488,32 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                 </div>
 
                 {/* Action Bar */}
-                {isSimulationMode && canEdit && (
-                    <div className="p-3 border-b bg-purple-50 flex items-center justify-between">
-                        <span className="text-sm text-purple-700">현재 Draft 상태를 시나리오로 저장할 수 있습니다.</span>
+                <div className="p-3 border-b bg-purple-50 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        {selectedForCompare.size > 0 && (
+                            <span className="text-sm text-indigo-700">
+                                {selectedForCompare.size}개 선택
+                            </span>
+                        )}
+                        {selectedForCompare.size >= 2 && (
+                            <button
+                                onClick={() => setIsCompareModalOpen(true)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors"
+                            >
+                                <GitCompare size={14} />
+                                비교하기
+                            </button>
+                        )}
+                        {selectedForCompare.size > 0 && (
+                            <button
+                                onClick={() => setSelectedForCompare(new Set())}
+                                className="text-sm text-gray-500 hover:text-gray-700"
+                            >
+                                선택 해제
+                            </button>
+                        )}
+                    </div>
+                    {isSimulationMode && canEdit && (
                         <button
                             onClick={() => setIsSaveDialogOpen(true)}
                             disabled={activeOperation !== null}
@@ -410,8 +522,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                             <Save size={14} />
                             현재 상태 저장
                         </button>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -433,19 +545,31 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                             const isOwner = scenario.createdByUid === currentUser?.uid;
                             const canModify = isMaster || isOwner || canManageSimulation;
                             const isBackup = scenario.id.startsWith('backup_');
+                            const isSelectedForCompare = selectedForCompare.has(scenario.id);
 
                             return (
                                 <div
                                     key={scenario.id}
-                                    className={`p-3 rounded-lg border transition-colors ${!validation.isValid
-                                        ? 'bg-red-50 border-red-200'
-                                        : isLatest
-                                            ? 'bg-blue-50 border-blue-200'
-                                            : 'bg-white border-gray-200 hover:border-gray-300'
-                                        }`}
+                                    className={`p-3 rounded-lg border transition-colors ${
+                                        isSelectedForCompare
+                                            ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-200'
+                                            : !validation.isValid
+                                                ? 'bg-red-50 border-red-200'
+                                                : isLatest
+                                                    ? 'bg-blue-50 border-blue-200'
+                                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                    }`}
                                 >
                                     {/* Name + Badges */}
                                     <div className="flex items-center gap-2 mb-1">
+                                        {/* Compare Checkbox */}
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelectedForCompare}
+                                            onChange={() => toggleCompareSelection(scenario.id)}
+                                            className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                                            title="비교 선택"
+                                        />
                                         {editingId === scenario.id ? (
                                             <input
                                                 type="text"
@@ -513,18 +637,35 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                         ) : (
                                             <>
                                                 {isSimulationMode && canEdit && validation.isValid && (
-                                                    <button
-                                                        onClick={() => handleLoadScenario(scenario)}
-                                                        disabled={activeOperation !== null}
-                                                        className="flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs font-bold hover:bg-blue-600 disabled:opacity-50"
-                                                    >
-                                                        {activeOperation === scenario.id ? (
-                                                            <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
-                                                        ) : (
-                                                            <Download size={12} />
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleLoadScenario(scenario)}
+                                                            disabled={activeOperation !== null}
+                                                            className="flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs font-bold hover:bg-blue-600 disabled:opacity-50"
+                                                        >
+                                                            {activeOperation === scenario.id ? (
+                                                                <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
+                                                            ) : (
+                                                                <Download size={12} />
+                                                            )}
+                                                            불러오기
+                                                        </button>
+                                                        {(scenario as any).version === 2 && (
+                                                            <button
+                                                                onClick={() => handleOverwriteScenario(scenario)}
+                                                                disabled={activeOperation !== null}
+                                                                className="flex items-center gap-1 px-2 py-1 bg-orange-500 text-white rounded text-xs font-bold hover:bg-orange-600 disabled:opacity-50"
+                                                                title="현재 상태를 이 시나리오에 덮어쓰기"
+                                                            >
+                                                                {activeOperation === `overwrite_${scenario.id}` ? (
+                                                                    <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
+                                                                ) : (
+                                                                    <Upload size={12} />
+                                                                )}
+                                                                덮어쓰기
+                                                            </button>
                                                         )}
-                                                        불러오기
-                                                    </button>
+                                                    </>
                                                 )}
                                                 {canModify && (
                                                     <button
