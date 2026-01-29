@@ -379,6 +379,19 @@ const App: React.FC = () => {
     sessionCategory
   );
 
+  // 세션 모드에서 현재 월에 맞는 세션 자동 선택
+  useEffect(() => {
+    if (attendanceViewMode === 'session' && !selectedSession && sessions.length > 0) {
+      const currentYear = attendanceDate.getFullYear();
+      const currentMonth = attendanceDate.getMonth() + 1;
+      const currentMonthSession = sessions.find(s => s.year === currentYear && s.month === currentMonth);
+
+      if (currentMonthSession) {
+        setSelectedSession(currentMonthSession);
+      }
+    }
+  }, [attendanceViewMode, selectedSession, sessions, attendanceDate]);
+
   // Permission Hook
   // 시뮬레이션 적용된 프로필로 권한 체크
   const { hasPermission, rolePermissions } = usePermissions(effectiveProfile || null);
@@ -1916,9 +1929,10 @@ const App: React.FC = () => {
             const changeSession = (delta: number) => {
               if (!sessions || sessions.length === 0) return;
 
-              // 현재 월의 세션 찾기
+              // 현재 월의 세션 찾기 (year와 month 모두 체크)
+              const currentYear = attendanceDate.getFullYear();
               const currentMonth = attendanceDate.getMonth() + 1;
-              const currentIdx = sessions.findIndex(s => s.month === currentMonth);
+              const currentIdx = sessions.findIndex(s => s.year === currentYear && s.month === currentMonth);
 
               if (currentIdx === -1) {
                 // 현재 월에 세션이 없으면 첫 세션으로
@@ -1947,11 +1961,12 @@ const App: React.FC = () => {
               }
             };
 
-            // 세션 모드에서 현재 월에 맞는 세션 자동 선택
-            const currentMonthSession = sessions.find(s => s.month === attendanceDate.getMonth() + 1);
-            if (attendanceViewMode === 'session' && !selectedSession && currentMonthSession) {
-              setSelectedSession(currentMonthSession);
-            }
+            // 현재 월의 세션 찾기 (useMemo로 최적화)
+            const currentMonthSession = useMemo(() => {
+              const currentYear = attendanceDate.getFullYear();
+              const currentMonth = attendanceDate.getMonth() + 1;
+              return sessions.find(s => s.year === currentYear && s.month === currentMonth);
+            }, [sessions, attendanceDate]);
 
             return (
               <TabSubNavigation variant="compact" className="justify-between px-6 border-b border-white/10 z-30">
@@ -2003,7 +2018,10 @@ const App: React.FC = () => {
                   <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
                     <TabButton
                       active={attendanceViewMode === 'monthly'}
-                      onClick={() => setAttendanceViewMode('monthly')}
+                      onClick={() => {
+                        setAttendanceViewMode('monthly');
+                        setSelectedSession(null); // 월별 모드로 전환 시 세션 선택 초기화
+                      }}
                       icon={<List size={14} />}
                       className="px-2 py-0.5"
                     >
@@ -2013,10 +2031,7 @@ const App: React.FC = () => {
                       active={attendanceViewMode === 'session'}
                       onClick={() => {
                         setAttendanceViewMode('session');
-                        // 세션 모드 전환 시 현재 월의 세션 자동 선택
-                        if (currentMonthSession) {
-                          setSelectedSession(currentMonthSession);
-                        }
+                        // 세션 모드 전환 시 현재 월의 세션 자동 선택 (useEffect에서 처리)
                       }}
                       icon={<CalendarIcon size={14} />}
                       className="px-2 py-0.5"
@@ -2036,7 +2051,9 @@ const App: React.FC = () => {
                     <span className="px-2 font-bold text-white text-xs min-w-[120px] text-center">
                       {attendanceViewMode === 'monthly'
                         ? attendanceDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
-                        : `${attendanceDate.getFullYear()}년 ${attendanceDate.getMonth() + 1}월 세션`
+                        : selectedSession
+                          ? `${selectedSession.year}년 ${selectedSession.month}월 세션`
+                          : `${attendanceDate.getFullYear()}년 ${attendanceDate.getMonth() + 1}월 세션`
                       }
                     </span>
                     <button

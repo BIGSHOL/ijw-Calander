@@ -22,6 +22,7 @@ const AddClassModal = lazy(() => import('./Math/components/Modals/AddClassModal'
 const ClassDetailModal = lazy(() => import('../ClassManagement/ClassDetailModal'));
 const StudentDetailModal = lazy(() => import('../StudentManagement/StudentDetailModal'));
 const SimpleViewSettingsModal = lazy(() => import('./Math/components/Modals/SimpleViewSettingsModal'));
+const ScenarioManagementModal = lazy(() => import('./Math/ScenarioManagementModal'));
 import { ClassInfo } from '../../hooks/useClasses';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 import { MathSimulationProvider, useMathSimulation } from './Math/context/SimulationContext';
