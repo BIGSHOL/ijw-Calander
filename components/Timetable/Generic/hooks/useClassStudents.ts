@@ -112,7 +112,7 @@ export function useClassStudents(
         classStudentMap[className].add(studentId);
         enrollmentDataMap[className][studentId] = {
           enrollmentDate: data.enrollmentDate,
-          withdrawalDate: data.withdrawalDate,
+          withdrawalDate: data.withdrawalDate || data.endDate,  // endDate도 퇴원으로 처리
           onHold: data.onHold,
           attendanceDays: data.attendanceDays || [],
         };

@@ -51,7 +51,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
         if (!searchQuery.trim()) return availableStudents;
         const query = searchQuery.toLowerCase();
         return availableStudents.filter(s =>
-            s.name.toLowerCase().includes(query) ||
+            (s.name || '').toLowerCase().includes(query) ||
             s.englishName?.toLowerCase().includes(query) ||
             s.school?.toLowerCase().includes(query)
         );

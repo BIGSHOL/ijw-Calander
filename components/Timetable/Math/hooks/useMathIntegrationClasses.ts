@@ -181,7 +181,7 @@ export const useMathIntegrationClasses = (
             if (a.startPeriod !== b.startPeriod) {
                 return a.startPeriod - b.startPeriod;
             }
-            return a.name.localeCompare(b.name, 'ko');
+            return (a.name || '').localeCompare(b.name || '', 'ko');
         });
     }, [classes, settings, teachersData]);
 };

@@ -2,13 +2,18 @@ import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { UnifiedStudent, UserProfile } from '../../types';
 import { useStudents, searchStudentsByQuery } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
+import { StudentFilters } from '../../hooks/useAppState';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
-import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database } from 'lucide-react';
+import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, GitMerge, Trash2, AlertTriangle, Languages } from 'lucide-react';
 
 // Performance: bundle-dynamic-imports - Modal components lazy load (~80-100KB bundle reduction)
 const StudentMigrationModal = lazy(() => import('./StudentMigrationModal'));
+const StudentMergeModal = lazy(() => import('./StudentMergeModal'));
+const StudentDataCleanupModal = lazy(() => import('./StudentDataCleanupModal'));
+const DuplicateNamesViewModal = lazy(() => import('./DuplicateNamesViewModal'));
+const BulkEnglishNameUpdateModal = lazy(() => import('./BulkEnglishNameUpdateModal'));
 
 export type SearchField =
   | 'all'           // 전체
@@ -20,15 +25,6 @@ export type SearchField =
   | 'memo'          // 메모
   | 'email'         // 이메일
   | 'etc';          // 기타 (생년월일, 기타항목, 퇴원사유 등)
-
-export interface StudentFilters {
-  searchQuery: string;
-  searchField: SearchField;  // 검색 필드 선택
-  grade: string;
-  status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn';
-  subjects: string[];  // 선택된 과목 배열 (빈 배열 = 전체)
-  teacher: string;  // 'all' 또는 선생님 이름
-}
 
 interface StudentManagementTabProps {
   filters: StudentFilters;
@@ -50,6 +46,10 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const [isSearchingOld, setIsSearchingOld] = useState(false);
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [showMigrationModal, setShowMigrationModal] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [showCleanupModal, setShowCleanupModal] = useState(false);
+  const [showDuplicateNamesModal, setShowDuplicateNamesModal] = useState(false);
+  const [showBulkEnglishNameModal, setShowBulkEnglishNameModal] = useState(false);
 
   // 선택된 학생 자동 업데이트 (students 배열 변경 시)
   useEffect(() => {
@@ -73,7 +73,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
       const query = filters.searchQuery.toLowerCase();
       const memoryResults = students.filter(
         (s) =>
-          s.name.toLowerCase().includes(query) ||
+          (s.name || '').toLowerCase().includes(query) ||
           s.englishName?.toLowerCase().includes(query) ||
           s.school?.toLowerCase().includes(query)
       );
@@ -114,7 +114,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             // 전체 검색 (모든 필드)
             return (
               // 기본 정보
-              s.name.toLowerCase().includes(query) ||
+              (s.name || '').toLowerCase().includes(query) ||
               s.englishName?.toLowerCase().includes(query) ||
               s.school?.toLowerCase().includes(query) ||
               s.grade?.toLowerCase().includes(query) ||
@@ -157,7 +157,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
           case 'name':
             // 이름 (이름, 영문이름, 닉네임)
             return (
-              s.name.toLowerCase().includes(query) ||
+              (s.name || '').toLowerCase().includes(query) ||
               s.englishName?.toLowerCase().includes(query) ||
               s.nickname?.toLowerCase().includes(query)
             );
@@ -266,7 +266,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
           if (studentStatus === 'on_hold') return true;
 
           // 2. status는 active지만 모든 enrollments가 onHold인 경우
-          const activeEnrollments = s.enrollments?.filter(e => !e.withdrawalDate) || [];
+          const activeEnrollments = s.enrollments?.filter(e => !e.endDate) || [];
           if (activeEnrollments.length > 0) {
             const allOnHold = activeEnrollments.every(e => e.onHold === true);
             if (allOnHold) return true;
@@ -279,19 +279,50 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
       });
     }
 
-    // 수강 과목 필터 (AND 조건: 선택된 모든 과목을 수강하는 학생만 표시)
+    // 수강 과목 필터 (OR 조건: 선택된 과목 중 하나라도 수강하는 학생 표시)
+    // 퇴원 학생의 경우, enrollments가 비어있어도 필터에서 제외하지 않음
     if (filters.subjects.length > 0) {
       result = result.filter((s) => {
-        const studentSubjects = s.enrollments.map((e) => e.subject);
-        return filters.subjects.every((subject) => studentSubjects.includes(subject));
+        // 퇴원 학생은 과목 필터에서 제외하지 않음 (enrollments가 없을 수 있음)
+        if (s.status === 'withdrawn') return true;
+        // 활성 enrollment만 필터링 (endDate가 없는 것)
+        const studentSubjects = (s.enrollments || []).filter(e => !e.endDate).map((e) => e.subject);
+        return filters.subjects.some((subject) => studentSubjects.includes(subject));
       });
     }
 
     // 선생님 필터
+    // 퇴원 학생의 경우, enrollments가 비어있어도 필터에서 제외하지 않음
     if (filters.teacher !== 'all') {
-      result = result.filter((s) =>
-        s.enrollments.some((e) => e.staffId === filters.teacher)
-      );
+      result = result.filter((s) => {
+        // 퇴원 학생은 선생님 필터에서 제외하지 않음
+        if (s.status === 'withdrawn') return true;
+        // 활성 enrollment만 필터링 (endDate가 없는 것)
+        return (s.enrollments || []).filter(e => !e.endDate).some((e) => e.staffId === filters.teacher);
+      });
+    }
+
+    // 미수강 제외 필터 (배정 예정 학생도 제외)
+    if (filters.excludeNoEnrollment) {
+      result = result.filter((s) => {
+        // 퇴원 학생은 미수강 필터에서 제외하지 않음
+        if (s.status === 'withdrawn') return true;
+
+        // 현재 날짜
+        const today = new Date().toISOString().split('T')[0];
+
+        // 활성 enrollment 중 이미 시작된 것만 필터링
+        const activeStartedEnrollments = (s.enrollments || []).filter(e => {
+          // 종료되지 않았고 (endDate 없음)
+          if (e.endDate) return false;
+
+          // 시작일이 없거나 시작일이 오늘 이전인 경우만 포함 (배정 예정 제외)
+          if (!e.enrollmentDate) return true;
+          return e.enrollmentDate <= today;
+        });
+
+        return activeStartedEnrollments.length > 0;
+      });
     }
 
     // 학년 정렬 우선순위 (고3 -> 고1 -> 중3 -> 중1 -> 초6 -> 초1 -> 기타)
@@ -308,13 +339,13 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
     // 정렬
     result.sort((a, b) => {
       if (sortBy === 'name') {
-        return a.name.localeCompare(b.name, 'ko');
+        return (a.name || '').localeCompare(b.name || '', 'ko');
       } else if (sortBy === 'grade') {
         const orderA = getGradeOrder(a.grade);
         const orderB = getGradeOrder(b.grade);
         if (orderA !== orderB) return orderA - orderB;
         // 같은 학년이면 이름순
-        return a.name.localeCompare(b.name, 'ko');
+        return (a.name || '').localeCompare(b.name || '', 'ko');
       } else if (sortBy === 'startDate') {
         return (b.startDate || '').localeCompare(a.startDate || '');
       }
@@ -359,8 +390,8 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             <Users className="w-4 h-4 text-[#fdb813]" />
             <span className="text-sm font-bold text-white">학생 목록</span>
           </div>
-          <div className="flex items-center gap-1.5 md:gap-2">
-            {canEdit && (
+          <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+            {isMaster && (
               <>
                 <button
                   onClick={() => setShowMigrationModal(true)}
@@ -370,13 +401,43 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                   <Database className="w-3.5 h-3.5" />
                 </button>
                 <button
-                  onClick={() => setIsAddStudentModalOpen(true)}
+                  onClick={() => setShowMergeModal(true)}
                   className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
-                  title="학생 추가"
+                  title="중복 학생 병합"
                 >
-                  <UserPlus className="w-3.5 h-3.5" />
+                  <GitMerge className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setShowDuplicateNamesModal(true)}
+                  className="p-1.5 text-amber-400 hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                  title="중복 이름 확인"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setShowCleanupModal(true)}
+                  className="p-1.5 text-orange-400 hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                  title="데이터 정리 (숫자 ID 삭제)"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setShowBulkEnglishNameModal(true)}
+                  className="p-1.5 text-[#fdb813] hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                  title="일괄 영어이름 업데이트"
+                >
+                  <Languages className="w-3.5 h-3.5" />
                 </button>
               </>
+            )}
+            {canEdit && (
+              <button
+                onClick={() => setIsAddStudentModalOpen(true)}
+                className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                title="학생 추가"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+              </button>
             )}
             <button
               onClick={async () => {
@@ -469,6 +530,57 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             onClose={() => {
               refreshStudents();
               setShowMigrationModal(false);
+            }}
+          />
+        </Suspense>
+      )}
+
+      {/* 중복 학생 병합 모달 */}
+      {showMergeModal && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
+          <StudentMergeModal
+            onClose={() => {
+              refreshStudents();
+              setShowMergeModal(false);
+            }}
+          />
+        </Suspense>
+      )}
+
+      {/* 데이터 정리 모달 (숫자 ID 삭제) */}
+      {showCleanupModal && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
+          <StudentDataCleanupModal
+            onClose={() => {
+              refreshStudents();
+              setShowCleanupModal(false);
+            }}
+          />
+        </Suspense>
+      )}
+
+      {/* 중복 이름 확인 모달 */}
+      {showDuplicateNamesModal && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
+          <DuplicateNamesViewModal
+            students={students}
+            onRefresh={refreshStudents}
+            onClose={() => {
+              refreshStudents();
+              setShowDuplicateNamesModal(false);
+            }}
+          />
+        </Suspense>
+      )}
+
+      {/* 일괄 영어이름 업데이트 모달 */}
+      {showBulkEnglishNameModal && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
+          <BulkEnglishNameUpdateModal
+            students={students}
+            onClose={() => {
+              refreshStudents();
+              setShowBulkEnglishNameModal(false);
             }}
           />
         </Suspense>

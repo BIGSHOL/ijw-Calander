@@ -394,7 +394,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
             }
 
             // Same weight -> Alphabetical
-            return a.name.localeCompare(b.name, 'ko');
+            return (a.name || '').localeCompare(b.name || '', 'ko');
         });
     }, [students]);
 

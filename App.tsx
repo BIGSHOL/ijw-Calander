@@ -2139,6 +2139,20 @@ const App: React.FC = () => {
                   </TabButton>
                 </div>
 
+                {/* Exclude No Enrollment Toggle */}
+                <button
+                  onClick={() => setStudentFilters(prev => ({ ...prev, excludeNoEnrollment: !prev.excludeNoEnrollment }))}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
+                    studentFilters.excludeNoEnrollment
+                      ? 'bg-[#fdb813] border-[#fdb813] text-[#081429] font-medium'
+                      : 'bg-white/10 border-white/10 text-white hover:border-white/30'
+                  }`}
+                  title="미수강 학생 제외"
+                >
+                  <XCircle size={14} />
+                  <span className="text-xs">미수강 제외</span>
+                </button>
+
                 {/* Status Toggle */}
                 <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
                   <TabButton

@@ -311,6 +311,7 @@ export interface StudentFilters {
   status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn';
   subjects: string[];  // 선택된 과목 배열 (빈 배열 = 전체)
   teacher: string;  // 'all' 또는 선생님 이름
+  excludeNoEnrollment: boolean;  // 미수강 학생 제외
 }
 
 export function useStudentFilterState() {
@@ -321,6 +322,7 @@ export function useStudentFilterState() {
     status: 'active',
     subjects: [],
     teacher: 'all',
+    excludeNoEnrollment: false,
   });
   const [studentSortBy, setStudentSortBy] = useState<'name' | 'grade' | 'startDate'>('name');
 
@@ -340,6 +342,7 @@ export function useStudentFilterState() {
       status: 'active',
       subjects: [],
       teacher: 'all',
+      excludeNoEnrollment: false,
     });
   }, []);
 

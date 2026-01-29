@@ -313,14 +313,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .filter(s => !s.withdrawalDate && !s.onHold && isStudentAttendingAllMergedDays(s))
             .sort((a, b) => {
                 const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
-                return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
+                return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
             });
         const commonHold = allStudents
             .filter(s => s.onHold && !s.withdrawalDate && isStudentAttendingAllMergedDays(s))
-            .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
         const commonWithdrawn = allStudents
             .filter(s => s.withdrawalDate && isStudentAttendingAllMergedDays(s))
-            .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
         // 요일별 부분 등원 학생 (특정 요일만 오는 학생)
         const partial: Record<string, { active: any[]; hold: any[]; withdrawn: any[] }> = {};
@@ -329,14 +329,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 .filter(s => !s.withdrawalDate && !s.onHold && !isStudentAttendingAllMergedDays(s) && isStudentAttendingDay(s, day))
                 .sort((a, b) => {
                     const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
-                    return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
+                    return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
                 });
             const hold = allStudents
                 .filter(s => s.onHold && !s.withdrawalDate && !isStudentAttendingAllMergedDays(s) && isStudentAttendingDay(s, day))
-                .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
             const withdrawn = allStudents
                 .filter(s => s.withdrawalDate && !isStudentAttendingAllMergedDays(s) && isStudentAttendingDay(s, day))
-                .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
             partial[day] = { active, hold, withdrawn };
         });
 
@@ -370,16 +370,16 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .filter(s => !s.withdrawalDate && !s.onHold && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
             .sort((a, b) => {
                 const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
-                return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
+                return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
             });
 
         const hold = allStudents
             .filter(s => s.onHold && !s.withdrawalDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
-            .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
         const withdrawn = allStudents
             .filter(s => s.withdrawalDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
-            .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
         return { activeStudents: active, holdStudents: hold, withdrawnStudents: withdrawn };
     }, [isMergedCell, allStudents, currentDay]);

@@ -53,7 +53,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(s =>
-        s.name.toLowerCase().includes(q) ||
+        (s.name || '').toLowerCase().includes(q) ||
         (s.email && s.email.toLowerCase().includes(q)) ||
         (s.phone && s.phone.includes(q))
       );
@@ -69,7 +69,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
       result = result.filter(s => s.status === statusFilter);
     }
 
-    return result.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+    return result.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
   }, [staff, searchQuery, roleFilter, statusFilter]);
 
   // Stats - staff 기반으로 계산

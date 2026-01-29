@@ -134,8 +134,9 @@ export const useEnglishStats = (
 
                 active++;
 
-                // New student check
-                const enrollmentDate = data.enrollmentDate || data.startDate;
+                // New student check - 우선순위: 영어 과목 수강 시작일 > 학생 전체 등록일
+                // (학생이 등록 후 나중에 영어 과목을 추가할 수 있으므로 영어 과목 기준)
+                const enrollmentDate = data.enrollmentDate || baseStudent.startDate || data.startDate;
                 if (enrollmentDate) {
                     const enrollDate = new Date(enrollmentDate);
                     const daysSinceEnroll = Math.floor((now.getTime() - enrollDate.getTime()) / (1000 * 60 * 60 * 24));

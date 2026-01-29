@@ -657,7 +657,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
       }
 
       // Within same group, maintain original order or sort by name
-      return a.name.localeCompare(b.name);
+      return (a.name || '').localeCompare(b.name || '', 'ko');
     });
   }, [students, groupOrder, uniqueGroups]);
 

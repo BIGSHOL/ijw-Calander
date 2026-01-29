@@ -13,6 +13,74 @@ import { UnifiedStudent } from '../../types';
 import { read, utils } from 'xlsx';
 import { generateAttendanceNumber } from '../../utils/attendanceNumberGenerator';
 
+/**
+ * 학교명 정규화 (전체 이름 → 축약형)
+ * - "달산초등학교" → "달산초"
+ * - "OO중학교" → "OO중"
+ * - "OO고등학교" → "OO고"
+ */
+const normalizeSchoolName = (school?: string): string | undefined => {
+  if (!school) return undefined;
+
+  // 공백 제거 및 트림
+  let normalized = school.trim();
+
+  // 초등학교 → 초
+  normalized = normalized.replace(/초등학교$/g, '초');
+
+  // 중학교 → 중
+  normalized = normalized.replace(/중학교$/g, '중');
+
+  // 고등학교 → 고
+  normalized = normalized.replace(/고등학교$/g, '고');
+
+  return normalized;
+};
+
+/**
+ * 전화번호 포맷팅 (010-1234-5678 형식)
+ * - "1093659838" → "010-9365-9838" (10자리, 앞에 0 누락)
+ * - "01093659838" → "010-9365-9838" (11자리 휴대폰)
+ * - "0531234567" → "053-123-4567" (지역번호)
+ * - "021234567" → "02-123-4567" (서울)
+ */
+const formatPhoneNumber = (phone?: string): string | undefined => {
+  if (!phone) return undefined;
+
+  // 숫자만 추출
+  const digits = phone.replace(/\D/g, '');
+  if (!digits) return undefined;
+
+  // 10자리이고 '10'으로 시작하면 앞에 0 추가 (010 누락 케이스)
+  let normalized = digits;
+  if (digits.length === 10 && digits.startsWith('10')) {
+    normalized = '0' + digits;
+  }
+
+  // 11자리 휴대폰 (010, 011, 016, 017, 018, 019)
+  if (normalized.length === 11 && normalized.startsWith('01')) {
+    return `${normalized.slice(0, 3)}-${normalized.slice(3, 7)}-${normalized.slice(7)}`;
+  }
+
+  // 10자리 지역번호 (02 제외)
+  if (normalized.length === 10 && normalized.startsWith('0') && !normalized.startsWith('02')) {
+    return `${normalized.slice(0, 3)}-${normalized.slice(3, 6)}-${normalized.slice(6)}`;
+  }
+
+  // 9~10자리 서울 (02)
+  if (normalized.startsWith('02')) {
+    if (normalized.length === 9) {
+      return `02-${normalized.slice(2, 5)}-${normalized.slice(5)}`;
+    }
+    if (normalized.length === 10) {
+      return `02-${normalized.slice(2, 6)}-${normalized.slice(6)}`;
+    }
+  }
+
+  // 그 외는 원본 반환 (이미 포맷팅 되어 있거나 특수한 경우)
+  return phone.trim();
+};
+
 interface StudentMigrationModalProps {
   onClose: () => void;
 }
@@ -110,17 +178,26 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
       setRawData(data);
       setTotalCount(data.length);
 
-      // 기존 학생과 매칭 분석 (출결번호 기준)
+      // 기존 학생과 매칭 분석 (출결번호 + 이름_학교_학년 기준)
       const studentsRef = collection(db, 'students');
       const existingSnapshot = await getDocs(studentsRef);
       const existingAttendanceNumbers = new Set<string>();
       const existingStudentsByAttendance = new Map<string, UnifiedStudent>();
+      const existingStudentsByNameKey = new Map<string, UnifiedStudent>();  // 이름_학교_학년 기준
 
       existingSnapshot.forEach(docSnap => {
         const student = docSnap.data() as UnifiedStudent;
+
+        // 출결번호 기준 맵
         if (student.attendanceNumber) {
           existingAttendanceNumbers.add(student.attendanceNumber);
           existingStudentsByAttendance.set(student.attendanceNumber, student);
+        }
+
+        // 이름_학교_학년 기준 맵 (기존 ID 형식 호환)
+        if (student.name) {
+          const nameKey = `${student.name}_${student.school || ''}_${student.grade || ''}`;
+          existingStudentsByNameKey.set(nameKey, student);
         }
       });
 
@@ -149,22 +226,46 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
           attendanceNumber = generateAttendanceNumber(item.보호자연락처, existingAttendanceNumbers);
         }
 
-        const isNew = !existingAttendanceNumbers.has(attendanceNumber);
-        let existingData: UnifiedStudent | undefined;
+        // 1차: 출결번호로 기존 학생 찾기
+        let existingData = existingStudentsByAttendance.get(attendanceNumber);
+        let foundByAttendance = !!existingData;
+
+        // 2차: 출결번호로 못 찾으면 이름_학교_학년으로 찾기 (기존 ID 형식 호환)
+        if (!existingData) {
+          const normalizedSchool = normalizeSchoolName(item.학교) || '';
+          // 학년 정규화 (간단히)
+          let grade = item.학년 || '';
+          const gradeNum = grade.match(/\d+/)?.[0];
+          if (gradeNum) {
+            const num = parseInt(gradeNum);
+            const schoolName = item.학교?.toLowerCase() || '';
+            if (schoolName.includes('초') || schoolName.includes('elementary')) {
+              grade = `초${num}`;
+            } else if (schoolName.includes('중') || schoolName.includes('middle')) {
+              grade = `중${num}`;
+            } else if (schoolName.includes('고') || schoolName.includes('high')) {
+              grade = `고${num}`;
+            }
+          }
+          const nameKey = `${item.이름}_${normalizedSchool}_${grade}`;
+          existingData = existingStudentsByNameKey.get(nameKey);
+        }
+
+        const isNew = !existingData;
         const changedFields: string[] = [];
 
-        if (!isNew) {
+        if (!isNew && existingData) {
           // 기존 데이터와 비교하여 변경될 필드 찾기
-          existingData = existingStudentsByAttendance.get(attendanceNumber);
-
-          if (existingData) {
-            Object.values(fieldMapping).forEach(({ excelKey, existingKey, label }) => {
-              const excelValue = item[excelKey];
-              const existingValue = existingData?.[existingKey];
-              if (excelValue && excelValue !== existingValue) {
-                changedFields.push(label);
-              }
-            });
+          Object.values(fieldMapping).forEach(({ excelKey, existingKey, label }) => {
+            const excelValue = item[excelKey];
+            const existingValue = existingData?.[existingKey];
+            if (excelValue && excelValue !== existingValue) {
+              changedFields.push(label);
+            }
+          });
+          // 출결번호로 못 찾았으면 출결번호도 업데이트 대상
+          if (!foundByAttendance) {
+            changedFields.push('출결번호');
           }
           updateCnt++;
         } else {
@@ -211,20 +312,30 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
     setProgress(0);
 
     try {
-      // 기존 학생 데이터 로드 (출결번호 기준)
+      // 기존 학생 데이터 로드 (출결번호 + 이름_학교_학년 기준)
       const studentsRef = collection(db, 'students');
       const existingSnapshot = await getDocs(studentsRef);
       const existingStudentsByAttendance = new Map<string, any>();
+      const existingStudentsByNameKey = new Map<string, any>();  // 이름_학교_학년 기준
       const existingAttendanceNumbers = new Set<string>();
 
       existingSnapshot.forEach(docSnap => {
         const student = docSnap.data() as UnifiedStudent;
+        const studentWithDocId = {
+          ...student,
+          _firestoreDocId: docSnap.id
+        };
+
+        // 출결번호 기준 맵
         if (student.attendanceNumber) {
-          existingStudentsByAttendance.set(student.attendanceNumber, {
-            ...student,
-            _firestoreDocId: docSnap.id
-          });
+          existingStudentsByAttendance.set(student.attendanceNumber, studentWithDocId);
           existingAttendanceNumbers.add(student.attendanceNumber);
+        }
+
+        // 이름_학교_학년 기준 맵 (기존 ID 형식 호환)
+        if (student.name) {
+          const nameKey = `${student.name}_${student.school || ''}_${student.grade || ''}`;
+          existingStudentsByNameKey.set(nameKey, studentWithDocId);
         }
       });
 
@@ -241,34 +352,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
         batchData.forEach(excelData => {
           const now = new Date().toISOString();
 
-          // 출결번호 생성 또는 Excel에서 가져오기
-          let attendanceNumber = excelData.출결번호;
-          if (!attendanceNumber) {
-            attendanceNumber = generateAttendanceNumber(excelData.보호자연락처, existingAttendanceNumbers);
-            existingAttendanceNumbers.add(attendanceNumber);
-          }
-
-          // 기존 학생 찾기 (출결번호 기준)
-          const existingStudent = existingStudentsByAttendance.get(attendanceNumber) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
-
-          // 문서 ID: 기존 학생이면 기존 ID 사용, 신규면 출결번호 사용
-          const id = existingStudent?._firestoreDocId || attendanceNumber;
-
-          // 주소 통합
-          const address = [excelData.주소1, excelData.주소2]
-            .filter(Boolean)
-            .join(' ')
-            .trim();
-
-          // 과목 추출
-          const subjects: ('math' | 'english')[] = [];
-          if (excelData.기타항목1) {
-            const upper = excelData.기타항목1.toUpperCase();
-            if (upper.includes('M')) subjects.push('math');
-            if (upper.includes('E')) subjects.push('english');
-          }
-
-          // 학년 정규화 (초/중/고 + 숫자 형식으로 변환)
+          // 학년 정규화 (초/중/고 + 숫자 형식으로 변환) - nameKey 생성 전에 먼저 처리
           let grade = excelData.학년;
           if (grade) {
             const gradeNum = grade.match(/\d+/)?.[0];
@@ -295,12 +379,67 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
                   grade = `초${num}`;
                 } else if (num >= 7 && num <= 9) {
                   grade = `중${num - 6}`;
-                } else {
-                  // 기본적으로 원본 유지
-                  grade = gradeNum;
                 }
               }
             }
+          }
+
+          // 출결번호 생성 또는 Excel에서 가져오기
+          let attendanceNumber = excelData.출결번호;
+          if (!attendanceNumber) {
+            attendanceNumber = generateAttendanceNumber(excelData.보호자연락처, existingAttendanceNumbers);
+            existingAttendanceNumbers.add(attendanceNumber);
+          }
+
+          // 기존 학생 찾기 (1. 출결번호 기준, 2. 이름_학교_학년 기준)
+          let existingStudent = existingStudentsByAttendance.get(attendanceNumber) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
+
+          // 학교명 정규화
+          const normalizedSchool = normalizeSchoolName(excelData.학교) || '';
+
+          // 출결번호로 못 찾으면 이름_학교_학년으로 찾기 (기존 ID 형식 호환)
+          if (!existingStudent) {
+            const nameKey = `${excelData.이름}_${normalizedSchool}_${grade || ''}`;
+            existingStudent = existingStudentsByNameKey.get(nameKey) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
+
+            // 찾았으면 출결번호도 업데이트하도록 플래그 설정
+            if (existingStudent) {
+              console.log(`📌 이름_학교_학년으로 기존 학생 찾음: ${nameKey}`);
+            }
+          }
+
+          // 문서 ID: 기존 학생이면 기존 ID 사용, 신규면 이름_학교_학년 형식
+          let id: string;
+          if (existingStudent?._firestoreDocId) {
+            id = existingStudent._firestoreDocId;
+          } else {
+            // 신규 학생: 이름_학교(정규화)_학년 형식
+            const baseId = `${excelData.이름}_${normalizedSchool}_${grade || ''}`;
+            id = baseId;
+
+            // 중복 ID 체크 - 이미 사용된 ID면 순번 추가
+            let counter = 1;
+            while (existingStudentsByNameKey.has(id) || existingStudentsByAttendance.has(id)) {
+              counter++;
+              id = `${baseId}_${counter}`;
+              if (counter > 100) break;
+            }
+            // 새 ID를 맵에 추가하여 같은 배치 내 중복 방지
+            existingStudentsByNameKey.set(id, { _firestoreDocId: id } as any);
+          }
+
+          // 주소 통합
+          const address = [excelData.주소1, excelData.주소2]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+
+          // 과목 추출
+          const subjects: ('math' | 'english')[] = [];
+          if (excelData.기타항목1) {
+            const upper = excelData.기타항목1.toUpperCase();
+            if (upper.includes('M')) subjects.push('math');
+            if (upper.includes('E')) subjects.push('english');
           }
 
           // 날짜 변환
@@ -321,19 +460,19 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             id,
             name: excelData.이름,
             englishName: existingStudent?.englishName || null,
-            school: excelData.학교 || existingStudent?.school,
+            school: normalizeSchoolName(excelData.학교 || existingStudent?.school),
             grade: grade || existingStudent?.grade,
             gender: excelData.성별 === '남' ? 'male' : excelData.성별 === '여' ? 'female' : existingStudent?.gender,
             attendanceNumber,  // 출결번호 추가
 
-            // 연락처 정보
-            studentPhone: excelData.원생연락처 || existingStudent?.studentPhone,
-            parentPhone: excelData.보호자연락처 || existingStudent?.parentPhone,
+            // 연락처 정보 (자동 포맷팅: 010-1234-5678)
+            studentPhone: formatPhoneNumber(excelData.원생연락처 || existingStudent?.studentPhone),
+            parentPhone: formatPhoneNumber(excelData.보호자연락처 || existingStudent?.parentPhone),
             parentName: excelData.보호자이름 || existingStudent?.parentName,
             parentRelation: excelData.보호자구분 || existingStudent?.parentRelation,
-            otherPhone: excelData.기타보호자연락처 || existingStudent?.otherPhone,
+            otherPhone: formatPhoneNumber(excelData.기타보호자연락처 || existingStudent?.otherPhone),
             otherPhoneRelation: excelData.기타보호자이름 || existingStudent?.otherPhoneRelation,
-            homePhone: excelData.집전화 || existingStudent?.homePhone,
+            homePhone: formatPhoneNumber(excelData.집전화 || existingStudent?.homePhone),
 
             // 주소 정보
             zipCode: excelData.우편번호 || existingStudent?.zipCode,
@@ -371,13 +510,11 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             // 수강 정보
             enrollments: existingStudent?.enrollments || [],
 
-            // 상태 관리
-            status: excelData.재원여부 === 'N' ? 'withdrawn' :
-              excelData.휴원여부 === 'Y' ? 'on_hold' :
-                existingStudent?.status || 'active',
-            startDate: enrollmentDate || excelData.등록일 || existingStudent?.startDate || now.split('T')[0],
-            endDate: excelData.퇴원일 || existingStudent?.endDate,
-            withdrawalDate: excelData.퇴원일 || existingStudent?.withdrawalDate,
+            // 상태 관리 - 기본값 active (기존 학생은 기존 status 유지)
+            status: existingStudent?.status || 'active',
+            startDate: enrollmentDate || existingStudent?.startDate || now.split('T')[0],
+            endDate: existingStudent?.endDate,
+            withdrawalDate: existingStudent?.withdrawalDate,
 
             // 출석부 연동
             group: excelData.반 || existingStudent?.group,
@@ -453,6 +590,8 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
                     <li>• 기존 학생과 이름 매칭 → 데이터 보완</li>
                     <li>• 새로운 학생 → 추가</li>
                     <li>• 영어 수업 자동 매핑 (약어 변환)</li>
+                    <li>• 학교명 자동 축약 (초등학교→초, 중학교→중, 고등학교→고)</li>
+                    <li>• 전화번호 자동 포맷 (1093659838→010-9365-9838)</li>
                     <li>• 수학 수업은 수동 배정 필요</li>
                   </ul>
                 </div>
@@ -600,7 +739,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-gray-900">{item.excelData.이름}</span>
                             <span className="text-gray-500">({item.excelData.학년})</span>
-                            <span className="text-gray-400 truncate">{item.excelData.학교}</span>
+                            <span className="text-gray-400 truncate">{normalizeSchoolName(item.excelData.학교)}</span>
                           </div>
 
                           {/* 변경 내역 (업데이트의 경우) */}

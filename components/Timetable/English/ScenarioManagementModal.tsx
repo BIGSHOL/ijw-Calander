@@ -281,10 +281,11 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             // Step 2: Replace draft schedule data
             const currentScheduleSnapshot = await getDocs(collection(db, CLASS_DRAFT_COLLECTION));
             const currentScheduleIds = new Set(currentScheduleSnapshot.docs.map(d => d.id));
-            const scenarioScheduleIds = new Set(Object.keys(scenario.data));
+            const scenarioData = scenario.data || {};
+            const scenarioScheduleIds = new Set(Object.keys(scenarioData));
 
-            if (Object.keys(scenario.data).length > 500) {
-                throw new Error(`시간표 문서가 너무 많습니다 (${Object.keys(scenario.data).length}개). 500개 제한.`);
+            if (Object.keys(scenarioData).length > 500) {
+                throw new Error(`시간표 문서가 너무 많습니다 (${Object.keys(scenarioData).length}개). 500개 제한.`);
             }
 
             const scheduleBatch = writeBatch(db);
@@ -297,7 +298,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             });
 
             // Write scenario data (sanitized)
-            Object.entries(scenario.data).forEach(([docId, docData]) => {
+            Object.entries(scenarioData).forEach(([docId, docData]) => {
                 scheduleBatch.set(doc(db, CLASS_DRAFT_COLLECTION, docId), sanitizeForFirestore(docData as Record<string, any>));
             });
 

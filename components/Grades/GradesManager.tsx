@@ -389,7 +389,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
       // 이미 추가된 학생 제외
       if (addedStudentIds.includes(s.id)) return false;
       // 검색어 매칭
-      const matchesQuery = s.name.toLowerCase().includes(query) ||
+      const matchesQuery = (s.name || '').toLowerCase().includes(query) ||
         s.englishName?.toLowerCase().includes(query);
       if (!matchesQuery) return false;
       // 재원생만

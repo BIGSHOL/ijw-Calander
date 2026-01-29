@@ -172,7 +172,7 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
         }
 
         // 이름순 정렬
-        students.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+        students.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
       }
 
       return {

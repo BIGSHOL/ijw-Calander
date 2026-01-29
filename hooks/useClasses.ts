@@ -86,7 +86,8 @@ export const useClasses = (subject?: SubjectType) => {
                 return {
                     id: doc.id,
                     className: data.className || '',
-                    teacher: data.teacher || '',
+                    // 영어 수업은 mainTeacher 필드를 우선 사용 (teacher가 없는 경우)
+                    teacher: data.mainTeacher || data.teacher || '',
                     subject: data.subject || 'math',
                     schedule: scheduleStrings,
                     studentCount,

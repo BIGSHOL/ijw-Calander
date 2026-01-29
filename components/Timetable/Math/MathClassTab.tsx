@@ -3,6 +3,8 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Settings, Eye, Edit, ArrowRightLeft, Copy, Upload, Save, ChevronDown, Users, Home, User, CalendarDays } from 'lucide-react';
+import { doc, collection, query, where, getDocs, updateDoc, deleteField } from 'firebase/firestore';
+import { db } from '../../../firebaseConfig';
 import { Teacher, TimetableStudent, ClassKeywordColor, TimetableClass } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 
@@ -105,7 +107,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     const { settings, settingsLoading, updateSettings } = useMathSettings();
     const mathClasses = useMathIntegrationClasses(classes, settings, teachersData);
     const classNames = useMemo(() => mathClasses.map(c => c.name), [mathClasses]);
-    const { classDataMap, isLoading: studentsLoading } = useMathClassStudents(classNames, studentMap);
+    const { classDataMap, isLoading: studentsLoading, refetch: refetchClassStudents } = useMathClassStudents(classNames, studentMap);
 
     // Student Stats 계산
     const studentStats = useMemo(() => {
@@ -130,8 +132,8 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     // Filter by search term
     const filteredClasses = useMemo(() => {
         return mathClasses
-            .filter(c => !searchTerm || c.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            .sort((a, b) => a.startPeriod - b.startPeriod || a.name.localeCompare(b.name, 'ko'));
+            .filter(c => !searchTerm || (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()))
+            .sort((a, b) => a.startPeriod - b.startPeriod || (a.name || '').localeCompare(b.name || '', 'ko'));
     }, [mathClasses, searchTerm]);
 
     // Group classes by start period OR Custom Groups
@@ -258,6 +260,39 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
         const student = studentMap[studentId];
         if (student) {
             setSelectedStudent(student);
+        }
+    };
+
+    // 수업 종료 취소 (퇴원생 복구)
+    const handleRestoreEnrollment = async (studentId: string, className: string) => {
+        try {
+            // Find the enrollment document
+            const enrollmentsQuery = query(
+                collection(db, 'students', studentId, 'enrollments'),
+                where('subject', '==', 'math'),
+                where('className', '==', className)
+            );
+            const snapshot = await getDocs(enrollmentsQuery);
+
+            if (snapshot.empty) {
+                alert('해당 수강 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            // Remove endDate and withdrawalDate from the enrollment
+            for (const docSnap of snapshot.docs) {
+                await updateDoc(docSnap.ref, {
+                    endDate: deleteField(),
+                    withdrawalDate: deleteField(),
+                });
+            }
+
+            // Refresh class students data
+            await refetchClassStudents();
+            alert('수업 종료가 취소되었습니다.');
+        } catch (error) {
+            console.error('수업 종료 취소 오류:', error);
+            alert('수업 종료 취소에 실패했습니다.');
         }
     };
 
@@ -543,6 +578,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                                                 hideTime={true}
                                                 onClassClick={mode === 'edit' && !isSimulationMode ? () => handleClassClick(cls) : undefined}
                                                 onStudentClick={handleStudentClick}
+                                                onRestoreEnrollment={!isSimulationMode ? handleRestoreEnrollment : undefined}
                                             />
                                         ))}
                                     </div>

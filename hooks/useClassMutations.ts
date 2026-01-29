@@ -87,6 +87,7 @@ export const useCreateClass = () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 시간표 대기 섹션 실시간 반영
     },
   });
 };
@@ -211,6 +212,7 @@ export const useUpdateClass = () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 시간표 대기 섹션 실시간 반영
     },
   });
 };
@@ -275,6 +277,7 @@ export const useDeleteClass = () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 시간표 대기 섹션 실시간 반영
     },
   });
 };
@@ -292,6 +295,7 @@ export interface ManageClassStudentsData {
   studentAttendanceDays?: Record<string, string[]>;  // { studentId: ['월', '목'] } 학생별 등원 요일 (수학용)
   studentUnderlines?: Record<string, boolean>;  // { studentId: true } 학생별 밑줄 강조 (영어용)
   studentSlotTeachers?: Record<string, boolean>;  // { studentId: true } 학생별 부담임 여부 (수학용)
+  studentStartDates?: Record<string, string>;  // { studentId: 'YYYY-MM-DD' } 학생별 시작일 (미지정시 오늘)
 }
 
 export const useManageClassStudents = () => {
@@ -299,18 +303,22 @@ export const useManageClassStudents = () => {
 
   return useMutation({
     mutationFn: async (data: ManageClassStudentsData) => {
-      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {}, studentUnderlines = {}, studentSlotTeachers = {} } = data;
+      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {}, studentUnderlines = {}, studentSlotTeachers = {}, studentStartDates = {} } = data;
 
       // 학생 추가
       if (addStudentIds.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
         const addPromises = addStudentIds.map(async (studentId) => {
           const enrollmentsRef = collection(db, COL_STUDENTS, studentId, 'enrollments');
+          // 개별 시작일이 지정되어 있으면 사용, 없으면 오늘 날짜
+          const startDate = studentStartDates[studentId] || today;
           const enrollmentData: any = {
             className,
             staffId: teacher, // teacher는 이제 staffId
             teacher: teacher,  // 호환성을 위해 유지
             subject,
             schedule,
+            startDate,  // 수업 시작일 기록
             createdAt: new Date().toISOString(),
           };
           // 신규 학생에게 attendanceDays가 설정되어 있으면 추가 (수학용)
@@ -436,6 +444,7 @@ export const useManageClassStudents = () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 시간표 대기 섹션 실시간 반영
     },
   });
 };
