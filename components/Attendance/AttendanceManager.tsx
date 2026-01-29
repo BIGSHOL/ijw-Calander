@@ -273,6 +273,84 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const { data: currentMonthSettlement, isLoading: isLoadingSettlement } = useMonthlySettlement(currentYearMonth, !!userProfile);
   const saveSettlementMutation = useSaveMonthlySettlement();
 
+  // 이미지 내보내기 상태 (MOVED: early return 전에 모든 hooks 호출)
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Helper for settlement (MOVED: must be before finalSalary useMemo)
+  const currentMonthKey = currentYearMonth;
+  const currentSettlement = currentMonthSettlement || {
+    hasBlog: false,
+    hasRetention: false,
+    otherAmount: 0,
+    note: ''
+  };
+
+  // MOVED: All useMemo hooks must be before early return (React Hooks rules)
+  // Filter visible students for current month
+  const visibleStudents = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const monthFirstDay = new Date(year, month, 1).toISOString().slice(0, 10);
+    const monthLastDay = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+
+    const filtered = allStudents.filter(s => {
+      if (s.status === 'withdrawn') return false;
+      if (s.startDate && typeof s.startDate === 'string' && s.startDate > monthLastDay) return false;
+      if (s.endDate && typeof s.endDate === 'string' && s.endDate < monthFirstDay) return false;
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      if (!a.group && b.group) return 1;
+      if (a.group && !b.group) return -1;
+
+      const aGroupIdx = groupOrder.indexOf(a.group || '');
+      const bGroupIdx = groupOrder.indexOf(b.group || '');
+
+      if (aGroupIdx !== -1 && bGroupIdx !== -1) {
+        if (aGroupIdx !== bGroupIdx) return aGroupIdx - bGroupIdx;
+      } else if (aGroupIdx !== -1 && bGroupIdx === -1) {
+        return -1;
+      } else if (aGroupIdx === -1 && bGroupIdx !== -1) {
+        return 1;
+      } else {
+        const groupCompare = (a.group || '').localeCompare(b.group || '');
+        if (groupCompare !== 0) return groupCompare;
+      }
+
+      return (a.name || '').localeCompare(b.name || '', 'ko');
+    });
+  }, [allStudents, currentDate, groupOrder]);
+
+  const pendingUpdatesByStudent = useMemo(() => groupUpdates(pendingUpdates), [pendingUpdates]);
+  const pendingMemosByStudent = useMemo(() => groupUpdates(pendingMemos), [pendingMemos]);
+
+  const stats = useMemo(() =>
+    calculateStats(allStudents, visibleStudents, salaryConfig, currentDate),
+    [allStudents, visibleStudents, salaryConfig, currentDate]
+  );
+
+  const finalSalary = useMemo(() => {
+    let total = stats.totalSalary;
+    if (currentSettlement.hasBlog) total += salaryConfig.incentives.blogAmount;
+    if (currentSettlement.hasRetention) total += salaryConfig.incentives.retentionAmount;
+    total += (currentSettlement.otherAmount || 0);
+    return total;
+  }, [stats.totalSalary, currentSettlement, salaryConfig.incentives]);
+
+  // IMPORTANT: Loading check moved here - AFTER all hooks to comply with React Hooks rules
+  // Hooks must always be called in the same order, so early returns must come AFTER all hooks
+  if (isLoadingStudents || isLoadingConfig) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">출석부를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Handlers
   const handleAttendanceChange = async (studentId: string, dateKey: string, value: number | null) => {
     const key = `${studentId}_${dateKey}`;
@@ -430,10 +508,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     });
   };
 
-  // 이미지 내보내기 상태
-  const [isExporting, setIsExporting] = useState(false);
-
   // 직접 이미지 다운로드 (모달 없이)
+  // isExporting state는 컴포넌트 최상단(275번 줄)으로 이동됨
   const handleDirectExport = async () => {
     if (!tableRef.current || isExporting) return;
 
@@ -487,104 +563,15 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     saveConfigMutation.mutate({ config, configId });
   };
 
-  // Helper for settlement
-  const currentMonthKey = currentYearMonth;
-  const currentSettlement = currentMonthSettlement || {
-    hasBlog: false,
-    hasRetention: false,
-    otherAmount: 0,
-    note: ''
-  };
+  // currentSettlement and currentMonthKey moved to component top (line 276+)
+  // This ensures proper initialization order before useMemo hooks
 
   const handleSettlementUpdate = (data: MonthlySettlement) => {
     saveSettlementMutation.mutate({ monthKey: currentMonthKey, data });
   };
 
-  // Filter visible students for current month
-  // A student is visible if:
-  // - Their startDate is on or before the last day of the month (they started before/during this month)
-  // - Their endDate is missing OR on/after the first day of the month (they haven't ended before this month)
-  const visibleStudents = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const monthFirstDay = new Date(year, month, 1).toISOString().slice(0, 10);   // YYYY-MM-01
-    const monthLastDay = new Date(year, month + 1, 0).toISOString().slice(0, 10); // YYYY-MM-28/29/30/31
-
-    const filtered = allStudents.filter(s => {
-      // IMPORTANT: Always exclude students with status 'withdrawn' from attendance table
-      // They should only appear in the "지난달 퇴원" dropped students list
-      if (s.status === 'withdrawn') return false;
-
-      // Exclude if startDate is in the future (after this month)
-      // startDate가 없거나 문자열이 아니면 포함
-      if (s.startDate && typeof s.startDate === 'string' && s.startDate > monthLastDay) return false;
-
-      // Exclude if endDate exists AND is before the first day of current month (already withdrawn)
-      // This means: if endDate < monthFirstDay, the student left before this month started
-      if (s.endDate && typeof s.endDate === 'string' && s.endDate < monthFirstDay) return false;
-
-      return true;
-    });
-
-    // Custom sort: use groupOrder if available, otherwise alphabetical
-    return filtered.sort((a, b) => {
-      // Students without groups go last
-      if (!a.group && b.group) return 1;
-      if (a.group && !b.group) return -1;
-
-      // Group ordering
-      const aGroupIdx = groupOrder.indexOf(a.group || '');
-      const bGroupIdx = groupOrder.indexOf(b.group || '');
-
-      // If both in order list, use order
-      if (aGroupIdx !== -1 && bGroupIdx !== -1) {
-        if (aGroupIdx !== bGroupIdx) return aGroupIdx - bGroupIdx;
-      } else if (aGroupIdx !== -1 && bGroupIdx === -1) {
-        return -1; // Ordered groups come first
-      } else if (aGroupIdx === -1 && bGroupIdx !== -1) {
-        return 1;
-      } else {
-        // Neither in order list - alphabetical fallback
-        const groupCompare = (a.group || '').localeCompare(b.group || '');
-        if (groupCompare !== 0) return groupCompare;
-      }
-
-      // Same group - sort by name
-      return (a.name || '').localeCompare(b.name || '', 'ko');
-    });
-  }, [allStudents, currentDate, groupOrder]);
-
-  // Group Optimistic Updates for Component Efficiency
-  const pendingUpdatesByStudent = useMemo(() => groupUpdates(pendingUpdates), [pendingUpdates]);
-  const pendingMemosByStudent = useMemo(() => groupUpdates(pendingMemos), [pendingMemos]);
-
-  // Statistics
-  const stats = useMemo(() =>
-    calculateStats(allStudents, visibleStudents, salaryConfig, currentDate),
-    [allStudents, visibleStudents, salaryConfig, currentDate]
-  );
-
-  const finalSalary = useMemo(() => {
-    let total = stats.totalSalary;
-    if (currentSettlement.hasBlog) total += salaryConfig.incentives.blogAmount;
-    if (currentSettlement.hasRetention) total += salaryConfig.incentives.retentionAmount;
-    total += (currentSettlement.otherAmount || 0);
-    return total;
-  }, [stats.totalSalary, currentSettlement, salaryConfig.incentives]);
-
-  // Loading state
-  if (isLoadingStudents || isLoadingConfig) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">출석부를 불러오는 중...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Teacher selection is now handled in App.tsx header - no need for selection prompt
+  // All useMemo hooks moved to component top (before early return) - see line 276+
+  // This ensures React Hooks rules are followed (same number of hooks on every render)
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white text-[#373d41]">

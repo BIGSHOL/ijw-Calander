@@ -84,7 +84,7 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
       <button
         onClick={() => setIsExpanded(true)}
         className="
-          fixed top-3 right-3 z-[9999]
+          fixed top-3 right-[270px] z-[9999]
           w-10 h-10 rounded-full
           bg-gray-800 text-gray-300
           hover:bg-gray-700 hover:text-white
@@ -118,7 +118,7 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
       <button
         onClick={() => setIsCollapsed(false)}
         className="
-          fixed top-3 right-3 z-[9999]
+          fixed top-3 right-[270px] z-[9999]
           px-3 py-2 rounded-full
           bg-amber-500 text-amber-950
           hover:bg-amber-400
@@ -140,7 +140,7 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
   return (
     <div
       className={`
-        fixed top-3 right-3 z-[9999]
+        fixed top-3 right-[270px] z-[9999]
         rounded-lg shadow-xl
         transition-all duration-300
         ${isSimulating

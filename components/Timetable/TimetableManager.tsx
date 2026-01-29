@@ -83,48 +83,7 @@ const TimetableManager = ({
     const subjectTab = externalSubjectTab ?? internalSubjectTab;
     const setSubjectTab = onSubjectChange ?? setInternalSubjectTab;
 
-    // Guard: Check if user has permission to view current subject
-    if (!currentUser) {
-        return (
-            <div className="flex items-center justify-center h-full text-gray-500">
-                로그인이 필요합니다.
-            </div>
-        );
-    }
-
-    if (subjectTab === 'math' && !canViewMath) {
-        return (
-            <div className="flex items-center justify-center h-full text-red-500">
-                수학 시간표를 볼 수 있는 권한이 없습니다.
-            </div>
-        );
-    }
-
-    if (subjectTab === 'english' && !canViewEnglish) {
-        return (
-            <div className="flex items-center justify-center h-full text-red-500">
-                영어 시간표를 볼 수 있는 권한이 없습니다.
-            </div>
-        );
-    }
-
-    if (subjectTab === 'science' && !canViewScience) {
-        return (
-            <div className="flex items-center justify-center h-full text-red-500">
-                과학 시간표를 볼 수 있는 권한이 없습니다.
-            </div>
-        );
-    }
-
-    if (subjectTab === 'korean' && !canViewKorean) {
-        return (
-            <div className="flex items-center justify-center h-full text-red-500">
-                국어 시간표를 볼 수 있는 권한이 없습니다.
-            </div>
-        );
-    }
-
-    // Hook Integration: Classes Data
+    // Hook Integration: Classes Data (MUST be called before any conditional returns)
     const { classes, loading: classesLoading } = useTimetableClasses();
 
     // Hook Integration: Unified Students
@@ -474,6 +433,47 @@ const TimetableManager = ({
         );
     }
 
+    // Guard: Check permissions
+    if (!currentUser) {
+        return (
+            <div className="flex items-center justify-center h-full text-gray-500">
+                로그인이 필요합니다.
+            </div>
+        );
+    }
+
+    if (subjectTab === 'math' && !canViewMath) {
+        return (
+            <div className="flex items-center justify-center h-full text-red-500">
+                수학 시간표를 볼 수 있는 권한이 없습니다.
+            </div>
+        );
+    }
+
+    if (subjectTab === 'english' && !canViewEnglish) {
+        return (
+            <div className="flex items-center justify-center h-full text-red-500">
+                영어 시간표를 볼 수 있는 권한이 없습니다.
+            </div>
+        );
+    }
+
+    if (subjectTab === 'science' && !canViewScience) {
+        return (
+            <div className="flex items-center justify-center h-full text-red-500">
+                과학 시간표를 볼 수 있는 권한이 없습니다.
+            </div>
+        );
+    }
+
+    if (subjectTab === 'korean' && !canViewKorean) {
+        return (
+            <div className="flex items-center justify-center h-full text-red-500">
+                국어 시간표를 볼 수 있는 권한이 없습니다.
+            </div>
+        );
+    }
+
     if (subjectTab === 'english') {
         return (
             <Suspense fallback={
@@ -817,21 +817,18 @@ const TimetableManager = ({
                     />
 
                     {/* Scenario Management Modal */}
-                    {/* TODO: Create Math-specific ScenarioManagementModal */}
                     {isScenarioModalOpen && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center">
-                            <div className="absolute inset-0 bg-black/50" onClick={() => setIsScenarioModalOpen(false)} />
-                            <div className="relative bg-white rounded-lg p-6 max-w-md">
-                                <h3 className="text-lg font-bold mb-4">시나리오 관리</h3>
-                                <p className="text-gray-600 mb-4">수학 시나리오 관리 기능은 개발 중입니다.</p>
-                                <button
-                                    onClick={() => setIsScenarioModalOpen(false)}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                >
-                                    닫기
-                                </button>
-                            </div>
-                        </div>
+                        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"><div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full" /></div>}>
+                            <ScenarioManagementModal
+                                isOpen={isScenarioModalOpen}
+                                onClose={() => setIsScenarioModalOpen(false)}
+                                currentUser={currentUser}
+                                isSimulationMode={isScenarioMode}
+                                onLoadScenario={(name) => {
+                                    console.log('시나리오 불러오기:', name);
+                                }}
+                            />
+                        </Suspense>
                     )}
                 </div>
             </>

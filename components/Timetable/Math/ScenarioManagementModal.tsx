@@ -5,7 +5,7 @@ import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, FileText, GitCompare, Upload } from 'lucide-react';
 import { ScenarioEntry } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { useMathSimulation } from './context/SimulationContext';
+import { useMathSimulationOptional } from './context/SimulationContext';
 
 // Math-specific constants
 const SCENARIO_COLLECTION = 'math_scenarios';
@@ -83,7 +83,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
     const isMaster = currentUser?.role === 'master';
 
     // SimulationContext 사용 (새 구조)
-    const simulation = useMathSimulation();
+    const simulation = useMathSimulationOptional();
 
     // Format date
     const formatDate = (dateString: string) => {
