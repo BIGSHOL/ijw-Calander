@@ -14,7 +14,7 @@ interface LevelUpConfirmModalProps {
     type: 'number' | 'class';
     direction?: 'up' | 'down';  // 레벨업 또는 레벨다운
     isSimulationMode?: boolean;
-    onSimulationLevelUp?: (oldName: string, newName: string) => void;
+    onSimulationLevelUp?: (oldName: string, newName: string) => boolean;
 }
 
 const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
@@ -42,7 +42,14 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
             // 시뮬레이션 모드: 메모리 상태만 변경 (Firebase 미사용)
             if (isSimulationMode && onSimulationLevelUp) {
                 console.log('[LevelUp-Simulation] Renaming:', oldClassName, '→', newClassName);
-                onSimulationLevelUp(oldClassName, newClassName);
+                const success = onSimulationLevelUp(oldClassName, newClassName);
+
+                if (!success) {
+                    // 충돌 등으로 실패 시 (alert는 renameScenarioClass에서 이미 표시됨)
+                    setIsProcessing(false);
+                    return;
+                }
+
                 setUpdateCount(1);
                 setTimeout(() => {
                     onSuccess();

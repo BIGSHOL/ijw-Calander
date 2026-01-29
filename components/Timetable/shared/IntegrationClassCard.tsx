@@ -8,6 +8,10 @@ import IntegrationMiniGridRow, { PeriodInfo, ScheduleCell } from './IntegrationM
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import LevelUpConfirmModal from '../English/LevelUpConfirmModal';
 import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, numberLevelDown, classLevelDown, isMinLevel, canNumberLevelDown, EN_PERIODS, INJAE_PERIODS } from '../English/englishUtils';
+import { collection, getDocs, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
+import { db } from '../../../firebaseConfig';
+import { CLASS_COLLECTION } from '../English/englishUtils';
+import { useQueryClient } from '@tanstack/react-query';
 
 // 공용 클래스 정보 타입
 export interface IntegrationClassInfo {
@@ -137,11 +141,12 @@ interface IntegrationClassCardProps {
     onStudentClick?: (studentId: string) => void;
     // 영어 전용 props
     englishLevels?: EnglishLevel[];
-    onSimulationLevelUp?: (oldName: string, newName: string) => void;
+    onSimulationLevelUp?: (oldName: string, newName: string) => boolean;
     moveChanges?: Map<string, any>;
     onMoveStudent?: (student: TimetableStudent, fromClass: string, toClass: string) => void;
     hiddenTeacherList?: string[];
     useInjaePeriod?: boolean;
+    onRestoreEnrollment?: (studentId: string, className: string) => void;  // 수업 종료 취소
 }
 
 // 주말 실제 시간대 (영어용)
@@ -178,16 +183,101 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     onMoveStudent,
     hiddenTeacherList = [],
     useInjaePeriod = false,
+    onRestoreEnrollment,
 }) => {
     const cardWidthClass = isTimeColumnOnly ? 'w-[49px]' : (hideTime ? 'w-[160px]' : 'w-[190px]');
     const isEnglish = subject === 'english';
 
+    const queryClient = useQueryClient();
     const [students, setStudents] = useState<TimetableStudent[]>([]);
     const [displayStudents, setDisplayStudents] = useState<TimetableStudent[]>([]);
     const [studentCount, setStudentCount] = useState<number>(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [levelUpModal, setLevelUpModal] = useState<{ isOpen: boolean; type: 'number' | 'class'; newName: string; direction: 'up' | 'down' }>({ isOpen: false, type: 'number', newName: '', direction: 'up' });
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
+
+    // 레벨업/다운 실행 함수 (충돌 체크 후 바로 실행 또는 경고)
+    const handleLevelChange = async (oldClassName: string, newClassName: string, type: 'number' | 'class', direction: 'up' | 'down') => {
+        try {
+            // 시뮬레이션 모드는 기존 로직 사용
+            if (isSimulationMode && onSimulationLevelUp) {
+                const success = onSimulationLevelUp(oldClassName, newClassName);
+                if (!success) {
+                    return;
+                }
+                return;
+            }
+
+            // 1. 충돌 체크: newClassName이 이미 존재하는지 확인
+            const classesRef = collection(db, CLASS_COLLECTION);
+            const classesSnapshot = await getDocs(classesRef);
+            const existingClass = classesSnapshot.docs.find(docSnap => {
+                const data = docSnap.data();
+                return data.className === newClassName && data.subject === 'english';
+            });
+
+            if (existingClass) {
+                alert(`⚠️ 수업명 충돌\n\n'${newClassName}' 수업이 이미 존재합니다.\n레벨업을 실행할 수 없습니다.`);
+                return;
+            }
+
+            // 2. 충돌 없음 → 바로 실행
+            console.log('[LevelChange] Starting:', oldClassName, '→', newClassName);
+            const batch = writeBatch(db);
+
+            // Classes 컬렉션 업데이트
+            let classesCount = 0;
+            classesSnapshot.docs.forEach(docSnap => {
+                const data = docSnap.data();
+                if (data.className === oldClassName && data.subject === 'english') {
+                    console.log('[LevelChange] Classes collection match:', docSnap.id);
+                    batch.update(doc(db, CLASS_COLLECTION, docSnap.id), { className: newClassName });
+                    classesCount++;
+                }
+            });
+
+            // Enrollments 컬렉션 업데이트
+            const enrollmentsQuery = query(
+                collectionGroup(db, 'enrollments'),
+                where('className', '==', oldClassName),
+                where('subject', '==', 'english')
+            );
+            const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+            let enrollmentsCount = 0;
+
+            enrollmentsSnapshot.docs.forEach(docSnap => {
+                console.log('[LevelChange] Enrollment match:', docSnap.ref.path);
+                batch.update(docSnap.ref, { className: newClassName });
+                enrollmentsCount++;
+            });
+
+            const totalUpdates = classesCount + enrollmentsCount;
+            console.log('[LevelChange] Total updates:', { classesCount, enrollmentsCount });
+
+            if (totalUpdates === 0) {
+                alert('업데이트할 데이터가 없습니다.');
+                return;
+            }
+
+            await batch.commit();
+            console.log('[LevelChange] Batch commit successful');
+
+            // React Query 캐시 무효화
+            queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            queryClient.invalidateQueries({ queryKey: ['classes'] });
+            console.log('[LevelChange] Cache invalidated');
+
+            // 성공 메시지 (간단하게)
+            const directionText = direction === 'up' ? '레벨업' : '레벨다운';
+            const typeText = type === 'number' ? '숫자' : '클래스';
+            alert(`✅ ${typeText} ${directionText} 완료!\n\n${oldClassName} → ${newClassName}\n(${totalUpdates}개 항목 업데이트)`);
+
+        } catch (err) {
+            console.error('Level change failed:', err);
+            alert('레벨 변경 중 오류가 발생했습니다.');
+        }
+    };
 
     // 키워드 색상 찾기
     const keywordColor = useMemo(() => {
@@ -264,15 +354,16 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     }, [classStudentData]);
 
     // 학생 목록 업데이트 (moveChanges 반영)
+    const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
     useEffect(() => {
         let currentList = [...students];
 
-        // 입학일 필터링
-        const today = new Date().toISOString().split('T')[0];
-        currentList = currentList.filter(s => {
-            if (!s.enrollmentDate) return true;
-            return s.enrollmentDate <= today;
-        });
+        // 배정 예정 학생 마킹 (enrollmentDate > today)
+        currentList = currentList.map(s => ({
+            ...s,
+            isScheduled: s.enrollmentDate ? s.enrollmentDate > today : false
+        }));
 
         if (moveChanges) {
             // 이동 나간 학생 제거
@@ -290,14 +381,20 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
             });
         }
 
-        const activeCount = currentList.filter(s => !s.withdrawalDate && !s.onHold).length;
+        // 활성 학생 수 계산 (배정 예정 제외)
+        const activeCount = currentList.filter(s => !s.withdrawalDate && !s.onHold && !(s as any).isScheduled).length;
         setStudentCount(activeCount);
         setDisplayStudents(currentList);
-    }, [students, moveChanges, classInfo.name]);
+    }, [students, moveChanges, classInfo.name, today]);
 
-    const activeStudents = displayStudents.filter(s => !s.withdrawalDate && !s.onHold);
-    const holdStudents = displayStudents.filter(s => s.onHold && !s.withdrawalDate);
-    const withdrawnStudents = displayStudents.filter(s => s.withdrawalDate);
+    // 배정 예정 학생 (미래 enrollmentDate)
+    const scheduledStudents = displayStudents.filter(s => (s as any).isScheduled && !s.withdrawalDate);
+    // 활성 학생 (배정 예정 제외)
+    const activeStudents = displayStudents.filter(s => !s.withdrawalDate && !s.onHold && !(s as any).isScheduled);
+    // 대기 학생 (onHold)
+    const holdStudents = displayStudents.filter(s => s.onHold && !s.withdrawalDate && !(s as any).isScheduled);
+    // 퇴원 학생 (반이동은 제외 - 다른 반에 활성 등록이 있는 경우)
+    const withdrawnStudents = displayStudents.filter(s => s.withdrawalDate && !s.isTransferred);
 
     // 신입생 판별 (영어용)
     const isNewStudent = (enrollmentDate: string): number => {
@@ -314,8 +411,10 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
         return [...activeStudents].sort((a, b) => {
             if (isEnglish) {
-                // 영어: 기존 정렬 (underline → 일반 → 신입생)
+                // 영어: 반이동 학생 → underline → 일반 → 신입생
                 const getWeight = (s: TimetableStudent) => {
+                    // 반이동 학생 (다른 반에서 이동해 온 학생)이 가장 상단
+                    if (s.isTransferredIn) return -1;
                     if (s.underline) return 0;
                     if (s.enrollmentDate) {
                         const newStatus = isNewStudent(s.enrollmentDate);
@@ -325,7 +424,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                     return 1;
                 };
                 const wA = getWeight(a), wB = getWeight(b);
-                return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
+                return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
             }
 
             // 수학: 전체등원 → 부분등원 (요일별 그룹화)
@@ -343,7 +442,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
             };
 
             const wA = getAttendanceWeight(a), wB = getAttendanceWeight(b);
-            return wA !== wB ? wA - wB : a.name.localeCompare(b.name, 'ko');
+            return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
         });
     }, [activeStudents, isEnglish, classInfo.finalDays]);
 
@@ -351,6 +450,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         if (student.isTempMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
         if (student.isMoved && student.underline) return { className: 'bg-green-50 ring-1 ring-green-300', textClass: 'underline decoration-blue-600 text-green-800 font-bold underline-offset-2', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
         if (student.isMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
+        // 반이동 학생 (다른 반에서 이동해 온 학생) - 초록 배경에 검은 글씨
+        if (student.isTransferredIn) return { className: 'bg-green-200', textClass: 'text-gray-900 font-bold', subTextClass: 'text-gray-700', englishTextClass: 'text-gray-700' };
         if (student.underline) return { className: 'bg-blue-50', textClass: 'underline decoration-blue-600 text-blue-600 underline-offset-2', subTextClass: 'text-blue-500', englishTextClass: 'text-blue-600' };
         if (isEnglish && student.enrollmentDate) {
             const newStatus = isNewStudent(student.enrollmentDate);
@@ -406,9 +507,10 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     return (
         <>
             <div
+                data-class-name={classInfo.name}
                 onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
                 onDrop={isTimeColumnOnly ? undefined : handleDrop}
-                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white`}
+                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white transition-all`}
             >
                 {/* 수업 상세 클릭 영역 */}
                 <div
@@ -482,7 +584,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 {/* 레벨업 섹션 */}
                                                 <div className="px-2 py-1 text-[10px] text-gray-400 font-medium border-b border-gray-100">레벨업</div>
                                                 <button
-                                                    onClick={() => {
+                                                    onClick={async () => {
                                                         if (!isValidLevel(classInfo.name, englishLevels)) {
                                                             alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
                                                             setIsMenuOpen(false);
@@ -490,9 +592,9 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                         }
                                                         const newName = numberLevelUp(classInfo.name);
                                                         if (newName) {
-                                                            setLevelUpModal({ isOpen: true, type: 'number', newName, direction: 'up' });
+                                                            setIsMenuOpen(false);
+                                                            await handleLevelChange(classInfo.name, newName, 'number', 'up');
                                                         }
-                                                        setIsMenuOpen(false);
                                                     }}
                                                     className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-indigo-50 text-gray-700"
                                                 >
@@ -500,7 +602,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     숫자 레벨업
                                                 </button>
                                                 <button
-                                                    onClick={() => {
+                                                    onClick={async () => {
                                                         if (!isValidLevel(classInfo.name, englishLevels)) {
                                                             alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
                                                             setIsMenuOpen(false);
@@ -508,9 +610,9 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                         }
                                                         const newName = classLevelUp(classInfo.name, englishLevels);
                                                         if (newName) {
-                                                            setLevelUpModal({ isOpen: true, type: 'class', newName, direction: 'up' });
+                                                            setIsMenuOpen(false);
+                                                            await handleLevelChange(classInfo.name, newName, 'class', 'up');
                                                         }
-                                                        setIsMenuOpen(false);
                                                     }}
                                                     disabled={isMaxLevel(classInfo.name, englishLevels)}
                                                     className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${isMaxLevel(classInfo.name, englishLevels) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-orange-50 text-gray-700'}`}
@@ -522,7 +624,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 {/* 레벨다운 섹션 */}
                                                 <div className="px-2 py-1 text-[10px] text-gray-400 font-medium border-t border-b border-gray-100 mt-1">레벨다운</div>
                                                 <button
-                                                    onClick={() => {
+                                                    onClick={async () => {
                                                         if (!isValidLevel(classInfo.name, englishLevels)) {
                                                             alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
                                                             setIsMenuOpen(false);
@@ -530,11 +632,12 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                         }
                                                         const newName = numberLevelDown(classInfo.name);
                                                         if (newName) {
-                                                            setLevelUpModal({ isOpen: true, type: 'number', newName, direction: 'down' });
+                                                            setIsMenuOpen(false);
+                                                            await handleLevelChange(classInfo.name, newName, 'number', 'down');
                                                         } else {
                                                             alert('숫자가 1이면 더 이상 레벨다운할 수 없습니다.');
+                                                            setIsMenuOpen(false);
                                                         }
-                                                        setIsMenuOpen(false);
                                                     }}
                                                     disabled={!canNumberLevelDown(classInfo.name)}
                                                     className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${!canNumberLevelDown(classInfo.name) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-blue-50 text-gray-700'}`}
@@ -543,7 +646,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     숫자 레벨다운
                                                 </button>
                                                 <button
-                                                    onClick={() => {
+                                                    onClick={async () => {
                                                         if (!isValidLevel(classInfo.name, englishLevels)) {
                                                             alert(`'${classInfo.name}' 수업은 레벨 설정에 등록되지 않았습니다.\n\n영어 레벨 설정에서 해당 레벨을 추가해주세요.`);
                                                             setIsMenuOpen(false);
@@ -551,9 +654,9 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                         }
                                                         const newName = classLevelDown(classInfo.name, englishLevels);
                                                         if (newName) {
-                                                            setLevelUpModal({ isOpen: true, type: 'class', newName, direction: 'down' });
+                                                            setIsMenuOpen(false);
+                                                            await handleLevelChange(classInfo.name, newName, 'class', 'down');
                                                         }
-                                                        setIsMenuOpen(false);
                                                     }}
                                                     disabled={isMinLevel(classInfo.name, englishLevels)}
                                                     className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${isMinLevel(classInfo.name, englishLevels) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-red-50 text-gray-700'}`}
@@ -641,7 +744,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                             <div className="h-[230px] flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none border-b border-indigo-100">
                                 <span>재</span><span>원</span><span>생</span>
                             </div>
-                            <div className="flex items-center justify-center bg-violet-100 text-violet-700 font-bold text-xs h-[40px] border-b border-violet-200 select-none">
+                            <div className="flex items-center justify-center bg-pink-100 text-pink-700 font-bold text-xs h-[80px] border-b border-pink-200 select-none">
                                 대기
                             </div>
                             <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs h-[80px] select-none">
@@ -655,7 +758,13 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                 <div className="border-b border-gray-300 flex items-center justify-center h-[30px] shrink-0 bg-white">
                                     <div className="w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2">
                                         <Users size={14} />
-                                        <span>{studentCount}명</span>
+                                        <span>
+                                            {studentCount}
+                                            {(holdStudents.length + scheduledStudents.length) > 0 && (
+                                                <span className="text-violet-500">+{holdStudents.length + scheduledStudents.length}</span>
+                                            )}
+                                            명
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="flex-1 overflow-y-auto px-2 py-1.5 text-xxs flex flex-col custom-scrollbar">
@@ -664,40 +773,69 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                             <span>학생이 없습니다</span>
                                         </div>
                                     ) : (
-                                        <>
-                                            {sortedActiveStudents.slice(0, 10).map((student) => (
-                                                <StudentItem
-                                                    key={student.id}
-                                                    student={student}
-                                                    style={getRowStyle(student)}
-                                                    mode={mode}
-                                                    showEnglishName={isEnglish}
-                                                    onStudentClick={onStudentClick}
-                                                    onDragStart={onMoveStudent ? handleDragStart : undefined}
-                                                    classDays={!isEnglish ? classInfo.finalDays : undefined}
-                                                />
-                                            ))}
-                                            {sortedActiveStudents.length > 10 && (
-                                                <div className="text-indigo-500 font-bold mt-0.5 text-xs">
-                                                    +{sortedActiveStudents.length - 10}명 더보기...
-                                                </div>
-                                            )}
-                                        </>
+                                        sortedActiveStudents.map((student) => (
+                                            <StudentItem
+                                                key={student.id}
+                                                student={student}
+                                                style={getRowStyle(student)}
+                                                mode={mode}
+                                                showEnglishName={isEnglish}
+                                                onStudentClick={onStudentClick}
+                                                onDragStart={onMoveStudent ? handleDragStart : undefined}
+                                                classDays={!isEnglish ? classInfo.finalDays : undefined}
+                                            />
+                                        ))
                                     )}
                                 </div>
                             </div>
 
-                            {/* 대기 Section */}
-                            <div className="h-[40px] flex items-center justify-center bg-violet-50 border-b border-violet-200 px-2 overflow-hidden">
-                                {holdStudents.length === 0 ? (
-                                    <span className="text-xxs text-violet-300">-</span>
+                            {/* 대기 Section (배정 예정 + 휴원) */}
+                            <div className="h-[80px] flex flex-col bg-pink-50 border-b border-pink-200 px-2 py-1 overflow-y-auto custom-scrollbar">
+                                {holdStudents.length === 0 && scheduledStudents.length === 0 ? (
+                                    <span className="text-xxs text-pink-300 flex items-center justify-center h-full">-</span>
                                 ) : (
-                                    <div className="flex flex-wrap gap-1 text-xxs">
-                                        {holdStudents.slice(0, 3).map(s => (
-                                            <span key={s.id} className="bg-violet-100 text-violet-800 px-1 rounded">{s.name}</span>
+                                    <>
+                                        {/* 배정 예정 학생 */}
+                                        {scheduledStudents.slice(0, 3).map((student) => (
+                                            <div
+                                                key={student.id}
+                                                className="flex items-center text-[12px] py-0.5 px-1 bg-amber-50 text-amber-800 mb-0.5 cursor-pointer hover:bg-amber-100"
+                                                title={student.enrollmentDate ? `수업시작: ${student.enrollmentDate}` : '배정 예정'}
+                                                onClick={() => onStudentClick?.(student.id)}
+                                            >
+                                                <div className="flex items-center truncate flex-1 min-w-0">
+                                                    <span className="font-medium truncate">{student.name}</span>
+                                                    {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate">({student.englishName})</span>}
+                                                </div>
+                                                <span className="text-xxs shrink-0 text-amber-600 text-right leading-none ml-1">
+                                                    {formatSchoolGrade(student.school, student.grade)}
+                                                </span>
+                                            </div>
                                         ))}
-                                        {holdStudents.length > 3 && <span className="text-violet-600">+{holdStudents.length - 3}</span>}
-                                    </div>
+                                        {scheduledStudents.length > 3 && (
+                                            <span className="text-micro text-amber-500">+{scheduledStudents.length - 3}명 예정</span>
+                                        )}
+                                        {/* 휴원 학생 */}
+                                        {holdStudents.slice(0, 3).map((student) => (
+                                            <div
+                                                key={student.id}
+                                                className="flex items-center text-[12px] py-0.5 px-1 bg-amber-50 text-amber-800 mb-0.5 cursor-pointer hover:bg-amber-100"
+                                                title={student.enrollmentDate ? `수업시작: ${student.enrollmentDate}` : '휴원'}
+                                                onClick={() => onStudentClick?.(student.id)}
+                                            >
+                                                <div className="flex items-center truncate flex-1 min-w-0">
+                                                    <span className="font-medium truncate">{student.name}</span>
+                                                    {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate">({student.englishName})</span>}
+                                                </div>
+                                                <span className="text-xxs shrink-0 text-amber-600 text-right leading-none ml-1">
+                                                    {formatSchoolGrade(student.school, student.grade)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {holdStudents.length > 3 && (
+                                            <span className="text-micro text-amber-500">+{holdStudents.length - 3}명 휴원</span>
+                                        )}
+                                    </>
                                 )}
                             </div>
 
@@ -710,16 +848,31 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                         {withdrawnStudents.slice(0, 3).map((student) => (
                                             <div
                                                 key={student.id}
-                                                className="flex items-center justify-between text-[12px] py-0.5 px-1 bg-black rounded text-white mb-0.5"
+                                                className="flex items-center text-[12px] py-0.5 px-1 bg-black text-white mb-0.5 cursor-pointer hover:bg-gray-800 group relative"
                                                 title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
+                                                onClick={() => onStudentClick?.(student.id)}
                                             >
-                                                <div className="flex items-center truncate max-w-[90px]">
-                                                    <span className="font-medium">{student.name}</span>
-                                                    {isEnglish && student.englishName && <span className="ml-1 text-gray-400">({student.englishName})</span>}
+                                                <div className="flex items-center truncate flex-1 min-w-0">
+                                                    <span className="font-medium truncate">{student.name}</span>
+                                                    {isEnglish && student.englishName && <span className="ml-1 text-gray-400 truncate">({student.englishName})</span>}
                                                 </div>
-                                                <span className="text-xxs ml-1 shrink-0 text-gray-300 text-right leading-none">
+                                                <span className="text-xxs shrink-0 text-gray-300 text-right leading-none ml-1">
                                                     {formatSchoolGrade(student.school, student.grade)}
                                                 </span>
+                                                {mode === 'edit' && onRestoreEnrollment && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (window.confirm(`${student.name} 학생의 수업 종료를 취소하시겠습니까?`)) {
+                                                                onRestoreEnrollment(student.id, classInfo.name);
+                                                            }
+                                                        }}
+                                                        className="absolute right-1 text-xxs text-yellow-400 hover:text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity bg-black px-0.5"
+                                                        title="수업 종료 취소"
+                                                    >
+                                                        복구
+                                                    </button>
+                                                )}
                                             </div>
                                         ))}
                                         {withdrawnStudents.length > 3 && (

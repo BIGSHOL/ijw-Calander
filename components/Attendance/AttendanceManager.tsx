@@ -550,7 +550,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       }
 
       // Same group - sort by name
-      return a.name.localeCompare(b.name);
+      return (a.name || '').localeCompare(b.name || '', 'ko');
     });
   }, [allStudents, currentDate, groupOrder]);
 

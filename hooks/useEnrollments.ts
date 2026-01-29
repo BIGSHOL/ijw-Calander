@@ -244,7 +244,7 @@ export const useClassStudents = (className: string, subject?: SubjectType) => {
                 new Map(students.map(s => [s.id, s])).values()
             );
 
-            uniqueStudents.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+            uniqueStudents.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
             return uniqueStudents;
         },

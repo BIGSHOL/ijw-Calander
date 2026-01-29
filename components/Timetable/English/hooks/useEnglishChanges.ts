@@ -21,6 +21,13 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
     const handleMoveStudent = (student: TimetableStudent, fromClass: string, toClass: string) => {
         if (fromClass === toClass) return;
 
+        // 시뮬레이션 모드: 즉시 적용 (히스토리에 기록됨, undo로 취소 가능)
+        if (isSimulationMode && simulation?.isScenarioMode) {
+            simulation.moveStudent(fromClass, toClass, student.id, student.name);
+            return;
+        }
+
+        // 실시간 모드: 기존 로직 (저장 버튼 필요)
         setMoveChanges(prev => {
             const next = new Map(prev);
             const existingMove = next.get(student.id);
@@ -65,6 +72,27 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
             // === 실시간 모드: Firebase 업데이트 ===
             const today = new Date().toISOString().split('T')[0];
 
+            // === 0. 대상 수업들의 teacher 정보 조회 (staffId 연동용) ===
+            const targetClassNames = [...new Set(Array.from(moveChanges.values()).map(c => c.toClass))];
+            const classTeacherMap = new Map<string, string>();
+
+            if (targetClassNames.length > 0) {
+                const classesQuery = query(
+                    collection(db, CLASS_COLLECTION),
+                    where('subject', '==', 'english'),
+                    where('className', 'in', targetClassNames)
+                );
+                const classesSnapshot = await getDocs(classesQuery);
+                classesSnapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    // 영어 수업은 mainTeacher 또는 teacher 필드 사용
+                    const teacher = data.mainTeacher || data.teacher;
+                    if (teacher) {
+                        classTeacherMap.set(data.className, teacher);
+                    }
+                });
+            }
+
             // === 1. enrollments subcollection 업데이트 (학생 관리 연동) ===
             const enrollmentPromises = Array.from(moveChanges.values()).map(async ({ student, fromClass, toClass }) => {
                 // 1-1. 이전 수업 enrollment에 endDate 설정 (종료 처리)
@@ -83,11 +111,13 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
                 );
                 await Promise.all(endDatePromises);
 
-                // 1-2. 새 수업 enrollment 생성
+                // 1-2. 새 수업 enrollment 생성 (staffId 포함)
                 const enrollmentsRef = collection(db, 'students', student.id, 'enrollments');
+                const staffId = classTeacherMap.get(toClass) || '';
                 await addDoc(enrollmentsRef, {
                     className: toClass,
                     subject: 'english',
+                    staffId,  // 학생관리 수업 탭 강사 표시용
                     enrollmentDate: today,  // 시작일 = 오늘
                     createdAt: new Date().toISOString(),
                     // 이전 enrollment에서 underline 등 속성 복사

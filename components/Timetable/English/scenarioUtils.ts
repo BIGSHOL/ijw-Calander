@@ -21,8 +21,10 @@ export const validateScenarioData = (scenario: any): { isValid: boolean; error?:
         return { isValid: false, error: '생성 날짜 정보가 없습니다.' };
     }
 
-    // Version 2 (새 구조): classes, enrollments 필드 검증
-    if (scenario.version === 2) {
+    // Version 2+ (새 구조): classes, enrollments 필드 검증
+    // - version 2: 기본 새 구조
+    // - version 3: 뷰 설정(viewSettings) 포함
+    if (scenario.version >= 2) {
         if (!scenario.classes || typeof scenario.classes !== 'object') {
             return { isValid: false, error: '수업 데이터(classes)가 손상되었습니다.' };
         }

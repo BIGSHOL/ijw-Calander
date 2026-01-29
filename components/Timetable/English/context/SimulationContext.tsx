@@ -21,6 +21,7 @@ import { collection, collectionGroup, query, where, getDocs, getDoc, writeBatch,
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
 import { SCENARIO_COLLECTION } from '../englishUtils';
+import { IntegrationSettings, CustomGroup } from '../IntegrationViewSettings';
 
 // ============ UTILITIES ============
 
@@ -73,13 +74,62 @@ export interface ScenarioStudent extends TimetableStudent {
   isScenarioRemoved?: boolean; // 시나리오에서 제거된 학생
 }
 
+// ============ HISTORY TYPES ============
+
+export interface HistoryEntry {
+  id: string;
+  action: string;  // 변경 내용 설명 (예: "LE1 → LE2 레벨업", "홍길동 → LE3 추가")
+  timestamp: string;
+  targetClass?: string;  // 바로가기 대상 수업 (없으면 바로가기 비활성화)
+  scenarioClasses: Record<string, ScenarioClass>;
+  scenarioEnrollments: Record<string, Record<string, ScenarioEnrollment>>;
+}
+
+const MAX_HISTORY_SIZE = 20;
+
+// ============ VIEW SETTINGS TYPES ============
+
+export interface ScenarioViewSettings {
+  viewMode: 'START_PERIOD' | 'CUSTOM_GROUP';
+  customGroups: CustomGroup[];
+  showOthersGroup: boolean;
+  othersGroupTitle: string;
+}
+
+const DEFAULT_SCENARIO_VIEW_SETTINGS: ScenarioViewSettings = {
+  viewMode: 'CUSTOM_GROUP',
+  customGroups: [],
+  showOthersGroup: true,
+  othersGroupTitle: '기타 수업',
+};
+
 export interface ScenarioState {
   isScenarioMode: boolean;
   scenarioClasses: Record<string, ScenarioClass>;  // classId -> ScenarioClass
   scenarioEnrollments: Record<string, Record<string, ScenarioEnrollment>>;  // className -> studentId -> enrollment
   isDirty: boolean;  // 변경 사항 있는지
   currentScenarioName: string | null;
+  // History
+  history: HistoryEntry[];
+  historyIndex: number;  // 현재 위치 (-1이면 히스토리 없음)
+  // Live state backup for redo (최신 상태 백업 - redo 끝에서 복원용)
+  liveStateBackup: {
+    scenarioClasses: Record<string, ScenarioClass>;
+    scenarioEnrollments: Record<string, Record<string, ScenarioEnrollment>>;
+  } | null;
+  // View Settings (시나리오별 독립 관리)
+  scenarioViewSettings: ScenarioViewSettings;
 }
+
+// ============ CONFLICT TYPES ============
+
+export interface ConflictInfo {
+  newInLive: ScenarioClass[];        // 시나리오 편집 중 실시간에 추가된 수업
+  deletedInLive: ScenarioClass[];    // 시나리오 편집 중 실시간에서 삭제된 수업
+  hasConflicts: boolean;
+}
+
+export type PublishMode = 'overwrite' | 'merge' | 'cancel';
 
 export interface ScenarioContextValue extends ScenarioState {
   // Mode control
@@ -96,20 +146,34 @@ export interface ScenarioContextValue extends ScenarioState {
 
   // Edit operations
   updateScenarioClass: (classId: string, updates: Partial<ScenarioClass>) => void;
-  renameScenarioClass: (oldClassName: string, newClassName: string) => void;
-  addStudentToClass: (className: string, studentId: string, enrollmentData?: Partial<ScenarioEnrollment>) => void;
-  removeStudentFromClass: (className: string, studentId: string) => void;
-  moveStudent: (fromClass: string, toClass: string, studentId: string) => void;
+  renameScenarioClass: (oldClassName: string, newClassName: string) => boolean;
+  addStudentToClass: (className: string, studentId: string, enrollmentData?: Partial<ScenarioEnrollment>, studentName?: string) => void;
+  removeStudentFromClass: (className: string, studentId: string, studentName?: string) => void;
+  moveStudent: (fromClass: string, toClass: string, studentId: string, studentName?: string) => void;
 
   // Scenario operations
   loadFromLive: () => Promise<void>;
   saveToScenario: (name: string, description: string, userId: string, userName: string) => Promise<string>;
   updateScenario: (scenarioId: string, userId: string, userName: string) => Promise<void>;
   loadFromScenario: (scenarioId: string) => Promise<void>;
-  publishToLive: (userId: string, userName: string) => Promise<void>;
+  publishToLive: (userId: string, userName: string, mode?: PublishMode) => Promise<void>;
+  detectConflicts: () => Promise<ConflictInfo>;
 
   // State
   setCurrentScenarioName: (name: string | null) => void;
+
+  // History
+  history: HistoryEntry[];
+  historyIndex: number;
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
+  getHistoryDescription: () => string[];
+
+  // View Settings
+  scenarioViewSettings: ScenarioViewSettings;
+  updateScenarioViewSettings: (settings: Partial<ScenarioViewSettings>) => void;
 }
 
 // ============ CONTEXT ============
@@ -146,22 +210,175 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     scenarioEnrollments: {},
     isDirty: false,
     currentScenarioName: null,
+    history: [],
+    historyIndex: -1,
+    liveStateBackup: null,
+    scenarioViewSettings: DEFAULT_SCENARIO_VIEW_SETTINGS,
   });
 
   // Ref for stable access in callbacks
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // ============ HISTORY MANAGEMENT ============
+
+  /**
+   * 현재 상태를 히스토리에 저장 (변경 전에 호출)
+   */
+  const saveToHistory = useCallback((action: string) => {
+    setState(prev => {
+      const newEntry: HistoryEntry = {
+        id: `history_${Date.now()}`,
+        action,
+        timestamp: new Date().toISOString(),
+        scenarioClasses: JSON.parse(JSON.stringify(prev.scenarioClasses)),
+        scenarioEnrollments: JSON.parse(JSON.stringify(prev.scenarioEnrollments)),
+      };
+
+      // 현재 위치 이후의 히스토리 삭제 (새 분기)
+      const newHistory = (prev.history ?? []).slice(0, prev.historyIndex + 1);
+      newHistory.push(newEntry);
+
+      // 최대 크기 유지
+      while (newHistory.length > MAX_HISTORY_SIZE) {
+        newHistory.shift();
+      }
+
+      return {
+        ...prev,
+        history: newHistory,
+        historyIndex: newHistory.length - 1,
+        liveStateBackup: null,  // 새 액션 시 이전 백업 클리어
+      };
+    });
+  }, []);
+
+  /**
+   * Undo - 이전 상태로 복원
+   */
+  const undo = useCallback(() => {
+    setState(prev => {
+      if (prev.historyIndex < 0) return prev;
+
+      const historyEntry = prev.history[prev.historyIndex];
+      if (!historyEntry) return prev;
+
+      // 첫 번째 undo 시 현재 live state 백업 (나중에 redo로 복원 가능하도록)
+      const isFirstUndo = prev.historyIndex === prev.history.length - 1;
+      const liveStateBackup = isFirstUndo
+        ? {
+            scenarioClasses: JSON.parse(JSON.stringify(prev.scenarioClasses)),
+            scenarioEnrollments: JSON.parse(JSON.stringify(prev.scenarioEnrollments)),
+          }
+        : prev.liveStateBackup;
+
+      return {
+        ...prev,
+        scenarioClasses: JSON.parse(JSON.stringify(historyEntry.scenarioClasses)),
+        scenarioEnrollments: JSON.parse(JSON.stringify(historyEntry.scenarioEnrollments)),
+        historyIndex: prev.historyIndex - 1,
+        liveStateBackup,
+        isDirty: true,
+      };
+    });
+  }, []);
+
+  /**
+   * Redo - 다음 상태로 복원
+   *
+   * 히스토리 모델:
+   * - history[i] = action i 실행 전의 상태 (즉, action i-1 실행 후의 상태)
+   * - historyIndex = 현재 위치 (undo하면 history[historyIndex]로 복원됨)
+   * - liveStateBackup = 마지막 action 실행 후의 상태 (undo 시 저장됨)
+   *
+   * Redo 시:
+   * - historyIndex를 i에서 i+1로 증가
+   * - 복원할 상태는 history[i+2] 또는 liveStateBackup (마지막으로 가는 경우)
+   */
+  const redo = useCallback(() => {
+    setState(prev => {
+      if (!prev.history || prev.history.length === 0) return prev;
+
+      const targetIndex = prev.historyIndex + 1;
+
+      // targetIndex가 history 범위를 벗어나면 redo 불가
+      if (targetIndex >= prev.history.length) {
+        return prev;
+      }
+
+      // 복원할 상태 결정
+      let stateToRestore: { scenarioClasses: any; scenarioEnrollments: any } | null = null;
+
+      if (targetIndex === prev.history.length - 1) {
+        // 마지막 히스토리 위치로 이동 - liveStateBackup 사용
+        if (!prev.liveStateBackup) return prev;
+        stateToRestore = prev.liveStateBackup;
+      } else {
+        // 중간 위치 - history[targetIndex + 1] 사용 (다음 action 전의 상태 = 현재 action 후의 상태)
+        stateToRestore = prev.history[targetIndex + 1];
+      }
+
+      if (!stateToRestore) return prev;
+
+      return {
+        ...prev,
+        scenarioClasses: JSON.parse(JSON.stringify(stateToRestore.scenarioClasses)),
+        scenarioEnrollments: JSON.parse(JSON.stringify(stateToRestore.scenarioEnrollments)),
+        historyIndex: targetIndex,
+        // 마지막으로 복원 시에만 liveStateBackup 클리어
+        liveStateBackup: targetIndex === prev.history.length - 1 ? null : prev.liveStateBackup,
+        isDirty: true,
+      };
+    });
+  }, []);
+
+  /**
+   * 히스토리 설명 목록 가져오기
+   */
+  const getHistoryDescription = useCallback((): string[] => {
+    return (stateRef.current.history ?? []).map((entry, index) => {
+      const isCurrent = index === stateRef.current.historyIndex;
+      const time = new Date(entry.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      return `${isCurrent ? '▶ ' : '  '}[${time}] ${entry.action}`;
+    });
+  }, []);
+
+  // Computed values for canUndo/canRedo
+  const canUndo = state.historyIndex >= 0;
+  // canRedo: 다음 히스토리 항목이 있거나, 마지막 히스토리에서 liveStateBackup이 있으면 redo 가능
+  const canRedo = !!state.history && (
+    state.historyIndex < state.history.length - 1 ||
+    (state.historyIndex === state.history.length - 1 && !!state.liveStateBackup)
+  );
+
   // ============ MODE CONTROL ============
 
   const enterScenarioMode = useCallback(async () => {
     // Load current live data into draft
     await loadFromLiveInternal();
+
+    // 현재 실시간 뷰 설정도 로드
+    const viewSettingsDoc = await getDoc(doc(db, 'settings', 'english_class_integration'));
+    let initialViewSettings = DEFAULT_SCENARIO_VIEW_SETTINGS;
+    if (viewSettingsDoc.exists()) {
+      const data = viewSettingsDoc.data();
+      initialViewSettings = {
+        viewMode: data.viewMode || 'CUSTOM_GROUP',
+        customGroups: data.customGroups || [],
+        showOthersGroup: data.showOthersGroup ?? true,
+        othersGroupTitle: data.othersGroupTitle || '기타 수업',
+      };
+    }
+
     setState(prev => ({
       ...prev,
       isScenarioMode: true,
       isDirty: false,
       currentScenarioName: null,
+      scenarioViewSettings: initialViewSettings,
+      history: [],
+      historyIndex: -1,
+      liveStateBackup: null,
     }));
   }, []);
 
@@ -177,6 +394,10 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       scenarioEnrollments: {},
       isDirty: false,
       currentScenarioName: null,
+      history: [],
+      historyIndex: -1,
+      liveStateBackup: null,
+      scenarioViewSettings: DEFAULT_SCENARIO_VIEW_SETTINGS,
     });
   }, []);
 
@@ -203,7 +424,8 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         slotTeachers: data.slotTeachers || {},
         slotRooms: data.slotRooms || {},
         underline: data.underline,
-        mainTeacher: data.mainTeacher,
+        // mainTeacher가 없으면 teacher 필드를 사용 (호환성)
+        mainTeacher: data.mainTeacher || data.teacher,
       };
     });
 
@@ -263,13 +485,41 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     const { isScenarioMode, scenarioEnrollments } = stateRef.current;
     const result: Record<string, { studentList: ScenarioStudent[]; studentIds: string[] }> = {};
 
-    classNames.forEach(className => {
-      if (!isScenarioMode) {
-        // Not in simulation mode - return empty, let useClassStudents handle it
+    if (!isScenarioMode) {
+      classNames.forEach(className => {
         result[className] = { studentList: [], studentIds: [] };
-        return;
-      }
+      });
+      return result;
+    }
 
+    const today = new Date().toISOString().split('T')[0];
+
+    // 1단계: 반이동 감지를 위해 모든 학생의 활성/종료 수업 목록 수집
+    const studentActiveClasses: Record<string, Set<string>> = {};  // studentId -> Set of active classNames
+    const studentEndedClasses: Record<string, Set<string>> = {};   // studentId -> Set of ended classNames
+
+    Object.entries(scenarioEnrollments).forEach(([className, enrollments]) => {
+      Object.entries(enrollments).forEach(([studentId, enrollment]) => {
+        const hasEndDate = !!(enrollment.withdrawalDate);
+
+        if (!hasEndDate) {
+          // 활성 등록
+          if (!studentActiveClasses[studentId]) {
+            studentActiveClasses[studentId] = new Set();
+          }
+          studentActiveClasses[studentId].add(className);
+        } else {
+          // 종료된 등록
+          if (!studentEndedClasses[studentId]) {
+            studentEndedClasses[studentId] = new Set();
+          }
+          studentEndedClasses[studentId].add(className);
+        }
+      });
+    });
+
+    // 2단계: 요청된 수업들에 대해 학생 목록 생성
+    classNames.forEach(className => {
       const enrollments = scenarioEnrollments[className] || {};
       const studentIds = Object.keys(enrollments);
 
@@ -281,9 +531,23 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
           if (!baseStudent || baseStudent.status !== 'active') return null;
 
           // Priority for enrollment date (useClassStudents와 동일한 로직):
-          // 1. enrollment.enrollmentDate (학생 관리 수업 탭의 '시작일' from enrollments subcollection)
-          // 2. baseStudent.startDate (학생 기본정보의 등록일 - fallback)
           const studentEnrollmentDate = enrollment?.enrollmentDate || baseStudent.startDate;
+
+          // 미래 시작일 학생 (배정 예정)
+          const isScheduled = studentEnrollmentDate && studentEnrollmentDate > today;
+
+          // 반이동 감지
+          const hasEndDate = !!(enrollment?.withdrawalDate);
+          const activeClasses = studentActiveClasses[id] || new Set();
+          const endedClasses = studentEndedClasses[id] || new Set();
+
+          // isTransferred: 이 수업에서 종료됐지만 다른 수업에 활성 등록이 있음 (퇴원 아님)
+          const isTransferred = hasEndDate &&
+            Array.from(activeClasses).some(c => c !== className);
+
+          // isTransferredIn: 이 수업에 활성 등록이 있고, 다른 수업에서 종료된 기록이 있음 (반이동 온 학생)
+          const isTransferredIn = !hasEndDate &&
+            Array.from(endedClasses).some(c => c !== className);
 
           return {
             id,
@@ -297,12 +561,15 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
             onHold: enrollment?.onHold,
             isMoved: false,
             attendanceDays: enrollment?.attendanceDays || [],
-            isScenarioAdded: false,  // 시나리오에서 추가되면 별도 표시 필요시 수정
+            isScheduled,
+            isTransferred,
+            isTransferredIn,
+            isScenarioAdded: false,
           } as ScenarioStudent;
         })
         .filter(Boolean) as ScenarioStudent[];
 
-      studentList.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+      studentList.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
       result[className] = { studentList, studentIds };
     });
@@ -334,8 +601,47 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     }));
   }, []);
 
-  const renameScenarioClass = useCallback((oldClassName: string, newClassName: string) => {
+  // 히스토리 엔트리 생성 헬퍼
+  const createHistoryEntry = (prev: ScenarioState, action: string, targetClass?: string): HistoryEntry => ({
+    id: `history_${Date.now()}`,
+    action,
+    timestamp: new Date().toISOString(),
+    targetClass,  // 바로가기 대상 수업
+    scenarioClasses: JSON.parse(JSON.stringify(prev.scenarioClasses)),
+    scenarioEnrollments: JSON.parse(JSON.stringify(prev.scenarioEnrollments)),
+  });
+
+  // 히스토리 업데이트 헬퍼
+  const updateHistoryInState = (prev: ScenarioState, newEntry: HistoryEntry) => {
+    const newHistory = (prev.history ?? []).slice(0, prev.historyIndex + 1);
+    newHistory.push(newEntry);
+    while (newHistory.length > MAX_HISTORY_SIZE) {
+      newHistory.shift();
+    }
+    return {
+      history: newHistory,
+      historyIndex: newHistory.length - 1,
+    };
+  };
+
+  const renameScenarioClass = useCallback((oldClassName: string, newClassName: string): boolean => {
+    let success = false;
+
     setState(prev => {
+      // 0. 충돌 검사: 새 이름의 수업이 이미 존재하는지 확인
+      const existingClass = Object.values(prev.scenarioClasses).find(c => c.className === newClassName);
+      if (existingClass) {
+        // 이미 같은 이름의 수업이 있으면 충돌 - 변경하지 않음
+        alert(`⚠️ '${newClassName}' 수업이 이미 존재합니다.\n\n기존 수업과 이름이 충돌하여 레벨 변경을 할 수 없습니다.\n먼저 기존 '${newClassName}' 수업을 다른 이름으로 변경하거나 레벨업 해주세요.`);
+        return prev;
+      }
+
+      success = true;
+
+      // 히스토리 저장 (바로가기 대상: 새 수업명)
+      const historyEntry = createHistoryEntry(prev, `${oldClassName} → ${newClassName} 레벨 변경`, newClassName);
+      const historyUpdate = updateHistoryInState(prev, historyEntry);
+
       // 1. Find the class by old name and update className
       const updatedClasses = { ...prev.scenarioClasses };
       const classEntry = Object.entries(updatedClasses).find(([, c]) => c.className === oldClassName);
@@ -359,23 +665,32 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
 
       return {
         ...prev,
+        ...historyUpdate,
         scenarioClasses: updatedClasses,
         scenarioEnrollments: updatedEnrollments,
         isDirty: true,
       };
     });
+
+    return success;
   }, []);
 
   const addStudentToClass = useCallback((
     className: string,
     studentId: string,
-    enrollmentData?: Partial<ScenarioEnrollment>
+    enrollmentData?: Partial<ScenarioEnrollment>,
+    studentName?: string  // 히스토리 설명용 (선택)
   ) => {
     setState(prev => {
+      // 히스토리 저장 (바로가기 대상: 추가된 수업)
+      const historyEntry = createHistoryEntry(prev, `${studentName || studentId} → ${className} 추가`, className);
+      const historyUpdate = updateHistoryInState(prev, historyEntry);
+
       const classEnrollments = prev.scenarioEnrollments[className] || {};
 
       return {
         ...prev,
+        ...historyUpdate,
         scenarioEnrollments: {
           ...prev.scenarioEnrollments,
           [className]: {
@@ -393,13 +708,18 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     });
   }, []);
 
-  const removeStudentFromClass = useCallback((className: string, studentId: string) => {
+  const removeStudentFromClass = useCallback((className: string, studentId: string, studentName?: string) => {
     setState(prev => {
+      // 히스토리 저장 (바로가기 대상: 제거된 수업)
+      const historyEntry = createHistoryEntry(prev, `${studentName || studentId} ← ${className} 제거`, className);
+      const historyUpdate = updateHistoryInState(prev, historyEntry);
+
       const classEnrollments = { ...prev.scenarioEnrollments[className] };
       delete classEnrollments[studentId];
 
       return {
         ...prev,
+        ...historyUpdate,
         scenarioEnrollments: {
           ...prev.scenarioEnrollments,
           [className]: classEnrollments,
@@ -409,7 +729,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     });
   }, []);
 
-  const moveStudent = useCallback((fromClass: string, toClass: string, studentId: string) => {
+  const moveStudent = useCallback((fromClass: string, toClass: string, studentId: string, studentName?: string) => {
     setState(prev => {
       const fromEnrollments = { ...prev.scenarioEnrollments[fromClass] };
       const toEnrollments = prev.scenarioEnrollments[toClass] || {};
@@ -417,10 +737,15 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       const enrollment = fromEnrollments[studentId];
       if (!enrollment) return prev;
 
+      // 히스토리 저장 (바로가기 대상: 이동 후 수업)
+      const historyEntry = createHistoryEntry(prev, `${studentName || studentId}: ${fromClass} → ${toClass} 이동`, toClass);
+      const historyUpdate = updateHistoryInState(prev, historyEntry);
+
       delete fromEnrollments[studentId];
 
       return {
         ...prev,
+        ...historyUpdate,
         scenarioEnrollments: {
           ...prev.scenarioEnrollments,
           [fromClass]: fromEnrollments,
@@ -459,7 +784,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     userId: string,
     userName: string
   ): Promise<string> => {
-    const { scenarioClasses, scenarioEnrollments } = stateRef.current;
+    const { scenarioClasses, scenarioEnrollments, scenarioViewSettings } = stateRef.current;
 
     const scenarioId = `scenario_${Date.now()}`;
 
@@ -471,6 +796,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     // Firebase에 저장 전 undefined 값 제거
     const sanitizedClasses = sanitizeForFirestore(scenarioClasses);
     const sanitizedEnrollments = sanitizeForFirestore(scenarioEnrollments);
+    const sanitizedViewSettings = sanitizeForFirestore(scenarioViewSettings);
 
     const scenarioData = {
       id: scenarioId,
@@ -479,6 +805,8 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       // 새 구조 데이터 (sanitized)
       classes: sanitizedClasses,
       enrollments: sanitizedEnrollments,
+      // 뷰 설정 (시나리오별 독립 관리)
+      viewSettings: sanitizedViewSettings,
       // 메타데이터
       createdAt: new Date().toISOString(),
       createdBy: userName,
@@ -488,7 +816,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         studentCount,
         timetableDocCount: classCount,  // 호환성
       },
-      version: 2,  // 새 구조 버전 표시
+      version: 3,  // 뷰 설정 포함 버전
     };
 
     await setDoc(doc(db, SCENARIO_COLLECTION, scenarioId), scenarioData);
@@ -507,7 +835,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     userId: string,
     userName: string
   ): Promise<void> => {
-    const { scenarioClasses, scenarioEnrollments } = stateRef.current;
+    const { scenarioClasses, scenarioEnrollments, scenarioViewSettings } = stateRef.current;
 
     // 기존 시나리오 정보 가져오기
     const existingDoc = await getDoc(doc(db, SCENARIO_COLLECTION, scenarioId));
@@ -525,6 +853,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     // Firebase에 저장 전 undefined 값 제거
     const sanitizedClasses = sanitizeForFirestore(scenarioClasses);
     const sanitizedEnrollments = sanitizeForFirestore(scenarioEnrollments);
+    const sanitizedViewSettings = sanitizeForFirestore(scenarioViewSettings);
 
     // 기존 시나리오 업데이트
     await setDoc(doc(db, SCENARIO_COLLECTION, scenarioId), {
@@ -532,6 +861,8 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       // 새 구조 데이터 (sanitized)
       classes: sanitizedClasses,
       enrollments: sanitizedEnrollments,
+      // 뷰 설정 (시나리오별 독립 관리)
+      viewSettings: sanitizedViewSettings,
       // 업데이트 정보
       updatedAt: new Date().toISOString(),
       updatedBy: userName,
@@ -541,7 +872,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         studentCount,
         timetableDocCount: classCount,
       },
-      version: 2,
+      version: 3,
     });
 
     setState(prev => ({
@@ -553,7 +884,10 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
 
   const loadFromScenario = useCallback(async (scenarioId: string) => {
     // [async-parallel] Direct document read instead of scanning collection
-    const docSnap = await getDoc(doc(db, SCENARIO_COLLECTION, scenarioId));
+    const [docSnap, liveClassesSnapshot] = await Promise.all([
+      getDoc(doc(db, SCENARIO_COLLECTION, scenarioId)),
+      getDocs(query(collection(db, 'classes'), where('subject', '==', 'english')))
+    ]);
 
     if (!docSnap.exists()) {
       throw new Error('시나리오를 찾을 수 없습니다.');
@@ -561,15 +895,69 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
 
     const scenario = docSnap.data();
 
-    // 버전 체크
-    if (scenario.version === 2) {
-      // 새 구조
+    // 버전 체크 (version 2 또는 3)
+    if (scenario.version >= 2) {
+      const scenarioClasses = scenario.classes || {};
+      const scenarioEnrollments = scenario.enrollments || {};
+
+      // 실시간 데이터에서 삭제된 수업 감지
+      const liveClassIds = new Set<string>();
+      liveClassesSnapshot.docs.forEach(docSnap => {
+        liveClassIds.add(docSnap.id);
+      });
+
+      const deletedInLive: ScenarioClass[] = [];
+      Object.keys(scenarioClasses).forEach(classId => {
+        if (!liveClassIds.has(classId)) {
+          deletedInLive.push(scenarioClasses[classId]);
+        }
+      });
+
+      // 삭제된 수업이 있으면 사용자에게 처리 방법 확인
+      let finalClasses = scenarioClasses;
+      let finalEnrollments = scenarioEnrollments;
+
+      if (deletedInLive.length > 0) {
+        let message = `⚠️ 시나리오에 포함된 수업 중 ${deletedInLive.length}개가 실시간 데이터에서 삭제되었습니다.\n\n`;
+        message += '삭제된 수업:\n';
+        deletedInLive.forEach(cls => {
+          message += `   - ${cls.className}\n`;
+        });
+        message += '\n시나리오에서도 이 수업들을 제거하시겠습니까?\n\n';
+        message += '[제거] - 삭제된 수업을 시나리오에서 제거\n';
+        message += '[유지] - 삭제된 수업을 시나리오에 유지 (반영 시 복원됨)';
+
+        const choice = prompt(message + '\n\n선택을 입력하세요 (제거/유지):');
+
+        if (choice === '제거') {
+          // 삭제된 수업을 시나리오에서 제거
+          finalClasses = { ...scenarioClasses };
+          finalEnrollments = { ...scenarioEnrollments };
+
+          deletedInLive.forEach(cls => {
+            delete finalClasses[cls.id];
+            delete finalEnrollments[cls.className];
+          });
+
+          console.log(`🗑️ 삭제된 수업 ${deletedInLive.length}개를 시나리오에서 제거`);
+        } else {
+          console.log(`📌 삭제된 수업 ${deletedInLive.length}개를 시나리오에 유지`);
+        }
+      }
+
+      // 새 구조 (v2: 기본, v3: 뷰설정 포함)
       setState(prev => ({
         ...prev,
-        scenarioClasses: scenario.classes || {},
-        scenarioEnrollments: scenario.enrollments || {},
-        isDirty: false,
+        scenarioClasses: finalClasses,
+        scenarioEnrollments: finalEnrollments,
+        // 뷰 설정: 저장된 설정이 있으면 사용, 없으면 기본값 유지
+        scenarioViewSettings: scenario.viewSettings || prev.scenarioViewSettings,
+        isDirty: deletedInLive.length > 0,  // 삭제 처리했으면 dirty로 표시
         currentScenarioName: scenario.name,
+        // 히스토리 초기화 (새 시나리오 로드)
+        history: [],
+        historyIndex: -1,
+        liveStateBackup: null,
       }));
     } else {
       // 레거시 구조 - 변환 필요
@@ -578,11 +966,113 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     }
   }, []);
 
-  const publishToLive = useCallback(async (userId: string, userName: string) => {
+  /**
+   * 충돌 감지: 시나리오 편집 중 실시간 데이터 변경 확인
+   */
+  const detectConflicts = useCallback(async (): Promise<ConflictInfo> => {
+    const { scenarioClasses } = stateRef.current;
+    const scenarioClassIds = new Set(Object.keys(scenarioClasses));
+
+    // 현재 실시간 데이터 가져오기
+    const liveClassesSnapshot = await getDocs(
+      query(collection(db, 'classes'), where('subject', '==', 'english'))
+    );
+
+    const liveClassIds = new Set<string>();
+    const liveClassesMap: Record<string, ScenarioClass> = {};
+
+    liveClassesSnapshot.docs.forEach(docSnap => {
+      const data = docSnap.data();
+      liveClassIds.add(docSnap.id);
+      liveClassesMap[docSnap.id] = {
+        id: docSnap.id,
+        className: data.className,
+        subject: 'english',
+        teacher: data.teacher,
+        room: data.room,
+        schedule: data.schedule || [],
+        slotTeachers: data.slotTeachers || {},
+        slotRooms: data.slotRooms || {},
+        underline: data.underline,
+        mainTeacher: data.mainTeacher,
+      };
+    });
+
+    // 1. 실시간에 새로 추가된 수업 (시나리오에 없는 수업)
+    const newInLive: ScenarioClass[] = [];
+    liveClassIds.forEach(classId => {
+      if (!scenarioClassIds.has(classId)) {
+        newInLive.push(liveClassesMap[classId]);
+      }
+    });
+
+    // 2. 실시간에서 삭제된 수업 (시나리오에만 있는 수업)
+    const deletedInLive: ScenarioClass[] = [];
+    scenarioClassIds.forEach(classId => {
+      if (!liveClassIds.has(classId)) {
+        deletedInLive.push(scenarioClasses[classId]);
+      }
+    });
+
+    return {
+      newInLive,
+      deletedInLive,
+      hasConflicts: newInLive.length > 0 || deletedInLive.length > 0,
+    };
+  }, []);
+
+  const publishToLive = useCallback(async (userId: string, userName: string, mode?: PublishMode) => {
     const { scenarioClasses, scenarioEnrollments, currentScenarioName } = stateRef.current;
 
-    if (!confirm('⚠️ 정말로 실제 시간표에 반영하시겠습니까?\n이 작업은 모든 사용자에게 즉시 반영됩니다.')) {
-      return;
+    // 모드가 지정되지 않은 경우 충돌 감지 수행
+    if (!mode) {
+      const conflicts = await detectConflicts();
+
+      if (conflicts.hasConflicts) {
+        // 충돌 정보 메시지 생성
+        let conflictMessage = '⚠️ 시나리오 편집 중 실시간 데이터가 변경되었습니다.\n\n';
+
+        if (conflicts.newInLive.length > 0) {
+          conflictMessage += `📌 새로 추가된 수업 (${conflicts.newInLive.length}개):\n`;
+          conflicts.newInLive.forEach(cls => {
+            conflictMessage += `   - ${cls.className}\n`;
+          });
+          conflictMessage += '\n';
+        }
+
+        if (conflicts.deletedInLive.length > 0) {
+          conflictMessage += `🗑️ 삭제된 수업 (${conflicts.deletedInLive.length}개):\n`;
+          conflicts.deletedInLive.forEach(cls => {
+            conflictMessage += `   - ${cls.className}\n`;
+          });
+          conflictMessage += '\n';
+        }
+
+        conflictMessage += '어떻게 처리하시겠습니까?\n\n';
+        conflictMessage += '[덮어쓰기] - 시나리오 데이터로 모두 대체 (새 수업 삭제, 삭제된 수업 복원)\n';
+        conflictMessage += '[병합] - 새 수업 유지, 삭제된 수업은 반영 안 함\n';
+        conflictMessage += '[취소] - 반영 취소';
+
+        // 사용자 선택
+        const choice = prompt(conflictMessage + '\n\n선택을 입력하세요 (덮어쓰기/병합/취소):');
+
+        if (!choice || choice === '취소') {
+          return;
+        } else if (choice === '덮어쓰기') {
+          mode = 'overwrite';
+        } else if (choice === '병합') {
+          mode = 'merge';
+        } else {
+          alert('올바른 선택이 아닙니다. 반영을 취소합니다.');
+          return;
+        }
+      } else {
+        // 충돌 없음 - 기본 확인
+        if (!confirm('⚠️ 정말로 실제 시간표에 반영하시겠습니까?\n이 작업은 모든 사용자에게 즉시 반영됩니다.')) {
+          return;
+        }
+        mode = 'overwrite';
+      }
     }
 
     let backupId = '';
@@ -604,58 +1094,185 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         version: 2,
       });
 
-      // 2. classes 업데이트 (sanitized)
+      // 2. classes 업데이트 결정
+      const liveClassIds = new Set(Object.keys(liveClasses));
+      const scenarioClassIds = new Set(Object.keys(scenarioClasses));
+
+      // 최종 반영할 classes 결정
+      let classesToPublish = { ...scenarioClasses };
+      let enrollmentsToPublish = { ...scenarioEnrollments };
+
+      if (mode === 'merge') {
+        // 병합 모드: 새로 추가된 수업 유지
+        liveClassIds.forEach(classId => {
+          if (!scenarioClassIds.has(classId)) {
+            // 실시간에만 있는 수업 -> 유지
+            classesToPublish[classId] = liveClasses[classId];
+          }
+        });
+
+        // 새 수업의 enrollments도 유지
+        Object.entries(liveEnrollments).forEach(([className, enrollments]) => {
+          // 시나리오에 없는 className의 enrollments 유지
+          const classInScenario = Object.values(scenarioClasses).find(c => c.className === className);
+          if (!classInScenario) {
+            enrollmentsToPublish[className] = enrollments;
+          }
+        });
+
+        // 삭제된 수업은 반영하지 않음 (시나리오에서만 있던 수업 제거)
+        scenarioClassIds.forEach(classId => {
+          if (!liveClassIds.has(classId)) {
+            delete classesToPublish[classId];
+            const className = scenarioClasses[classId].className;
+            delete enrollmentsToPublish[className];
+          }
+        });
+
+        console.log(`🔀 [병합 모드] 새 수업 유지, 삭제된 수업 무시`);
+      } else {
+        // 덮어쓰기 모드: 시나리오 데이터로 모두 대체
+        // 실시간에만 있는 수업 삭제
+        const classesToDelete: string[] = [];
+        liveClassIds.forEach(classId => {
+          if (!scenarioClassIds.has(classId)) {
+            classesToDelete.push(classId);
+          }
+        });
+
+        if (classesToDelete.length > 0) {
+          const deleteBatch = writeBatch(db);
+          classesToDelete.forEach(classId => {
+            deleteBatch.delete(doc(db, 'classes', classId));
+          });
+          await deleteBatch.commit();
+          console.log(`🗑️ [덮어쓰기 모드] 새 수업 ${classesToDelete.length}개 삭제`);
+        }
+      }
+
+      // 3. classes 업데이트 (sanitized)
       const classBatch = writeBatch(db);
-      Object.entries(scenarioClasses).forEach(([classId, classData]) => {
+      Object.entries(classesToPublish).forEach(([classId, classData]) => {
         classBatch.set(doc(db, 'classes', classId), sanitizeForFirestore(classData));
       });
       await classBatch.commit();
 
-      // 3. enrollments 업데이트 (복잡 - 학생별 subcollection)
-      // 기존 enrollments 삭제 후 새로 생성
+      // 4. enrollments 업데이트 (이동 이력 추적 방식)
+      // 기존: 전체 삭제 후 재생성 → 개선: 변경된 부분만 업데이트하고 이력 유지
       const existingEnrollmentsSnapshot = await getDocs(
         query(collectionGroup(db, 'enrollments'), where('subject', '==', 'english'))
       );
 
-      // 삭제 배치 (500개 단위로 분할)
-      const docsToDelete = existingEnrollmentsSnapshot.docs;
-      for (let i = 0; i < docsToDelete.length; i += 500) {
-        const batch = writeBatch(db);
-        const chunk = docsToDelete.slice(i, i + 500);
-        chunk.forEach(docSnap => {
-          batch.delete(docSnap.ref);
-        });
-        await batch.commit();
-        console.log(`✅ Deleted enrollments batch: ${i + chunk.length}/${docsToDelete.length}`);
-      }
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
-      // 생성 배치 (500개 단위로 분할, sanitized)
-      const enrollmentsToCreate: { ref: any; data: any }[] = [];
-      Object.entries(scenarioEnrollments).forEach(([className, students]) => {
-        Object.entries(students).forEach(([studentId, enrollment]) => {
-          const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `english_${className}`);
-          enrollmentsToCreate.push({
-            ref: enrollmentRef,
-            data: sanitizeForFirestore({
-              ...enrollment,
-              subject: 'english',
-              className,
-            }),
-          });
+      // 현재 실시간 enrollments 맵 구축: studentId -> { className, docRef, data }
+      const liveStudentEnrollments: Record<string, { className: string; docRef: any; data: any }> = {};
+      existingEnrollmentsSnapshot.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        // endDate가 없는 (현재 수강중인) enrollment만 처리
+        if (!data.endDate) {
+          const studentId = docSnap.ref.parent.parent?.id;
+          if (studentId) {
+            liveStudentEnrollments[studentId] = {
+              className: data.className,
+              docRef: docSnap.ref,
+              data,
+            };
+          }
+        }
+      });
+
+      // 시나리오 enrollments 맵 구축: studentId -> className
+      const scenarioStudentEnrollments: Record<string, string> = {};
+      Object.entries(enrollmentsToPublish).forEach(([className, students]) => {
+        Object.keys(students).forEach(studentId => {
+          scenarioStudentEnrollments[studentId] = className;
         });
       });
 
-      for (let i = 0; i < enrollmentsToCreate.length; i += 500) {
+      // 변경 사항 분류
+      const toEndDate: { docRef: any }[] = [];  // 이전 수업 종료 처리
+      const toCreate: { ref: any; data: any }[] = [];  // 새 수업 생성
+      const unchanged: string[] = [];  // 변경 없음
+
+      // 1. 기존 학생들 처리
+      Object.entries(liveStudentEnrollments).forEach(([studentId, liveInfo]) => {
+        const newClassName = scenarioStudentEnrollments[studentId];
+
+        if (!newClassName) {
+          // 학생이 시나리오에서 제거됨 → 이전 수업 종료
+          toEndDate.push({ docRef: liveInfo.docRef });
+          console.log(`📤 [제거] ${studentId}: ${liveInfo.className} → (없음)`);
+        } else if (newClassName !== liveInfo.className) {
+          // 학생이 다른 수업으로 이동 → 이전 수업 종료 + 새 수업 생성
+          toEndDate.push({ docRef: liveInfo.docRef });
+          const newEnrollment = enrollmentsToPublish[newClassName]?.[studentId];
+          if (newEnrollment) {
+            toCreate.push({
+              ref: doc(db, 'students', studentId, 'enrollments', `english_${newClassName}`),
+              data: sanitizeForFirestore({
+                ...newEnrollment,
+                subject: 'english',
+                className: newClassName,
+                startDate: today,  // 새 수업 시작일
+              }),
+            });
+          }
+          console.log(`🔄 [이동] ${studentId}: ${liveInfo.className} → ${newClassName}`);
+        } else {
+          // 같은 수업 유지 → 변경 없음
+          unchanged.push(studentId);
+        }
+      });
+
+      // 2. 새로 추가된 학생들 처리
+      Object.entries(scenarioStudentEnrollments).forEach(([studentId, className]) => {
+        if (!liveStudentEnrollments[studentId]) {
+          // 새로 추가된 학생 → 새 수업 생성
+          const newEnrollment = enrollmentsToPublish[className]?.[studentId];
+          if (newEnrollment) {
+            toCreate.push({
+              ref: doc(db, 'students', studentId, 'enrollments', `english_${className}`),
+              data: sanitizeForFirestore({
+                ...newEnrollment,
+                subject: 'english',
+                className,
+                startDate: today,  // 새 수업 시작일
+              }),
+            });
+            console.log(`📥 [추가] ${studentId}: (없음) → ${className}`);
+          }
+        }
+      });
+
+      console.log(`📊 Enrollment 변경 요약: 종료=${toEndDate.length}, 생성=${toCreate.length}, 유지=${unchanged.length}`);
+
+      // 종료 처리 배치 (endDate 설정)
+      for (let i = 0; i < toEndDate.length; i += 500) {
         const batch = writeBatch(db);
-        const chunk = enrollmentsToCreate.slice(i, i + 500);
+        const chunk = toEndDate.slice(i, i + 500);
+        chunk.forEach(item => {
+          batch.update(item.docRef, {
+            endDate: today,
+            withdrawalDate: today,  // 통합뷰 호환
+          });
+        });
+        await batch.commit();
+        console.log(`✅ Updated endDate batch: ${i + chunk.length}/${toEndDate.length}`);
+      }
+
+      // 생성 배치
+      for (let i = 0; i < toCreate.length; i += 500) {
+        const batch = writeBatch(db);
+        const chunk = toCreate.slice(i, i + 500);
         chunk.forEach(item => {
           batch.set(item.ref, item.data);
         });
         await batch.commit();
-        console.log(`✅ Created enrollments batch: ${i + chunk.length}/${enrollmentsToCreate.length}`);
+        console.log(`✅ Created enrollments batch: ${i + chunk.length}/${toCreate.length}`);
       }
 
-      // 4. 시나리오 이름을 english_config에 저장 (영구 저장)
+      // 5. 시나리오 이름을 english_config에 저장 (영구 저장)
       if (currentScenarioName) {
         await setDoc(doc(db, 'settings', 'english_config'), {
           publishedScenarioName: currentScenarioName,
@@ -671,19 +1288,33 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         isDirty: false,
       }));
 
-      alert(`✅ 성공적으로 반영되었습니다.\n(백업 ID: ${backupId})`);
+      const modeLabel = mode === 'merge' ? '병합' : '덮어쓰기';
+      alert(`✅ 성공적으로 반영되었습니다. (${modeLabel} 모드)\n(백업 ID: ${backupId})`);
     } catch (error) {
       console.error('publishToLive 오류:', error);
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
       alert(`❌ 실제 반영 중 오류가 발생했습니다.\n${errorMessage}\n\n${backupId ? `백업이 생성되었습니다: ${backupId}` : ''}`);
       throw error;
     }
-  }, []);
+  }, [detectConflicts]);
 
   const setCurrentScenarioName = useCallback((name: string | null) => {
     setState(prev => ({
       ...prev,
       currentScenarioName: name,
+    }));
+  }, []);
+
+  // ============ VIEW SETTINGS ============
+
+  const updateScenarioViewSettings = useCallback((updates: Partial<ScenarioViewSettings>) => {
+    setState(prev => ({
+      ...prev,
+      scenarioViewSettings: {
+        ...prev.scenarioViewSettings,
+        ...updates,
+      },
+      isDirty: true,
     }));
   }, []);
 
@@ -706,7 +1337,16 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     updateScenario,
     loadFromScenario,
     publishToLive,
+    detectConflicts,
     setCurrentScenarioName,
+    // History
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    getHistoryDescription,
+    // View Settings
+    updateScenarioViewSettings,
   }), [
     state,
     enterScenarioMode,
@@ -724,7 +1364,13 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     updateScenario,
     loadFromScenario,
     publishToLive,
+    detectConflicts,
     setCurrentScenarioName,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    getHistoryDescription,
   ]);
 
   return (

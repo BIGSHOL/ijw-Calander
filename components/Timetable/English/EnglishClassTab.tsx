@@ -1,7 +1,7 @@
 // English Class Integration Tab
 // 영어 통합 시간표 탭 - 수업별 컬럼 뷰 (Refactored to match academy-app style with Logic Port)
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, Settings, Eye, ChevronDown, Users, Home, User, Edit, ArrowRightLeft, Copy, Upload, Save, CalendarDays } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
@@ -11,7 +11,8 @@ import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewS
 import LevelSettingsModal from './LevelSettingsModal';
 import LevelUpConfirmModal from './LevelUpConfirmModal';
 import StudentModal from './StudentModal';
-import { doc, onSnapshot, setDoc, collection, query, where, writeBatch, getDocs } from 'firebase/firestore';
+// import SimulationStudentModal from './SimulationStudentModal';  // 비활성화
+import { doc, onSnapshot, setDoc, collection, query, where, writeBatch, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 
 // Hooks
@@ -47,7 +48,7 @@ interface EnglishClassTabProps {
     onPublishToLive?: () => void;
     onOpenScenarioModal?: () => void;
     canPublish?: boolean;
-    onSimulationLevelUp?: (oldName: string, newName: string) => void;
+    onSimulationLevelUp?: (oldName: string, newName: string) => boolean;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -89,33 +90,70 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
+    // 시뮬레이션 모드 학생 배정 비활성화 (학생 이동만 드래그앤드랍으로 처리)
+    // const [simStudentModalClass, setSimStudentModalClass] = useState<{ className: string; classId: string } | null>(null);
 
     // --- Hook Integration ---
     // 1. Settings & Levels
-    const { settings, settingsLoading, englishLevels, updateSettings } = useEnglishSettings();
+    const { settings: liveSettings, settingsLoading, englishLevels, updateSettings: updateLiveSettings } = useEnglishSettings();
 
-    // 2. Student Statistics (now uses enrollments + studentMap)
+    // 2. Scenario Context (시뮬레이션 모드용)
+    const scenario = useScenario();
+    const scenarioClasses = scenario?.scenarioClasses || {};
+    const scenarioViewSettings = scenario?.scenarioViewSettings;
+
+    // 3. Merged Settings: 시뮬레이션 모드에서는 시나리오 전용 뷰 설정 사용
+    const settings = useMemo(() => {
+        if (isSimulationMode && scenarioViewSettings) {
+            return {
+                ...liveSettings,
+                // 시나리오 전용 그룹 설정으로 오버라이드
+                viewMode: scenarioViewSettings.viewMode,
+                customGroups: scenarioViewSettings.customGroups,
+                showOthersGroup: scenarioViewSettings.showOthersGroup,
+                othersGroupTitle: scenarioViewSettings.othersGroupTitle,
+            };
+        }
+        return liveSettings;
+    }, [isSimulationMode, scenarioViewSettings, liveSettings]);
+
+    // 4. Settings Update Handler (시뮬레이션 모드: 시나리오 설정, 실시간: Firebase)
+    const updateSettings = useCallback((newSettings: IntegrationSettings) => {
+        if (isSimulationMode && scenario?.updateScenarioViewSettings) {
+            // 시뮬레이션 모드: 시나리오 전용 뷰 설정 업데이트
+            scenario.updateScenarioViewSettings({
+                viewMode: newSettings.viewMode,
+                customGroups: newSettings.customGroups,
+                showOthersGroup: newSettings.showOthersGroup,
+                othersGroupTitle: newSettings.othersGroupTitle,
+            });
+            // displayOptions 등 개인 설정은 여전히 실시간 설정에 저장
+            if (newSettings.displayOptions || newSettings.hiddenTeachers || newSettings.hiddenLegendTeachers) {
+                updateLiveSettings(newSettings);
+            }
+        } else {
+            updateLiveSettings(newSettings);
+        }
+    }, [isSimulationMode, scenario, updateLiveSettings]);
+
+    // 5. Student Statistics (now uses enrollments + studentMap)
     const studentStats = useEnglishStats(scheduleData, isSimulationMode, studentMap);
 
-    // 3. Move Changes
+    // 6. Move Changes
     const { moveChanges, isSaving, handleMoveStudent, handleCancelChanges, handleSaveChanges } = useEnglishChanges(isSimulationMode);
 
-    // 4. Scenario Context (시뮬레이션 모드용)
-    const scenario = useScenario();
-    const scenarioClasses = scenario?.state?.scenarioClasses || {};
-
-    // 5. Classes Data Transformation (classesData 또는 scenarioClasses로부터 담임 정보 전달)
+    // 7. Classes Data Transformation (classesData 또는 scenarioClasses로부터 담임 정보 전달)
     const rawClasses = useEnglishClasses(scheduleData, settings, teachersData, classesData, isSimulationMode, scenarioClasses);
 
     // 6. Centralized Student Data Fetch (Cost Optimization)
     const classNames = useMemo(() => rawClasses.map(c => c.name), [rawClasses]);
-    const { classDataMap } = useClassStudents(classNames, isSimulationMode, studentMap);
+    const { classDataMap, refetch: refetchClassStudents } = useClassStudents(classNames, isSimulationMode, studentMap);
 
     // Filter by search term (Original 'classes' variable name preserved for compatibility)
     const classes = useMemo(() => {
         return rawClasses
-            .filter(c => !searchTerm || c.name.includes(searchTerm))
-            .sort((a, b) => a.startPeriod - b.startPeriod || a.name.localeCompare(b.name, 'ko'));
+            .filter(c => !searchTerm || (c.name || '').includes(searchTerm))
+            .sort((a, b) => a.startPeriod - b.startPeriod || (a.name || '').localeCompare(b.name || '', 'ko'));
     }, [rawClasses, searchTerm]);
     // --- End Hook Integration ---
 
@@ -145,10 +183,14 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             // 1. Defined Groups (classId 기반 매칭, 하위호환: className도 지원)
             settings.customGroups.forEach((g, idx) => {
                 const groupClasses: ClassInfo[] = [];
-                g.classes.forEach(classRef => {
+                // 중복 classRef 제거 (같은 그룹 내 중복 방지)
+                const uniqueClassRefs = [...new Set(g.classes)];
+                uniqueClassRefs.forEach(classRef => {
                     const cls = classes.find(c => c.classId === classRef) || classes.find(c => c.name === classRef);
                     if (cls) {
                         if (hiddenClasses.has(cls.name) && mode === 'view') return;
+                        // 중복 방지: 이미 다른 그룹에 할당된 수업은 건너뛰기
+                        if (assignedClasses.has(cls.name)) return;
                         groupClasses.push(cls);
                         assignedClasses.add(cls.name);
                     }
@@ -176,7 +218,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     groups.push({
                         periodIndex: 999,
                         label: settings.othersGroupTitle || '기타 수업',
-                        classes: visibleOthers.sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+                        classes: visibleOthers.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
                     });
                 }
             }
@@ -213,6 +255,39 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             else newSet.add(className);
             return newSet;
         });
+    };
+
+    // 수업 종료 취소 (퇴원생 복구)
+    const handleRestoreEnrollment = async (studentId: string, className: string) => {
+        try {
+            // Find the enrollment document
+            const enrollmentsQuery = query(
+                collection(db, 'students', studentId, 'enrollments'),
+                where('subject', '==', 'english'),
+                where('className', '==', className)
+            );
+            const snapshot = await getDocs(enrollmentsQuery);
+
+            if (snapshot.empty) {
+                alert('해당 수강 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            // Remove endDate and withdrawalDate from the enrollment
+            for (const docSnap of snapshot.docs) {
+                await updateDoc(docSnap.ref, {
+                    endDate: deleteField(),
+                    withdrawalDate: deleteField(),
+                });
+            }
+
+            // Refresh class students data
+            await refetchClassStudents();
+            alert('수업 종료가 취소되었습니다.');
+        } catch (error) {
+            console.error('수업 종료 취소 오류:', error);
+            alert('수업 종료 취소에 실패했습니다.');
+        }
     };
 
     // Show loading spinner while settings are loading to prevent flicker
@@ -270,16 +345,12 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                         <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xxs font-bold">
                             재원 {studentStats.active}
                         </span>
-                        {studentStats.new1 > 0 && (
-                            <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full text-xxs font-bold">
-                                신입1 {studentStats.new1}
-                            </span>
-                        )}
-                        {studentStats.new2 > 0 && (
-                            <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xxs font-bold">
-                                신입2 {studentStats.new2}
-                            </span>
-                        )}
+                        <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full text-xxs font-bold">
+                            신입1 {studentStats.new1}
+                        </span>
+                        <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xxs font-bold">
+                            신입2 {studentStats.new2}
+                        </span>
                         {studentStats.withdrawn > 0 && (
                             <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xxs font-bold">
                                 퇴원 {studentStats.withdrawn}
@@ -572,7 +643,9 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 hideTime={true}
                                                 useInjaePeriod={group.useInjaePeriod}
                                                 hiddenTeacherList={settings.hiddenTeachers}
-                                                onClassClick={mode === 'edit' && !isSimulationMode ? () => {
+                                                onClassClick={(mode === 'edit' && !isSimulationMode) ? () => {
+                                                    // 실시간 모드에서만 수업 상세 모달 열기
+                                                    // 시뮬레이션 모드에서는 학생 배정 변경 비활성화
                                                     const classDetail: ClassInfoFromHook = {
                                                         id: cls.classId,
                                                         className: cls.name,
@@ -583,12 +656,14 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                     };
                                                     setSelectedClassDetail(classDetail);
                                                 } : undefined}
-                                                onStudentClick={(studentId) => {
+                                                onStudentClick={!isSimulationMode ? (studentId) => {
+                                                    // 시뮬레이션 모드에서는 학생 클릭 비활성화 (실시간 데이터 수정 방지)
                                                     const student = studentMap[studentId];
                                                     if (student) {
                                                         setSelectedStudent(student as UnifiedStudent);
                                                     }
-                                                }}
+                                                } : undefined}
+                                                onRestoreEnrollment={!isSimulationMode ? handleRestoreEnrollment : undefined}
                                             />
                                         ))}
                                     </div>
@@ -629,6 +704,16 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     currentUser={currentUser}
                 />
             )}
+
+            {/* 시뮬레이션 모드 학생 배정 모달 - 비활성화 (학생 이동은 드래그앤드랍으로만) */}
+            {/* {simStudentModalClass && isSimulationMode && (
+                <SimulationStudentModal
+                    className={simStudentModalClass.className}
+                    classId={simStudentModalClass.classId}
+                    onClose={() => setSimStudentModalClass(null)}
+                    studentMap={studentMap}
+                />
+            )} */}
         </div>
     );
 };

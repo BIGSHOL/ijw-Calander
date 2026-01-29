@@ -113,6 +113,37 @@ export const useClassStudents = (
             // Get today's date for filtering future enrollments
             const today = new Date().toISOString().split('T')[0];
 
+            // 반이동 감지: 학생별로 활성/종료 등록 수업 목록 수집
+            const studentActiveClasses: Record<string, Set<string>> = {}; // studentId -> Set of active classNames
+            const studentEndedClasses: Record<string, Set<string>> = {};  // studentId -> Set of ended classNames
+
+            // 1차: 모든 enrollment 순회하여 활성/종료 등록 수집
+            snapshot.docs.forEach(doc => {
+                const data = doc.data();
+                const className = data.className as string;
+                const studentId = doc.ref.parent.parent?.id;
+                if (!studentId) return;
+
+                const withdrawalDate = convertTimestampToDate(data.withdrawalDate);
+                const endDate = convertTimestampToDate(data.endDate);
+                const hasEndDate = !!(withdrawalDate || endDate);
+
+                if (!hasEndDate) {
+                    // 활성 등록 (endDate 없음)
+                    if (!studentActiveClasses[studentId]) {
+                        studentActiveClasses[studentId] = new Set();
+                    }
+                    studentActiveClasses[studentId].add(className);
+                } else {
+                    // 종료된 등록 (endDate 있음)
+                    if (!studentEndedClasses[studentId]) {
+                        studentEndedClasses[studentId] = new Set();
+                    }
+                    studentEndedClasses[studentId].add(className);
+                }
+            });
+
+            // 2차: 요청된 수업들의 enrollment 데이터 처리
             snapshot.docs.forEach(doc => {
                 const data = doc.data();
                 const className = data.className as string;
@@ -126,21 +157,36 @@ export const useClassStudents = (
 
                 const startDate = convertTimestampToDate(data.enrollmentDate || data.startDate);
                 const withdrawalDate = convertTimestampToDate(data.withdrawalDate);
+                const endDate = convertTimestampToDate(data.endDate);
 
-                // Filter out students with future start dates (not yet started)
-                if (startDate && startDate > today) return;
+                // 미래 시작일 학생도 포함 (대기 섹션에 '배정 예정'으로 표시)
+                const isScheduled = startDate && startDate > today;
 
-                // Skip if student is withdrawn or on hold (based on enrollment data)
-                if (withdrawalDate || data.onHold) return;
+                // 반이동 여부 체크
+                const hasEndDate = !!(withdrawalDate || endDate);
+                const activeClasses = studentActiveClasses[studentId] || new Set();
+                const endedClasses = studentEndedClasses[studentId] || new Set();
 
+                // isTransferred: 이 수업에서 종료됐지만 다른 수업에 활성 등록이 있음 (퇴원 섹션에서 제외)
+                const hasActiveInOtherClass = hasEndDate &&
+                    Array.from(activeClasses).some(c => c !== className);
+
+                // isTransferredIn: 이 수업에 활성 등록이 있고, 다른 수업에서 종료된 기록이 있음 (반이동으로 온 학생)
+                const hasEndedInOtherClass = !hasEndDate &&
+                    Array.from(endedClasses).some(c => c !== className);
+
+                // 모든 학생 포함 (퇴원/휴원도 카드에서 별도 섹션으로 표시)
                 classStudentMap[className].add(studentId);
 
                 enrollmentDataMap[className][studentId] = {
                     underline: data.underline,
                     enrollmentDate: startDate,
-                    withdrawalDate: withdrawalDate,
+                    withdrawalDate: withdrawalDate || endDate,  // endDate도 퇴원으로 처리
                     onHold: data.onHold,
                     attendanceDays: data.attendanceDays || [],
+                    isScheduled,  // 배정 예정 플래그
+                    isTransferred: hasActiveInOtherClass,  // 반이동 나감 (퇴원 섹션에서 제외)
+                    isTransferredIn: hasEndedInOtherClass,  // 반이동 들어옴 (초록색 배경으로 상단 표시)
                 };
             });
 
@@ -180,12 +226,15 @@ export const useClassStudents = (
                             onHold: enrollmentData.onHold,
                             isMoved: false,
                             attendanceDays: enrollmentData.attendanceDays || [],  // 등원 요일
+                            isScheduled: enrollmentData.isScheduled || false,  // 배정 예정
+                            isTransferred: enrollmentData.isTransferred || false,  // 반이동 나감 (퇴원 아님)
+                            isTransferredIn: enrollmentData.isTransferredIn || false,  // 반이동 들어옴 (초록 배경)
                         } as TimetableStudent;
                     })
                     .filter(Boolean) as TimetableStudent[];
 
                 // Sort by name
-                studentList.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+                studentList.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
                 result[className] = {
                     studentList,

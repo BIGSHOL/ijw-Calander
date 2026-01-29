@@ -130,7 +130,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
         if (!studentSearch.trim()) return students.slice(0, 10);
         const query = studentSearch.toLowerCase();
         return students.filter(s =>
-            s.name.toLowerCase().includes(query) ||
+            (s.name || '').toLowerCase().includes(query) ||
             s.englishName?.toLowerCase().includes(query) ||
             s.school?.toLowerCase().includes(query)
         ).slice(0, 10);

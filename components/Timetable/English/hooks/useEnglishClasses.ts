@@ -215,7 +215,9 @@ export const useEnglishClasses = (
         return validClasses.map(c => {
             // 0. 담임 결정: 시뮬레이션 모드면 scenarioClasses에서, 아니면 classes 컬렉션에서 가져옴 (classId 기준)
             if (isSimulationMode && c.classId && scenarioClasses[c.classId]) {
-                c.mainTeacher = scenarioClasses[c.classId].mainTeacher || '';
+                // mainTeacher가 없으면 teacher 필드를 fallback으로 사용 (Firebase classes 컬렉션은 teacher 필드 사용)
+                const scenarioClass = scenarioClasses[c.classId];
+                c.mainTeacher = scenarioClass.mainTeacher || scenarioClass.teacher || '';
             } else {
                 const classFromDB = classesData.find(cls => cls.id === c.classId);
                 c.mainTeacher = classFromDB?.teacher || '';

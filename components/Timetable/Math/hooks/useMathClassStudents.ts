@@ -153,7 +153,7 @@ export const useMathClassStudents = (
                     .filter(Boolean) as TimetableStudent[];
 
                 // Sort by name
-                studentList.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+                studentList.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
                 result[className] = {
                     studentList,

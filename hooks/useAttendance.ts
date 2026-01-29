@@ -311,7 +311,7 @@ export const useAttendanceStudents = (options?: {
             });
 
             // 이름순 정렬
-            data.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+            data.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
             return { filtered: data, all: allRaw };
         },

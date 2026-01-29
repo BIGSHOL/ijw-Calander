@@ -14,6 +14,7 @@ import TeacherOrderModal from './TeacherOrderModal';
 import BackupHistoryModal from './BackupHistoryModal';
 import ScenarioManagementModal from './ScenarioManagementModal';
 import { SimulationProvider, useSimulation } from './context/SimulationContext';
+import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus } from 'lucide-react';
 
 interface EnglishTimetableProps {
     onClose?: () => void;
@@ -52,10 +53,39 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const [publishedScenarioName, setPublishedScenarioName] = useState<string | null>(null);
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
     // SimulationContext 사용
     const simulation = useSimulation();
-    const { isScenarioMode: isSimulationMode, currentScenarioName, enterScenarioMode: enterSimulationMode, exitScenarioMode: exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName } = simulation;
+    const { isScenarioMode: isSimulationMode, currentScenarioName, enterScenarioMode: enterSimulationMode, exitScenarioMode: exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName, canUndo, canRedo, undo, redo, history, historyIndex, getHistoryDescription } = simulation;
+
+    // Ctrl+Z / Ctrl+Y 키보드 단축키 (시뮬레이션 모드에서만)
+    useEffect(() => {
+        if (!isSimulationMode) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // input, textarea, select 등 입력 필드에서는 동작 안함
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable) {
+                return;
+            }
+
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                if (canUndo) {
+                    undo();
+                }
+            } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                if (canRedo) {
+                    redo();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isSimulationMode, canUndo, canRedo, undo, redo]);
 
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -350,8 +380,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         }
     }, [publishToLive, currentUser]);
 
-    const handleSimulationLevelUp = useCallback((oldName: string, newName: string) => {
-        simulation.renameScenarioClass(oldName, newName);
+    const handleSimulationLevelUp = useCallback((oldName: string, newName: string): boolean => {
+        return simulation.renameScenarioClass(oldName, newName);
     }, [simulation]);
 
     return (
@@ -367,7 +397,104 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </span>
                     {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">SIMULATION</span>}
                 </h1>
+                {/* 시뮬레이션 모드 히스토리 컨트롤 */}
+                {isSimulationMode && (
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                        <button
+                            onClick={undo}
+                            disabled={!canUndo}
+                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${canUndo ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                            title="되돌리기 (Ctrl+Z)"
+                        >
+                            <Undo2 size={14} />
+                            되돌리기
+                        </button>
+                        <button
+                            onClick={redo}
+                            disabled={!canRedo}
+                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${canRedo ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                            title="다시 실행 (Ctrl+Y)"
+                        >
+                            <Redo2 size={14} />
+                            다시 실행
+                        </button>
+                        <button
+                            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${history.length > 0 ? 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-400'}`}
+                            title="변경 히스토리 보기"
+                        >
+                            <History size={14} />
+                            히스토리 ({history.length})
+                            {isHistoryOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        </button>
+                    </div>
+                )}
             </div>
+
+            {/* 히스토리 패널 */}
+            {isSimulationMode && isHistoryOpen && history.length > 0 && (
+                <div className="bg-indigo-50 border-b border-indigo-200 px-4 py-3 max-h-[200px] overflow-y-auto shrink-0">
+                    <div className="text-xs font-bold text-indigo-700 mb-2">
+                        변경 히스토리 (최근 {history.length}개)
+                    </div>
+                    <div className="space-y-1">
+                        {[...history].reverse().map((entry, idx) => {
+                            const originalIndex = history.length - 1 - idx;
+                            const isCurrent = originalIndex === historyIndex;
+                            const isPast = originalIndex <= historyIndex;
+                            const time = new Date(entry.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                            // 바로가기 함수: 대상 수업으로 스크롤
+                            const handleJumpTo = () => {
+                                if (!entry.targetClass) return;
+                                // 수업 카드 또는 테이블 셀을 찾아 스크롤
+                                const targetElement = document.querySelector(`[data-class-name="${entry.targetClass}"]`);
+                                if (targetElement) {
+                                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    // 하이라이트 효과
+                                    targetElement.classList.add('ring-4', 'ring-orange-400', 'ring-offset-2');
+                                    setTimeout(() => {
+                                        targetElement.classList.remove('ring-4', 'ring-orange-400', 'ring-offset-2');
+                                    }, 2000);
+                                } else {
+                                    alert(`'${entry.targetClass}' 수업을 찾을 수 없습니다.\n(다른 그룹에 있거나 숨겨진 수업일 수 있습니다)`);
+                                }
+                            };
+
+                            return (
+                                <div
+                                    key={entry.id}
+                                    className={`flex items-center gap-2 px-2 py-1 rounded text-xs ${
+                                        isCurrent
+                                            ? 'bg-indigo-200 text-indigo-900 font-bold'
+                                            : isPast
+                                                ? 'bg-white text-gray-700'
+                                                : 'bg-gray-100 text-gray-400'
+                                    }`}
+                                >
+                                    <span className="text-gray-500 w-16 shrink-0">{time}</span>
+                                    <span className={`flex-1 ${isCurrent ? 'text-indigo-800' : ''}`}>{entry.action}</span>
+                                    {entry.targetClass && (
+                                        <button
+                                            onClick={handleJumpTo}
+                                            className="p-1 text-indigo-500 hover:bg-indigo-100 rounded transition-colors"
+                                            title={`'${entry.targetClass}' 수업으로 이동`}
+                                        >
+                                            <Focus size={14} />
+                                        </button>
+                                    )}
+                                    {isCurrent && <span className="text-indigo-600">← 현재</span>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {history.length === 0 && (
+                        <div className="text-gray-400 text-xs text-center py-2">
+                            아직 변경 사항이 없습니다
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Content */}
             <div className="flex-1 overflow-hidden">

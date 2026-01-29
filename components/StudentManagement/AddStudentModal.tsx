@@ -51,6 +51,19 @@ const GRADE_OPTIONS = [
 // 보호자 관계 옵션
 const RELATION_OPTIONS = ['모', '부', '조부', '조모', '기타'];
 
+/**
+ * 학교명 정규화 (전체 이름 → 축약형)
+ * - "대구일중학교" → "대구일중"
+ * - "칠성초등학교" → "칠성초"
+ * - "대구고등학교" → "대구고"
+ */
+const normalizeSchoolName = (school: string): string => {
+    return school.trim()
+        .replace(/초등학교$/g, '초')
+        .replace(/중학교$/g, '중')
+        .replace(/고등학교$/g, '고');
+};
+
 // 섹션 토글 타입
 type SectionKey = 'basic' | 'school' | 'contact' | 'address' | 'extra';
 
@@ -111,8 +124,11 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
         validateOnBlur: true,
         onSubmit: async (formData) => {
             try {
-                // studentId 기본 형식: "이름_학교_학년"
-                const baseId = `${formData.name.trim()}_${formData.school.trim()}_${formData.grade.trim()}`;
+                // 학교명 정규화 (대구일중학교 → 대구일중)
+                const normalizedSchool = normalizeSchoolName(formData.school);
+
+                // studentId 기본 형식: "이름_학교(정규화)_학년"
+                const baseId = `${formData.name.trim()}_${normalizedSchool}_${formData.grade.trim()}`;
                 let studentId = baseId;
                 let counter = 1;
 
@@ -131,8 +147,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     name: formData.name.trim(),
                     englishName: formData.englishName.trim() || null,
                     gender: formData.gender || null,
-                    // 학교 정보
-                    school: formData.school.trim(),
+                    // 학교 정보 (학교명 정규화 적용)
+                    school: normalizedSchool,
                     grade: formData.grade.trim(),
                     graduationYear: formData.graduationYear.trim() || null,
                     // 연락처 (암호화)

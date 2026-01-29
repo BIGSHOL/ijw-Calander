@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, BookOpen, Loader2, Plus, Search } from 'lucide-react';
+import { X, BookOpen, Loader2, Plus, Search, AlertCircle, Clock, CheckCircle } from 'lucide-react';
 import { db } from '../../firebaseConfig';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { UnifiedStudent, SubjectType } from '../../types';
@@ -47,15 +47,25 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
         : selectedSubject === 'science' ? loadingScience
         : loadingKorean;
 
+    // 현재 과목의 활성 enrollment (배정 중 + 배정 예정)
+    const activeEnrollments = useMemo(() => {
+        const today = new Date().toISOString().split('T')[0];
+        return student.enrollments
+            .filter(e => e.subject === selectedSubject && !e.endDate)
+            .map(e => ({
+                ...e,
+                isScheduled: e.startDate && e.startDate > today  // 배정 예정 여부
+            }));
+    }, [student.enrollments, selectedSubject]);
+
     // 이미 배정된 수업 필터링 + 검색어 필터링
     const availableClasses = useMemo(() => {
         if (!currentClasses) return [];
 
-        const enrolledClassNames = student.enrollments
-            .filter(e => e.subject === selectedSubject)
-            .map(e => e.className);
+        // 활성 enrollment만 필터링 (endDate가 없는 것 = 현재 배정 중 또는 배정 예정)
+        const activeEnrolledClassNames = activeEnrollments.map(e => e.className);
 
-        let filtered = currentClasses.filter(cls => !enrolledClassNames.includes(cls.className));
+        let filtered = currentClasses.filter(cls => !activeEnrolledClassNames.includes(cls.className));
 
         // 검색어 필터링
         if (searchQuery.trim()) {
@@ -67,7 +77,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
         }
 
         return filtered;
-    }, [currentClasses, student.enrollments, selectedSubject, searchQuery]);
+    }, [currentClasses, activeEnrollments, searchQuery]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -108,8 +118,10 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                 createdAt: Timestamp.now(),
             });
 
-            // 캐시 무효화: classes 쿼리 갱신 (학생 수 업데이트)
+            // 캐시 무효화
             queryClient.invalidateQueries({ queryKey: ['classes'] });
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 시간표 대기 섹션 실시간 반영
 
             // 성공 처리
             onSuccess();
@@ -247,6 +259,31 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                 </p>
                             </label>
                         </div>
+
+                        {/* 이미 배정된 수업 안내 */}
+                        {activeEnrollments.length > 0 && (
+                            <div className="p-2 bg-amber-50 border border-amber-200 rounded">
+                                <div className="flex items-center gap-1.5 mb-1.5">
+                                    <AlertCircle size={12} className="text-amber-600" />
+                                    <span className="text-xs font-bold text-amber-800">이미 배정된 수업</span>
+                                </div>
+                                <div className="space-y-1">
+                                    {activeEnrollments.map((e, idx) => (
+                                        <div key={idx} className="flex items-center gap-1.5 text-xxs text-amber-700">
+                                            {e.isScheduled ? (
+                                                <Clock size={10} className="text-blue-500" />
+                                            ) : (
+                                                <CheckCircle size={10} className="text-green-500" />
+                                            )}
+                                            <span className="font-medium">{e.className}</span>
+                                            {e.isScheduled && (
+                                                <span className="text-blue-600">({e.startDate} 배정 예정)</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* 수업 선택 - Compact */}
                         <div>

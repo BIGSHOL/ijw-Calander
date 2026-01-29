@@ -138,7 +138,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
 
         // 각 과목별 이름순 정렬
         Object.keys(result).forEach(key => {
-            result[key].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+            result[key].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
         });
 
         return result;

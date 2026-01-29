@@ -138,7 +138,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
     if (!studentSearch.trim()) return students;
     const search = studentSearch.toLowerCase();
     return students.filter(s =>
-      s.name.toLowerCase().includes(search) ||
+      (s.name || '').toLowerCase().includes(search) ||
       s.school?.toLowerCase().includes(search) ||
       s.grade?.toLowerCase().includes(search)
     );

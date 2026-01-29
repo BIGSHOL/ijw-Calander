@@ -51,7 +51,7 @@ const StaffSelector: React.FC<StaffSelectorProps> = ({
 
     // 각 그룹 내에서 이름순 정렬
     Object.keys(groups).forEach(key => {
-      groups[key].sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+      groups[key].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
     });
 
     return groups;

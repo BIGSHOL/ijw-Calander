@@ -7,7 +7,7 @@ import { useTeachers } from '../../../hooks/useFirebaseQueries';
 import { ClassInfo, useClasses } from '../../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../../utils/styleUtils';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
-import { doc, getDocs, collection, query, where, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -211,14 +211,17 @@ interface GroupedEnrollment {
   endDate?: string; // 수강 종료일 (undefined = 재원중)
 }
 
-const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readOnly = false }) => {
+const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact = false, readOnly = false }) => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
   const [deletingClass, setDeletingClass] = useState<string | null>(null);
-  const { refreshStudents } = useStudents();
+  const { students, refreshStudents } = useStudents();
   const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
   const { data: allClasses = [] } = useClasses();
   const queryClient = useQueryClient();
+
+  // 실시간 학생 데이터: students 목록에서 최신 데이터를 가져오거나 prop을 사용
+  const student = students.find(s => s.id === studentProp.id) || studentProp;
 
   // 날짜 포맷팅 함수 (YYYY-MM-DD -> YY.MM.DD)
   const formatDate = (dateStr?: string) => {
@@ -419,9 +422,15 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       // 1. 저장된 enrollmentIds가 있으면 사용
       if (group.enrollmentIds.length > 0) {
         for (const enrollmentId of group.enrollmentIds) {
-          await updateDoc(doc(db, `students/${student.id}/enrollments`, enrollmentId), {
-            endDate: endDate,
-          });
+          const docRef = doc(db, `students/${student.id}/enrollments`, enrollmentId);
+          const docSnap = await getDoc(docRef);
+          // 문서가 존재하는 경우에만 업데이트 (수동 삭제된 경우 스킵)
+          if (docSnap.exists()) {
+            await updateDoc(docRef, {
+              endDate: endDate,
+              withdrawalDate: endDate,  // 통합뷰 퇴원 섹션 표시용
+            });
+          }
         }
       } else {
         // 2. enrollmentIds가 없으면 쿼리로 찾아서 업데이트
@@ -436,13 +445,16 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         for (const docSnap of snapshot.docs) {
           await updateDoc(docSnap.ref, {
             endDate: endDate,
+            withdrawalDate: endDate,  // 통합뷰 퇴원 섹션 표시용
           });
         }
       }
 
-      // 캐시 무효화 및 새로고침
+      // 캐시 무효화 및 새로고침 (모든 시간표 뷰에 실시간 반영)
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classes'] });
+      queryClient.invalidateQueries({ queryKey: ['classStudents'] });  // Generic 시간표
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표
       refreshStudents();
 
     } catch (err) {
@@ -652,17 +664,13 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         {/* 학생수 (빈 공간) */}
         <div className="w-10 shrink-0"></div>
 
-        {/* 시작일/종료일 (compact 모드가 아닐 때만) */}
-        {!compact && (
-          <>
-            <span className="w-16 shrink-0 text-xxs text-[#373d41] text-center">
-              {formatDate(group.startDate)}
-            </span>
-            <span className="w-14 shrink-0 text-xxs text-[#373d41] text-center">
-              {formatDate(group.endDate)}
-            </span>
-          </>
-        )}
+        {/* 시작일/종료일 */}
+        <span className="w-16 shrink-0 text-xxs text-[#373d41] text-center">
+          {formatDate(group.startDate)}
+        </span>
+        <span className="w-14 shrink-0 text-xxs text-[#373d41] text-center">
+          {formatDate(group.endDate)}
+        </span>
 
         {/* 삭제 버튼 자리 (빈 공간) */}
         <div className="w-5 shrink-0"></div>
@@ -749,7 +757,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         <div className="bg-amber-50/30 border border-amber-200 overflow-hidden">
           {/* 테이블 헤더 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-amber-100/50 border-b border-amber-200 text-xxs font-medium text-[#373d41]">
-            <span className="w-8 shrink-0">과목</span>
+            <span className="w-8 shrink-0"></span>
             <span className="w-24 shrink-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
             <span className="flex-1">스케줄</span>
@@ -784,16 +792,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                     className="flex items-center gap-2 px-2 py-1.5 border-b border-amber-200 hover:bg-amber-100/30 transition-colors cursor-pointer"
                     onClick={() => handleClassClick(group)}
                   >
-                    {/* 과목 뱃지 */}
-                    <span
-                      className="w-8 shrink-0 text-micro px-1 py-0.5 rounded font-semibold text-center"
-                      style={{
-                        backgroundColor: subjectColor.bg,
-                        color: subjectColor.text,
-                      }}
-                    >
-                      {SUBJECT_LABELS[group.subject]}
-                    </span>
+                    {/* 과목 뱃지 - 배정 예정 수업은 라벨 숨김 */}
+                    <span className="w-8 shrink-0"></span>
 
                     {/* 수업명 */}
                     <span className="w-24 shrink-0 text-xs text-[#373d41] font-medium truncate">
@@ -870,12 +870,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             <span className="w-14 shrink-0">강사</span>
             <span className="flex-1">상태</span>
             <span className="w-10 shrink-0"></span>
-            {!compact && (
-              <>
-                <span className="w-16 shrink-0 text-center">시작</span>
-                <span className="w-14 shrink-0 text-center">종료</span>
-              </>
-            )}
+            <span className="w-16 shrink-0 text-center">시작</span>
+            <span className="w-14 shrink-0 text-center">종료</span>
             <span className="w-5 shrink-0"></span>
           </div>
 

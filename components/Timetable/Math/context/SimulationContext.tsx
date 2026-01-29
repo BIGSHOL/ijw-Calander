@@ -295,7 +295,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         })
         .filter(Boolean) as ScenarioStudent[];
 
-      studentList.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+      studentList.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
       result[className] = { studentList, studentIds };
     });

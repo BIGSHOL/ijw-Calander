@@ -78,7 +78,7 @@ export function useStudents(includeWithdrawn = false) {
                 } as UnifiedStudent));
 
                 // Client-side sort by name (먼저 정렬)
-                studentList.sort((a, b) => a.name.localeCompare(b.name));
+                studentList.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
                 // 단일 쿼리로 모든 enrollments 조회 (collectionGroup 최적화)
                 await fetchAllEnrollmentsOptimized(studentList);
@@ -98,7 +98,7 @@ export function useStudents(includeWithdrawn = false) {
                 } as UnifiedStudent));
 
                 // Client-side sort by name (먼저 정렬)
-                studentList.sort((a, b) => a.name.localeCompare(b.name));
+                studentList.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
                 // 단일 쿼리로 모든 enrollments 조회 (collectionGroup 최적화)
                 await fetchAllEnrollmentsOptimized(studentList);
