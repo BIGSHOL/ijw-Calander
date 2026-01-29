@@ -319,8 +319,8 @@ const App: React.FC = () => {
   }, [effectiveProfile, isSimulating, currentStaffMember, staffWithAccounts]);
 
   // Students and Classes for Global Search
-  const { students: globalStudents = [] } = useStudents(false);
-  const { data: allClasses = [] } = useClasses();
+  const { students: globalStudents = [] } = useStudents(false, !!currentUser);
+  const { data: allClasses = [] } = useClasses(!!currentUser);
 
   // 선생님 목록 추출 (학생 enrollments에서 staffId 수집, 과목별 그룹화)
   const teachersBySubject = useMemo(() => {

@@ -61,12 +61,15 @@ async function fetchAllEnrollmentsOptimized(students: UnifiedStudent[]): Promise
  * - onSnapshot 대신 getDocs 사용으로 Firebase 비용 절감
  * - 5분 캐싱으로 불필요한 재요청 방지
  * - includeWithdrawn=true 시 최근 90일 퇴원생만 포함 (성능 최적화)
+ * @param includeWithdrawn - 퇴원생 포함 여부
+ * @param enabled - 쿼리 활성화 여부 (기본값: true)
  */
-export function useStudents(includeWithdrawn = false) {
+export function useStudents(includeWithdrawn = false, enabled = true) {
     const queryClient = useQueryClient();
 
     const { data: students = [], isLoading: loading, error: queryError, refetch } = useQuery<UnifiedStudent[]>({
         queryKey: ['students', includeWithdrawn],
+        enabled,
         queryFn: async () => {
             if (includeWithdrawn) {
                 // 전체 학생 조회 (조건 없이 모든 문서)
