@@ -24,12 +24,18 @@ export interface ClassInfo {
 /**
  * 반(수업) 목록 조회 Hook
  * @param subject 과목 필터 (선택)
+ * @param enabled 쿼리 활성화 여부 (기본값: true)
  *
  * 데이터 소스: classes 컬렉션 (isActive=true) + enrollments를 통한 실시간 학생 수 계산
  */
-export const useClasses = (subject?: SubjectType) => {
+export const useClasses = (subjectOrEnabled?: SubjectType | boolean, enabled = true) => {
+    // 첫 번째 인자가 boolean이면 enabled로 처리, 아니면 subject로 처리
+    const subject = typeof subjectOrEnabled === 'boolean' ? undefined : subjectOrEnabled;
+    const isEnabled = typeof subjectOrEnabled === 'boolean' ? subjectOrEnabled : enabled;
+
     return useQuery<ClassInfo[]>({
         queryKey: ['classes', subject],
+        enabled: isEnabled,
         queryFn: async () => {
             let q;
 
