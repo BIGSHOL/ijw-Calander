@@ -11,7 +11,7 @@ import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewS
 import LevelSettingsModal from './LevelSettingsModal';
 import LevelUpConfirmModal from './LevelUpConfirmModal';
 import StudentModal from './StudentModal';
-import SimulationClassModal from './SimulationClassModal';
+import EditClassModal from '../../ClassManagement/EditClassModal';
 // import SimulationStudentModal from './SimulationStudentModal';  // 비활성화
 import { doc, onSnapshot, setDoc, collection, query, where, writeBatch, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -719,13 +719,34 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             )} */}
 
             {/* 시뮬레이션 모드 수업 편집 모달 */}
-            {editingClassId && isSimulationMode && (
-                <SimulationClassModal
-                    classId={editingClassId}
-                    onClose={() => setEditingClassId(null)}
-                    teachers={teachersData || []}
-                />
-            )}
+            {editingClassId && isSimulationMode && (() => {
+                const scenarioClass = scenarioClasses[editingClassId];
+                if (!scenarioClass) return null;
+
+                // ScenarioClass를 EditClassModal이 기대하는 ClassInfo 형식으로 변환
+                // schedule: { day, periodId }[] -> "월 5" 형식의 문자열 배열로 변환
+                const scheduleStrings = scenarioClass.schedule.map(s => `${s.day} ${s.periodId}`);
+
+                const classInfo = {
+                    id: editingClassId,
+                    className: scenarioClass.className,
+                    teacher: scenarioClass.teacher,
+                    subject: 'english' as const,
+                    schedule: scheduleStrings,
+                    room: scenarioClass.room,
+                    slotTeachers: scenarioClass.slotTeachers,
+                    slotRooms: scenarioClass.slotRooms,
+                };
+
+                return (
+                    <EditClassModal
+                        classInfo={classInfo}
+                        initialSlotTeachers={scenarioClass.slotTeachers}
+                        onClose={() => setEditingClassId(null)}
+                        isSimulationMode={true}
+                    />
+                );
+            })()}
         </div>
     );
 };

@@ -126,7 +126,10 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         // scenarioClasses를 scheduleData 형식으로 변환
         const scheduleData: ScheduleData = {};
 
-        Object.entries(simulation.scenarioClasses).forEach(([classId, cls]) => {
+        // 합반 순서 일관성을 위해 className 순으로 정렬
+        Object.entries(simulation.scenarioClasses)
+            .sort(([, a], [, b]) => (a.className || '').localeCompare(b.className || '', 'ko'))
+            .forEach(([classId, cls]) => {
             if (!cls.schedule || !Array.isArray(cls.schedule)) return;
 
             cls.schedule.forEach((slot: { day: string; periodId: string; room?: string }) => {
@@ -184,7 +187,14 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             (snapshot) => {
                 const scheduleData: ScheduleData = {};
 
-                snapshot.docs.forEach((docSnap) => {
+                // 합반 순서 일관성을 위해 className 순으로 정렬
+                const sortedDocs = [...snapshot.docs].sort((a, b) => {
+                    const aData = a.data();
+                    const bData = b.data();
+                    return (aData.className || '').localeCompare(bData.className || '', 'ko');
+                });
+
+                sortedDocs.forEach((docSnap) => {
                     const cls = docSnap.data();
 
                     // 영어 수업만 처리, 비활성 수업 제외
