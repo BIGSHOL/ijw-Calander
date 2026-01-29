@@ -142,12 +142,20 @@ const StudentList: React.FC<StudentListProps> = ({
                   }`}
               >
                 <div className="flex flex-col gap-0.5">
-                  {/* 1번째 줄: 상태 + 이름 + 학교/학년 */}
+                  {/* 1번째 줄: 상태 + 이름 + 영어이름 + 학교/학년 */}
                   <div className="flex items-center gap-1">
                     {getStatusBadge(student.status)}
                     <span className={`text-xs font-bold ${student.isOldWithdrawn ? 'text-[#fdb813]' : 'text-[#081429]'}`}>
                       {student.name}
                     </span>
+                    {student.englishName && (
+                      <span
+                        className="text-xxs text-gray-500 max-w-[60px] truncate"
+                        title={student.englishName}
+                      >
+                        ({student.englishName})
+                      </span>
+                    )}
                     {student.isOldWithdrawn && (
                       <span className="text-micro bg-[#fdb813]/20 text-[#fdb813] px-1 rounded font-medium">과거</span>
                     )}

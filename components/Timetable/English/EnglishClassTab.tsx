@@ -11,6 +11,7 @@ import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewS
 import LevelSettingsModal from './LevelSettingsModal';
 import LevelUpConfirmModal from './LevelUpConfirmModal';
 import StudentModal from './StudentModal';
+import SimulationClassModal from './SimulationClassModal';
 // import SimulationStudentModal from './SimulationStudentModal';  // 비활성화
 import { doc, onSnapshot, setDoc, collection, query, where, writeBatch, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -90,6 +91,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
+    const [editingClassId, setEditingClassId] = useState<string | null>(null);  // 시뮬레이션 수업 편집
     // 시뮬레이션 모드 학생 배정 비활성화 (학생 이동만 드래그앤드랍으로 처리)
     // const [simStudentModalClass, setSimStudentModalClass] = useState<{ className: string; classId: string } | null>(null);
 
@@ -664,6 +666,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                     }
                                                 } : undefined}
                                                 onRestoreEnrollment={!isSimulationMode ? handleRestoreEnrollment : undefined}
+                                                onEditClass={isSimulationMode ? (classId) => setEditingClassId(classId) : undefined}
                                             />
                                         ))}
                                     </div>
@@ -714,6 +717,15 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     studentMap={studentMap}
                 />
             )} */}
+
+            {/* 시뮬레이션 모드 수업 편집 모달 */}
+            {editingClassId && isSimulationMode && (
+                <SimulationClassModal
+                    classId={editingClassId}
+                    onClose={() => setEditingClassId(null)}
+                    teachers={teachersData || []}
+                />
+            )}
         </div>
     );
 };

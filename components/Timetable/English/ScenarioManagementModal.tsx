@@ -122,6 +122,10 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         try {
             // 새 구조: SimulationContext 사용
             if (simulation?.isScenarioMode) {
+                console.log('💾 시나리오 저장 시작');
+                console.log('📊 저장할 데이터 - scenarioClasses:', Object.keys(simulation.scenarioClasses).length);
+                console.log('📊 저장할 데이터 - scenarioEnrollments:', Object.keys(simulation.scenarioEnrollments).length);
+
                 const scenarioId = await simulation.saveToScenario(
                     newScenarioName.trim(),
                     newScenarioDesc.trim(),
@@ -133,6 +137,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                 const studentCount = Object.values(simulation.scenarioEnrollments)
                     .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
 
+                console.log('✅ 시나리오 저장 완료:', scenarioId);
                 alert(`✅ 시나리오 "${newScenarioName}"가 저장되었습니다.\n(수업: ${classCount}개, 학생: ${studentCount}명)`);
                 setIsSaveDialogOpen(false);
                 setNewScenarioName('');
@@ -196,13 +201,14 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
     // Load scenario to draft (새 구조: Context 사용)
     const handleLoadScenario = async (scenario: ScenarioEntry) => {
+        console.log('🔵 handleLoadScenario 호출됨:', scenario.name);
         if (!canEdit) {
             alert('불러오기 권한이 없습니다.');
             return;
         }
 
-        // 새 구조 시나리오 (version 2) 확인
-        const isNewStructure = (scenario as any).version === 2;
+        // 새 구조 시나리오 (version 2 이상) 확인
+        const isNewStructure = (scenario as any).version >= 2;
 
         // Validate (레거시만)
         if (!isNewStructure) {
@@ -228,7 +234,11 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         try {
             // 새 구조: SimulationContext 사용
             if (isNewStructure && simulation?.isScenarioMode) {
+                console.log('📦 새 구조 시나리오 로드 시작:', scenario.id);
+                console.log('📊 시나리오 통계:', scenario.stats);
                 await simulation.loadFromScenario(scenario.id);
+                console.log('✅ 로드 완료 - 현재 scenarioClasses:', Object.keys(simulation.scenarioClasses).length);
+                console.log('✅ 로드 완료 - 현재 scenarioEnrollments:', Object.keys(simulation.scenarioEnrollments).length);
                 alert(`✅ 시나리오 "${scenario.name}"를 불러왔습니다.`);
                 onLoadScenario?.(scenario.name);
                 setActiveOperation(null);
@@ -237,48 +247,9 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             }
 
             // 레거시 시나리오 처리 (기존 로직 유지)
-            // Step 1: Backup current draft state
-            const preLoadBackupId = `backup_preload_${Date.now()}`;
-            try {
-                const [currentSchedule, currentClass] = await Promise.all([
-                    getDocs(collection(db, CLASS_DRAFT_COLLECTION)),
-                    getDocs(collection(db, CLASS_DRAFT_COLLECTION))
-                ]);
+            // Note: 불러오기 전 백업은 생성하지 않음 (실시간 반영 시에만 백업 생성)
 
-                const currentScheduleData: Record<string, any> = {};
-                const currentStudentData: Record<string, any> = {};
-
-                currentSchedule.docs.forEach(docSnap => {
-                    currentScheduleData[docSnap.id] = docSnap.data();
-                });
-
-                currentClass.docs.forEach(docSnap => {
-                    currentStudentData[docSnap.id] = docSnap.data();
-                });
-
-                // 통계 계산
-                const stats = calculateScenarioStats(currentScheduleData, currentStudentData);
-
-                await setDoc(doc(db, SCENARIO_COLLECTION, preLoadBackupId), {
-                    id: preLoadBackupId,
-                    name: `백업(자동)_${new Date().toLocaleString()}`,
-                    description: `[자동백업] 시나리오 "${scenario.name}" 불러오기 전 자동 생성됨.`,
-                    data: sanitizeForFirestore(currentScheduleData),
-                    studentData: sanitizeForFirestore(currentStudentData),
-                    createdAt: new Date().toISOString(),
-                    createdBy: `${currentUser?.displayName || 'Unknown'} (자동)`,
-                    createdByUid: currentUser?.uid || '',
-                    stats,
-                    isPreRestoreBackup: true,
-                    restoringTo: scenario.id
-                });
-
-                console.log(`✅ Pre-load backup created as Scenario: ${preLoadBackupId}`);
-            } catch (backupError) {
-                console.warn('불러오기 전 백업 생성 실패 (계속 진행):', backupError);
-            }
-
-            // Step 2: Replace draft schedule data
+            // Step 1: Replace draft schedule data
             const currentScheduleSnapshot = await getDocs(collection(db, CLASS_DRAFT_COLLECTION));
             const currentScheduleIds = new Set(currentScheduleSnapshot.docs.map(d => d.id));
             const scenarioData = scenario.data || {};
@@ -331,7 +302,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                 console.log('✅ Class draft replaced');
             }
 
-            alert(`✅ 시나리오 "${scenario.name}"를 불러왔습니다.\n(자동 백업 ID: ${preLoadBackupId})`);
+            alert(`✅ 시나리오 "${scenario.name}"를 불러왔습니다.`);
             onLoadScenario?.(scenario.name);
             onClose();
         } catch (error) {
@@ -372,15 +343,9 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
     // Overwrite existing scenario with current state
     const handleOverwriteScenario = async (scenario: ScenarioEntry) => {
+        console.log('🟠 handleOverwriteScenario 호출됨:', scenario.name);
         if (!canEdit) {
             alert('저장 권한이 없습니다.');
-            return;
-        }
-
-        // 새 구조 시나리오만 덮어쓰기 가능
-        const isNewStructure = (scenario as any).version === 2;
-        if (!isNewStructure) {
-            alert('레거시 시나리오는 덮어쓰기할 수 없습니다. 새로운 시나리오를 생성해주세요.');
             return;
         }
 
@@ -651,21 +616,19 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                             )}
                                                             불러오기
                                                         </button>
-                                                        {(scenario as any).version === 2 && (
-                                                            <button
-                                                                onClick={() => handleOverwriteScenario(scenario)}
-                                                                disabled={activeOperation !== null}
-                                                                className="flex items-center gap-1 px-2 py-1 bg-orange-500 text-white rounded text-xs font-bold hover:bg-orange-600 disabled:opacity-50"
-                                                                title="현재 상태를 이 시나리오에 덮어쓰기"
-                                                            >
-                                                                {activeOperation === `overwrite_${scenario.id}` ? (
-                                                                    <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
-                                                                ) : (
-                                                                    <Upload size={12} />
-                                                                )}
-                                                                덮어쓰기
-                                                            </button>
-                                                        )}
+                                                        <button
+                                                            onClick={() => handleOverwriteScenario(scenario)}
+                                                            disabled={activeOperation !== null}
+                                                            className="flex items-center gap-1 px-2 py-1 bg-orange-500 text-white rounded text-xs font-bold hover:bg-orange-600 disabled:opacity-50"
+                                                            title="현재 상태를 이 시나리오에 덮어쓰기"
+                                                        >
+                                                            {activeOperation === `overwrite_${scenario.id}` ? (
+                                                                <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
+                                                            ) : (
+                                                                <Upload size={12} />
+                                                            )}
+                                                            덮어쓰기
+                                                        </button>
                                                     </>
                                                 )}
                                                 {canModify && (

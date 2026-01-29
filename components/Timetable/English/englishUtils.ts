@@ -296,6 +296,16 @@ export const canNumberLevelDown = (className: string): boolean => {
 };
 
 /**
+ * Check if number level can be incremented (number < 6)
+ */
+export const canNumberLevelUp = (className: string): boolean => {
+    const parsed = parseClassName(className);
+    if (!parsed) return false;
+
+    return parsed.number < 6;
+};
+
+/**
  * Format class name with smart line breaks
  * Splits class names on spaces for better readability in cells
  * Example: "중등E_중2 정규A" → ["중등E_중2", "정규A"]
