@@ -700,7 +700,14 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
         {/* 새로고침 버튼 */}
         <button
-          onClick={() => refetch()}
+          onClick={() => {
+            console.log('🔄 새로고침 버튼 클릭:', {
+              staffId: filterStaffId,
+              subject: selectedSubject,
+              yearMonth: currentYearMonth
+            });
+            refetch();
+          }}
           disabled={isLoadingStudents}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
             isLoadingStudents
