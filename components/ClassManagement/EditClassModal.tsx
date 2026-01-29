@@ -409,10 +409,16 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     try {
       if (isSimulationMode && simulationContext) {
         // 시뮬레이션 모드: SimulationContext에 저장
+        // schedule을 ScenarioClass 형식으로 변환: "월 5" -> { day: "월", periodId: "5" }
+        const scenarioSchedule = schedule.map(slot => {
+          const [day, periodId] = slot.split(' ');
+          return { day, periodId };
+        });
+
         const updates: Partial<ScenarioClass> = {
           className: trimmedClassName,
           teacher: teacher.trim(),
-          schedule,
+          schedule: scenarioSchedule,
           room: room.trim(),
           slotTeachers: filteredSlotTeachers,
           slotRooms: filteredSlotRooms,

@@ -407,13 +407,18 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
   // ============ INTERNAL LOAD FROM LIVE ============
 
   const loadFromLiveInternal = async () => {
-    console.log('🔄 loadFromLiveInternal 시작 - 실시간 데이터 로드');
-    // [async-parallel] Load classes and enrollments in parallel
-    const [classesSnapshot, enrollmentsSnapshot] = await Promise.all([
+    // [async-parallel] Load classes, students, and enrollments in parallel
+    const [classesSnapshot, studentsSnapshot, enrollmentsSnapshot] = await Promise.all([
       getDocs(query(collection(db, 'classes'), where('subject', '==', 'english'))),
+      getDocs(collection(db, 'students')),
       getDocs(query(collectionGroup(db, 'enrollments'), where('subject', '==', 'english')))
     ]);
-    console.log('📊 로드된 enrollments 총 개수:', enrollmentsSnapshot.docs.length);
+
+    // 존재하는 학생 ID Set 생성 (고아 enrollment 필터링용)
+    const existingStudentIds = new Set<string>();
+    studentsSnapshot.docs.forEach(doc => {
+      existingStudentIds.add(doc.id);
+    });
 
     // 1. Process classes
     const scenarioClasses: Record<string, ScenarioClass> = {};
@@ -439,6 +444,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     const scenarioEnrollments: Record<string, Record<string, ScenarioEnrollment>> = {};
     let withdrawnCount = 0;
     let activeCount = 0;
+    let orphanedCount = 0;
 
     enrollmentsSnapshot.docs.forEach(docSnap => {
       const data = docSnap.data();
@@ -446,6 +452,13 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       const studentId = docSnap.ref.parent.parent?.id;
 
       if (!studentId || !className) return;
+
+      // 학생이 삭제되었으면 enrollment 무시 (고아 enrollment 필터링)
+      if (!existingStudentIds.has(studentId)) {
+        orphanedCount++;
+        return;
+      }
+
       // 실시간 모드와 동일하게 모든 학생 포함 (퇴원생, 대기생, 반이동생 포함)
 
       if (data.withdrawalDate) {
@@ -469,22 +482,21 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         return undefined;
       };
 
+      // withdrawalDate와 endDate 둘 다 체크 (실시간 모드와 동일)
+      const withdrawalDate = convertTimestampToDate(data.withdrawalDate);
+      const endDate = convertTimestampToDate(data.endDate);
+
       scenarioEnrollments[className][studentId] = {
         studentId,
         className,
         subject: 'english',
         underline: data.underline,
         enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
-        withdrawalDate: convertTimestampToDate(data.withdrawalDate),
+        withdrawalDate: withdrawalDate || endDate,  // endDate도 퇴원으로 처리
         onHold: data.onHold || false,  // onHold 상태 유지
         attendanceDays: data.attendanceDays || [],
       };
     });
-
-    console.log('✅ 로드 완료 - 활성 enrollments:', activeCount, '/ 퇴원 enrollments:', withdrawnCount);
-    console.log('📊 반별 enrollment 개수:', Object.entries(scenarioEnrollments).map(([className, enrollments]) =>
-      `${className}: ${Object.keys(enrollments).length}명`
-    ).join(', '));
 
     setState(prev => ({
       ...prev,
@@ -503,8 +515,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
   ) => {
     const { isScenarioMode, scenarioEnrollments } = stateRef.current;
     const result: Record<string, { studentList: ScenarioStudent[]; studentIds: string[] }> = {};
-
-    console.log('🔍 getClassStudents 호출 - studentMap 학생 수:', Object.keys(studentMap).length);
 
     if (!isScenarioMode) {
       classNames.forEach(className => {
@@ -546,19 +556,17 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
 
       const studentList: ScenarioStudent[] = studentIds
         .map(id => {
-          let baseStudent = studentMap[id];
+          const baseStudent = studentMap[id];
           const enrollment = enrollments[id];
 
-          // enrollment가 있지만 student 없으면 임시 객체 생성
+          // 실시간 모드와 동일한 필터링 로직 적용
           if (!baseStudent) {
-            console.warn(`⚠️ ${className} - enrollment 있지만 student 없음: studentId=${id}, enrollment:`, enrollment);
-            // 임시 학생 객체 생성 (enrollment 데이터만으로)
-            baseStudent = {
-              id,
-              name: id, // studentId를 이름으로 사용
-              status: 'active',
-              startDate: enrollment?.enrollmentDate,
-            };
+            return null;
+          }
+
+          // Skip if student is not active
+          if (baseStudent.status !== 'active') {
+            return null;
           }
 
           // Priority for enrollment date (useClassStudents와 동일한 로직):
