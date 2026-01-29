@@ -2,12 +2,12 @@
 // 영어/수학 통합뷰 공용 수업 카드
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Eye, EyeOff, Users, MoreVertical, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Clock } from 'lucide-react';
+import { Eye, EyeOff, Users, MoreVertical, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Clock, Settings } from 'lucide-react';
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
 import IntegrationMiniGridRow, { PeriodInfo, ScheduleCell } from './IntegrationMiniGridRow';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import LevelUpConfirmModal from '../English/LevelUpConfirmModal';
-import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, numberLevelDown, classLevelDown, isMinLevel, canNumberLevelDown, EN_PERIODS, INJAE_PERIODS } from '../English/englishUtils';
+import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, numberLevelDown, classLevelDown, isMinLevel, canNumberLevelDown, canNumberLevelUp, EN_PERIODS, INJAE_PERIODS } from '../English/englishUtils';
 import { collection, getDocs, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { CLASS_COLLECTION } from '../English/englishUtils';
@@ -100,7 +100,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            className={`flex items-center justify-between text-[12px] py-0.5 px-1 transition-all duration-150 ${style.className} ${isClickable ? 'cursor-pointer' : ''}`}
+            className={`flex items-center justify-between text-[12px] py-0.5 px-1 transition-all duration-200 animate-in fade-in ${style.className} ${isClickable ? 'cursor-pointer' : ''}`}
             style={hoverStyle}
         >
             <span className={`font-medium truncate flex items-center gap-0.5 ${isHovered && isClickable ? '' : style.textClass}`}>
@@ -147,6 +147,7 @@ interface IntegrationClassCardProps {
     hiddenTeacherList?: string[];
     useInjaePeriod?: boolean;
     onRestoreEnrollment?: (studentId: string, className: string) => void;  // 수업 종료 취소
+    onEditClass?: (classId: string) => void;  // 시뮬레이션 모드 수업 편집
 }
 
 // 주말 실제 시간대 (영어용)
@@ -184,6 +185,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     hiddenTeacherList = [],
     useInjaePeriod = false,
     onRestoreEnrollment,
+    onEditClass,
 }) => {
     const cardWidthClass = isTimeColumnOnly ? 'w-[49px]' : (hideTime ? 'w-[160px]' : 'w-[190px]');
     const isEnglish = subject === 'english';
@@ -569,7 +571,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
                                             </button>
                                         )}
-                                        {isEnglish && englishLevels.length > 0 && (
+                                        {isEnglish && (englishLevels.length > 0 || (isSimulationMode && onEditClass)) && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
                                                 className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -581,6 +583,22 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                         {/* Level Up/Down Dropdown (영어 전용) */}
                                         {isEnglish && isMenuOpen && (
                                             <div className="absolute top-8 right-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                                                {/* 시뮬레이션 모드: 수업 편집 버튼 */}
+                                                {isSimulationMode && onEditClass && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => {
+                                                                setIsMenuOpen(false);
+                                                                onEditClass(classInfo.classId);
+                                                            }}
+                                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-purple-50 text-gray-700"
+                                                        >
+                                                            <Settings size={14} className="text-purple-500" />
+                                                            수업 편집
+                                                        </button>
+                                                        <div className="border-b border-gray-100 my-1" />
+                                                    </>
+                                                )}
                                                 {/* 레벨업 섹션 */}
                                                 <div className="px-2 py-1 text-[10px] text-gray-400 font-medium border-b border-gray-100">레벨업</div>
                                                 <button
@@ -596,9 +614,10 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                             await handleLevelChange(classInfo.name, newName, 'number', 'up');
                                                         }
                                                     }}
-                                                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-indigo-50 text-gray-700"
+                                                    disabled={!canNumberLevelUp(classInfo.name)}
+                                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left ${!canNumberLevelUp(classInfo.name) ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-indigo-50 text-gray-700'}`}
                                                 >
-                                                    <TrendingUp size={14} className="text-indigo-500" />
+                                                    <TrendingUp size={14} className={!canNumberLevelUp(classInfo.name) ? 'text-gray-300' : 'text-indigo-500'} />
                                                     숫자 레벨업
                                                 </button>
                                                 <button
@@ -767,7 +786,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex-1 overflow-y-auto px-2 py-1.5 text-xxs flex flex-col custom-scrollbar">
+                                <div className="flex-1 overflow-y-auto px-2 py-1.5 text-xxs flex flex-col custom-scrollbar transition-opacity duration-300">
                                     {sortedActiveStudents.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center h-full text-gray-300">
                                             <span>학생이 없습니다</span>

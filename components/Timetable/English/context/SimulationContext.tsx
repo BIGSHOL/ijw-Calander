@@ -146,6 +146,9 @@ export interface ScenarioContextValue extends ScenarioState {
 
   // Edit operations
   updateScenarioClass: (classId: string, updates: Partial<ScenarioClass>) => void;
+  updateScenarioClassWithHistory: (classId: string, updates: Partial<ScenarioClass>, actionDescription?: string) => void;
+  addScenarioClass: (classData: Omit<ScenarioClass, 'id'>) => string;
+  deleteScenarioClass: (classId: string) => void;
   renameScenarioClass: (oldClassName: string, newClassName: string) => boolean;
   addStudentToClass: (className: string, studentId: string, enrollmentData?: Partial<ScenarioEnrollment>, studentName?: string) => void;
   removeStudentFromClass: (className: string, studentId: string, studentName?: string) => void;
@@ -438,7 +441,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       const studentId = docSnap.ref.parent.parent?.id;
 
       if (!studentId || !className) return;
-      if (data.withdrawalDate) return;  // Skip withdrawn only (onHold는 포함)
+      // 실시간 모드와 동일하게 모든 학생 포함 (퇴원생, 대기생, 반이동생 포함)
 
       if (!scenarioEnrollments[className]) {
         scenarioEnrollments[className] = {};
@@ -623,6 +626,98 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       historyIndex: newHistory.length - 1,
     };
   };
+
+  // 수업 정보 업데이트 (히스토리 포함) - 스케줄 변경 등
+  const updateScenarioClassWithHistory = useCallback((
+    classId: string,
+    updates: Partial<ScenarioClass>,
+    actionDescription?: string
+  ) => {
+    setState(prev => {
+      const existingClass = prev.scenarioClasses[classId];
+      if (!existingClass) return prev;
+
+      const action = actionDescription || `${existingClass.className} 수업 정보 변경`;
+      const historyEntry = createHistoryEntry(prev, action, existingClass.className);
+      const historyUpdate = updateHistoryInState(prev, historyEntry);
+
+      return {
+        ...prev,
+        ...historyUpdate,
+        scenarioClasses: {
+          ...prev.scenarioClasses,
+          [classId]: {
+            ...existingClass,
+            ...updates,
+          },
+        },
+        isDirty: true,
+      };
+    });
+  }, []);
+
+  // 새 수업 추가 (히스토리 포함)
+  const addScenarioClass = useCallback((classData: Omit<ScenarioClass, 'id'>): string => {
+    const newClassId = `scenario_class_${Date.now()}`;
+
+    setState(prev => {
+      // 같은 이름의 수업이 있는지 확인
+      const existingClass = Object.values(prev.scenarioClasses).find(
+        c => c.className === classData.className
+      );
+      if (existingClass) {
+        alert(`⚠️ '${classData.className}' 수업이 이미 존재합니다.`);
+        return prev;
+      }
+
+      const historyEntry = createHistoryEntry(prev, `${classData.className} 수업 추가`, classData.className);
+      const historyUpdate = updateHistoryInState(prev, historyEntry);
+
+      const newClass: ScenarioClass = {
+        ...classData,
+        id: newClassId,
+      };
+
+      return {
+        ...prev,
+        ...historyUpdate,
+        scenarioClasses: {
+          ...prev.scenarioClasses,
+          [newClassId]: newClass,
+        },
+        isDirty: true,
+      };
+    });
+
+    return newClassId;
+  }, []);
+
+  // 수업 삭제 (히스토리 포함)
+  const deleteScenarioClass = useCallback((classId: string) => {
+    setState(prev => {
+      const classToDelete = prev.scenarioClasses[classId];
+      if (!classToDelete) return prev;
+
+      const historyEntry = createHistoryEntry(prev, `${classToDelete.className} 수업 삭제`, classToDelete.className);
+      const historyUpdate = updateHistoryInState(prev, historyEntry);
+
+      // 수업 삭제
+      const updatedClasses = { ...prev.scenarioClasses };
+      delete updatedClasses[classId];
+
+      // 해당 수업의 enrollment도 삭제
+      const updatedEnrollments = { ...prev.scenarioEnrollments };
+      delete updatedEnrollments[classToDelete.className];
+
+      return {
+        ...prev,
+        ...historyUpdate,
+        scenarioClasses: updatedClasses,
+        scenarioEnrollments: updatedEnrollments,
+        isDirty: true,
+      };
+    });
+  }, []);
 
   const renameScenarioClass = useCallback((oldClassName: string, newClassName: string): boolean => {
     let success = false;
@@ -1328,6 +1423,9 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     getScenarioClass,
     getScenarioClassByName,
     updateScenarioClass,
+    updateScenarioClassWithHistory,
+    addScenarioClass,
+    deleteScenarioClass,
     renameScenarioClass,
     addStudentToClass,
     removeStudentFromClass,
@@ -1355,6 +1453,9 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     getScenarioClass,
     getScenarioClassByName,
     updateScenarioClass,
+    updateScenarioClassWithHistory,
+    addScenarioClass,
+    deleteScenarioClass,
     renameScenarioClass,
     addStudentToClass,
     removeStudentFromClass,
