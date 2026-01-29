@@ -9,17 +9,21 @@ import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/cons
 import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
 import { formatSchoolGrade } from '../../utils/studentUtils';
+import { useSimulationOptional } from '../Timetable/English/context/SimulationContext';
+import { ScenarioClass } from '../Timetable/English/englishUtils';
 
 interface EditClassModalProps {
   classInfo: ClassInfo;
   initialSlotTeachers?: Record<string, string>;
   onClose: (saved?: boolean, newClassName?: string) => void;
+  isSimulationMode?: boolean;
 }
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
 
-const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotTeachers, onClose }) => {
+const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotTeachers, onClose, isSimulationMode = false }) => {
+  const simulationContext = isSimulationMode ? useSimulationOptional() : null;
   const [className, setClassName] = useState(classInfo.className);
   const [teacher, setTeacher] = useState(classInfo.teacher);
   const [room, setRoom] = useState(classInfo.room || '');
@@ -402,42 +406,63 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       }
     });
 
-    const updateData: UpdateClassData = {
-      originalClassName: classInfo.className,
-      originalSubject: classInfo.subject,
-      newClassName: className.trim(),
-      newTeacher: teacher.trim(),
-      newSchedule: schedule,
-      newRoom: room.trim(),
-      slotTeachers: filteredSlotTeachers,
-      slotRooms: filteredSlotRooms,
-      memo: memo.trim(),
-    };
-
     try {
-      // 1. 수업 정보 업데이트
-      await updateClassMutation.mutateAsync(updateData);
-
-      // 2. 학생 추가/제거/등원요일/밑줄/부담임 변경이 있으면 처리
-      const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0;
-      if (hasStudentChanges) {
-        await manageStudentsMutation.mutateAsync({
-          className: className.trim(),
+      if (isSimulationMode && simulationContext) {
+        // 시뮬레이션 모드: SimulationContext에 저장
+        const updates: Partial<ScenarioClass> = {
+          className: trimmedClassName,
           teacher: teacher.trim(),
-          subject: classInfo.subject,
           schedule,
-          addStudentIds: Array.from(studentsToAdd),
-          removeStudentIds: Array.from(studentsToRemove),
-          studentAttendanceDays,
-          studentUnderlines,
-          studentSlotTeachers,
-          studentStartDates,  // 학생별 시작일 전달
-        });
-      }
+          room: room.trim(),
+          slotTeachers: filteredSlotTeachers,
+          slotRooms: filteredSlotRooms,
+        };
 
-      // 수업명이 변경되었으면 새 수업명 전달
-      const classNameChanged = className.trim() !== classInfo.className;
-      onClose(true, classNameChanged ? className.trim() : undefined);
+        simulationContext.updateScenarioClassWithHistory(
+          classInfo.id!,
+          updates,
+          `수업 수정: ${originalClassName}`
+        );
+
+        onClose(true);
+      } else {
+        // 실시간 모드: Firebase에 저장
+        const updateData: UpdateClassData = {
+          originalClassName: classInfo.className,
+          originalSubject: classInfo.subject,
+          newClassName: className.trim(),
+          newTeacher: teacher.trim(),
+          newSchedule: schedule,
+          newRoom: room.trim(),
+          slotTeachers: filteredSlotTeachers,
+          slotRooms: filteredSlotRooms,
+          memo: memo.trim(),
+        };
+
+        // 1. 수업 정보 업데이트
+        await updateClassMutation.mutateAsync(updateData);
+
+        // 2. 학생 추가/제거/등원요일/밑줄/부담임 변경이 있으면 처리
+        const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0;
+        if (hasStudentChanges) {
+          await manageStudentsMutation.mutateAsync({
+            className: className.trim(),
+            teacher: teacher.trim(),
+            subject: classInfo.subject,
+            schedule,
+            addStudentIds: Array.from(studentsToAdd),
+            removeStudentIds: Array.from(studentsToRemove),
+            studentAttendanceDays,
+            studentUnderlines,
+            studentSlotTeachers,
+            studentStartDates,  // 학생별 시작일 전달
+          });
+        }
+
+        // 수업명이 변경되었으면 새 수업명 전달
+        const classNameChanged = className.trim() !== classInfo.className;
+        onClose(true, classNameChanged ? className.trim() : undefined);
+      }
     } catch (err) {
       console.error('[EditClassModal] Error updating class:', err);
       setError('수업 수정에 실패했습니다.');
@@ -491,10 +516,13 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               기본 정보
             </button>
             <button
-              onClick={() => setActiveTab('students')}
+              onClick={() => !isSimulationMode && setActiveTab('students')}
+              disabled={isSimulationMode}
               className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                 activeTab === 'students'
                   ? 'bg-[#fdb813] text-[#081429]'
+                  : isSimulationMode
+                  ? 'bg-white/5 text-white/40 cursor-not-allowed'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >

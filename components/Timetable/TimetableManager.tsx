@@ -127,7 +127,7 @@ const TimetableManager = ({
     const { classes, loading: classesLoading } = useTimetableClasses();
 
     // Hook Integration: Unified Students
-    const { students: globalStudents } = useStudents();
+    const { students: globalStudents } = useStudents(true);  // 퇴원생 포함 (시간표에서 필요)
 
     // Create Student Lookup Map
     const studentMap = useMemo(() => {
