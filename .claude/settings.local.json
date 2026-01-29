@@ -46,6 +46,9 @@
       "Bash(npx vite build:*)",
       "mcp__ide__getDiagnostics",
       "Read(//d/**)"
+    ],
+    "additionalDirectories": [
+      "d:\\ijw-calander\\components\\Timetable\\English"
     ]
   },
   "mcpServers": {
