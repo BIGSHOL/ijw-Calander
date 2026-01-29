@@ -1596,6 +1596,14 @@ const App: React.FC = () => {
 
   const pendingEventIds = pendingEventMoves.map(m => m.original.id);
 
+  // IMPORTANT: 현재 월의 세션 찾기 - 컴포넌트 최상단에서 호출 (React Hooks 규칙 준수)
+  // JSX 내부에서 조건부로 호출하면 안 됨!
+  const currentMonthSession = useMemo(() => {
+    const currentYear = attendanceDate.getFullYear();
+    const currentMonth = attendanceDate.getMonth() + 1;
+    return sessions.find(s => s.year === currentYear && s.month === currentMonth);
+  }, [sessions, attendanceDate]);
+
   // Generate breadcrumb items based on current tab
   const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => {
     if (!appMode) return [];
@@ -1961,12 +1969,7 @@ const App: React.FC = () => {
               }
             };
 
-            // 현재 월의 세션 찾기 (useMemo로 최적화)
-            const currentMonthSession = useMemo(() => {
-              const currentYear = attendanceDate.getFullYear();
-              const currentMonth = attendanceDate.getMonth() + 1;
-              return sessions.find(s => s.year === currentYear && s.month === currentMonth);
-            }, [sessions, attendanceDate]);
+            // 현재 월의 세션은 컴포넌트 최상단(1597번 줄)에서 계산됨
 
             return (
               <TabSubNavigation variant="compact" className="justify-between px-6 border-b border-white/10 z-30">

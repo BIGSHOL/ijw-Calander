@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Lock as LockIcon, LogIn, UserPlus } from 'lucide-react';
 import { auth, db } from '../../firebaseConfig';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { StaffMember } from '../../types';
 
@@ -13,6 +13,7 @@ interface LoginModalProps {
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = true }) => {
     const [isSignUp, setIsSignUp] = useState(false);
+    const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -116,13 +117,32 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
         }
     };
 
-    const toggleMode = () => {
-        setIsSignUp(!isSignUp);
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
         setError('');
-        setPassword('');
-        setConfirmPassword('');
-        setDisplayName('');
-        setJobTitle('');
+
+        if (!email) {
+            setError('이메일을 입력해주세요.');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            await sendPasswordResetEmail(auth, email);
+            setError('비밀번호 재설정 링크가 이메일로 전송되었습니다.');
+        } catch (err: any) {
+            console.error(err);
+            if (err.code === 'auth/user-not-found') {
+                setError('등록되지 않은 이메일입니다.');
+            } else if (err.code === 'auth/invalid-email') {
+                setError('올바른 이메일 주소를 입력해주세요.');
+            } else {
+                setError('오류가 발생했습니다: ' + err.message);
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -143,9 +163,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                     <div className="bg-[#fdb813] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                         {isSignUp ? <UserPlus size={32} className="text-[#081429]" /> : <LockIcon size={32} className="text-[#081429]" />}
                     </div>
-                    <h2 id="login-modal-title" className="text-xl font-bold text-white">{isSignUp ? '관리자/직원 가입' : '로그인'}</h2>
+                    <h2 id="login-modal-title" className="text-xl font-bold text-white">
+                        {isForgotPassword ? '비밀번호 찾기' : (isSignUp ? '관리자/직원 가입' : '로그인')}
+                    </h2>
                     <p className="text-gray-300 text-sm mt-1">
-                        {isSignUp ? '새로운 계정을 생성합니다.' : '일정 관리 시스템에 접속합니다.'}
+                        {isForgotPassword ? '비밀번호 재설정 링크를 보내드립니다.' : (isSignUp ? '새로운 계정을 생성합니다.' : '인재원 Eywa에 로그인합니다.')}
                     </p>
 
                     <button
@@ -159,7 +181,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
 
                 {/* Body */}
                 <div className="p-8">
-                    <form onSubmit={handleAuth} className="space-y-4">
+                    <form onSubmit={isForgotPassword ? handleForgotPassword : handleAuth} className="space-y-4">
                         <div>
                             <label htmlFor={isSignUp ? 'signup-email' : 'login-email'} className="block text-sm font-bold text-gray-700 mb-1">이메일</label>
                             <input
@@ -175,22 +197,24 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor={isSignUp ? 'signup-password' : 'login-password'} className="block text-sm font-bold text-gray-700 mb-1">비밀번호</label>
-                            <input
-                                id={isSignUp ? 'signup-password' : 'login-password'}
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#fdb813] focus:ring-2 focus:ring-[#fdb813]/20 outline-none transition-all font-medium"
-                                placeholder="••••••••"
-                                required
-                                aria-required="true"
-                                autoComplete={isSignUp ? "new-password" : "current-password"}
-                            />
-                        </div>
+                        {!isForgotPassword && (
+                            <div>
+                                <label htmlFor={isSignUp ? 'signup-password' : 'login-password'} className="block text-sm font-bold text-gray-700 mb-1">비밀번호</label>
+                                <input
+                                    id={isSignUp ? 'signup-password' : 'login-password'}
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#fdb813] focus:ring-2 focus:ring-[#fdb813]/20 outline-none transition-all font-medium"
+                                    placeholder="••••••••"
+                                    required
+                                    aria-required="true"
+                                    autoComplete={isSignUp ? "new-password" : "current-password"}
+                                />
+                            </div>
+                        )}
 
-                        {isSignUp && (
+                        {isSignUp && !isForgotPassword && (
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-1">비밀번호 확인</label>
                                 <input
@@ -204,7 +228,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                             </div>
                         )}
 
-                        {isSignUp && (
+                        {isSignUp && !isForgotPassword && (
                             <>
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-1">이름(한글) <span className="text-red-500">*</span></label>
@@ -246,20 +270,58 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
                                 <>
-                                    {isSignUp ? <UserPlus size={20} /> : <LogIn size={20} />}
-                                    {isSignUp ? '가입하기' : '로그인'}
+                                    {isForgotPassword ? <LockIcon size={20} /> : (isSignUp ? <UserPlus size={20} /> : <LogIn size={20} />)}
+                                    {isForgotPassword ? '비밀번호 재설정 링크 보내기' : (isSignUp ? '가입하기' : '로그인')}
                                 </>
                             )}
                         </button>
                     </form>
 
                     <div className="mt-6 text-center">
-                        <button
-                            onClick={toggleMode}
-                            className="text-sm font-bold text-[#fdb813] hover:underline"
-                        >
-                            {isSignUp ? '이미 계정이 있으신가요? 로그인' : '계정이 없으신가요? 회원가입'}
-                        </button>
+                        {!isSignUp && !isForgotPassword ? (
+                            <div className="flex items-center justify-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsSignUp(true);
+                                        setIsForgotPassword(false);
+                                        setError('');
+                                    }}
+                                    className="text-sm font-bold text-[#fdb813] hover:underline"
+                                >
+                                    회원가입
+                                </button>
+                                <span className="text-gray-400">/</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsForgotPassword(true);
+                                        setIsSignUp(false);
+                                        setError('');
+                                        setPassword('');
+                                    }}
+                                    className="text-sm font-bold text-[#fdb813] hover:underline"
+                                >
+                                    비밀번호찾기
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsSignUp(false);
+                                    setIsForgotPassword(false);
+                                    setError('');
+                                    setPassword('');
+                                    setConfirmPassword('');
+                                    setDisplayName('');
+                                    setJobTitle('');
+                                }}
+                                className="text-sm font-bold text-[#fdb813] hover:underline"
+                            >
+                                로그인으로 돌아가기
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
