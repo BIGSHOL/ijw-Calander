@@ -407,11 +407,13 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
   // ============ INTERNAL LOAD FROM LIVE ============
 
   const loadFromLiveInternal = async () => {
+    console.log('🔄 loadFromLiveInternal 시작 - 실시간 데이터 로드');
     // [async-parallel] Load classes and enrollments in parallel
     const [classesSnapshot, enrollmentsSnapshot] = await Promise.all([
       getDocs(query(collection(db, 'classes'), where('subject', '==', 'english'))),
       getDocs(query(collectionGroup(db, 'enrollments'), where('subject', '==', 'english')))
     ]);
+    console.log('📊 로드된 enrollments 총 개수:', enrollmentsSnapshot.docs.length);
 
     // 1. Process classes
     const scenarioClasses: Record<string, ScenarioClass> = {};
@@ -435,6 +437,9 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     // 2. Process enrollments
 
     const scenarioEnrollments: Record<string, Record<string, ScenarioEnrollment>> = {};
+    let withdrawnCount = 0;
+    let activeCount = 0;
+
     enrollmentsSnapshot.docs.forEach(docSnap => {
       const data = docSnap.data();
       const className = data.className as string;
@@ -442,6 +447,12 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
 
       if (!studentId || !className) return;
       // 실시간 모드와 동일하게 모든 학생 포함 (퇴원생, 대기생, 반이동생 포함)
+
+      if (data.withdrawalDate) {
+        withdrawnCount++;
+      } else {
+        activeCount++;
+      }
 
       if (!scenarioEnrollments[className]) {
         scenarioEnrollments[className] = {};
@@ -470,6 +481,11 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       };
     });
 
+    console.log('✅ 로드 완료 - 활성 enrollments:', activeCount, '/ 퇴원 enrollments:', withdrawnCount);
+    console.log('📊 반별 enrollment 개수:', Object.entries(scenarioEnrollments).map(([className, enrollments]) =>
+      `${className}: ${Object.keys(enrollments).length}명`
+    ).join(', '));
+
     setState(prev => ({
       ...prev,
       scenarioClasses,
@@ -487,6 +503,8 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
   ) => {
     const { isScenarioMode, scenarioEnrollments } = stateRef.current;
     const result: Record<string, { studentList: ScenarioStudent[]; studentIds: string[] }> = {};
+
+    console.log('🔍 getClassStudents 호출 - studentMap 학생 수:', Object.keys(studentMap).length);
 
     if (!isScenarioMode) {
       classNames.forEach(className => {
@@ -528,13 +546,23 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
 
       const studentList: ScenarioStudent[] = studentIds
         .map(id => {
-          const baseStudent = studentMap[id];
+          let baseStudent = studentMap[id];
           const enrollment = enrollments[id];
 
-          if (!baseStudent || baseStudent.status !== 'active') return null;
+          // enrollment가 있지만 student 없으면 임시 객체 생성
+          if (!baseStudent) {
+            console.warn(`⚠️ ${className} - enrollment 있지만 student 없음: studentId=${id}, enrollment:`, enrollment);
+            // 임시 학생 객체 생성 (enrollment 데이터만으로)
+            baseStudent = {
+              id,
+              name: id, // studentId를 이름으로 사용
+              status: 'active',
+              startDate: enrollment?.enrollmentDate,
+            };
+          }
 
           // Priority for enrollment date (useClassStudents와 동일한 로직):
-          const studentEnrollmentDate = enrollment?.enrollmentDate || baseStudent.startDate;
+          const studentEnrollmentDate = enrollment?.enrollmentDate || baseStudent?.startDate;
 
           // 미래 시작일 학생 (배정 예정)
           const isScheduled = studentEnrollmentDate && studentEnrollmentDate > today;
@@ -888,9 +916,33 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     const studentCount = Object.values(scenarioEnrollments)
       .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
 
+    // 재원생만 필터링 (퇴원생과 대기생 제외)
+    const activeEnrollmentsOnly: Record<string, Record<string, ScenarioEnrollment>> = {};
+    let filteredOutCount = 0;
+    let activeOnlyCount = 0;
+
+    Object.entries(scenarioEnrollments).forEach(([className, classEnrollments]) => {
+      activeEnrollmentsOnly[className] = {};
+      Object.entries(classEnrollments).forEach(([studentId, enrollment]) => {
+        // 퇴원생(withdrawalDate 있음) 또는 대기생(onHold) 제외
+        if (enrollment.withdrawalDate || enrollment.onHold) {
+          filteredOutCount++;
+          return;
+        }
+        activeEnrollmentsOnly[className][studentId] = enrollment;
+        activeOnlyCount++;
+      });
+      // 빈 반은 제거
+      if (Object.keys(activeEnrollmentsOnly[className]).length === 0) {
+        delete activeEnrollmentsOnly[className];
+      }
+    });
+
+    console.log('💾 저장할 시나리오 - 재원생만:', activeOnlyCount, '/ 제외된 학생(퇴원+대기):', filteredOutCount);
+
     // Firebase에 저장 전 undefined 값 제거
     const sanitizedClasses = sanitizeForFirestore(scenarioClasses);
-    const sanitizedEnrollments = sanitizeForFirestore(scenarioEnrollments);
+    const sanitizedEnrollments = sanitizeForFirestore(activeEnrollmentsOnly);  // 필터링된 데이터 사용
     const sanitizedViewSettings = sanitizeForFirestore(scenarioViewSettings);
 
     const scenarioData = {
@@ -908,7 +960,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       createdByUid: userId,
       stats: {
         classCount,
-        studentCount,
+        studentCount: activeOnlyCount,  // 재원생만 카운트
         timetableDocCount: classCount,  // 호환성
       },
       version: 3,  // 뷰 설정 포함 버전
@@ -994,6 +1046,17 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
     if (scenario.version >= 2) {
       const scenarioClasses = scenario.classes || {};
       const scenarioEnrollments = scenario.enrollments || {};
+
+      // 로드된 시나리오의 퇴원생 체크
+      let withdrawnInLoaded = 0;
+      let totalInLoaded = 0;
+      Object.values(scenarioEnrollments).forEach((classEnrollments: any) => {
+        Object.values(classEnrollments).forEach((enrollment: any) => {
+          totalInLoaded++;
+          if (enrollment.withdrawalDate) withdrawnInLoaded++;
+        });
+      });
+      console.log('📦 불러온 시나리오 - 총 학생:', totalInLoaded, '/ 퇴원생:', withdrawnInLoaded);
 
       // 실시간 데이터에서 삭제된 수업 감지
       const liveClassIds = new Set<string>();
