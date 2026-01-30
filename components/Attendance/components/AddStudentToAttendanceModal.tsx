@@ -3,6 +3,7 @@ import { X, Search, UserPlus, Check, Target, BookOpen } from 'lucide-react';
 import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface StudentInfo {
     id: string;
@@ -38,6 +39,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
     existingStudentIds,
     onStudentAdded,
 }) => {
+    const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,6 +103,12 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
                     updatedAt: new Date().toISOString(),
                 });
             }
+
+            // 캐시 무효화 - 출석부 실시간 반영
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            queryClient.invalidateQueries({ queryKey: ['attendanceStudents'] });
+            queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+            queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
 
             onStudentAdded();
             onClose();

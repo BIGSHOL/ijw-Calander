@@ -51,6 +51,11 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const [studentEndDates, setStudentEndDates] = useState<Record<string, string>>({});  // 학생별 종료 예정일 (YYYY-MM-DD)
   const [endDatePickerOpen, setEndDatePickerOpen] = useState<string | null>(null);  // 종료일 선택기가 열린 학생 ID
 
+  // 반이동 관련 state
+  const [transferMode, setTransferMode] = useState<Record<string, 'add' | 'transfer'>>({});  // 학생별 추가/반이동 선택
+  const [transferFromClass, setTransferFromClass] = useState<Record<string, string>>({});  // 반이동 시 이전 수업명
+  const [showTransferChoice, setShowTransferChoice] = useState<string | null>(null);  // 추가/반이동 선택 UI 표시 중인 학생
+
   const [error, setError] = useState('');
 
   const updateClassMutation = useUpdateClass();
@@ -148,6 +153,30 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     if (!allStudents) return [];
     return allStudents.filter(s => studentsToAdd.has(s.id));
   }, [allStudents, studentsToAdd]);
+
+  // 학생의 같은 과목 기존 수업 찾기 (현재 수업 제외)
+  const findExistingSubjectClass = (studentId: string): string | null => {
+    const student = allStudents?.find(s => s.id === studentId);
+    if (!student || !student.enrollments) return null;
+
+    // enrollments에서 현재 과목과 같고, 현재 수업이 아닌 활성 enrollment 찾기
+    for (const enrollment of student.enrollments) {
+      // 이미 종료된 enrollment는 제외
+      if (enrollment.endDate) continue;
+      // 현재 수업과 같은 수업은 제외
+      if (enrollment.className === classInfo.className) continue;
+      // 같은 과목인지 확인 (enrollment.subject 또는 수업 목록에서 확인)
+      const enrolledClass = existingClasses?.find(c => c.className === enrollment.className);
+      if (enrolledClass && enrolledClass.subject === classInfo.subject) {
+        return enrollment.className;
+      }
+      // enrollment에 subject 필드가 있는 경우
+      if (enrollment.subject === classInfo.subject) {
+        return enrollment.className;
+      }
+    }
+    return null;
+  };
 
   // 담임 강사 자동 매칭 (staff 데이터 로드 후)
   useEffect(() => {
@@ -257,25 +286,67 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     setSlotRooms(prev => ({ ...prev, [key]: roomName }));
   };
 
-  // 학생 추가 토글
+  // 학생 추가 토글 (기존 같은 과목 수업 확인)
   const toggleAddStudent = (studentId: string) => {
     const newSet = new Set(studentsToAdd);
     if (newSet.has(studentId)) {
+      // 추가 취소
       newSet.delete(studentId);
-      // 시작일도 제거
+      // 관련 데이터 제거
       setStudentStartDates(prev => {
         const { [studentId]: _, ...rest } = prev;
         return rest;
       });
+      setTransferMode(prev => {
+        const { [studentId]: _, ...rest } = prev;
+        return rest;
+      });
+      setTransferFromClass(prev => {
+        const { [studentId]: _, ...rest } = prev;
+        return rest;
+      });
+      setShowTransferChoice(null);
     } else {
-      newSet.add(studentId);
-      // 기본 시작일: 오늘
-      setStudentStartDates(prev => ({
-        ...prev,
-        [studentId]: new Date().toISOString().split('T')[0]
-      }));
+      // 같은 과목 기존 수업 확인
+      const existingClass = findExistingSubjectClass(studentId);
+      if (existingClass) {
+        // 기존 수업 있음 → 선택 UI 표시
+        setTransferFromClass(prev => ({ ...prev, [studentId]: existingClass }));
+        setShowTransferChoice(studentId);
+      } else {
+        // 기존 수업 없음 → 바로 추가
+        newSet.add(studentId);
+        setStudentStartDates(prev => ({
+          ...prev,
+          [studentId]: new Date().toISOString().split('T')[0]
+        }));
+      }
     }
     setStudentsToAdd(newSet);
+  };
+
+  // 추가/반이동 선택 처리
+  const handleTransferChoice = (studentId: string, choice: 'add' | 'transfer') => {
+    const today = new Date().toISOString().split('T')[0];
+
+    setStudentsToAdd(prev => new Set([...prev, studentId]));
+    setTransferMode(prev => ({ ...prev, [studentId]: choice }));
+    setStudentStartDates(prev => ({ ...prev, [studentId]: today }));
+
+    if (choice === 'transfer') {
+      // 반이동: 기존 수업 종료일도 오늘로 설정 (handleSave에서 처리)
+    }
+
+    setShowTransferChoice(null);
+  };
+
+  // 선택 취소
+  const cancelTransferChoice = (studentId: string) => {
+    setTransferFromClass(prev => {
+      const { [studentId]: _, ...rest } = prev;
+      return rest;
+    });
+    setShowTransferChoice(null);
   };
 
   // 기존 학생 제거 토글
@@ -294,8 +365,16 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     const newSet = new Set(studentsToAdd);
     newSet.delete(studentId);
     setStudentsToAdd(newSet);
-    // 시작일도 제거
+    // 관련 데이터 제거
     setStudentStartDates(prev => {
+      const { [studentId]: _, ...rest } = prev;
+      return rest;
+    });
+    setTransferMode(prev => {
+      const { [studentId]: _, ...rest } = prev;
+      return rest;
+    });
+    setTransferFromClass(prev => {
       const { [studentId]: _, ...rest } = prev;
       return rest;
     });
@@ -465,6 +544,9 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
             studentSlotTeachers,
             studentStartDates,  // 학생별 시작일 전달
             studentEndDates,    // 학생별 종료 예정일 전달
+            // 반이동 정보 전달
+            transferMode,
+            transferFromClass,
           });
         }
 
@@ -1051,17 +1133,28 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                         const startDate = studentStartDates[student.id] || new Date().toISOString().split('T')[0];
                         const today = new Date().toISOString().split('T')[0];
                         const isScheduled = startDate > today;  // 미래 날짜인 경우 배정 예정
+                        const isTransfer = transferMode[student.id] === 'transfer';
+                        const fromClass = transferFromClass[student.id];
 
                         return (
                           <div
                             key={student.id}
-                            className="px-2.5 py-1.5 text-sm bg-green-50/50 border-b border-green-100 last:border-b-0"
+                            className={`px-2.5 py-1.5 text-sm border-b border-green-100 last:border-b-0 ${
+                              isTransfer ? 'bg-amber-50/50' : 'bg-green-50/50'
+                            }`}
                           >
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-green-800 font-medium">{student.name}</span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`font-medium ${isTransfer ? 'text-amber-800' : 'text-green-800'}`}>
+                                  {student.name}
+                                </span>
                                 <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
-                                {isScheduled && (
+                                {isTransfer && fromClass && (
+                                  <span className="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded font-medium">
+                                    반이동 ← {fromClass}
+                                  </span>
+                                )}
+                                {isScheduled && !isTransfer && (
                                   <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
                                     배정 예정
                                   </span>
@@ -1106,7 +1199,12 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                 }}
                                 className="px-2 py-0.5 text-[10px] border border-gray-200 rounded focus:ring-1 focus:ring-[#fdb813] outline-none"
                               />
-                              {isScheduled && (
+                              {isTransfer && (
+                                <span className="text-[10px] text-amber-700">
+                                  {fromClass} → {className} ({startDate}부터)
+                                </span>
+                              )}
+                              {isScheduled && !isTransfer && (
                                 <span className="text-[10px] text-blue-600">{startDate}부터 시작</span>
                               )}
                             </div>
@@ -1128,6 +1226,53 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                   />
                 </div>
 
+                {/* 추가/반이동 선택 UI */}
+                {showTransferChoice && (
+                  <div className="p-3 bg-amber-50 border-b border-amber-200">
+                    {(() => {
+                      const student = allStudents?.find(s => s.id === showTransferChoice);
+                      const fromClass = transferFromClass[showTransferChoice];
+                      if (!student || !fromClass) return null;
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-amber-800">{student.name}</span>
+                            <span className="text-[10px] text-amber-600">
+                              현재 <span className="font-semibold">{fromClass}</span> 수업 중
+                            </span>
+                          </div>
+                          <div className="text-xs text-amber-700 mb-2">
+                            이 학생은 같은 과목({SUBJECT_LABELS[classInfo.subject as SubjectType]})의 기존 수업이 있습니다.
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleTransferChoice(showTransferChoice, 'add')}
+                              className="flex-1 px-3 py-1.5 text-xs font-medium bg-white border border-amber-300 text-amber-700 rounded hover:bg-amber-100 transition-colors"
+                            >
+                              추가 (기존 유지)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleTransferChoice(showTransferChoice, 'transfer')}
+                              className="flex-1 px-3 py-1.5 text-xs font-medium bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors"
+                            >
+                              반이동 (기존 종료)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => cancelTransferChoice(showTransferChoice)}
+                              className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
                 {/* 추가 가능한 학생 목록 */}
                 <div className="max-h-32 overflow-y-auto">
                   {studentsLoading ? (
@@ -1137,21 +1282,29 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                       {studentSearch ? '검색 결과가 없습니다' : '추가 가능한 학생이 없습니다'}
                     </div>
                   ) : (
-                    availableStudents.map(student => (
-                      <label
-                        key={student.id}
-                        className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer transition-colors hover:bg-gray-50 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={studentsToAdd.has(student.id)}
-                          onChange={() => toggleAddStudent(student.id)}
-                          className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813]"
-                        />
-                        <span className="text-gray-800">{student.name}</span>
-                        <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
-                      </label>
-                    ))
+                    availableStudents.map(student => {
+                      const existingClass = findExistingSubjectClass(student.id);
+                      return (
+                        <label
+                          key={student.id}
+                          className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer transition-colors hover:bg-gray-50 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={studentsToAdd.has(student.id)}
+                            onChange={() => toggleAddStudent(student.id)}
+                            className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813]"
+                          />
+                          <span className="text-gray-800">{student.name}</span>
+                          <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                          {existingClass && (
+                            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+                              {existingClass}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })
                   )}
                 </div>
               </div>

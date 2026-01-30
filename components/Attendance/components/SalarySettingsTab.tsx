@@ -5,6 +5,22 @@ import { Calculator, HelpCircle, Plus, Trash2, Gift, Save, ShieldAlert, User, Us
 import { calculateClassRate, resolveColor } from '../utils';
 import { useAttendanceConfig, useSaveAttendanceConfig, useDeleteAttendanceConfig } from '../../../hooks/useAttendance';
 
+// 12가지 색상 팔레트 (새 항목 추가시 순환 사용)
+const COLOR_PALETTE = [
+    '#FACC15', // Yellow (초등)
+    '#C084FC', // Purple (중등)
+    '#3B82F6', // Blue (고등)
+    '#F97316', // Orange
+    '#22C55E', // Green
+    '#EC4899', // Pink
+    '#14B8A6', // Teal
+    '#EF4444', // Red
+    '#8B5CF6', // Violet
+    '#06B6D4', // Cyan
+    '#F59E0B', // Amber
+    '#84CC16', // Lime
+];
+
 interface Props {
     teachers?: Teacher[];
     canEdit?: boolean;  // 권한 체크: false이면 읽기 전용
@@ -48,7 +64,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
         setHasChanges(true);
     };
 
-    const handleIncentiveChange = (field: keyof SalaryConfig['incentives'], value: number) => {
+    const handleIncentiveChange = (field: keyof SalaryConfig['incentives'], value: number | string) => {
         if (!localConfig) return;
         setLocalConfig(prev => prev ? ({
             ...prev,
@@ -62,10 +78,15 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
 
     const handleAddItem = () => {
         if (!localConfig) return;
+        // 기존 항목에서 사용하지 않은 색상 찾기
+        const usedColors = localConfig.items.map(item => item.color);
+        const availableColor = COLOR_PALETTE.find(c => !usedColors.includes(c))
+            || COLOR_PALETTE[localConfig.items.length % COLOR_PALETTE.length];
+
         const newItem: SalarySettingItem = {
             id: crypto.randomUUID(),
             name: '새 과정',
-            color: '#3B82F6', // Default Blue
+            color: availableColor,
             type: 'fixed',
             fixedRate: 30000,
             baseTuition: 0,
@@ -247,17 +268,55 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                             <Gift size={14} className="text-yellow-600" /> 인센티브 기준 설정
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            {/* 블로그 포스팅 인센티브 - 고정금/비율 선택 */}
                             <div className="bg-yellow-50 p-2.5 rounded-md border border-yellow-100">
-                                <label className="block text-[10px] font-bold text-gray-600 mb-1">블로그 포스팅 수당 (월)</label>
-                                <div className="relative">
-                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">₩</span>
-                                    <input
-                                        type="text"
-                                        value={localConfig.incentives?.blogAmount?.toLocaleString() ?? 0}
-                                        onChange={(e) => handleIncentiveChange('blogAmount', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
-                                        className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
-                                    />
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="block text-[10px] font-bold text-gray-600">블로그 포스팅</label>
+                                    <div className="flex bg-gray-100 p-0.5 rounded">
+                                        <button
+                                            onClick={() => handleIncentiveChange('blogType', 'fixed')}
+                                            className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-all ${
+                                                localConfig.incentives?.blogType === 'fixed' || !localConfig.incentives?.blogType
+                                                    ? 'bg-white text-yellow-700 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            고정금
+                                        </button>
+                                        <button
+                                            onClick={() => handleIncentiveChange('blogType', 'percentage')}
+                                            className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-all ${
+                                                localConfig.incentives?.blogType === 'percentage'
+                                                    ? 'bg-white text-yellow-700 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            비율
+                                        </button>
+                                    </div>
                                 </div>
+                                {localConfig.incentives?.blogType === 'percentage' ? (
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={localConfig.incentives?.blogRate ?? 2}
+                                            onChange={(e) => handleIncentiveChange('blogRate', parseFloat(e.target.value) || 0)}
+                                            className="w-full pl-2 pr-6 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-[10px]">%</span>
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">₩</span>
+                                        <input
+                                            type="text"
+                                            value={localConfig.incentives?.blogAmount?.toLocaleString() ?? 0}
+                                            onChange={(e) => handleIncentiveChange('blogAmount', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
+                                            className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
+                                        />
+                                    </div>
+                                )}
                             </div>
                             <div className="bg-yellow-50 p-2.5 rounded-md border border-yellow-100">
                                 <label className="block text-[10px] font-bold text-gray-600 mb-1">퇴원율 달성 수당 (월)</label>

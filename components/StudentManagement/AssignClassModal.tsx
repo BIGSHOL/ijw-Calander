@@ -122,6 +122,8 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
             queryClient.invalidateQueries({ queryKey: ['classes'] });
             queryClient.invalidateQueries({ queryKey: ['students'] });
             queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 시간표 대기 섹션 실시간 반영
+            queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });     // 수학 시간표 실시간 반영
+            queryClient.invalidateQueries({ queryKey: ['attendanceStudents'] });    // 출석부 실시간 반영
 
             // 성공 처리
             onSuccess();

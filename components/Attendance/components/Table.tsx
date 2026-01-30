@@ -28,6 +28,7 @@ interface Props {
   onMemoChange: (studentId: string, className: string, dateKey: string, memo: string) => void;
   onHomeworkChange?: (studentId: string, className: string, dateKey: string, value: boolean) => void;  // 과제 토글
   onCellColorChange?: (studentId: string, className: string, dateKey: string, color: string | null) => void;  // 셀 배경색 변경
+  onSalarySettingChange?: (studentId: string, className: string, salarySettingId: string | null) => void;  // 급여 설정 수동 변경 (수업별)
   pendingUpdatesByStudent?: Record<string, Record<string, number | null>>;
   pendingMemosByStudent?: Record<string, Record<string, string>>;
   // Grade/Exam integration
@@ -68,6 +69,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
   onMemoChange,
   onHomeworkChange,
   onCellColorChange,
+  onSalarySettingChange,
   pendingUpdatesByStudent,
   pendingMemosByStudent,
   examsByDate,
@@ -248,7 +250,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
       const { isNew, isLeaving } = getStudentStatus(student, currentDate);
 
       rows.push(
-        <tr key={student.id} className="group hover:bg-gray-50 transition-colors">
+        <tr key={`${student.id}_${student.group || 'nogroup'}`} className="group hover:bg-gray-50 transition-colors">
           {/* Fixed Columns */}
           <td className="p-3 sticky left-0 z-10 bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-[#373d41]/50 font-mono text-xs align-middle">
             {idx + 1}
@@ -439,6 +441,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               onEditStudent={onEditStudent}
               onCellClick={handleCellClick}
               onContextMenu={handleContextMenu}
+              onSalarySettingChange={onSalarySettingChange}
               pendingUpdatesByStudent={pendingUpdatesByStudent}
               pendingMemosByStudent={pendingMemosByStudent}
               groupOrder={groupOrder}
@@ -602,7 +605,7 @@ Table.displayName = 'Table';
 
 // Extracted & Memoized Components
 
-const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange, examsByDate, scoresByStudent, onHomeworkChange, collapsedGroups: externalCollapsedGroups, onCollapsedGroupsChange, highlightWeekends = false, holidayDateSet = new Set(), holidayNameMap = new Map() }: {
+const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, onSalarySettingChange, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange, examsByDate, scoresByStudent, onHomeworkChange, collapsedGroups: externalCollapsedGroups, onCollapsedGroupsChange, highlightWeekends = false, holidayDateSet = new Set(), holidayNameMap = new Map() }: {
   students: Student[],
   days: Date[],
   currentDate: Date,
@@ -610,6 +613,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
   onEditStudent: (student: Student) => void,
   onCellClick: (studentId: string, className: string, dateKey: string, currentValue: number | undefined, isValid: boolean) => void,
   onContextMenu: (e: React.MouseEvent, student: Student, dateKey: string, isValid: boolean) => void;
+  onSalarySettingChange?: (studentId: string, className: string, salarySettingId: string | null) => void;
   pendingUpdatesByStudent?: Record<string, Record<string, number | null>>;
   pendingMemosByStudent?: Record<string, Record<string, string>>;
   groupOrder?: string[];
@@ -856,7 +860,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
 
     rows.push(
       <StudentRow
-        key={student.id}
+        key={`${student.id}_${student.group || 'nogroup'}`}
         student={student}
         idx={rankIndex}
         days={days}
@@ -865,6 +869,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
         onEditStudent={onEditStudent}
         onCellClick={onCellClick}
         onContextMenu={onContextMenu}
+        onSalarySettingChange={onSalarySettingChange}
         pendingUpdates={updates}
         pendingMemos={memos}
         examsByDate={examsByDate}
@@ -880,7 +885,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
   return <>{rows}</>;
 });
 
-const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, pendingUpdates, pendingMemos, examsByDate, scoresByStudent, onHomeworkChange, highlightWeekends = false, holidayDateSet = new Set(), holidayNameMap = new Map() }: {
+const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, onSalarySettingChange, pendingUpdates, pendingMemos, examsByDate, scoresByStudent, onHomeworkChange, highlightWeekends = false, holidayDateSet = new Set(), holidayNameMap = new Map() }: {
   student: Student,
   idx: number,
   days: Date[],
@@ -889,6 +894,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
   onEditStudent: (student: Student) => void,
   onCellClick: (studentId: string, className: string, dateKey: string, currentValue: number | undefined, isValid: boolean) => void,
   onContextMenu: (e: React.MouseEvent, student: Student, dateKey: string, isValid: boolean) => void;
+  onSalarySettingChange?: (studentId: string, className: string, salarySettingId: string | null) => void;
   pendingUpdates?: Record<string, number | null>;
   pendingMemos?: Record<string, string>;
   examsByDate?: Map<string, Exam[]>;
@@ -898,7 +904,22 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
   holidayDateSet?: Set<string>;
   holidayNameMap?: Map<string, string>;
 }) => {
+  const [showSalaryDropdown, setShowSalaryDropdown] = useState(false);
+  const salaryDropdownRef = useRef<HTMLDivElement>(null);
   const currentMonthStr = currentDate.toISOString().slice(0, 7);
+
+  // 급여 설정 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (salaryDropdownRef.current && !salaryDropdownRef.current.contains(e.target as Node)) {
+        setShowSalaryDropdown(false);
+      }
+    };
+    if (showSalaryDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSalaryDropdown]);
 
   // Merge attendance with pending updates for stats calculation within the row
   // Note: This only affects the "Attended Units" count displayed in the row.
@@ -908,9 +929,11 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
     .filter(([k, v]) => k.startsWith(currentMonthStr) && (v as number) > 0)
     .reduce((acc, [_, v]) => acc + (v as number), 0);
 
-  // Auto-match salary setting: First try explicit ID, then match from school name
-  const salarySetting = student.salarySettingId
-    ? salaryConfig.items.find(item => item.id === student.salarySettingId)
+  // 급여 설정 우선순위: 수업별 override > 학생 기본값 > 학교 기반 자동 매칭
+  const salarySettingOverrideId = student.salarySettingOverrides?.[student.group || ''];
+  const effectiveSalarySettingId = salarySettingOverrideId || student.salarySettingId;
+  const salarySetting = effectiveSalarySettingId
+    ? salaryConfig.items.find(item => item.id === effectiveSalarySettingId)
     : getSchoolLevelSalarySetting(student.school, salaryConfig.items);
   const levelName = salarySetting ? salarySetting.name : '미설정';
   const badgeStyle = salarySetting ? getBadgeStyle(salarySetting.color) : undefined;
@@ -946,12 +969,59 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
           <div className="text-xxs text-[#373d41] font-medium truncate" title={formatSchoolGrade(student.school, student.grade)}>
             {formatSchoolGrade(student.school, student.grade)}
           </div>
-          <span
-            className={`text-micro px-1.5 py-0.5 rounded-full w-fit font-bold ${badgeClass}`}
-            style={badgeStyle}
-          >
-            {levelName}
-          </span>
+          <div className="relative" ref={salaryDropdownRef}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onSalarySettingChange) setShowSalaryDropdown(!showSalaryDropdown);
+              }}
+              className={`text-micro px-1.5 py-0.5 rounded-full w-fit font-bold ${badgeClass} ${onSalarySettingChange ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+              style={badgeStyle}
+              title={onSalarySettingChange ? '클릭하여 급여 설정 변경' : undefined}
+            >
+              {levelName}
+            </button>
+            {/* 급여 설정 드롭다운 */}
+            {showSalaryDropdown && onSalarySettingChange && (
+              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[120px] z-[200] animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-2 py-1 text-micro font-semibold text-gray-400 border-b border-gray-100">
+                  급여 설정 선택
+                </div>
+                {/* 자동 (미설정) 옵션 */}
+                <button
+                  onClick={() => {
+                    onSalarySettingChange(student.id, student.group || '', null);
+                    setShowSalaryDropdown(false);
+                  }}
+                  className={`w-full text-left px-2 py-1.5 text-micro hover:bg-gray-50 flex items-center gap-1.5 ${!salarySettingOverrideId ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-gray-300"></span>
+                  자동 (학교 기반)
+                </button>
+                {/* 급여 설정 항목들 */}
+                {salaryConfig.items.map((item) => {
+                  const itemBadgeStyle = getBadgeStyle(item.color);
+                  const isSelected = salarySettingOverrideId === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        onSalarySettingChange(student.id, student.group || '', item.id);
+                        setShowSalaryDropdown(false);
+                      }}
+                      className={`w-full text-left px-2 py-1.5 text-micro hover:bg-gray-50 flex items-center gap-1.5 ${isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full border"
+                        style={{ backgroundColor: itemBadgeStyle?.backgroundColor, borderColor: itemBadgeStyle?.borderColor }}
+                      ></span>
+                      {item.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </td>
 
@@ -986,8 +1056,9 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
         const isSunday = day.getDay() === 0;
         const isHoliday = holidayDateSet.has(dateKey);
         const holidayName = holidayNameMap.get(dateKey);
-        const isSpecialDay = isSaturday || isSunday || isHoliday; // 특별한 날 (주말 또는 공휴일)
-        const isScheduled = (student.days || []).includes(dayName);
+        const isWeekend = isSaturday || isSunday;
+        // 공휴일은 수업 없음 - 출석 요일이어도 흰색 처리
+        const isScheduled = !isHoliday && (student.days || []).includes(dayName);
 
         // Validity Check
         const isValid = isDateValidForStudent(dateKey, student);
@@ -1035,31 +1106,20 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
           ? { backgroundColor: customColorConfig.hex, opacity: 0.6 }
           : undefined;
 
-        // 특별한 날의 배경색 클래스 (공휴일: 보라, 일요일: 빨강, 토요일: 파랑)
-        const getSpecialDayBg = (isLighter: boolean = false) => {
-          if (!highlightWeekends || !isSpecialDay) return "bg-white";
-          if (isHoliday) return isLighter ? "bg-purple-100" : "bg-purple-200";
-          if (isSunday) return isLighter ? "bg-red-100" : "bg-red-200";
-          if (isSaturday) return isLighter ? "bg-blue-100" : "bg-blue-200";
-          return "bg-white";
-        };
-
         // Q1 (출석) 스타일 - 커스텀 색상 또는 기본 색상 유지 (출석값과 무관)
         let q1BgClass = "";
         let q1BgStyle: React.CSSProperties | undefined;
         let q1Content: React.ReactNode = null;
 
         if (isValid) {
-          // 배경색: 커스텀 색상 > 등록요일 주황색 > 특별일(주말/공휴일) > 평일 흰색
+          // 배경색: 커스텀 색상 > 등록요일 주황색 > 비등록 흰색 (출석값과 무관하게 유지)
           if (hasCustomColor) {
             q1BgStyle = customBgStyle;
             q1BgClass = "hover:brightness-95";
           } else if (isScheduled) {
             q1BgClass = "bg-orange-200 hover:bg-orange-300";
-          } else if (highlightWeekends && isSpecialDay) {
-            q1BgClass = `${getSpecialDayBg(false)} hover:brightness-95`;
           } else {
-            q1BgClass = "bg-white hover:bg-gray-50";
+            q1BgClass = highlightWeekends && isWeekend ? "bg-gray-300 hover:bg-gray-400" : "bg-white hover:bg-gray-50";
           }
 
           // 출석값 표시 (숫자만, 배경색은 변경하지 않음)
@@ -1079,33 +1139,30 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
             // 커스텀 색상 전체 적용 (연한 버전)
             return { style: isLighter ? customBgLightStyle : customBgStyle, className: "hover:brightness-95" };
           }
-          // 주말/공휴일 색상 처리 (토요일: 파랑, 일요일: 빨강, 공휴일: 보라)
-          if (highlightWeekends && isSpecialDay) {
-            return { className: isScheduled ? "bg-orange-100/50" : getSpecialDayBg(true) };
-          }
-          return { className: isScheduled ? "bg-orange-100/50" : "bg-white" };
+          // 주말/공휴일 회색 처리
+          const defaultBg = highlightWeekends && isWeekend ? "bg-gray-300" : "bg-white";
+          return { className: isScheduled ? "bg-orange-100/50" : defaultBg };
         };
         const otherQuadrantProps = getQuadrantBg(true);
-
-        // 셀 전체 배경색 클래스
-        const cellBgClass = highlightWeekends && isSpecialDay && isValid ? getSpecialDayBg(false) : '';
 
         return (
           <td
             key={dateKey}
             onContextMenu={(e) => onContextMenu(e, student, dateKey, isValid)}
-            className={`p-0 border-r border-b border-gray-200 text-center text-xxs font-medium relative ${cellBaseClass} align-middle ${cellBgClass}`}
+            className={`p-0 border-r border-b border-gray-200 text-center text-xxs font-medium relative ${cellBaseClass} align-middle ${
+              highlightWeekends && isWeekend && isValid ? 'bg-gray-300' : ''
+            }`}
             title={holidayName ? `🎉 ${holidayName}${memo ? ` | 메모: ${memo}` : ''}` : (memo ? `메모: ${memo}` : undefined)}
           >
             {isValid ? (
-              // 4등분 레이아웃 - 주말/공휴일 색상 처리 시 배경색 조정
+              // 4등분 레이아웃 - 주말/공휴일 회색 처리 시 배경색 조정
               <div className={`grid grid-cols-2 grid-rows-2 w-full h-full min-h-[36px] ${
-                highlightWeekends && isSpecialDay ? getSpecialDayBg(false) : ''
+                highlightWeekends && isWeekend ? 'bg-gray-300' : ''
               }`}>
                 {/* Q1: 출석 (좌상단) - 11시 방향 */}
                 <div
                   onClick={() => onCellClick(student.id, student.group || '', dateKey, status, isValid)}
-                  className={`flex items-center justify-center border-r border-b ${highlightWeekends && isSpecialDay ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${q1BgClass}`}
+                  className={`flex items-center justify-center border-r border-b ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${q1BgClass}`}
                   style={q1BgStyle}
                 >
                   {q1Content}
@@ -1113,7 +1170,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
                 {/* Q2: 과제 (우상단) - 1시 방향 */}
                 <div
                   onClick={() => onHomeworkChange?.(student.id, student.group || '', dateKey, !homeworkDone)}
-                  className={`flex items-center justify-center border-b ${highlightWeekends && isSpecialDay ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${
+                  className={`flex items-center justify-center border-b ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${
                     homeworkDone
                       ? 'bg-emerald-100 hover:bg-emerald-200'
                       : otherQuadrantProps.className || 'hover:brightness-95'
@@ -1125,7 +1182,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
                 </div>
                 {/* Q4: 쪽지시험 (좌하단) - 7시 방향 */}
                 <div
-                  className={`flex items-center justify-center border-r ${highlightWeekends && isSpecialDay ? 'border-gray-400' : 'border-gray-300/50'} ${
+                  className={`flex items-center justify-center border-r ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} ${
                     dailyExamScore
                       ? GRADE_COLORS[dailyExamScore.grade || 'F'].bg
                       : otherQuadrantProps.className || ''

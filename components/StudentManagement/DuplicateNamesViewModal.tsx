@@ -14,6 +14,7 @@ import { useStudents } from '../../hooks/useStudents';
 import { UnifiedStudent } from '../../types';
 import { doc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface DuplicateNamesViewModalProps {
   onClose: () => void;
@@ -53,10 +54,19 @@ const extractNameFromId = (id: string): string => {
 };
 
 const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClose, students: externalStudents, onRefresh }) => {
+  const queryClient = useQueryClient();
   const { students: internalStudents, loading: internalLoading, refreshStudents: internalRefresh } = useStudents(!externalStudents); // 외부 데이터 없을 때만 로드
   const students = externalStudents || internalStudents;
   const loading = externalStudents ? false : internalLoading;
-  const refreshStudents = onRefresh || internalRefresh;  // 외부 콜백 우선
+
+  // 삭제/수정 후 캐시 무효화 + 리프레시
+  const invalidateAndRefresh = async () => {
+    // React Query 캐시 완전 무효화
+    await queryClient.invalidateQueries({ queryKey: ['students'] });
+    // 외부 콜백도 호출
+    if (onRefresh) await onRefresh();
+    else await internalRefresh();
+  };
   const [expandedNames, setExpandedNames] = useState<Set<string>>(new Set());
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
@@ -194,7 +204,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
         }
       }
 
-      await refreshStudents();
+      await invalidateAndRefresh();
       alert(`삭제 완료!\n- 삭제됨: ${deleted}개\n- 오류: ${errors}건`);
     } catch (error) {
       console.error('일괄 삭제 실패:', error);
@@ -235,7 +245,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
         }
       }
 
-      await refreshStudents();
+      await invalidateAndRefresh();
       alert(`상태 변경 완료!\n- 변경됨: ${converted}명\n- 오류: ${errors}건`);
     } catch (error) {
       console.error('일괄 변경 실패:', error);
@@ -271,7 +281,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
         }
       }
 
-      await refreshStudents();
+      await invalidateAndRefresh();
       alert(`삭제 완료!\n- 삭제됨: ${deleted}명\n- 오류: ${errors}건`);
     } catch (error) {
       console.error('일괄 삭제 실패:', error);
@@ -321,7 +331,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
         }
       }
 
-      await refreshStudents();
+      await invalidateAndRefresh();
       alert(`이름 수정 완료!\n- 수정됨: ${fixed}명\n- 오류: ${errors}건`);
     } catch (error) {
       console.error('일괄 수정 실패:', error);
@@ -360,7 +370,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
     setDeletingId(studentId);
     try {
       await deleteDoc(doc(db, 'students', studentId));
-      await refreshStudents();
+      await invalidateAndRefresh();
     } catch (error) {
       console.error('학생 삭제 실패:', error);
       alert('학생 삭제 중 오류가 발생했습니다.');
@@ -409,7 +419,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
         }
       }
 
-      await refreshStudents();
+      await invalidateAndRefresh();
       alert(`삭제 완료!\n- 삭제됨: ${deleted}명\n- 오류: ${errors}건`);
     } catch (error) {
       console.error('일괄 삭제 실패:', error);
@@ -430,7 +440,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
       for (const student of group.students) {
         await deleteDoc(doc(db, 'students', student.id));
       }
-      await refreshStudents();
+      await invalidateAndRefresh();
     } catch (error) {
       console.error('그룹 삭제 실패:', error);
       alert('그룹 삭제 중 오류가 발생했습니다.');

@@ -52,6 +52,7 @@ export interface Student {
   memos?: Record<string, string>;
   homework?: Record<string, boolean>;  // 과제 완료 여부 (날짜별)
   cellColors?: Record<string, string>;  // 셀 배경색 (날짜별, 미리 정의된 색상 키 또는 hex)
+  salarySettingOverrides?: Record<string, string>;  // 수업별 급여 설정 override (className -> salarySettingId)
 
   // Legacy/Optional Compatibility
   isHomeroom?: boolean;

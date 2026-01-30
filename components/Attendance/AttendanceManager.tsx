@@ -19,6 +19,7 @@ import {
   useUpdateMemo,
   useUpdateHomework,
   useUpdateCellColor,
+  useUpdateSalarySettingOverride,
   useSaveAttendanceConfig,
   useMonthlySettlement,
   useSaveMonthlySettlement
@@ -205,6 +206,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const updateMemoMutation = useUpdateMemo();
   const updateHomeworkMutation = useUpdateHomework();
   const updateCellColorMutation = useUpdateCellColor();
+  const updateSalarySettingMutation = useUpdateSalarySettingOverride();
   const saveConfigMutation = useSaveAttendanceConfig();
   const createDailyAttendanceMutation = useCreateDailyAttendance();
 
@@ -317,8 +319,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     // 블로그 인센티브: 고정금 또는 비율 가산
     if (currentSettlement.hasBlog) {
       const blogBonus = salaryConfig.incentives.blogType === 'percentage'
-        ? Math.round(stats.totalSalary * (salaryConfig.incentives.blogRate || 0) / 100)
-        : salaryConfig.incentives.blogAmount;
+        ? Math.round(stats.totalSalary * (salaryConfig.incentives.blogRate ?? 2) / 100)
+        : (salaryConfig.incentives.blogAmount ?? 0);
       total += blogBonus;
     }
     if (currentSettlement.hasRetention) total += salaryConfig.incentives.retentionAmount;
@@ -358,15 +360,15 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   }, [allStudents, createDailyAttendanceMutation, userProfile?.uid]);
 
   // Handlers
-  const handleAttendanceChange = useCallback(async (studentId: string, dateKey: string, value: number | null) => {
-    const key = `${studentId}_${dateKey}`;
+  const handleAttendanceChange = useCallback(async (studentId: string, className: string, dateKey: string, value: number | null) => {
+    const key = `${studentId}_${className}_${dateKey}`;
     // 1. Optimistic Update (Immediate Feedback)
     setPendingUpdates(prev => ({ ...prev, [key]: value }));
 
     const yearMonth = dateKey.substring(0, 7);
 
-    // 2. 출석부(attendance_records)에 저장
-    updateAttendanceMutation.mutate({ studentId, yearMonth, dateKey, value }, {
+    // 2. 출석부(attendance_records)에 저장 (className 복합키로 저장)
+    updateAttendanceMutation.mutate({ studentId, className, yearMonth, dateKey, value }, {
       onSuccess: () => {
         // 3. 출결 관리(daily_attendance)에도 동기화
         syncToDailyAttendance(studentId, dateKey, value);
@@ -390,12 +392,12 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     });
   }, [updateAttendanceMutation, syncToDailyAttendance]);
 
-  const handleMemoChange = useCallback(async (studentId: string, dateKey: string, memo: string) => {
-    const key = `${studentId}_${dateKey}`;
+  const handleMemoChange = useCallback(async (studentId: string, className: string, dateKey: string, memo: string) => {
+    const key = `${studentId}_${className}_${dateKey}`;
     setPendingMemos(prev => ({ ...prev, [key]: memo }));
 
     const yearMonth = dateKey.substring(0, 7);
-    updateMemoMutation.mutate({ studentId, yearMonth, dateKey, memo }, {
+    updateMemoMutation.mutate({ studentId, className, yearMonth, dateKey, memo }, {
       onSuccess: () => {
         setPendingMemos(prev => {
           const next = { ...prev };
@@ -414,9 +416,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     });
   }, [updateMemoMutation]);
 
-  const handleHomeworkChange = useCallback(async (studentId: string, dateKey: string, completed: boolean) => {
+  const handleHomeworkChange = useCallback(async (studentId: string, className: string, dateKey: string, completed: boolean) => {
     const yearMonth = dateKey.substring(0, 7);
-    updateHomeworkMutation.mutate({ studentId, yearMonth, dateKey, completed }, {
+    updateHomeworkMutation.mutate({ studentId, className, yearMonth, dateKey, completed }, {
       onSuccess: () => {
         // No need to refetch - optimistic update handled in mutation
       },
@@ -426,9 +428,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     });
   }, [updateHomeworkMutation]);
 
-  const handleCellColorChange = useCallback(async (studentId: string, dateKey: string, color: string | null) => {
+  const handleCellColorChange = useCallback(async (studentId: string, className: string, dateKey: string, color: string | null) => {
     const yearMonth = dateKey.substring(0, 7);
-    updateCellColorMutation.mutate({ studentId, yearMonth, dateKey, color }, {
+    updateCellColorMutation.mutate({ studentId, className, yearMonth, dateKey, color }, {
       onSuccess: () => {
         // No need to refetch - optimistic update handled in mutation
       },
@@ -437,6 +439,20 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       }
     });
   }, [updateCellColorMutation]);
+
+  // 급여 설정 수동 변경 핸들러 (선생님별 + 수업별로 개별 저장)
+  const handleSalarySettingChange = useCallback(async (studentId: string, className: string, salarySettingId: string | null) => {
+    const yearMonth = currentDate.toISOString().slice(0, 7);
+    updateSalarySettingMutation.mutate({ studentId, className, yearMonth, salarySettingId }, {
+      onSuccess: () => {
+        // optimistic update handles cache
+      },
+      onError: () => {
+        secureWarn('Failed to update salary setting', { studentId, className, salarySettingId });
+        alert('급여 설정 저장에 실패했습니다.');
+      }
+    });
+  }, [updateSalarySettingMutation, currentDate]);
 
   const handleEditStudent = useCallback((student: Student) => {
     setEditingStudent(student);
@@ -682,6 +698,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             onMemoChange={handleMemoChange}
             onHomeworkChange={handleHomeworkChange}
             onCellColorChange={handleCellColorChange}
+            onSalarySettingChange={handleSalarySettingChange}
             pendingUpdatesByStudent={pendingUpdatesByStudent}
             pendingMemosByStudent={pendingMemosByStudent}
             examsByDate={examsByDate}

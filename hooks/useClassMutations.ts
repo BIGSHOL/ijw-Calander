@@ -297,6 +297,9 @@ export interface ManageClassStudentsData {
   studentSlotTeachers?: Record<string, boolean>;  // { studentId: true } 학생별 부담임 여부 (수학용)
   studentStartDates?: Record<string, string>;  // { studentId: 'YYYY-MM-DD' } 학생별 시작일 (미지정시 오늘)
   studentEndDates?: Record<string, string>;  // { studentId: 'YYYY-MM-DD' } 학생별 종료 예정일
+  // 반이동 관련
+  transferMode?: Record<string, 'add' | 'transfer'>;  // 학생별 추가/반이동 선택
+  transferFromClass?: Record<string, string>;  // 반이동 시 이전 수업명
 }
 
 export const useManageClassStudents = () => {
@@ -304,7 +307,56 @@ export const useManageClassStudents = () => {
 
   return useMutation({
     mutationFn: async (data: ManageClassStudentsData) => {
-      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {}, studentUnderlines = {}, studentSlotTeachers = {}, studentStartDates = {}, studentEndDates = {} } = data;
+      const {
+        className,
+        teacher,
+        subject,
+        schedule = [],
+        addStudentIds = [],
+        removeStudentIds = [],
+        studentAttendanceDays = {},
+        studentUnderlines = {},
+        studentSlotTeachers = {},
+        studentStartDates = {},
+        studentEndDates = {},
+        transferMode = {},
+        transferFromClass = {}
+      } = data;
+
+      // 반이동 학생 처리: 기존 수업 enrollment에 endDate 설정
+      const transferStudentIds = Object.keys(transferMode).filter(id => transferMode[id] === 'transfer');
+
+      if (transferStudentIds.length > 0) {
+        const transferPromises = transferStudentIds.map(async (studentId) => {
+          const fromClass = transferFromClass[studentId];
+          if (!fromClass) return;
+
+          // 학생의 기존 수업 enrollment 찾아서 endDate 설정
+          const enrollmentsQuery = query(
+            collection(db, COL_STUDENTS, studentId, 'enrollments'),
+            where('subject', '==', subject),
+            where('className', '==', fromClass)
+          );
+          const snapshot = await getDocs(enrollmentsQuery);
+
+          // 기존 수업 종료일 = 새 수업 시작일의 하루 전
+          const startDate = studentStartDates[studentId] || new Date().toISOString().split('T')[0];
+          const startDateObj = new Date(startDate);
+          startDateObj.setDate(startDateObj.getDate() - 1);
+          const endDate = startDateObj.toISOString().split('T')[0];
+
+          const updateOps = snapshot.docs.map(async (docSnap) => {
+            await updateDoc(docSnap.ref, {
+              endDate: endDate,
+              updatedAt: new Date().toISOString(),
+              transferTo: className,  // 어디로 반이동했는지 기록
+            });
+          });
+
+          await Promise.all(updateOps);
+        });
+        await Promise.all(transferPromises);
+      }
 
       // 학생 추가
       if (addStudentIds.length > 0) {
