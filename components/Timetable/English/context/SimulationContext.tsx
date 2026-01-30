@@ -946,8 +946,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       }
     });
 
-    console.log('💾 저장할 시나리오 - 재원생만:', activeOnlyCount, '/ 제외된 학생(퇴원+대기):', filteredOutCount);
-
     // Firebase에 저장 전 undefined 값 제거
     const sanitizedClasses = sanitizeForFirestore(scenarioClasses);
     const sanitizedEnrollments = sanitizeForFirestore(activeEnrollmentsOnly);  // 필터링된 데이터 사용
@@ -1064,7 +1062,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
           if (enrollment.withdrawalDate) withdrawnInLoaded++;
         });
       });
-      console.log('📦 불러온 시나리오 - 총 학생:', totalInLoaded, '/ 퇴원생:', withdrawnInLoaded);
 
       // 실시간 데이터에서 삭제된 수업 감지
       const liveClassIds = new Set<string>();
@@ -1105,9 +1102,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
             delete finalEnrollments[cls.className];
           });
 
-          console.log(`🗑️ 삭제된 수업 ${deletedInLive.length}개를 시나리오에서 제거`);
-        } else {
-          console.log(`📌 삭제된 수업 ${deletedInLive.length}개를 시나리오에 유지`);
         }
       }
 
@@ -1295,7 +1289,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
           }
         });
 
-        console.log(`🔀 [병합 모드] 새 수업 유지, 삭제된 수업 무시`);
       } else {
         // 덮어쓰기 모드: 시나리오 데이터로 모두 대체
         // 실시간에만 있는 수업 삭제
@@ -1312,7 +1305,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
             deleteBatch.delete(doc(db, 'classes', classId));
           });
           await deleteBatch.commit();
-          console.log(`🗑️ [덮어쓰기 모드] 새 수업 ${classesToDelete.length}개 삭제`);
         }
       }
 
@@ -1368,7 +1360,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         if (!newClassName) {
           // 학생이 시나리오에서 제거됨 → 이전 수업 종료
           toEndDate.push({ docRef: liveInfo.docRef });
-          console.log(`📤 [제거] ${studentId}: ${liveInfo.className} → (없음)`);
         } else if (newClassName !== liveInfo.className) {
           // 학생이 다른 수업으로 이동 → 이전 수업 종료 + 새 수업 생성
           toEndDate.push({ docRef: liveInfo.docRef });
@@ -1384,7 +1375,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
               }),
             });
           }
-          console.log(`🔄 [이동] ${studentId}: ${liveInfo.className} → ${newClassName}`);
         } else {
           // 같은 수업 유지 → 변경 없음
           unchanged.push(studentId);
@@ -1406,12 +1396,9 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
                 startDate: today,  // 새 수업 시작일
               }),
             });
-            console.log(`📥 [추가] ${studentId}: (없음) → ${className}`);
           }
         }
       });
-
-      console.log(`📊 Enrollment 변경 요약: 종료=${toEndDate.length}, 생성=${toCreate.length}, 유지=${unchanged.length}`);
 
       // 종료 처리 배치 (endDate 설정)
       for (let i = 0; i < toEndDate.length; i += 500) {
@@ -1424,7 +1411,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
           });
         });
         await batch.commit();
-        console.log(`✅ Updated endDate batch: ${i + chunk.length}/${toEndDate.length}`);
       }
 
       // 생성 배치
@@ -1435,7 +1421,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
           batch.set(item.ref, item.data);
         });
         await batch.commit();
-        console.log(`✅ Created enrollments batch: ${i + chunk.length}/${toCreate.length}`);
       }
 
       // 5. 시나리오 이름을 english_config에 저장 (영구 저장)
@@ -1446,7 +1431,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
           publishedBy: userName,
           publishedByUid: userId,
         }, { merge: true });
-        console.log(`✅ Saved scenario name: ${currentScenarioName}`);
       }
 
       setState(prev => ({

@@ -163,6 +163,14 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
         { id: 'attendance.manage_sessions' as PermissionId, label: '세션 기간 설정', desc: '월별/세션 모드의 세션 기간 설정 (관리자 전용)' },
     ];
 
+    // Student Management Permissions
+    const studentPermissions = [
+        { id: 'students.view' as PermissionId, label: '학생 조회', desc: '학생 목록 및 상세 정보 조회' },
+        { id: 'students.edit' as PermissionId, label: '학생 정보 수정', desc: '학생 기본 정보 및 수강 배정 수정' },
+        { id: 'students.delete' as PermissionId, label: '학생 삭제', desc: '학생 데이터 완전 삭제' },
+        { id: 'students.manage_class_history' as PermissionId, label: '수업 이력 관리', desc: '종료된 수업 이력 삭제' },
+    ];
+
     // --- Render Permission Row ---
     const renderPermissionRow = (perm: { id: PermissionId; label: string; desc: string; disabled?: boolean }) => (
         <tr key={perm.id} className="border-b border-gray-100 hover:bg-gray-50/50">
@@ -284,6 +292,12 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                                     <td colSpan={7} className="px-4 py-2 font-bold text-teal-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-teal-50">📝 출석부 (Attendance)</td>
                                 </tr>
                                 {attendancePermissions.map(renderPermissionRow)}
+
+                                {/* 학생 관리 섹션 */}
+                                <tr className="bg-cyan-50/50">
+                                    <td colSpan={7} className="px-4 py-2 font-bold text-cyan-700 text-xs uppercase tracking-wider sticky left-0 z-10 bg-cyan-50">🎓 학생 관리 (Students)</td>
+                                </tr>
+                                {studentPermissions.map(renderPermissionRow)}
 
                                 {/* 시스템 설정 섹션 */}
                                 <tr className="bg-orange-50/50">

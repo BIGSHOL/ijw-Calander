@@ -296,6 +296,7 @@ export interface ManageClassStudentsData {
   studentUnderlines?: Record<string, boolean>;  // { studentId: true } 학생별 밑줄 강조 (영어용)
   studentSlotTeachers?: Record<string, boolean>;  // { studentId: true } 학생별 부담임 여부 (수학용)
   studentStartDates?: Record<string, string>;  // { studentId: 'YYYY-MM-DD' } 학생별 시작일 (미지정시 오늘)
+  studentEndDates?: Record<string, string>;  // { studentId: 'YYYY-MM-DD' } 학생별 종료 예정일
 }
 
 export const useManageClassStudents = () => {
@@ -303,7 +304,7 @@ export const useManageClassStudents = () => {
 
   return useMutation({
     mutationFn: async (data: ManageClassStudentsData) => {
-      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {}, studentUnderlines = {}, studentSlotTeachers = {}, studentStartDates = {} } = data;
+      const { className, teacher, subject, schedule = [], addStudentIds = [], removeStudentIds = [], studentAttendanceDays = {}, studentUnderlines = {}, studentSlotTeachers = {}, studentStartDates = {}, studentEndDates = {} } = data;
 
       // 학생 추가
       if (addStudentIds.length > 0) {
@@ -438,6 +439,44 @@ export const useManageClassStudents = () => {
           await Promise.all(updateOps);
         });
         await Promise.all(slotTeacherPromises);
+      }
+
+      // 기존 학생 종료 예정일 업데이트 (추가/제거 대상이 아닌 학생들)
+      const endDateStudentIds = Object.keys(studentEndDates).filter(
+        id => !addStudentIds.includes(id) && !removeStudentIds.includes(id)
+      );
+
+      if (endDateStudentIds.length > 0) {
+        const endDatePromises = endDateStudentIds.map(async (studentId) => {
+          const enrollmentsQuery = query(
+            collection(db, COL_STUDENTS, studentId, 'enrollments'),
+            where('subject', '==', subject),
+            where('className', '==', className)
+          );
+          const snapshot = await getDocs(enrollmentsQuery);
+
+          const updateOps = snapshot.docs.map(async (docSnap) => {
+            const endDate = studentEndDates[studentId];
+            if (endDate) {
+              // 종료 예정일 설정
+              await updateDoc(docSnap.ref, {
+                endDate: endDate,
+                withdrawalDate: endDate,  // CoursesTab 호환성
+                updatedAt: new Date().toISOString()
+              });
+            } else {
+              // 종료 예정일 해제 (빈 문자열인 경우)
+              await updateDoc(docSnap.ref, {
+                endDate: null,
+                withdrawalDate: null,
+                updatedAt: new Date().toISOString()
+              });
+            }
+          });
+
+          await Promise.all(updateOps);
+        });
+        await Promise.all(endDatePromises);
       }
     },
     onSuccess: () => {

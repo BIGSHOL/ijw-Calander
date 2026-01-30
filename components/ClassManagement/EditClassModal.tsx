@@ -48,6 +48,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const [studentUnderlines, setStudentUnderlines] = useState<Record<string, boolean>>({});  // 학생별 밑줄 강조 (영어용)
   const [studentSlotTeachers, setStudentSlotTeachers] = useState<Record<string, boolean>>({});  // 학생별 부담임 여부 (수학용)
   const [studentStartDates, setStudentStartDates] = useState<Record<string, string>>({});  // 학생별 시작일 (YYYY-MM-DD)
+  const [studentEndDates, setStudentEndDates] = useState<Record<string, string>>({});  // 학생별 종료 예정일 (YYYY-MM-DD)
+  const [endDatePickerOpen, setEndDatePickerOpen] = useState<string | null>(null);  // 종료일 선택기가 열린 학생 ID
 
   const [error, setError] = useState('');
 
@@ -448,8 +450,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         // 1. 수업 정보 업데이트
         await updateClassMutation.mutateAsync(updateData);
 
-        // 2. 학생 추가/제거/등원요일/밑줄/부담임 변경이 있으면 처리
-        const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0;
+        // 2. 학생 추가/제거/등원요일/밑줄/부담임/종료일 변경이 있으면 처리
+        const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0 || Object.keys(studentEndDates).length > 0;
         if (hasStudentChanges) {
           await manageStudentsMutation.mutateAsync({
             className: className.trim(),
@@ -462,6 +464,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
             studentUnderlines,
             studentSlotTeachers,
             studentStartDates,  // 학생별 시작일 전달
+            studentEndDates,    // 학생별 종료 예정일 전달
           });
         }
 
@@ -827,15 +830,11 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                   <div className="px-2.5 py-1.5 bg-blue-50 text-xs font-semibold text-blue-700 flex items-center justify-between">
                     <span>현재 등록된 학생 ({currentStudents.length - studentsToRemove.size}명)</span>
                     {/* 수학: 등원 요일 설정 안내, 영어: 밑줄 강조 안내 */}
-                    {classInfo.subject === 'math' && classDays.length > 1 && (
-                      <span className="text-[10px] text-blue-500 font-normal">클릭하여 등원 요일 설정 · 체크박스: 부담임</span>
-                    )}
-                    {classInfo.subject === 'math' && classDays.length <= 1 && (
-                      <span className="text-[10px] text-blue-500 font-normal">체크박스: 부담임</span>
-                    )}
-                    {classInfo.subject === 'english' && (
-                      <span className="text-[10px] text-blue-500 font-normal">U: 밑줄 강조</span>
-                    )}
+                    <span className="text-[10px] text-blue-500 font-normal">
+                      {classInfo.subject === 'math' && classDays.length > 1 && '클릭하여 등원 요일 설정 · '}
+                      {classInfo.subject === 'math' && '체크박스: 부담임'}
+                      {classInfo.subject === 'english' && 'U: 밑줄 강조'}
+                    </span>
                   </div>
                   <div className="max-h-40 overflow-y-auto">
                     {currentStudents.length === 0 ? (
@@ -911,25 +910,99 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                     {attendanceDaysText}만
                                   </span>
                                 )}
+                                {/* 종료 예정일 표시 */}
                               </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleRemoveStudent(student.id);
-                                }}
-                                className={`p-1 rounded transition-colors flex-shrink-0 ${isMarkedForRemoval
-                                    ? 'text-blue-600 hover:bg-blue-100'
-                                    : 'text-red-500 hover:bg-red-100'
-                                  }`}
-                                title={isMarkedForRemoval ? '제거 취소' : '수업에서 제외'}
-                              >
-                                {isMarkedForRemoval ? (
-                                  <span className="text-xs font-medium">취소</span>
-                                ) : (
-                                  <UserMinus size={14} />
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {/* 종료 예정 버튼 */}
+                                {!isMarkedForRemoval && (
+                                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                    {studentEndDates[student.id] ? (
+                                      // 종료일이 설정된 경우: 날짜 표시 + 취소 버튼
+                                      <>
+                                        <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-medium">
+                                          ~{studentEndDates[student.id]}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setStudentEndDates(prev => {
+                                              const { [student.id]: _, ...rest } = prev;
+                                              return rest;
+                                            });
+                                          }}
+                                          className="text-[10px] text-gray-400 hover:text-red-500"
+                                          title="종료일 취소"
+                                        >
+                                          ✕
+                                        </button>
+                                      </>
+                                    ) : endDatePickerOpen === student.id ? (
+                                      // 날짜 선택기가 열린 경우
+                                      <div className="flex items-center gap-1">
+                                        <input
+                                          type="date"
+                                          autoFocus
+                                          defaultValue={new Date().toISOString().split('T')[0]}
+                                          onChange={(e) => {
+                                            const value = e.target.value;
+                                            if (value) {
+                                              setStudentEndDates(prev => ({ ...prev, [student.id]: value }));
+                                            }
+                                            setEndDatePickerOpen(null);
+                                          }}
+                                          onBlur={() => {
+                                            setTimeout(() => setEndDatePickerOpen(null), 150);
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              const value = (e.target as HTMLInputElement).value;
+                                              if (value) {
+                                                setStudentEndDates(prev => ({ ...prev, [student.id]: value }));
+                                              }
+                                              setEndDatePickerOpen(null);
+                                            }
+                                          }}
+                                          className="text-[10px] px-1 py-0.5 border border-orange-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-400"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => setEndDatePickerOpen(null)}
+                                          className="text-[10px] text-gray-400 hover:text-gray-600"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      // 종료일이 없는 경우: 종료 예정 버튼
+                                      <button
+                                        type="button"
+                                        onClick={() => setEndDatePickerOpen(student.id)}
+                                        className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded hover:bg-orange-100 hover:text-orange-700 transition-colors"
+                                      >
+                                        종료 예정
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleRemoveStudent(student.id);
+                                  }}
+                                  className={`p-1 rounded transition-colors ${isMarkedForRemoval
+                                      ? 'text-blue-600 hover:bg-blue-100'
+                                      : 'text-red-500 hover:bg-red-100'
+                                    }`}
+                                  title={isMarkedForRemoval ? '제거 취소' : '수업에서 제외'}
+                                >
+                                  {isMarkedForRemoval ? (
+                                    <span className="text-xs font-medium">취소</span>
+                                  ) : (
+                                    <UserMinus size={14} />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                             {/* 수학: 요일 선택 UI (펼쳐졌을 때) */}
                             {isMath && isExpanded && classDays.length > 1 && (

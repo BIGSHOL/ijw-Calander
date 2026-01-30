@@ -26,8 +26,6 @@ import {
 } from './hooks/useAppState';
 
 // 항상 필요한 컴포넌트 (즉시 로딩)
-import EventModal from './components/Calendar/EventModal';
-import SettingsModal from './components/settings/SettingsModal';
 import LoginModal from './components/Auth/LoginModal';
 import CalendarBoard from './components/Calendar/CalendarBoard';
 import Sidebar from './components/Navigation/Sidebar';
@@ -38,6 +36,10 @@ import { TabSubNavigation } from './components/Common/TabSubNavigation';
 import { TabButton } from './components/Common/TabButton';
 import { RoleSimulationProvider, SimulationState, getEffectiveUserProfile } from './hooks/useRoleSimulation';
 import RoleSimulationBanner from './components/Common/RoleSimulationBanner';
+
+// Performance: bundle-dynamic-imports - 모달 컴포넌트 lazy loading (~30-50KB 번들 감소)
+const EventModal = lazy(() => import('./components/Calendar/EventModal'));
+const SettingsModal = lazy(() => import('./components/settings/SettingsModal'));
 
 // 탭별 컴포넌트 (lazy loading - 해당 탭 진입 시 로딩)
 const TimetableManager = lazy(() => import('./components/Timetable/TimetableManager'));
@@ -3144,45 +3146,55 @@ const App: React.FC = () => {
         )
       }
 
-      <EventModal
-        isOpen={isEventModalOpen}
-        onClose={() => { setIsEventModalOpen(false); setInitialTitle(''); setPendingBucketId(null); setTemplateEvent(null); }}
-        onSave={handleSaveEvent}
-        onDelete={handleDeleteEvent}
-        initialDate={selectedDate}
-        initialEndDate={selectedEndDate}
-        initialDepartmentId={selectedDeptId}
-        initialDepartmentIds={selectedDeptIds} // Pass multi-select
-        initialStartTime={initialStartTime}
-        initialEndTime={initialEndTime}
-        initialTitle={initialTitle}
-        existingEvent={editingEvent}
-        departments={visibleDepartments} // ONLY Pass visible
-        // Granular Permission Update: 
-        // We do NOT forcefully set readOnly based on global edit anymore.
-        // EventModal will check `userProfile.departmentPermissions` vs `selectedDeptId`.
-        readOnly={false}
-        users={usersFromStaff}
-        currentUser={effectiveProfile}
-        allEvents={events}
-        onBatchUpdateAttendance={handleBatchUpdateAttendance}
-        onCopy={handleCopyEvent}
-        templateEvent={templateEvent}
-      />
+      {/* Event Modal - Performance: lazy loaded */}
+      {isEventModalOpen && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+          <EventModal
+            isOpen={isEventModalOpen}
+            onClose={() => { setIsEventModalOpen(false); setInitialTitle(''); setPendingBucketId(null); setTemplateEvent(null); }}
+            onSave={handleSaveEvent}
+            onDelete={handleDeleteEvent}
+            initialDate={selectedDate}
+            initialEndDate={selectedEndDate}
+            initialDepartmentId={selectedDeptId}
+            initialDepartmentIds={selectedDeptIds} // Pass multi-select
+            initialStartTime={initialStartTime}
+            initialEndTime={initialEndTime}
+            initialTitle={initialTitle}
+            existingEvent={editingEvent}
+            departments={visibleDepartments} // ONLY Pass visible
+            // Granular Permission Update:
+            // We do NOT forcefully set readOnly based on global edit anymore.
+            // EventModal will check `userProfile.departmentPermissions` vs `selectedDeptId`.
+            readOnly={false}
+            users={usersFromStaff}
+            currentUser={effectiveProfile}
+            allEvents={events}
+            onBatchUpdateAttendance={handleBatchUpdateAttendance}
+            onCopy={handleCopyEvent}
+            templateEvent={templateEvent}
+          />
+        </Suspense>
+      )}
 
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        departments={departments}
-        currentUserProfile={effectiveProfile}
-        users={usersFromStaff}
-        holidays={holidays}
-        events={events}
-        sysCategories={sysCategories}
-        teachers={teachers}
-        showArchived={showArchived}
-        onToggleArchived={() => setShowArchived(!showArchived)}
-      />
+      {/* Settings Modal - Performance: lazy loaded */}
+      {isSettingsOpen && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+          <SettingsModal
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            departments={departments}
+            currentUserProfile={effectiveProfile}
+            users={usersFromStaff}
+            holidays={holidays}
+            events={events}
+            sysCategories={sysCategories}
+            teachers={teachers}
+            showArchived={showArchived}
+            onToggleArchived={() => setShowArchived(!showArchived)}
+          />
+        </Suspense>
+      )}
 
       {/* Timetable Settings Modal - 시간표 탭 상단에서 열림 */}
       {isTimetableSettingsOpen && (

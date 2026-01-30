@@ -122,10 +122,6 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         try {
             // 새 구조: SimulationContext 사용
             if (simulation?.isScenarioMode) {
-                console.log('💾 시나리오 저장 시작');
-                console.log('📊 저장할 데이터 - scenarioClasses:', Object.keys(simulation.scenarioClasses).length);
-                console.log('📊 저장할 데이터 - scenarioEnrollments:', Object.keys(simulation.scenarioEnrollments).length);
-
                 const scenarioId = await simulation.saveToScenario(
                     newScenarioName.trim(),
                     newScenarioDesc.trim(),
@@ -137,7 +133,6 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                 const studentCount = Object.values(simulation.scenarioEnrollments)
                     .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
 
-                console.log('✅ 시나리오 저장 완료:', scenarioId);
                 alert(`✅ 시나리오 "${newScenarioName}"가 저장되었습니다.\n(수업: ${classCount}개, 학생: ${studentCount}명)`);
                 setIsSaveDialogOpen(false);
                 setNewScenarioName('');
@@ -201,7 +196,6 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
     // Load scenario to draft (새 구조: Context 사용)
     const handleLoadScenario = async (scenario: ScenarioEntry) => {
-        console.log('🔵 handleLoadScenario 호출됨:', scenario.name);
         if (!canEdit) {
             alert('불러오기 권한이 없습니다.');
             return;
@@ -234,11 +228,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         try {
             // 새 구조: SimulationContext 사용
             if (isNewStructure && simulation?.isScenarioMode) {
-                console.log('📦 새 구조 시나리오 로드 시작:', scenario.id);
-                console.log('📊 시나리오 통계:', scenario.stats);
                 await simulation.loadFromScenario(scenario.id);
-                console.log('✅ 로드 완료 - 현재 scenarioClasses:', Object.keys(simulation.scenarioClasses).length);
-                console.log('✅ 로드 완료 - 현재 scenarioEnrollments:', Object.keys(simulation.scenarioEnrollments).length);
                 alert(`✅ 시나리오 "${scenario.name}"를 불러왔습니다.`);
                 onLoadScenario?.(scenario.name);
                 setActiveOperation(null);
@@ -311,7 +301,6 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                 scheduleBatch.commit(),
                 classBatch ? classBatch.commit() : Promise.resolve()
             ]);
-            console.log('✅ Schedule and Class draft replaced');
 
             alert(`✅ 시나리오 "${scenario.name}"를 불러왔습니다.`);
             onLoadScenario?.(scenario.name);
@@ -354,7 +343,6 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
     // Overwrite existing scenario with current state
     const handleOverwriteScenario = async (scenario: ScenarioEntry) => {
-        console.log('🟠 handleOverwriteScenario 호출됨:', scenario.name);
         if (!canEdit) {
             alert('저장 권한이 없습니다.');
             return;

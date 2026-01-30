@@ -577,7 +577,6 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
           batch.delete(docSnap.ref);
         });
         await batch.commit();
-        console.log(`✅ Deleted enrollments batch: ${i + chunk.length}/${docsToDelete.length}`);
       }
 
       // 생성 배치
@@ -603,7 +602,6 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
           batch.set(item.ref, item.data);
         });
         await batch.commit();
-        console.log(`✅ Created enrollments batch: ${i + chunk.length}/${enrollmentsToCreate.length}`);
       }
 
       setState(prev => ({

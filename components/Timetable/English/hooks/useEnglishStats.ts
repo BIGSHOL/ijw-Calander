@@ -34,6 +34,7 @@ interface StudentStats {
     new1: number;
     new2: number;
     withdrawn: number;
+    waiting: number;  // 대기생 (onHold)
 }
 
 export const useEnglishStats = (
@@ -61,7 +62,7 @@ export const useEnglishStats = (
         return [...classNames].sort().join(',');
     }, [scheduleData]);
 
-    const { data: studentStats = { active: 0, new1: 0, new2: 0, withdrawn: 0 } } = useQuery<StudentStats>({
+    const { data: studentStats = { active: 0, new1: 0, new2: 0, withdrawn: 0, waiting: 0 } } = useQuery<StudentStats>({
         queryKey: ['englishStats', classNamesKey],
         queryFn: async () => {
             // Get unique class names from scheduleData
@@ -76,7 +77,7 @@ export const useEnglishStats = (
             });
 
             if (classNames.size === 0) {
-                return { active: 0, new1: 0, new2: 0, withdrawn: 0 };
+                return { active: 0, new1: 0, new2: 0, withdrawn: 0, waiting: 0 };
             }
 
             // Query enrollments collection group for english subject
@@ -88,7 +89,7 @@ export const useEnglishStats = (
             const snapshot = await getDocs(enrollmentsQuery);
 
             const now = new Date();
-            let active = 0, new1 = 0, new2 = 0, withdrawn = 0;
+            let active = 0, new1 = 0, new2 = 0, withdrawn = 0, waiting = 0;
 
             // Track unique students to avoid double-counting (a student can have multiple enrollments)
             const countedStudents = new Set<string>();
@@ -126,8 +127,11 @@ export const useEnglishStats = (
                     return;
                 }
 
-                // On hold check
-                if (data.onHold) return;
+                // On hold check (대기생)
+                if (data.onHold) {
+                    waiting++;
+                    return;
+                }
 
                 // Check student status from studentMap (must be 'active')
                 if (baseStudent.status !== 'active') return;
@@ -148,7 +152,7 @@ export const useEnglishStats = (
                 }
             });
 
-            return { active, new1, new2, withdrawn };
+            return { active, new1, new2, withdrawn, waiting };
         },
         enabled: classNamesKey.length > 0,
         staleTime: 1000 * 60 * 5,     // 5분 캐싱

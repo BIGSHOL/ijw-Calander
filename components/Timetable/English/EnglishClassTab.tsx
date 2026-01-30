@@ -353,6 +353,11 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                         <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xxs font-bold">
                             신입2 {studentStats.new2}
                         </span>
+                        {studentStats.waiting > 0 && (
+                            <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xxs font-bold">
+                                대기 {studentStats.waiting}
+                            </span>
+                        )}
                         {studentStats.withdrawn > 0 && (
                             <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xxs font-bold">
                                 퇴원 {studentStats.withdrawn}

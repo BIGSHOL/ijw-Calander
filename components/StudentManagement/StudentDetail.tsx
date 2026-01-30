@@ -141,7 +141,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
       {/* 탭 컨텐츠 - 각 탭별 권한 체크 */}
       <div className="flex-1 overflow-y-auto p-3">
         {activeTab === 'basic' && <BasicInfoTab student={student} readOnly={readOnly || !canEditStudent} />}
-        {activeTab === 'courses' && <CoursesTab student={student} compact={compact} readOnly={readOnly || !canManageEnrollment} />}
+        {activeTab === 'courses' && <CoursesTab student={student} compact={compact} readOnly={readOnly || !canManageEnrollment} currentUser={currentUser} />}
         {activeTab === 'grades' && <GradesTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
         {activeTab === 'attendance' && <AttendanceTab student={student} readOnly={readOnly || !canEditStudent} />}
         {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
