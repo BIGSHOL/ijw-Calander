@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TAB_GROUPS, TAB_META, AppTab } from '../../types';
-import { ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, X, ExternalLink } from 'lucide-react';
 
 interface SidebarProps {
   currentTab: AppTab | null;
@@ -161,6 +161,25 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </button>
                   );
                 })}
+
+                {/* 수업 그룹 하단에 수업보고서 외부 링크 추가 */}
+                {group.id === 'class' && (
+                  <a
+                    href="https://edutrix-delta.vercel.app/auth/login"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${isCollapsed ? 'justify-center' : ''}`}
+                    title={isCollapsed ? '수업보고서' : undefined}
+                  >
+                    <span className="text-sm flex-shrink-0" aria-hidden="true">📋</span>
+                    {!isCollapsed && (
+                      <span className="flex items-center gap-1">
+                        수업보고서
+                        <ExternalLink size={10} className="text-gray-400" />
+                      </span>
+                    )}
+                  </a>
+                )}
               </div>
             </div>
           );
