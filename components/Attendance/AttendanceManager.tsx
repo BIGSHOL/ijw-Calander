@@ -25,6 +25,7 @@ import {
 } from '../../hooks/useAttendance';
 import { useExamsByDateMap, useScoresByExams } from '../../hooks/useExamsByDate';
 import { useCreateDailyAttendance } from '../../hooks/useDailyAttendance';
+import { useVisibleAttendanceStudents } from '../../hooks/useVisibleAttendanceStudents';
 import { UserProfile, Teacher, UnifiedStudent } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { mapAttendanceValueToStatus } from '../../utils/attendanceSync';
@@ -286,70 +287,10 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   };
 
   // MOVED: All useMemo hooks must be before early return (React Hooks rules)
-  // 학생 ID 목록을 안정적인 의존성으로 생성 (무한 렌더링 방지)
-  const studentIdsKey = useMemo(() =>
-    allStudents.map(s => s.id).sort().join(','),
-    [allStudents]
-  );
-
-  // Filter visible students for current month
-  const visibleStudents = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const monthFirstDay = new Date(year, month, 1).toISOString().slice(0, 10);
-    const monthLastDay = new Date(year, month + 1, 0).toISOString().slice(0, 10);
-
-    const filtered = allStudents.filter(s => {
-      if (s.status === 'withdrawn') return false;
-      if (s.startDate && typeof s.startDate === 'string' && s.startDate > monthLastDay) return false;
-      if (s.endDate && typeof s.endDate === 'string' && s.endDate < monthFirstDay) return false;
-      return true;
-    });
-
-    // 학생을 클래스별로 확장 (한 학생이 여러 클래스에 있으면 여러 행으로 표시)
-    const expandedStudents: Student[] = [];
-    filtered.forEach(student => {
-      const mainClasses = student.mainClasses || [];
-      const slotClasses = student.slotClasses || [];
-      const allClasses = [...mainClasses, ...slotClasses];
-
-      if (allClasses.length === 0) {
-        // 클래스가 없는 학생은 그대로 추가
-        expandedStudents.push(student);
-      } else {
-        // 각 클래스별로 별도의 행 생성
-        allClasses.forEach(className => {
-          expandedStudents.push({
-            ...student,
-            group: className, // 단일 클래스명으로 설정
-            mainClasses: mainClasses.includes(className) ? [className] : [],
-            slotClasses: slotClasses.includes(className) ? [className] : [],
-          });
-        });
-      }
-    });
-
-    return expandedStudents.sort((a, b) => {
-      if (!a.group && b.group) return 1;
-      if (a.group && !b.group) return -1;
-
-      const aGroupIdx = groupOrder.indexOf(a.group || '');
-      const bGroupIdx = groupOrder.indexOf(b.group || '');
-
-      if (aGroupIdx !== -1 && bGroupIdx !== -1) {
-        if (aGroupIdx !== bGroupIdx) return aGroupIdx - bGroupIdx;
-      } else if (aGroupIdx !== -1 && bGroupIdx === -1) {
-        return -1;
-      } else if (aGroupIdx === -1 && bGroupIdx !== -1) {
-        return 1;
-      } else {
-        const groupCompare = (a.group || '').localeCompare(b.group || '');
-        if (groupCompare !== 0) return groupCompare;
-      }
-
-      return (a.name || '').localeCompare(b.name || '', 'ko');
-    });
-  }, [studentIdsKey, currentDate, groupOrder]);
+  // OPTIMIZATION: Vercel React Best Practices (rerender-derived-state)
+  // - 90+ 줄 useMemo → useVisibleAttendanceStudents 커스텀 훅으로 분리
+  // - 독립적으로 메모이제이션되어 불필요한 재계산 방지
+  const visibleStudents = useVisibleAttendanceStudents(allStudents, currentDate, groupOrder);
 
   const pendingUpdatesByStudent = useMemo(() => groupUpdates(pendingUpdates), [pendingUpdates]);
   const pendingMemosByStudent = useMemo(() => groupUpdates(pendingMemos), [pendingMemos]);
@@ -373,33 +314,36 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     return total;
   }, [stats.totalSalary, currentSettlement, salaryConfig.incentives]);
 
-  // DEBUG: Log for simulation mode debugging
-  console.log('🔍 AttendanceManager Debug:', {
-    userProfile: !!userProfile,
-    userRole: userProfile?.role,
-    staffId: userProfile?.staffId,
-    currentStaffId,
-    filterStaffId,
-    canManageCurrentSubject,
-    isLoadingStudents,
-    isLoadingConfig,
-    availableTeachersCount: availableTeachers.length,
-    allStudentsCount: allStudents.length,
-    visibleStudentsCount: visibleStudents.length
-  });
+  // MOVED: All event handlers (useCallback) must be before early return (React Hooks rules)
+  /**
+   * 출석부 데이터를 출결 관리 시스템에 동기화
+   * 출석부(attendance_records) → 출결 관리(daily_attendance)
+   */
+  const syncToDailyAttendance = useCallback((studentId: string, dateKey: string, value: number | null) => {
+    const student = allStudents.find(s => s.id === studentId);
+    if (!student) return;
 
-  // IMPORTANT: Loading check moved here - AFTER all hooks to comply with React Hooks rules
-  // Hooks must always be called in the same order, so early returns must come AFTER all hooks
-  if (isLoadingStudents || isLoadingConfig) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">출석부를 불러오는 중...</p>
-        </div>
-      </div>
-    );
-  }
+    const enrollments = (student as any).enrollments || [];
+    if (enrollments.length === 0) return;
+
+    const primaryEnrollment = enrollments[0];
+    if (!primaryEnrollment.classId || !primaryEnrollment.className) return;
+
+    if (value === null) return;
+
+    const status = mapAttendanceValueToStatus(value);
+
+    createDailyAttendanceMutation.mutate({
+      date: dateKey,
+      studentId: student.id,
+      studentName: student.name,
+      classId: primaryEnrollment.classId,
+      className: primaryEnrollment.className,
+      status: status,
+      createdBy: userProfile?.uid || 'system',
+      note: '',
+    });
+  }, [allStudents, createDailyAttendanceMutation, userProfile?.uid]);
 
   // Handlers
   const handleAttendanceChange = useCallback(async (studentId: string, dateKey: string, value: number | null) => {
@@ -433,82 +377,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       }
     });
   }, [updateAttendanceMutation, syncToDailyAttendance]);
-
-  /**
-   * 출석부 데이터를 출결 관리 시스템에 동기화
-   * 출석부(attendance_records) → 출결 관리(daily_attendance)
-   */
-  const syncToDailyAttendance = (studentId: string, dateKey: string, value: number | null) => {
-    const student = allStudents.find(s => s.id === studentId);
-    if (!student) {
-      console.warn(`[Sync] Student not found: ${studentId}`);
-      return;
-    }
-
-    // 학생의 수업 정보 가져오기 (enrollments에서)
-    const enrollments = (student as any).enrollments || [];
-    if (enrollments.length === 0) {
-      secureWarn('[Sync] No enrollments found for student', {
-        studentId: student.id,
-        studentName: student.name
-      });
-      return;
-    }
-
-    // 첫 번째 enrollment 사용 (주 수업)
-    const primaryEnrollment = enrollments[0];
-
-    // classId가 없으면 동기화 스킵 ('unknown' 저장 방지)
-    if (!primaryEnrollment.classId || !primaryEnrollment.className) {
-      secureWarn('[Sync] Invalid enrollment data for student', {
-        studentId: student.id,
-        studentName: student.name
-      });
-      return;
-    }
-
-    if (value === null) {
-      // TODO: 출결 관리에서도 기록 제거 (useDeleteDailyAttendance 훅 필요)
-      secureLog('[Sync] Attendance deleted - daily_attendance deletion not implemented yet', {
-        studentId: student.id,
-        studentName: student.name,
-        dateKey
-      });
-      return;
-    }
-
-    // 숫자 → 문자열 출석 상태 변환
-    const status = mapAttendanceValueToStatus(value);
-
-    // daily_attendance에 저장 (에러 핸들링 추가)
-    createDailyAttendanceMutation.mutate({
-      date: dateKey,
-      studentId: student.id,
-      studentName: student.name,
-      classId: primaryEnrollment.classId,
-      className: primaryEnrollment.className,
-      status: status,
-      createdBy: userProfile?.uid || 'system',
-      note: '', // 메모는 별도 처리
-    }, {
-      onError: (error) => {
-        console.error('[Sync] Failed to sync to daily_attendance:', error);
-        // 사용자에게 알림 (선택적 - 메인 저장은 성공했으므로 경고 수준)
-        secureWarn('출결 관리 동기화 실패', {
-          studentId: student.id,
-          studentName: student.name,
-          dateKey
-        });
-      },
-      onSuccess: () => {
-        secureLog('[Sync] Successfully synced to daily_attendance', {
-          studentId: student.id,
-          studentName: student.name,
-          dateKey
-        });
-      }
-    });
-  };
 
   const handleMemoChange = useCallback(async (studentId: string, dateKey: string, memo: string) => {
     const key = `${studentId}_${dateKey}`;
@@ -558,6 +426,24 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     });
   }, [updateCellColorMutation]);
 
+  const handleEditStudent = useCallback((student: Student) => {
+    setEditingStudent(student);
+    setStudentModalOpen(true);
+  }, []);
+
+  // IMPORTANT: Loading check moved here - AFTER all hooks to comply with React Hooks rules
+  // Hooks must always be called in the same order, so early returns must come AFTER all hooks
+  if (isLoadingStudents || isLoadingConfig) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">출석부를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   // 직접 이미지 다운로드 (모달 없이)
   // isExporting state는 컴포넌트 최상단(275번 줄)으로 이동됨
   const handleDirectExport = async () => {
@@ -601,11 +487,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       setIsExporting(false);
     }
   };
-
-  const handleEditStudent = useCallback((student: Student) => {
-    setEditingStudent(student);
-    setStudentModalOpen(true);
-  }, []);
 
   // Month navigation is now handled in App.tsx header
 
@@ -821,6 +702,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             student={unifiedStudent}
             onClose={() => { setStudentModalOpen(false); setEditingStudent(null); }}
             readOnly={!hasPermission('attendance.edit_student_info')}
+            currentUser={userProfile}
           />
         ) : null;
       })()}

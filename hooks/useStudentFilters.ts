@@ -1,0 +1,329 @@
+/**
+ * useStudentFilters - Student filtering and sorting logic
+ *
+ * PURPOSE: Extract complex filtering logic from StudentManagementTab
+ *
+ * BENEFITS:
+ * - 250+ lines of useMemo split into testable functions
+ * - Each filter independently memoized for optimal performance
+ * - Easy to debug and maintain
+ * - Reusable across components
+ *
+ * PERFORMANCE: Vercel React Best Practices (rerender-derived-state)
+ * - Original: 1 giant useMemo (250+ lines)
+ * - Optimized: 7 independent memoized steps
+ * - Result: Only changed filters re-run, not all 250 lines
+ */
+
+import { useMemo } from 'react';
+import { UnifiedStudent } from '../types';
+import { StudentFilters } from './useAppState';
+
+type SearchField = 'all' | 'name' | 'englishName' | 'phone' | 'school' | 'address' | 'parent' | 'memo' | 'email' | 'etc';
+
+/**
+ * Filter students by search query (완전한 구현 - 모든 필드 지원)
+ */
+const filterBySearch = (
+    students: UnifiedStudent[],
+    searchQuery: string,
+    searchField: SearchField,
+    oldWithdrawnStudents: UnifiedStudent[]
+): UnifiedStudent[] => {
+    if (!searchQuery) return students;
+
+    const query = searchQuery.toLowerCase();
+
+    const filtered = students.filter((s) => {
+        switch (searchField) {
+            case 'all':
+                return (
+                    // 기본 정보
+                    (s.name || '').toLowerCase().includes(query) ||
+                    s.englishName?.toLowerCase().includes(query) ||
+                    s.school?.toLowerCase().includes(query) ||
+                    s.grade?.toLowerCase().includes(query) ||
+                    s.nickname?.toLowerCase().includes(query) ||
+
+                    // 연락처 정보
+                    s.studentPhone?.includes(query) ||
+                    s.parentPhone?.includes(query) ||
+                    s.homePhone?.includes(query) ||
+                    s.parentName?.toLowerCase().includes(query) ||
+                    s.parentRelation?.toLowerCase().includes(query) ||
+                    s.otherPhone?.includes(query) ||
+                    s.otherPhoneRelation?.toLowerCase().includes(query) ||
+
+                    // 주소 정보
+                    s.zipCode?.includes(query) ||
+                    s.address?.toLowerCase().includes(query) ||
+                    s.addressDetail?.toLowerCase().includes(query) ||
+
+                    // 추가 정보
+                    s.birthDate?.includes(query) ||
+                    s.studentEmail?.toLowerCase().includes(query) ||
+                    s.emailDomain?.toLowerCase().includes(query) ||
+                    s.enrollmentReason?.toLowerCase().includes(query) ||
+
+                    // 수납 정보
+                    s.cashReceiptNumber?.includes(query) ||
+
+                    // 기타 정보
+                    s.graduationYear?.includes(query) ||
+                    s.customField1?.toLowerCase().includes(query) ||
+                    s.customField2?.toLowerCase().includes(query) ||
+                    s.memo?.toLowerCase().includes(query) ||
+
+                    // 퇴원 정보
+                    s.withdrawalReason?.toLowerCase().includes(query) ||
+                    s.withdrawalMemo?.toLowerCase().includes(query)
+                );
+
+            case 'name':
+                return (
+                    (s.name || '').toLowerCase().includes(query) ||
+                    s.englishName?.toLowerCase().includes(query) ||
+                    s.nickname?.toLowerCase().includes(query)
+                );
+
+            case 'phone':
+                return (
+                    s.studentPhone?.includes(query) ||
+                    s.parentPhone?.includes(query) ||
+                    s.homePhone?.includes(query) ||
+                    s.otherPhone?.includes(query)
+                );
+
+            case 'school':
+                return s.school?.toLowerCase().includes(query);
+
+            case 'address':
+                return (
+                    s.zipCode?.includes(query) ||
+                    s.address?.toLowerCase().includes(query) ||
+                    s.addressDetail?.toLowerCase().includes(query)
+                );
+
+            case 'parent':
+                return (
+                    s.parentName?.toLowerCase().includes(query) ||
+                    s.parentRelation?.toLowerCase().includes(query) ||
+                    s.otherPhoneRelation?.toLowerCase().includes(query)
+                );
+
+            case 'memo':
+                return s.memo?.toLowerCase().includes(query);
+
+            case 'email':
+                return (
+                    s.studentEmail?.toLowerCase().includes(query) ||
+                    s.emailDomain?.toLowerCase().includes(query)
+                );
+
+            case 'etc':
+                return (
+                    s.birthDate?.includes(query) ||
+                    s.grade?.toLowerCase().includes(query) ||
+                    s.customField1?.toLowerCase().includes(query) ||
+                    s.customField2?.toLowerCase().includes(query) ||
+                    s.withdrawalReason?.toLowerCase().includes(query) ||
+                    s.withdrawalMemo?.toLowerCase().includes(query) ||
+                    s.cashReceiptNumber?.includes(query) ||
+                    s.graduationYear?.includes(query) ||
+                    s.enrollmentReason?.toLowerCase().includes(query)
+                );
+
+            default:
+                return false;
+        }
+    });
+
+    // 과거 퇴원생 추가 (중복 제거)
+    const existingIds = new Set(filtered.map(s => s.id));
+    const oldFiltered = oldWithdrawnStudents.filter(s => !existingIds.has(s.id));
+    return [...filtered, ...oldFiltered];
+};
+
+/**
+ * Filter students by grade (완전한 구현 - 그룹 필터 지원)
+ */
+const filterByGrade = (students: UnifiedStudent[], grade: string): UnifiedStudent[] => {
+    if (grade === 'all') return students;
+
+    if (grade === 'elementary') {
+        return students.filter((s) => s.grade?.startsWith('초'));
+    } else if (grade === 'middle') {
+        return students.filter((s) => s.grade?.startsWith('중'));
+    } else if (grade === 'high') {
+        return students.filter((s) => s.grade?.startsWith('고'));
+    } else if (grade === 'other') {
+        return students.filter((s) => {
+            const g = s.grade;
+            if (!g) return true;
+            return !g.startsWith('초') && !g.startsWith('중') && !g.startsWith('고');
+        });
+    }
+
+    return students.filter((s) => s.grade === grade);
+};
+
+/**
+ * Filter students by status (완전한 구현 - prospect/on_hold 지원)
+ */
+const filterByStatus = (students: UnifiedStudent[], status: string): UnifiedStudent[] => {
+    if (status === 'all') return students;
+
+    return students.filter((s) => {
+        const studentStatus = s.status || 'active';
+
+        if (status === 'prospect') {
+            return studentStatus === 'prospect' || studentStatus === 'prospective';
+        }
+
+        if (status === 'on_hold') {
+            if (studentStatus === 'on_hold') return true;
+
+            const activeEnrollments = s.enrollments?.filter(e => !e.endDate) || [];
+            if (activeEnrollments.length > 0) {
+                const allOnHold = activeEnrollments.every(e => e.onHold === true);
+                if (allOnHold) return true;
+            }
+
+            return false;
+        }
+
+        return studentStatus === status;
+    });
+};
+
+/**
+ * Filter students by subjects (OR condition)
+ */
+const filterBySubjects = (students: UnifiedStudent[], subjects: string[]): UnifiedStudent[] => {
+    if (subjects.length === 0) return students;
+
+    return students.filter((s) => {
+        if (s.status === 'withdrawn') return true;
+
+        const studentSubjects = (s.enrollments || [])
+            .filter(e => !e.endDate)
+            .map((e) => e.subject);
+
+        return subjects.some((subject) => studentSubjects.includes(subject));
+    });
+};
+
+/**
+ * Filter students by teacher
+ */
+const filterByTeacher = (students: UnifiedStudent[], teacherId: string): UnifiedStudent[] => {
+    if (teacherId === 'all') return students;
+
+    return students.filter((s) => {
+        if (s.status === 'withdrawn') return true;
+
+        return (s.enrollments || [])
+            .filter(e => !e.endDate)
+            .some((e) => e.staffId === teacherId);
+    });
+};
+
+/**
+ * Filter out students with no enrollment
+ */
+const filterByEnrollment = (students: UnifiedStudent[], excludeNoEnrollment: boolean): UnifiedStudent[] => {
+    if (!excludeNoEnrollment) return students;
+
+    return students.filter((s) => {
+        if (s.status === 'withdrawn') return true;
+
+        const today = new Date().toISOString().split('T')[0];
+
+        const activeStartedEnrollments = (s.enrollments || []).filter(e => {
+            if (e.endDate) return false;
+            if (!e.enrollmentDate) return true;
+            return e.enrollmentDate <= today;
+        });
+
+        return activeStartedEnrollments.length > 0;
+    });
+};
+
+/**
+ * Sort students by specified field
+ */
+const sortStudents = (students: UnifiedStudent[], sortBy: 'name' | 'grade' | 'startDate'): UnifiedStudent[] => {
+    const getGradeOrder = (grade: string | undefined): number => {
+        if (!grade) return 999;
+        const gradeMap: Record<string, number> = {
+            '고3': 1, '고2': 2, '고1': 3,
+            '중3': 4, '중2': 5, '중1': 6,
+            '초6': 7, '초5': 8, '초4': 9, '초3': 10, '초2': 11, '초1': 12,
+        };
+        return gradeMap[grade] ?? 999;
+    };
+
+    return [...students].sort((a, b) => {
+        if (sortBy === 'name') {
+            return (a.name || '').localeCompare(b.name || '', 'ko');
+        } else if (sortBy === 'grade') {
+            const orderA = getGradeOrder(a.grade);
+            const orderB = getGradeOrder(b.grade);
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.name || '').localeCompare(b.name || '', 'ko');
+        } else if (sortBy === 'startDate') {
+            return (b.startDate || '').localeCompare(a.startDate || '');
+        }
+        return 0;
+    });
+};
+
+/**
+ * Main hook: Apply all filters and sorting with independent memoization
+ */
+export const useStudentFilters = (
+    students: UnifiedStudent[],
+    filters: StudentFilters,
+    sortBy: 'name' | 'grade' | 'startDate',
+    oldWithdrawnStudents: UnifiedStudent[]
+) => {
+    // OPTIMIZATION: Each filter independently memoized
+    // Only re-runs when its specific dependencies change
+
+    const searchFiltered = useMemo(
+        () => filterBySearch(students, filters.searchQuery, filters.searchField, oldWithdrawnStudents),
+        [students, filters.searchQuery, filters.searchField, oldWithdrawnStudents]
+    );
+
+    const gradeFiltered = useMemo(
+        () => filterByGrade(searchFiltered, filters.grade),
+        [searchFiltered, filters.grade]
+    );
+
+    const statusFiltered = useMemo(
+        () => filterByStatus(gradeFiltered, filters.status),
+        [gradeFiltered, filters.status]
+    );
+
+    const subjectFiltered = useMemo(
+        () => filterBySubjects(statusFiltered, filters.subjects),
+        [statusFiltered, filters.subjects]
+    );
+
+    const teacherFiltered = useMemo(
+        () => filterByTeacher(subjectFiltered, filters.teacher),
+        [subjectFiltered, filters.teacher]
+    );
+
+    const enrollmentFiltered = useMemo(
+        () => filterByEnrollment(teacherFiltered, filters.excludeNoEnrollment),
+        [teacherFiltered, filters.excludeNoEnrollment]
+    );
+
+    const sorted = useMemo(
+        () => sortStudents(enrollmentFiltered, sortBy),
+        [enrollmentFiltered, sortBy]
+    );
+
+    return sorted;
+};

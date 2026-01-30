@@ -243,22 +243,24 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                             </p>
                         </div>
 
-                        {/* 부담임 여부 (수학 과목용) */}
-                        <div className="flex items-start gap-2">
-                            <input
-                                type="checkbox"
-                                id="isSlotTeacher"
-                                checked={isSlotTeacher}
-                                onChange={(e) => setIsSlotTeacher(e.target.checked)}
-                                className="mt-0.5 w-4 h-4 text-[#fdb813] bg-gray-100 border-gray-300 rounded focus:ring-[#fdb813] focus:ring-2"
-                            />
-                            <label htmlFor="isSlotTeacher" className="flex-1 cursor-pointer">
-                                <div className="text-xs font-bold text-gray-700">부담임으로 배정</div>
-                                <p className="text-xxs text-gray-500 mt-0.5">
-                                    수학 과목에서 별도 수업으로 생성된 부담임 수업인 경우 체크
-                                </p>
-                            </label>
-                        </div>
+                        {/* 부담임 여부 (수학 과목 전용) */}
+                        {selectedSubject === 'math' && (
+                            <div className="flex items-start gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="isSlotTeacher"
+                                    checked={isSlotTeacher}
+                                    onChange={(e) => setIsSlotTeacher(e.target.checked)}
+                                    className="mt-0.5 w-4 h-4 text-[#fdb813] bg-gray-100 border-gray-300 rounded focus:ring-[#fdb813] focus:ring-2"
+                                />
+                                <label htmlFor="isSlotTeacher" className="flex-1 cursor-pointer">
+                                    <div className="text-xs font-bold text-gray-700">부담임으로 배정</div>
+                                    <p className="text-xxs text-gray-500 mt-0.5">
+                                        별도 수업으로 생성된 부담임 수업인 경우 체크
+                                    </p>
+                                </label>
+                            </div>
+                        )}
 
                         {/* 이미 배정된 수업 안내 */}
                         {activeEnrollments.length > 0 && (

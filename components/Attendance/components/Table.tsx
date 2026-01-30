@@ -303,14 +303,18 @@ const Table = forwardRef<HTMLTableElement, Props>(({
             const isWeekend = day.getDay() === 0 || day.getDay() === 6;
             const isScheduled = (student.days || []).includes(dayName);
 
+            // 학생의 수업 요일 정보가 있으면 해당 요일만 표시
+            const hasScheduleInfo = student.days && student.days.length > 0;
+            const isNotScheduledDay = hasScheduleInfo && !isScheduled;
+
             // Validity Check
             const isValid = isDateValidForStudent(dateKey, student);
 
             let cellClass = "";
             let content: React.ReactNode = null;
 
-            if (!isValid) {
-              // Invalid Date
+            if (!isValid || isNotScheduledDay) {
+              // Invalid Date or Not Scheduled Day
               cellClass = "bg-slate-200 bg-[linear-gradient(45deg,#cbd5e1_25%,transparent_25%,transparent_50%,#cbd5e1_50%,#cbd5e1_75%,transparent_75%,transparent)] bg-[length:8px_8px] cursor-not-allowed shadow-inner border-slate-200";
             } else {
               // Valid Date Logic
@@ -338,8 +342,8 @@ const Table = forwardRef<HTMLTableElement, Props>(({
             return (
               <td
                 key={dateKey}
-                onClick={() => handleCellClick(student.id, dateKey, status, isValid)}
-                onContextMenu={(e) => handleContextMenu(e, student, dateKey, isValid)}
+                onClick={() => !isNotScheduledDay && handleCellClick(student.id, dateKey, status, isValid)}
+                onContextMenu={(e) => !isNotScheduledDay && handleContextMenu(e, student, dateKey, isValid)}
                 className={`p-1 border-r border-b border-gray-200 text-center text-sm font-medium relative ${cellClass} align-middle`}
                 title={memo ? `메모: ${memo}` : undefined}
               >
@@ -887,8 +891,8 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
             </span>
           )}
           {isLeaving && (
-            <span className="inline-flex items-center px-1 py-0.5 rounded-full bg-red-100 text-red-600 text-nano font-bold">
-              E
+            <span className="inline-flex items-center p-0.5 rounded-full bg-red-100 text-red-600" title="퇴원 예정">
+              <LogOut size={10} />
             </span>
           )}
         </button>

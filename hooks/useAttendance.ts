@@ -167,11 +167,16 @@ export const useAttendanceStudents = (options?: {
 
             // Step 6: 학생 ID 목록 수집 - 클라이언트에서 className 필터링
             const studentIdsSet = new Set<string>();
+            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
             enrollmentsSnapshot.docs.forEach(doc => {
                 const data = doc.data();
                 const enrollmentClassName = data.className as string;
                 const enrollmentClassId = data.classId as string;
                 const studentId = doc.ref.parent.parent?.id;
+
+                // BUG FIX: 종료된 수업(endDate가 과거인 enrollment)은 제외
+                // 종료 예정일이 미래인 경우는 아직 수강 중이므로 포함
+                if (data.endDate && data.endDate < today) return;
 
                 // className 또는 classId로 필터링 (내 클래스에 속하는 학생만)
                 if (studentId && (myClassNames.includes(enrollmentClassName) || myClassIds.includes(enrollmentClassId))) {
@@ -234,6 +239,9 @@ export const useAttendanceStudents = (options?: {
                 const slotClasses: string[] = [];  // 부담임 수업들
 
                 teacherEnrollments.forEach((e: any) => {
+                    // 종료된 수업은 제외
+                    if (e.endDate) return;
+
                     const classData = myClasses.find(c => c.id === e.classId || c.className === e.className);
                     if (!classData) return;
 
@@ -253,6 +261,9 @@ export const useAttendanceStudents = (options?: {
                 // 요일 추출
                 const teacherDays: string[] = [];
                 teacherEnrollments.forEach((e: any) => {
+                    // 종료된 수업은 제외
+                    if (e.endDate) return;
+
                     const classData = classesMap.get(e.classId);
                     // staffId로 슬롯 선생님 여부 확인
                     const isMainTeacherForThisClass = isTeacherMatchWithStaffId(
@@ -278,27 +289,21 @@ export const useAttendanceStudents = (options?: {
                     }
                 });
 
-                // 날짜 범위 추출
+                // 날짜 범위 추출 (종료되지 않은 수업만)
                 let enrollmentStartDate = '1970-01-01';
                 let enrollmentEndDate: string | null = null;
 
-                if (teacherEnrollments.length > 0) {
-                    const startDates = teacherEnrollments
+                const activeEnrollments = teacherEnrollments.filter((e: any) => !e.endDate);
+                if (activeEnrollments.length > 0) {
+                    const startDates = activeEnrollments
                         .map((e: any) => e.startDate)
                         .filter((d: string) => d);
-                    const endDates = teacherEnrollments
-                        .map((e: any) => e.endDate)
-                        .filter((d: string | null) => d !== null && d !== undefined) as string[];
 
                     if (startDates.length > 0) {
                         enrollmentStartDate = startDates.sort()[0];
                     }
-                    if (endDates.length > 0) {
-                        enrollmentEndDate = endDates.sort().reverse()[0];
-                    }
-                    if (teacherEnrollments.some((e: any) => !e.endDate)) {
-                        enrollmentEndDate = null;
-                    }
+                    // 종료되지 않은 수업만 사용하므로 endDate는 항상 null
+                    enrollmentEndDate = null;
                 }
 
                 // 그룹명: 담임 수업 먼저, 부담임 수업 나중에 (담임/부담임 라벨 없음 - UI에서 표시)
@@ -605,6 +610,23 @@ export const useUpdateAttendance = () => {
 
             return { previousData };
         },
+        onSuccess: ({ studentId, yearMonth, dateKey, value }) => {
+            // Firebase 저장 완료 후 캐시 확정 업데이트
+            // setQueriesData로 모든 관련 쿼리의 캐시를 업데이트
+            queryClient.setQueriesData(
+                { queryKey: ['attendanceRecords'] },
+                (old: any) => {
+                    if (!old || !Array.isArray(old)) return old;
+                    return old.map((student: any) => {
+                        if (student.id !== studentId) return student;
+                        const newAttendance = { ...student.attendance };
+                        if (value === null) delete newAttendance[dateKey];
+                        else newAttendance[dateKey] = value;
+                        return { ...student, attendance: newAttendance };
+                    });
+                }
+            );
+        },
         onError: (err, variables, context: any) => {
             // 에러 시 이전 상태로 롤백
             if (context?.previousData) {
@@ -614,7 +636,7 @@ export const useUpdateAttendance = () => {
             }
         },
         // onSettled에서 invalidateQueries 제거
-        // - onMutate에서 이미 optimistic update 완료
+        // - onSuccess에서 이미 캐시 업데이트 완료
         // - invalidate 시 Firebase 저장 완료 전에 fetch가 일어나면 이전 값으로 되돌아가는 버그 발생
     });
 };

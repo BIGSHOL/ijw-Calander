@@ -1,15 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { UnifiedStudent } from '../../../types';
-import { BookOpen, Plus, User, X, Loader2, Users } from 'lucide-react';
+import { UnifiedStudent, UserProfile } from '../../../types';
+import { BookOpen, Plus, User, X, Loader2, Users, Trash2 } from 'lucide-react';
 import AssignClassModal from '../AssignClassModal';
 import { useStudents } from '../../../hooks/useStudents';
 import { useTeachers } from '../../../hooks/useFirebaseQueries';
 import { ClassInfo, useClasses } from '../../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../../utils/styleUtils';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
-import { doc, getDoc, getDocs, collection, query, where, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
+import { usePermissions } from '../../../hooks/usePermissions';
 import {
   SubjectForSchedule,
   MATH_PERIOD_INFO,
@@ -199,6 +200,7 @@ interface CoursesTabProps {
   student: UnifiedStudent;
   compact?: boolean; // 컴팩트 모드 (모달)
   readOnly?: boolean; // 조회 전용 모드
+  currentUser?: UserProfile | null; // 현재 사용자
 }
 
 interface GroupedEnrollment {
@@ -211,7 +213,7 @@ interface GroupedEnrollment {
   endDate?: string; // 수강 종료일 (undefined = 재원중)
 }
 
-const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact = false, readOnly = false }) => {
+const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact = false, readOnly = false, currentUser }) => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
   const [deletingClass, setDeletingClass] = useState<string | null>(null);
@@ -219,6 +221,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
   const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
   const { data: allClasses = [] } = useClasses();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions(currentUser);
+
+  // 권한 체크
+  const canManageClassHistory = currentUser?.role === 'master' || hasPermission('students.manage_class_history');
 
   // 실시간 학생 데이터: students 목록에서 최신 데이터를 가져오거나 prop을 사용
   const student = students.find(s => s.id === studentProp.id) || studentProp;
@@ -465,6 +471,64 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
     }
   };
 
+  // 종료된 수업 이력 완전 삭제 (권한 필요)
+  const handleDeleteCompletedEnrollment = async (group: GroupedEnrollment, e: React.MouseEvent) => {
+    e.stopPropagation(); // 행 클릭 이벤트 전파 방지
+
+    // 권한 체크
+    if (!canManageClassHistory) {
+      alert('종료된 수업 이력을 삭제할 권한이 없습니다.');
+      return;
+    }
+
+    const confirmMsg = `"${group.className}" 수업 이력을 완전히 삭제하시겠습니까?\n\n⚠️ 이 작업은 되돌릴 수 없습니다.`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    const key = `${group.subject}_${group.className}`;
+    setDeletingClass(key);
+
+    try {
+      // 1. 저장된 enrollmentIds가 있으면 사용
+      if (group.enrollmentIds.length > 0) {
+        for (const enrollmentId of group.enrollmentIds) {
+          const docRef = doc(db, `students/${student.id}/enrollments`, enrollmentId);
+          const docSnap = await getDoc(docRef);
+          // 문서가 존재하는 경우에만 삭제
+          if (docSnap.exists()) {
+            await deleteDoc(docRef);
+          }
+        }
+      } else {
+        // 2. enrollmentIds가 없으면 쿼리로 찾아서 삭제
+        const enrollmentsRef = collection(db, `students/${student.id}/enrollments`);
+        const q = query(
+          enrollmentsRef,
+          where('subject', '==', group.subject),
+          where('className', '==', group.className)
+        );
+        const snapshot = await getDocs(q);
+
+        for (const docSnap of snapshot.docs) {
+          await deleteDoc(docSnap.ref);
+        }
+      }
+
+      // 캐시 무효화 및 새로고침
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+      queryClient.invalidateQueries({ queryKey: ['classStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+      refreshStudents();
+
+    } catch (err) {
+      console.error('수업 이력 삭제 오류:', err);
+      alert('수업 이력 삭제에 실패했습니다.');
+    } finally {
+      setDeletingClass(null);
+    }
+  };
+
   const handleAssignSuccess = () => {
     refreshStudents();
   };
@@ -672,8 +736,23 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           {formatDate(group.endDate)}
         </span>
 
-        {/* 삭제 버튼 자리 (빈 공간) */}
-        <div className="w-5 shrink-0"></div>
+        {/* 삭제 버튼 (권한이 있는 경우만 표시) */}
+        <div className="w-5 shrink-0 flex items-center justify-center">
+          {canManageClassHistory && !readOnly && (
+            <button
+              onClick={(e) => handleDeleteCompletedEnrollment(group, e)}
+              disabled={deletingClass === `${group.subject}_${group.className}`}
+              className="text-red-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="수업 이력 삭제"
+            >
+              {deletingClass === `${group.subject}_${group.className}` ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Trash2 className="w-3 h-3" />
+              )}
+            </button>
+          )}
+        </div>
       </div>
     );
   };
