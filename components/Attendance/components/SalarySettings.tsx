@@ -3,6 +3,22 @@ import { SalaryConfig, SalarySettingItem } from '../types';
 import { X, Save, Calculator, HelpCircle, Plus, Trash2, Palette, Gift } from 'lucide-react';
 import { calculateClassRate, resolveColor } from '../utils';
 
+// 12가지 색상 팔레트 (새 항목 추가시 순환 사용)
+const COLOR_PALETTE = [
+    '#FACC15', // Yellow (초등)
+    '#C084FC', // Purple (중등)
+    '#3B82F6', // Blue (고등)
+    '#F97316', // Orange
+    '#22C55E', // Green
+    '#EC4899', // Pink
+    '#14B8A6', // Teal
+    '#EF4444', // Red
+    '#8B5CF6', // Violet
+    '#06B6D4', // Cyan
+    '#F59E0B', // Amber
+    '#84CC16', // Lime
+];
+
 interface Props {
     isOpen: boolean;
     onClose: () => void;
@@ -38,10 +54,15 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
     };
 
     const handleAddItem = () => {
+        // 기존 항목에서 사용하지 않은 색상 찾기
+        const usedColors = localConfig.items.map(item => item.color);
+        const availableColor = COLOR_PALETTE.find(c => !usedColors.includes(c))
+            || COLOR_PALETTE[localConfig.items.length % COLOR_PALETTE.length];
+
         const newItem: SalarySettingItem = {
             id: crypto.randomUUID(),
             name: '새 과정',
-            color: '#3B82F6', // Default Blue
+            color: availableColor,
             type: 'fixed',
             fixedRate: 30000,
             baseTuition: 0,

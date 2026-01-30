@@ -42,10 +42,10 @@ const SettlementModal: React.FC<Props> = ({
     }
 
     // Calculate Totals
-    // 블로그 인센티브: 고정금 또는 비율 가산
+    // 블로그 인센티브: 고정금 또는 비율 가산 (blogType 없으면 기본 fixed)
     const blogBonusAmount = incentiveConfig.blogType === 'percentage'
-        ? Math.round(baseSalary * (incentiveConfig.blogRate || 0) / 100)
-        : incentiveConfig.blogAmount;
+        ? Math.round(baseSalary * (incentiveConfig.blogRate ?? 2) / 100)
+        : (incentiveConfig.blogAmount ?? 0);
     const blogBonus = localData.hasBlog ? blogBonusAmount : 0;
     const retentionBonus = localData.hasRetention ? incentiveConfig.retentionAmount : 0;
     const otherBonus = localData.otherAmount || 0;
@@ -55,8 +55,8 @@ const SettlementModal: React.FC<Props> = ({
 
     // 블로그 인센티브 표시 텍스트
     const blogBonusDisplay = incentiveConfig.blogType === 'percentage'
-        ? `+${incentiveConfig.blogRate}% (${formatCurrency(blogBonusAmount)})`
-        : `+${formatCurrency(incentiveConfig.blogAmount)}`;
+        ? `+${incentiveConfig.blogRate ?? 2}% (${formatCurrency(blogBonusAmount)})`
+        : `+${formatCurrency(incentiveConfig.blogAmount ?? 0)}`;
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>

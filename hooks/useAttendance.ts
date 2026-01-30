@@ -845,6 +845,82 @@ export const useUpdateCellColor = () => {
 };
 
 /**
+ * Mutation to update salary setting override per class
+ * This allows different salary settings for the same student in different classes/teachers
+ */
+export const useUpdateSalarySettingOverride = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async ({
+            studentId,
+            className,
+            yearMonth,
+            salarySettingId
+        }: {
+            studentId: string;
+            className: string;
+            yearMonth: string;
+            salarySettingId: string | null;
+        }) => {
+            const docId = `${studentId}_${yearMonth}`;
+            const docRef = doc(db, RECORDS_COLLECTION, docId);
+            const compositeKey = className; // className을 키로 사용
+
+            const payload = {
+                salarySettingOverrides: {
+                    [compositeKey]: salarySettingId === null ? deleteField() : salarySettingId
+                }
+            };
+
+            await setDoc(docRef, payload, { merge: true });
+            return { studentId, className, yearMonth, salarySettingId };
+        },
+        onMutate: async ({ studentId, className, yearMonth, salarySettingId }) => {
+            // 관련된 모든 attendanceRecords 쿼리 취소
+            await queryClient.cancelQueries({ queryKey: ['attendanceRecords'] });
+
+            // 이전 상태 저장 (롤백용)
+            const previousData = queryClient.getQueriesData({ queryKey: ['attendanceRecords'] });
+
+            // 1. useAttendanceRecords용 캐시 업데이트
+            queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
+                if (!old) return { attendance: {}, memos: {}, salarySettingOverrides: { [className]: salarySettingId } };
+                const newOverrides = { ...(old.salarySettingOverrides || {}) };
+                if (salarySettingId === null) delete newOverrides[className];
+                else newOverrides[className] = salarySettingId;
+                return { ...old, salarySettingOverrides: newOverrides };
+            });
+
+            // 2. useAttendanceStudents용 캐시 업데이트 (학생 배열)
+            queryClient.setQueriesData(
+                { queryKey: ['attendanceRecords', yearMonth] },
+                (old: any) => {
+                    if (!old || !Array.isArray(old)) return old;
+                    return old.map((student: any) => {
+                        if (student.id !== studentId) return student;
+                        const newOverrides = { ...(student.salarySettingOverrides || {}) };
+                        if (salarySettingId === null) delete newOverrides[className];
+                        else newOverrides[className] = salarySettingId;
+                        return { ...student, salarySettingOverrides: newOverrides };
+                    });
+                }
+            );
+
+            return { previousData };
+        },
+        onError: (err, variables, context: any) => {
+            // 에러 시 이전 상태로 롤백
+            if (context?.previousData) {
+                context.previousData.forEach(([queryKey, data]: [any, any]) => {
+                    queryClient.setQueryData(queryKey, data);
+                });
+            }
+        },
+    });
+};
+
+/**
  * Mutation to delete a student
  */
 export const useDeleteStudent = () => {

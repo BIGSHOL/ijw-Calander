@@ -60,12 +60,26 @@ export const useVisibleAttendanceStudents = (
       } else {
         // Create separate row for each class
         allClasses.forEach(className => {
-          // Extract class schedules (days) from enrollments
+          // Extract class schedules (days) and dates from enrollments
           const classDays: string[] = [];
+          let classStartDate = student.startDate;
+          let classEndDate = student.endDate;
+
           if (student.enrollments && Array.isArray(student.enrollments)) {
             student.enrollments.forEach((enrollment: any) => {
               // Only process enrollments for this class
-              if (enrollment.className === className && !enrollment.endDate) {
+              if (enrollment.className === className) {
+                // Get class-specific dates from enrollment
+                if (enrollment.startDate) {
+                  classStartDate = enrollment.startDate;
+                }
+                if (enrollment.endDate) {
+                  classEndDate = enrollment.endDate;
+                }
+
+                // Skip if enrollment already ended
+                if (enrollment.endDate) return;
+
                 // Extract days from schedule field (e.g., "월 1" -> "월")
                 if (enrollment.schedule && Array.isArray(enrollment.schedule)) {
                   enrollment.schedule.forEach((slot: string) => {
@@ -125,6 +139,9 @@ export const useVisibleAttendanceStudents = (
             mainClasses: mainClasses.includes(className) ? [className] : [],
             slotClasses: slotClasses.includes(className) ? [className] : [],
             days: classDays.length > 0 ? classDays : undefined, // Class schedule days
+            // Class-specific dates (수업별 시작/종료일)
+            startDate: classStartDate,
+            endDate: classEndDate,
             // Class-specific attendance data (filtered)
             attendance: classAttendance,
             memos: classMemos,

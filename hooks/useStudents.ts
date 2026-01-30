@@ -80,6 +80,19 @@ export function useStudents(includeWithdrawn = false, enabled = true) {
                     ...docSnap.data()
                 } as UnifiedStudent));
 
+                // DEBUG: 이상한 이름 또는 name 필드가 없는 학생 찾기
+                const suspiciousStudents = studentList.filter(s => {
+                    const name = s.name || '';
+                    // 이름이 없거나, 빈 문자열이거나, 특수문자만 있는 경우
+                    if (!name || name.trim() === '' || /^[^가-힣a-zA-Z0-9]+$/.test(name)) {
+                        return true;
+                    }
+                    return false;
+                });
+                if (suspiciousStudents.length > 0) {
+                    console.warn('[useStudents] 🚨 의심스러운 학생 데이터:', suspiciousStudents.map(s => ({ id: s.id, name: s.name, status: s.status })));
+                }
+
                 // Client-side sort by name (먼저 정렬)
                 studentList.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
