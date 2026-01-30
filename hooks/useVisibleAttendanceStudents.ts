@@ -87,12 +87,49 @@ export const useVisibleAttendanceStudents = (
             });
           }
 
+          // Filter attendance data for this specific class
+          // Keys with "::" are class-specific, keys without are legacy (shared)
+          const classAttendance: Record<string, number> = {};
+          const classMemos: Record<string, string> = {};
+          const classHomework: Record<string, boolean> = {};
+          const classCellColors: Record<string, string> = {};
+
+          // Only use class-specific keys: "className::dateKey"
+          Object.entries(student.attendance || {}).forEach(([key, value]) => {
+            if (key.startsWith(`${className}::`)) {
+              classAttendance[key.split('::')[1]] = value;
+            }
+          });
+
+          Object.entries(student.memos || {}).forEach(([key, value]) => {
+            if (key.startsWith(`${className}::`)) {
+              classMemos[key.split('::')[1]] = value;
+            }
+          });
+
+          Object.entries(student.homework || {}).forEach(([key, value]) => {
+            if (key.startsWith(`${className}::`)) {
+              classHomework[key.split('::')[1]] = value;
+            }
+          });
+
+          Object.entries(student.cellColors || {}).forEach(([key, value]) => {
+            if (key.startsWith(`${className}::`)) {
+              classCellColors[key.split('::')[1]] = value;
+            }
+          });
+
           expandedStudents.push({
             ...student,
             group: className, // Set to single class name
             mainClasses: mainClasses.includes(className) ? [className] : [],
             slotClasses: slotClasses.includes(className) ? [className] : [],
             days: classDays.length > 0 ? classDays : undefined, // Class schedule days
+            // Class-specific attendance data (filtered)
+            attendance: classAttendance,
+            memos: classMemos,
+            homework: classHomework,
+            cellColors: classCellColors,
           });
         });
       }
