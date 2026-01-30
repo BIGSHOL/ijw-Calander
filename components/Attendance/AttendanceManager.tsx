@@ -286,6 +286,12 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   };
 
   // MOVED: All useMemo hooks must be before early return (React Hooks rules)
+  // 학생 ID 목록을 안정적인 의존성으로 생성 (무한 렌더링 방지)
+  const studentIdsKey = useMemo(() =>
+    allStudents.map(s => s.id).sort().join(','),
+    [allStudents]
+  );
+
   // Filter visible students for current month
   const visibleStudents = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -343,7 +349,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
       return (a.name || '').localeCompare(b.name || '', 'ko');
     });
-  }, [allStudents, currentDate, groupOrder]);
+  }, [studentIdsKey, currentDate, groupOrder]);
 
   const pendingUpdatesByStudent = useMemo(() => groupUpdates(pendingUpdates), [pendingUpdates]);
   const pendingMemosByStudent = useMemo(() => groupUpdates(pendingMemos), [pendingMemos]);
