@@ -553,11 +553,13 @@ export const useUpdateAttendance = () => {
     return useMutation({
         mutationFn: async ({
             studentId,
+            className,
             yearMonth,
             dateKey,
             value
         }: {
             studentId: string;
+            className: string;  // 수업별 분리를 위한 className
             yearMonth: string;
             dateKey: string;
             value: number | null;
@@ -565,18 +567,23 @@ export const useUpdateAttendance = () => {
             const docId = `${studentId}_${yearMonth}`;
             const docRef = doc(db, RECORDS_COLLECTION, docId);
 
+            // 복합키: "className::dateKey" 형태로 저장하여 수업별 분리
+            const compositeKey = `${className}::${dateKey}`;
+
             // Use deleteField() to properly remove keys during a merge
             // This also avoids the need to read the document first (Write Optimization)
             const payload = {
                 attendance: {
-                    [dateKey]: value === null ? deleteField() : value
+                    [compositeKey]: value === null ? deleteField() : value
                 }
             };
 
             await setDoc(docRef, payload, { merge: true });
-            return { studentId, yearMonth, dateKey, value };
+            return { studentId, className, yearMonth, dateKey, value };
         },
-        onMutate: async ({ studentId, yearMonth, dateKey, value }) => {
+        onMutate: async ({ studentId, className, yearMonth, dateKey, value }) => {
+            // 복합키 생성
+            const compositeKey = `${className}::${dateKey}`;
             // 관련된 모든 attendanceRecords 쿼리 취소
             await queryClient.cancelQueries({ queryKey: ['attendanceRecords'] });
 
@@ -585,10 +592,10 @@ export const useUpdateAttendance = () => {
 
             // 1. useAttendanceRecords용 캐시 업데이트 ['attendanceRecords', studentId, yearMonth]
             queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
-                if (!old) return { attendance: { [dateKey]: value }, memos: {} };
+                if (!old) return { attendance: { [compositeKey]: value }, memos: {} };
                 const newAttendance = { ...old.attendance };
-                if (value === null) delete newAttendance[dateKey];
-                else newAttendance[dateKey] = value;
+                if (value === null) delete newAttendance[compositeKey];
+                else newAttendance[compositeKey] = value;
                 return { ...old, attendance: newAttendance };
             });
 
@@ -601,8 +608,8 @@ export const useUpdateAttendance = () => {
                     return old.map((student: any) => {
                         if (student.id !== studentId) return student;
                         const newAttendance = { ...student.attendance };
-                        if (value === null) delete newAttendance[dateKey];
-                        else newAttendance[dateKey] = value;
+                        if (value === null) delete newAttendance[compositeKey];
+                        else newAttendance[compositeKey] = value;
                         return { ...student, attendance: newAttendance };
                     });
                 }
@@ -610,7 +617,9 @@ export const useUpdateAttendance = () => {
 
             return { previousData };
         },
-        onSuccess: ({ studentId, yearMonth, dateKey, value }) => {
+        onSuccess: ({ studentId, className, yearMonth, dateKey, value }) => {
+            // 복합키 생성
+            const compositeKey = `${className}::${dateKey}`;
             // Firebase 저장 완료 후 캐시 확정 업데이트
             // setQueriesData로 모든 관련 쿼리의 캐시를 업데이트
             queryClient.setQueriesData(
@@ -620,8 +629,8 @@ export const useUpdateAttendance = () => {
                     return old.map((student: any) => {
                         if (student.id !== studentId) return student;
                         const newAttendance = { ...student.attendance };
-                        if (value === null) delete newAttendance[dateKey];
-                        else newAttendance[dateKey] = value;
+                        if (value === null) delete newAttendance[compositeKey];
+                        else newAttendance[compositeKey] = value;
                         return { ...student, attendance: newAttendance };
                     });
                 }
@@ -650,36 +659,40 @@ export const useUpdateMemo = () => {
     return useMutation({
         mutationFn: async ({
             studentId,
+            className,
             yearMonth,
             dateKey,
             memo
         }: {
             studentId: string;
+            className: string;
             yearMonth: string;
             dateKey: string;
             memo: string;
         }) => {
             const docId = `${studentId}_${yearMonth}`;
             const docRef = doc(db, RECORDS_COLLECTION, docId);
+            const compositeKey = `${className}::${dateKey}`;
 
             const payload = {
                 memos: {
-                    [dateKey]: !memo.trim() ? deleteField() : memo.trim()
+                    [compositeKey]: !memo.trim() ? deleteField() : memo.trim()
                 }
             };
 
             await setDoc(docRef, payload, { merge: true });
-            return { studentId, yearMonth, dateKey, memo };
+            return { studentId, className, yearMonth, dateKey, memo };
         },
-        onMutate: async ({ studentId, yearMonth, dateKey, memo }) => {
+        onMutate: async ({ studentId, className, yearMonth, dateKey, memo }) => {
+            const compositeKey = `${className}::${dateKey}`;
             await queryClient.cancelQueries({ queryKey: ['attendanceRecords', studentId, yearMonth] });
             const previousRecord = queryClient.getQueryData(['attendanceRecords', studentId, yearMonth]);
 
             queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
-                if (!old) return { attendance: {}, memos: { [dateKey]: memo } };
+                if (!old) return { attendance: {}, memos: { [compositeKey]: memo } };
                 const newMemos = { ...old.memos };
-                if (!memo) delete newMemos[dateKey];
-                else newMemos[dateKey] = memo;
+                if (!memo) delete newMemos[compositeKey];
+                else newMemos[compositeKey] = memo;
                 return { ...old, memos: newMemos };
             });
 
@@ -703,36 +716,40 @@ export const useUpdateHomework = () => {
     return useMutation({
         mutationFn: async ({
             studentId,
+            className,
             yearMonth,
             dateKey,
             completed
         }: {
             studentId: string;
+            className: string;
             yearMonth: string;
             dateKey: string;
             completed: boolean;
         }) => {
             const docId = `${studentId}_${yearMonth}`;
             const docRef = doc(db, RECORDS_COLLECTION, docId);
+            const compositeKey = `${className}::${dateKey}`;
 
             const payload = {
                 homework: {
-                    [dateKey]: completed ? true : deleteField()
+                    [compositeKey]: completed ? true : deleteField()
                 }
             };
 
             await setDoc(docRef, payload, { merge: true });
-            return { studentId, yearMonth, dateKey, completed };
+            return { studentId, className, yearMonth, dateKey, completed };
         },
-        onMutate: async ({ studentId, yearMonth, dateKey, completed }) => {
+        onMutate: async ({ studentId, className, yearMonth, dateKey, completed }) => {
+            const compositeKey = `${className}::${dateKey}`;
             await queryClient.cancelQueries({ queryKey: ['attendanceRecords', studentId, yearMonth] });
             const previousRecord = queryClient.getQueryData(['attendanceRecords', studentId, yearMonth]);
 
             queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
-                if (!old) return { attendance: {}, memos: {}, homework: { [dateKey]: completed } };
+                if (!old) return { attendance: {}, memos: {}, homework: { [compositeKey]: completed } };
                 const newHomework = { ...(old.homework || {}) };
-                if (!completed) delete newHomework[dateKey];
-                else newHomework[dateKey] = completed;
+                if (!completed) delete newHomework[compositeKey];
+                else newHomework[compositeKey] = completed;
                 return { ...old, homework: newHomework };
             });
 
@@ -757,28 +774,32 @@ export const useUpdateCellColor = () => {
     return useMutation({
         mutationFn: async ({
             studentId,
+            className,
             yearMonth,
             dateKey,
             color
         }: {
             studentId: string;
+            className: string;
             yearMonth: string;
             dateKey: string;
             color: string | null;  // null to reset to default
         }) => {
             const docId = `${studentId}_${yearMonth}`;
             const docRef = doc(db, RECORDS_COLLECTION, docId);
+            const compositeKey = `${className}::${dateKey}`;
 
             const payload = {
                 cellColors: {
-                    [dateKey]: color === null ? deleteField() : color
+                    [compositeKey]: color === null ? deleteField() : color
                 }
             };
 
             await setDoc(docRef, payload, { merge: true });
-            return { studentId, yearMonth, dateKey, color };
+            return { studentId, className, yearMonth, dateKey, color };
         },
-        onMutate: async ({ studentId, yearMonth, dateKey, color }) => {
+        onMutate: async ({ studentId, className, yearMonth, dateKey, color }) => {
+            const compositeKey = `${className}::${dateKey}`;
             // 관련된 모든 attendanceRecords 쿼리 취소
             await queryClient.cancelQueries({ queryKey: ['attendanceRecords'] });
 
@@ -787,10 +808,10 @@ export const useUpdateCellColor = () => {
 
             // 1. useAttendanceRecords용 캐시 업데이트
             queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
-                if (!old) return { attendance: {}, memos: {}, cellColors: { [dateKey]: color } };
+                if (!old) return { attendance: {}, memos: {}, cellColors: { [compositeKey]: color } };
                 const newCellColors = { ...(old.cellColors || {}) };
-                if (color === null) delete newCellColors[dateKey];
-                else newCellColors[dateKey] = color;
+                if (color === null) delete newCellColors[compositeKey];
+                else newCellColors[compositeKey] = color;
                 return { ...old, cellColors: newCellColors };
             });
 
@@ -802,8 +823,8 @@ export const useUpdateCellColor = () => {
                     return old.map((student: any) => {
                         if (student.id !== studentId) return student;
                         const newCellColors = { ...(student.cellColors || {}) };
-                        if (color === null) delete newCellColors[dateKey];
-                        else newCellColors[dateKey] = color;
+                        if (color === null) delete newCellColors[compositeKey];
+                        else newCellColors[compositeKey] = color;
                         return { ...student, cellColors: newCellColors };
                     });
                 }

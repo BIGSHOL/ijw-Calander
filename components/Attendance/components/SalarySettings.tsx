@@ -27,7 +27,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
         setLocalConfig(prev => ({ ...prev, [field]: numValue }));
     };
 
-    const handleIncentiveChange = (field: keyof SalaryConfig['incentives'], value: number) => {
+    const handleIncentiveChange = (field: keyof SalaryConfig['incentives'], value: number | string) => {
         setLocalConfig(prev => ({
             ...prev,
             incentives: {
@@ -130,18 +130,60 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                             <Gift size={16} className="text-yellow-600" /> 인센티브 기준 설정
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-white p-3 rounded-lg border border-yellow-100">
-                                <label className="block text-xs font-bold text-gray-500 mb-1">블로그 포스팅 수당 (월)</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">₩</span>
-                                    <input
-                                        type="text"
-                                        value={localConfig.incentives?.blogAmount?.toLocaleString() ?? 0}
-                                        onChange={(e) => handleIncentiveChange('blogAmount', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
-                                        disabled={readOnly}
-                                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
-                                    />
+                            {/* 블로그 포스팅 인센티브 - 고정금/비율 선택 */}
+                            <div className="bg-white p-3 rounded-lg border border-yellow-100 md:col-span-2">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-xs font-bold text-gray-500">블로그 포스팅 인센티브</label>
+                                    <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                                        <button
+                                            onClick={() => handleIncentiveChange('blogType', 'fixed')}
+                                            disabled={readOnly}
+                                            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                                                localConfig.incentives?.blogType === 'fixed'
+                                                    ? 'bg-white text-yellow-700 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                            } ${readOnly ? 'cursor-not-allowed' : ''}`}
+                                        >
+                                            고정금
+                                        </button>
+                                        <button
+                                            onClick={() => handleIncentiveChange('blogType', 'percentage')}
+                                            disabled={readOnly}
+                                            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                                                localConfig.incentives?.blogType === 'percentage'
+                                                    ? 'bg-white text-yellow-700 shadow-sm'
+                                                    : 'text-gray-500 hover:text-gray-700'
+                                            } ${readOnly ? 'cursor-not-allowed' : ''}`}
+                                        >
+                                            비율 가산
+                                        </button>
+                                    </div>
                                 </div>
+                                {localConfig.incentives?.blogType === 'percentage' ? (
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            value={localConfig.incentives?.blogRate ?? 2}
+                                            onChange={(e) => handleIncentiveChange('blogRate', parseFloat(e.target.value) || 0)}
+                                            disabled={readOnly}
+                                            className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
+                                        <p className="text-xxs text-gray-400 mt-1">기본 수업료의 {localConfig.incentives?.blogRate ?? 2}%가 추가 지급됩니다.</p>
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">₩</span>
+                                        <input
+                                            type="text"
+                                            value={localConfig.incentives?.blogAmount?.toLocaleString() ?? 0}
+                                            onChange={(e) => handleIncentiveChange('blogAmount', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
+                                            disabled={readOnly}
+                                            className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                        />
+                                    </div>
+                                )}
                             </div>
                             <div className="bg-white p-3 rounded-lg border border-yellow-100">
                                 <label className="block text-xs font-bold text-gray-500 mb-1">퇴원율 달성 수당 (월)</label>

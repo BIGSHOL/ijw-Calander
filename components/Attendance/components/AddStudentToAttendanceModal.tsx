@@ -23,6 +23,7 @@ interface Props {
     allStudents: StudentInfo[];
     currentStaffId: string;
     currentTeacherName: string;
+    currentSubject: 'math' | 'english'; // 현재 출석부 과목
     existingStudentIds: string[]; // Already in this teacher's attendance
     onStudentAdded: () => void; // Callback to refresh data
 }
@@ -33,6 +34,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
     allStudents,
     currentStaffId,
     currentTeacherName,
+    currentSubject,
     existingStudentIds,
     onStudentAdded,
 }) => {
@@ -83,7 +85,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
             for (const studentId of selectedStudentIds) {
                 const studentRef = doc(db, 'students', studentId);
                 const newEnrollment = {
-                    subject: 'english', // or determine based on context
+                    subject: currentSubject,
                     classId: `manual-${today}`,
                     className: enrollmentType === 'temporary' ? '특강/보강' : '직접등록',
                     staffId: currentStaffId,
@@ -124,7 +126,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
                         </div>
                         <div>
                             <h3 className="font-bold text-lg text-indigo-900">학생 추가</h3>
-                            <p className="text-xs text-indigo-600">{currentTeacherName} 선생님 출석부</p>
+                            <p className="text-xs text-indigo-600">{currentTeacherName} 선생님 {currentSubject === 'math' ? '수학' : '영어'} 출석부</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-1 hover:bg-white/50 rounded-full transition-colors">

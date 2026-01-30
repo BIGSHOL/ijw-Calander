@@ -10,8 +10,12 @@ export interface SalarySettingItem {
   ratio: number;          // Used when type is 'percentage'
 }
 
+export type IncentiveType = 'fixed' | 'percentage';
+
 export interface IncentiveConfig {
-  blogAmount: number;
+  blogType: IncentiveType;     // 'fixed' = 고정금, 'percentage' = 비율 가산
+  blogAmount: number;          // 고정금일 때 금액 (e.g., 50000)
+  blogRate: number;            // 비율일 때 % (e.g., 2 for 2%)
   retentionAmount: number;
   retentionTargetRate: number; // Percentage (e.g. 0 for 0% drop-out)
 }

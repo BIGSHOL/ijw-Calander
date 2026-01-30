@@ -42,12 +42,21 @@ const SettlementModal: React.FC<Props> = ({
     }
 
     // Calculate Totals
-    const blogBonus = localData.hasBlog ? incentiveConfig.blogAmount : 0;
+    // 블로그 인센티브: 고정금 또는 비율 가산
+    const blogBonusAmount = incentiveConfig.blogType === 'percentage'
+        ? Math.round(baseSalary * (incentiveConfig.blogRate || 0) / 100)
+        : incentiveConfig.blogAmount;
+    const blogBonus = localData.hasBlog ? blogBonusAmount : 0;
     const retentionBonus = localData.hasRetention ? incentiveConfig.retentionAmount : 0;
     const otherBonus = localData.otherAmount || 0;
     const finalTotal = baseSalary + blogBonus + retentionBonus + otherBonus;
 
     const isRetentionEligible = droppedStudentRate <= incentiveConfig.retentionTargetRate;
+
+    // 블로그 인센티브 표시 텍스트
+    const blogBonusDisplay = incentiveConfig.blogType === 'percentage'
+        ? `+${incentiveConfig.blogRate}% (${formatCurrency(blogBonusAmount)})`
+        : `+${formatCurrency(incentiveConfig.blogAmount)}`;
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
@@ -93,11 +102,16 @@ const SettlementModal: React.FC<Props> = ({
                                 }
                                 <div>
                                     <p className={`font-bold ${localData.hasBlog ? 'text-blue-700' : 'text-gray-600'}`}>블로그 포스팅</p>
-                                    <p className="text-xs text-gray-400">기준: 월 1회 이상 작성</p>
+                                    <p className="text-xs text-gray-400">
+                                        기준: 월 1회 이상 작성
+                                        {incentiveConfig.blogType === 'percentage' && (
+                                            <span className="ml-1 text-blue-500">(비율 가산)</span>
+                                        )}
+                                    </p>
                                 </div>
                             </div>
-                            <span className={`font-mono font-bold ${localData.hasBlog ? 'text-blue-600' : 'text-gray-300'}`}>
-                                +{formatCurrency(incentiveConfig.blogAmount)}
+                            <span className={`font-mono font-bold text-sm ${localData.hasBlog ? 'text-blue-600' : 'text-gray-300'}`}>
+                                {blogBonusDisplay}
                             </span>
                         </div>
 

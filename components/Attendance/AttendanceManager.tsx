@@ -26,6 +26,7 @@ import {
 import { useExamsByDateMap, useScoresByExams } from '../../hooks/useExamsByDate';
 import { useCreateDailyAttendance } from '../../hooks/useDailyAttendance';
 import { useVisibleAttendanceStudents } from '../../hooks/useVisibleAttendanceStudents';
+import { useHolidays } from '../../hooks/useFirebaseQueries';
 import { UserProfile, Teacher, UnifiedStudent } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { mapAttendanceValueToStatus } from '../../utils/attendanceSync';
@@ -40,7 +41,9 @@ const INITIAL_SALARY_CONFIG: SalaryConfig = {
     { id: 'default-high', name: '고등', color: '#3B82F6', type: 'fixed', fixedRate: 45000, baseTuition: 0, ratio: 45 },
   ],
   incentives: {
+    blogType: 'fixed',
     blogAmount: 50000,
+    blogRate: 2,
     retentionAmount: 100000,
     retentionTargetRate: 0,
   }
@@ -183,6 +186,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const examIds = useMemo(() => exams.map(e => e.id), [exams]);
   const { data: scoresByStudent } = useScoresByExams(studentIds, examIds);
 
+  // Fetch holidays for attendance table styling
+  const { data: holidays = [] } = useHolidays(!!userProfile);
+
   // Resolve Teacher by Staff ID for Config
   const targetTeacher = useMemo(() => {
     if (!filterStaffId) return undefined;
@@ -308,7 +314,13 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
   const finalSalary = useMemo(() => {
     let total = stats.totalSalary;
-    if (currentSettlement.hasBlog) total += salaryConfig.incentives.blogAmount;
+    // 블로그 인센티브: 고정금 또는 비율 가산
+    if (currentSettlement.hasBlog) {
+      const blogBonus = salaryConfig.incentives.blogType === 'percentage'
+        ? Math.round(stats.totalSalary * (salaryConfig.incentives.blogRate || 0) / 100)
+        : salaryConfig.incentives.blogAmount;
+      total += blogBonus;
+    }
     if (currentSettlement.hasRetention) total += salaryConfig.incentives.retentionAmount;
     total += (currentSettlement.otherAmount || 0);
     return total;
@@ -681,6 +693,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             viewMode={viewMode}
             selectedSession={selectedSession}
             highlightWeekends={highlightWeekends}
+            holidays={holidays}
           />
         </div>
       </div>
@@ -732,6 +745,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         allStudents={rawAllStudents as any[] || []}
         currentStaffId={filterStaffId || ''}
         currentTeacherName={teachers.find(t => t.id === filterStaffId)?.name || ''}
+        currentSubject={selectedSubject}
         existingStudentIds={visibleStudents.map(s => s.id)}
         onStudentAdded={() => refetch()}
       />
