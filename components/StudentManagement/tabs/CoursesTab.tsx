@@ -565,7 +565,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         </span>
 
         {/* 수업명 */}
-        <span className="w-24 shrink-0 text-xs text-[#081429] truncate font-medium">
+        <span className="w-40 shrink-0 text-xs text-[#081429] truncate font-medium">
           {group.className}
         </span>
 
@@ -578,7 +578,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         </div>
 
         {/* 스케줄 (요일+교시 배지) */}
-        <div className="flex-1 min-w-0 overflow-hidden">
+        <div className="w-40 min-w-0 overflow-hidden">
           <ScheduleBadge schedule={actualClass?.schedule} subject={subjectForSchedule} />
         </div>
 
@@ -644,7 +644,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         </span>
 
         {/* 수업명 */}
-        <span className="w-24 shrink-0 text-xs text-[#373d41] truncate">
+        <span className="w-40 shrink-0 text-xs text-[#373d41] truncate">
           {group.className}
         </span>
 
@@ -657,7 +657,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         </div>
 
         {/* 스케줄 (빈 공간) */}
-        <div className="flex-1 min-w-0 overflow-hidden">
+        <div className="w-40 min-w-0 overflow-hidden">
           <span className="text-xxs text-gray-400 italic">종료됨</span>
         </div>
 
@@ -704,9 +704,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         {/* 테이블 헤더 */}
         <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
           <span className="w-8 shrink-0">과목</span>
-          <span className="w-24 shrink-0">수업명</span>
+          <span className="w-40 shrink-0">수업명</span>
           <span className="w-14 shrink-0">강사</span>
-          <span className="flex-1">스케줄</span>
+          <span className="w-40">스케줄</span>
           <span className="w-10 shrink-0 text-center">인원</span>
           {!compact && (
             <>
@@ -758,9 +758,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           {/* 테이블 헤더 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-amber-100/50 border-b border-amber-200 text-xxs font-medium text-[#373d41]">
             <span className="w-8 shrink-0"></span>
-            <span className="w-24 shrink-0">수업명</span>
+            <span className="w-40 shrink-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
-            <span className="flex-1">스케줄</span>
+            <span className="w-40">스케줄</span>
             <span className="w-10 shrink-0 text-center">인원</span>
             {!compact && (
               <>
@@ -796,7 +796,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                     <span className="w-8 shrink-0"></span>
 
                     {/* 수업명 */}
-                    <span className="w-24 shrink-0 text-xs text-[#373d41] font-medium truncate">
+                    <span className="w-40 shrink-0 text-xs text-[#373d41] font-medium truncate">
                       {group.className}
                     </span>
 
@@ -809,7 +809,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                     </div>
 
                     {/* 스케줄 */}
-                    <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="w-40 min-w-0 overflow-hidden">
                       <ScheduleBadge
                         schedule={actualClass?.schedule || group.schedule}
                         subject={group.subject === 'english' ? 'english' : 'math'}
@@ -866,9 +866,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           {/* 테이블 헤더 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
             <span className="w-8 shrink-0">과목</span>
-            <span className="w-24 shrink-0">수업명</span>
+            <span className="w-40 shrink-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
-            <span className="flex-1">상태</span>
+            <span className="w-40">상태</span>
             <span className="w-10 shrink-0"></span>
             <span className="w-16 shrink-0 text-center">시작</span>
             <span className="w-14 shrink-0 text-center">종료</span>

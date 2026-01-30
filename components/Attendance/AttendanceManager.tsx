@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, RefreshCw } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
@@ -231,10 +231,10 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   });
 
   // Persist group order changes
-  const handleGroupOrderChange = (newOrder: string[]) => {
+  const handleGroupOrderChange = useCallback((newOrder: string[]) => {
     setGroupOrder(newOrder);
     storage.setJSON(groupOrderKey, newOrder);
-  };
+  }, [groupOrderKey]);
 
   // Collapsed groups state (per teacher, stored in localStorage)
   const collapsedGroupsKey = STORAGE_KEYS.attendanceCollapsedGroups(filterStaffId || 'all', selectedSubject);
@@ -246,10 +246,10 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   });
 
   // Persist collapsed groups changes
-  const handleCollapsedGroupsChange = (newCollapsed: Set<string>) => {
+  const handleCollapsedGroupsChange = useCallback((newCollapsed: Set<string>) => {
     setCollapsedGroups(newCollapsed);
     storage.setJSON(collapsedGroupsKey, Array.from(newCollapsed));
-  };
+  }, [collapsedGroupsKey]);
 
   // 주말 회색 처리 상태 (localStorage에서 로드)
   const [highlightWeekends, setHighlightWeekends] = useState<boolean>(() => {
@@ -257,11 +257,11 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   });
 
   // 주말 회색 처리 토글
-  const handleToggleHighlightWeekends = () => {
+  const handleToggleHighlightWeekends = useCallback(() => {
     const newValue = !highlightWeekends;
     setHighlightWeekends(newValue);
     storage.setJSON(STORAGE_KEYS.ATTENDANCE_HIGHLIGHT_WEEKENDS, newValue);
-  };
+  }, [highlightWeekends]);
 
 
 
@@ -402,7 +402,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   }
 
   // Handlers
-  const handleAttendanceChange = async (studentId: string, dateKey: string, value: number | null) => {
+  const handleAttendanceChange = useCallback(async (studentId: string, dateKey: string, value: number | null) => {
     const key = `${studentId}_${dateKey}`;
     // 1. Optimistic Update (Immediate Feedback)
     setPendingUpdates(prev => ({ ...prev, [key]: value }));
@@ -432,7 +432,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         alert('저장에 실패했습니다.');
       }
     });
-  };
+  }, [updateAttendanceMutation, syncToDailyAttendance]);
 
   /**
    * 출석부 데이터를 출결 관리 시스템에 동기화
@@ -510,7 +510,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     });
   };
 
-  const handleMemoChange = async (studentId: string, dateKey: string, memo: string) => {
+  const handleMemoChange = useCallback(async (studentId: string, dateKey: string, memo: string) => {
     const key = `${studentId}_${dateKey}`;
     setPendingMemos(prev => ({ ...prev, [key]: memo }));
 
@@ -532,9 +532,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         alert('메모 저장에 실패했습니다.');
       }
     });
-  };
+  }, [updateMemoMutation]);
 
-  const handleHomeworkChange = async (studentId: string, dateKey: string, completed: boolean) => {
+  const handleHomeworkChange = useCallback(async (studentId: string, dateKey: string, completed: boolean) => {
     const yearMonth = dateKey.substring(0, 7);
     updateHomeworkMutation.mutate({ studentId, yearMonth, dateKey, completed }, {
       onSuccess: () => {
@@ -544,9 +544,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         alert('과제 상태 저장에 실패했습니다.');
       }
     });
-  };
+  }, [updateHomeworkMutation]);
 
-  const handleCellColorChange = async (studentId: string, dateKey: string, color: string | null) => {
+  const handleCellColorChange = useCallback(async (studentId: string, dateKey: string, color: string | null) => {
     const yearMonth = dateKey.substring(0, 7);
     updateCellColorMutation.mutate({ studentId, yearMonth, dateKey, color }, {
       onSuccess: () => {
@@ -556,7 +556,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         alert('셀 색상 저장에 실패했습니다.');
       }
     });
-  };
+  }, [updateCellColorMutation]);
 
   // 직접 이미지 다운로드 (모달 없이)
   // isExporting state는 컴포넌트 최상단(275번 줄)으로 이동됨
@@ -602,10 +602,10 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     }
   };
 
-  const handleEditStudent = (student: Student) => {
+  const handleEditStudent = useCallback((student: Student) => {
     setEditingStudent(student);
     setStudentModalOpen(true);
-  };
+  }, []);
 
   // Month navigation is now handled in App.tsx header
 
