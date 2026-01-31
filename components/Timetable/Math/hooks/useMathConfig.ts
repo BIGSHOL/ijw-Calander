@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 
 export interface MathConfig {
@@ -16,36 +16,33 @@ export const useMathConfig = () => {
     const [isTeacherOrderModalOpen, setIsTeacherOrderModalOpen] = useState(false);
     const [isWeekdayOrderModalOpen, setIsWeekdayOrderModalOpen] = useState(false);
 
-    // Load Math Config from Firestore
+    // Real-time sync (onSnapshot) - 영어 시간표와 동일하게 실시간 반영
     useEffect(() => {
-        const loadConfig = async () => {
-            try {
-                const docSnap = await getDoc(doc(db, 'settings', 'math_config'));
+        const unsubscribe = onSnapshot(
+            doc(db, 'settings', 'math_config'),
+            (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     setMathConfig({
                         teacherOrder: data.teacherOrder || [],
-                        weekdayOrder: data.weekdayOrder || []
+                        weekdayOrder: data.weekdayOrder || [],
                     });
                 }
-            } catch (error) {
-                console.error('Math config 로딩 실패:', error);
-            } finally {
+                setIsLoading(false);
+            },
+            (error) => {
+                console.error('Math config 실시간 동기화 실패:', error);
                 setIsLoading(false);
             }
-        };
-        loadConfig();
+        );
+
+        return () => unsubscribe();
     }, []);
 
     const handleSaveTeacherOrder = async (newOrder: string[]) => {
-        if (isLoading) {
-            console.warn('Config not loaded yet');
-            return;
-        }
-
         try {
             await setDoc(doc(db, 'settings', 'math_config'), { teacherOrder: newOrder }, { merge: true });
-            setMathConfig(prev => ({ ...prev, teacherOrder: newOrder }));
+            // onSnapshot이 자동으로 mathConfig를 업데이트함
         } catch (error) {
             console.error('강사 순서 저장 실패:', error);
             alert('강사 순서 저장에 실패했습니다.');
@@ -53,14 +50,9 @@ export const useMathConfig = () => {
     };
 
     const handleSaveWeekdayOrder = async (newOrder: string[]) => {
-        if (isLoading) {
-            console.warn('Config not loaded yet');
-            return;
-        }
-
         try {
             await setDoc(doc(db, 'settings', 'math_config'), { weekdayOrder: newOrder }, { merge: true });
-            setMathConfig(prev => ({ ...prev, weekdayOrder: newOrder }));
+            // onSnapshot이 자동으로 mathConfig를 업데이트함
         } catch (error) {
             console.error('요일 순서 저장 실패:', error);
             alert('요일 순서 저장에 실패했습니다.');
