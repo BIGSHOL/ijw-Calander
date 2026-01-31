@@ -53,9 +53,7 @@ const MigrationTab: React.FC = () => {
           <p>✅ Cloud Functions 업데이트 완료</p>
           <p>✅ 레거시 fallback 코드 제거 완료</p>
           <p className="text-gray-500 mt-4">
-            💡 기존 <code className="bg-gray-100 px-1 rounded">수업목록</code> 및
-            <code className="bg-gray-100 px-1 rounded ml-1">english_schedules</code> 컬렉션은
-            Firebase Console에서 수동으로 삭제할 수 있습니다.
+            💡 레거시 컬렉션 정리 완료. 현재 <code className="bg-gray-100 px-1 rounded">classes</code> 컬렉션을 사용합니다.
           </p>
         </div>
       </div>

@@ -404,7 +404,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   }, [addedStudentIds, students]);
 
   const handleBatchSaveScores = async () => {
-    if (!selectedExam || !user) return;
+    if (!selectedExam || !currentUser) return;
 
     const validEntries = Object.entries(scoreInputs)
       .filter(([_, input]) => input.score && !isNaN(Number(input.score)))

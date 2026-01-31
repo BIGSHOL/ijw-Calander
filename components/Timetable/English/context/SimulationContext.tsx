@@ -53,6 +53,7 @@ export interface ScenarioClass {
   schedule: { day: string; periodId: string; room?: string }[];
   slotTeachers?: Record<string, string>;  // "월-5" -> "Teacher"
   slotRooms?: Record<string, string>;     // "월-5" -> "Room"
+  slotUnderlines?: Record<string, boolean>; // "월-5" -> true/false (슬롯별 밑줄)
   underline?: boolean;
   mainTeacher?: string;
   // ... 기타 필드

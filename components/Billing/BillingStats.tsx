@@ -9,53 +9,59 @@ interface BillingStatsProps {
 
 export const BillingStats: React.FC<BillingStatsProps> = ({ records, selectedMonth }) => {
   const stats = useMemo(() => {
-    const totalAmount = records.reduce((sum, r) => sum + r.amount, 0);
-    const paidAmount = records.reduce((sum, r) => sum + r.paidAmount, 0);
-    const pendingCount = records.filter(r => r.status === 'pending' || r.status === 'partial').length;
-    const overdueCount = records.filter(r => r.status === 'overdue').length;
-    const collectionRate = totalAmount > 0 ? (paidAmount / totalAmount) * 100 : 0;
+    const totalBilled = records.reduce((sum, r) => sum + r.billedAmount, 0);
+    const totalDiscount = records.reduce((sum, r) => sum + r.discountAmount, 0);
+    const totalPaid = records.reduce((sum, r) => sum + r.paidAmount, 0);
+    const totalUnpaid = records.reduce((sum, r) => sum + r.unpaidAmount, 0);
+    const pendingCount = records.filter((r) => r.status === 'pending').length;
+    const paidCount = records.filter((r) => r.status === 'paid').length;
+    const uniqueStudents = new Set(records.map((r) => r.externalStudentId || r.studentName)).size;
+    const collectionRate = totalBilled > 0 ? (totalPaid / (totalBilled - totalDiscount)) * 100 : 0;
 
     return {
-      totalAmount,
-      paidAmount,
-      unpaidAmount: totalAmount - paidAmount,
-      totalStudents: records.length,
+      totalBilled,
+      totalDiscount,
+      totalPaid,
+      totalUnpaid,
       pendingCount,
-      overdueCount,
-      collectionRate,
+      paidCount,
+      uniqueStudents,
+      collectionRate: Math.min(collectionRate, 100),
     };
   }, [records]);
 
   const statCards = [
     {
       label: '총 청구액',
-      value: `${stats.totalAmount.toLocaleString()}원`,
+      value: `${stats.totalBilled.toLocaleString()}원`,
       icon: DollarSign,
       color: 'bg-blue-500',
       bgColor: 'bg-blue-50',
+      subValue: stats.totalDiscount > 0 ? `할인 ${stats.totalDiscount.toLocaleString()}원` : undefined,
     },
     {
       label: '수납액',
-      value: `${stats.paidAmount.toLocaleString()}원`,
+      value: `${stats.totalPaid.toLocaleString()}원`,
       icon: TrendingUp,
       color: 'bg-emerald-500',
       bgColor: 'bg-emerald-50',
-      subValue: `${stats.collectionRate.toFixed(1)}%`,
+      subValue: `수납률 ${stats.collectionRate.toFixed(1)}%`,
     },
     {
       label: '미수금',
-      value: `${stats.unpaidAmount.toLocaleString()}원`,
+      value: `${stats.totalUnpaid.toLocaleString()}원`,
       icon: TrendingDown,
       color: 'bg-orange-500',
       bgColor: 'bg-orange-50',
+      subValue: stats.pendingCount > 0 ? `${stats.pendingCount}건 미납` : undefined,
     },
     {
       label: '대상 학생',
-      value: `${stats.totalStudents}명`,
+      value: `${stats.uniqueStudents}명`,
       icon: Users,
       color: 'bg-purple-500',
       bgColor: 'bg-purple-50',
-      subValue: stats.pendingCount > 0 ? `미납 ${stats.pendingCount}명` : undefined,
+      subValue: `총 ${records.length}건`,
     },
   ];
 
@@ -83,11 +89,11 @@ export const BillingStats: React.FC<BillingStatsProps> = ({ records, selectedMon
         })}
       </div>
 
-      {stats.overdueCount > 0 && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-red-600" />
-          <span className="text-sm text-red-700">
-            연체 중인 학생이 {stats.overdueCount}명 있습니다.
+      {stats.pendingCount > 0 && (
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-yellow-600" />
+          <span className="text-sm text-yellow-700">
+            미납 건이 {stats.pendingCount}건 ({stats.totalUnpaid.toLocaleString()}원) 있습니다.
           </span>
         </div>
       )}

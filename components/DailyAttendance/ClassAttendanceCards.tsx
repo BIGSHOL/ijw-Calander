@@ -45,7 +45,7 @@ const ClassAttendanceCards: React.FC<ClassAttendanceCardsProps> = ({
   const { data: allClasses = [] } = useClasses();
 
   // 모든 학생 목록 조회 (enrollments 포함)
-  const { data: allStudents = [] } = useStudents();
+  const { students: allStudents = [] } = useStudents();
 
   // 수업별 출결 통계 계산
   const classSummaries = useMemo((): ClassSummary[] => {

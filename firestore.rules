@@ -119,22 +119,6 @@ service cloud.firestore {
       allow delete: if hasRole(['master']) || hasPermission('timetable.math.simulation');
     }
 
-    // Class List (수업목록)
-    match /{collection}/{classId} {
-      allow read: if collection == '\uC218\uC5C5\uBAA9\uB85D' && isAuthenticated();
-      allow write: if collection == '\uC218\uC5C5\uBAA9\uB85D' && 
-                      (hasRole(['master']) || 
-                       hasPermission('timetable.math.edit') || 
-                       hasPermission('timetable.english.edit'));
-    }
-
-    // Class List Draft (수업목록_draft)
-    match /{collection}/{classId} {
-      allow read: if collection == '\uC218\uC5C5\uBAA9\uB85D_draft' && 
-                     (hasRole(['master']) || hasPermission('timetable.english.simulation'));
-      allow write: if collection == '\uC218\uC5C5\uBAA9\uB85D_draft' && 
-                     (hasRole(['master']) || hasPermission('timetable.english.simulation'));
-    }
 
     // Teacher List (강사목록) - DEPRECATED: Migrated to 'staff' collection
     // NOTE: 강사 데이터가 staff 컬렉션으로 마이그레이션되었습니다.
@@ -144,7 +128,7 @@ service cloud.firestore {
       allow write: if false; // 쓰기 비활성화 - staff 컬렉션 사용
     }
 
-    // === Calendar Events (일정) ===
+    // === Calendar Events ===
 
     // Get permission from settings/rolePermissions
     function hasPermission(permissionId) {
@@ -153,27 +137,20 @@ service cloud.firestore {
       return rolePermissions[userRole][permissionId] == true;
     }
 
-    // Calendar Events Collection (Korean collection name: 일정)
-    // Note: Firestore Rules don't support Korean field names directly
-    // Field names in Rules use Unicode escape sequences
-    match /{collection}/{eventId} {
-      // Apply rules only to "일정" collection
-      allow read: if collection == '\uC77C\uC815' && isAuthenticated();
+    match /events/{eventId} {
+      allow read: if isAuthenticated();
 
-      allow create: if collection == '\uC77C\uC815' &&
-                       isAuthenticated() &&
+      allow create: if isAuthenticated() &&
                        hasPermission('events.create') &&
                        request.resource.data['\uC791\uC131\uC790ID'] == request.auth.uid;
 
-      allow update: if collection == '\uC77C\uC815' &&
-                       isAuthenticated() && (
+      allow update: if isAuthenticated() && (
                          (hasPermission('events.manage_own') &&
                           resource.data['\uC791\uC131\uC790ID'] == request.auth.uid) ||
                          hasPermission('events.manage_others')
                        );
 
-      allow delete: if collection == '\uC77C\uC815' &&
-                       isAuthenticated() && (
+      allow delete: if isAuthenticated() && (
                          (hasPermission('events.manage_own') &&
                           resource.data['\uC791\uC131\uC790ID'] == request.auth.uid) ||
                          hasPermission('events.manage_others')
@@ -373,12 +350,6 @@ service cloud.firestore {
       allow delete: if hasRole(['master']) ||
                        hasPermission('consultation.edit');
     }
-
-    // === Class Management (Korean collection names) ===
-    // Using wildcard match for Korean collection names
-
-    // Note: 수업목록 is handled by specific match groups above
-    // 강사목록 is DEPRECATED - use staff collection instead
 
     // === Departments (부서 관리) ===
     match /departments/{departmentId} {

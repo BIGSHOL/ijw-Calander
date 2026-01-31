@@ -21,10 +21,11 @@ export interface ClassStudent {
   name: string;
   school: string;
   grade: string;
-  status: 'active' | 'on_hold' | 'withdrawn';
+  status: 'active' | 'on_hold' | 'withdrawn' | 'prospect' | 'prospective';
   enrollmentDate: string;
   attendanceDays?: string[];  // 실제 등원 요일 (비어있으면 모든 수업 요일에 등원)
   underline?: boolean;  // 영어 시간표용 밑줄 강조 표시
+  isSlotTeacher?: boolean;  // 부담임 여부 (슬롯 교사)
   enrollmentId?: string;  // enrollment 문서 ID (onHold 업데이트용)
   onHold?: boolean;  // enrollment.onHold 상태
 }

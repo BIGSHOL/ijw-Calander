@@ -50,6 +50,12 @@ const StudentModal: React.FC<StudentModalProps> = ({
     // studentMap이 전달되면 enrollments 모드 (initialStudents가 비어있어도)
     const useEnrollmentsMode = Object.keys(studentMap).length > 0;
 
+    // Refs to avoid stale closures in async effects
+    const onCloseRef = useRef(onClose);
+    onCloseRef.current = onClose;
+    const teacherRef = useRef(teacher);
+    teacherRef.current = teacher;
+
     // Get full class name (e.g., PL5 -> Pre Let's 5)
     const fullClassName = useMemo(() => {
         const parsed = parseClassName(className);
@@ -88,12 +94,12 @@ const StudentModal: React.FC<StudentModalProps> = ({
             // Enrollments 모드: props에서 받은 학생 데이터 사용
             console.log('[StudentModal] Using enrollments mode with', initialStudents.length, 'students');
             setStudents(initialStudents);
-            setClassTeacher(teacher || '');
+            setClassTeacher(teacherRef.current || '');
             setLoading(false);
             return;
         }
 
-        // Legacy 모드: 수업목록에서 직접 로드 (fallback)
+        // Legacy 모드: classes 컬렉션에서 직접 로드 (fallback)
         const findOrCreateClass = async () => {
             setLoading(true);
             try {
@@ -115,7 +121,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
                         const newClassData = {
                             id: newDocId,
                             className: className,
-                            teacher: teacher || '',
+                            teacher: teacherRef.current || '',
                             subject: '영어',
                             room: '',
                             schedule: [],
@@ -132,7 +138,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
                             `새로 생성하시겠습니까?\n(취소 시 모달이 닫힙니다)`
                         );
                         if (!confirmed) {
-                            onClose();
+                            onCloseRef.current();
                             setLoading(false);
                             return;
                         }
@@ -141,7 +147,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
                         const newClassData = {
                             id: newDocId,
                             className: className,
-                            teacher: teacher || '',
+                            teacher: teacherRef.current || '',
                             subject: '영어',
                             room: '',
                             schedule: [],

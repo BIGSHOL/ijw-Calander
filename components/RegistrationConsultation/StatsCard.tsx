@@ -32,7 +32,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                     <div className="text-lg font-bold text-slate-900">{value}</div>
                 </div>
                 <div className={`p-1.5 rounded-lg ${colorClass} bg-opacity-10 text-opacity-100`}>
-                    {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4' })}
+                    {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-4 h-4' })}
                 </div>
             </div>
 

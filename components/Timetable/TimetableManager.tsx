@@ -229,17 +229,17 @@ const TimetableManager = ({
 
     // 나머지 뷰 설정 (캐시된 viewSettings에서 초기화)
     const [showClassName, setShowClassName] = useState(viewSettings.showClassName ?? true);
-    const [showSchool, setShowSchool] = useState(viewSettings.showSchool ?? false);
+    const [showSchool, setShowSchool] = useState(viewSettings.showSchool ?? true);
     const [showGrade, setShowGrade] = useState(viewSettings.showGrade ?? true);
     const [showEmptyRooms, setShowEmptyRooms] = useState(viewSettings.showEmptyRooms ?? false);
     const [columnWidth, setColumnWidth] = useState<'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide'>(
-        viewSettings.columnWidth || 'normal'
+        viewSettings.columnWidth || 'compact'
     );
     const [rowHeight, setRowHeight] = useState<'compact' | 'short' | 'normal' | 'tall' | 'very-tall'>(
-        viewSettings.rowHeight || 'normal'
+        viewSettings.rowHeight || 'compact'
     );
     const [fontSize, setFontSize] = useState<'small' | 'normal' | 'large'>(
-        viewSettings.fontSize || 'normal'
+        viewSettings.fontSize || 'small'
     );
     const [showHoldStudents, setShowHoldStudents] = useState(viewSettings.showHoldStudents ?? true);
     const [showWithdrawnStudents, setShowWithdrawnStudents] = useState(viewSettings.showWithdrawnStudents ?? true);
@@ -689,7 +689,7 @@ const TimetableManager = ({
                             }}
                             onDragLeave={(e) => {
                                 if (!isScenarioMode) {
-                                    handleDragLeave(e);
+                                    handleDragLeave();
                                 }
                             }}
                             onDrop={(e, toClassId) => {

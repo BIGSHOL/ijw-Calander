@@ -9,6 +9,7 @@ const COL_CLASSES = 'classes';
 export interface ClassInfo {
     id: string;
     className: string;
+    name?: string;        // className 별칭 (레거시 호환)
     teacher: string;
     subject: SubjectType;
     schedule?: string[];

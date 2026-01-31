@@ -66,28 +66,28 @@ function extractSchool(raw: any): string {
 
 // 과목 매핑
 function mapSubject(raw: any): ConsultationSubject {
-  if (!raw) return '기타' as ConsultationSubject;
+  if (!raw) return ConsultationSubject.Other;
   const str = String(raw).toUpperCase();
 
-  if (str.includes('EIE') || str.includes('영어') || str.includes('ENGLISH')) return 'English';
-  if (str.includes('수학') || str.includes('MATH')) return 'Math';
+  if (str.includes('EIE') || str.includes('영어') || str.includes('ENGLISH')) return ConsultationSubject.English;
+  if (str.includes('수학') || str.includes('MATH')) return ConsultationSubject.Math;
 
-  return '기타' as ConsultationSubject;
+  return ConsultationSubject.Other;
 }
 
 // 등록여부 매핑
 function mapStatus(raw: any): ConsultationStatus {
-  if (!raw) return '미등록';
+  if (!raw) return ConsultationStatus.NotRegistered;
   const str = String(raw).trim();
 
-  if (str.includes('영어등록')) return '영어등록';
-  if (str.includes('수학등록')) return '수학등록';
-  if (str.includes('영수등록')) return '영수등록';
-  if (str.includes('미등록')) return '미등록';
-  if (str.includes('이번달') || str.includes('등록예정')) return '이번달 등록예정';
-  if (str.includes('추후')) return '추후 등록예정';
+  if (str.includes('영어등록')) return ConsultationStatus.EngRegistered;
+  if (str.includes('수학등록')) return ConsultationStatus.MathRegistered;
+  if (str.includes('영수등록')) return ConsultationStatus.EngMathRegistered;
+  if (str.includes('미등록')) return ConsultationStatus.NotRegistered;
+  if (str.includes('이번달') || str.includes('등록예정')) return ConsultationStatus.PendingThisMonth;
+  if (str.includes('추후')) return ConsultationStatus.PendingFuture;
 
-  return (str || '미등록') as ConsultationStatus;
+  return (str || ConsultationStatus.NotRegistered) as ConsultationStatus;
 }
 
 // 날짜 변환

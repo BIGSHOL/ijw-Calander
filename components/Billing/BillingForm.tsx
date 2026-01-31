@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
-import { BillingRecord, BillingItem, PaymentMethod } from '../../types';
+import { X } from 'lucide-react';
+import { BillingRecord } from '../../types';
 
 interface BillingFormProps {
   isOpen: boolean;
@@ -18,63 +18,74 @@ export const BillingForm: React.FC<BillingFormProps> = ({
   selectedMonth,
 }) => {
   const [formData, setFormData] = useState({
-    studentId: '',
+    externalStudentId: '',
     studentName: '',
+    grade: '',
+    school: '',
+    parentPhone: '',
+    studentPhone: '',
+    category: '수업',
     month: selectedMonth,
-    items: [{ name: '', amount: 0 }] as BillingItem[],
-    dueDate: '',
-    paymentMethod: 'card' as PaymentMethod,
+    billingDay: 1,
+    billingName: '',
+    billedAmount: 0,
+    discountAmount: 0,
+    pointsUsed: 0,
+    paidAmount: 0,
+    unpaidAmount: 0,
+    status: 'pending' as 'pending' | 'paid',
+    paymentMethod: '',
+    cardCompany: '',
+    paidDate: '',
+    cashReceipt: '',
     memo: '',
   });
 
   useEffect(() => {
     if (initialData) {
       setFormData({
-        studentId: initialData.studentId,
+        externalStudentId: initialData.externalStudentId,
         studentName: initialData.studentName,
+        grade: initialData.grade,
+        school: initialData.school,
+        parentPhone: initialData.parentPhone,
+        studentPhone: initialData.studentPhone,
+        category: initialData.category,
         month: initialData.month,
-        items: initialData.items,
-        dueDate: initialData.dueDate,
-        paymentMethod: initialData.paymentMethod || 'card',
-        memo: initialData.memo || '',
+        billingDay: initialData.billingDay,
+        billingName: initialData.billingName,
+        billedAmount: initialData.billedAmount,
+        discountAmount: initialData.discountAmount,
+        pointsUsed: initialData.pointsUsed,
+        paidAmount: initialData.paidAmount,
+        unpaidAmount: initialData.unpaidAmount,
+        status: initialData.status,
+        paymentMethod: initialData.paymentMethod,
+        cardCompany: initialData.cardCompany,
+        paidDate: initialData.paidDate,
+        cashReceipt: initialData.cashReceipt,
+        memo: initialData.memo,
       });
     }
   }, [initialData]);
 
-  const totalAmount = formData.items.reduce((sum, item) => sum + (item.amount || 0), 0);
-
-  const handleAddItem = () => {
-    setFormData(prev => ({
-      ...prev,
-      items: [...prev.items, { name: '', amount: 0 }],
-    }));
-  };
-
-  const handleRemoveItem = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleItemChange = (index: number, field: keyof BillingItem, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.map((item, i) =>
-        i === index ? { ...item, [field]: value } : item
-      ),
-    }));
-  };
+  // 미납금 자동 계산
+  const effectiveUnpaid = formData.billedAmount - formData.discountAmount - formData.pointsUsed - formData.paidAmount;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const status = effectiveUnpaid <= 0 ? 'paid' : 'pending';
     onSubmit({
       ...formData,
-      amount: totalAmount,
-      paidAmount: initialData?.paidAmount || 0,
-      status: initialData?.status || 'pending',
-      createdBy: initialData?.createdBy || '',
+      unpaidAmount: Math.max(0, effectiveUnpaid),
+      status,
+      createdAt: initialData?.createdAt || '',
+      updatedAt: '',
     });
+  };
+
+  const updateField = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   if (!isOpen) return null;
@@ -84,7 +95,7 @@ export const BillingForm: React.FC<BillingFormProps> = ({
       <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <h2 className="text-lg font-bold">
-            {initialData ? '청구서 수정' : '청구서 생성'}
+            {initialData ? '수납 수정' : '수납 추가'}
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <X className="w-5 h-5" />
@@ -93,92 +104,144 @@ export const BillingForm: React.FC<BillingFormProps> = ({
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-auto p-6">
           <div className="space-y-4">
-            {/* 학생 선택 */}
+            {/* 학생 정보 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
+                <input
+                  type="text"
+                  value={formData.studentName}
+                  onChange={(e) => updateField('studentName', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">학년</label>
+                <input
+                  type="text"
+                  value={formData.grade}
+                  onChange={(e) => updateField('grade', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+              </div>
+            </div>
+
+            {/* 청구 정보 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">청구월</label>
+                <input
+                  type="month"
+                  value={formData.month}
+                  onChange={(e) => updateField('month', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">청구일</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={formData.billingDay}
+                  onChange={(e) => updateField('billingDay', parseInt(e.target.value) || 1)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">학생</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">수납명</label>
               <input
                 type="text"
-                value={formData.studentName}
-                onChange={(e) => setFormData(prev => ({ ...prev, studentName: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
-                placeholder="학생 이름"
+                value={formData.billingName}
+                onChange={(e) => updateField('billingName', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+                placeholder="예: [수학] 중2 정규반 월수금"
                 required
               />
             </div>
 
-            {/* 청구 월 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">청구 월</label>
-              <input
-                type="month"
-                value={formData.month}
-                onChange={(e) => setFormData(prev => ({ ...prev, month: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
-                required
-              />
-            </div>
-
-            {/* 청구 항목 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">청구 항목</label>
-              <div className="space-y-2">
-                {formData.items.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={item.name}
-                      onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                      className="flex-1 px-3 py-2 border rounded-lg text-sm"
-                      placeholder="항목명 (예: 수학)"
-                    />
-                    <input
-                      type="number"
-                      value={item.amount || ''}
-                      onChange={(e) => handleItemChange(index, 'amount', parseInt(e.target.value) || 0)}
-                      className="w-32 px-3 py-2 border rounded-lg text-sm text-right"
-                      placeholder="금액"
-                    />
-                    {formData.items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(index)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+            {/* 금액 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">청구액</label>
+                <input
+                  type="number"
+                  value={formData.billedAmount || ''}
+                  onChange={(e) => updateField('billedAmount', parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm text-right"
+                />
               </div>
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="mt-2 flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700"
-              >
-                <Plus className="w-4 h-4" /> 항목 추가
-              </button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">할인액</label>
+                <input
+                  type="number"
+                  value={formData.discountAmount || ''}
+                  onChange={(e) => updateField('discountAmount', parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm text-right"
+                />
+              </div>
             </div>
 
-            {/* 합계 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">적립금 사용</label>
+                <input
+                  type="number"
+                  value={formData.pointsUsed || ''}
+                  onChange={(e) => updateField('pointsUsed', parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm text-right"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">실제 납부액</label>
+                <input
+                  type="number"
+                  value={formData.paidAmount || ''}
+                  onChange={(e) => updateField('paidAmount', parseInt(e.target.value) || 0)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm text-right"
+                />
+              </div>
+            </div>
+
+            {/* 미납금 자동 계산 표시 */}
             <div className="p-3 bg-gray-50 rounded-lg">
               <div className="flex justify-between items-center">
-                <span className="font-medium">총 청구액</span>
-                <span className="text-xl font-bold text-emerald-600">
-                  {totalAmount.toLocaleString()}원
+                <span className="text-sm text-gray-600">미납 금액</span>
+                <span className={`text-lg font-bold ${effectiveUnpaid > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                  {Math.max(0, effectiveUnpaid).toLocaleString()}원
                 </span>
               </div>
             </div>
 
-            {/* 납부 기한 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">납부 기한</label>
-              <input
-                type="date"
-                value={formData.dueDate}
-                onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
-                required
-              />
+            {/* 결제 정보 */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">결제수단</label>
+                <select
+                  value={formData.paymentMethod}
+                  onChange={(e) => updateField('paymentMethod', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                >
+                  <option value="">선택</option>
+                  <option value="카드">카드</option>
+                  <option value="온라인(계좌)">계좌이체</option>
+                  <option value="현금">현금</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">카드사</label>
+                <input
+                  type="text"
+                  value={formData.cardCompany}
+                  onChange={(e) => updateField('cardCompany', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                  placeholder="예: KB국민카드"
+                />
+              </div>
             </div>
 
             {/* 메모 */}
@@ -186,10 +249,9 @@ export const BillingForm: React.FC<BillingFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">메모</label>
               <textarea
                 value={formData.memo}
-                onChange={(e) => setFormData(prev => ({ ...prev, memo: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg resize-none"
+                onChange={(e) => updateField('memo', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg resize-none text-sm"
                 rows={2}
-                placeholder="추가 메모"
               />
             </div>
           </div>
@@ -207,7 +269,7 @@ export const BillingForm: React.FC<BillingFormProps> = ({
             onClick={handleSubmit}
             className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
           >
-            {initialData ? '수정' : '생성'}
+            {initialData ? '수정' : '추가'}
           </button>
         </div>
       </div>

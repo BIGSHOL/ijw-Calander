@@ -9,6 +9,7 @@ import {
   query,
   where,
   orderBy,
+  writeBatch,
   DocumentData,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
@@ -17,14 +18,57 @@ import { BillingRecord } from '../types';
 const COL_BILLING = 'billing';
 
 /**
+ * xlsx 청구월 포맷(202601) → 내부 포맷(2026-01) 변환
+ */
+export function normalizeMonth(raw: string | number): string {
+  const s = String(raw);
+  if (s.includes('-')) return s; // 이미 2026-01 형식
+  if (s.length === 6) return `${s.slice(0, 4)}-${s.slice(4, 6)}`;
+  return s;
+}
+
+/**
+ * Firestore 문서 → BillingRecord 매핑
+ */
+function docToBillingRecord(id: string, data: DocumentData): BillingRecord {
+  return {
+    id,
+    externalStudentId: data.externalStudentId ?? '',
+    studentName: data.studentName ?? '',
+    grade: data.grade ?? '',
+    school: data.school ?? '',
+    parentPhone: data.parentPhone ?? '',
+    studentPhone: data.studentPhone ?? '',
+    category: data.category ?? '',
+    month: data.month ?? '',
+    billingDay: data.billingDay ?? 0,
+    billingName: data.billingName ?? '',
+    status: data.status ?? 'pending',
+    billedAmount: data.billedAmount ?? 0,
+    discountAmount: data.discountAmount ?? 0,
+    pointsUsed: data.pointsUsed ?? 0,
+    paidAmount: data.paidAmount ?? 0,
+    unpaidAmount: data.unpaidAmount ?? 0,
+    paymentMethod: data.paymentMethod ?? '',
+    cardCompany: data.cardCompany ?? '',
+    paidDate: data.paidDate ?? '',
+    cashReceipt: data.cashReceipt ?? '',
+    memo: data.memo ?? '',
+    createdAt: data.createdAt ?? '',
+    updatedAt: data.updatedAt ?? '',
+  };
+}
+
+/**
  * 수납 관리 Hook
- * - 월별 청구서 CRUD
+ * - 월별 수납 CRUD
+ * - xlsx 일괄 import
  * - React Query 기반 캐싱
  */
 export function useBilling(month?: string) {
   const queryClient = useQueryClient();
 
-  // 청구서 목록 조회
+  // 수납 목록 조회
   const {
     data: records = [],
     isLoading,
@@ -45,55 +89,22 @@ export function useBilling(month?: string) {
       }
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as DocumentData;
-        return {
-          id: docSnap.id,
-          studentId: data.studentId,
-          studentName: data.studentName,
-          month: data.month,
-          amount: data.amount,
-          paidAmount: data.paidAmount,
-          status: data.status,
-          dueDate: data.dueDate,
-          items: data.items,
-          createdBy: data.createdBy,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt,
-          ...(data.paymentMethod && { paymentMethod: data.paymentMethod }),
-          ...(data.paidDate && { paidDate: data.paidDate }),
-          ...(data.memo && { memo: data.memo }),
-        } as BillingRecord;
-      });
+      return snapshot.docs.map((docSnap) =>
+        docToBillingRecord(docSnap.id, docSnap.data())
+      );
     },
-    staleTime: 1000 * 60 * 5, // 5분 캐싱
+    staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
     refetchOnWindowFocus: false,
   });
 
-  // 청구서 생성
+  // 수납 생성
   const createRecord = useMutation({
-    mutationFn: async (data: Omit<BillingRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
+    mutationFn: async (data: Omit<BillingRecord, 'id'>) => {
       const now = new Date().toISOString();
-      const newRecord: Record<string, any> = {
-        studentId: data.studentId,
-        studentName: data.studentName,
-        month: data.month,
-        amount: data.amount,
-        paidAmount: data.paidAmount,
-        status: data.status,
-        dueDate: data.dueDate,
-        items: data.items,
-        createdBy: data.createdBy,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      if (data.paymentMethod) newRecord.paymentMethod = data.paymentMethod;
-      if (data.paidDate) newRecord.paidDate = data.paidDate;
-      if (data.memo) newRecord.memo = data.memo;
-
-      const docRef = await addDoc(collection(db, COL_BILLING), newRecord);
+      const docData: Record<string, any> = { ...data, createdAt: now, updatedAt: now };
+      delete (docData as any).id;
+      const docRef = await addDoc(collection(db, COL_BILLING), docData);
       return docRef.id;
     },
     onSuccess: () => {
@@ -101,14 +112,13 @@ export function useBilling(month?: string) {
     },
   });
 
-  // 청구서 수정
+  // 수납 수정
   const updateRecord = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<BillingRecord> }) => {
       const docRef = doc(db, COL_BILLING, id);
-      const now = new Date().toISOString();
       await updateDoc(docRef, {
         ...updates,
-        updatedAt: now,
+        updatedAt: new Date().toISOString(),
       });
       return { id, updates };
     },
@@ -117,7 +127,7 @@ export function useBilling(month?: string) {
     },
   });
 
-  // 청구서 삭제
+  // 수납 삭제
   const deleteRecord = useMutation({
     mutationFn: async (id: string) => {
       const docRef = doc(db, COL_BILLING, id);
@@ -129,34 +139,55 @@ export function useBilling(month?: string) {
     },
   });
 
-  // 납부 처리
-  const processPayment = useMutation({
-    mutationFn: async ({
-      id,
-      amount,
-      method,
-    }: {
-      id: string;
-      amount: number;
-      method: 'card' | 'cash' | 'transfer';
-    }) => {
-      const record = records.find((r) => r.id === id);
-      if (!record) throw new Error('청구서를 찾을 수 없습니다.');
+  // 월 단위 삭제 (import 전 기존 데이터 제거용)
+  const deleteByMonth = useMutation({
+    mutationFn: async (targetMonth: string) => {
+      const q = query(
+        collection(db, COL_BILLING),
+        where('month', '==', targetMonth)
+      );
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) return 0;
 
-      const newPaidAmount = record.paidAmount + amount;
-      const newStatus =
-        newPaidAmount >= record.amount ? 'paid' : newPaidAmount > 0 ? 'partial' : 'pending';
+      // Firestore batch는 500개 제한
+      let count = 0;
+      let batch = writeBatch(db);
+      for (const docSnap of snapshot.docs) {
+        batch.delete(docSnap.ref);
+        count++;
+        if (count % 450 === 0) {
+          await batch.commit();
+          batch = writeBatch(db);
+        }
+      }
+      if (count % 450 !== 0) {
+        await batch.commit();
+      }
+      return count;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['billing'] });
+    },
+  });
 
-      const docRef = doc(db, COL_BILLING, id);
-      await updateDoc(docRef, {
-        paidAmount: newPaidAmount,
-        status: newStatus,
-        paymentMethod: method,
-        paidDate: new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString(),
-      });
-
-      return { id, newPaidAmount, newStatus };
+  // xlsx 일괄 import
+  const importRecords = useMutation({
+    mutationFn: async (billingRecords: Omit<BillingRecord, 'id'>[]) => {
+      let count = 0;
+      let batch = writeBatch(db);
+      for (const record of billingRecords) {
+        const docRef = doc(collection(db, COL_BILLING));
+        batch.set(docRef, record);
+        count++;
+        if (count % 450 === 0) {
+          await batch.commit();
+          batch = writeBatch(db);
+        }
+      }
+      if (count % 450 !== 0) {
+        await batch.commit();
+      }
+      return count;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing'] });
@@ -171,7 +202,8 @@ export function useBilling(month?: string) {
     createRecord,
     updateRecord,
     deleteRecord,
-    processPayment,
+    deleteByMonth,
+    importRecords,
   };
 }
 

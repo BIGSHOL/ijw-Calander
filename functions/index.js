@@ -405,7 +405,7 @@ exports.onConsultationWrite = functions
  * Cloud Function: Auto-Archive Old Events
  * =========================================================
  * Triggered daily. Moves events older than 'lookbackYears'
- * from '일정' to 'archived_events'.
+ * from 'events' to 'archived_events'.
  */
 exports.archiveOldEvents = functions
     .region("asia-northeast3")
@@ -436,7 +436,7 @@ exports.archiveOldEvents = functions
 
             // 3. Query Old Events
             // Limit to 450 to fill one batch comfortably (limit is 500)
-            const snapshot = await db.collection("일정")
+            const snapshot = await db.collection("events")
                 .where("종료일", "<", cutoffDate)
                 .limit(450)
                 .get();
@@ -454,13 +454,13 @@ exports.archiveOldEvents = functions
             snapshot.forEach(doc => {
                 const data = doc.data();
                 const archiveRef = db.collection("archived_events").doc(doc.id);
-                const originalRef = db.collection("일정").doc(doc.id);
+                const originalRef = db.collection("events").doc(doc.id);
 
                 // Copy to Archive with metadata
                 batch.set(archiveRef, {
                     ...data,
                     archivedAt: new Date().toISOString(),
-                    originalCollection: "일정"
+                    originalCollection: "events"
                 });
 
                 // Delete from Original

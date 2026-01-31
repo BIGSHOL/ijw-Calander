@@ -94,7 +94,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
       }
 
       // 레거시: role='teacher' + subjects 체크
-      if (member.role === 'teacher' && member.subjects?.includes(subject)) {
+      if (member.role === 'teacher' && member.subjects?.includes(subject as 'math' | 'english')) {
         return true;
       }
 
