@@ -1,505 +1,293 @@
-# 🤖 Claude Code 에이전트 시스템
+# Claude Code Agent System
 
-> **프로젝트**: ijw-calander (학원 관리 시스템)
-> **업데이트**: 2026-01-09
-> **에이전트 수**: 17개
-
----
-
-## 📚 주요 문서
-
-### 1. [협업 워크플로우](WORKFLOW.md)
-에이전트 간 협업 프로세스와 사용 시나리오를 상세하게 설명합니다.
-
-**주요 내용**:
-- 8가지 핵심 워크플로우
-- 워크플로우별 실행 가이드
-- 사용 시나리오 및 예시
-- 트리거 조건 정리
-
-### 2. [역할 명확화](ROLE-CLARIFICATION.md)
-에이전트 간 중복 기능을 정리하고 명확한 역할을 정의합니다.
-
-**주요 내용**:
-- 중복 영역 분석
-- 에이전트별 책임 범위
-- 의사결정 가이드
-- 안티패턴 및 모범 사례
+> **Project**: ijw-calander (Academy Management System)
+> **Updated**: 2026-01-31
+> **Structure**: 11 Teams, 67 Agents + 1 Director Command
 
 ---
 
-## 🎯 에이전트 목록
+## Architecture
 
-### 코드 품질 관리 (5개)
+```
+refactor (Director Command, opus model)
+|
+|-- Frontend Team (frontend-lead) .......... 6 agents
+|-- Backend Team (backend-lead) ............ 6 agents
+|-- Database Team (database-lead) .......... 6 agents
+|-- Test Team (test-lead) .................. 6 agents
+|-- Review Team (review-lead) .............. 8 agents
+|-- Security Team (security-lead) .......... 6 agents
+|-- Cost Optimization Team (cost-lead) ..... 6 agents
+|-- Design Team (design-lead) .............. 6 agents
+|-- Debug Team (debug-lead) ................ 5 agents
+|-- Content Team (content-lead) ............ 7 agents
+|-- Migration Team (migration-lead) ........ 5 agents
+```
 
-#### 1. [code-reviewer](code-reviewer.md)
-**역할**: 코드 품질 검토 및 개선점 제안
-**트리거**: `trigger_on_code_review: true`
-**키워드**: "코드 점검", "코드 리뷰", "검토", "체크"
-
-#### 2. [code-fixer](code-fixer.md)
-**역할**: 리뷰 피드백 자동 반영
-**트리거**: `trigger_after_code_review: true`
-**협업**: code-reviewer → **code-fixer**
-
-#### 3. [firebase-cost-optimizer](firebase-cost-optimizer.md)
-**역할**: Firebase/Firestore 비용 분석 및 최적화
-**트리거**: `trigger_on_firebase_code: true`
-**협업**: code-reviewer → **firebase-cost-optimizer** → code-fixer
-
-#### 4. 🆕 [security-auditor](security-auditor.md)
-**역할**: 코드 보안 취약점 검사, 개인정보 보호 검토
-**트리거**: `trigger_before_deployment: true`
-**키워드**: "보안", "취약점", "XSS", "인증", "개인정보"
-**협업**: code-reviewer → **security-auditor** → code-fixer
-
-#### 5. 🆕 [design-system-guardian](design-system-guardian.md)
-**역할**: UI 디자인 일관성 검사, 브랜드 색상 준수 확인
-**트리거**: `trigger_after_component_creation: true`
-**키워드**: "디자인", "UI 검사", "스타일", "색상", "일관성"
-**브랜드 색상**: 곤색(#081429), 노란색(#fdb813), 회색(#373d41)
-**협업**: code-reviewer → **design-system-guardian** → code-fixer
+Director: `.claude/commands/refactor.md` (opus model, Task tool access)
+Agents: `.claude/agents/*.md` (sonnet model, subagent_type for Task)
 
 ---
 
-### 도메인 전문가 (3개)
+## Team Details
 
-#### 6. [academy-domain-expert](academy-domain-expert.md)
-**역할**: 학원 관리 시스템 도메인 로직 설계
-**트리거**: `trigger_on_phrases` + `trigger_on_domain_features: true`
-**키워드**: "학원", "원생", "출석", "수강", "강좌"
+### 1. Frontend Team (frontend-lead)
 
-#### 7. [cloud-function-architect](cloud-function-architect.md)
-**역할**: Firebase Cloud Functions 아키텍처 설계
-**트리거**: `trigger_on_phrases`
-**키워드**: "Cloud Function", "클라우드 펑션", "서버리스", "트리거"
+| Agent | Role |
+|-------|------|
+| frontend-lead | Team lead. React 19 component architecture |
+| component-refactorer | Component split/merge/optimization |
+| state-optimizer | State management optimization |
+| ui-consistency | UI design consistency |
+| performance-optimizer | React rendering performance |
+| accessibility-specialist | A11y, responsive design |
 
-#### 8. 🆕 [notification-designer](notification-designer.md)
-**역할**: 알림 시스템 설계, 푸시/SMS/카카오 연동
-**트리거**: `trigger_on_domain_features: true`
-**키워드**: "알림", "푸시", "SMS", "카카오", "알림톡"
-**협업**: academy-domain-expert → **notification-designer** → cloud-function-architect
+Access: `components/`, `hooks/`, `pages/`, `App.tsx`, `types.ts`
 
----
+### 2. Backend Team (backend-lead)
 
-### 문제 해결 (2개)
+| Agent | Role |
+|-------|------|
+| backend-lead | Team lead. Firebase Cloud Functions |
+| cloud-function-architect | Cloud Functions architecture |
+| api-designer | API standardization |
+| firebase-cost-optimizer | Firebase cost optimization (Cost team shared) |
+| error-handler | Error handling patterns |
+| caching-specialist | Caching strategy |
 
-#### 9. [bug-hunter](bug-hunter.md)
-**역할**: 버그 추적 및 디버깅
-**트리거**: `trigger_on_phrases`
-**키워드**: "버그", "에러", "오류", "bug", "error", "문제 발생"
-**협업**: **bug-hunter** → code-fixer → test-writer
+Access: `functions/`, `firebaseConfig.ts`
 
-#### 10. [refactor-expert](refactor-expert.md)
-**역할**: 코드 리팩토링 및 최적화
-**트리거**: `trigger_on_phrases` + `trigger_on_complexity_threshold: true`
-**키워드**: "리팩토링", "코드 개선", "최적화", "구조 개선"
-**협업**: **refactor-expert** → code-fixer → test-writer
+### 3. Database Team (database-lead)
 
----
+| Agent | Role |
+|-------|------|
+| database-lead | Team lead. Firestore schema/converter |
+| schema-designer | Firestore schema design |
+| query-optimizer | Query/index optimization |
+| migration-helper | Migration scripts (Migration team shared) |
+| data-validator | Data integrity verification |
+| backup-specialist | Backup/recovery strategy |
 
-### 문서화 및 분석 (4개)
+Access: `converters.ts`, `types.ts`, `firestore.indexes.json`, `scripts/`
 
-#### 11. [doc-writer](doc-writer.md)
-**역할**: 기술 문서 및 API 문서 작성
-**트리거**: `trigger_on_phrases` + `trigger_on_new_features: true`
-**키워드**: "문서 작성", "README", "API 문서", "가이드"
-**협업**: **doc-writer** → report-analyst
+### 4. Test Team (test-lead)
 
-#### 12. [report-analyst](report-analyst.md)
-**역할**: 마크다운 보고서 분석 및 개선
-**트리거**: `trigger_on_file_extension: [".md"]` + `trigger_on_phrases`
-**키워드**: "보고서 검토", "문서 검토", "리포트 분석"
+| Agent | Role |
+|-------|------|
+| test-lead | Team lead. Test strategy |
+| test-writer | Unit/integration test writing |
+| tdd-expert | TDD workflow |
+| e2e-tester | E2E testing |
+| bug-hunter | Bug detection/fix (Debug team shared) |
+| test-infra-specialist | Test infrastructure |
 
-#### 13. 🆕 [analytics-expert](analytics-expert.md)
-**역할**: 운영 데이터 분석, 리포트 생성, 시각화
-**트리거**: `trigger_on_domain_features: true`
-**키워드**: "통계", "분석", "리포트", "대시보드", "KPI"
-**협업**: **analytics-expert** → doc-writer → notification-designer
+Access: `__tests__/`, `scripts/`, `*.test.ts`
 
-#### 14. 🆕 [report-summarizer](report-summarizer.md)
-**역할**: 긴 리포트를 핵심만 빠르게 요약, 의사결정 지원
-**트리거**: `trigger_after_report_generation: true`
-**키워드**: "요약", "핵심만", "간단히", "브리핑", "정리해줘", "한줄로"
-**협업**: 다른 에이전트 리포트 → **report-summarizer** → 사용자 의사결정
+### 5. Review Team (review-lead)
 
----
+| Agent | Role |
+|-------|------|
+| review-lead | Team lead. Code quality standards |
+| code-reviewer | Code review |
+| refactor-expert | Refactoring patterns |
+| doc-writer | Documentation |
+| report-analyst | Report analysis |
+| architecture-reviewer | Architecture review |
+| analytics-expert | Operations data analysis/KPI |
+| report-summarizer | Report summarization/briefing |
 
-### 테스트 (1개)
+Access: All files (read-only)
 
-#### 15. [test-writer](test-writer.md)
-**역할**: 단위/통합/E2E 테스트 작성
-**트리거**: `trigger_on_phrases` + `trigger_after_refactoring: true` + `trigger_after_bug_fix: true`
-**키워드**: "테스트 작성", "테스트 추가", "test", "커버리지"
+### 6. Security Team (security-lead)
 
----
+| Agent | Role |
+|-------|------|
+| security-lead | Team lead. Security policy |
+| security-auditor | Security audit |
+| firestore-rules-specialist | Firestore Security Rules |
+| auth-specialist | Authentication/authorization |
+| data-privacy-specialist | Personal data protection |
+| dependency-scanner | Dependency vulnerability scanning |
 
-### 🎖️ 시스템 관리 (2개)
+Access: `firestore.rules`, `functions/index.js` (auth), `.env`
 
-#### 16. 🆕 [agent-orchestrator](agent-orchestrator.md)
-**역할**: 에이전트 시스템 총괄 관리 (추가/삭제/수정 시 문서 자동 업데이트)
-**트리거**: `priority: highest`
-**키워드**: "에이전트 추가", "에이전트 삭제", "에이전트 현황", "시스템 관리"
-**특징**: 에이전트 변경 시 README, WORKFLOW, ROLE-CLARIFICATION, UPDATE-GUIDE 자동 업데이트
+### 7. Cost Optimization Team (cost-lead)
 
-#### 17. 🆕 [token-optimizer](token-optimizer.md)
-**역할**: 토큰 사용량 최소화, 모든 에이전트의 효율화 가이드라인
-**트리거**: `priority: reference`
-**키워드**: "토큰", "비용", "효율", "간단히", "짧게"
-**특징**: Grep 우선 읽기, 간결한 응답, 필요한 체인만 실행
+| Agent | Role |
+|-------|------|
+| cost-lead | Team lead. Cost reduction strategy |
+| bundle-optimizer | Bundle size optimization |
+| function-cost-optimizer | Cloud Functions cost optimization |
+| network-optimizer | Network optimization |
+| resource-monitor | Resource monitoring |
+| token-optimizer | Claude Code token cost optimization |
 
----
+Access: All files (read-only) + `package.json`, bundle analysis
+Note: `firebase-cost-optimizer` from Backend team shared
 
-## 🔄 핵심 워크플로우 (8가지)
+### 8. Design Team (design-lead)
 
-### 1️⃣ 코드 품질 관리 (가장 자주 사용)
+| Agent | Role |
+|-------|------|
+| design-lead | Team lead. Design system |
+| ux-researcher | UX research/analysis |
+| ui-designer | UI component design |
+| interaction-designer | Interaction design |
+| responsive-specialist | Responsive design |
+| design-system-guardian | Design system consistency |
 
-```
-code-reviewer → firebase-cost-optimizer → code-fixer
-```
+Access: `components/`, `tailwind.config.*`, `index.css`
+Brand colors: Navy(#081429), Yellow(#fdb813), Gray(#373d41)
 
-**사용 예**:
-```
-사용자: "StudentList.tsx 파일 코드 리뷰해줘"
-→ code-reviewer 자동 실행
-→ firebase-cost-optimizer 자동 실행 (Firestore 코드 발견 시)
-→ code-fixer 실행 (사용자 확인 후)
-```
+### 9. Debug Team (debug-lead)
 
----
+| Agent | Role |
+|-------|------|
+| debug-lead | Team lead. RADAR process |
+| error-tracer | Error tracking/stack analysis |
+| regression-tester | Regression testing |
+| firebase-debugger | Firebase-specific debugging |
+| performance-debugger | Performance issue debugging |
 
-### 2️⃣ 버그 수정
+Access: All files (full access)
+Note: `bug-hunter` from Test team shared
+Process: Reproduce -> Analyze -> Diagnose -> Act -> Regression (RADAR)
 
-```
-bug-hunter → code-fixer → test-writer
-```
+### 10. Content Team (content-lead)
 
-**사용 예**:
-```
-사용자: "출석 체크 시 에러 발생하는데 원인 찾아줘"
-→ bug-hunter 실행
-→ code-fixer 실행 (수정 적용)
-→ test-writer 실행 (회귀 테스트)
-```
+| Agent | Role |
+|-------|------|
+| content-lead | Team lead. Student-centered content |
+| ui-text-specialist | UI text/labels |
+| data-display-specialist | Data display formats |
+| i18n-specialist | Korean-English mapping/terminology |
+| help-content-specialist | Help/guide/onboarding content |
+| notification-designer | Notification/message content |
+| academy-domain-expert | Academy domain logic/business |
 
----
+Access: `components/` (text), `types.ts` (labels/enum)
 
-### 3️⃣ 기능 개발
+### 11. Migration Team (migration-lead)
 
-```
-academy-domain-expert → cloud-function-architect → [구현] → test-writer → code-reviewer
-```
+| Agent | Role |
+|-------|------|
+| migration-lead | Team lead. SAFE process |
+| schema-migrator | Schema change impact analysis |
+| data-integrity-checker | Data integrity verification |
+| code-sync-specialist | Code reference synchronization |
+| rollback-specialist | Rollback/emergency recovery |
 
-**사용 예**:
-```
-사용자: "학생 출석률 자동 계산 기능 설계해줘"
-→ academy-domain-expert 실행 (도메인 설계)
-→ cloud-function-architect 실행 (서버리스 설계)
-→ [개발자 코드 구현]
-→ test-writer 실행
-→ code-reviewer 실행
-```
-
----
-
-### 4️⃣ 리팩토링
-
-```
-refactor-expert → code-fixer → test-writer → code-reviewer
-```
-
-**사용 예**:
-```
-사용자: "App.tsx 리팩토링 계획 세워줘"
-→ refactor-expert 실행
-→ code-fixer 실행 (리팩토링 적용)
-→ test-writer 실행 (회귀 테스트)
-→ code-reviewer 실행 (검증)
-```
+Access: All files (full access)
+Note: `migration-helper` from Database team shared
+Process: Survey -> Architect -> Fulfill -> Evaluate (SAFE)
 
 ---
 
-### 5️⃣ 문서화
+## Shared Agents
 
-```
-doc-writer → report-analyst
-```
+Some agents serve on multiple teams:
 
-**사용 예**:
-```
-사용자: "출석 관리 API 문서 작성해줘"
-→ doc-writer 실행
-→ report-analyst 실행 (품질 검토)
-→ doc-writer 실행 (개선 반영)
-```
+| Agent | Primary Team | Shared With |
+|-------|-------------|-------------|
+| firebase-cost-optimizer | Backend | Cost Optimization |
+| migration-helper | Database | Migration |
+| bug-hunter | Test | Debug |
 
 ---
 
-### 6️⃣ 🆕 보안 점검
+## Access Rights
 
-```
-code-reviewer → security-auditor → code-fixer → [배포]
-```
-
-**사용 예**:
-```
-사용자: "배포 전 보안 검사해줘"
-→ code-reviewer 실행 (기본 품질 검토)
-→ security-auditor 실행 (보안 취약점 검사)
-→ code-fixer 실행 (보안 이슈 수정)
-→ [배포 진행]
-```
+| Level | Teams | Scope |
+|-------|-------|-------|
+| Full access (R/W) | Director, Debug, Migration | All project files |
+| Domain access (R/W) | Frontend, Backend, Database, Security, Design, Content, Test | Own domain files |
+| Read-only | Review, Cost Optimization | All files (analysis/review) |
 
 ---
 
-### 7️⃣ 🆕 알림 기능 개발
+## Dispatch Priority
 
+| Priority | Situation | Teams Dispatched |
+|----------|-----------|-----------------|
+| P0 (immediate) | Error/Bug | Debug + related teams |
+| P0 (immediate) | Security vulnerability | Security (can halt all) |
+| P1 (high) | New feature | Frontend + Backend + DB |
+| P1 (high) | Performance issue | Cost Optimization + Debug |
+| P1 (high) | Data migration | Migration + DB |
+| P2 (medium) | UI/UX improvement | Design + Frontend |
+| P2 (medium) | Refactoring | Review + related teams |
+| P2 (medium) | Content update | Content |
+| P2 (medium) | Test writing | Test |
+| P3 (low) | Documentation | Review (doc-writer) |
+
+---
+
+## Usage
+
+### Via Director (recommended for complex tasks)
 ```
-academy-domain-expert → notification-designer → cloud-function-architect → code-fixer → security-auditor
+/refactor [description of work]
 ```
+The Director analyzes the situation, dispatches appropriate teams in parallel/sequence, and reports results.
 
-**사용 예**:
+### Via Individual Agent (for specific tasks)
+Use Task tool with `subagent_type` matching the agent name:
 ```
-사용자: "학부모 출결 알림 기능 설계해줘"
-→ academy-domain-expert 실행 (비즈니스 요구사항)
-→ notification-designer 실행 (알림 채널 및 템플릿 설계)
-→ cloud-function-architect 실행 (트리거 설계)
-→ code-fixer 실행 (구현)
-→ security-auditor 실행 (개인정보 보호 검토)
-```
-
----
-
-### 8️⃣ 🆕 데이터 분석
-
-```
-analytics-expert → doc-writer → notification-designer
-```
-
-**사용 예**:
-```
-사용자: "이번 달 매출 분석 리포트 만들어줘"
-→ analytics-expert 실행 (데이터 분석)
-→ doc-writer 실행 (리포트 문서화)
-→ notification-designer 실행 (자동 발송 설정, 선택)
-```
-
----
-
-## 🚀 빠른 시작
-
-### Step 1: 상황 파악
-무엇을 하고 싶은가?
-- 코드 점검? → `code-reviewer`
-- 버그 수정? → `bug-hunter`
-- 기능 설계? → `academy-domain-expert`
-- 리팩토링? → `refactor-expert`
-- 문서 작성? → `doc-writer`
-- 🆕 보안 검사? → `security-auditor`
-- 🆕 알림 설계? → `notification-designer`
-- 🆕 데이터 분석? → `analytics-expert`
-- 🆕 리포트 요약? → `report-summarizer`
-- 🆕 디자인 일관성? → `design-system-guardian`
-- 🆕 에이전트 관리? → `agent-orchestrator`
-
-### Step 2: 워크플로우 확인
-[WORKFLOW.md](WORKFLOW.md)에서 해당 워크플로우 찾기
-
-### Step 3: 순차 실행
-각 에이전트를 순서대로 실행 (자동 트리거 활용)
-
-### Step 4: 결과 검증
-마지막 단계에서 전체 검증
-
----
-
-## ⚡ 빠른 참조 카드
-
-### 상황별 에이전트 선택
-
-| 이런 상황에서... | 이렇게 말하세요 | 실행되는 에이전트 |
-|-----------------|----------------|------------------|
-| 코드 작성 후 | "코드 점검해줘" | code-reviewer |
-| 에러 발생 | "버그 찾아줘" | bug-hunter |
-| 새 기능 필요 | "기능 설계해줘" | academy-domain-expert |
-| 문서 필요 | "문서 작성해줘" | doc-writer |
-| 테스트 필요 | "테스트 작성해줘" | test-writer |
-| 🆕 보안 걱정 | "보안 검사해줘" | security-auditor |
-| 🆕 알림 기능 | "알림 설계해줘" | notification-designer |
-| 🆕 데이터 분석 | "통계 분석해줘" | analytics-expert |
-| 🆕 리포트 요약 | "요약해줘" / "핵심만" | report-summarizer |
-| 🆕 UI 일관성 | "디자인 검사해줘" | design-system-guardian |
-| 🆕 에이전트 관리 | "에이전트 추가/삭제/현황" | agent-orchestrator |
-| 🆕 토큰 절약 | "간단히" / "짧게" | token-optimizer (참조) |
-
----
-
-## 📊 에이전트 활용 통계 (권장)
-
-### 🔥 매일 사용
-- `code-reviewer`: 모든 코드 작업 후
-- `code-fixer`: 리뷰 피드백 반영
-
-### 📈 자주 사용
-- `firebase-cost-optimizer`: Firebase 코드 작업 시
-- `bug-hunter`: 버그 발생 시
-- `test-writer`: 새 기능 추가 시
-- 🆕 `security-auditor`: 배포 전
-
-### 📅 주기적 사용
-- `refactor-expert`: 주간 코드 정리
-- `doc-writer`: 기능 완성 시
-- `report-analyst`: 월간 보고서 작성 시
-- 🆕 `analytics-expert`: 주간/월간 리포트 생성
-
-### 🌙 필요 시 사용
-- `academy-domain-expert`: 새 도메인 기능 설계
-- `cloud-function-architect`: Cloud Function 추가
-- 🆕 `notification-designer`: 알림 기능 추가
-
----
-
-## ⚠️ 주의사항
-
-### ✅ DO (해야 할 것)
-1. 워크플로우 순서 준수
-2. 자동 트리거 활용
-3. 결과 검증 필수
-4. 문서 업데이트
-5. 🆕 배포 전 보안 검사
-
-### ❌ DON'T (하지 말 것)
-1. 같은 에이전트 중복 실행
-2. 순서 뒤바꾸기 (reviewer 전에 fixer)
-3. 역할 오용 (doc-writer에게 검토 요청)
-4. 검증 없이 배포
-5. 🆕 보안 검사 없이 배포
-
----
-
-## 🔧 트러블슈팅
-
-### Q1: 어떤 에이전트를 사용해야 할지 모르겠어요
-**A**: [ROLE-CLARIFICATION.md](ROLE-CLARIFICATION.md)의 의사결정 가이드 참조
-
-### Q2: 에이전트가 자동 실행되지 않아요
-**A**: 트리거 키워드를 정확히 사용했는지 확인
-- 예: "코드 점검" (O) vs "코드 확인" (X)
-
-### Q3: 에이전트 결과가 기대와 달라요
-**A**:
-1. 역할 범위 확인 (각 에이전트 문서 참조)
-2. 올바른 워크플로우 사용 중인지 확인
-3. 이전 단계 결과물 제공했는지 확인
-
-### Q4: 여러 에이전트를 동시에 실행하고 싶어요
-**A**:
-- 독립적인 작업: 병렬 실행 가능
-- 의존 관계: 순차 실행 필수
-
-### Q5: 🆕 보안 검사는 언제 해야 하나요?
-**A**:
-- 배포 전 필수
-- 개인정보 관련 코드 수정 후
-- 인증/권한 로직 변경 후
-
----
-
-## 📈 성능 최적화
-
-### 에이전트 실행 속도 개선
-1. **모델 선택**: 간단한 작업은 `haiku` 모델 사용 (설정 시)
-2. **캐싱 활용**: 반복 작업은 결과 재사용
-3. **병렬 실행**: 독립적 에이전트 동시 실행
-
-### 비용 절감
-1. 필요한 에이전트만 실행
-2. 자동 트리거 조건 정확히 설정
-3. 결과물 재사용
-
----
-
-## 📝 변경 이력
-
-### v1.4 (2026-01-09) - 현재
-- ✅ **report-summarizer** 추가 (리포트 요약)
-- ✅ **design-system-guardian** 추가 (디자인 일관성)
-- ✅ **agent-orchestrator** 추가 (시스템 총괄 관리)
-- ✅ **token-optimizer** 추가 (토큰 효율화)
-- ✅ 에이전트 17개로 확장
-- ✅ 기존 에이전트에 report-summarizer 협업 연계 추가
-- ✅ 학원 브랜드 색상 시스템 정의 (곤색/노란색/회색)
-
-### v1.3 (2026-01-09)
-- ✅ **security-auditor** 추가 (보안 검사)
-- ✅ **notification-designer** 추가 (알림 설계)
-- ✅ **analytics-expert** 추가 (데이터 분석)
-- ✅ 워크플로우 3개 추가 (총 8개)
-- ✅ 전체 문서 업데이트
-
-### v1.2 (2026-01-08)
-- ✅ 협업 워크플로우 문서화 완료
-- ✅ 자동 트리거 조건 추가
-- ✅ 에이전트 간 중복 기능 정리
-
-### v1.1 (2026-01-05)
-- code-reviewer, code-fixer, firebase-cost-optimizer 업데이트
-
-### v1.0 (2025-12-30)
-- 초기 에이전트 시스템 구축
-
----
-
-## 🤝 기여
-
-에이전트 개선 제안:
-1. 이슈 등록
-2. 팀 회의 안건 상정
-3. 문서 업데이트 PR
-
----
-
-## 📚 추가 리소스
-
-- [Claude Code 공식 문서](https://claude.com/claude-code)
-- [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk)
-- [프로젝트 위키](링크 추가 예정)
-
----
-
-## 💡 팁과 트릭
-
-### 효율적인 사용법
-```bash
-# 1. 키워드로 자동 트리거
-"이 파일 코드 점검해줘"  # code-reviewer 자동 실행
-
-# 2. 체인 실행 요청
-"코드 리뷰하고 자동으로 수정까지 해줘"
-# code-reviewer → code-fixer 순차 실행
-
-# 3. 컨텍스트 공유
-"위에서 발견한 버그 수정해줘"
-# bug-hunter 결과를 code-fixer가 참조
-
-# 4. 🆕 보안 검사 포함
-"코드 리뷰하고 보안 검사까지 해줘"
-# code-reviewer → security-auditor 순차 실행
-
-# 5. 🆕 리포트 요약 체인
-"코드 리뷰하고 요약해줘"
-# code-reviewer → report-summarizer 순차 실행
+Task(subagent_type="code-reviewer", prompt="Review App.tsx")
+Task(subagent_type="bug-hunter", prompt="Fix attendance error")
 ```
 
-### 베스트 프랙티스
-1. **작은 단위로**: 큰 작업은 여러 단계로 분할
-2. **검증 우선**: 각 단계 후 결과 확인
-3. **문서화 습관**: 중요한 변경사항 기록
-4. **정기 점검**: 주기적으로 전체 코드 리뷰
-5. **🆕 보안 우선**: 배포 전 반드시 보안 검사
+### Quick Reference
+
+| Situation | Agent/Team |
+|-----------|-----------|
+| Code review | code-reviewer |
+| Bug fix | bug-hunter / debug-lead |
+| New feature design | academy-domain-expert |
+| Refactoring | refactor-expert |
+| Documentation | doc-writer |
+| Security audit | security-auditor |
+| Performance issue | performance-debugger |
+| Cost analysis | firebase-cost-optimizer |
+| UI consistency | design-system-guardian |
+| Data migration | migration-lead |
+| Report summary | report-summarizer |
+| Test writing | test-writer |
 
 ---
 
-**관리자**: ijw-calander 개발팀
-**문서 작성**: Claude
-**최종 업데이트**: 2026-01-09
+## Tech Stack
+
+- **Frontend**: React 19 + Vite + TypeScript + TailwindCSS
+- **Backend**: Firebase Cloud Functions (Node.js)
+- **Database**: Cloud Firestore (Korean field names + converter pattern)
+- **Auth**: Firebase Authentication (RBAC)
+- **Deploy**: Vercel (frontend) + Firebase (Cloud Functions)
+- **Standards**: Vercel React Best Practices
+
+---
+
+## Changelog
+
+### v2.0 (2026-01-31) - Current
+- Complete restructure: flat 17-agent system -> 11-team hierarchy
+- Added Director command (opus model) for orchestration
+- Created 6 new teams: Frontend, Backend, Database, Design, Debug, Content
+- Added Migration team (SAFE process)
+- Expanded to 67 agents with team leads
+- Access rights distribution policy
+- Autonomous dispatch system (P0-P3)
+- Removed outdated docs (ROLE-CLARIFICATION, UPDATE-GUIDE, WORKFLOW)
+- Removed redundant agent (code-fixer)
+
+### v1.4 (2026-01-09)
+- Added report-summarizer, design-system-guardian, agent-orchestrator, token-optimizer
+- 17 agents total
+
+### v1.0-v1.3 (2025-12-30 ~ 2026-01-09)
+- Initial agent system through iterative expansion
+
+---
+
+**Maintainer**: ijw-calander dev team
+**Last updated**: 2026-01-31
