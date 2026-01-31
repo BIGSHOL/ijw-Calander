@@ -1,10 +1,12 @@
 /**
- * 클라이언트 측 데이터 암호화/복호화 유틸리티
+ * @deprecated 클라이언트 측 암호화는 보안상 안전하지 않습니다.
+ * VITE_ 환경변수는 브라우저 번들에 포함되어 키가 노출됩니다.
  *
- * 주의사항:
- * 1. 환경변수 VITE_ENCRYPTION_KEY는 반드시 .env.local에 설정해야 합니다
- * 2. 암호화 키는 32바이트 (256비트) 길이여야 합니다
- * 3. 프로덕션 환경에서는 Firebase Functions 사용을 권장합니다
+ * 대신 서버 측 Cloud Functions를 사용하세요:
+ * - encryptPhoneNumbers (functions/index.js)
+ * - decryptPhoneNumbers (functions/index.js)
+ *
+ * 이 파일은 레거시 호환용으로만 유지됩니다.
  */
 
 import CryptoJS from 'crypto-js';
