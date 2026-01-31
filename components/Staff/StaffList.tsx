@@ -66,6 +66,11 @@ const StaffList: React.FC<StaffListProps> = ({
       math_teacher: { icon: <User className="w-3 h-3" />, color: 'text-blue-500' },
       english_teacher: { icon: <User className="w-3 h-3" />, color: 'text-pink-500' },
       user: { icon: <User className="w-3 h-3" />, color: 'text-gray-600' },
+      teacher: { icon: <User className="w-3 h-3" />, color: 'text-green-600' },
+      staff: { icon: <User className="w-3 h-3" />, color: 'text-gray-500' },
+      editor: { icon: <User className="w-3 h-3" />, color: 'text-blue-500' },
+      senior_staff: { icon: <User className="w-3 h-3" />, color: 'text-indigo-600' },
+      viewer: { icon: <User className="w-3 h-3" />, color: 'text-yellow-600' },
     };
     return styles[role];
   };

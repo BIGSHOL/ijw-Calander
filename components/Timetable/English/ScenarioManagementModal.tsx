@@ -285,7 +285,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
                 classBatch = writeBatch(db);
 
-                currentClassIds.forEach(docId => {
+                currentClassIds.forEach((docId: string) => {
                     if (!scenarioClassIds.has(docId)) {
                         classBatch!.delete(doc(db, CLASS_DRAFT_COLLECTION, docId));
                     }

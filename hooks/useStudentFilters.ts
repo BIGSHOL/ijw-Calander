@@ -209,7 +209,7 @@ const filterBySubjects = (students: UnifiedStudent[], subjects: string[]): Unifi
             .filter(e => !e.endDate)
             .map((e) => e.subject);
 
-        return subjects.some((subject) => studentSubjects.includes(subject));
+        return subjects.some((subject) => studentSubjects.includes(subject as any));
     });
 };
 

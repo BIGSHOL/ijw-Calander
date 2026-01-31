@@ -54,6 +54,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
     const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [labRooms, setLabRooms] = useState<string[]>([]);
 
     // SimulationContext 사용
     const simulation = useSimulation();
@@ -159,7 +160,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         className: cls.className,
                         classId,
                         room: slotRoom,
-                        underline: cls.underline || false
+                        underline: cls.slotUnderlines?.[slotKey] ?? cls.underline ?? false
                     });
                 } else {
                     scheduleData[key] = {
@@ -167,6 +168,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         classId,
                         room: slotRoom,
                         teacher: slotTeacher,
+                        underline: cls.slotUnderlines?.[slotKey] ?? cls.underline ?? false,
                         merged: []
                     };
                 }
@@ -231,7 +233,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 className: cls.className,
                                 classId: docSnap.id,
                                 room: slotRoom,
-                                underline: cls.underline || false
+                                underline: cls.slotUnderlines?.[slotKey] ?? cls.underline ?? false
                             });
                         } else {
                             scheduleData[key] = {
@@ -239,6 +241,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 classId: docSnap.id,
                                 room: slotRoom,
                                 teacher: slotTeacher,
+                                underline: cls.slotUnderlines?.[slotKey] ?? cls.underline ?? false,
                                 merged: []
                             };
                         }
@@ -302,6 +305,16 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             }
         });
         return listenerRegistry.register('EnglishTimetable(config)', unsubscribeOrder);
+    }, []);
+
+    // Subscribe to Room Settings (labRooms)
+    useEffect(() => {
+        const unsubscribe = onSnapshot(doc(db, 'settings', 'roomSettings'), (docSnap) => {
+            if (docSnap.exists()) {
+                setLabRooms(docSnap.data().labRooms || []);
+            }
+        });
+        return listenerRegistry.register('EnglishTimetable(roomSettings)', unsubscribe);
     }, []);
 
     // Derived sorted teachers
@@ -533,6 +546,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     onPublishToLive={handlePublishDraftToLive}
                                     onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
                                     canPublish={isMaster || hasPermission('timetable.english.simulation')}
+                                    labRooms={labRooms}
+                                    studentMap={studentMap}
                                 />
 
                                 <TeacherOrderModal
@@ -570,6 +585,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 scheduleData={scheduleData}
                                 classKeywords={classKeywords}
                                 currentUser={currentUser}
+                                labRooms={labRooms}
+                                studentMap={studentMap}
                             />
                         )}
                     </>

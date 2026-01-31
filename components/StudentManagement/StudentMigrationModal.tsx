@@ -104,15 +104,31 @@ interface ExcelStudentData {
   보호자연락처?: string;
   보호자구분?: string;
   보호자이름?: string;
+  기타보호자이름?: string;
   기타보호자연락처?: string;
+  집전화?: string;
   입학일?: string;
   주소1?: string;
   주소2?: string;
+  우편번호?: string;
   메모?: string;
   수업?: string;
+  반?: string;
   담임강사?: string;
   기타항목1?: string;
+  기타항목2?: string;
   원생고유번호?: string;
+  생일?: string;
+  닉네임?: string;
+  원생이메일?: string;
+  입학동기?: string;
+  현금영수증발급번호?: string;
+  현금영수증발급구분?: string;
+  수납기준청구일?: string;
+  할인액?: string;
+  보호자출결알림?: string;
+  기타보호자출결알림?: string;
+  졸업연도?: string;
 }
 
 const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }) => {

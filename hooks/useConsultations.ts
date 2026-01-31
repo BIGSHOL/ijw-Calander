@@ -56,7 +56,7 @@ export const useConsultations = (options: UseConsultationsOptions = {}) => {
 
             const records = snapshot.docs.map(doc => ({
                 id: doc.id,
-                ...doc.data(),
+                ...(doc.data() as Record<string, any>),
             })) as ConsultationRecord[];
 
             // Helper to get valid date object

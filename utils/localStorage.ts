@@ -44,6 +44,7 @@ export const STORAGE_KEYS = {
   RESOURCE_FAVORITES: 'ijw_resource_favorites',
   RESOURCE_CATEGORY_ORDER: 'ijw_resource_category_order',
   ATTENDANCE_HIGHLIGHT_WEEKENDS: 'ijw_attendance_highlight_weekends',
+  ATTENDANCE_SORT_MODE: 'ijw_attendance_sort_mode',
 
   // Dynamic keys (functions)
   resourceSubCategoryOrder: (mainCategory: string) =>

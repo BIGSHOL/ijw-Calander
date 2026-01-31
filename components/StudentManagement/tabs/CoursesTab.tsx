@@ -205,12 +205,13 @@ interface CoursesTabProps {
 
 interface GroupedEnrollment {
   className: string;
-  subject: 'math' | 'english';
+  subject: 'math' | 'english' | 'science' | 'korean' | 'other';
   teachers: string[];
   days: string[];
   enrollmentIds: string[]; // 삭제를 위해 enrollment ID 저장
   startDate?: string; // 수강 시작일
   endDate?: string; // 수강 종료일 (undefined = 재원중)
+  schedule?: string[]; // 스케줄 정보
 }
 
 const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact = false, readOnly = false, currentUser }) => {

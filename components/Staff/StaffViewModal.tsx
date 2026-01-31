@@ -25,6 +25,11 @@ const SYSTEM_ROLE_STYLES: Record<UserRole, { label: string; bg: string; text: st
   math_teacher: { label: '수학 강사', bg: 'bg-blue-50', text: 'text-blue-700', icon: <User className="w-3.5 h-3.5" /> },
   english_teacher: { label: '영어 강사', bg: 'bg-pink-50', text: 'text-pink-700', icon: <User className="w-3.5 h-3.5" /> },
   user: { label: 'USER', bg: 'bg-gray-100', text: 'text-gray-800', icon: <User className="w-3.5 h-3.5" /> },
+  teacher: { label: '강사', bg: 'bg-green-100', text: 'text-green-800', icon: <User className="w-3.5 h-3.5" /> },
+  staff: { label: '직원', bg: 'bg-gray-100', text: 'text-gray-700', icon: <User className="w-3.5 h-3.5" /> },
+  editor: { label: 'EDITOR', bg: 'bg-blue-100', text: 'text-blue-800', icon: <User className="w-3.5 h-3.5" /> },
+  senior_staff: { label: '시니어', bg: 'bg-indigo-100', text: 'text-indigo-800', icon: <User className="w-3.5 h-3.5" /> },
+  viewer: { label: '뷰어', bg: 'bg-yellow-100', text: 'text-yellow-800', icon: <User className="w-3.5 h-3.5" /> },
 };
 
 // 승인 상태 스타일

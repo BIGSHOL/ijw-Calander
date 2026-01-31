@@ -36,6 +36,7 @@ import { TabSubNavigation } from './components/Common/TabSubNavigation';
 import { TabButton } from './components/Common/TabButton';
 import { RoleSimulationProvider, SimulationState, getEffectiveUserProfile } from './hooks/useRoleSimulation';
 import RoleSimulationBanner from './components/Common/RoleSimulationBanner';
+import ErrorBoundary from './components/Common/ErrorBoundary';
 
 // Performance: bundle-dynamic-imports - 모달 컴포넌트 lazy loading (~30-50KB 번들 감소)
 const EventModal = lazy(() => import('./components/Calendar/EventModal'));
@@ -196,7 +197,7 @@ const createNewStaffMember = async (user: User, isMaster: boolean): Promise<Staf
 const App: React.FC = () => {
 
   // App Mode (Top-level navigation) - null until permissions are loaded
-  const [appMode, setAppMode] = useState<'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'classroom-assignment' | 'student-consultations' | 'billing' | 'daily-attendance' | 'staff' | 'resources' | null>(null);
+  const [appMode, setAppMode] = useState<AppTab | null>(null);
 
   // ============================================
   // Custom Hooks (Vercel Best Practices: rerender-derived-state)
@@ -522,6 +523,7 @@ const App: React.FC = () => {
   // Auth Listener with Real-time Profile Sync
   useEffect(() => {
     let profileUnsubscribe: (() => void) | null = null;
+    let isCancelled = false;
 
     const authUnsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
@@ -540,6 +542,8 @@ const App: React.FC = () => {
 
         try {
           profileUnsubscribe = onSnapshot(staffQuery, async (snapshot) => {
+            // Race condition guard: 로그아웃 후 비동기 코드 실행 방지
+            if (isCancelled) return;
             try {
               const masterEmails = systemConfig?.masterEmails || ['st2000423@gmail.com'];
               const isMasterEmail = user.email && masterEmails.includes(user.email);
@@ -636,6 +640,7 @@ const App: React.FC = () => {
     });
 
     return () => {
+      isCancelled = true;
       authUnsubscribe();
       if (profileUnsubscribe) profileUnsubscribe();
     };
@@ -838,13 +843,13 @@ const App: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
-  // Subscribe to Events (일정) - REAL-TIME (필수)
+  // Subscribe to Events - REAL-TIME (필수)
   useEffect(() => {
     // Optimization: Fetch events from configured lookback years (default 2)
     const queryStartDate = format(subYears(new Date(), lookbackYears), 'yyyy-MM-dd');
 
     const q = query(
-      collection(db, "일정").withConverter(eventConverter),
+      collection(db, "events").withConverter(eventConverter),
       where("시작일", ">=", queryStartDate)
     );
 
@@ -1116,6 +1121,9 @@ const App: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
+  // Firestore 문서 ID에 '/'가 포함되면 경로 구분자로 해석되므로 치환
+  const safeDeptId = (deptId: string) => deptId.replace(/\//g, '_');
+
   const handleSaveEvent = async (event: CalendarEvent) => {
     try {
       // 0. Auto-Restore from Archive Logic
@@ -1204,7 +1212,7 @@ const App: React.FC = () => {
             // Or just make sure they are unique.
             // If we use baseEventId for one and suffix for others, it works.
             const isPrimary = deptId === event.departmentId;
-            const finalId = isPrimary ? baseEventId : `${baseEventId}_${deptId}`;
+            const finalId = isPrimary ? baseEventId : `${baseEventId}_${safeDeptId(deptId)}`;
 
             const recurringEvent: CalendarEvent = {
               ...event,
@@ -1218,7 +1226,7 @@ const App: React.FC = () => {
               relatedGroupId: instanceRelatedGroupId,
             };
 
-            const ref = doc(db, "일정", finalId).withConverter(eventConverter);
+            const ref = doc(db, "events", finalId).withConverter(eventConverter);
 
             // Check batch size limit and commit if necessary
             if (operationCount >= MAX_BATCH_SIZE) {
@@ -1248,7 +1256,7 @@ const App: React.FC = () => {
         if (event.relatedGroupId) {
           // Strategy: Query all siblings and update them
           const q = query(
-            collection(db, "일정").withConverter(eventConverter),
+            collection(db, "events").withConverter(eventConverter),
             where("연결그룹ID", "==", event.relatedGroupId)
           );
 
@@ -1273,7 +1281,7 @@ const App: React.FC = () => {
               // Note: Reuse ID to preserve history/references if possible.
               let finalId = existingSiblingsMap.get(deptId);
               if (!finalId) {
-                finalId = isPrimary ? event.id : `${event.id}_${deptId}`;
+                finalId = isPrimary ? event.id : `${event.id}_${safeDeptId(deptId)}`;
               }
 
               const singleEvent: CalendarEvent = {
@@ -1285,7 +1293,7 @@ const App: React.FC = () => {
                 version: (event.version || 0) + 1 // Increment version for concurrency control
               };
 
-              batch.set(doc(db, "일정", finalId).withConverter(eventConverter), singleEvent);
+              batch.set(doc(db, "events", finalId).withConverter(eventConverter), singleEvent);
             }
 
             // B. Delete Orphans (Siblings that are in DB but NOT in targetDeptIds)
@@ -1294,7 +1302,7 @@ const App: React.FC = () => {
               const siblingDeptId = data.departmentId;
               // If this sibling's department is NOT in the new selection, delete it.
               if (!targetDeptIds.includes(siblingDeptId)) {
-                batch.delete(doc(db, "일정", d.id));
+                batch.delete(doc(db, "events", d.id));
               }
             });
 
@@ -1313,7 +1321,7 @@ const App: React.FC = () => {
 
             for (const deptId of targetDeptIds) {
               const isPrimary = deptId === event.departmentId;
-              const finalId = isPrimary ? event.id : `${event.id}_${deptId}`;
+              const finalId = isPrimary ? event.id : `${event.id}_${safeDeptId(deptId)}`;
 
               const singleEvent: CalendarEvent = {
                 ...event,
@@ -1326,7 +1334,7 @@ const App: React.FC = () => {
 
               // Check if we need to DELETE an old ID if we renamed/switched primary? 
               // For now, simpler set.
-              batch.set(doc(db, "일정", finalId).withConverter(eventConverter), singleEvent);
+              batch.set(doc(db, "events", finalId).withConverter(eventConverter), singleEvent);
             }
           }
         } else {
@@ -1342,7 +1350,7 @@ const App: React.FC = () => {
             const isPrimary = deptId === event.departmentId;
             // Careful: If 'event.id' already has a suffix, adding another is bad.
             // Ideally event.id is clean.
-            const finalId = isPrimary ? event.id : `${event.id}_${deptId}`;
+            const finalId = isPrimary ? event.id : `${event.id}_${safeDeptId(deptId)}`;
 
             plannedIds.push(finalId);
 
@@ -1355,13 +1363,13 @@ const App: React.FC = () => {
               version: (event.version || 0) + 1 // Increment version for concurrency control
             };
 
-            batch.set(doc(db, "일정", finalId).withConverter(eventConverter), singleEvent);
+            batch.set(doc(db, "events", finalId).withConverter(eventConverter), singleEvent);
           }
 
           // Cleanup: If the original event ID is NOT in the new set (meaning Primary Dept changed), delete it.
           if (!plannedIds.includes(event.id)) {
             if (event.createdAt) {
-              batch.delete(doc(db, "일정", event.id));
+              batch.delete(doc(db, "events", event.id));
             }
           }
         }
@@ -1390,20 +1398,31 @@ const App: React.FC = () => {
       const batch = writeBatch(db);
       let deleteCount = 0;
 
+      // Helper: 연결 그룹의 형제 이벤트 조회 (자기 자신 제외)
+      const getLinkedSiblings = async (evt: CalendarEvent) => {
+        if (!evt.relatedGroupId) return [];
+        const q = query(
+          collection(db, "events").withConverter(eventConverter),
+          where("연결그룹ID", "==", evt.relatedGroupId)
+        );
+        const snapshot = await import('firebase/firestore').then(mod => mod.getDocs(q));
+        return snapshot.docs.filter(d => d.id !== evt.id);
+      };
+
       // Helper to delete a linked group for a single event instance
       const deleteLinkedGroup = async (evt: CalendarEvent, existingBatch: any) => {
         if (evt.relatedGroupId) {
           const q = query(
-            collection(db, "일정").withConverter(eventConverter),
+            collection(db, "events").withConverter(eventConverter),
             where("연결그룹ID", "==", evt.relatedGroupId)
           );
           const snapshot = await import('firebase/firestore').then(mod => mod.getDocs(q));
           snapshot.forEach(d => {
-            existingBatch.delete(doc(db, "일정", d.id));
+            existingBatch.delete(doc(db, "events", d.id));
             deleteCount++;
           });
         } else {
-          existingBatch.delete(doc(db, "일정", evt.id));
+          existingBatch.delete(doc(db, "events", evt.id));
           deleteCount++;
         }
       };
@@ -1426,7 +1445,7 @@ const App: React.FC = () => {
           );
 
           toDelete.forEach(e => {
-            batch.delete(doc(db, "일정", e.id));
+            batch.delete(doc(db, "events", e.id));
             deleteCount++;
           });
 
@@ -1434,34 +1453,38 @@ const App: React.FC = () => {
           alert(`${deleteCount}개의 반복 일정이 삭제되었습니다.`);
         } else {
           // Delete only this event (and its linked siblings)
-          if (event.relatedGroupId) {
+          const siblings = await getLinkedSiblings(event);
+          if (siblings.length > 0) {
             const deleteLinked = window.confirm("해당 일정은 다른 부서와 연동되어 있습니다.\n\n[확인]: 연동된 모든 부서의 일정 삭제\n[취소]: 현재 부서의 일정만 삭제");
             if (deleteLinked) {
               await deleteLinkedGroup(event, batch);
             } else {
-              batch.delete(doc(db, "일정", event.id));
+              batch.delete(doc(db, "events", event.id));
             }
           } else {
-            await deleteLinkedGroup(event, batch);
+            batch.delete(doc(db, "events", event.id));
+            deleteCount++;
           }
           await batch.commit();
         }
       } else {
         // Regular single event delete (and siblings)
         if (event) {
-          if (event.relatedGroupId) {
+          const siblings = await getLinkedSiblings(event);
+          if (siblings.length > 0) {
             const deleteLinked = window.confirm("해당 일정은 다른 부서와 연동되어 있습니다.\n\n[확인]: 연동된 모든 부서의 일정 삭제\n[취소]: 현재 부서의 일정만 삭제");
             if (deleteLinked) {
               await deleteLinkedGroup(event, batch);
             } else {
-              batch.delete(doc(db, "일정", event.id));
+              batch.delete(doc(db, "events", event.id));
             }
           } else {
-            await deleteLinkedGroup(event, batch);
+            batch.delete(doc(db, "events", event.id));
+            deleteCount++;
           }
         } else {
           // Fallback if event object missing (rare)
-          batch.delete(doc(db, "일정", id));
+          batch.delete(doc(db, "events", id));
         }
         await batch.commit();
       }
@@ -1472,8 +1495,8 @@ const App: React.FC = () => {
   };
 
   const toggleDeptVisibility = (id: string) => {
-    setHiddenDeptIds(prev =>
-      prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]
+    setHiddenDeptIds(
+      hiddenDeptIds.includes(id) ? hiddenDeptIds.filter(d => d !== id) : [...hiddenDeptIds, id]
     );
   };
 
@@ -1517,7 +1540,7 @@ const App: React.FC = () => {
       const batch = writeBatch(db);
 
       groupEvents.forEach(event => {
-        const ref = doc(db, "일정", event.id);
+        const ref = doc(db, "events", event.id);
         const updatedAttendance = { ...(event.attendance || {}), [uid]: status };
         batch.update(ref, { 참가현황: updatedAttendance });
       });
@@ -2470,7 +2493,7 @@ const App: React.FC = () => {
                 {(studentFilters.searchQuery || studentFilters.grade !== 'all' || studentFilters.status !== 'all' || studentFilters.subjects.length > 0 || studentFilters.teacher !== 'all') && (
                   <button
                     onClick={() => {
-                      setStudentFilters({ searchQuery: '', grade: 'all', status: 'all', subjects: [], teacher: 'all' });
+                      setStudentFilters({ searchQuery: '', searchField: 'all', grade: 'all', status: 'all', subjects: [], teacher: 'all', excludeNoEnrollment: false });
                       setStudentSortBy('name');
                     }}
                     className="px-2 py-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors"
@@ -2710,6 +2733,7 @@ const App: React.FC = () => {
 
         <main id="main-content" className="flex-1 flex flex-col md:flex-row overflow-hidden" role="main">
           {/* Render Gating: If permission fails, show nothing (Redirect will happen in useEffect) */}
+          <ErrorBoundary key={appMode}>
           {!canAccessTab(appMode) ? (
             <div className="flex-1 flex items-center justify-center bg-gray-50">
               {/* Optional: "Not Authorized" message or just blank while redirecting */}
@@ -2955,6 +2979,7 @@ const App: React.FC = () => {
               </div>
             </Suspense>
           ) : null}
+          </ErrorBoundary>
 
           {/* Floating Save Button for Pending Moves */}
           {pendingEventMoves.length > 0 && (

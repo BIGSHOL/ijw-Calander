@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, collectionGroup, doc, getDocs, getDoc, setDoc, deleteDoc, query, where, orderBy, deleteField } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Student, SalaryConfig, MonthlySettlement, AttendanceSubject } from '../components/Attendance/types';
+import { StaffMember } from '../types';
 import { isTeacherMatch, isTeacherMatchWithStaffId, isTeacherInSlotTeachers, isSlotTeacherMatch, isAssistantTeacher } from '../utils/teacherUtils';
 
 // Classes collection for checking assistants
@@ -123,8 +124,8 @@ export const useAttendanceStudents = (options?: {
                 getDocs(classesQuery)
             ]);
 
-            const staff = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            const allClasses = classesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const staff = staffSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StaffMember));
+            const allClasses = classesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Array<{ id: string; teacher?: string; className?: string; slotTeachers?: Record<string, string>; [key: string]: any }>;
 
             let teacherName = '';
             let teacherKoreanName = '';
@@ -152,8 +153,11 @@ export const useAttendanceStudents = (options?: {
             }
 
             // Step 4: 그 수업들의 className 목록
+            // OPTIMIZATION (js-set-map-lookups): Set으로 O(1) 조회
             const myClassNames = myClasses.map(cls => cls.className);
             const myClassIds = myClasses.map(cls => cls.id);
+            const myClassNamesSet = new Set(myClassNames);
+            const myClassIdsSet = new Set(myClassIds);
             if (myClassNames.length === 0) {
                 return { filtered: [], all: [] };
             }
@@ -179,7 +183,7 @@ export const useAttendanceStudents = (options?: {
                 if (data.endDate && data.endDate < today) return;
 
                 // className 또는 classId로 필터링 (내 클래스에 속하는 학생만)
-                if (studentId && (myClassNames.includes(enrollmentClassName) || myClassIds.includes(enrollmentClassId))) {
+                if (studentId && (myClassNamesSet.has(enrollmentClassName) || myClassIdsSet.has(enrollmentClassId))) {
                     studentIdsSet.add(studentId);
                 }
             });
@@ -201,18 +205,23 @@ export const useAttendanceStudents = (options?: {
                 chunkPromises.push(getDocs(studentsQuery));
             }
 
-            const allSnapshots = await Promise.all(chunkPromises);
+            // OPTIMIZATION (async-parallel): Promise.allSettled로 개별 청크 실패 시에도 나머지 결과 보존
+            const allResults = await Promise.allSettled(chunkPromises);
             const allRaw: Student[] = [];
-            allSnapshots.forEach(snapshot => {
-                snapshot.docs.forEach(doc => {
-                    allRaw.push({
-                        id: doc.id,
-                        ...doc.data(),
-                        attendance: {},
-                        memos: {},
-                        teacherIds: doc.data().teacherIds || [],
-                    } as Student);
-                });
+            allResults.forEach(result => {
+                if (result.status === 'fulfilled') {
+                    result.value.docs.forEach(doc => {
+                        allRaw.push({
+                            id: doc.id,
+                            ...doc.data(),
+                            attendance: {},
+                            memos: {},
+                            teacherIds: doc.data().teacherIds || [],
+                        } as Student);
+                    });
+                } else {
+                    console.warn('[useAttendance] Student chunk fetch failed:', result.reason);
+                }
             });
 
             // Step 8: Enrollments 서브컬렉션 로드
@@ -230,13 +239,14 @@ export const useAttendanceStudents = (options?: {
                 const teacherEnrollments = options?.staffId
                     ? enrollments.filter((e: any) => {
                         // myClasses에 포함된 수업인지 확인 (classId 또는 className으로)
-                        return myClassIds.includes(e.classId) || myClassNames.includes(e.className);
+                        return myClassIdsSet.has(e.classId) || myClassNamesSet.has(e.className);
                     })
                     : enrollments;
 
                 // 수업별 담임/부담임 여부 확인 (myClasses에서 직접 체크)
-                const mainClasses: string[] = [];  // 담임 수업들
-                const slotClasses: string[] = [];  // 부담임 수업들
+                // OPTIMIZATION (js-set-map-lookups): Set으로 중복 체크 O(1)
+                const mainClassesSet = new Set<string>();
+                const slotClassesSet = new Set<string>();
 
                 teacherEnrollments.forEach((e: any) => {
                     // 종료된 수업은 제외
@@ -249,17 +259,21 @@ export const useAttendanceStudents = (options?: {
                     const isMain = isTeacherMatch(classData.teacher || '', teacherName, teacherKoreanName, staff);
 
                     if (isMain) {
-                        if (!mainClasses.includes(e.className)) mainClasses.push(e.className);
+                        mainClassesSet.add(e.className);
                     } else {
-                        if (!slotClasses.includes(e.className)) slotClasses.push(e.className);
+                        slotClassesSet.add(e.className);
                     }
                 });
+
+                const mainClasses = Array.from(mainClassesSet);
+                const slotClasses = Array.from(slotClassesSet);
 
                 // 전체 수업이 모두 부담임인 경우
                 const isSlotTeacher = mainClasses.length === 0 && slotClasses.length > 0;
 
                 // 요일 추출
-                const teacherDays: string[] = [];
+                // OPTIMIZATION (js-set-map-lookups): Set으로 중복 체크 O(1)
+                const teacherDaysSet = new Set<string>();
                 teacherEnrollments.forEach((e: any) => {
                     // 종료된 수업은 제외
                     if (e.endDate) return;
@@ -279,15 +293,16 @@ export const useAttendanceStudents = (options?: {
                                 if (!isSlotTeacherMatch(classData.slotTeachers, slotKey, teacherName, teacherKoreanName, staff)) return;
                             }
                             const day = slot.split(' ')[0];
-                            if (day && !teacherDays.includes(day)) teacherDays.push(day);
+                            if (day) teacherDaysSet.add(day);
                         });
                     }
                     if (e.days && Array.isArray(e.days)) {
                         e.days.forEach((d: string) => {
-                            if (!teacherDays.includes(d)) teacherDays.push(d);
+                            teacherDaysSet.add(d);
                         });
                     }
                 });
+                const teacherDays = Array.from(teacherDaysSet);
 
                 // 날짜 범위 추출 (종료되지 않은 수업만)
                 let enrollmentStartDate = '1970-01-01';
@@ -362,7 +377,7 @@ export const useAttendanceStudents = (options?: {
                     chunks.push(expectedDocIds.slice(i, i + CHUNK_SIZE));
                 }
 
-                const recordsMap = new Map<string, { attendance: Record<string, number>; memos: Record<string, string>; cellColors: Record<string, string> }>();
+                const recordsMap = new Map<string, { attendance: Record<string, number>; memos: Record<string, string>; cellColors: Record<string, string>; salarySettingOverrides: Record<string, string> }>();
 
                 // Parallel chunk processing
                 const chunkPromises = chunks.map(async (chunkDocIds) => {
@@ -378,11 +393,13 @@ export const useAttendanceStudents = (options?: {
                             const idParts = docId.split('_');
                             idParts.pop(); // Remove yearMonth part
                             const extractedStudentId = idParts.join('_');
+                            const data = docSnap.data();
 
                             recordsMap.set(extractedStudentId, {
-                                attendance: (docSnap.data().attendance || {}) as Record<string, number>,
-                                memos: (docSnap.data().memos || {}) as Record<string, string>,
-                                cellColors: (docSnap.data().cellColors || {}) as Record<string, string>
+                                attendance: (data.attendance || {}) as Record<string, number>,
+                                memos: (data.memos || {}) as Record<string, string>,
+                                cellColors: (data.cellColors || {}) as Record<string, string>,
+                                salarySettingOverrides: (data.salarySettingOverrides || {}) as Record<string, string>
                             });
                         });
                     } catch (e) {
@@ -399,7 +416,8 @@ export const useAttendanceStudents = (options?: {
                         ...student,
                         attendance: record?.attendance || {},
                         memos: record?.memos || {},
-                        cellColors: record?.cellColors || {}
+                        cellColors: record?.cellColors || {},
+                        salarySettingOverrides: record?.salarySettingOverrides || {}
                     };
                 });
 

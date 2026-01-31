@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, RefreshCw } from 'lucide-react';
+import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, RefreshCw, LayoutList, SortAsc } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
 import { formatCurrency, calculateStats, getCategoryLabel } from './utils';
@@ -227,6 +227,14 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const [isSettlementModalOpen, setSettlementModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
+  const [sortMode, setSortMode] = useState<'class' | 'name'>(() => {
+    const saved = storage.getString(STORAGE_KEYS.ATTENDANCE_SORT_MODE);
+    return saved === 'name' ? 'name' : 'class';
+  });
+  const handleSortModeChange = useCallback((mode: 'class' | 'name') => {
+    setSortMode(mode);
+    storage.setString(STORAGE_KEYS.ATTENDANCE_SORT_MODE, mode);
+  }, []);
 
   // 테이블 ref (이미지 내보내기용)
   const tableRef = useRef<HTMLTableElement>(null);
@@ -613,6 +621,32 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </div>
         </label>
 
+        {/* 수업/이름 뷰 전환 토글 */}
+        <div className="flex bg-gray-100 rounded-lg p-0.5 flex-shrink-0">
+          <button
+            onClick={() => handleSortModeChange('class')}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-colors ${
+              sortMode === 'class'
+                ? 'bg-[#081429] text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <LayoutList size={12} />
+            수업
+          </button>
+          <button
+            onClick={() => handleSortModeChange('name')}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-colors ${
+              sortMode === 'name'
+                ? 'bg-[#081429] text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <SortAsc size={12} />
+            이름
+          </button>
+        </div>
+
         {/* 새로고침 버튼 */}
         <button
           onClick={() => {
@@ -711,6 +745,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             selectedSession={selectedSession}
             highlightWeekends={highlightWeekends}
             holidays={holidays}
+            sortMode={sortMode}
           />
         </div>
       </div>

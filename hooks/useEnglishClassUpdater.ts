@@ -238,8 +238,10 @@ export const useEnglishClassUpdater = () => {
                 updateData.isGroupLeader = options.isGroupLeader ?? false;
             }
 
+            // underline을 슬롯별로 저장 (slotUnderlines)
             if (options?.underline !== undefined) {
-                updateData.underline = options.underline;
+                const currentSlotUnderlines = classData.slotUnderlines || {};
+                updateData.slotUnderlines = { ...currentSlotUnderlines, [slotKey]: options.underline };
             }
 
             await updateDoc(doc(db, COL_CLASSES, classDoc.id), updateData);
@@ -266,8 +268,9 @@ export const useEnglishClassUpdater = () => {
                 newClassData.isGroupLeader = options.isGroupLeader ?? false;
             }
 
+            // underline을 슬롯별로 저장 (slotUnderlines)
             if (options?.underline !== undefined) {
-                newClassData.underline = options.underline;
+                newClassData.slotUnderlines = { [slotKey]: options.underline };
             }
 
             const docRef = await addDoc(collection(db, COL_CLASSES), newClassData);
@@ -300,6 +303,10 @@ export const useEnglishClassUpdater = () => {
         const updatedSlotTeachers = { ...(classData.slotTeachers || {}) };
         delete updatedSlotTeachers[slotKey];
 
+        // slotUnderlines에서도 제거
+        const updatedSlotUnderlines = { ...(classData.slotUnderlines || {}) };
+        delete updatedSlotUnderlines[slotKey];
+
         if (updatedSchedule.length === 0) {
             // 스케줄이 비면 수업 비활성화
             await updateDoc(doc(db, COL_CLASSES, classDocId), {
@@ -307,6 +314,7 @@ export const useEnglishClassUpdater = () => {
                 schedule: [],
                 slotRooms: {},
                 slotTeachers: {},
+                slotUnderlines: {},
                 classGroupId: null,
                 isGroupLeader: null,
                 groupMembers: null,
@@ -317,6 +325,7 @@ export const useEnglishClassUpdater = () => {
                 schedule: updatedSchedule,
                 slotRooms: updatedSlotRooms,
                 slotTeachers: updatedSlotTeachers,
+                slotUnderlines: updatedSlotUnderlines,
                 updatedAt: new Date().toISOString()
             });
         }
@@ -354,6 +363,10 @@ export const useEnglishClassUpdater = () => {
         const updatedSlotTeachers = { ...(classData.slotTeachers || {}) };
         delete updatedSlotTeachers[slotKey];
 
+        // slotUnderlines에서도 제거
+        const updatedSlotUnderlines = { ...(classData.slotUnderlines || {}) };
+        delete updatedSlotUnderlines[slotKey];
+
         if (updatedSchedule.length === 0) {
             // 스케줄이 비면 수업 비활성화
             scn.updateScenarioClass(classId, {
@@ -362,6 +375,7 @@ export const useEnglishClassUpdater = () => {
                 schedule: [],
                 slotRooms: {},
                 slotTeachers: {},
+                slotUnderlines: {},
                 classGroupId: null,
                 isGroupLeader: null,
                 groupMembers: null,
@@ -373,6 +387,7 @@ export const useEnglishClassUpdater = () => {
                 schedule: updatedSchedule,
                 slotRooms: updatedSlotRooms,
                 slotTeachers: updatedSlotTeachers,
+                slotUnderlines: updatedSlotUnderlines,
                 updatedAt: new Date().toISOString()
             });
         }
@@ -430,8 +445,9 @@ export const useEnglishClassUpdater = () => {
                 updateData.isGroupLeader = options.isGroupLeader ?? false;
             }
 
+            // underline을 슬롯별로 저장 (slotUnderlines)
             if (options?.underline !== undefined) {
-                updateData.underline = options.underline;
+                updateData.slotUnderlines = { ...(classData.slotUnderlines || {}), [slotKey]: options.underline };
             }
 
             scn.updateScenarioClass(existing.id, updateData);
@@ -458,8 +474,9 @@ export const useEnglishClassUpdater = () => {
                 newClassData.isGroupLeader = options.isGroupLeader ?? false;
             }
 
+            // underline을 슬롯별로 저장 (slotUnderlines)
             if (options?.underline !== undefined) {
-                newClassData.underline = options.underline;
+                newClassData.slotUnderlines = { [slotKey]: options.underline };
             }
 
             scn.updateScenarioClass(newId, newClassData);

@@ -108,6 +108,11 @@ export const getRoleDisplayName = (member: StaffMember): string => {
       math_teacher: '수학선생님',
       english_teacher: '영어선생님',
       user: '일반사용자',
+      teacher: '강사',
+      staff: '직원',
+      editor: '에디터',
+      senior_staff: '시니어직원',
+      viewer: '뷰어',
     };
     return roleMap[member.systemRole] || member.systemRole;
   }

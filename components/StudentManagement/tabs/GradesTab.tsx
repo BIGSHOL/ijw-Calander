@@ -339,7 +339,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                             <button
                                                 onClick={() => {
                                                     if (confirm('이 레벨테스트를 삭제하시겠습니까?')) {
-                                                        deleteLevelTest.mutateAsync(test.id);
+                                                        deleteLevelTest.mutateAsync({ id: test.id, studentId: student.id });
                                                     }
                                                 }}
                                                 className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
@@ -439,7 +439,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                                 <button
                                                     onClick={() => {
                                                         if (confirm('이 목표를 삭제하시겠습니까?')) {
-                                                            deleteGoalSetting.mutateAsync(goal.id);
+                                                            deleteGoalSetting.mutateAsync({ id: goal.id, studentId: student.id });
                                                         }
                                                     }}
                                                     className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
@@ -536,7 +536,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                                         <button
                                                             onClick={() => {
                                                                 if (confirm('이 코멘트를 삭제하시겠습니까?')) {
-                                                                    deleteGradeComment.mutateAsync(comment.id);
+                                                                    deleteGradeComment.mutateAsync({ id: comment.id, studentId: student.id });
                                                                 }
                                                             }}
                                                             className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
@@ -940,7 +940,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                     onClose={() => setIsAddingLevelTest(false)}
                     studentId={student.id}
                     studentName={student.name}
-                    onAdd={addLevelTest.mutateAsync}
+                    onAdd={async (data: any) => { await addLevelTest.mutateAsync(data); }}
                 />
             )}
 
@@ -950,7 +950,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                     onClose={() => setIsAddingGoal(false)}
                     studentId={student.id}
                     studentName={student.name}
-                    onAdd={addGoalSetting.mutateAsync}
+                    onAdd={async (data: any) => { await addGoalSetting.mutateAsync(data); }}
                     exams={exams}
                 />
             )}
@@ -964,8 +964,8 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                     }}
                     studentId={student.id}
                     studentName={student.name}
-                    onAdd={addGradeComment.mutateAsync}
-                    onUpdate={updateGradeComment.mutateAsync}
+                    onAdd={async (data: any) => { await addGradeComment.mutateAsync(data); }}
+                    onUpdate={async (id: string, data: any) => { await updateGradeComment.mutateAsync({ id, updates: data }); }}
                     editingComment={editingComment}
                 />
             )}

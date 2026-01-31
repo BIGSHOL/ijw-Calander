@@ -1,5 +1,5 @@
 import React, { useState, useCallback, Suspense, lazy } from 'react';
-import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade } from '../../types';
+import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade, ConsultationSubject, ConsultationStatus } from '../../types';
 import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation } from '../../hooks/useConsultations';
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -162,10 +162,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
 
                 // 수강 정보 - 상담 과목으로 기본 enrollment 생성
                 enrollments: [{
-                    subject: consultation.subject === 'English' ? 'english' :
-                             consultation.subject === 'Math' ? 'math' :
-                             consultation.subject === 'Korean' ? 'korean' :
-                             consultation.subject === 'Science' ? 'science' : 'other',
+                    subject: (consultation.subject === ConsultationSubject.English || consultation.subject === ConsultationSubject.EiE || (consultation.subject as string) === 'English') ? 'english' :
+                             (consultation.subject === ConsultationSubject.Math || (consultation.subject as string) === 'Math') ? 'math' :
+                             (consultation.subject === ConsultationSubject.Korean || (consultation.subject as string) === 'Korean') ? 'korean' : 'other',
                     classId: '', // 수업 ID는 나중에 배정
                     className: `미배정 (${consultation.subject})`, // 임시 수업명
                     staffId: '', // 강사는 나중에 배정
@@ -183,7 +182,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                 id: consultation.id,
                 updates: {
                     registeredStudentId: studentId,
-                    status: 'registered', // 등록 완료 상태로 변경
+                    status: ConsultationStatus.Registered, // 등록 완료 상태로 변경
                 }
             });
 

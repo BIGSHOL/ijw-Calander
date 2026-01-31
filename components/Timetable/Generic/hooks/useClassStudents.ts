@@ -148,7 +148,7 @@ export function useClassStudents(
               attendanceDays: enrollmentData?.attendanceDays,
             };
           })
-          .filter((s): s is TimetableStudent => s !== null);
+          .filter(s => s !== null) as TimetableStudent[];
 
         result[className] = { studentList, studentIds };
       }

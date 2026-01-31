@@ -39,6 +39,11 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
   math_teacher: 5,
   english_teacher: 5,
   user: 6,
+  teacher: 5,
+  staff: 6,
+  editor: 4,
+  senior_staff: 3,
+  viewer: 7,
 };
 
 const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSystemFields = false, currentUserRole = 'user' }) => {

@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect, useRef, forwardRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, forwardRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Student, SalaryConfig, AttendanceViewMode, SessionPeriod } from '../types';
 import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getDaysInSessionRanges } from '../utils';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
@@ -47,6 +48,8 @@ interface Props {
   highlightWeekends?: boolean;
   // 공휴일 데이터
   holidays?: Holiday[];
+  // 정렬 모드: 수업별 그룹 | 이름순 flat
+  sortMode?: 'class' | 'name';
 }
 
 interface ContextMenuState {
@@ -81,7 +84,8 @@ const Table = forwardRef<HTMLTableElement, Props>(({
   viewMode = 'monthly',
   selectedSession,
   highlightWeekends = false,
-  holidays = []
+  holidays = [],
+  sortMode = 'class'
 }, ref) => {
   // 세션 모드에 따라 표시할 날짜 결정
   const days = useMemo(() => {
@@ -454,6 +458,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               highlightWeekends={highlightWeekends}
               holidayDateSet={holidayDateSet}
               holidayNameMap={holidayNameMap}
+              sortMode={sortMode}
             />
           ) : (
             <tr>
@@ -605,7 +610,7 @@ Table.displayName = 'Table';
 
 // Extracted & Memoized Components
 
-const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, onSalarySettingChange, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange, examsByDate, scoresByStudent, onHomeworkChange, collapsedGroups: externalCollapsedGroups, onCollapsedGroupsChange, highlightWeekends = false, holidayDateSet = new Set(), holidayNameMap = new Map() }: {
+const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, onSalarySettingChange, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange, examsByDate, scoresByStudent, onHomeworkChange, collapsedGroups: externalCollapsedGroups, onCollapsedGroupsChange, highlightWeekends = false, holidayDateSet = new Set(), holidayNameMap = new Map(), sortMode = 'class' }: {
   students: Student[],
   days: Date[],
   currentDate: Date,
@@ -626,6 +631,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
   highlightWeekends?: boolean;
   holidayDateSet?: Set<string>;
   holidayNameMap?: Map<string, string>;
+  sortMode?: 'class' | 'name';
 }) => {
   // 그룹 접기/펼치기 상태 관리 (외부에서 전달받거나 내부 state 사용)
   const [internalCollapsedGroups, setInternalCollapsedGroups] = useState<Set<string>>(new Set());
@@ -675,9 +681,14 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
     onGroupOrderChange(currentOrder);
   };
 
-  // Sort students by group order (담임 수업 우선, 부담임 수업 후순위)
+  // Sort students by group order (수업 뷰) or by name (이름 뷰)
   const sortedStudents = useMemo(() => {
-    // Build effective group order
+    if (sortMode === 'name') {
+      // 이름순 정렬 (flat, 그룹 무시)
+      return [...students].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+    }
+
+    // 수업별 그룹 정렬 (기존 로직)
     const effectiveOrder = [...groupOrder];
     uniqueGroups.forEach(g => {
       if (!effectiveOrder.includes(g)) effectiveOrder.push(g);
@@ -698,7 +709,6 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
       const orderB = effectiveOrder.indexOf(groupB);
 
       if (orderA !== orderB) {
-        // Handle -1 (not in order) by putting at end
         if (orderA === -1) return 1;
         if (orderB === -1) return -1;
         return orderA - orderB;
@@ -707,7 +717,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
       // Within same group, maintain original order or sort by name
       return (a.name || '').localeCompare(b.name || '', 'ko');
     });
-  }, [students, groupOrder, uniqueGroups]);
+  }, [students, groupOrder, uniqueGroups, sortMode]);
 
   // Build effective group order (existing order + any new groups)
   const effectiveGroupOrder = useMemo(() => {
@@ -735,6 +745,11 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
   sortedStudents.forEach((student) => {
     rankIndex++;
 
+    // 이름 뷰: 그룹 헤더 없이 바로 학생 행 렌더링
+    if (sortMode === 'name') {
+      // 그룹 헤더, 접기/펼치기 모두 스킵
+    } else {
+    // 수업 뷰: 기존 그룹 헤더 로직
     // 1. Group Header Logic
     const studentGroup = student.group || '그룹 없음';
     if (student.group && studentGroup !== currentGroup) {
@@ -745,11 +760,8 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
       const isCollapsed = collapsedGroups.has(currentGroup);
       const studentCount = groupStudentCounts.get(currentGroup) || 0;
 
-      // 같은 그룹의 학생들 중 담임/부담임 여부 확인
-      // 그룹의 첫 번째 학생 정보로 판단 (mainClasses 또는 slotClasses 사용)
       const groupStudents = students.filter(s => s.group === currentGroup);
       const firstStudent = groupStudents[0];
-      // 그룹이 부담임인지 확인: mainClasses가 비어있고 slotClasses에 현재 그룹이 포함된 경우
       const isAssistantGroup = firstStudent ?
         (!firstStudent.mainClasses?.includes(currentGroup) && firstStudent.slotClasses?.includes(currentGroup)) :
         false;
@@ -786,7 +798,6 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
                 <FolderOpen size={14} className="text-slate-400" />
               )}
               {currentGroup}
-              {/* 접혔을 때 학생 수 표시 */}
               {isCollapsed && (
                 <span className="text-slate-400 font-normal text-[10px] ml-1">
                   ({studentCount}명)
@@ -825,7 +836,6 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
         <tr key="group-none" className="bg-slate-100 border-y border-slate-200">
           <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
             <div className="flex items-center gap-2">
-              {/* 접기/펼치기 버튼 */}
               <button
                 onClick={() => toggleGroupCollapse('그룹 없음')}
                 className="p-0.5 rounded hover:bg-slate-200 transition-colors"
@@ -854,6 +864,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
     if (collapsedGroups.has(studentGroup)) {
       return;
     }
+    } // end of sortMode === 'class' block
 
     const updates = pendingUpdatesByStudent?.[student.id];
     const memos = pendingMemosByStudent?.[student.id];
@@ -905,20 +916,45 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
   holidayNameMap?: Map<string, string>;
 }) => {
   const [showSalaryDropdown, setShowSalaryDropdown] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const salaryBtnRef = useRef<HTMLButtonElement>(null);
   const salaryDropdownRef = useRef<HTMLDivElement>(null);
   const currentMonthStr = currentDate.toISOString().slice(0, 7);
 
-  // 급여 설정 드롭다운 외부 클릭 시 닫기
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (salaryDropdownRef.current && !salaryDropdownRef.current.contains(e.target as Node)) {
-        setShowSalaryDropdown(false);
-      }
-    };
+  // 드롭다운 위치 계산 및 열기/닫기
+  const toggleDropdown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onSalarySettingChange) return;
     if (showSalaryDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
+      setShowSalaryDropdown(false);
+      return;
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const btn = salaryBtnRef.current;
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setShowSalaryDropdown(true);
+  }, [onSalarySettingChange, showSalaryDropdown]);
+
+  // 급여 설정 드롭다운 외부 클릭 시 닫기 + 스크롤 시 닫기
+  useEffect(() => {
+    if (!showSalaryDropdown) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        salaryBtnRef.current?.contains(target) ||
+        salaryDropdownRef.current?.contains(target)
+      ) return;
+      setShowSalaryDropdown(false);
+    };
+    const handleScroll = () => setShowSalaryDropdown(false);
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
   }, [showSalaryDropdown]);
 
   // Merge attendance with pending updates for stats calculation within the row
@@ -969,59 +1005,63 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
           <div className="text-xxs text-[#373d41] font-medium truncate" title={formatSchoolGrade(student.school, student.grade)}>
             {formatSchoolGrade(student.school, student.grade)}
           </div>
-          <div className="relative" ref={salaryDropdownRef}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onSalarySettingChange) setShowSalaryDropdown(!showSalaryDropdown);
-              }}
-              className={`text-micro px-1.5 py-0.5 rounded-full w-fit font-bold ${badgeClass} ${onSalarySettingChange ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-              style={badgeStyle}
-              title={onSalarySettingChange ? '클릭하여 급여 설정 변경' : undefined}
+          <button
+            ref={salaryBtnRef}
+            type="button"
+            onClick={toggleDropdown}
+            className={`text-micro px-1.5 py-0.5 rounded-full w-fit font-bold ${badgeClass} ${onSalarySettingChange ? 'cursor-pointer hover:opacity-80 active:scale-95 transition-all' : ''}`}
+            style={badgeStyle}
+            title={onSalarySettingChange ? '클릭하여 급여 설정 변경' : undefined}
+          >
+            {levelName}
+          </button>
+          {/* 급여 설정 드롭다운 - Portal로 body에 렌더링하여 overflow/z-index 문제 회피 */}
+          {showSalaryDropdown && onSalarySettingChange && dropdownPos && createPortal(
+            <div
+              ref={salaryDropdownRef}
+              className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
+              style={{ top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
             >
-              {levelName}
-            </button>
-            {/* 급여 설정 드롭다운 */}
-            {showSalaryDropdown && onSalarySettingChange && (
-              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[120px] z-[200] animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-2 py-1 text-micro font-semibold text-gray-400 border-b border-gray-100">
-                  급여 설정 선택
-                </div>
-                {/* 자동 (미설정) 옵션 */}
-                <button
-                  onClick={() => {
-                    onSalarySettingChange(student.id, student.group || '', null);
-                    setShowSalaryDropdown(false);
-                  }}
-                  className={`w-full text-left px-2 py-1.5 text-micro hover:bg-gray-50 flex items-center gap-1.5 ${!salarySettingOverrideId ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-gray-300"></span>
-                  자동 (학교 기반)
-                </button>
-                {/* 급여 설정 항목들 */}
-                {salaryConfig.items.map((item) => {
-                  const itemBadgeStyle = getBadgeStyle(item.color);
-                  const isSelected = salarySettingOverrideId === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        onSalarySettingChange(student.id, student.group || '', item.id);
-                        setShowSalaryDropdown(false);
-                      }}
-                      className={`w-full text-left px-2 py-1.5 text-micro hover:bg-gray-50 flex items-center gap-1.5 ${isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full border"
-                        style={{ backgroundColor: itemBadgeStyle?.backgroundColor, borderColor: itemBadgeStyle?.borderColor }}
-                      ></span>
-                      {item.name}
-                    </button>
-                  );
-                })}
+              <div className="px-2 py-1 text-micro font-semibold text-gray-400 border-b border-gray-100">
+                급여 설정 선택
               </div>
-            )}
-          </div>
+              {/* 자동 (미설정) 옵션 */}
+              <button
+                type="button"
+                onClick={() => {
+                  onSalarySettingChange(student.id, student.group || '', null);
+                  setShowSalaryDropdown(false);
+                }}
+                className={`w-full text-left px-2 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-1.5 ${!salarySettingOverrideId ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}
+              >
+                <span className="w-2 h-2 rounded-full bg-gray-300"></span>
+                자동 (학교 기반)
+              </button>
+              {/* 급여 설정 항목들 */}
+              {salaryConfig.items.map((item) => {
+                const itemBadgeStyle = getBadgeStyle(item.color);
+                const isSelected = salarySettingOverrideId === item.id;
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() => {
+                      onSalarySettingChange(student.id, student.group || '', item.id);
+                      setShowSalaryDropdown(false);
+                    }}
+                    className={`w-full text-left px-2 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-1.5 ${isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full border"
+                      style={{ backgroundColor: itemBadgeStyle?.backgroundColor, borderColor: itemBadgeStyle?.borderColor }}
+                    ></span>
+                    {item.name}
+                  </button>
+                );
+              })}
+            </div>,
+            document.body
+          )}
         </div>
       </td>
 

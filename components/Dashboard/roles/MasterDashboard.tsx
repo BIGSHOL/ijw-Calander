@@ -108,13 +108,13 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const billingStats = useMemo(() => {
     let totalBilled = 0;
     let totalPaid = 0;
-    let overdueCount = 0;
+    let pendingCount = 0;
 
     for (const record of billingRecords) {
-      totalBilled += record.amount; // BillingRecord의 amount 필드 사용
+      totalBilled += record.billedAmount;
       totalPaid += record.paidAmount;
-      if (record.status === 'overdue') {
-        overdueCount++;
+      if (record.status === 'pending') {
+        pendingCount++;
       }
     }
 
@@ -122,10 +122,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       ? Math.round((totalPaid / totalBilled) * 100)
       : 0;
 
-    return { totalBilled, totalPaid, overdueCount, billingRate };
+    return { totalBilled, totalPaid, pendingCount, billingRate };
   }, [billingRecords]);
 
-  const { totalBilled, totalPaid, overdueCount, billingRate } = billingStats;
+  const { totalBilled, totalPaid, pendingCount, billingRate } = billingStats;
 
   // Performance: useMemo - 신규 등록 계산 최적화 (이번 달)
   const newStudentsThisMonth = useMemo(() => {
@@ -226,7 +226,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       value: `${billingRate}%`,
       subValue: `${totalPaid.toLocaleString()}/${totalBilled.toLocaleString()}원`,
       trend: billingRate >= 90 ? 'up' : billingRate >= 80 ? 'stable' : 'down',
-      trendValue: overdueCount > 0 ? `연체 ${overdueCount}건` : undefined,
+      trendValue: pendingCount > 0 ? `미납 ${pendingCount}건` : undefined,
       icon: '💰',
       color: '#f59e0b',
     },
@@ -402,10 +402,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 <h3 className="text-xs font-bold text-[#081429] mb-2">⚠️ 주의 필요</h3>
                 {/* Performance: rendering-conditional-render - && 대신 삼항 연산자 사용 */}
                 <div className="space-y-1.5">
-                  {overdueCount > 0 ? (
+                  {pendingCount > 0 ? (
                     <div className="flex items-center gap-1.5 text-[10px] text-red-600">
                       <span className="w-1 h-1 bg-red-600 rounded-full" />
-                      연체 학부모 {overdueCount}명 (독촉 필요)
+                      미납 학부모 {pendingCount}명 (독촉 필요)
                     </div>
                   ) : null}
                   {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 ? (
@@ -420,7 +420,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       오늘 출석률 낮음 ({attendanceRate}%)
                     </div>
                   ) : null}
-                  {overdueCount === 0 && attendanceRate >= 80 && (!stats?.studentsNeedingConsultation || stats.studentsNeedingConsultation.length === 0) ? (
+                  {pendingCount === 0 && attendanceRate >= 80 && (!stats?.studentsNeedingConsultation || stats.studentsNeedingConsultation.length === 0) ? (
                     <div className="text-[10px] text-gray-500">현재 주의가 필요한 항목이 없습니다.</div>
                   ) : null}
                 </div>

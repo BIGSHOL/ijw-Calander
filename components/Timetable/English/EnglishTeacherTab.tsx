@@ -14,6 +14,7 @@ import PortalTooltip from '../../Common/PortalTooltip';
 import EnglishExportModal from './EnglishExportModal';
 import { useEnglishClassUpdater } from '../../../hooks/useEnglishClassUpdater';
 import { useClasses } from '../../../hooks/useClasses';
+import { useClassStudents } from './hooks/useClassStudents';
 import { useQueryClient } from '@tanstack/react-query';
 
 export interface ScheduleCell {
@@ -47,11 +48,13 @@ interface EnglishTeacherTabProps {
     onPublishToLive?: () => void;
     onOpenScenarioModal?: () => void;
     canPublish?: boolean;
+    labRooms?: string[];
+    studentMap?: Record<string, any>;
 }
 
 type ViewSize = 'small' | 'medium' | 'large';
 
-const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser, isSimulationMode = false, canSimulation = false, onToggleSimulation, onCopyLiveToDraft, onPublishToLive, onOpenScenarioModal, canPublish = false }) => {
+const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser, isSimulationMode = false, canSimulation = false, onToggleSimulation, onCopyLiveToDraft, onPublishToLive, onOpenScenarioModal, canPublish = false, labRooms = [], studentMap = {} }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
@@ -76,6 +79,36 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             room: c.room,
         }));
     }, [englishClasses]);
+
+    // LAB실 수업명 수집 → 학생수 조회
+    const labClassNames = useMemo(() => {
+        if (labRooms.length === 0) return [];
+        const classNameSet = new Set<string>();
+        Object.values(scheduleData).forEach(cell => {
+            if (cell.room && labRooms.includes(cell.room)) {
+                if (cell.className) classNameSet.add(cell.className);
+                cell.merged?.forEach(m => {
+                    if (m.className) classNameSet.add(m.className);
+                });
+            }
+        });
+        return Array.from(classNameSet);
+    }, [scheduleData, labRooms]);
+
+    const { classDataMap } = useClassStudents(labClassNames, false, studentMap);
+
+    const getActiveStudentCount = (className: string, slotUnderline?: boolean): number => {
+        const data = classDataMap[className];
+        if (!data) return 0;
+        const active = data.studentList.filter((s: any) => !s.withdrawalDate && !s.onHold);
+        if (slotUnderline !== undefined) {
+            const hasAnyUnderline = active.some((s: any) => s.underline);
+            if (hasAnyUnderline) {
+                return active.filter((s: any) => !!s.underline === slotUnderline).length;
+            }
+        }
+        return active.length;
+    };
 
     // 시뮬레이션 모드에서는 항상 수정모드
     const [mode, setMode] = useState<'view' | 'edit' | 'move'>(isSimulationMode ? 'edit' : 'view');
@@ -921,6 +954,21 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                                 {cellData.room}
                                                             </div>
                                                         )}
+
+                                                        {/* LAB실 학생수 표시 (강의실뷰와 동일 디자인) */}
+                                                        {cellData?.room && labRooms.includes(cellData.room) && cellData.className && (() => {
+                                                            let totalCount = getActiveStudentCount(cellData.className, cellData.underline);
+                                                            if (cellData.merged) {
+                                                                cellData.merged.forEach(m => {
+                                                                    totalCount += getActiveStudentCount(m.className, m.underline);
+                                                                });
+                                                            }
+                                                            return totalCount > 0 ? (
+                                                                <div className="absolute bottom-0.5 left-0.5 bg-indigo-600 text-white text-micro font-bold px-1 rounded-sm shadow-sm z-10 leading-tight">
+                                                                    {totalCount}명
+                                                                </div>
+                                                            ) : null;
+                                                        })()}
 
                                                         {/* Render Merged Badge & Tooltip */}
                                                         {cellData?.merged && cellData.merged.length > 0 && (

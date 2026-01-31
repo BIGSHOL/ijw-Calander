@@ -23,17 +23,21 @@ export interface Enrollment {
   // Teacher identification (migration complete)
   staffId?: string;   // Staff document ID (references staff collection)
   teacherId_deprecated?: string; // Backup of original teacherId after migration (for rollback only)
+  teacher?: string;   // 강사명 (레거시 호환)
 
   days: string[];     // Class schedule days (e.g., ['월', '수'])
   schedule?: string[]; // 스케줄 정보 (e.g., ['월 1교시', '수 3교시'])
   attendanceDays?: string[];  // 실제 등원 요일 (비어있거나 없으면 모든 수업 요일에 등원)
 
   // 수강 기간 정보
+  startDate?: string;       // 수강 시작일 (enrollmentDate 별칭)
   enrollmentDate?: string;  // 수강 시작일 (YYYY-MM-DD)
+  endDate?: string;         // 수강 종료일 (withdrawalDate 별칭)
   withdrawalDate?: string;  // 수강 종료일 (YYYY-MM-DD, undefined면 현재 수강 중)
 
   // 수강 상태
   onHold?: boolean;  // 일시정지 여부
+  isScheduled?: boolean; // 배정 예정 (미래 시작일)
 
   // Migration metadata
   migrated?: boolean;
@@ -134,6 +138,13 @@ export interface UnifiedStudent {
 
   // 수강 정보 (v5: 계층형 구조)
   enrollments: Enrollment[];     // 상세 수강 정보 (Subject -> Class -> Teacher mapping)
+  subjects?: string[];           // 수강 과목 목록 (레거시 호환)
+
+  // 레거시/마이그레이션 필드
+  parentPhone2?: string;         // 보조 보호자 연락처
+  enrollmentDate?: string;       // 등록일 (레거시 호환, startDate 별칭)
+  legacyId?: string;             // 레거시 시스템 ID
+  source?: string;               // 데이터 출처 (마이그레이션 시)
 
   // 상태 관리
   // prospect = prospective (예비) - 두 표기 모두 지원
@@ -238,7 +249,8 @@ export interface ScenarioEntry {
 
   // 스냅샷 데이터
   data: Record<string, any>;         // english_schedules_draft
-  studentData: Record<string, any>;  // 수업목록_draft
+  studentData: Record<string, any>;  // classes_draft
+  classes?: Record<string, any>;     // 수업 데이터 (수학 시나리오용)
 
   // 메타데이터
   createdAt: string;
@@ -356,7 +368,8 @@ export const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
 // 8-tier role system (ordered from highest to lowest)
 // Simplified from 11-tier: removed editor, viewer, guest (rarely used)
-export type UserRole = 'master' | 'admin' | 'manager' | 'math_lead' | 'english_lead' | 'math_teacher' | 'english_teacher' | 'user';
+export type UserRole = 'master' | 'admin' | 'manager' | 'math_lead' | 'english_lead' | 'math_teacher' | 'english_teacher' | 'user'
+  | 'teacher' | 'staff' | 'editor' | 'senior_staff' | 'viewer';  // 레거시 호환
 
 export const ROLE_HIERARCHY: UserRole[] = ['master', 'admin', 'manager', 'math_lead', 'english_lead', 'math_teacher', 'english_teacher', 'user'];
 
@@ -368,7 +381,12 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   english_lead: '영어팀장',
   math_teacher: '수학선생님',
   english_teacher: '영어선생님',
-  user: 'USER'
+  user: 'USER',
+  teacher: '강사',
+  staff: '직원',
+  editor: 'EDITOR',
+  senior_staff: '시니어직원',
+  viewer: '뷰어',
 };
 
 // Permission IDs for granular control
@@ -390,6 +408,7 @@ export type PermissionId =
   | 'timetable.math.view' | 'timetable.math.edit'
   | 'timetable.english.view' | 'timetable.english.edit'
   | 'timetable.english.simulation'
+  | 'timetable.math.simulation'
   | 'timetable.english.backup.view' | 'timetable.english.backup.restore'
   | 'timetable.science.view' | 'timetable.science.edit'
   | 'timetable.korean.view' | 'timetable.korean.edit'
@@ -657,9 +676,9 @@ export interface UserProfile {
   status: 'approved' | 'pending' | 'rejected';
   /** @deprecated Use granular permissions instead (kept for migration) */
   allowedDepartments?: string[];
-  // Department visibility control: 'view' = visible, undefined/missing = hidden
+  // Department visibility control: 'view' = visible, 'edit' = editable, undefined/missing = hidden
   // Note: Edit permissions are controlled by role permissions, not department permissions
-  departmentPermissions?: Record<string, 'view'>;
+  departmentPermissions?: Record<string, 'view' | 'edit'>;
   // Favorite departments (user-specific bookmarks)
   favoriteDepartments?: string[];
 
@@ -673,6 +692,9 @@ export interface UserProfile {
   /** @deprecated Use 'events.edit_others' permission */
   canManageEventAuthors?: boolean;
   displayName?: string; // 이름 (표시명)
+  name?: string;        // 이름 (displayName 별칭)
+  koreanName?: string;  // 한국어 이름
+  department?: string;  // 소속 부서 (departmentId 별칭)
   jobTitle?: string; // 호칭
 
   // Attendance: Link to Staff Profile (for view_own filtering)
@@ -911,6 +933,7 @@ export enum ConsultationStatus {
   PendingThisMonth = '이번달 등록예정',
   PendingFuture = '추후 등록예정',
   NotRegistered = '미등록',
+  Registered = 'registered',
 }
 
 export enum ConsultationSubject {
@@ -1006,6 +1029,7 @@ export const CONSULTATION_STATUS_COLORS: Record<ConsultationStatus, string> = {
   [ConsultationStatus.PendingThisMonth]: 'bg-amber-100 text-amber-800 border-amber-200',
   [ConsultationStatus.PendingFuture]: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   [ConsultationStatus.NotRegistered]: 'bg-slate-100 text-slate-800 border-slate-200',
+  [ConsultationStatus.Registered]: 'bg-blue-100 text-blue-800 border-blue-200',
 };
 
 export const CONSULTATION_CHART_COLORS = ['#059669', '#0d9488', '#0891b2', '#f59e0b', '#fbbf24', '#94a3b8'];
@@ -1338,7 +1362,7 @@ export interface Consultation {
 
   // 상담 내용
   category: ConsultationCategory;
-  subject?: 'math' | 'english' | 'all';
+  subject?: 'math' | 'english' | 'all' | '수학' | '영어';
   title: string;
   content: string;
 
@@ -1501,7 +1525,7 @@ export interface StaffMember {
   englishName?: string;           // 영어 이름
   email?: string;
   phone?: string;
-  role: 'teacher' | 'admin' | 'staff';
+  role: 'teacher' | 'admin' | 'staff' | '강사';
   subjects?: ('math' | 'english')[];
   hireDate: string;
   status: 'active' | 'inactive' | 'resigned';
@@ -1558,6 +1582,7 @@ export const STAFF_ROLE_LABELS: Record<StaffMember['role'], string> = {
   teacher: '강사',
   admin: '관리자',
   staff: '직원',
+  '강사': '강사',
 };
 
 /**
@@ -1673,42 +1698,43 @@ export interface AttendanceHistory {
 // ============ BILLING MANAGEMENT TYPES ============
 
 /**
- * 수납 항목 (청구 내역)
- */
-export interface BillingItem {
-  name: string; // '수학', '영어' 등
-  amount: number;
-}
-
-/**
  * 수납 상태
  */
-export type BillingStatus = 'pending' | 'partial' | 'paid' | 'overdue';
+export type BillingStatus = 'pending' | 'paid';
 
 /**
- * 결제 수단
- */
-export type PaymentMethod = 'card' | 'cash' | 'transfer';
-
-/**
- * 수납 기록
+ * 수납 기록 (xlsx 1행 = 1레코드, flat 구조)
  */
 export interface BillingRecord {
   id: string;
-  studentId: string;
-  studentName: string;
-  month: string; // '2026-01' 형식
-  amount: number; // 청구 금액
-  paidAmount: number; // 납부 금액
-  status: BillingStatus;
-  paymentMethod?: PaymentMethod;
-  dueDate: string; // YYYY-MM-DD
-  paidDate?: string; // YYYY-MM-DD
-  items: BillingItem[];
-  memo?: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
+  // 학생 정보
+  externalStudentId: string; // 원생고유번호
+  studentName: string; // 이름
+  grade: string; // 학년
+  school: string; // 학교
+  parentPhone: string; // 학부모연락처
+  studentPhone: string; // 원생연락처
+  // 청구 정보
+  category: string; // 구분 (수업 등)
+  month: string; // 청구월 (2026-01 형식)
+  billingDay: number; // 청구일
+  billingName: string; // 수납명
+  // 금액 정보
+  status: BillingStatus; // 수납여부 (pending=미납, paid=납부완료)
+  billedAmount: number; // 청구액
+  discountAmount: number; // 할인액
+  pointsUsed: number; // 적립금사용
+  paidAmount: number; // 실제낸금액
+  unpaidAmount: number; // 미납금액
+  // 결제 정보
+  paymentMethod: string; // 결제수단
+  cardCompany: string; // 카드사
+  paidDate: string; // 수납일
+  cashReceipt: string; // 현금영수증
+  // 기타
+  memo: string; // 메모
+  createdAt: string; // 등록일시
+  updatedAt: string; // 수정일시
 }
 
 /**
@@ -1716,10 +1742,11 @@ export interface BillingRecord {
  */
 export interface BillingSummaryStats {
   totalBilled: number; // 총 청구 금액
+  totalDiscount: number; // 총 할인 금액
   totalPaid: number; // 총 납부 금액
+  totalUnpaid: number; // 총 미납 금액
   pendingCount: number; // 미납 건수
   paidCount: number; // 완납 건수
-  overdueCount: number; // 연체 건수
   collectionRate: number; // 수납률 (%)
 }
 
@@ -1728,9 +1755,7 @@ export interface BillingSummaryStats {
  */
 export const BILLING_STATUS_COLORS: Record<BillingStatus, { bg: string; text: string; border: string }> = {
   pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-200' },
-  partial: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-200' },
   paid: { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-200' },
-  overdue: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-200' },
 };
 
 /**
@@ -1738,18 +1763,17 @@ export const BILLING_STATUS_COLORS: Record<BillingStatus, { bg: string; text: st
  */
 export const BILLING_STATUS_LABELS: Record<BillingStatus, string> = {
   pending: '미납',
-  partial: '부분납부',
-  paid: '완납',
-  overdue: '연체',
+  paid: '납부완료',
 };
 
 /**
  * 결제 수단 라벨
  */
-export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  card: '카드',
-  cash: '현금',
-  transfer: '계좌이체',
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  '카드': '카드',
+  '온라인(계좌)': '계좌이체',
+  '현금': '현금',
+  '': '-',
 };
 
 // ============ DASHBOARD TYPES ============

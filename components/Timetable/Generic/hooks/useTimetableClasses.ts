@@ -89,6 +89,9 @@ export function useTimetableClasses(subject: SubjectKey) {
 
       setClasses(loadedClasses);
       setLoading(false);
+    }, (error) => {
+      console.error(`[useTimetableClasses:${subject}] Error loading classes:`, error);
+      setLoading(false);
     });
 
     // Register listener for cleanup (returns cleanup function)
