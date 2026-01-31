@@ -4,8 +4,8 @@
  */
 
 import React from 'react';
-import { Eye, X, ClipboardList, Calendar as CalendarIcon, Library, BarChart3, MessageCircle, Check } from 'lucide-react';
-import { UserProfile, ROLE_LABELS, AppTab } from '../../types';
+import { Eye, X, ClipboardList, Check } from 'lucide-react';
+import { UserProfile, ROLE_LABELS, AppTab, TAB_META } from '../../types';
 
 interface PermissionViewModalProps {
   isOpen: boolean;
@@ -93,15 +93,15 @@ export const PermissionViewModal: React.FC<PermissionViewModalProps> = ({
               <ClipboardList size={14} className="inline mr-1" />허용된 탭
             </h4>
             <div className="flex flex-wrap gap-2">
-              {accessibleTabs.map(tab => (
-                <span key={tab} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                  {tab === 'calendar' && <><CalendarIcon size={12} className="inline mr-1" />연간 일정</>}
-                  {tab === 'timetable' && <><Library size={12} className="inline mr-1" />시간표</>}
-                  {tab === 'payment' && '💳 전자 결재'}
-                  {tab === 'gantt' && <><BarChart3 size={12} className="inline mr-1" />간트 차트</>}
-                  {tab === 'consultation' && <><MessageCircle size={12} className="inline mr-1" />상담</>}
-                </span>
-              ))}
+              {accessibleTabs.map(tab => {
+                const meta = TAB_META[tab];
+                if (!meta) return null;
+                return (
+                  <span key={tab} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                    {meta.icon} {meta.label}
+                  </span>
+                );
+              })}
             </div>
           </div>
 

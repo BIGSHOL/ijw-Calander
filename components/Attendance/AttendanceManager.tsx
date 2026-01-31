@@ -28,6 +28,7 @@ import { useExamsByDateMap, useScoresByExams } from '../../hooks/useExamsByDate'
 import { useCreateDailyAttendance } from '../../hooks/useDailyAttendance';
 import { useVisibleAttendanceStudents } from '../../hooks/useVisibleAttendanceStudents';
 import { useHolidays } from '../../hooks/useFirebaseQueries';
+import { useStudents } from '../../hooks/useStudents';
 import { UserProfile, Teacher, UnifiedStudent } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { mapAttendanceValueToStatus } from '../../utils/attendanceSync';
@@ -223,6 +224,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // Internal state is removed. IsAddStudentModalOpen is now controlled by App.
   const isAddStudentOpen = isAddStudentModalOpen || false;
   const closeAddStudent = onCloseAddStudentModal || (() => { });
+
+  // 전체 학생 목록 (특강/보강 학생 추가용) - 모달 열릴 때만 로드
+  const { students: allSystemStudents = [] } = useStudents(false, isAddStudentOpen);
 
   const [isSettlementModalOpen, setSettlementModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -810,7 +814,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       <AddStudentToAttendanceModal
         isOpen={isAddStudentOpen}
         onClose={closeAddStudent}
-        allStudents={rawAllStudents as any[] || []}
+        allStudents={allSystemStudents as any[] || []}
         currentStaffId={filterStaffId || ''}
         currentTeacherName={teachers.find(t => t.id === filterStaffId)?.name || ''}
         currentSubject={selectedSubject}

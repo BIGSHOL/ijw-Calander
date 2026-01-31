@@ -12,6 +12,7 @@ import { auth, db } from '../firebaseConfig';
 import { UserProfile, StaffMember } from '../types';
 import { staffToUserProfile, createNewStaffMember } from '../utils/staffHelpers';
 import { storage, STORAGE_KEYS } from '../utils/localStorage';
+import { queryClient } from '../queryClient';
 
 interface SystemConfig {
   masterEmails?: string[];
@@ -148,9 +149,12 @@ export const useAuth = ({ setCurrentUser, systemConfig, onShowLogin }: UseAuthPa
   }, []);
 
   const handleLogout = async () => {
-    await signOut(auth);
-    setUserProfile(null);
+    // Cancel all pending React Query queries to prevent permission-denied errors
+    queryClient.cancelQueries();
+    queryClient.clear();
     storage.remove(STORAGE_KEYS.DEPT_HIDDEN_IDS);
+    setUserProfile(null);
+    await signOut(auth);
     window.location.reload();
   };
 

@@ -160,12 +160,16 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
           <TabButton
             active={attendanceViewMode === 'session'}
             onClick={() => {
+              if (sessions.length === 0) {
+                alert('현재 과목/연도에 세션 데이터가 없습니다. 출석부 설정에서 세션을 먼저 생성해주세요.');
+                return;
+              }
               setAttendanceViewMode('session');
             }}
             icon={<CalendarIcon size={14} />}
             className="px-2 py-0.5"
           >
-            세션
+            세션{sessions.length === 0 && attendanceViewMode !== 'session' ? '' : ''}
           </TabButton>
         </div>
 
@@ -173,7 +177,8 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
         <div className="flex items-center gap-1">
           <button
             onClick={() => attendanceViewMode === 'monthly' ? changeMonth(-1) : changeSession(-1)}
-            className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+            disabled={attendanceViewMode === 'session' && sessions.length === 0}
+            className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronLeft size={14} />
           </button>
@@ -182,12 +187,15 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
               ? attendanceDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
               : selectedSession
                 ? `${selectedSession.year}년 ${selectedSession.month}월 세션`
-                : `${attendanceDate.getFullYear()}년 ${attendanceDate.getMonth() + 1}월 세션`
+                : sessions.length === 0
+                  ? '세션 없음'
+                  : `${attendanceDate.getFullYear()}년 ${attendanceDate.getMonth() + 1}월 세션`
             }
           </span>
           <button
             onClick={() => attendanceViewMode === 'monthly' ? changeMonth(1) : changeSession(1)}
-            className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+            disabled={attendanceViewMode === 'session' && sessions.length === 0}
+            className="p-1 border border-gray-700 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <ChevronRight size={14} />
           </button>
