@@ -23,7 +23,7 @@ export const useExamsByDateRange = (
         queryFn: async () => {
             if (!startDate || !endDate) return [];
 
-            let q = query(
+            const q = query(
                 collection(db, COL_EXAMS),
                 where('date', '>=', startDate),
                 where('date', '<=', endDate),

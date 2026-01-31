@@ -159,7 +159,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
       if (id.length <= 3) return true;
 
       // 5. 특수문자만 있거나 이상한 패턴
-      if (!/^[가-힣a-zA-Z0-9_\-]+$/.test(id)) return true;
+      if (!/^[가-힣a-zA-Z0-9_-]+$/.test(id)) return true;
 
       return false;
     });
@@ -174,7 +174,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
     if (/^\d{4,6}$/.test(id)) return '숫자 ID';
     if (/^[a-zA-Z0-9]{20,}$/.test(id)) return '자동생성 ID';
     if (id.length <= 3) return '짧은 ID';
-    if (!/^[가-힣a-zA-Z0-9_\-]+$/.test(id)) return '특수문자 ID';
+    if (!/^[가-힣a-zA-Z0-9_-]+$/.test(id)) return '특수문자 ID';
     return '기타';
   };
 

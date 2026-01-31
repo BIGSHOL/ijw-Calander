@@ -307,7 +307,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                 const isWeekend = day === '토' || day === '일';
                 const period = periodsToUse.find(p => p.id === periodId);
-                let timeStr: string = isWeekend
+                const timeStr: string = isWeekend
                     ? (WEEKEND_PERIOD_TIMES[periodId] || period?.time || '')
                     : (period?.time || '');
 

@@ -165,7 +165,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
         const allDeps: Array<{ fromId: string; toId: string; fromY: number; toY: number; toX: number; fromX: number; colorIndex: number }> = [];
 
         // Build a map of taskId -> colorIndex
-        let globalTaskIndex = 0;
+        const globalTaskIndex = 0;
         const taskColorMap: Record<string, number> = {};
         groups.forEach((group, gIndex) => {
             group.tasks.forEach((task, tIndex) => {

@@ -203,7 +203,7 @@ export const useEnglishClassUpdater = () => {
         const slotKey = `${day}-${periodId}`;
 
         // 기존 수업 찾기 (className으로만 찾음)
-        let classDoc = await findClassByNameAndTeacher(className);
+        const classDoc = await findClassByNameAndTeacher(className);
 
         if (classDoc) {
             // 기존 수업에 스케줄 추가

@@ -1260,8 +1260,8 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       const scenarioClassIds = new Set(Object.keys(scenarioClasses));
 
       // 최종 반영할 classes 결정
-      let classesToPublish = { ...scenarioClasses };
-      let enrollmentsToPublish = { ...scenarioEnrollments };
+      const classesToPublish = { ...scenarioClasses };
+      const enrollmentsToPublish = { ...scenarioEnrollments };
 
       if (mode === 'merge') {
         // 병합 모드: 새로 추가된 수업 유지

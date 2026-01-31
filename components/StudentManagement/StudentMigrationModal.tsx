@@ -244,7 +244,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
         // 1차: 출결번호로 기존 학생 찾기
         let existingData = existingStudentsByAttendance.get(attendanceNumber);
-        let foundByAttendance = !!existingData;
+        const foundByAttendance = !!existingData;
 
         // 2차: 출결번호로 못 찾으면 이름_학교_학년으로 찾기 (기존 ID 형식 호환)
         if (!existingData) {

@@ -225,7 +225,7 @@ export function useGradeComments(studentId: string | undefined, period?: string)
     queryKey: ['grade_comments', studentId, period],
     queryFn: async () => {
       if (!studentId) return [];
-      let q = query(
+      const q = query(
         collection(db, COL_GRADE_COMMENTS),
         where('studentId', '==', studentId),
         orderBy('createdAt', 'desc')

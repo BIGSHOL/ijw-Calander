@@ -141,7 +141,7 @@ async function assignEnglishClasses(dryRun: boolean = false): Promise<void> {
     const results: EnglishAssignmentResult[] = [];
     let totalAssigned = 0;
     let totalSkipped = 0;
-    let totalErrors = 0;
+    const totalErrors = 0;
 
     // 배치 처리
     const BATCH_SIZE = 500;

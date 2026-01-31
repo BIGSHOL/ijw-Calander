@@ -383,8 +383,8 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             const sMain = sData.className ? { className: sData.className, room: sData.room, underline: sData.underline } : null;
             const sMerged = sData.merged || [];
 
-            let classesToMove: { className: string; room?: string; underline?: boolean }[] = [];
-            let classesToKeep: { className: string; room?: string; underline?: boolean }[] = [];
+            const classesToMove: { className: string; room?: string; underline?: boolean }[] = [];
+            const classesToKeep: { className: string; room?: string; underline?: boolean }[] = [];
 
             if (moveIndices) {
                 // 선택적 이동

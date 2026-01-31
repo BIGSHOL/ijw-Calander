@@ -230,7 +230,7 @@ export const useAttendanceStudents = (options?: {
             // Step 9: 클라이언트 사이드 필터링 및 데이터 매핑 (기존 로직)
             const classesMap = new Map(allClasses.map(cls => [cls.id, cls]));
 
-            let data = allRaw.map(s => {
+            const data = allRaw.map(s => {
                 const enrollments = (s as any).enrollments || [];
 
                 // 담임 또는 부담임으로 배정된 수업 필터링
