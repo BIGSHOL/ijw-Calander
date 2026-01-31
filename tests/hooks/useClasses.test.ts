@@ -3,7 +3,7 @@ import React from 'react';
 import { useClasses } from '../../hooks/useClasses';
 import { createTestQueryClient } from '../utils/testHelpers';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { collection, getDocs, query, orderBy, where, collectionGroup } from 'firebase/firestore';
+import { collection, getDocs, query, where, collectionGroup } from 'firebase/firestore';
 
 // Mock Firebase Firestore
 vi.mock('firebase/firestore', () => ({
@@ -27,80 +27,82 @@ describe('useClasses Hook', () => {
       React.createElement(QueryClientProvider, { client: queryClient }, children);
   };
 
-  const mockClasses = [
+  // Class documents from 'classes' collection
+  const mockClassDocs = [
     {
       id: 'class1',
-      className: '수학 A반',
-      teacher: '김선생',
-      subject: 'math' as const,
-      schedule: ['월 14:00', '수 14:00'],
-      studentCount: 5,
+      data: () => ({
+        className: '수학 A반',
+        teacher: '김선생',
+        subject: 'math',
+        isActive: true,
+        schedule: [{ day: '월', periodId: '14:00' }, { day: '수', periodId: '14:00' }],
+      }),
     },
     {
       id: 'class2',
-      className: '영어 B반',
-      teacher: '이선생',
-      subject: 'english' as const,
-      schedule: ['화 15:00', '목 15:00'],
-      studentCount: 8,
+      data: () => ({
+        className: '영어 B반',
+        teacher: '이선생',
+        subject: 'english',
+        isActive: true,
+        schedule: [{ day: '화', periodId: '15:00' }],
+      }),
     },
     {
       id: 'class3',
-      className: '수학 B반',
-      teacher: '박선생',
-      subject: 'math' as const,
-      schedule: ['금 16:00'],
-      studentCount: 3,
+      data: () => ({
+        className: '수학 B반',
+        teacher: '박선생',
+        subject: 'math',
+        isActive: true,
+        schedule: [],
+      }),
     },
   ];
 
-  const mockEnrollments = [
+  // Enrollment documents from collectionGroup('enrollments') for student count calculation
+  const mockEnrollmentDocs = [
     {
-      id: 'enroll1',
-      className: '수학 A반',
-      teacher: '김선생',
-      subject: 'math',
+      id: 'e1',
+      data: () => ({ className: '수학 A반', subject: 'math' }),
       ref: { parent: { parent: { id: 'student1' } } },
     },
     {
-      id: 'enroll2',
-      className: '영어 B반',
-      teacher: '이선생',
-      subject: 'english',
+      id: 'e2',
+      data: () => ({ className: '수학 A반', subject: 'math' }),
       ref: { parent: { parent: { id: 'student2' } } },
+    },
+    {
+      id: 'e3',
+      data: () => ({ className: '영어 B반', subject: 'english' }),
+      ref: { parent: { parent: { id: 'student3' } } },
     },
   ];
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
 
     // Setup default mocks
     (collection as any).mockReturnValue({});
-    (query as any).mockImplementation((...args) => args[0]);
-    (orderBy as any).mockReturnValue({});
+    (query as any).mockImplementation((...args: any[]) => args[0]);
     (where as any).mockReturnValue({});
     (collectionGroup as any).mockReturnValue({});
-
-    // Set localStorage default
-    localStorage.setItem('useNewDataStructure', 'true');
   });
 
-  afterEach(() => {
-    localStorage.clear();
-  });
-
-  describe('Fetching from New Structure (enrollments)', () => {
-    it('should fetch all classes from enrollments', async () => {
-      const mockDocs = mockEnrollments.map((enrollment) => ({
-        id: enrollment.id,
-        data: () => enrollment,
-        ref: enrollment.ref,
-      }));
-
+  describe('Fetching Classes', () => {
+    it('should fetch all classes', async () => {
+      // Mock 1: classes collection query
       (getDocs as any).mockResolvedValueOnce({
-        docs: mockDocs,
+        docs: mockClassDocs,
         empty: false,
-        size: mockDocs.length,
+        size: mockClassDocs.length,
+      });
+      // Mock 2: enrollments collectionGroup (for student count)
+      (getDocs as any).mockResolvedValueOnce({
+        docs: mockEnrollmentDocs,
+        empty: false,
+        size: mockEnrollmentDocs.length,
       });
 
       const { result } = renderHook(() => useClasses(), {
@@ -112,21 +114,28 @@ describe('useClasses Hook', () => {
       });
 
       expect(result.current.data).toBeDefined();
-      expect(result.current.data!.length).toBeGreaterThan(0);
+      expect(result.current.data!.length).toBe(3);
+
+      // Verify student counts from enrollments
+      const mathA = result.current.data!.find(c => c.className === '수학 A반');
+      expect(mathA?.studentCount).toBe(2);
+      const englishB = result.current.data!.find(c => c.className === '영어 B반');
+      expect(englishB?.studentCount).toBe(1);
     });
 
     it('should filter classes by subject (math)', async () => {
-      const mathEnrollments = mockEnrollments.filter((e) => e.subject === 'math');
-      const mockDocs = mathEnrollments.map((enrollment) => ({
-        id: enrollment.id,
-        data: () => enrollment,
-        ref: enrollment.ref,
-      }));
+      const mathDocs = mockClassDocs.filter(d => d.data().subject === 'math');
+      const mathEnrollments = mockEnrollmentDocs.filter(d => d.data().subject === 'math');
 
       (getDocs as any).mockResolvedValueOnce({
-        docs: mockDocs,
+        docs: mathDocs,
         empty: false,
-        size: mockDocs.length,
+        size: mathDocs.length,
+      });
+      (getDocs as any).mockResolvedValueOnce({
+        docs: mathEnrollments,
+        empty: false,
+        size: mathEnrollments.length,
       });
 
       const { result } = renderHook(() => useClasses('math'), {
@@ -138,24 +147,25 @@ describe('useClasses Hook', () => {
       });
 
       expect(result.current.data).toBeDefined();
-      // All returned classes should be math
+      expect(result.current.data!.length).toBe(2);
       result.current.data?.forEach((classInfo) => {
         expect(classInfo.subject).toBe('math');
       });
     });
 
     it('should filter classes by subject (english)', async () => {
-      const englishEnrollments = mockEnrollments.filter((e) => e.subject === 'english');
-      const mockDocs = englishEnrollments.map((enrollment) => ({
-        id: enrollment.id,
-        data: () => enrollment,
-        ref: enrollment.ref,
-      }));
+      const englishDocs = mockClassDocs.filter(d => d.data().subject === 'english');
+      const englishEnrollments = mockEnrollmentDocs.filter(d => d.data().subject === 'english');
 
       (getDocs as any).mockResolvedValueOnce({
-        docs: mockDocs,
+        docs: englishDocs,
         empty: false,
-        size: mockDocs.length,
+        size: englishDocs.length,
+      });
+      (getDocs as any).mockResolvedValueOnce({
+        docs: englishEnrollments,
+        empty: false,
+        size: englishEnrollments.length,
       });
 
       const { result } = renderHook(() => useClasses('english'), {
@@ -167,13 +177,18 @@ describe('useClasses Hook', () => {
       });
 
       expect(result.current.data).toBeDefined();
-      // All returned classes should be english
+      expect(result.current.data!.length).toBe(1);
       result.current.data?.forEach((classInfo) => {
         expect(classInfo.subject).toBe('english');
       });
     });
 
-    it('should return empty array when no enrollments exist', async () => {
+    it('should return empty array when no classes exist', async () => {
+      (getDocs as any).mockResolvedValueOnce({
+        docs: [],
+        empty: true,
+        size: 0,
+      });
       (getDocs as any).mockResolvedValueOnce({
         docs: [],
         empty: true,
@@ -189,82 +204,6 @@ describe('useClasses Hook', () => {
       });
 
       expect(result.current.data).toEqual([]);
-    });
-  });
-
-  describe('Fetching from Old Structure (수업목록)', () => {
-    beforeEach(() => {
-      localStorage.setItem('useNewDataStructure', 'false');
-    });
-
-    it('should fetch all classes from old structure', async () => {
-      const mockDocs = mockClasses.map((classInfo) => ({
-        id: classInfo.id,
-        data: () => ({
-          className: classInfo.className,
-          teacher: classInfo.teacher,
-          schedule: classInfo.schedule,
-          studentIds: new Array(classInfo.studentCount).fill('student-id'),
-        }),
-      }));
-
-      (getDocs as any).mockResolvedValueOnce({
-        docs: mockDocs,
-        empty: false,
-        size: mockDocs.length,
-      });
-
-      const { result } = renderHook(() => useClasses(), {
-        wrapper: createWrapper(),
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      expect(result.current.data).toBeDefined();
-      expect(result.current.data!.length).toBe(3);
-    });
-
-    it('should filter classes by subject from old structure', async () => {
-      const mathClasses = mockClasses.filter((c) => c.subject === 'math');
-      const mockDocs = mathClasses.map((classInfo) => ({
-        id: classInfo.id,
-        data: () => ({
-          className: classInfo.className,
-          teacher: classInfo.teacher,
-          schedule: classInfo.schedule,
-          studentIds: new Array(classInfo.studentCount).fill('student-id'),
-        }),
-      }));
-
-      (getDocs as any).mockResolvedValueOnce({
-        docs: mockClasses.map((classInfo) => ({
-          id: classInfo.id,
-          data: () => ({
-            className: classInfo.className,
-            teacher: classInfo.teacher,
-            schedule: classInfo.schedule,
-            studentIds: new Array(classInfo.studentCount).fill('student-id'),
-          }),
-        })),
-        empty: false,
-        size: mockClasses.length,
-      });
-
-      const { result } = renderHook(() => useClasses('math'), {
-        wrapper: createWrapper(),
-      });
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      expect(result.current.data).toBeDefined();
-      // Should only return math classes
-      result.current.data?.forEach((classInfo) => {
-        expect(classInfo.subject).toBe('math');
-      });
     });
   });
 
@@ -286,17 +225,11 @@ describe('useClasses Hook', () => {
   });
 
   describe('Caching Behavior', () => {
-    it('should cache results with 10 minute staleTime', async () => {
-      const mockDocs = mockEnrollments.map((enrollment) => ({
-        id: enrollment.id,
-        data: () => enrollment,
-        ref: enrollment.ref,
-      }));
-
+    it('should cache results with staleTime', async () => {
       (getDocs as any).mockResolvedValue({
-        docs: mockDocs,
+        docs: mockClassDocs,
         empty: false,
-        size: mockDocs.length,
+        size: mockClassDocs.length,
       });
 
       const { result, rerender } = renderHook(() => useClasses(), {
