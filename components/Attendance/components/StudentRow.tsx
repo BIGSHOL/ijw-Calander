@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Student, SalaryConfig } from '../types';
 import { Exam, StudentScore, GRADE_COLORS } from '../../../types';
-import { formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting } from '../utils';
+import { formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getLocalYearMonth } from '../utils';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { LogOut, Check } from 'lucide-react';
 import { PREDEFINED_CELL_COLORS } from './cellColors';
@@ -52,7 +52,7 @@ const StudentRow = React.memo(({
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const salaryBtnRef = useRef<HTMLButtonElement>(null);
   const salaryDropdownRef = useRef<HTMLDivElement>(null);
-  const currentMonthStr = currentDate.toISOString().slice(0, 7);
+  const currentMonthStr = getLocalYearMonth(currentDate);
 
   // 드롭다운 위치 계산 및 열기/닫기
   const toggleDropdown = useCallback((e: React.MouseEvent) => {
@@ -206,11 +206,11 @@ const StudentRow = React.memo(({
             return order.indexOf(a[0]) - order.indexOf(b[0]);
           }).map(d => {
             const dayChar = d[0];
-            let colorClass = "bg-white border-gray-200 text-gray-600";
-            if (dayChar === '토') colorClass = "bg-blue-50 border-blue-200 text-blue-600";
-            if (dayChar === '일') colorClass = "bg-red-50 border-red-200 text-red-600";
+            let colorClass = "bg-gray-200 text-gray-700";
+            if (dayChar === '토') colorClass = "bg-blue-100 text-blue-700";
+            if (dayChar === '일') colorClass = "bg-red-100 text-red-700";
             return (
-              <span key={d} className={`text-micro border px-1 rounded font-medium ${colorClass}`}>{dayChar}</span>
+              <span key={d} className={`text-xxs px-1.5 py-px rounded font-medium ${colorClass}`}>{dayChar}</span>
             );
           })}
         </div>

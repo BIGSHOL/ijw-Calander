@@ -211,7 +211,9 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
 
   // 현재 선택된 월의 yearMonth 포맷 (YYYY-MM)
   const yearMonth = useMemo(() => {
-    return selectedMonth.toISOString().slice(0, 7);
+    const year = selectedMonth.getFullYear();
+    const month = String(selectedMonth.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
   }, [selectedMonth]);
 
   // 학생의 수업 목록 추출 (최적화: 캐시된 함수 사용)
