@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { X, UserPlus, Loader2, User, School, Phone, MapPin, Cake, FileText, ChevronDown, ChevronRight } from 'lucide-react';
 import { db } from '../../firebaseConfig';
 import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useForm } from '../../hooks/useForm';
 import { required, phone as phoneValidator } from '../../utils/formValidation';
-import { encryptPhone } from '../../utils/encryption';
 
 interface AddStudentModalProps {
     isOpen: boolean;
@@ -141,7 +141,19 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     }
                 }
 
-                // students 컬렉션에 추가 (전화번호는 암호화)
+                // 전화번호 서버 측 암호화
+                const functionsInstance = getFunctions(undefined, 'asia-northeast3');
+                const encryptFn = httpsCallable(functionsInstance, 'encryptPhoneNumbers');
+                const encryptResult = await encryptFn({
+                    phones: {
+                        studentPhone: formData.studentPhone,
+                        homePhone: formData.homePhone,
+                        parentPhone: formData.parentPhone,
+                    }
+                });
+                const encryptedPhones = (encryptResult.data as any).encrypted;
+
+                // students 컬렉션에 추가 (전화번호는 서버 측 암호화)
                 await setDoc(doc(db, 'students', studentId), {
                     // 기본 정보
                     name: formData.name.trim(),
@@ -151,10 +163,10 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     school: normalizedSchool,
                     grade: formData.grade.trim(),
                     graduationYear: formData.graduationYear.trim() || null,
-                    // 연락처 (암호화)
-                    studentPhone: encryptPhone(formData.studentPhone),
-                    homePhone: encryptPhone(formData.homePhone),
-                    parentPhone: encryptPhone(formData.parentPhone),
+                    // 연락처 (서버 측 암호화)
+                    studentPhone: encryptedPhones.studentPhone,
+                    homePhone: encryptedPhones.homePhone,
+                    parentPhone: encryptedPhones.parentPhone,
                     parentName: formData.parentName.trim() || null,
                     parentRelation: formData.parentRelation || '모',
                     // 주소

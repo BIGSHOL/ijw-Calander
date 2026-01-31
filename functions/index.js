@@ -4,6 +4,7 @@
 
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
+const CryptoJS = require("crypto-js");
 const logger = functions.logger;
 
 admin.initializeApp();
@@ -501,16 +502,20 @@ exports.setUserPassword = functions
 
         const callerUid = context.auth.uid;
 
-        // 2. Get caller's role from Firestore (users collection)
-        const callerDoc = await db.collection("users").doc(callerUid).get();
-        if (!callerDoc.exists) {
+        // 2. Get caller's role from Firestore (staff collection)
+        const callerSnap = await db.collection("staff")
+            .where("uid", "==", callerUid)
+            .limit(1)
+            .get();
+        if (callerSnap.empty) {
             throw new functions.https.HttpsError(
                 "permission-denied",
                 "사용자 정보를 찾을 수 없습니다."
             );
         }
 
-        const callerRole = callerDoc.data().role;
+        const callerData = callerSnap.docs[0].data();
+        const callerRole = callerData.systemRole || callerData.role;
         const allowedRoles = ["master", "admin"];
 
         if (!allowedRoles.includes(callerRole)) {
@@ -538,9 +543,13 @@ exports.setUserPassword = functions
         }
 
         // 4. Get target user's role (prevent admin from changing master's password)
-        const targetUserDoc = await db.collection("users").doc(uid).get();
-        if (targetUserDoc.exists) {
-            const targetRole = targetUserDoc.data().role;
+        const targetSnap = await db.collection("staff")
+            .where("uid", "==", uid)
+            .limit(1)
+            .get();
+        if (!targetSnap.empty) {
+            const targetData = targetSnap.docs[0].data();
+            const targetRole = targetData.systemRole || targetData.role;
             // Only master can change master's password
             if (targetRole === "master" && callerRole !== "master") {
                 throw new functions.https.HttpsError(
@@ -581,5 +590,121 @@ exports.setUserPassword = functions
                 "비밀번호 변경 중 오류가 발생했습니다."
             );
         }
+    });
+
+/**
+ * Cloud Function: 서버 측 전화번호 암호화
+ * 클라이언트에 암호화 키를 노출하지 않고 서버에서 암호화 수행
+ *
+ * @param {Object} phones - { studentPhone, homePhone, parentPhone }
+ * @returns {Object} encrypted - 암호화된 전화번호 객체
+ */
+exports.encryptPhoneNumbers = functions
+    .region("asia-northeast3")
+    .https.onCall(async (data, context) => {
+        // 1. 인증 확인
+        if (!context.auth) {
+            throw new functions.https.HttpsError(
+                "unauthenticated",
+                "로그인이 필요합니다."
+            );
+        }
+
+        // 2. 암호화 키 로드 (Firebase Functions 환경변수)
+        const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+        if (!ENCRYPTION_KEY) {
+            logger.error("[encryptPhoneNumbers] ENCRYPTION_KEY not configured");
+            throw new functions.https.HttpsError(
+                "internal",
+                "암호화 키가 설정되지 않았습니다."
+            );
+        }
+
+        // 3. 입력 검증
+        const { phones } = data;
+        if (!phones || typeof phones !== "object") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "전화번호 객체가 필요합니다."
+            );
+        }
+
+        // 4. 각 전화번호 암호화
+        const encrypted = {};
+        for (const [key, value] of Object.entries(phones)) {
+            if (value && typeof value === "string") {
+                const cleaned = value.replace(/-/g, "").trim();
+                if (cleaned) {
+                    encrypted[key] = CryptoJS.AES.encrypt(cleaned, ENCRYPTION_KEY).toString();
+                } else {
+                    encrypted[key] = null;
+                }
+            } else {
+                encrypted[key] = null;
+            }
+        }
+
+        return { encrypted };
+    });
+
+/**
+ * Cloud Function: 서버 측 전화번호 복호화
+ *
+ * @param {Object} phones - 암호화된 전화번호 객체
+ * @returns {Object} decrypted - 복호화된 전화번호 객체
+ */
+exports.decryptPhoneNumbers = functions
+    .region("asia-northeast3")
+    .https.onCall(async (data, context) => {
+        if (!context.auth) {
+            throw new functions.https.HttpsError(
+                "unauthenticated",
+                "로그인이 필요합니다."
+            );
+        }
+
+        const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+        if (!ENCRYPTION_KEY) {
+            throw new functions.https.HttpsError(
+                "internal",
+                "암호화 키가 설정되지 않았습니다."
+            );
+        }
+
+        const { phones } = data;
+        if (!phones || typeof phones !== "object") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "전화번호 객체가 필요합니다."
+            );
+        }
+
+        const decrypted = {};
+        for (const [key, value] of Object.entries(phones)) {
+            if (value && typeof value === "string") {
+                try {
+                    const bytes = CryptoJS.AES.decrypt(value, ENCRYPTION_KEY);
+                    const plain = bytes.toString(CryptoJS.enc.Utf8);
+                    if (plain && plain.length >= 10 && plain.length <= 11) {
+                        // 전화번호 포맷팅
+                        if (plain.length === 11 && plain.startsWith("01")) {
+                            decrypted[key] = `${plain.slice(0, 3)}-${plain.slice(3, 7)}-${plain.slice(7)}`;
+                        } else if (plain.length === 10) {
+                            decrypted[key] = `${plain.slice(0, 3)}-${plain.slice(3, 6)}-${plain.slice(6)}`;
+                        } else {
+                            decrypted[key] = plain;
+                        }
+                    } else {
+                        decrypted[key] = "";
+                    }
+                } catch {
+                    decrypted[key] = "";
+                }
+            } else {
+                decrypted[key] = "";
+            }
+        }
+
+        return { decrypted };
     });
 

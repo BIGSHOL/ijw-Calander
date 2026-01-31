@@ -327,8 +327,8 @@ async function diagnoseConsultationNeeds(): Promise<void> {
     return;
 }
 
-// 전역 expose (콘솔 로그 제거)
-if (typeof window !== 'undefined') {
+// 진단 함수는 개발 환경에서만 노출
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
     (window as any).diagnoseEnrollments = diagnoseEnrollments;
     (window as any).diagnoseClassNameMatching = diagnoseClassNameMatching;
     (window as any).diagnoseConsultationNeeds = diagnoseConsultationNeeds;
