@@ -85,6 +85,15 @@ export const calculateClassRate = (item: SalarySettingItem | undefined, academyF
   }
 };
 
+// Get local timezone-aware YYYY-MM string from a Date object
+// IMPORTANT: Do NOT use date.toISOString().slice(0,7) — it returns UTC month,
+// which differs from local month on the 1st of month in timezones east of UTC (e.g., KST).
+export const getLocalYearMonth = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
 // Check if a specific date key (YYYY-MM-DD) is valid within student's start/end range
 export const isDateValidForStudent = (dateKey: string, student: Student): boolean => {
   // startDate가 문자열이 아니면 항상 유효한 것으로 간주
@@ -95,7 +104,7 @@ export const isDateValidForStudent = (dateKey: string, student: Student): boolea
 
 // Helper to determine student status based on Date Range (Badge Logic)
 export const getStudentStatus = (student: Student, currentMonth: Date) => {
-  const currentMonthStr = currentMonth.toISOString().slice(0, 7); // "YYYY-MM"
+  const currentMonthStr = getLocalYearMonth(currentMonth);
 
   // startDate가 문자열이 아니면 기본값 사용
   const startMonthStr = typeof student.startDate === 'string'
@@ -126,12 +135,12 @@ export const calculateStats = (
 
   const newStudents: Student[] = [];
 
-  const monthStr = currentMonth.toISOString().slice(0, 7); // "YYYY-MM"
+  const monthStr = getLocalYearMonth(currentMonth);
 
   // Previous Month for Dropped Calculation
   const prevMonthDate = new Date(currentMonth);
   prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
-  const prevMonthStr = prevMonthDate.toISOString().slice(0, 7);
+  const prevMonthStr = getLocalYearMonth(prevMonthDate);
 
   // 1. Calculate Statistics for VISIBLE (Active) Students
   const daysInMonth = getDaysInMonth(currentMonth);
@@ -165,9 +174,11 @@ export const calculateStats = (
       // because we are comparing against the *Schedule*.
     });
 
-    // Auto-match salary setting: First try explicit ID, then match from school name
-    const settingItem = student.salarySettingId
-      ? salaryConfig.items.find(item => item.id === student.salarySettingId)
+    // Auto-match salary setting: class override > student default > school-level auto-match
+    const salarySettingOverrideId = student.salarySettingOverrides?.[student.group || ''];
+    const effectiveSalarySettingId = salarySettingOverrideId || student.salarySettingId;
+    const settingItem = effectiveSalarySettingId
+      ? salaryConfig.items.find(item => item.id === effectiveSalarySettingId)
       : getSchoolLevelSalarySetting(student.school, salaryConfig.items);
     const rate = calculateClassRate(settingItem, salaryConfig.academyFee);
     totalSalary += studentClassUnits * rate;

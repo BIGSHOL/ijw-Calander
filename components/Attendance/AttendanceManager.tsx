@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, RefreshCw, LayoutList, SortAsc } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
-import { formatCurrency, calculateStats, getCategoryLabel } from './utils';
+import { formatCurrency, calculateStats, getCategoryLabel, getLocalYearMonth } from './utils';
 import Table from './components/Table';
 import SalarySettings from './components/SalarySettings';
 import StudentDetailModal from '../StudentManagement/StudentDetailModal';
@@ -156,7 +156,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
   // Firebase Hooks - Pass yearMonth to load attendance records for current month
   const currentYearMonth = useMemo(() => {
-    return currentDate.toISOString().slice(0, 7); // "YYYY-MM"
+    return getLocalYearMonth(currentDate);
   }, [currentDate]);
 
   const { students: allStudents, allStudents: rawAllStudents, isLoading: isLoadingStudents, refetch } = useAttendanceStudents({
@@ -468,7 +468,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
   // 급여 설정 수동 변경 핸들러 (선생님별 + 수업별로 개별 저장)
   const handleSalarySettingChange = useCallback(async (studentId: string, className: string, salarySettingId: string | null) => {
-    const yearMonth = currentDate.toISOString().slice(0, 7);
+    const yearMonth = getLocalYearMonth(currentDate);
     updateSalarySettingMutation.mutate({ studentId, className, yearMonth, salarySettingId }, {
       onSuccess: () => {
         // optimistic update handles cache

@@ -49,7 +49,8 @@ const getNextMonth = (periodStr: string): string => {
 
 const PaymentReport: React.FC<PaymentReportProps> = () => {
     const [currentPeriod, setCurrentPeriod] = useState<string>(() => {
-        return new Date().toISOString().slice(0, 7);
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     });
 
     const [history, setHistory] = useState<TuitionHistory>({});
