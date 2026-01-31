@@ -420,7 +420,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
 
                 for (const item of chunk) {
                     let studentId = item.matchedStudent?.id;
-                    let studentName = item.matchedStudent?.name || item.studentName;
+                    const studentName = item.matchedStudent?.name || item.studentName;
 
                     // If NO_STUDENT, create a new student with 이름_학교_학년 ID pattern
                     if (!studentId && item.isNewStudent) {

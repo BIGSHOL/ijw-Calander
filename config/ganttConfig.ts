@@ -3,6 +3,9 @@
  * P2 개선: 하드코딩된 값들을 중앙 관리
  */
 
+import { parseISO, addDays, format } from 'date-fns';
+import { ko } from 'date-fns/locale';
+
 // 태스크 바 색상 팔레트 (Neon Gradient Palette with Glow)
 export const GANTT_TASK_COLORS = [
     { bg: 'bg-gradient-to-r from-cyan-500 to-blue-500', shadow: 'shadow-cyan-500/50', glow: 'rgba(6, 182, 212, 0.4)', arrow: '#06b6d4' },
@@ -42,8 +45,6 @@ export const GANTT_TIMELINE_CONFIG = {
 export const formatTaskDate = (offset: number, startDate: string | undefined): string => {
     if (!startDate) return `Day ${offset}`;
     try {
-        const { parseISO, addDays, format } = require('date-fns');
-        const { ko } = require('date-fns/locale');
         const baseDate = parseISO(startDate);
         const taskDate = addDays(baseDate, offset);
         return format(taskDate, 'M월 d일', { locale: ko });

@@ -14,7 +14,9 @@
     "migrate": "tsx --env-file=.env.local scripts/migrateToEnrollments.ts",
     "validate": "tsx --env-file=.env.local scripts/validateMigration.ts",
     "migrate:teachers": "tsx --env-file=.env.local scripts/migrate-teachers-to-staff.ts",
-    "migrate:teacher-id": "tsx --env-file=.env.local scripts/migrateTeacherIdToStaffId.ts"
+    "migrate:teacher-id": "tsx --env-file=.env.local scripts/migrateTeacherIdToStaffId.ts",
+    "lint": "eslint . --max-warnings=-1",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -39,15 +41,19 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/crypto-js": "^4.2.2",
+    "@types/eslint__js": "^9.14.0",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "@vitest/ui": "^4.0.16",
     "autoprefixer": "^10.4.23",
+    "eslint": "^9.39.2",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "firebase-admin": "^13.6.0",
     "happy-dom": "^20.1.0",
     "jsdom": "^27.4.0",
@@ -55,6 +61,7 @@
     "tailwindcss": "^3.4.19",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
+    "typescript-eslint": "^8.54.0",
     "vite": "^6.2.0",
     "vitest": "^4.0.16"
   }

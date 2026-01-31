@@ -102,9 +102,9 @@ const generateDocId = (record: Omit<ConsultationRecord, 'id'>): string => {
     const date = new Date(record.consultationDate);
     const dateStr = format(date, 'yyMMdd');
     // 특수문자 제거하고 공백을 언더스코어로 변환
-    const studentName = record.studentName.replace(/[\/\\.\#\$\[\]]/g, '').trim();
-    const school = record.schoolName.replace(/[\/\\.\#\$\[\]]/g, '').trim();
-    const grade = record.grade.replace(/[\/\\.\#\$\[\]]/g, '').trim();
+    const studentName = record.studentName.replace(/[/\\.#$[\]]/g, '').trim();
+    const school = record.schoolName.replace(/[/\\.#$[\]]/g, '').trim();
+    const grade = record.grade.replace(/[/\\.#$[\]]/g, '').trim();
 
     // 고유성을 위해 타임스탬프 추가
     const timestamp = Date.now().toString(36);

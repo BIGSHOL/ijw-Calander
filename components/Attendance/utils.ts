@@ -332,7 +332,7 @@ export const getDaysInSessionRanges = (session: SessionPeriod): Date[] => {
   const days: Date[] = [];
 
   for (const range of session.ranges) {
-    let current = parseLocalDate(range.startDate);
+    const current = parseLocalDate(range.startDate);
     const end = parseLocalDate(range.endDate);
 
     while (current <= end) {
