@@ -3,11 +3,12 @@ import React from 'react';
 import { useAttendanceStudents } from '../../hooks/useAttendance';
 import { createTestQueryClient } from '../utils/testHelpers';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, collectionGroup } from 'firebase/firestore';
 
 // Mock Firebase Firestore
 vi.mock('firebase/firestore', () => ({
   collection: vi.fn(),
+  collectionGroup: vi.fn(),
   getDocs: vi.fn(),
   getDoc: vi.fn(),
   query: vi.fn(),
@@ -31,90 +32,100 @@ describe('useAttendance Hook', () => {
       React.createElement(QueryClientProvider, { client: queryClient }, children);
   };
 
-  const mockStudents = [
+  // Staff documents
+  const mockStaffDocs = [
+    { id: 'teacher1', data: () => ({ name: '김선생', englishName: 'Kim', role: 'teacher' }) },
+    { id: 'teacher2', data: () => ({ name: '이선생', englishName: 'Lee', role: 'teacher' }) },
+  ];
+
+  // Class documents from 'classes' collection
+  const mockClassDocs = [
+    { id: 'class1', data: () => ({ className: '수학 A반', teacher: 'Kim', subject: 'math', isActive: true }) },
+    { id: 'class2', data: () => ({ className: '영어 B반', teacher: 'Lee', subject: 'english', isActive: true }) },
+  ];
+
+  // Enrollment docs from collectionGroup('enrollments') — used to find student IDs
+  const mockEnrollmentDocs = [
+    { id: 'e1', data: () => ({ className: '수학 A반', classId: 'class1', subject: 'math' }), ref: { parent: { parent: { id: 'student1' } } } },
+    { id: 'e2', data: () => ({ className: '영어 B반', classId: 'class2', subject: 'english' }), ref: { parent: { parent: { id: 'student2' } } } },
+    { id: 'e3', data: () => ({ className: '수학 A반', classId: 'class1', subject: 'math' }), ref: { parent: { parent: { id: 'student3' } } } },
+  ];
+
+  // Student documents (fetched by chunk query in Step 7)
+  const mockStudentDocs = [
     {
       id: 'student1',
-      name: '김철수',
-      grade: 5,
-      phone: '010-1234-5678',
-      teacherIds: ['teacher1'],
-      enrollments: [
-        {
-          staffId: 'teacher1',
-          className: '수학 A반',
-          subject: 'math',
-          days: ['월', '수'],
-        },
-      ],
+      data: () => ({
+        name: '김철수', grade: 5, phone: '010-1234-5678',
+        enrollments: [{ staffId: 'teacher1', className: '수학 A반', classId: 'class1', subject: 'math', days: ['월', '수'] }],
+        teacherIds: ['teacher1'],
+      }),
     },
     {
       id: 'student2',
-      name: '이영희',
-      grade: 6,
-      phone: '010-2345-6789',
-      teacherIds: ['teacher2'],
-      enrollments: [
-        {
-          staffId: 'teacher2',
-          className: '영어 B반',
-          subject: 'english',
-          days: ['화', '목'],
-        },
-      ],
+      data: () => ({
+        name: '이영희', grade: 6, phone: '010-2345-6789',
+        enrollments: [{ staffId: 'teacher2', className: '영어 B반', classId: 'class2', subject: 'english', days: ['화', '목'] }],
+        teacherIds: ['teacher2'],
+      }),
     },
     {
       id: 'student3',
-      name: '박민수',
-      grade: 5,
-      phone: '010-3456-7890',
-      teacherIds: ['teacher1', 'teacher2'],
-      enrollments: [
-        {
-          staffId: 'teacher1',
-          className: '수학 A반',
-          subject: 'math',
-          days: ['월', '수'],
-        },
-        {
-          staffId: 'teacher2',
-          className: '영어 C반',
-          subject: 'english',
-          days: ['금'],
-        },
-      ],
+      data: () => ({
+        name: '박민수', grade: 5, phone: '010-3456-7890',
+        enrollments: [
+          { staffId: 'teacher1', className: '수학 A반', classId: 'class1', subject: 'math', days: ['월', '수'] },
+          { staffId: 'teacher2', className: '영어 C반', classId: 'class3', subject: 'english', days: ['금'] },
+        ],
+        teacherIds: ['teacher1', 'teacher2'],
+      }),
     },
   ];
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
 
     // Setup default mocks
     (collection as any).mockReturnValue({});
-    (query as any).mockImplementation((...args) => args[0]);
+    (collectionGroup as any).mockReturnValue({});
+    (query as any).mockImplementation((...args: any[]) => args[0]);
     (orderBy as any).mockReturnValue({});
+    (where as any).mockReturnValue({});
   });
 
   describe('useAttendanceStudents - Fetching Students', () => {
     it('should fetch all students', async () => {
-      const mockDocs = mockStudents.map((student) => ({
-        id: student.id,
-        data: () => student,
-      }));
+      // The hook queries in this order:
+      // 1. Promise.all([getDocs(staff), getDocs(classes)])
+      // 2. getDocs(enrollments collectionGroup)
+      // 3. getDocs(student chunk query)
 
+      // Mock 1: staff collection
       (getDocs as any).mockResolvedValueOnce({
-        docs: mockDocs,
+        docs: mockStaffDocs,
         empty: false,
-        size: mockDocs.length,
+        size: mockStaffDocs.length,
       });
-
-      // Mock the attendance records query (returns empty)
+      // Mock 2: classes query
       (getDocs as any).mockResolvedValueOnce({
-        docs: [],
-        empty: true,
-        size: 0,
+        docs: mockClassDocs,
+        empty: false,
+        size: mockClassDocs.length,
+      });
+      // Mock 3: enrollments collectionGroup
+      (getDocs as any).mockResolvedValueOnce({
+        docs: mockEnrollmentDocs,
+        empty: false,
+        size: mockEnrollmentDocs.length,
+      });
+      // Mock 4: student chunk query
+      (getDocs as any).mockResolvedValueOnce({
+        docs: mockStudentDocs,
+        empty: false,
+        size: mockStudentDocs.length,
       });
 
-      const { result } = renderHook(() => useAttendanceStudents(), {
+      const { result } = renderHook(() => useAttendanceStudents({}), {
         wrapper: createWrapper(),
       });
 
@@ -126,18 +137,9 @@ describe('useAttendance Hook', () => {
       expect(result.current.allStudents.length).toBe(3);
     });
 
-    // Note: These tests are commented out due to complex mock state management
-    // The hook has two-phase querying (students + attendance records) with dependencies
-    // Main functionality is covered by other tests
-    it.skip('should filter students by staffId - SKIPPED (complex internal behavior)', () => {
-      // This test requires detailed understanding of enrollment filtering logic
-      // which is an implementation detail rather than public API
-    });
+    it.skip('should filter students by staffId - SKIPPED (complex internal behavior)', () => {});
 
-    it.skip('should return empty with no students - SKIPPED (mock state management)', () => {
-      // This test has mock state bleeding from previous tests
-      // The core empty state handling is verified in error handling tests
-    });
+    it.skip('should return empty with no students - SKIPPED (mock state management)', () => {});
   });
 
   describe('Error Handling', () => {
@@ -159,18 +161,13 @@ describe('useAttendance Hook', () => {
 
   describe('Refetch Functionality', () => {
     it('should expose refetch function', async () => {
-      const mockDocs = mockStudents.map((student) => ({
-        id: student.id,
-        data: () => student,
-      }));
-
       (getDocs as any).mockResolvedValue({
-        docs: mockDocs,
-        empty: false,
-        size: mockDocs.length,
+        docs: [],
+        empty: true,
+        size: 0,
       });
 
-      const { result } = renderHook(() => useAttendanceStudents(), {
+      const { result } = renderHook(() => useAttendanceStudents({}), {
         wrapper: createWrapper(),
       });
 
@@ -194,18 +191,13 @@ describe('useAttendance Hook', () => {
 
   describe('Caching Behavior', () => {
     it('should cache results with React Query', async () => {
-      const mockDocs = mockStudents.map((student) => ({
-        id: student.id,
-        data: () => student,
-      }));
-
       (getDocs as any).mockResolvedValue({
-        docs: mockDocs,
-        empty: false,
-        size: mockDocs.length,
+        docs: [],
+        empty: true,
+        size: 0,
       });
 
-      const { result, rerender } = renderHook(() => useAttendanceStudents(), {
+      const { result, rerender } = renderHook(() => useAttendanceStudents({}), {
         wrapper: createWrapper(),
       });
 
@@ -229,17 +221,6 @@ describe('useAttendance Hook', () => {
 
   describe('Disabled State', () => {
     it('should not fetch when enabled is false', async () => {
-      const mockDocs = mockStudents.map((student) => ({
-        id: student.id,
-        data: () => student,
-      }));
-
-      (getDocs as any).mockResolvedValue({
-        docs: mockDocs,
-        empty: false,
-        size: mockDocs.length,
-      });
-
       const { result } = renderHook(() => useAttendanceStudents({ enabled: false }), {
         wrapper: createWrapper(),
       });

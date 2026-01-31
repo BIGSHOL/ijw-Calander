@@ -83,12 +83,12 @@ describe('useStudents Hook', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
 
     // Setup default mocks
     (collection as any).mockReturnValue({});
     (doc as any).mockReturnValue({});
-    (query as any).mockImplementation((...args) => args[0]);
+    (query as any).mockImplementation((...args: any[]) => args[0]);
     (where as any).mockReturnValue({});
     (collectionGroup as any).mockReturnValue({});
     (getDoc as any).mockResolvedValue({
@@ -133,37 +133,25 @@ describe('useStudents Hook', () => {
     });
 
     it('should include withdrawn students when includeWithdrawn is true', async () => {
-      // Mock active students query
-      const activeMockDocs = mockStudents.map((student) => ({
+      // includeWithdrawn=true: single query for ALL students, then enrollments
+      const allStudents = [...mockStudents, mockWithdrawnStudent];
+      const allMockDocs = allStudents.map((student) => ({
         id: student.id,
         data: () => student,
       }));
 
-      // Mock withdrawn students query
-      const withdrawnMockDocs = [
-        {
-          id: mockWithdrawnStudent.id,
-          data: () => mockWithdrawnStudent,
-        },
-      ];
-
-      // First call: active students, Second call: withdrawn students, Third call: enrollments
-      (getDocs as any)
-        .mockResolvedValueOnce({
-          docs: activeMockDocs,
-          empty: false,
-          size: activeMockDocs.length,
-        })
-        .mockResolvedValueOnce({
-          docs: withdrawnMockDocs,
-          empty: false,
-          size: withdrawnMockDocs.length,
-        })
-        .mockResolvedValueOnce({
-          docs: [],
-          empty: true,
-          size: 0,
-        });
+      // Mock 1: all students (single query)
+      (getDocs as any).mockResolvedValueOnce({
+        docs: allMockDocs,
+        empty: false,
+        size: allMockDocs.length,
+      });
+      // Mock 2: enrollments collectionGroup (empty)
+      (getDocs as any).mockResolvedValueOnce({
+        docs: [],
+        empty: true,
+        size: 0,
+      });
 
       const { result } = renderHook(() => useStudents(true), {
         wrapper: createWrapper(),
@@ -177,54 +165,40 @@ describe('useStudents Hook', () => {
       expect(result.current.students.some((s) => s.id === 'student3')).toBe(true);
     });
 
-    it('should filter withdrawn students older than 90 days', async () => {
-      const now = new Date();
-      const oldWithdrawnDate = new Date(now.getTime() - 100 * 24 * 60 * 60 * 1000); // 100 days ago
-      const recentWithdrawnDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
-
+    it('should return all students including withdrawn when includeWithdrawn is true', async () => {
       const oldWithdrawnStudent = {
         ...mockWithdrawnStudent,
         id: 'student4',
-        withdrawalDate: oldWithdrawnDate.toISOString().split('T')[0],
-        status: 'withdrawn',
+        name: '정수영',
+        status: 'withdrawn' as const,
       };
 
       const recentWithdrawnStudent = {
         ...mockWithdrawnStudent,
         id: 'student5',
-        withdrawalDate: recentWithdrawnDate.toISOString().split('T')[0],
-        status: 'withdrawn',
+        name: '최민호',
+        status: 'withdrawn' as const,
       };
 
-      // Mock active students
-      const activeMockDocs = mockStudents.map((student) => ({
+      // includeWithdrawn=true: single query returns ALL students
+      const allStudents = [...mockStudents, oldWithdrawnStudent, recentWithdrawnStudent];
+      const allMockDocs = allStudents.map((student) => ({
         id: student.id,
         data: () => student,
       }));
 
-      // Mock withdrawn students (both old and recent)
-      const withdrawnMockDocs = [oldWithdrawnStudent, recentWithdrawnStudent].map((student) => ({
-        id: student.id,
-        data: () => student,
-      }));
-
-      // First call: active students, Second call: withdrawn students, Third call: enrollments
-      (getDocs as any)
-        .mockResolvedValueOnce({
-          docs: activeMockDocs,
-          empty: false,
-          size: activeMockDocs.length,
-        })
-        .mockResolvedValueOnce({
-          docs: withdrawnMockDocs,
-          empty: false,
-          size: withdrawnMockDocs.length,
-        })
-        .mockResolvedValueOnce({
-          docs: [],
-          empty: true,
-          size: 0,
-        });
+      // Mock 1: all students
+      (getDocs as any).mockResolvedValueOnce({
+        docs: allMockDocs,
+        empty: false,
+        size: allMockDocs.length,
+      });
+      // Mock 2: enrollments (empty)
+      (getDocs as any).mockResolvedValueOnce({
+        docs: [],
+        empty: true,
+        size: 0,
+      });
 
       const { result } = renderHook(() => useStudents(true), {
         wrapper: createWrapper(),
@@ -234,10 +208,10 @@ describe('useStudents Hook', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      // Should include active students + recent withdrawn student (not old withdrawn)
-      expect(result.current.students).toHaveLength(3);
+      // All students returned (no date-based filtering)
+      expect(result.current.students).toHaveLength(4);
+      expect(result.current.students.some((s) => s.id === 'student4')).toBe(true);
       expect(result.current.students.some((s) => s.id === 'student5')).toBe(true);
-      expect(result.current.students.some((s) => s.id === 'student4')).toBe(false);
     });
 
     it('should return empty array when no students exist', async () => {
