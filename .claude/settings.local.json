@@ -45,12 +45,21 @@
       "Bash(npx grep:*)",
       "Bash(npx vite build:*)",
       "mcp__ide__getDiagnostics",
-      "Read(//d/**)"
+      "Read(//d/**)",
+      "Read(//f/ijw-calander/**)",
+      "Read(//c/Users/user/.claude/skills/**)"
     ],
     "additionalDirectories": [
-      "d:\\ijw-calander\\components\\Timetable\\English"
+      "d:\\ijw-calander\\components\\Timetable\\English",
+      "f:\\ijw-calander\\.claude",
+      "f:\\ijw-calander\\.claude\\agents"
     ]
   },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7",
+    "sequential-thinking"
+  ],
   "mcpServers": {
     "context7": {
       "command": "npx",
