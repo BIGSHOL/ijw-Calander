@@ -566,24 +566,37 @@ exports.setUserPassword = functions
             }
         }
 
-        // 5. Update password using Admin SDK
+        // 5. Update password using Identity Toolkit REST API
         try {
-            await admin.auth().updateUser(uid, {
-                password: password
-            });
+            const accessToken = await admin.app().options.credential.getAccessToken();
 
-            logger.info(`[setUserPassword] Password updated for user: ${uid} by ${callerUid}`);
+            const response = await fetch(
+                "https://identitytoolkit.googleapis.com/v1/accounts:update",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${accessToken.access_token}`
+                    },
+                    body: JSON.stringify({
+                        localId: uid,
+                        password: password
+                    })
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                logger.error(`[setUserPassword] Failed:`, JSON.stringify(result.error));
+                throw new Error(result.error?.message || `HTTP ${response.status}`);
+            }
+
+            logger.info(`[setUserPassword] Password updated for ${result.email} by ${callerUid}`);
 
             return { success: true, message: "비밀번호가 변경되었습니다." };
         } catch (error) {
-            logger.error(`[setUserPassword] Error updating password:`, error);
-
-            if (error.code === "auth/user-not-found") {
-                throw new functions.https.HttpsError(
-                    "not-found",
-                    "대상 사용자를 찾을 수 없습니다."
-                );
-            }
+            logger.error(`[setUserPassword] Error:`, error);
 
             throw new functions.https.HttpsError(
                 "internal",
@@ -600,6 +613,7 @@ exports.setUserPassword = functions
  * @returns {Object} encrypted - 암호화된 전화번호 객체
  */
 exports.encryptPhoneNumbers = functions
+    .runWith({ secrets: ["ENCRYPTION_KEY"] })
     .region("asia-northeast3")
     .https.onCall(async (data, context) => {
         // 1. 인증 확인
@@ -654,6 +668,7 @@ exports.encryptPhoneNumbers = functions
  * @returns {Object} decrypted - 복호화된 전화번호 객체
  */
 exports.decryptPhoneNumbers = functions
+    .runWith({ secrets: ["ENCRYPTION_KEY"] })
     .region("asia-northeast3")
     .https.onCall(async (data, context) => {
         if (!context.auth) {

@@ -268,6 +268,20 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     storage.setJSON(collapsedGroupsKey, Array.from(newCollapsed));
   }, [collapsedGroupsKey]);
 
+  // 숨긴 날짜 열 (per teacher/subject, localStorage에서 로드)
+  const hiddenDatesKey = STORAGE_KEYS.attendanceHiddenDates(filterStaffId || 'all', selectedSubject);
+  const [hiddenDates, setHiddenDates] = useState<Set<string>>(() => {
+    try {
+      const saved = storage.getJSON<string[]>(hiddenDatesKey, []);
+      return new Set(saved);
+    } catch { return new Set(); }
+  });
+
+  const handleHiddenDatesChange = useCallback((newHidden: Set<string>) => {
+    setHiddenDates(newHidden);
+    storage.setJSON(hiddenDatesKey, Array.from(newHidden));
+  }, [hiddenDatesKey]);
+
   // 주말 회색 처리 상태 (localStorage에서 로드)
   const [highlightWeekends, setHighlightWeekends] = useState<boolean>(() => {
     return storage.getJSON<boolean>(STORAGE_KEYS.ATTENDANCE_HIGHLIGHT_WEEKENDS, false);
@@ -746,6 +760,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             highlightWeekends={highlightWeekends}
             holidays={holidays}
             sortMode={sortMode}
+            hiddenDates={hiddenDates}
+            onHiddenDatesChange={handleHiddenDatesChange}
           />
         </div>
       </div>
