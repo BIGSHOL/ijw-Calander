@@ -1,6 +1,9 @@
-import { expect, afterEach, vi } from 'vitest';
+import { vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
+import * as matchers from '@testing-library/jest-dom/matchers';
+
+// Extend expect with jest-dom matchers
+expect.extend(matchers);
 
 // Cleanup after each test
 afterEach(() => {
@@ -22,7 +25,7 @@ vi.mock('./firebaseConfig', () => ({
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation((query) => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -68,8 +71,6 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 // Suppress console errors in tests (optional)
-import { beforeAll, afterAll } from 'vitest';
-
 const originalError = console.error;
 beforeAll(() => {
   console.error = (...args: any[]) => {
