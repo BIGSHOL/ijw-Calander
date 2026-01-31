@@ -70,14 +70,30 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         return;
       }
 
-      // 메모리 필터링 결과 미리 계산
+      // 메모리 필터링 결과 미리 계산 (searchField 반영)
       const query = filters.searchQuery.toLowerCase();
-      const memoryResults = students.filter(
-        (s) =>
-          (s.name || '').toLowerCase().includes(query) ||
-          s.englishName?.toLowerCase().includes(query) ||
-          s.school?.toLowerCase().includes(query)
-      );
+      const field = filters.searchField || 'all';
+      const memoryResults = students.filter((s) => {
+        switch (field) {
+          case 'name':
+            return (s.name || '').toLowerCase().includes(query) ||
+              s.englishName?.toLowerCase().includes(query) ||
+              s.nickname?.toLowerCase().includes(query);
+          case 'phone':
+            return s.studentPhone?.includes(query) ||
+              s.parentPhone?.includes(query) ||
+              s.homePhone?.includes(query);
+          case 'school':
+            return s.school?.toLowerCase().includes(query);
+          case 'all':
+          default:
+            return (s.name || '').toLowerCase().includes(query) ||
+              s.englishName?.toLowerCase().includes(query) ||
+              s.school?.toLowerCase().includes(query) ||
+              s.memo?.toLowerCase().includes(query) ||
+              s.parentName?.toLowerCase().includes(query);
+        }
+      });
 
       // 결과가 5개 미만이면 과거 퇴원생 검색
       if (memoryResults.length < 5) {
@@ -99,7 +115,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
     // 디바운스 (300ms)
     const timer = setTimeout(searchOldWithdrawn, 300);
     return () => clearTimeout(timer);
-  }, [filters.searchQuery, students]);
+  }, [filters.searchQuery, filters.searchField, students]);
 
   // 필터링 및 정렬된 학생 목록
   // OPTIMIZATION: Vercel React Best Practices (rerender-derived-state)

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Student, SalaryConfig, AttendanceViewMode, SessionPeriod } from '../types';
 import { getDaysInMonth, formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getDaysInSessionRanges } from '../utils';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
-import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save, ChevronUp, ChevronDown, ChevronRight, GripVertical, Check, X, Palette, RotateCcw } from 'lucide-react';
+import { Sparkles, LogOut, Folder, FolderOpen, StickyNote, Save, ChevronUp, ChevronDown, ChevronRight, GripVertical, Check, X, Palette, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { Exam, StudentScore, GRADE_COLORS, Holiday } from '../../../types';
 
 // 미리 정의된 셀 배경색 팔레트
@@ -50,6 +50,9 @@ interface Props {
   holidays?: Holiday[];
   // 정렬 모드: 수업별 그룹 | 이름순 flat
   sortMode?: 'class' | 'name';
+  // 숨긴 날짜 열
+  hiddenDates?: Set<string>;
+  onHiddenDatesChange?: (newHidden: Set<string>) => void;
 }
 
 interface ContextMenuState {
@@ -85,7 +88,9 @@ const Table = forwardRef<HTMLTableElement, Props>(({
   selectedSession,
   highlightWeekends = false,
   holidays = [],
-  sortMode = 'class'
+  sortMode = 'class',
+  hiddenDates = new Set<string>(),
+  onHiddenDatesChange
 }, ref) => {
   // 세션 모드에 따라 표시할 날짜 결정
   const days = useMemo(() => {
@@ -108,6 +113,24 @@ const Table = forwardRef<HTMLTableElement, Props>(({
   }, [holidays]);
 
   const memoInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // 숨긴 날짜를 제외한 실제 표시 날짜
+  const visibleDays = useMemo(() => {
+    if (hiddenDates.size === 0) return days;
+    return days.filter(day => !hiddenDates.has(formatDateKey(day)));
+  }, [days, hiddenDates]);
+
+  const hasHiddenDates = hiddenDates.size > 0;
+
+  // 날짜 헤더 우클릭 메뉴 State
+  const [dateContextMenu, setDateContextMenu] = useState<{ x: number; y: number; dateKey: string } | null>(null);
+
+  useEffect(() => {
+    if (!dateContextMenu) return;
+    const close = () => setDateContextMenu(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [dateContextMenu]);
 
   // Context Menu State
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -206,7 +229,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
 
         rows.push(
           <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">
-            <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <td colSpan={days.length + 5 + (hasHiddenDates ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
               <div className="flex items-center gap-2">
                 {isAssistantGroup ? (
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold">
@@ -228,7 +251,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
         currentGroup = '그룹 없음';
         rows.push(
           <tr key="group-none" className="bg-slate-100 border-y border-slate-200">
-            <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <td colSpan={days.length + 5 + (hasHiddenDates ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
               <div className="flex items-center gap-2">
                 <Folder size={14} className="text-slate-400" />
                 그룹 없음
@@ -401,8 +424,25 @@ const Table = forwardRef<HTMLTableElement, Props>(({
             <th className="p-2 sticky left-[182px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[70px] text-center bg-[#081429] align-middle text-xs">요일</th>
             <th className="p-2 sticky left-[252px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-[#081429] align-middle text-xs">출석</th>
 
+            {/* 숨긴 열 표시 바 */}
+            {hiddenDates.size > 0 && onHiddenDatesChange && (
+              <th className="p-1 sticky top-0 border-r border-b border-[#ffffff]/10 text-center align-middle bg-[#081429] w-[30px]">
+                <button
+                  type="button"
+                  onClick={() => onHiddenDatesChange(new Set())}
+                  className="text-micro text-yellow-400 hover:text-yellow-200 font-bold whitespace-nowrap"
+                  title={`${hiddenDates.size}개 열 숨김 중 — 클릭하여 모두 표시`}
+                >
+                  <div className="flex flex-col items-center gap-0.5">
+                    <Eye size={10} />
+                    <span>{hiddenDates.size}</span>
+                  </div>
+                </button>
+              </th>
+            )}
+
             {/* Dynamic Date Columns - Square for 4-quadrant layout */}
-            {days.map((day) => {
+            {visibleDays.map((day) => {
               const { date, day: dayName } = formatDateDisplay(day);
               const dateKey = formatDateKey(day);
               const isHoliday = holidayDateSet.has(dateKey);
@@ -423,8 +463,12 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               return (
                 <th
                   key={day.toISOString()}
-                  className={`p-1 sticky top-0 border-r border-b border-[#ffffff]/10 text-center align-middle min-w-[40px] bg-[#081429] ${headerColorClass}`}
-                  title={holidayName || undefined}
+                  className={`p-1 sticky top-0 border-r border-b border-[#ffffff]/10 text-center align-middle min-w-[40px] bg-[#081429] ${headerColorClass} cursor-context-menu`}
+                  title={holidayName || '우클릭으로 열 숨기기'}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setDateContextMenu({ x: e.clientX, y: e.clientY, dateKey });
+                  }}
                 >
                   <div className="flex flex-col items-center justify-center leading-tight">
                     <span className="text-xxs font-bold">{date}</span>
@@ -439,7 +483,8 @@ const Table = forwardRef<HTMLTableElement, Props>(({
           {students.length > 0 ? (
             <StudentTableBody
               students={students}
-              days={days}
+              days={visibleDays}
+              hasHiddenDates={hiddenDates.size > 0}
               currentDate={currentDate}
               salaryConfig={salaryConfig}
               onEditStudent={onEditStudent}
@@ -462,7 +507,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
             />
           ) : (
             <tr>
-              <td colSpan={days.length + 5} className="p-12 text-center text-gray-400">
+              <td colSpan={days.length + 5 + (hasHiddenDates ? 1 : 0)} className="p-12 text-center text-gray-400">
                 등록된 학생이 없습니다. 상단의 '학생 추가' 버튼을 눌러 시작하세요.
               </td>
             </tr>
@@ -602,6 +647,32 @@ const Table = forwardRef<HTMLTableElement, Props>(({
           )}
         </div>
       )}
+
+      {/* 날짜 헤더 우클릭 컨텍스트 메뉴 (열 숨기기) */}
+      {dateContextMenu && createPortal(
+        <div
+          className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+          style={{ top: dateContextMenu.y, left: dateContextMenu.x, zIndex: 9999 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              if (onHiddenDatesChange) {
+                const next = new Set(hiddenDates);
+                next.add(dateContextMenu.dateKey);
+                onHiddenDatesChange(next);
+              }
+              setDateContextMenu(null);
+            }}
+            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700 flex items-center gap-2"
+          >
+            <EyeOff size={14} />
+            이 열 숨기기
+          </button>
+        </div>,
+        document.body
+      )}
     </>
   );
 });
@@ -610,7 +681,7 @@ Table.displayName = 'Table';
 
 // Extracted & Memoized Components
 
-const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, onSalarySettingChange, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange, examsByDate, scoresByStudent, onHomeworkChange, collapsedGroups: externalCollapsedGroups, onCollapsedGroupsChange, highlightWeekends = false, holidayDateSet = new Set(), holidayNameMap = new Map(), sortMode = 'class' }: {
+const StudentTableBody = React.memo(({ students, days, hasHiddenDates = false, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, onSalarySettingChange, pendingUpdatesByStudent, pendingMemosByStudent, groupOrder = [], onGroupOrderChange, examsByDate, scoresByStudent, onHomeworkChange, collapsedGroups: externalCollapsedGroups, onCollapsedGroupsChange, highlightWeekends = false, holidayDateSet = new Set(), holidayNameMap = new Map(), sortMode = 'class' }: {
   students: Student[],
   days: Date[],
   currentDate: Date,
@@ -632,6 +703,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
   holidayDateSet?: Set<string>;
   holidayNameMap?: Map<string, string>;
   sortMode?: 'class' | 'name';
+  hasHiddenDates?: boolean;
 }) => {
   // 그룹 접기/펼치기 상태 관리 (외부에서 전달받거나 내부 state 사용)
   const [internalCollapsedGroups, setInternalCollapsedGroups] = useState<Set<string>>(new Set());
@@ -768,7 +840,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
 
       rows.push(
         <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">
-          <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
+          <td colSpan={days.length + 5 + (hasHiddenDates ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
             <div className="flex items-center gap-2">
               {/* 접기/펼치기 버튼 */}
               <button
@@ -834,7 +906,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
 
       rows.push(
         <tr key="group-none" className="bg-slate-100 border-y border-slate-200">
-          <td colSpan={days.length + 5} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <td colSpan={days.length + 5 + (hasHiddenDates ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => toggleGroupCollapse('그룹 없음')}
@@ -889,6 +961,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
         highlightWeekends={highlightWeekends}
         holidayDateSet={holidayDateSet}
         holidayNameMap={holidayNameMap}
+        hasHiddenDates={hasHiddenDates}
       />
     );
   });
@@ -896,7 +969,7 @@ const StudentTableBody = React.memo(({ students, days, currentDate, salaryConfig
   return <>{rows}</>;
 });
 
-const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, onSalarySettingChange, pendingUpdates, pendingMemos, examsByDate, scoresByStudent, onHomeworkChange, highlightWeekends = false, holidayDateSet = new Set(), holidayNameMap = new Map() }: {
+const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, onEditStudent, onCellClick, onContextMenu, onSalarySettingChange, pendingUpdates, pendingMemos, examsByDate, scoresByStudent, onHomeworkChange, highlightWeekends = false, holidayDateSet = new Set(), holidayNameMap = new Map(), hasHiddenDates = false }: {
   student: Student,
   idx: number,
   days: Date[],
@@ -914,6 +987,7 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
   highlightWeekends?: boolean;
   holidayDateSet?: Set<string>;
   holidayNameMap?: Map<string, string>;
+  hasHiddenDates?: boolean;
 }) => {
   const [showSalaryDropdown, setShowSalaryDropdown] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
@@ -1085,6 +1159,11 @@ const StudentRow = React.memo(({ student, idx, days, currentDate, salaryConfig, 
       <td className="p-1 sticky left-[252px] z-[90] border-r border-b border-gray-200 text-center font-bold text-[#081429] bg-[#f0f4f8] align-middle w-[36px] text-xs">
         {attendedUnits}
       </td>
+
+      {/* 숨긴 열 표시 칸 (헤더의 Eye 아이콘 열과 정렬) */}
+      {hasHiddenDates && (
+        <td className="p-0 border-r border-b border-gray-200 w-[30px] bg-gray-50" />
+      )}
 
       {/* Attendance Cells - 4-Quadrant Design */}
       {days.map((day) => {

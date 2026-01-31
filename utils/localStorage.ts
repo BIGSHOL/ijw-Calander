@@ -53,6 +53,8 @@ export const STORAGE_KEYS = {
     `ijw_attendance_group_order_${subject}_${staffId}`,
   attendanceCollapsedGroups: (staffId: string, subject: string) =>
     `ijw_attendance_collapsed_groups_${subject}_${staffId}`,
+  attendanceHiddenDates: (staffId: string, subject: string) =>
+    `ijw_attendance_hidden_dates_${subject}_${staffId}`,
 } as const;
 
 // Type-safe localStorage utilities

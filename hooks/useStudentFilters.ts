@@ -138,9 +138,49 @@ const filterBySearch = (
         }
     });
 
-    // 과거 퇴원생 추가 (중복 제거)
+    // 과거 퇴원생도 동일한 검색 필터 적용 후 추가 (중복 제거)
     const existingIds = new Set(filtered.map(s => s.id));
-    const oldFiltered = oldWithdrawnStudents.filter(s => !existingIds.has(s.id));
+    const oldFiltered = oldWithdrawnStudents.filter(s => {
+        if (existingIds.has(s.id)) return false;
+        switch (searchField) {
+            case 'all':
+                return (
+                    (s.name || '').toLowerCase().includes(query) ||
+                    s.englishName?.toLowerCase().includes(query) ||
+                    s.school?.toLowerCase().includes(query) ||
+                    s.grade?.toLowerCase().includes(query) ||
+                    s.nickname?.toLowerCase().includes(query) ||
+                    s.studentPhone?.includes(query) ||
+                    s.parentPhone?.includes(query) ||
+                    s.parentName?.toLowerCase().includes(query) ||
+                    s.memo?.toLowerCase().includes(query) ||
+                    s.address?.toLowerCase().includes(query) ||
+                    s.customField1?.toLowerCase().includes(query) ||
+                    s.customField2?.toLowerCase().includes(query) ||
+                    s.withdrawalReason?.toLowerCase().includes(query) ||
+                    s.withdrawalMemo?.toLowerCase().includes(query)
+                );
+            case 'name':
+                return (
+                    (s.name || '').toLowerCase().includes(query) ||
+                    s.englishName?.toLowerCase().includes(query) ||
+                    s.nickname?.toLowerCase().includes(query)
+                );
+            case 'phone':
+                return (
+                    s.studentPhone?.includes(query) ||
+                    s.parentPhone?.includes(query) ||
+                    s.homePhone?.includes(query) ||
+                    s.otherPhone?.includes(query)
+                );
+            case 'school':
+                return s.school?.toLowerCase().includes(query);
+            case 'memo':
+                return s.memo?.toLowerCase().includes(query);
+            default:
+                return (s.name || '').toLowerCase().includes(query);
+        }
+    });
     return [...filtered, ...oldFiltered];
 };
 
