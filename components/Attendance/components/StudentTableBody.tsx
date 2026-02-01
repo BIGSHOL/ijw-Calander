@@ -204,11 +204,11 @@ const StudentTableBody = React.memo(({
               </button>
               {/* 담임/부담임 배지 */}
               {isAssistantGroup ? (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold">
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 text-xxs font-bold">
                   부담임
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-xxs font-bold">
                   담임
                 </span>
               )}
@@ -219,7 +219,7 @@ const StudentTableBody = React.memo(({
               )}
               {currentGroup}
               {isCollapsed && (
-                <span className="text-slate-400 font-normal text-[10px] ml-1">
+                <span className="text-slate-400 font-normal text-xxs ml-1">
                   ({studentCount}명)
                 </span>
               )}
@@ -270,7 +270,7 @@ const StudentTableBody = React.memo(({
               <Folder size={14} className="text-slate-400" />
               그룹 없음
               {isCollapsed && (
-                <span className="text-slate-400 font-normal text-[10px] ml-1">
+                <span className="text-slate-400 font-normal text-xxs ml-1">
                   ({studentCount}명)
                 </span>
               )}

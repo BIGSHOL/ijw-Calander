@@ -64,7 +64,7 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
                         className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-300"
                         style={{ opacity: activeIndex !== null ? 0.3 : 1 }}
                     >
-                        <span className="text-slate-400 text-[9px] font-medium">{totalLabel}</span>
+                        <span className="text-slate-400 text-micro font-medium">{totalLabel}</span>
                         <span className="text-base font-bold text-slate-800">{totalValue}</span>
                     </div>
                 </div>
@@ -90,7 +90,7 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
                                     {entry.name}
                                 </span>
                             </div>
-                            <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] transition-colors ${activeIndex === index
+                            <span className={`font-bold px-1.5 py-0.5 rounded text-xxs transition-colors ${activeIndex === index
                                 ? 'bg-indigo-600 text-white shadow-sm'
                                 : 'bg-slate-100 text-slate-600'
                                 }`}>

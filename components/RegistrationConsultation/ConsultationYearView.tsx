@@ -276,7 +276,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                     <div className="flex gap-1 items-center">
                                         {monthCount > 0 && (
                                             <span
-                                                className="text-[8px] sm:text-xxs px-1.5 py-0.5 rounded-full font-bold"
+                                                className="text-nano sm:text-xxs px-1.5 py-0.5 rounded-full font-bold"
                                                 style={{ backgroundColor: COLORS.yellow, color: COLORS.navy }}
                                             >
                                                 {monthCount}
@@ -284,7 +284,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                         )}
                                         {isSelected && (
                                             <span
-                                                className="text-[6px] sm:text-[8px] px-1 py-0.5 rounded-full font-bold"
+                                                className="text-[6px] sm:text-nano px-1 py-0.5 rounded-full font-bold"
                                                 style={{ backgroundColor: COLORS.yellow, color: COLORS.navy }}
                                             >
                                                 선택됨
@@ -295,7 +295,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
 
                                 <div className="grid grid-cols-7 gap-[1px] text-center">
                                     {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-                                        <div key={d} className="text-[5px] sm:text-[6px] lg:text-[8px] text-gray-400 font-medium">{d}</div>
+                                        <div key={d} className="text-[5px] sm:text-[6px] lg:text-nano text-gray-400 font-medium">{d}</div>
                                     ))}
 
                                     {emptySlots.map((_, i) => <div key={`empty-${i}`} />)}
@@ -313,7 +313,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                                 <span
                                                     className={`
                                                         w-full h-full flex items-center justify-center
-                                                        text-[6px] sm:text-[8px] lg:text-xxs font-medium
+                                                        text-[6px] sm:text-nano lg:text-xxs font-medium
                                                         rounded-[2px] sm:rounded-[3px]
                                                         ${totalCount === 0 ? 'text-gray-600' : ''}
                                                     `}
@@ -363,7 +363,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                                     : '-'}
                                             </span>
                                             <span
-                                                className="text-[8px] px-1 py-0.5 rounded font-bold"
+                                                className="text-nano px-1 py-0.5 rounded font-bold"
                                                 style={{ backgroundColor: COLORS.yellow + '30', color: COLORS.navy }}
                                             >
                                                 {record.status}

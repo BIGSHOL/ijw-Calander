@@ -394,7 +394,7 @@ const ClassroomAssignmentTab: React.FC = () => {
         {/* 뷰 전환 바 (프리뷰 있을 때만) */}
         {previewResult && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0d1f3c] border-b border-gray-700">
-            <span className="text-[10px] text-gray-400 mr-1">뷰:</span>
+            <span className="text-xxs text-gray-400 mr-1">뷰:</span>
             <button
               onClick={() => setViewMode('original')}
               className={`px-2.5 py-0.5 text-[11px] font-medium rounded transition-colors ${viewMode === 'original'
@@ -414,7 +414,7 @@ const ClassroomAssignmentTab: React.FC = () => {
               미리보기 (배정 후)
             </button>
             {viewMode === 'original' && (
-              <span className="text-[10px] text-amber-400 ml-2">
+              <span className="text-xxs text-amber-400 ml-2">
                 현재 원본 보기 중 — 자동 배정 결과를 보려면 &quot;미리보기&quot; 클릭
               </span>
             )}

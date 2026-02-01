@@ -167,7 +167,7 @@ export const AssignmentToolbar: React.FC<AssignmentToolbarProps> = ({
 
             {roomGroups.map(group => (
               <div key={group.label} className="mb-2">
-                <div className="text-[10px] font-bold text-[#fdb813] mb-1">{group.label}</div>
+                <div className="text-xxs font-bold text-[#fdb813] mb-1">{group.label}</div>
                 <div className="grid grid-cols-3 gap-1">
                   {group.rooms.map(room => {
                     const isSelected = !selectedRooms || selectedRooms.has(room);
@@ -207,7 +207,7 @@ export const AssignmentToolbar: React.FC<AssignmentToolbarProps> = ({
           <div className="absolute top-full left-0 mt-1 z-50 bg-[#0d1f3c] border border-gray-600 rounded-lg shadow-xl p-3 min-w-[280px]">
             {/* 시간대 설정 */}
             <div className="mb-3 pb-2 border-b border-gray-700">
-              <div className="text-[10px] font-bold text-[#fdb813] mb-1.5">표시 시간대</div>
+              <div className="text-xxs font-bold text-[#fdb813] mb-1.5">표시 시간대</div>
               <div className="flex items-center gap-2">
                 <select
                   value={timeRange.start}
@@ -218,7 +218,7 @@ export const AssignmentToolbar: React.FC<AssignmentToolbarProps> = ({
                     <option key={h} value={h}>{h}:00</option>
                   ))}
                 </select>
-                <span className="text-gray-400 text-[10px]">~</span>
+                <span className="text-gray-400 text-xxs">~</span>
                 <select
                   value={timeRange.end}
                   onChange={e => onTimeRangeChange({ ...timeRange, end: Number(e.target.value) })}
@@ -232,12 +232,12 @@ export const AssignmentToolbar: React.FC<AssignmentToolbarProps> = ({
             </div>
 
             {/* 배정 무시 강의실 */}
-            <div className="text-[10px] text-gray-400 mb-2">
+            <div className="text-xxs text-gray-400 mb-2">
               배정 무시 강의실은 자동 배정에서 제외됩니다
             </div>
             {roomGroups.map(group => (
               <div key={group.label} className="mb-2">
-                <div className="text-[10px] font-bold text-[#fdb813] mb-1">{group.label}</div>
+                <div className="text-xxs font-bold text-[#fdb813] mb-1">{group.label}</div>
                 <div className="grid grid-cols-3 gap-1">
                   {group.rooms.map(room => {
                     const isExcluded = excludedRooms.has(room);
@@ -295,7 +295,7 @@ export const AssignmentToolbar: React.FC<AssignmentToolbarProps> = ({
       {stats && (
         <>
           <div className="h-5 w-px bg-gray-600" />
-          <div className="flex items-center gap-2 text-[10px]">
+          <div className="flex items-center gap-2 text-xxs">
             <span className="text-gray-400">
               전체 <span className="font-semibold text-gray-200">{stats.totalSlots}</span>
             </span>
@@ -325,7 +325,7 @@ export const AssignmentToolbar: React.FC<AssignmentToolbarProps> = ({
             <button
               key={subject}
               onClick={() => onSubjectToggle(subject)}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] transition-colors ${isActive ? 'font-medium' : 'opacity-60'
+              className={`flex items-center gap-1 px-2 py-0.5 rounded border text-xxs transition-colors ${isActive ? 'font-medium' : 'opacity-60'
                 }`}
               style={{
                 backgroundColor: isActive ? CLASSROOM_COLORS[subject].light : '#1f2937',

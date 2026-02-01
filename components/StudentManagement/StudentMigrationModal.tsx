@@ -741,7 +741,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
                         {/* 상태 배지 */}
                         <span
-                          className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          className={`shrink-0 px-1.5 py-0.5 rounded text-xxs font-bold ${
                             item.isNew
                               ? 'bg-green-100 text-green-700'
                               : 'bg-blue-100 text-blue-700'
@@ -764,7 +764,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
                               {item.changedFields.map((field, i) => (
                                 <span
                                   key={i}
-                                  className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px]"
+                                  className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-xxs"
                                 >
                                   {field} 변경
                                 </span>
@@ -774,7 +774,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
                           {/* 신규 학생의 경우 주요 정보 표시 */}
                           {item.isNew && (
-                            <div className="mt-1 text-[10px] text-gray-500">
+                            <div className="mt-1 text-xxs text-gray-500">
                               {item.excelData.보호자연락처 && (
                                 <span className="mr-2">📞 {item.excelData.보호자연락처}</span>
                               )}
@@ -786,7 +786,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
                         </div>
 
                         {/* 출결번호 */}
-                        <span className="text-[10px] text-gray-400 shrink-0">
+                        <span className="text-xxs text-gray-400 shrink-0">
                           {item.excelData.출결번호 || '자동생성'}
                         </span>
                       </div>

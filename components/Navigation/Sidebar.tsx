@@ -86,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
             <div>
               <h1 className="text-xs font-bold leading-tight">Injaewon</h1>
-              <p className="text-[10px] text-gray-400 leading-tight">Eywa</p>
+              <p className="text-xxs text-gray-400 leading-tight">Eywa</p>
             </div>
           </div>
         )}
@@ -127,7 +127,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div key={group.id} className="mb-4">
               {/* Group Title */}
               {!isCollapsed && (
-                <div className="px-2 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                <div className="px-2 py-1 text-xxs font-bold text-gray-500 uppercase tracking-wider">
                   {group.label}
                 </div>
               )}
@@ -189,7 +189,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar Footer - Optional */}
       {!isCollapsed && (
         <div className="border-t border-gray-200 p-2">
-          <p className="text-[10px] text-gray-400 text-center">
+          <p className="text-xxs text-gray-400 text-center">
             © 2026 Injaewon Eywa
           </p>
         </div>

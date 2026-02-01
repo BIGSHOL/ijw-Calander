@@ -443,7 +443,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                             {/* 수학 */}
                                             {consultantsBySubject.math.length > 0 && (
                                                 <div className="mb-2">
-                                                    <div className="text-[10px] text-blue-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">수학</div>
+                                                    <div className="text-xxs text-blue-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">수학</div>
                                                     <div className="grid grid-cols-3 gap-0.5">
                                                         {consultantsBySubject.math.map(consultant => (
                                                             <button
@@ -464,7 +464,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                             {/* 영어 */}
                                             {consultantsBySubject.english.length > 0 && (
                                                 <div className="mb-2">
-                                                    <div className="text-[10px] text-purple-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">영어</div>
+                                                    <div className="text-xxs text-purple-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">영어</div>
                                                     <div className="grid grid-cols-3 gap-0.5">
                                                         {consultantsBySubject.english.map(consultant => (
                                                             <button
@@ -485,7 +485,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                             {/* 과학 */}
                                             {consultantsBySubject.science.length > 0 && (
                                                 <div className="mb-2">
-                                                    <div className="text-[10px] text-green-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">과학</div>
+                                                    <div className="text-xxs text-green-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">과학</div>
                                                     <div className="grid grid-cols-3 gap-0.5">
                                                         {consultantsBySubject.science.map(consultant => (
                                                             <button
@@ -506,7 +506,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                             {/* 국어 */}
                                             {consultantsBySubject.korean.length > 0 && (
                                                 <div className="mb-2">
-                                                    <div className="text-[10px] text-orange-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">국어</div>
+                                                    <div className="text-xxs text-orange-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">국어</div>
                                                     <div className="grid grid-cols-3 gap-0.5">
                                                         {consultantsBySubject.korean.map(consultant => (
                                                             <button
@@ -527,7 +527,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                             {/* 기타 */}
                                             {consultantsBySubject.other.length > 0 && (
                                                 <div className="mb-2">
-                                                    <div className="text-[10px] text-gray-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">기타</div>
+                                                    <div className="text-xxs text-gray-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">기타</div>
                                                     <div className="grid grid-cols-3 gap-0.5">
                                                         {consultantsBySubject.other.map(consultant => (
                                                             <button

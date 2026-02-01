@@ -572,7 +572,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             <span className="text-sm font-bold leading-none">₩</span>
           </div>
           <div>
-            <p className="text-[10px] text-gray-500 font-medium">이번 달 급여</p>
+            <p className="text-xxs text-gray-600 font-medium">이번 달 급여</p>
             <p className="text-sm font-bold text-[#373d41]">{formatCurrency(finalSalary)}</p>
           </div>
         </div>
@@ -582,7 +582,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             <Users size={16} />
           </div>
           <div>
-            <p className="text-[10px] text-gray-500 font-medium">전체 학생</p>
+            <p className="text-xxs text-gray-600 font-medium">전체 학생</p>
             <p className="text-sm font-bold text-[#373d41]">{uniqueStudentCount}명</p>
           </div>
         </div>
@@ -595,7 +595,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             <UserPlus size={16} />
           </div>
           <div>
-            <p className="text-[10px] text-gray-500 font-medium">신입생 유입</p>
+            <p className="text-xxs text-gray-600 font-medium">신입생 유입</p>
             <p className="text-sm font-bold text-[#fdb813]">+{stats.newStudentsCount}명</p>
           </div>
         </div>
@@ -608,14 +608,14 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             <UserMinus size={16} />
           </div>
           <div>
-            <p className="text-[10px] text-gray-500 font-medium">지난달 퇴원</p>
+            <p className="text-xxs text-gray-600 font-medium">지난달 퇴원</p>
             <p className="text-sm font-bold text-red-500">-{stats.droppedStudentsCount}명</p>
           </div>
         </div>
 
         <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 flex-shrink-0">
           <div>
-            <p className="text-[10px] text-gray-500 font-medium">출석률</p>
+            <p className="text-xxs text-gray-600 font-medium">출석률</p>
             <p className="text-sm font-bold text-[#373d41]">
               {stats.totalPresent + stats.totalAbsent === 0 ? '0' : Math.round((stats.totalPresent / (stats.totalPresent + stats.totalAbsent)) * 100)}%
             </p>

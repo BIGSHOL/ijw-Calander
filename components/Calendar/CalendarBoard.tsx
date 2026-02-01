@@ -773,7 +773,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                 </div>
                 <button
                   onClick={() => setIsSettingsOpen(true)}
-                  className="flex items-center gap-1 @sm:gap-1 bg-gray-700 hover:bg-gray-600 text-white px-1.5 @xs:px-2 @sm:px-2.5 py-1 @sm:py-1.5 rounded-lg transition-all shadow-md hover:shadow-lg font-bold text-[10px] @xs:text-xs"
+                  className="flex items-center gap-1 @sm:gap-1 bg-gray-700 hover:bg-gray-600 text-white px-1.5 @xs:px-2 @sm:px-2.5 py-1 @sm:py-1.5 rounded-lg transition-all shadow-md hover:shadow-lg font-bold text-xxs @xs:text-xs"
                   title="연간 일정 설정"
                 >
                   <Settings size={14} className="@sm:w-4 @sm:h-4" />
@@ -782,7 +782,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                 <div className="relative">
                   <button
                     onClick={() => setIsMyEventsOpen(true)}
-                    className="flex items-center gap-1 @sm:gap-1 bg-[#081429] hover:bg-[#081429]/90 text-white px-1.5 @xs:px-2 @sm:px-3 py-1 @sm:py-1.5 rounded-lg transition-all shadow-md hover:shadow-lg font-bold text-[10px] @xs:text-xs transform hover:-translate-y-0.5"
+                    className="flex items-center gap-1 @sm:gap-1 bg-[#081429] hover:bg-[#081429]/90 text-white px-1.5 @xs:px-2 @sm:px-3 py-1 @sm:py-1.5 rounded-lg transition-all shadow-md hover:shadow-lg font-bold text-xxs @xs:text-xs transform hover:-translate-y-0.5"
                   >
                     <List size={14} className="text-[#fdb813] @sm:w-4 @sm:h-4" />
                     <span className="hidden @sm:inline">내 일정</span>

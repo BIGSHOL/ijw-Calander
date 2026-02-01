@@ -281,7 +281,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
             <Calendar className="w-3.5 h-3.5" />
             <span>휴가 관리</span>
             {pendingCount > 0 && (
-              <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+              <span className="bg-red-500 text-white text-xxs px-1.5 py-0.5 rounded-full">
                 {pendingCount}
               </span>
             )}

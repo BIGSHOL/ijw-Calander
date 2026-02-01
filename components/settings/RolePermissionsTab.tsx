@@ -177,7 +177,7 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
             <td className="px-4 py-2.5 sticky left-0 z-10 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                 <div className="text-gray-700">
                     {perm.label}
-                    {/* {perm.disabled && <span className="text-[10px] text-red-400 ml-2">(MASTER 전용)</span>} */}
+                    {/* {perm.disabled && <span className="text-xxs text-red-400 ml-2">(MASTER 전용)</span>} */}
                 </div>
                 <div className="text-xxs text-gray-400">{perm.desc}</div>
             </td>

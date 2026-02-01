@@ -83,7 +83,7 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({
                   }`}
                 >
                   <div className="font-bold">{session.month}월 세션</div>
-                  <div className="text-[10px] text-gray-400 mt-0.5">
+                  <div className="text-xxs text-gray-400 mt-0.5">
                     {formatSessionRanges(session)} · {session.sessions}회
                   </div>
                 </button>

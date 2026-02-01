@@ -260,7 +260,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
             className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs focus:border-[#fdb813] outline-none"
           />
         </div>
-        <div className="text-[10px] text-gray-400">
+        <div className="text-xxs text-gray-400">
           {filteredUsers.length}명
         </div>
       </div>
@@ -314,12 +314,12 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                 {/* 권한 요약 뱃지 */}
                 <div className="flex items-center gap-2 shrink-0">
                   {isUserMaster ? (
-                    <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                    <span className="text-xxs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">
                       전체 권한
                     </span>
                   ) : (
                     <>
-                      <div className="flex items-center gap-1 text-[10px]">
+                      <div className="flex items-center gap-1 text-xxs">
                         {summary.view > 0 && (
                           <span className="flex items-center gap-0.5 text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
                             <Eye size={8} /> {summary.view}
@@ -347,14 +347,14 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                         <button
                           onClick={(e) => { e.stopPropagation(); handleBulkPermission(user.uid, 'none'); }}
                           disabled={isSaving}
-                          className="px-2 py-1 text-[10px] font-bold bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-colors"
+                          className="px-2 py-1 text-xxs font-bold bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-colors"
                         >
                           전체 차단
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleBulkPermission(user.uid, 'view'); }}
                           disabled={isSaving}
-                          className="px-2 py-1 text-[10px] font-bold bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                          className="px-2 py-1 text-xxs font-bold bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                         >
                           전체 보기
                         </button>
@@ -370,7 +370,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                         value={deptSearchTerm}
                         onChange={(e) => { e.stopPropagation(); setDeptSearchTerm(e.target.value); }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full pl-6 pr-2 py-1 bg-white border border-gray-200 rounded text-[10px] focus:border-[#fdb813] outline-none"
+                        className="w-full pl-6 pr-2 py-1 bg-white border border-gray-200 rounded text-xxs focus:border-[#fdb813] outline-none"
                       />
                     </div>
 
@@ -412,10 +412,10 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                               ) : (
                                 <ChevronRight size={12} className="text-gray-400" />
                               )}
-                              <span className="text-[10px] font-bold text-gray-700">{category}</span>
-                              <span className="text-[9px] text-gray-400">({depts.length})</span>
+                              <span className="text-xxs font-bold text-gray-700">{category}</span>
+                              <span className="text-micro text-gray-400">({depts.length})</span>
                             </div>
-                            <div className="flex items-center gap-1 text-[9px]">
+                            <div className="flex items-center gap-1 text-micro">
                               <span className="text-blue-500">{categoryViewCount}</span>
                               <span className="text-gray-300">/</span>
                               <span className="text-gray-400">{depts.length}</span>
@@ -439,7 +439,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                                           className="w-2 h-2 rounded-full shrink-0"
                                           style={{ backgroundColor: dept.color }}
                                         />
-                                        <span className="text-[10px] font-medium text-gray-600 truncate">
+                                        <span className="text-xxs font-medium text-gray-600 truncate">
                                           {dept.name}
                                         </span>
                                       </div>
@@ -479,7 +479,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                     })}
 
                     {departmentsByCategory.length === 0 && deptSearchTerm && (
-                      <div className="text-center py-2 text-gray-400 text-[10px]">
+                      <div className="text-center py-2 text-gray-400 text-xxs">
                         검색 결과가 없습니다.
                       </div>
                     )}

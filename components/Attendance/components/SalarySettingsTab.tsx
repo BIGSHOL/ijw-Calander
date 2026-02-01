@@ -148,7 +148,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                         {selectedStaffId ? <User size={14} /> : <Users size={14} />}
                     </div>
                     <div className="flex-1">
-                        <label className="block text-[10px] font-bold text-gray-500 mb-0.5">설정 적용 대상</label>
+                        <label className="block text-xxs font-bold text-gray-500 mb-0.5">설정 적용 대상</label>
                         <select
                             value={selectedStaffId || ''}
                             onChange={(e) => setSelectedStaffId(e.target.value || null)}
@@ -194,9 +194,9 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                     {selectedStaffId && (
                         <div className="mr-1">
                             {isCustomConfig ? (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">개별 설정</span>
+                                <span className="text-xxs font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">개별 설정</span>
                             ) : (
-                                <span className="text-[10px] font-medium text-gray-400 px-1">기본 설정</span>
+                                <span className="text-xxs font-medium text-gray-400 px-1">기본 설정</span>
                             )}
                         </div>
                     )}
@@ -205,7 +205,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                         <button
                             onClick={handleReset}
                             disabled={isDeleting}
-                            className="px-2 py-1 text-[10px] font-bold text-red-600 hover:bg-red-50 rounded-md flex items-center gap-1 transition-colors"
+                            className="px-2 py-1 text-xxs font-bold text-red-600 hover:bg-red-50 rounded-md flex items-center gap-1 transition-colors"
                             title="개별 설정 삭제 (기본값 복귀)"
                         >
                             <RotateCcw size={10} /> 초기화
@@ -244,7 +244,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                 <label className="text-[11px] font-bold text-slate-700">카드/행정 수수료 (%)</label>
                                 <div className="group relative">
                                     <HelpCircle size={10} className="text-slate-400 cursor-help" />
-                                    <div className="absolute left-0 bottom-full mb-1 w-48 p-1.5 bg-gray-800 text-white text-[10px] rounded shadow-lg hidden group-hover:block z-10">
+                                    <div className="absolute left-0 bottom-full mb-1 w-48 p-1.5 bg-gray-800 text-white text-xxs rounded shadow-lg hidden group-hover:block z-10">
                                         비율제 정산 시, 전체 수강료에서 이 수수료율을 먼저 공제한 후 비율을 곱합니다.
                                     </div>
                                 </div>
@@ -257,7 +257,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                     onChange={(e) => handleGlobalChange('academyFee', e.target.value)}
                                     className="w-full pl-2 pr-6 py-1 text-right border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-xs"
                                 />
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-[10px]">%</span>
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xxs">%</span>
                             </div>
                         </div>
                     </div>
@@ -271,11 +271,11 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                             {/* 블로그 포스팅 인센티브 - 고정금/비율 선택 */}
                             <div className="bg-yellow-50 p-2.5 rounded-md border border-yellow-100">
                                 <div className="flex items-center justify-between mb-1">
-                                    <label className="block text-[10px] font-bold text-gray-600">블로그 포스팅</label>
+                                    <label className="block text-xxs font-bold text-gray-600">블로그 포스팅</label>
                                     <div className="flex bg-gray-100 p-0.5 rounded">
                                         <button
                                             onClick={() => handleIncentiveChange('blogType', 'fixed')}
-                                            className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-all ${
+                                            className={`px-1.5 py-0.5 text-micro font-bold rounded transition-all ${
                                                 localConfig.incentives?.blogType === 'fixed' || !localConfig.incentives?.blogType
                                                     ? 'bg-white text-yellow-700 shadow-sm'
                                                     : 'text-gray-500 hover:text-gray-700'
@@ -285,7 +285,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                         </button>
                                         <button
                                             onClick={() => handleIncentiveChange('blogType', 'percentage')}
-                                            className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-all ${
+                                            className={`px-1.5 py-0.5 text-micro font-bold rounded transition-all ${
                                                 localConfig.incentives?.blogType === 'percentage'
                                                     ? 'bg-white text-yellow-700 shadow-sm'
                                                     : 'text-gray-500 hover:text-gray-700'
@@ -304,11 +304,11 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                             onChange={(e) => handleIncentiveChange('blogRate', parseFloat(e.target.value) || 0)}
                                             className="w-full pl-2 pr-6 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
                                         />
-                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-[10px]">%</span>
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xxs">%</span>
                                     </div>
                                 ) : (
                                     <div className="relative">
-                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">₩</span>
+                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xxs">₩</span>
                                         <input
                                             type="text"
                                             value={localConfig.incentives?.blogAmount?.toLocaleString() ?? 0}
@@ -319,9 +319,9 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                 )}
                             </div>
                             <div className="bg-yellow-50 p-2.5 rounded-md border border-yellow-100">
-                                <label className="block text-[10px] font-bold text-gray-600 mb-1">퇴원율 달성 수당 (월)</label>
+                                <label className="block text-xxs font-bold text-gray-600 mb-1">퇴원율 달성 수당 (월)</label>
                                 <div className="relative">
-                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">₩</span>
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xxs">₩</span>
                                     <input
                                         type="text"
                                         value={localConfig.incentives?.retentionAmount?.toLocaleString() ?? 0}
@@ -331,7 +331,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                 </div>
                             </div>
                             <div className="bg-yellow-50 p-2.5 rounded-md border border-yellow-100">
-                                <label className="block text-[10px] font-bold text-gray-600 mb-1">목표 퇴원율 기준 (%)</label>
+                                <label className="block text-xxs font-bold text-gray-600 mb-1">목표 퇴원율 기준 (%)</label>
                                 <div className="relative">
                                     <input
                                         type="number"
@@ -340,9 +340,9 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                         onChange={(e) => handleIncentiveChange('retentionTargetRate', parseFloat(e.target.value) || 0)}
                                         className="w-full pl-2 pr-8 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
                                     />
-                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-[10px]">이하</span>
+                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xxs">이하</span>
                                 </div>
-                                <p className="text-[9px] text-gray-400 mt-0.5">이 비율 이하로 퇴원생 발생 시 인센티브 적용</p>
+                                <p className="text-micro text-gray-400 mt-0.5">이 비율 이하로 퇴원생 발생 시 인센티브 적용</p>
                             </div>
                         </div>
                     </div>
@@ -354,7 +354,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                             {canEdit && (
                                 <button
                                     onClick={handleAddItem}
-                                    className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-[10px] font-bold hover:bg-blue-100 transition-colors"
+                                    className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-xxs font-bold hover:bg-blue-100 transition-colors"
                                 >
                                     <Plus size={12} /> 항목 추가
                                 </button>
@@ -402,14 +402,14 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                             <div className="flex bg-gray-100 p-0.5 rounded-md ml-auto">
                                                 <button
                                                     onClick={() => handleItemChange(item.id, 'type', 'fixed')}
-                                                    className={`px-2 py-0.5 text-[10px] font-bold rounded transition-all ${item.type === 'fixed' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                                    className={`px-2 py-0.5 text-xxs font-bold rounded transition-all ${item.type === 'fixed' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                                         }`}
                                                 >
                                                     고정급
                                                 </button>
                                                 <button
                                                     onClick={() => handleItemChange(item.id, 'type', 'percentage')}
-                                                    className={`px-2 py-0.5 text-[10px] font-bold rounded transition-all ${item.type === 'percentage' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                                    className={`px-2 py-0.5 text-xxs font-bold rounded transition-all ${item.type === 'percentage' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                                                         }`}
                                                 >
                                                     비율제
@@ -420,9 +420,9 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-md border border-slate-100">
                                             {item.type === 'fixed' ? (
                                                 <div className="md:col-span-2">
-                                                    <label className="block text-[10px] font-bold text-slate-500 mb-1">1회 지급액 (선생님 수령)</label>
+                                                    <label className="block text-xxs font-bold text-slate-500 mb-1">1회 지급액 (선생님 수령)</label>
                                                     <div className="relative">
-                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">₩</span>
+                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xxs">₩</span>
                                                         <input
                                                             type="text"
                                                             value={item.fixedRate.toLocaleString()}
@@ -434,9 +434,9 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                             ) : (
                                                 <>
                                                     <div>
-                                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">1회 수강료 (학생 납부)</label>
+                                                        <label className="block text-xxs font-bold text-slate-500 mb-1">1회 수강료 (학생 납부)</label>
                                                         <div className="relative">
-                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">₩</span>
+                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xxs">₩</span>
                                                             <input
                                                                 type="text"
                                                                 value={item.baseTuition.toLocaleString()}
@@ -446,7 +446,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                                         </div>
                                                     </div>
                                                     <div>
-                                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">선생님 정산 비율 (%)</label>
+                                                        <label className="block text-xxs font-bold text-slate-500 mb-1">선생님 정산 비율 (%)</label>
                                                         <div className="relative">
                                                             <input
                                                                 type="number"
@@ -455,7 +455,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                                                 className="w-full pl-2 pr-6 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white outline-none text-xs"
                                                                 placeholder="예: 45"
                                                             />
-                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-[10px]">%</span>
+                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xxs">%</span>
                                                         </div>
                                                     </div>
                                                 </>
@@ -465,7 +465,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                         {/* Preview Calculation */}
                                         <div className="mt-2 flex justify-end items-center border-t border-gray-100 pt-2">
                                             <div className="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-md border border-blue-100">
-                                                <span className="text-[10px] text-blue-400 font-bold">1회당 정산액</span>
+                                                <span className="text-xxs text-blue-400 font-bold">1회당 정산액</span>
                                                 <span className="text-xs font-bold text-blue-600 font-mono">{calculatedRate.toLocaleString()}원</span>
                                             </div>
                                         </div>
@@ -478,7 +478,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                             <div className="text-center py-6 text-gray-400 bg-white rounded-lg border border-dashed border-gray-200">
                                 <Calculator size={24} className="mx-auto mb-2 opacity-20" />
                                 <p className="font-medium text-xs">등록된 급여 설정이 없습니다.</p>
-                                <p className="text-[10px] mt-0.5">상단의 '항목 추가' 버튼을 눌러주세요.</p>
+                                <p className="text-xxs mt-0.5">상단의 '항목 추가' 버튼을 눌러주세요.</p>
                             </div>
                         )}
                     </div>

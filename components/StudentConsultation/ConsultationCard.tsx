@@ -67,19 +67,19 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                         (() => {
                             switch (matchedStudent.status) {
                                 case 'prospect':
-                                    return <span className="text-[10px] bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-medium border border-orange-200">예비</span>;
+                                    return <span className="text-xxs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-medium border border-orange-200">예비</span>;
                                 case 'active':
-                                    return <span className="text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-medium">재원</span>;
+                                    return <span className="text-xxs bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-medium">재원</span>;
                                 case 'on_hold':
-                                    return <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">휴원/대기</span>;
+                                    return <span className="text-xxs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">휴원/대기</span>;
                                 case 'withdrawn':
-                                    return <span className="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-medium">퇴원</span>;
+                                    return <span className="text-xxs bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-medium">퇴원</span>;
                                 default:
-                                    return <span className="text-[10px] text-gray-400">-</span>;
+                                    return <span className="text-xxs text-gray-400">-</span>;
                             }
                         })()
                     ) : (
-                        <span className="text-[10px] text-gray-400">-</span>
+                        <span className="text-xxs text-gray-400">-</span>
                     )}
                 </div>
 
@@ -122,7 +122,7 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                 <div className="flex-1 min-w-0 flex items-center gap-2">
                     {/* 카테고리 뱃지 */}
                     <span
-                        className="px-1.5 py-0.5 rounded text-[10px] shrink-0"
+                        className="px-1.5 py-0.5 rounded text-xxs shrink-0"
                         style={{
                             backgroundColor: `${categoryConfig.color}15`,
                             color: categoryConfig.color
@@ -132,7 +132,7 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                     </span>
                     {/* 후속조치 뱃지 */}
                     {urgency && (
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${urgency === 'urgent' ? 'bg-red-600 text-white' :
+                        <span className={`px-1.5 py-0.5 rounded text-xxs font-medium shrink-0 ${urgency === 'urgent' ? 'bg-red-600 text-white' :
                             urgency === 'pending' ? 'bg-amber-100 text-amber-700' :
                                 'bg-green-100 text-green-700'
                             }`}>

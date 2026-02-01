@@ -35,7 +35,7 @@ const StaffList: React.FC<StaffListProps> = ({
       resigned: 'bg-gray-100 text-gray-800',
     };
     return (
-      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${styles[status]}`}>
+      <span className={`text-xxs px-1.5 py-0.5 rounded font-medium ${styles[status]}`}>
         {STAFF_STATUS_LABELS[status]}
       </span>
     );
@@ -48,7 +48,7 @@ const StaffList: React.FC<StaffListProps> = ({
       staff: 'bg-gray-100 text-gray-800',
     };
     return (
-      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${styles[role]}`}>
+      <span className={`text-xxs px-1.5 py-0.5 rounded font-medium ${styles[role]}`}>
         {STAFF_ROLE_LABELS[role]}
       </span>
     );
@@ -184,11 +184,11 @@ const StaffList: React.FC<StaffListProps> = ({
                       <div className="text-xs font-medium text-[#081429] truncate">
                         {member.name}
                         {member.englishName && (
-                          <span className="ml-1 text-[10px] text-gray-500 font-normal">({member.englishName})</span>
+                          <span className="ml-1 text-xxs text-gray-500 font-normal">({member.englishName})</span>
                         )}
                       </div>
                       {member.email && (
-                        <div className="text-[10px] text-gray-500 truncate">{member.email}</div>
+                        <div className="text-xxs text-gray-500 truncate">{member.email}</div>
                       )}
                     </div>
                   </div>
@@ -200,7 +200,7 @@ const StaffList: React.FC<StaffListProps> = ({
                   {member.phone ? (
                     <span className="text-[11px] text-gray-600">{member.phone}</span>
                   ) : (
-                    <span className="text-[10px] text-gray-400">-</span>
+                    <span className="text-xxs text-gray-400">-</span>
                   )}
                 </td>
                 <td className="px-2 py-1.5">
@@ -208,7 +208,7 @@ const StaffList: React.FC<StaffListProps> = ({
                     {member.subjects?.map((subject) => (
                       <span
                         key={subject}
-                        className={`text-[10px] px-1.5 py-0.5 rounded ${subject === 'math'
+                        className={`text-xxs px-1.5 py-0.5 rounded ${subject === 'math'
                             ? 'bg-blue-100 text-blue-700'
                             : 'bg-pink-100 text-pink-700'
                           }`}
@@ -217,7 +217,7 @@ const StaffList: React.FC<StaffListProps> = ({
                       </span>
                     ))}
                     {(!member.subjects || member.subjects.length === 0) && (
-                      <span className="text-[10px] text-gray-400">-</span>
+                      <span className="text-xxs text-gray-400">-</span>
                     )}
                   </div>
                 </td>
@@ -227,7 +227,7 @@ const StaffList: React.FC<StaffListProps> = ({
                       {member.bgColor && (
                         <div className="flex items-center gap-1">
                           <div
-                            className="w-4 h-4 rounded border border-gray-300 flex items-center justify-center text-[9px] font-bold"
+                            className="w-4 h-4 rounded border border-gray-300 flex items-center justify-center text-micro font-bold"
                             style={{
                               backgroundColor: member.bgColor,
                               color: member.textColor || '#ffffff'
@@ -236,30 +236,30 @@ const StaffList: React.FC<StaffListProps> = ({
                           >
                             A
                           </div>
-                          <span className="text-[10px] text-gray-500">{member.bgColor}</span>
+                          <span className="text-xxs text-gray-500">{member.bgColor}</span>
                         </div>
                       )}
                       {member.defaultRoom && (
-                        <span className="text-[10px] text-gray-600">
+                        <span className="text-xxs text-gray-600">
                           강의실: <span className="font-medium">{member.defaultRoom}</span>
                         </span>
                       )}
                       {member.isNative && (
-                        <span className="text-[10px] px-1 py-0.5 bg-purple-100 text-purple-700 rounded">
+                        <span className="text-xxs px-1 py-0.5 bg-purple-100 text-purple-700 rounded">
                           원어민
                         </span>
                       )}
                       {member.isHiddenInTimetable && (
-                        <span className="text-[10px] px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
+                        <span className="text-xxs px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
                           숨김
                         </span>
                       )}
                       {!member.bgColor && !member.defaultRoom && !member.isNative && !member.isHiddenInTimetable && (
-                        <span className="text-[10px] text-gray-400">-</span>
+                        <span className="text-xxs text-gray-400">-</span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-[10px] text-gray-400">-</span>
+                    <span className="text-xxs text-gray-400">-</span>
                   )}
                 </td>
                 <td className="px-2 py-1.5 text-[11px] text-gray-600">
@@ -278,14 +278,14 @@ const StaffList: React.FC<StaffListProps> = ({
                           return (
                             <>
                               <span className={style.color}>{style.icon}</span>
-                              <span className={`text-[10px] font-medium ${style.color}`}>
+                              <span className={`text-xxs font-medium ${style.color}`}>
                                 {ROLE_LABELS[member.systemRole as keyof typeof ROLE_LABELS] || member.systemRole}
                               </span>
                             </>
                           );
                         })()}
                       </div>
-                      <span className={`text-[9px] px-1 py-0.5 rounded ${
+                      <span className={`text-micro px-1 py-0.5 rounded ${
                         member.approvalStatus === 'approved' ? 'bg-emerald-100 text-emerald-700' :
                         member.approvalStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-red-100 text-red-700'
@@ -295,7 +295,7 @@ const StaffList: React.FC<StaffListProps> = ({
                       </span>
                     </div>
                   ) : (
-                    <span className="text-[10px] text-gray-400 flex items-center justify-center gap-0.5">
+                    <span className="text-xxs text-gray-400 flex items-center justify-center gap-0.5">
                       <XCircle className="w-3 h-3" />
                       미연동
                     </span>

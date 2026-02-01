@@ -54,7 +54,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
             <span className="text-2xl">{resource.icon || typeIcon}</span>
             <div>
               <h3 className="text-sm font-bold text-white">{resource.title}</h3>
-              <span className="text-[10px] text-gray-400">{typeLabel}</span>
+              <span className="text-xxs text-gray-400">{typeLabel}</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -123,7 +123,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
           <div className="flex items-start gap-3">
             <Tag size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-[10px] text-gray-400 mb-0.5">카테고리</p>
+              <p className="text-xxs text-gray-400 mb-0.5">카테고리</p>
               <div className="flex items-center gap-1 text-sm text-[#081429]">
                 {categoryParts.map((part, idx) => (
                   <span key={idx} className="flex items-center gap-1">
@@ -139,7 +139,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
           <div className="flex items-start gap-3">
             <User size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-[10px] text-gray-400 mb-0.5">작성자</p>
+              <p className="text-xxs text-gray-400 mb-0.5">작성자</p>
               <p className="text-sm text-[#081429]">{resource.createdByName || '-'}</p>
             </div>
           </div>
@@ -148,7 +148,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
           <div className="flex items-start gap-3">
             <Calendar size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-[10px] text-gray-400 mb-0.5">등록일</p>
+              <p className="text-xxs text-gray-400 mb-0.5">등록일</p>
               <p className="text-sm text-[#081429]">{formatDate(resource.createdAt)}</p>
             </div>
           </div>
@@ -170,7 +170,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
 
       {/* URL 표시 */}
       <div className="p-3 border-t border-gray-200 bg-gray-50">
-        <p className="text-[10px] text-gray-400 truncate font-mono">{resource.url}</p>
+        <p className="text-xxs text-gray-400 truncate font-mono">{resource.url}</p>
       </div>
     </div>
   );

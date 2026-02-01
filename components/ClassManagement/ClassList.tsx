@@ -110,7 +110,7 @@ const ScheduleBadge: React.FC<ScheduleBadgeProps> = ({ schedule, subject }) => {
               return (
                 <span
                   key={day}
-                  className={`px-1.5 py-0.5 text-[10px] font-bold ${dayIdx === 0 ? 'rounded-l' : ''} ${dayIdx === entry.days.length - 1 ? 'rounded-r' : ''}`}
+                  className={`px-1.5 py-0.5 text-xxs font-bold ${dayIdx === 0 ? 'rounded-l' : ''} ${dayIdx === entry.days.length - 1 ? 'rounded-r' : ''}`}
                   style={{ backgroundColor: colors.bg, color: colors.text }}
                 >
                   {day}

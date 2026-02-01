@@ -71,8 +71,8 @@ const ClassroomGrid: React.FC<ClassroomGridProps> = ({ blocksByRoom, rooms, isWe
                 style={{ top: `${m.topPx}px` }}
               >
                 <span className={`absolute left-1 ${m.isHour
-                  ? '-top-2.5 text-[10px] font-semibold text-gray-700'
-                  : '-top-1.5 text-[8px] text-gray-400'
+                  ? '-top-2.5 text-xxs font-semibold text-gray-700'
+                  : '-top-1.5 text-nano text-gray-400'
                   }`}>
                   {m.label}
                 </span>

@@ -111,7 +111,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
                     </span>
                 )}
                 {partialDaysBadge && (
-                    <span className="text-[9px] font-bold text-orange-600 bg-orange-100 px-0.5 rounded shrink-0">
+                    <span className="text-micro font-bold text-orange-600 bg-orange-100 px-0.5 rounded shrink-0">
                         {partialDaysBadge.join('')}
                     </span>
                 )}
@@ -600,7 +600,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     </>
                                                 )}
                                                 {/* 레벨업 섹션 */}
-                                                <div className="px-2 py-1 text-[10px] text-gray-400 font-medium border-b border-gray-100">레벨업</div>
+                                                <div className="px-2 py-1 text-xxs text-gray-400 font-medium border-b border-gray-100">레벨업</div>
                                                 <button
                                                     onClick={async () => {
                                                         if (!isValidLevel(classInfo.name, englishLevels)) {
@@ -641,7 +641,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 </button>
 
                                                 {/* 레벨다운 섹션 */}
-                                                <div className="px-2 py-1 text-[10px] text-gray-400 font-medium border-t border-b border-gray-100 mt-1">레벨다운</div>
+                                                <div className="px-2 py-1 text-xxs text-gray-400 font-medium border-t border-b border-gray-100 mt-1">레벨다운</div>
                                                 <button
                                                     onClick={async () => {
                                                         if (!isValidLevel(classInfo.name, englishLevels)) {

@@ -68,13 +68,13 @@ export const AssignmentBlock: React.FC<AssignmentBlockProps> = React.memo(({
     >
       {/* 배정 소스 배지 */}
       {showBadge && (
-        <div className={`absolute top-0.5 right-0.5 text-white text-[8px] font-bold px-1 rounded-sm leading-tight ${isAuto ? 'bg-emerald-500' : 'bg-amber-500'
+        <div className={`absolute top-0.5 right-0.5 text-white text-nano font-bold px-1 rounded-sm leading-tight ${isAuto ? 'bg-emerald-500' : 'bg-amber-500'
           }`}>
           {isAuto ? '자동' : '수동'}
         </div>
       )}
       {hasConflict && (
-        <div className="absolute top-0.5 right-0.5 bg-red-500 text-white text-[8px] font-bold px-1 rounded-sm leading-tight">
+        <div className="absolute top-0.5 right-0.5 bg-red-500 text-white text-nano font-bold px-1 rounded-sm leading-tight">
           충돌
         </div>
       )}
@@ -83,14 +83,14 @@ export const AssignmentBlock: React.FC<AssignmentBlockProps> = React.memo(({
           {hasConflict && <span className="mr-0.5">⚠</span>}
           {slot.className}
         </div>
-        <div className="text-[9px] text-gray-500 leading-tight truncate">
+        <div className="text-micro text-gray-500 leading-tight truncate">
           {SUBJECT_LABELS[slot.subject]} | {slot.teacher}
         </div>
-        <div className="text-[9px] text-gray-400 leading-tight">
+        <div className="text-micro text-gray-400 leading-tight">
           {slot.startTime}~{slot.endTime}
         </div>
         {slot.studentCount > 0 && (
-          <div className="text-[9px] text-gray-400 leading-tight">
+          <div className="text-micro text-gray-400 leading-tight">
             {slot.studentCount}명
           </div>
         )}

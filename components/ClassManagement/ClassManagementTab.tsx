@@ -339,7 +339,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                         {/* 수학 */}
                         {teachersBySubject.math.length > 0 && (
                           <div className="mb-2">
-                            <div className="text-[10px] text-blue-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">수학</div>
+                            <div className="text-xxs text-blue-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">수학</div>
                             <div className="grid grid-cols-3 gap-0.5">
                               {teachersBySubject.math.map(teacher => (
                                 <button
@@ -360,7 +360,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                         {/* 영어 */}
                         {teachersBySubject.english.length > 0 && (
                           <div className="mb-2">
-                            <div className="text-[10px] text-purple-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">영어</div>
+                            <div className="text-xxs text-purple-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">영어</div>
                             <div className="grid grid-cols-3 gap-0.5">
                               {teachersBySubject.english.map(teacher => (
                                 <button
@@ -381,7 +381,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                         {/* 과학 */}
                         {teachersBySubject.science.length > 0 && (
                           <div className="mb-2">
-                            <div className="text-[10px] text-green-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">과학</div>
+                            <div className="text-xxs text-green-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">과학</div>
                             <div className="grid grid-cols-3 gap-0.5">
                               {teachersBySubject.science.map(teacher => (
                                 <button
@@ -402,7 +402,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                         {/* 국어 */}
                         {teachersBySubject.korean.length > 0 && (
                           <div className="mb-2">
-                            <div className="text-[10px] text-orange-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">국어</div>
+                            <div className="text-xxs text-orange-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">국어</div>
                             <div className="grid grid-cols-3 gap-0.5">
                               {teachersBySubject.korean.map(teacher => (
                                 <button
@@ -423,7 +423,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                         {/* 기타 */}
                         {teachersBySubject.other.length > 0 && (
                           <div className="mb-2">
-                            <div className="text-[10px] text-gray-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">기타</div>
+                            <div className="text-xxs text-gray-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">기타</div>
                             <div className="grid grid-cols-3 gap-0.5">
                               {teachersBySubject.other.map(teacher => (
                                 <button

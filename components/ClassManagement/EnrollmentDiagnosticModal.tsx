@@ -509,14 +509,14 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
                                                             {/* 왼쪽: Firebase Enrollment 정보 */}
                                                             <div className="flex flex-col">
                                                                 <div className="flex items-center gap-1 mb-0.5">
-                                                                    <div className="text-[10px] text-gray-400 uppercase">Enrollment Data</div>
+                                                                    <div className="text-xxs text-gray-400 uppercase">Enrollment Data</div>
                                                                     {enroll._source === 'array_field' && (
-                                                                        <span className="text-[9px] px-1 py-0.5 bg-yellow-100 text-yellow-700 rounded border border-yellow-200 font-bold leading-none">
+                                                                        <span className="text-micro px-1 py-0.5 bg-yellow-100 text-yellow-700 rounded border border-yellow-200 font-bold leading-none">
                                                                             Array Format
                                                                         </span>
                                                                     )}
                                                                     {enroll.isMatched && enroll.matchType === 'NAME' && (
-                                                                        <span className="text-[9px] px-1 py-0.5 bg-blue-100 text-blue-700 rounded border border-blue-200 font-bold leading-none">
+                                                                        <span className="text-micro px-1 py-0.5 bg-blue-100 text-blue-700 rounded border border-blue-200 font-bold leading-none">
                                                                             ID Update Needed
                                                                         </span>
                                                                     )}
@@ -535,18 +535,18 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
                                                                     enroll.matchType === 'ID' ? (
                                                                         <div className="text-green-500 flex flex-col items-center">
                                                                             <CheckCircle2 size={18} />
-                                                                            <span className="text-[10px] font-bold mt-0.5">ID OK</span>
+                                                                            <span className="text-xxs font-bold mt-0.5">ID OK</span>
                                                                         </div>
                                                                     ) : (
                                                                         <div className="text-blue-500 flex flex-col items-center">
                                                                             <CheckCircle2 size={18} />
-                                                                            <span className="text-[10px] font-bold mt-0.5">NAME OK</span>
+                                                                            <span className="text-xxs font-bold mt-0.5">NAME OK</span>
                                                                         </div>
                                                                     )
                                                                 ) : (
                                                                     <div className="text-red-500 flex flex-col items-center">
                                                                         <Link2Off size={18} />
-                                                                        <span className="text-[10px] font-bold mt-0.5">FAIL</span>
+                                                                        <span className="text-xxs font-bold mt-0.5">FAIL</span>
                                                                     </div>
                                                                 )}
                                                                 <ArrowRight size={14} className="text-gray-300 mt-1" />
@@ -554,7 +554,7 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
 
                                                             {/* 오른쪽: 매칭된 Class 정보 */}
                                                             <div className="flex flex-col">
-                                                                <div className="text-[10px] text-gray-400 uppercase mb-0.5">Matched Class(DB)</div>
+                                                                <div className="text-xxs text-gray-400 uppercase mb-0.5">Matched Class(DB)</div>
                                                                 {enroll.isMatched && enroll.matchedClass ? (
                                                                     <>
                                                                         <div className={`text-sm font-medium ${enroll.matchType === 'ID' ? 'text-green-700' : 'text-blue-700'}`}>

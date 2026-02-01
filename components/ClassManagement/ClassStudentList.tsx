@@ -70,7 +70,7 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
             </span>
             {/* 등원 요일이 수업 요일과 다른 경우에만 표시 */}
             {shouldShowAttendanceDays(student.attendanceDays) && (
-              <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+              <span className="text-xxs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
                 {student.attendanceDays!.join(', ')}만
               </span>
             )}
