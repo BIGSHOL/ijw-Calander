@@ -432,7 +432,7 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
               </div>
               {ROLES_TO_SHOW.map(role => (
                 <div key={role} className="flex-1 min-w-[80px] px-2 py-2 text-center border-r last:border-r-0">
-                  <span className={`inline-block px-2 py-0.5 rounded-none text-[10px] font-black ${getRoleBadgeStyle(role)}`}>
+                  <span className={`inline-block px-2 py-0.5 rounded-none text-xxs font-black ${getRoleBadgeStyle(role)}`}>
                     {ROLE_LABELS[role]}
                   </span>
                 </div>
@@ -458,7 +458,7 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
                       )}
                       <span className="text-sm">{category.icon}</span>
                       <span className="text-xs font-bold text-gray-700">{category.label}</span>
-                      <span className="text-[10px] text-gray-400">({category.permissions.length})</span>
+                      <span className="text-xxs text-gray-400">({category.permissions.length})</span>
                     </div>
                     {/* Quick summary when collapsed */}
                     {!expandedCategories.has(category.id) && (
@@ -469,7 +469,7 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
                           ).length;
                           return (
                             <div key={role} className="flex-1 min-w-[80px] text-center">
-                              <span className={`text-[10px] font-bold ${enabledCount === category.permissions.length ? 'text-green-600' : enabledCount > 0 ? 'text-yellow-600' : 'text-gray-300'}`}>
+                              <span className={`text-xxs font-bold ${enabledCount === category.permissions.length ? 'text-green-600' : enabledCount > 0 ? 'text-yellow-600' : 'text-gray-300'}`}>
                                 {enabledCount}/{category.permissions.length}
                               </span>
                             </div>
@@ -517,7 +517,7 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
                 <div key={tab.id} className="flex hover:bg-gray-50/30">
                   <div className="w-48 shrink-0 px-3 py-2 border-r">
                     <span className="text-xs font-medium text-gray-700">{tab.label}</span>
-                    <span className="text-[10px] text-gray-400 ml-1 font-mono">({tab.id})</span>
+                    <span className="text-xxs text-gray-400 ml-1 font-mono">({tab.id})</span>
                   </div>
                   {ROLES_TO_SHOW.map(role => (
                     <div key={role} className="flex-1 min-w-[80px] flex items-center justify-center border-r last:border-r-0 py-2">

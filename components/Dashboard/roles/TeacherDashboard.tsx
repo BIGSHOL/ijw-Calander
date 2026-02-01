@@ -519,7 +519,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               <BookOpen className="w-4 h-4 text-blue-500" />
             </div>
             <p className="text-2xl font-bold text-[#081429]">{myClasses.length}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">담당 중인 수업</p>
+            <p className="text-xxs text-gray-400 mt-0.5">담당 중인 수업</p>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
@@ -528,7 +528,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               <Calendar className="w-4 h-4 text-green-500" />
             </div>
             <p className="text-2xl font-bold text-[#081429]">{todayClasses.length}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{dayOfWeek}요일 수업</p>
+            <p className="text-xxs text-gray-400 mt-0.5">{dayOfWeek}요일 수업</p>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
@@ -537,7 +537,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               <Users className="w-4 h-4 text-purple-500" />
             </div>
             <p className="text-2xl font-bold text-[#081429]">{myStudents.length}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">담당 학생 수</p>
+            <p className="text-xxs text-gray-400 mt-0.5">담당 학생 수</p>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
@@ -546,7 +546,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               <Clock className="w-4 h-4 text-orange-500" />
             </div>
             <p className="text-2xl font-bold text-[#081429]">0</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">예정된 상담</p>
+            <p className="text-xxs text-gray-400 mt-0.5">예정된 상담</p>
           </div>
         </div>
 
@@ -682,14 +682,14 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                             <div className="flex items-center gap-1">
                               <span className="text-xs font-medium text-[#081429]">{cls.className}</span>
                               {isTodayClass && (
-                                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-200 text-amber-800 font-bold">
+                                <span className="text-micro px-1 py-0.5 rounded bg-amber-200 text-amber-800 font-bold">
                                   오늘
                                 </span>
                               )}
                             </div>
                           </td>
                           <td className="px-2">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
+                            <span className={`text-xxs px-1.5 py-0.5 rounded-full ${cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
                               cls.subject === 'english' ? 'bg-green-100 text-green-700' :
                                 cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
                                   'bg-orange-100 text-orange-700'
@@ -701,11 +701,11 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                           </td>
                           <td className="px-2 text-center">
                             {cls.isMainTeacher ? (
-                              <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
+                              <span className="text-micro px-1 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
                                 담임
                               </span>
                             ) : (
-                              <span className="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-600 font-bold">
+                              <span className="text-micro px-1 py-0.5 rounded bg-gray-100 text-gray-600 font-bold">
                                 부담임
                               </span>
                             )}
@@ -723,19 +723,19 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                                       return (
                                         <span
                                           key={dayIdx}
-                                          className="text-[9px] px-1 py-0.5 rounded font-bold"
+                                          className="text-micro px-1 py-0.5 rounded font-bold"
                                           style={{ backgroundColor: colors.bg, color: colors.text }}
                                         >
                                           {day}
                                         </span>
                                       );
                                     })}
-                                    <span className="text-[10px] text-gray-500">{entry.label}</span>
+                                    <span className="text-xxs text-gray-500">{entry.label}</span>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-[10px] text-gray-400 italic">미지정</span>
+                              <span className="text-xxs text-gray-400 italic">미지정</span>
                             )}
                           </td>
                         </tr>

@@ -638,7 +638,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                                                 <td className="px-3 py-2 text-gray-700">{item.subject}</td>
                                                 <td className="px-3 py-2 font-medium text-gray-900">
                                                     {item.studentName}
-                                                    {item.matchStatus === 'NEW_STUDENT' && <span className="text-[10px] text-purple-600 ml-1">(신규)</span>}
+                                                    {item.matchStatus === 'NEW_STUDENT' && <span className="text-xxs text-purple-600 ml-1">(신규)</span>}
                                                 </td>
                                                 <td className="px-3 py-2 text-gray-600">{item.schoolName}</td>
                                                 <td className="px-3 py-2 text-gray-600">{item.grade}</td>
@@ -646,7 +646,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                                                 <td className="px-3 py-2 text-gray-500 text-[11px]">{item.studentPhone}</td>
                                                 <td className="px-3 py-2 max-w-[300px]" title={item.notes}>
                                                     <div className="flex items-center gap-1.5">
-                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] shrink-0 ${
+                                                        <span className={`px-1.5 py-0.5 rounded text-xxs shrink-0 ${
                                                             item.generatedCategory === 'progress'
                                                                 ? 'bg-blue-100 text-blue-700'
                                                                 : 'bg-gray-100 text-gray-600'

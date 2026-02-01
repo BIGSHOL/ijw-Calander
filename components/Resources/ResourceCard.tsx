@@ -124,7 +124,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
 
       {/* 타입 */}
       <div className="w-24 flex-shrink-0">
-        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#081429]/10 text-[#081429] inline-flex items-center gap-1">
+        <span className="text-xxs font-medium px-2 py-0.5 rounded-full bg-[#081429]/10 text-[#081429] inline-flex items-center gap-1">
           <span>{typeIcon}</span>
           <span>{typeLabel}</span>
         </span>
@@ -258,7 +258,7 @@ export const ResourceTableHeader: React.FC<ResourceTableHeaderProps> = ({
   isIndeterminate = false,
   onToggleAll,
 }) => (
-  <div className="flex items-center gap-3 px-4 py-2 bg-gray-100 border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase">
+  <div className="flex items-center gap-3 px-4 py-2 bg-gray-100 border-b border-gray-200 text-xxs font-bold text-gray-500 uppercase">
     {showCheckbox && (
       <div className="w-5 flex-shrink-0">
         <input

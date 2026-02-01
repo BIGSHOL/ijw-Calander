@@ -44,7 +44,7 @@ const ClassBlock: React.FC<ClassBlockProps> = ({ block, config, onClick }) => {
       }}
     >
       {block.isMerged && (
-        <div className="absolute top-0.5 right-0.5 bg-blue-500 text-white text-[8px] font-bold px-1 rounded-sm leading-tight">
+        <div className="absolute top-0.5 right-0.5 bg-blue-500 text-white text-nano font-bold px-1 rounded-sm leading-tight">
           합반
         </div>
       )}
@@ -53,14 +53,14 @@ const ClassBlock: React.FC<ClassBlockProps> = ({ block, config, onClick }) => {
           {block.hasConflict && <span className="mr-0.5">⚠</span>}
           {block.className}
         </div>
-        <div className="text-[9px] text-gray-500 leading-tight truncate">
+        <div className="text-micro text-gray-500 leading-tight truncate">
           {SUBJECT_LABELS[block.subject]} | {block.teacher}
         </div>
-        <div className="text-[9px] text-gray-400 leading-tight">
+        <div className="text-micro text-gray-400 leading-tight">
           {block.startTime}~{block.endTime}
         </div>
         {block.hasConflict && (
-          <div className="text-[9px] text-amber-600 font-semibold">충돌</div>
+          <div className="text-micro text-amber-600 font-semibold">충돌</div>
         )}
       </div>
     </div>

@@ -432,7 +432,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 style={dayHeaderWidth}
                                             >
                                                 <div>{day}</div>
-                                                {dateInfo && <div className="text-[10px] opacity-70">{dateInfo.formatted}</div>}
+                                                {dateInfo && <div className="text-xxs opacity-70">{dateInfo.formatted}</div>}
                                             </th>
                                         );
                                     });
@@ -491,7 +491,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             backgroundColor: bgHex
                                                         }}
                                                     >
-                                                        <div className="font-bold text-[10px] text-gray-500">{groupInfo.label}</div>
+                                                        <div className="font-bold text-xxs text-gray-500">{groupInfo.label}</div>
                                                         <div>{groupInfo.time}</div>
                                                     </td>
                                                     {resources.map(resource => {
@@ -790,7 +790,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 backgroundColor: bgHex
                                                             }}
                                                         >
-                                                            <div className="font-bold text-[10px] text-gray-500">{period}</div>
+                                                            <div className="font-bold text-xxs text-gray-500">{period}</div>
                                                             <div>{periodTime}</div>
                                                         </td>
                                                         {resources.map(resource => {
@@ -1237,7 +1237,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             backgroundColor: bgHex
                                                         }}
                                                     >
-                                                        <div className="font-bold text-[10px] text-gray-500">{groupInfo.label}</div>
+                                                        <div className="font-bold text-xxs text-gray-500">{groupInfo.label}</div>
                                                         <div>{groupInfo.time}</div>
                                                     </td>
                                                     {resources.map((resource, resourceIdx) => {
@@ -1411,7 +1411,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 backgroundColor: bgHex
                                                             }}
                                                         >
-                                                            <div className="font-bold text-[10px] text-gray-500">{period}</div>
+                                                            <div className="font-bold text-xxs text-gray-500">{period}</div>
                                                             <div>{periodTime}</div>
                                                         </td>
                                                         {resources.map((resource, resourceIdx) => {

@@ -37,7 +37,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
                     className={`pb-2 px-1 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${userTab === 'approved' ? 'border-[#081429] text-[#081429]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                 >
                     정회원 (Members)
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${userTab === 'approved' ? 'bg-[#081429] text-white' : 'bg-gray-100'}`}>
+                    <span className={`text-xxs px-1.5 py-0.5 rounded-full ${userTab === 'approved' ? 'bg-[#081429] text-white' : 'bg-gray-100'}`}>
                         {localUsers.filter(u => u.status === 'approved').length}
                     </span>
                 </button>
@@ -49,7 +49,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
                     {localUsers.filter(u => u.status === 'pending').length > 0 && (
                         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                     )}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${userTab === 'pending' ? 'bg-[#fdb813] text-[#081429]' : 'bg-gray-100'}`}>
+                    <span className={`text-xxs px-1.5 py-0.5 rounded-full ${userTab === 'pending' ? 'bg-[#fdb813] text-[#081429]' : 'bg-gray-100'}`}>
                         {localUsers.filter(u => u.status === 'pending').length}
                     </span>
                 </button>

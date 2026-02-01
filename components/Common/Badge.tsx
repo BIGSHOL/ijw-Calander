@@ -53,9 +53,9 @@ const Badge: React.FC<BadgeProps> = ({
       dotColor: 'bg-info',
     },
     neutral: {
-      className: 'bg-gray-100 text-gray-700 border-gray-300',
+      className: 'bg-gray-200 text-gray-800 border-gray-400',
       icon: <Circle size={12} />,
-      dotColor: 'bg-gray-500',
+      dotColor: 'bg-gray-600',
     },
     primary: {
       className: 'bg-primary-100 text-primary-800 border-primary-300',

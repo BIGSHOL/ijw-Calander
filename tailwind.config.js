@@ -72,9 +72,9 @@ export default {
         mono: ['JetBrains Mono', 'Consolas', 'Monaco', 'monospace'],
       },
       fontSize: {
-        'xxs': ['10px', { lineHeight: '14px' }],
-        'micro': ['9px', { lineHeight: '12px' }],
-        'nano': ['8px', { lineHeight: '10px' }],
+        'xxs': ['11px', { lineHeight: '16px' }],
+        'micro': ['11px', { lineHeight: '16px' }],
+        'nano': ['10px', { lineHeight: '14px' }],
         xs: ['0.75rem', { lineHeight: '1rem' }],
         sm: ['0.875rem', { lineHeight: '1.25rem' }],
         base: ['1rem', { lineHeight: '1.5rem' }],

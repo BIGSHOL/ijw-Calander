@@ -315,25 +315,25 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
               )}
             </div>
             {isDuplicateUrl && (
-              <p className="text-[10px] text-orange-500 mt-1 flex items-center gap-1">
+              <p className="text-xxs text-orange-500 mt-1 flex items-center gap-1">
                 <AlertTriangle size={12} />
                 이 URL은 이미 등록되어 있습니다
               </p>
             )}
             {!isDuplicateUrl && urlValidation && !urlValidation.valid && (
-              <p className="text-[10px] text-orange-500 mt-1 flex items-center gap-1">
+              <p className="text-xxs text-orange-500 mt-1 flex items-center gap-1">
                 <AlertTriangle size={12} />
                 {urlValidation.message}
               </p>
             )}
             {!isDuplicateUrl && urlValidation?.valid && (
-              <p className="text-[10px] text-green-600 mt-1 flex items-center gap-1">
+              <p className="text-xxs text-green-600 mt-1 flex items-center gap-1">
                 <CheckCircle2 size={12} />
                 {urlValidation.message}
               </p>
             )}
             {!isDuplicateUrl && !urlValidation && type !== 'other' && type !== '__custom__' && RESOURCE_TYPE_LABELS[type] && (
-              <p className="text-[10px] text-[#fdb813] mt-1">
+              <p className="text-xxs text-[#fdb813] mt-1">
                 자동 감지: {RESOURCE_TYPE_ICONS[type]} {RESOURCE_TYPE_LABELS[type]}
               </p>
             )}
@@ -474,7 +474,7 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
 
               {/* 선택된 카테고리 미리보기 */}
               {(categoryMain || customMain) && (
-                <p className="text-[10px] text-[#fdb813] flex items-center gap-1">
+                <p className="text-xxs text-[#fdb813] flex items-center gap-1">
                   선택: {finalCategory}
                 </p>
               )}

@@ -421,7 +421,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                                     onChange={(e) => setNewKeywordBgColor(e.target.value)}
                                     className="w-6 h-6 rounded cursor-pointer"
                                 />
-                                <span className="text-[10px] text-gray-500 font-mono">{newKeywordBgColor}</span>
+                                <span className="text-xxs text-gray-500 font-mono">{newKeywordBgColor}</span>
                             </div>
                         </div>
                         <div>
@@ -433,7 +433,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                                     onChange={(e) => setNewKeywordTextColor(e.target.value)}
                                     className="w-6 h-6 rounded cursor-pointer"
                                 />
-                                <span className="text-[10px] text-gray-500 font-mono">{newKeywordTextColor}</span>
+                                <span className="text-xxs text-gray-500 font-mono">{newKeywordTextColor}</span>
                             </div>
                         </div>
                         <button
@@ -473,13 +473,13 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                                         />
                                         <button
                                             onClick={() => handleSaveEdit(kw.id)}
-                                            className="flex-1 px-1 py-0.5 bg-blue-600 text-white rounded text-[10px] font-bold hover:bg-blue-700"
+                                            className="flex-1 px-1 py-0.5 bg-blue-600 text-white rounded text-xxs font-bold hover:bg-blue-700"
                                         >
                                             <Check size={10} className="inline" />
                                         </button>
                                         <button
                                             onClick={handleCancelEdit}
-                                            className="px-1 py-0.5 bg-gray-400 text-white rounded text-[10px] font-bold hover:bg-gray-500"
+                                            className="px-1 py-0.5 bg-gray-400 text-white rounded text-xxs font-bold hover:bg-gray-500"
                                         >
                                             <X size={10} />
                                         </button>

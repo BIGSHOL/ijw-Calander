@@ -113,7 +113,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
         const opacity = Math.min(data.total * 0.15 + 0.1, 0.9);
 
         return {
-            className: `text-[5px] sm:text-[6px] lg:text-[8px] font-medium relative overflow-hidden ${isConflict ? 'ring-1 ring-red-500 z-10' : ''}`,
+            className: `text-[5px] sm:text-[6px] lg:text-nano font-medium relative overflow-hidden ${isConflict ? 'ring-1 ring-red-500 z-10' : ''}`,
             customColor: baseColor,
             opacityValue: opacity,
             isConflict
@@ -269,7 +269,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
 
                                     <div className="grid grid-cols-7 gap-[1px] text-center">
                                         {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-                                            <div key={d} className="text-[5px] sm:text-[6px] lg:text-[8px] text-gray-400 font-medium">{d}</div>
+                                            <div key={d} className="text-[5px] sm:text-[6px] lg:text-nano text-gray-400 font-medium">{d}</div>
                                         ))}
 
                                         {emptySlots.map((_, i) => <div key={`empty-${i}`} />)}

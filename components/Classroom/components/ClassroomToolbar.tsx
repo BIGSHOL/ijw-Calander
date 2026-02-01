@@ -151,7 +151,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             {/* 그룹별 강의실 */}
             {roomGroups.map(group => (
               <div key={group.label} className="mb-2">
-                <div className="text-[10px] font-bold text-[#fdb813] mb-1">{group.label}</div>
+                <div className="text-xxs font-bold text-[#fdb813] mb-1">{group.label}</div>
                 <div className="grid grid-cols-3 gap-1">
                   {group.rooms.map(room => {
                     const isSelected = !selectedRooms || selectedRooms.has(room);
@@ -193,7 +193,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
           <div className="absolute top-full left-0 mt-1 z-50 bg-[#0d1f3c] border border-gray-600 rounded-lg shadow-xl p-3 min-w-[280px]">
             {/* 시간대 설정 */}
             <div className="mb-3 pb-2 border-b border-gray-700">
-              <div className="text-[10px] font-bold text-[#fdb813] mb-1.5">표시 시간대</div>
+              <div className="text-xxs font-bold text-[#fdb813] mb-1.5">표시 시간대</div>
               <div className="flex items-center gap-2">
                 <select
                   value={timeRange.start}
@@ -204,7 +204,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
                     <option key={h} value={h}>{h}:00</option>
                   ))}
                 </select>
-                <span className="text-gray-400 text-[10px]">~</span>
+                <span className="text-gray-400 text-xxs">~</span>
                 <select
                   value={timeRange.end}
                   onChange={e => onTimeRangeChange({ ...timeRange, end: Number(e.target.value) })}
@@ -218,12 +218,12 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             </div>
 
             {/* 충돌 무시 강의실 */}
-            <div className="text-[10px] text-gray-400 mb-2">
+            <div className="text-xxs text-gray-400 mb-2">
               충돌 무시 강의실은 경고 없이 수업을 나란히 표시합니다 (3배 가로폭)
             </div>
             {roomGroups.map(group => (
               <div key={group.label} className="mb-2">
-                <div className="text-[10px] font-bold text-[#fdb813] mb-1">{group.label}</div>
+                <div className="text-xxs font-bold text-[#fdb813] mb-1">{group.label}</div>
                 <div className="grid grid-cols-3 gap-1">
                   {group.rooms.map(room => {
                     const isIgnored = ignoredRooms.has(room);
@@ -256,7 +256,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             <button
               key={subject}
               onClick={() => onSubjectToggle(subject)}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] transition-colors ${
+              className={`flex items-center gap-1 px-2 py-0.5 rounded border text-xxs transition-colors ${
                 isActive
                   ? 'font-medium'
                   : 'opacity-60'

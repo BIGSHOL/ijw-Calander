@@ -113,7 +113,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
         {DAYS.map((day, index) => (
           <div
             key={day}
-            className={`text-center text-[10px] font-semibold py-0.5 ${
+            className={`text-center text-xxs font-semibold py-0.5 ${
               index === 0 ? 'text-red-500' : index === 6 ? 'text-blue-500' : 'text-gray-500'
             }`}
           >

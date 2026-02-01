@@ -357,8 +357,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   {subjectDistribution.map((item, idx) => (
                     <div key={idx}>
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[10px] font-medium text-gray-700">{item.subject}</span>
-                        <span className="text-[10px] font-bold" style={{ color: item.color }}>{item.count}명</span>
+                        <span className="text-xxs font-medium text-gray-700">{item.subject}</span>
+                        <span className="text-xxs font-bold" style={{ color: item.color }}>{item.count}명</span>
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-1.5">
                         <div
@@ -387,12 +387,12 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                             style={{ height: `${day.rate}%` }}
                           />
                         </div>
-                        <span className="text-[9px] text-gray-500 font-medium">{day.day}</span>
+                        <span className="text-micro text-gray-500 font-medium">{day.day}</span>
                       </div>
                     );
                   })}
                 </div>
-                <div className="text-center mt-1.5 text-[9px] text-gray-400">
+                <div className="text-center mt-1.5 text-micro text-gray-400">
                   평균 출석률: {Math.round(weeklyAttendance.reduce((sum, d) => sum + d.rate, 0) / weeklyAttendance.length) || 0}%
                 </div>
               </div>
@@ -403,25 +403,25 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 {/* Performance: rendering-conditional-render - && 대신 삼항 연산자 사용 */}
                 <div className="space-y-1.5">
                   {pendingCount > 0 ? (
-                    <div className="flex items-center gap-1.5 text-[10px] text-red-600">
+                    <div className="flex items-center gap-1.5 text-xxs text-red-600">
                       <span className="w-1 h-1 bg-red-600 rounded-full" />
                       미납 학부모 {pendingCount}명 (독촉 필요)
                     </div>
                   ) : null}
                   {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 ? (
-                    <div className="flex items-center gap-1.5 text-[10px] text-orange-600">
+                    <div className="flex items-center gap-1.5 text-xxs text-orange-600">
                       <span className="w-1 h-1 bg-orange-600 rounded-full" />
                       상담 필요 학생 {stats.studentsNeedingConsultation.length}명
                     </div>
                   ) : null}
                   {attendanceRate < 80 ? (
-                    <div className="flex items-center gap-1.5 text-[10px] text-yellow-600">
+                    <div className="flex items-center gap-1.5 text-xxs text-yellow-600">
                       <span className="w-1 h-1 bg-yellow-600 rounded-full" />
                       오늘 출석률 낮음 ({attendanceRate}%)
                     </div>
                   ) : null}
                   {pendingCount === 0 && attendanceRate >= 80 && (!stats?.studentsNeedingConsultation || stats.studentsNeedingConsultation.length === 0) ? (
-                    <div className="text-[10px] text-gray-500">현재 주의가 필요한 항목이 없습니다.</div>
+                    <div className="text-xxs text-gray-500">현재 주의가 필요한 항목이 없습니다.</div>
                   ) : null}
                 </div>
               </div>

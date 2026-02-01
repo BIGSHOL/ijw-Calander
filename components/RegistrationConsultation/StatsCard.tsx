@@ -28,7 +28,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
         <div className="bg-white rounded-lg shadow-sm p-3 border border-slate-100 flex flex-col justify-between">
             <div className="flex justify-between items-start mb-1.5">
                 <div>
-                    <h3 className="text-[10px] font-medium text-slate-500 mb-0.5">{title}</h3>
+                    <h3 className="text-xxs font-medium text-slate-500 mb-0.5">{title}</h3>
                     <div className="text-lg font-bold text-slate-900">{value}</div>
                 </div>
                 <div className={`p-1.5 rounded-lg ${colorClass} bg-opacity-10 text-opacity-100`}>
@@ -36,7 +36,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                 </div>
             </div>
 
-            <div className="flex items-center text-[10px]">
+            <div className="flex items-center text-xxs">
                 {hasTrendData ? (
                     <>
                         <span className={`flex items-center font-medium ${trend > 0 ? 'text-emerald-600' : trend < 0 ? 'text-red-500' : 'text-slate-500'}`}>

@@ -679,11 +679,11 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
         {!currentMain && (
           <div className="p-4 border-b border-gray-200 bg-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-gray-400">드래그하여 순서 변경</span>
+              <span className="text-xxs text-gray-400">드래그하여 순서 변경</span>
               {categoryOrder.length > 0 && (
                 <button
                   onClick={handleResetCategoryOrder}
-                  className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-[#fdb813] transition-colors"
+                  className="flex items-center gap-1 text-xxs text-gray-400 hover:text-[#fdb813] transition-colors"
                   title="가나다 순으로 초기화"
                 >
                   <RotateCcw size={10} />
@@ -713,7 +713,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                   </div>
                   <span className="text-xs font-bold text-[#081429]">{main}</span>
                   {mainCounts[main] > 0 && (
-                    <span className="text-[10px] text-gray-500">{mainCounts[main]}개</span>
+                    <span className="text-xxs text-gray-500">{mainCounts[main]}개</span>
                   )}
                 </div>
               ))}
@@ -752,11 +752,11 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
         {currentMain && !currentSub && subCategories.length > 0 && (
           <div className="p-4 border-b border-gray-200 bg-white">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] text-gray-400">드래그하여 순서 변경</span>
+              <span className="text-xxs text-gray-400">드래그하여 순서 변경</span>
               {subCategoryOrders[currentMain]?.length > 0 && (
                 <button
                   onClick={handleResetSubCategoryOrder}
-                  className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-[#081429] transition-colors"
+                  className="flex items-center gap-1 text-xxs text-gray-400 hover:text-[#081429] transition-colors"
                   title="가나다 순으로 초기화"
                 >
                   <RotateCcw size={10} />
@@ -786,7 +786,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                   </div>
                   <span className="text-xs font-medium text-[#081429]">{sub}</span>
                   {subCounts[sub] > 0 && (
-                    <span className="text-[10px] text-gray-500">{subCounts[sub]}개</span>
+                    <span className="text-xxs text-gray-500">{subCounts[sub]}개</span>
                   )}
                 </div>
               ))}

@@ -67,7 +67,7 @@ export const StrategySettingsPanel: React.FC<StrategySettingsPanelProps> = ({
               <div key={key} className="flex items-center gap-3">
                 <div className="w-28 flex-shrink-0">
                   <div className="text-[11px] font-medium text-gray-700">{label}</div>
-                  <div className="text-[9px] text-gray-400 truncate" title={description}>
+                  <div className="text-micro text-gray-400 truncate" title={description}>
                     {description}
                   </div>
                 </div>
@@ -83,7 +83,7 @@ export const StrategySettingsPanel: React.FC<StrategySettingsPanelProps> = ({
                   className="flex-1 h-1.5 accent-blue-600 cursor-pointer"
                   disabled={preset !== 'custom'}
                 />
-                <span className="w-8 text-right text-[10px] font-mono text-gray-500">
+                <span className="w-8 text-right text-xxs font-mono text-gray-500">
                   {weights[key]}
                 </span>
               </div>

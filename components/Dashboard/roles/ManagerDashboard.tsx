@@ -208,7 +208,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
               <Users className="w-4 h-4 text-blue-500" />
             </div>
             <p className="text-2xl font-bold text-[#081429]">{totalStudents}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">재원 {activeStudents}명</p>
+            <p className="text-xxs text-gray-400 mt-0.5">재원 {activeStudents}명</p>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
@@ -217,7 +217,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
               <BookOpen className="w-4 h-4 text-green-500" />
             </div>
             <p className="text-2xl font-bold text-[#081429]">{totalClasses}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">운영 중인 수업</p>
+            <p className="text-xxs text-gray-400 mt-0.5">운영 중인 수업</p>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
@@ -226,7 +226,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
               <Calendar className="w-4 h-4 text-purple-500" />
             </div>
             <p className="text-2xl font-bold text-[#081429]">{todayClasses.length}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{dayOfWeek}요일 수업</p>
+            <p className="text-xxs text-gray-400 mt-0.5">{dayOfWeek}요일 수업</p>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
@@ -235,7 +235,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
               <UserCheck className="w-4 h-4 text-orange-500" />
             </div>
             <p className="text-2xl font-bold text-[#081429]">{teacherStats.length}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">활동 중인 강사</p>
+            <p className="text-xxs text-gray-400 mt-0.5">활동 중인 강사</p>
           </div>
         </div>
 
@@ -334,7 +334,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
                 >
                   <div className="flex items-start justify-between mb-1">
                     <h3 className="text-sm font-bold text-[#081429]">{cls.className}</h3>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    <span className={`text-xxs px-1.5 py-0.5 rounded-full ${
                       cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
                       cls.subject === 'english' ? 'bg-green-100 text-green-700' :
                       cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
@@ -357,7 +357,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      <span className="text-[10px]">
+                      <span className="text-xxs">
                         {filteredSchedule && filteredSchedule.length > 0
                           ? filteredSchedule.map(s => s.day).join(', ')
                           : '시간표 미지정'}

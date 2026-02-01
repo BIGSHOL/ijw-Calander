@@ -72,14 +72,14 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
           <div className="flex items-center gap-0.5">
             {getTrendIcon(trend)}
             {trendValue && (
-              <span className={`text-[10px] font-medium ${getTrendColor(trend)}`}>
+              <span className={`text-xxs font-medium ${getTrendColor(trend)}`}>
                 {trendValue}
               </span>
             )}
           </div>
         )}
         {subValue && (
-          <span className="text-[10px] text-gray-500">{subValue}</span>
+          <span className="text-xxs text-gray-500">{subValue}</span>
         )}
       </div>
     </div>

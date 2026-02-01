@@ -106,7 +106,7 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
                 <div className="text-lg font-bold text-gray-900">
                   {staff.totalCount}
                 </div>
-                <div className="text-[10px] text-gray-500">
+                <div className="text-xxs text-gray-500">
                   /{staff.totalNeeded} ({totalPercentage}%)
                 </div>
               </div>

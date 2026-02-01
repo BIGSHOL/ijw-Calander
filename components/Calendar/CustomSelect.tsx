@@ -43,7 +43,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
           ${className}
         `}
             >
-                <span className={`font-extrabold text-[10px] @xs:text-xs @sm:text-sm tracking-tight group-hover:text-[#fdb813] transition-colors`}>
+                <span className={`font-extrabold text-xxs @xs:text-xs @sm:text-sm tracking-tight group-hover:text-[#fdb813] transition-colors`}>
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>
                 <ChevronDown

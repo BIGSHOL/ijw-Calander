@@ -124,7 +124,7 @@ const StaffSelector: React.FC<StaffSelectorProps> = ({
 
                   return (
                     <div key={role} className="mb-2">
-                      <div className={`text-[10px] text-${roleColor}-400 font-bold px-1.5 py-0.5 border-b border-white/10 mb-0.5`}>
+                      <div className={`text-xxs text-${roleColor}-400 font-bold px-1.5 py-0.5 border-b border-white/10 mb-0.5`}>
                         {role}
                       </div>
                       <div className="grid grid-cols-5 gap-0.5">

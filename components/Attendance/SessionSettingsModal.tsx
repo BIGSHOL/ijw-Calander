@@ -27,7 +27,7 @@ const SessionSettingsModal: React.FC<SessionSettingsModalProps> = ({
           <h2 className="text-sm font-bold flex items-center gap-1.5">
             <Calendar size={16} className="text-[#fdb813]" />
             세션 기간 설정
-            <span className="ml-2 px-1.5 py-0.5 bg-yellow-500 text-[10px] font-bold rounded">관리자</span>
+            <span className="ml-2 px-1.5 py-0.5 bg-yellow-500 text-xxs font-bold rounded">관리자</span>
           </h2>
           <button
             onClick={onClose}

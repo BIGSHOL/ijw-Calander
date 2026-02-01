@@ -69,7 +69,7 @@ const MiniCalendar: React.FC<{
         {DAY_NAMES_SHORT.map((day, idx) => (
           <div
             key={day}
-            className={`text-[9px] font-medium ${
+            className={`text-micro font-medium ${
               idx === 0 ? 'text-red-400' : idx === 6 ? 'text-blue-400' : 'text-gray-400'
             }`}
           >
@@ -97,7 +97,7 @@ const MiniCalendar: React.FC<{
                 onMouseDown(day.dateStr);
               }}
               onMouseEnter={() => onMouseEnter(day.dateStr)}
-              className={`h-5 text-[10px] font-medium rounded-sm transition-colors ${
+              className={`h-5 text-xxs font-medium rounded-sm transition-colors ${
                 isSelected
                   ? 'bg-blue-500 text-white'
                   : isInDrag

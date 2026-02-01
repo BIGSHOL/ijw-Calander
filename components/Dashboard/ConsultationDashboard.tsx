@@ -197,7 +197,7 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
               <div className={`text-lg font-bold ${stats.studentsNeedingConsultation.length > 0 ? 'text-[#fdb813]' : 'text-[#081429]'}`}>
                 {stats.studentsNeedingConsultation.length}명
               </div>
-              <div className="text-[10px] text-[#373d41]">상담 필요</div>
+              <div className="text-xxs text-[#373d41]">상담 필요</div>
             </div>
           </div>
         </div>
@@ -214,7 +214,7 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
               style={{ width: `${percentage}%` }}
             />
           </div>
-          <div className="flex justify-between mt-1 text-[10px] text-[#373d41]">
+          <div className="flex justify-between mt-1 text-xxs text-[#373d41]">
             <span>{consultedSubjectCount}건 완료</span>
             <span>총 {totalSubjectEnrollments}건</span>
           </div>
@@ -334,7 +334,7 @@ const MiniCard: React.FC<MiniCardProps> = ({ icon, label, value, loading, color 
         </div>
         <div>
           <div className="text-base font-bold text-[#081429]">{value}</div>
-          <div className="text-[10px] text-[#373d41]">{label}</div>
+          <div className="text-xxs text-[#373d41]">{label}</div>
         </div>
       </div>
     </div>
@@ -485,7 +485,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#081429]/10 bg-[#fdb813]">
           <div>
             <h3 className="text-sm font-semibold text-[#081429]">상담 필요 학생 ({filteredStudents.length}명)</h3>
-            <p className="text-[10px] text-[#081429]/70">선택 기간 내 상담 미완료</p>
+            <p className="text-xxs text-[#081429]/70">선택 기간 내 상담 미완료</p>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-[#081429]/10 rounded">
             <X className="w-4 h-4 text-[#081429]" />
@@ -499,7 +499,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
             <div className="flex bg-white rounded-md p-0.5 border border-[#081429]/10">
               <button
                 onClick={() => setSubjectFilter('all')}
-                className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                className={`px-2 py-0.5 text-xxs font-medium rounded transition-colors ${
                   subjectFilter === 'all' ? 'bg-[#081429] text-white' : 'text-[#373d41] hover:bg-[#081429]/10'
                 }`}
               >
@@ -507,7 +507,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
               </button>
               <button
                 onClick={() => setSubjectFilter('math')}
-                className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                className={`px-2 py-0.5 text-xxs font-medium rounded transition-colors ${
                   subjectFilter === 'math' ? 'bg-[#081429] text-white' : 'text-[#373d41] hover:bg-[#081429]/10'
                 }`}
               >
@@ -515,7 +515,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
               </button>
               <button
                 onClick={() => setSubjectFilter('english')}
-                className={`px-2 py-0.5 text-[10px] font-medium rounded transition-colors ${
+                className={`px-2 py-0.5 text-xxs font-medium rounded transition-colors ${
                   subjectFilter === 'english' ? 'bg-[#fdb813] text-[#081429]' : 'text-[#373d41] hover:bg-[#081429]/10'
                 }`}
               >
@@ -562,7 +562,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
                 <div key={`${student.studentId}-${student.subject}-${idx}`} className="px-4 py-2 hover:bg-[#081429]/5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-[#081429] min-w-[60px]">{student.studentName}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                    <span className={`text-xxs px-1.5 py-0.5 rounded font-medium ${
                       student.subject === 'math'
                         ? 'bg-[#081429]/10 text-[#081429]'
                         : 'bg-[#fdb813]/30 text-[#081429]'
@@ -570,7 +570,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
                       {student.subject === 'math' ? '수학' : '영어'}
                     </span>
                   </div>
-                  <span className="text-[10px] text-[#373d41]">
+                  <span className="text-xxs text-[#373d41]">
                     {student.lastConsultationDate
                       ? `최근: ${student.lastConsultationDate} (${getDaysSince(student.lastConsultationDate)}일 전)`
                       : '상담 기록 없음'}

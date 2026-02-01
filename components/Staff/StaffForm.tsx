@@ -216,7 +216,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 }`}
               />
               {staff && formData.email && (
-                <p className="text-[10px] text-gray-400 mt-0.5">
+                <p className="text-xxs text-gray-400 mt-0.5">
                   시스템 계정과 연동된 이메일은 변경할 수 없습니다.
                 </p>
               )}
@@ -459,7 +459,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                       ))}
                     </select>
                     {!availableRoles.some(r => r.value === formData.systemRole) && (
-                      <p className="text-[10px] text-amber-600 mt-0.5">
+                      <p className="text-xxs text-amber-600 mt-0.5">
                         현재 역할은 변경할 수 없습니다. (자신보다 낮은 권한만 설정 가능)
                       </p>
                     )}
@@ -482,7 +482,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                     </select>
                   </div>
                 </div>
-                <p className="text-[10px] text-gray-500">
+                <p className="text-xxs text-gray-500">
                   시스템 역할은 앱 내 기능 접근 권한을 결정합니다. 승인 상태가 '승인됨'이어야 로그인이 가능합니다.
                 </p>
               </div>

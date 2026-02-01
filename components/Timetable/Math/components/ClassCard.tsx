@@ -122,14 +122,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
     const isCompact = rowHeight === 'compact';
     // 글자 크기 CSS 클래스 매핑
     const fontSizeClass = {
-        'small': 'text-[9px]',
-        'normal': 'text-[10px]',
+        'small': 'text-micro',
+        'normal': 'text-xxs',
         'large': 'text-[11px]',
         'very-large': 'text-xs'
     }[fontSize];
 
     const titleFontSizeClass = {
-        'small': 'text-[10px]',
+        'small': 'text-xxs',
         'normal': 'text-xs',
         'large': 'text-sm',
         'very-large': 'text-base'
@@ -596,29 +596,29 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             <div className="flex-shrink-0">
                                 {showHoldStudents && (
                                     <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                                        <div className="text-[10px] font-bold text-violet-600">대기 ({commonStudents.hold.length}명)</div>
+                                        <div className="text-xxs font-bold text-violet-600">대기 ({commonStudents.hold.length}명)</div>
                                         {commonStudents.hold.length > 0 ? (
                                             <ul className="flex flex-col">
                                                 {commonStudents.hold.map(s => (
-                                                    <li key={s.id} className="text-[10px] leading-tight text-violet-800 truncate">{s.name}</li>
+                                                    <li key={s.id} className="text-xxs leading-tight text-violet-800 truncate">{s.name}</li>
                                                 ))}
                                             </ul>
                                         ) : (
-                                            <span className="text-[10px] text-violet-300">-</span>
+                                            <span className="text-xxs text-violet-300">-</span>
                                         )}
                                     </div>
                                 )}
                                 {showWithdrawnStudents && (
                                     <div className="px-0.5 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                                        <div className="text-[10px] font-bold text-gray-600">퇴원 ({commonStudents.withdrawn.length}명)</div>
+                                        <div className="text-xxs font-bold text-gray-600">퇴원 ({commonStudents.withdrawn.length}명)</div>
                                         {commonStudents.withdrawn.length > 0 ? (
                                             <ul className="flex flex-col">
                                                 {commonStudents.withdrawn.map(s => (
-                                                    <li key={s.id} className="text-[10px] leading-tight text-gray-700 truncate">{s.name}</li>
+                                                    <li key={s.id} className="text-xxs leading-tight text-gray-700 truncate">{s.name}</li>
                                                 ))}
                                             </ul>
                                         ) : (
-                                            <span className="text-[10px] text-gray-400">-</span>
+                                            <span className="text-xxs text-gray-400">-</span>
                                         )}
                                     </div>
                                 )}
@@ -628,7 +628,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden">
                         <div className="px-0.5 py-0.5">
-                            <div className="text-[10px] font-bold text-indigo-600 mb-0.5">재원생 ({activeStudents.length}명)</div>
+                            <div className="text-xxs font-bold text-indigo-600 mb-0.5">재원생 ({activeStudents.length}명)</div>
                             <ul className="flex flex-col">
                                 {activeStudents.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
@@ -669,17 +669,17 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {/* 대기생 Section */}
                                 {showHoldStudents && (
                                     <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                                        <div className="text-[10px] font-bold text-violet-600">대기 ({holdStudents.length}명)</div>
+                                        <div className="text-xxs font-bold text-violet-600">대기 ({holdStudents.length}명)</div>
                                         {holdStudents.length > 0 ? (
                                             <ul className="flex flex-col">
                                                 {holdStudents.map(s => (
-                                                    <li key={s.id} className="text-[10px] leading-tight text-violet-800 truncate" title={s.name}>
+                                                    <li key={s.id} className="text-xxs leading-tight text-violet-800 truncate" title={s.name}>
                                                         {s.name}
                                                     </li>
                                                 ))}
                                             </ul>
                                         ) : (
-                                            <span className="text-[10px] text-violet-300">-</span>
+                                            <span className="text-xxs text-violet-300">-</span>
                                         )}
                                     </div>
                                 )}
@@ -687,13 +687,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {/* 퇴원생 Section */}
                                 {showWithdrawnStudents && (
                                     <div className="px-0.5 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                                        <div className="text-[10px] font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
+                                        <div className="text-xxs font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
                                         {withdrawnStudents.length > 0 ? (
                                             <ul className="flex flex-col">
                                                 {withdrawnStudents.map(s => (
                                                     <li
                                                         key={s.id}
-                                                        className="text-[10px] leading-tight text-gray-700 truncate"
+                                                        className="text-xxs leading-tight text-gray-700 truncate"
                                                         title={s.withdrawalDate ? `${s.name} (퇴원: ${s.withdrawalDate})` : s.name}
                                                     >
                                                         {s.name}
@@ -701,7 +701,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 ))}
                                             </ul>
                                         ) : (
-                                            <span className="text-[10px] text-gray-400">-</span>
+                                            <span className="text-xxs text-gray-400">-</span>
                                         )}
                                     </div>
                                 )}

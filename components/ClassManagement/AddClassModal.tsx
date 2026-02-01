@@ -353,7 +353,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
               <div className="max-h-56 overflow-y-auto">
                 {/* 헤더 - Sticky */}
                 <div className="grid bg-gray-50 border-b border-gray-200 sticky top-0 z-10" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
-                  <div className="p-1 text-center text-[10px] font-semibold text-gray-400 border-r border-gray-200"></div>
+                  <div className="p-1 text-center text-xxs font-semibold text-gray-400 border-r border-gray-200"></div>
                   {WEEKDAYS.map((day) => (
                     <div key={day} className="p-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200 last:border-r-0">
                       {day}
@@ -368,7 +368,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                     className="grid border-b border-gray-100 last:border-b-0"
                     style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
                   >
-                    <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                    <div className="p-1 text-center text-xxs text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
                       {periodId}
                     </div>
                     {WEEKDAYS.map((day, idx) => {
@@ -397,7 +397,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                           key={key}
                           type="button"
                           onClick={() => toggleSlot(day, periodId)}
-                          className={`p-1 transition-colors text-[10px] min-h-[24px] border-r border-gray-200 last:border-r-0 ${
+                          className={`p-1 transition-colors text-xxs min-h-[24px] border-r border-gray-200 last:border-r-0 ${
                             isSelected
                               ? 'font-semibold'
                               : 'hover:bg-gray-100 text-gray-300'
@@ -418,11 +418,11 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
             {selectedSlots.size > 0 && (
               <div className="mt-1.5 flex items-center justify-between">
-                <p className="text-[10px] text-gray-500">{selectedSlots.size}개 교시 선택</p>
+                <p className="text-xxs text-gray-500">{selectedSlots.size}개 교시 선택</p>
                 <button
                   type="button"
                   onClick={() => setShowAdvancedSchedule(!showAdvancedSchedule)}
-                  className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
+                  className="text-xxs text-blue-600 hover:underline flex items-center gap-0.5"
                 >
                   {showAdvancedSchedule ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                   교시별 강사/강의실 설정
@@ -434,7 +434,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
               <div className="mt-2 space-y-2">
                 {/* 교시별 강사 설정 */}
                 <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200 bg-blue-50 font-semibold">교시별 강사 (비워두면 담임)</p>
+                  <p className="text-xxs text-gray-500 px-2 py-1 border-b border-gray-200 bg-blue-50 font-semibold">교시별 강사 (비워두면 담임)</p>
                   {(() => {
                     const selectedPeriods = new Set<string>();
                     selectedSlots.forEach(key => {
@@ -449,7 +449,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                         className="grid border-b border-gray-100 last:border-b-0"
                         style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
                       >
-                        <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                        <div className="p-1 text-center text-xxs text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
                           {periodId}
                         </div>
                         {WEEKDAYS.map((day) => {
@@ -463,7 +463,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                               <select
                                 value={slotTeachers[key] || ''}
                                 onChange={(e) => setSlotTeacher(key, e.target.value)}
-                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-xxs focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
                               >
                                 <option value="">
                                   {mainTeacher ? (() => {
@@ -491,7 +491,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
                 {/* 교시별 강의실 설정 */}
                 <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200 bg-purple-50 font-semibold">교시별 강의실 (비워두면 기본 강의실)</p>
+                  <p className="text-xxs text-gray-500 px-2 py-1 border-b border-gray-200 bg-purple-50 font-semibold">교시별 강의실 (비워두면 기본 강의실)</p>
                   {(() => {
                     const selectedPeriods = new Set<string>();
                     selectedSlots.forEach(key => {
@@ -506,7 +506,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                         className="grid border-b border-gray-100 last:border-b-0"
                         style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
                       >
-                        <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                        <div className="p-1 text-center text-xxs text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
                           {periodId}
                         </div>
                         {WEEKDAYS.map((day) => {
@@ -522,7 +522,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                                 value={slotRooms[key] || ''}
                                 onChange={(e) => setSlotRoom(key, e.target.value)}
                                 placeholder={room || '-'}
-                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-xxs focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
                               />
                             </div>
                           );
@@ -584,7 +584,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                           className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813]"
                         />
                         <span className="text-gray-800">{student.name}</span>
-                        <span className="text-[10px] text-gray-400">{student.grade}</span>
+                        <span className="text-xxs text-gray-400">{student.grade}</span>
                       </label>
                     ))
                   )}
