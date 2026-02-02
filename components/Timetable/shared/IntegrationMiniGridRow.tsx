@@ -50,22 +50,22 @@ const IntegrationMiniGridRow: React.FC<IntegrationMiniGridRowProps> = ({
     if (onlyTime) {
         // 시간 컬럼만 표시 (sticky용)
         return (
-            <div className="flex border-b border-gray-100 h-[24px]">
-                <div className="w-[48px] border-r border-gray-100 flex flex-col items-center justify-center bg-gray-50 shrink-0 leading-tight py-0.5">
-                    <span className="text-micro font-bold text-gray-700 tracking-tighter">{startTime}</span>
-                    <span className="text-micro text-gray-500 tracking-tighter">~{endTime}</span>
+            <div className="flex border-b border-gray-100 h-[32px]">
+                <div className="w-[48px] border-r border-gray-100 flex flex-col items-center justify-center bg-gray-50 shrink-0 py-0.5">
+                    <span className="text-micro font-bold text-gray-700 tracking-tighter leading-none">{startTime}</span>
+                    <span className="text-micro text-gray-500 tracking-tighter leading-none">~{endTime}</span>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex border-b border-gray-100 h-[24px]">
+        <div className="flex border-b border-gray-100 h-[32px]">
             {/* 시간 컬럼 */}
             {!hideTime && (
-                <div className="w-[48px] border-r border-gray-100 flex flex-col items-center justify-center bg-gray-50 shrink-0 leading-tight py-0.5">
-                    <span className="text-micro font-bold text-gray-700 tracking-tighter">{startTime}</span>
-                    <span className="text-micro text-gray-500 tracking-tighter">~{endTime}</span>
+                <div className="w-[48px] border-r border-gray-100 flex flex-col items-center justify-center bg-gray-50 shrink-0 py-0.5">
+                    <span className="text-micro font-bold text-gray-700 tracking-tighter leading-none">{startTime}</span>
+                    <span className="text-micro text-gray-500 tracking-tighter leading-none">~{endTime}</span>
                 </div>
             )}
 
@@ -112,7 +112,7 @@ const IntegrationMiniGridRow: React.FC<IntegrationMiniGridRowProps> = ({
                         title={displayName}
                     >
                         {cell && !isHidden && (
-                            <span className={`leading-tight line-clamp-2 break-all ${cell.underline ? 'underline italic' : ''}`}>
+                            <span className={`leading-tight whitespace-nowrap ${cell.underline ? 'underline italic' : ''}`}>
                                 {displayName.slice(0, 4)}
                             </span>
                         )}
