@@ -24,6 +24,8 @@ interface EnglishTimetableProps {
     classKeywords?: ClassKeywordColor[];
     currentUser: any;
     studentMap: Record<string, any>;
+    // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
+    currentWeekStart?: Date;
 }
 
 interface ScheduleCell {
@@ -40,7 +42,7 @@ interface ScheduleCell {
 type ScheduleData = Record<string, ScheduleCell>;
 
 // Inner component that uses SimulationContext
-const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap }) => {
+const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart }) => {
     // Removed local activeTab state, using viewType prop
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
@@ -576,6 +578,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
                                 canPublish={isMaster || hasPermission('timetable.english.simulation')}
                                 onSimulationLevelUp={isSimulationMode ? handleSimulationLevelUp : undefined}
+                                currentWeekStart={currentWeekStart}
                             />
                         )}
                         {viewType === 'room' && (

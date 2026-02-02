@@ -50,6 +50,8 @@ interface EnglishClassTabProps {
     onOpenScenarioModal?: () => void;
     canPublish?: boolean;
     onSimulationLevelUp?: (oldName: string, newName: string) => boolean;
+    // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
+    currentWeekStart?: Date;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -72,6 +74,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     onOpenScenarioModal,
     canPublish = false,
     onSimulationLevelUp,
+    currentWeekStart,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -625,6 +628,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                     isTimeColumnOnly={true}
                                                     englishLevels={englishLevels}
                                                     hiddenTeacherList={settings.hiddenTeachers}
+                                                    currentWeekStart={currentWeekStart}
                                                 />
                                             </div>
                                         )}
@@ -672,6 +676,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 } : undefined}
                                                 onRestoreEnrollment={!isSimulationMode ? handleRestoreEnrollment : undefined}
                                                 onEditClass={isSimulationMode ? (classId) => setEditingClassId(classId) : undefined}
+                                                currentWeekStart={currentWeekStart}
                                             />
                                         ))}
                                     </div>
