@@ -948,6 +948,7 @@ const TimetableManager = ({
                     classKeywords={classKeywords}
                     currentUser={currentUser}
                     studentMap={studentMap} // Pass global student map
+                    currentWeekStart={currentMonday}
                 />
             </Suspense>
         );
