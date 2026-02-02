@@ -1,5 +1,5 @@
-import React, { useState, lazy, Suspense } from 'react';
-import { DollarSign, Plus, Filter, Download, Search, Upload } from 'lucide-react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
+import { DollarSign, Plus, Filter, Download, Search, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BillingTable } from './BillingTable';
 import { BillingForm } from './BillingForm';
 import { BillingStats } from './BillingStats';
@@ -22,18 +22,25 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'paid'>('all');
   const [editingRecord, setEditingRecord] = useState<BillingRecord | null>(null);
+  const [pageSize, setPageSize] = useState(20);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { records, isLoading, createRecord, updateRecord, deleteRecord, deleteByMonth, importRecords } =
     useBilling(selectedMonth);
 
   // 필터링된 레코드
-  const filteredRecords = records.filter((record) => {
+  const filteredRecords = useMemo(() => records.filter((record) => {
     const matchesSearch =
       record.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       record.billingName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || record.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }), [records, searchQuery, statusFilter]);
+
+  // 페이지네이션
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedRecords = filteredRecords.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const handleEdit = (record: BillingRecord) => {
     setEditingRecord(record);
@@ -63,6 +70,10 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
       await deleteByMonth.mutateAsync(month);
     }
     await importRecords.mutateAsync(parsedRecords);
+    // import된 데이터의 월로 자동 전환하여 결과가 바로 보이게
+    if (month && month !== selectedMonth) {
+      setSelectedMonth(month);
+    }
   };
 
   return (
@@ -146,11 +157,51 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
       {/* Table */}
       <div className="flex-1 overflow-auto p-6">
         <BillingTable
-          records={filteredRecords}
+          records={paginatedRecords}
           isLoading={isLoading}
           onEdit={handleEdit}
           onDelete={(id) => deleteRecord.mutate(id)}
         />
+
+        {/* Pagination */}
+        {filteredRecords.length > 0 && (
+          <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <span>페이지당</span>
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                className="px-2 py-1 border rounded text-sm"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span>건</span>
+              <span className="ml-2 text-gray-400">
+                (총 {filteredRecords.length}건 중 {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, filteredRecords.length)}건)
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="px-3 py-1">{safePage} / {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Form Modal */}

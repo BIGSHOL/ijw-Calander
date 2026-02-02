@@ -77,20 +77,19 @@ export function useBilling(month?: string) {
   } = useQuery<BillingRecord[]>({
     queryKey: ['billing', month],
     queryFn: async () => {
-      let q;
-      if (month) {
-        q = query(
-          collection(db, COL_BILLING),
-          where('month', '==', month),
-          orderBy('studentName', 'asc')
-        );
-      } else {
-        q = query(collection(db, COL_BILLING), orderBy('month', 'desc'));
-      }
+      const q = month
+        ? query(collection(db, COL_BILLING), where('month', '==', month))
+        : query(collection(db, COL_BILLING));
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map((docSnap) =>
+      const results = snapshot.docs.map((docSnap) =>
         docToBillingRecord(docSnap.id, docSnap.data())
+      );
+      // 클라이언트 정렬 (복합 인덱스 불필요)
+      return results.sort((a, b) =>
+        month
+          ? a.studentName.localeCompare(b.studentName, 'ko')
+          : b.month.localeCompare(a.month)
       );
     },
     staleTime: 1000 * 60 * 5,
@@ -173,11 +172,12 @@ export function useBilling(month?: string) {
   // xlsx 일괄 import
   const importRecords = useMutation({
     mutationFn: async (billingRecords: Omit<BillingRecord, 'id'>[]) => {
+      const now = new Date().toISOString();
       let count = 0;
       let batch = writeBatch(db);
       for (const record of billingRecords) {
         const docRef = doc(collection(db, COL_BILLING));
-        batch.set(docRef, record);
+        batch.set(docRef, { ...record, createdAt: now, updatedAt: now });
         count++;
         if (count % 450 === 0) {
           await batch.commit();
