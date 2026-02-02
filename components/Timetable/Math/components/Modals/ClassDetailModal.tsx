@@ -201,110 +201,140 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                             </div>
                         </div>
 
-                        {/* Student List - 영어 스타일 번호와 배경 */}
-                        <div className="flex-1 overflow-y-auto max-h-[300px] px-4 py-3">
-                            {selectedClass.studentList && selectedClass.studentList.length > 0 ? (
-                                <div className="space-y-1.5">
-                                    {(() => {
-                                        const activeList = selectedClass.studentList.filter(s => !s.withdrawalDate);
-                                        const withdrawnList = selectedClass.studentList.filter(s => {
-                                            if (!s.withdrawalDate) return false;
-                                            const withdrawnDate = new Date(s.withdrawalDate);
-                                            const now = new Date();
-                                            const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
-                                            return daysSinceWithdrawal <= 30;
-                                        });
+                        {/* Student List - IntegrationClassCard 스타일 (재원생/대기/퇴원 섹션) */}
+                        <div className="flex-1 overflow-y-auto max-h-[400px]">
+                            {(() => {
+                                const studentList = selectedClass.studentList || [];
+                                // 재원생: 퇴원 아니고, 휴원 아닌 학생
+                                const activeList = studentList.filter(s => !s.withdrawalDate && !s.onHold);
+                                // 대기: 휴원(onHold) 학생
+                                const holdList = studentList.filter(s => s.onHold && !s.withdrawalDate);
+                                // 퇴원: withdrawalDate가 있고 반이동(isTransferred)이 아닌 학생
+                                const withdrawnList = studentList.filter(s => s.withdrawalDate && !s.isTransferred);
 
-                                        return (
-                                            <>
-                                                {/* 재원생 목록 */}
-                                                {activeList.map((student, idx) => (
-                                                    <div
-                                                        key={student.id}
-                                                        draggable
-                                                        onDragStart={(e) => handleDragStart(e, student.id, selectedClass.id)}
-                                                        className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-grab group transition-colors"
-                                                    >
-                                                        <div className="flex items-center gap-3 flex-1">
-                                                            <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-xxs font-bold flex items-center justify-center shrink-0">
-                                                                {idx + 1}
-                                                            </span>
-                                                            <span className="font-bold text-sm text-[#373d41]">
-                                                                {student.name}
-                                                            </span>
-                                                            {(student.school || student.grade) && (
-                                                                <span className="text-xs text-gray-400">
-                                                                    {formatSchoolGrade(student.school, student.grade)}
+                                return (
+                                    <>
+                                        {/* 재원생 섹션 */}
+                                        <div className="border-b border-indigo-100">
+                                            <div className="bg-indigo-50 text-indigo-600 px-4 py-2 text-sm font-bold flex items-center gap-2">
+                                                <Users size={14} />
+                                                재원생 ({activeList.length}명)
+                                            </div>
+                                            <div className="px-4 py-2 space-y-1 max-h-[180px] overflow-y-auto">
+                                                {activeList.length === 0 ? (
+                                                    <div className="text-center text-gray-300 py-4 text-sm">-</div>
+                                                ) : (
+                                                    activeList.map((student, idx) => (
+                                                        <div
+                                                            key={student.id}
+                                                            draggable
+                                                            onDragStart={(e) => handleDragStart(e, student.id, selectedClass.id)}
+                                                            className="flex items-center justify-between py-1.5 px-2 rounded bg-gray-50 hover:bg-gray-100 cursor-grab group transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-2 flex-1">
+                                                                <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-xxs font-bold flex items-center justify-center shrink-0">
+                                                                    {idx + 1}
                                                                 </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={() => handleWithdrawal(student.id)}
-                                                                className="px-2 py-0.5 text-xxs rounded border border-gray-200 text-gray-400 hover:bg-gray-800 hover:text-white hover:border-gray-800 transition-colors"
-                                                            >
-                                                                퇴원
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleRemoveStudent(student.id)}
-                                                                className="px-2 py-0.5 text-xxs rounded border bg-white text-red-400 border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
-                                                            >
-                                                                삭제
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-
-                                                {/* 퇴원생 목록 (30일 이내) */}
-                                                {withdrawnList.length > 0 && (
-                                                    <div className="mt-6 border-t border-gray-100 pt-4">
-                                                        <div className="flex items-center gap-2 mb-3 px-1">
-                                                            <div className="h-px bg-gray-200 flex-1"></div>
-                                                            <span className="text-xs font-bold text-gray-400">퇴원한 학생 ({withdrawnList.length})</span>
-                                                            <div className="h-px bg-gray-200 flex-1"></div>
-                                                        </div>
-                                                        <div className="opacity-70 grayscale space-y-1">
-                                                            {withdrawnList.map((student) => (
-                                                                <div
-                                                                    key={student.id}
-                                                                    className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50"
+                                                                <span className="font-bold text-sm text-[#373d41]">{student.name}</span>
+                                                                {(student.school || student.grade) && (
+                                                                    <span className="text-xs text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    onClick={() => handleWithdrawal(student.id)}
+                                                                    className="px-2 py-0.5 text-xxs rounded border border-gray-200 text-gray-400 hover:bg-gray-800 hover:text-white hover:border-gray-800 transition-colors"
                                                                 >
-                                                                    <div className="flex items-center gap-3 flex-1">
-                                                                        <span className="font-bold text-sm text-gray-400 line-through">
-                                                                            {student.name}
-                                                                        </span>
-                                                                        {(student.school || student.grade) && (
-                                                                            <span className="text-xs text-gray-400">
-                                                                                {formatSchoolGrade(student.school, student.grade)}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex gap-1">
-                                                                        <button
-                                                                            onClick={() => handleRestoreStudent(student.id)}
-                                                                            className="px-2 py-0.5 text-xxs rounded border transition-colors bg-black text-white border-black hover:bg-gray-800"
-                                                                        >
-                                                                            복구
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleRemoveStudent(student.id)}
-                                                                            className="px-2 py-0.5 text-xxs rounded border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
-                                                                        >
-                                                                            삭제
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
+                                                                    퇴원
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleRemoveStudent(student.id)}
+                                                                    className="px-2 py-0.5 text-xxs rounded border bg-white text-red-400 border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-colors"
+                                                                >
+                                                                    삭제
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    ))
                                                 )}
-                                            </>
-                                        );
-                                    })()}
-                                </div>
-                            ) : (
-                                <div className="text-center text-gray-400 py-8 text-sm">등록된 학생이 없습니다.</div>
-                            )}
+                                            </div>
+                                        </div>
+
+                                        {/* 대기 섹션 (휴원 학생) */}
+                                        <div className="border-b border-pink-200">
+                                            <div className="bg-pink-50 text-pink-600 px-4 py-2 text-sm font-bold">
+                                                대기 ({holdList.length}명)
+                                            </div>
+                                            <div className="bg-pink-50/50 px-4 py-2 space-y-1 max-h-[100px] overflow-y-auto">
+                                                {holdList.length === 0 ? (
+                                                    <div className="text-center text-pink-300 py-2 text-sm">-</div>
+                                                ) : (
+                                                    holdList.map((student) => (
+                                                        <div
+                                                            key={student.id}
+                                                            className="flex items-center justify-between py-1.5 px-2 rounded bg-amber-50 text-amber-800 group"
+                                                        >
+                                                            <div className="flex items-center gap-2 flex-1">
+                                                                <span className="font-medium text-sm">{student.name}</span>
+                                                                {(student.school || student.grade) && (
+                                                                    <span className="text-xs text-amber-600">{formatSchoolGrade(student.school, student.grade)}</span>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleRestoreStudent(student.id)}
+                                                                className="px-2 py-0.5 text-xxs rounded bg-amber-600 text-white hover:bg-amber-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                복구
+                                                            </button>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* 퇴원 섹션 */}
+                                        <div>
+                                            <div className="bg-gray-100 text-gray-600 px-4 py-2 text-sm font-bold">
+                                                퇴원 ({withdrawnList.length}명)
+                                            </div>
+                                            <div className="bg-gray-50 px-4 py-2 space-y-1 max-h-[100px] overflow-y-auto">
+                                                {withdrawnList.length === 0 ? (
+                                                    <div className="text-center text-gray-300 py-2 text-sm">-</div>
+                                                ) : (
+                                                    withdrawnList.map((student) => (
+                                                        <div
+                                                            key={student.id}
+                                                            className="flex items-center justify-between py-1.5 px-2 rounded bg-black text-white group"
+                                                            title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
+                                                        >
+                                                            <div className="flex items-center gap-2 flex-1">
+                                                                <span className="font-medium text-sm">{student.name}</span>
+                                                                {(student.school || student.grade) && (
+                                                                    <span className="text-xs text-gray-300">{formatSchoolGrade(student.school, student.grade)}</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    onClick={() => handleRestoreStudent(student.id)}
+                                                                    className="px-2 py-0.5 text-xxs rounded bg-yellow-500 text-black hover:bg-yellow-400"
+                                                                >
+                                                                    복구
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleRemoveStudent(student.id)}
+                                                                    className="px-2 py-0.5 text-xxs rounded bg-red-600 text-white hover:bg-red-500"
+                                                                >
+                                                                    삭제
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    </>
+                                );
+                            })()}
                         </div>
                     </>
                 )}

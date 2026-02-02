@@ -31,6 +31,10 @@ export interface MonthlySettlement {
   hasRetention: boolean;
   otherAmount: number;
   note: string;
+  // 정산 확정 관련 필드
+  isFinalized?: boolean;           // 확정 여부
+  finalizedAt?: string;            // 확정 일시 (ISO string)
+  salaryConfig?: SalaryConfig;     // 확정 시점의 급여 설정 스냅샷
 }
 
 export type AttendanceSubject = 'math' | 'english';

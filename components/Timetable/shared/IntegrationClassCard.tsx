@@ -148,6 +148,8 @@ interface IntegrationClassCardProps {
     useInjaePeriod?: boolean;
     onRestoreEnrollment?: (studentId: string, className: string) => void;  // 수업 종료 취소
     onEditClass?: (classId: string) => void;  // 시뮬레이션 모드 수업 편집
+    // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
+    currentWeekStart?: Date;  // 현재 보고 있는 주의 시작일 (월요일)
 }
 
 // 주말 실제 시간대 (영어용)
@@ -186,6 +188,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     useInjaePeriod = false,
     onRestoreEnrollment,
     onEditClass,
+    currentWeekStart,
 }) => {
     const cardWidthClass = isTimeColumnOnly ? 'w-[49px]' : (hideTime ? 'w-[160px]' : 'w-[190px]');
     const isEnglish = subject === 'english';
@@ -356,15 +359,23 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     }, [classStudentData]);
 
     // 학생 목록 업데이트 (moveChanges 반영)
-    const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+    // currentWeekStart가 있으면 해당 주의 시작일 기준, 없으면 오늘 기준
+    const referenceDate = useMemo(() => {
+        if (currentWeekStart) {
+            return currentWeekStart.toISOString().split('T')[0];
+        }
+        return new Date().toISOString().split('T')[0];
+    }, [currentWeekStart]);
 
     useEffect(() => {
         let currentList = [...students];
 
-        // 배정 예정 학생 마킹 (enrollmentDate > today)
+        // 배정 예정 학생 마킹 (enrollmentDate > referenceDate)
+        // 퇴원 예정 학생 마킹 (withdrawalDate가 있고 referenceDate보다 이후)
         currentList = currentList.map(s => ({
             ...s,
-            isScheduled: s.enrollmentDate ? s.enrollmentDate > today : false
+            isScheduled: s.enrollmentDate ? s.enrollmentDate > referenceDate : false,
+            isWithdrawalScheduled: s.withdrawalDate ? s.withdrawalDate > referenceDate : false
         }));
 
         if (moveChanges) {
@@ -383,20 +394,34 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
             });
         }
 
-        // 활성 학생 수 계산 (배정 예정 제외)
-        const activeCount = currentList.filter(s => !s.withdrawalDate && !s.onHold && !(s as any).isScheduled).length;
+        // 활성 학생 수 계산 (배정 예정 제외, 퇴원 예정 학생은 아직 활성으로 표시)
+        const activeCount = currentList.filter(s =>
+            (!s.withdrawalDate || (s as any).isWithdrawalScheduled) &&
+            !s.onHold &&
+            !(s as any).isScheduled
+        ).length;
         setStudentCount(activeCount);
         setDisplayStudents(currentList);
-    }, [students, moveChanges, classInfo.name, today]);
+    }, [students, moveChanges, classInfo.name, referenceDate]);
 
     // 배정 예정 학생 (미래 enrollmentDate)
     const scheduledStudents = displayStudents.filter(s => (s as any).isScheduled && !s.withdrawalDate);
-    // 활성 학생 (배정 예정 제외)
-    const activeStudents = displayStudents.filter(s => !s.withdrawalDate && !s.onHold && !(s as any).isScheduled);
+    // 퇴원 예정 학생 (withdrawalDate가 있지만 아직 미래인 경우)
+    const withdrawalScheduledStudents = displayStudents.filter(s => (s as any).isWithdrawalScheduled && !s.isTransferred);
+    // 활성 학생 (배정 예정 제외, 퇴원 예정은 활성에 포함하되 마킹)
+    const activeStudents = displayStudents.filter(s =>
+        (!s.withdrawalDate || (s as any).isWithdrawalScheduled) &&
+        !s.onHold &&
+        !(s as any).isScheduled
+    );
     // 대기 학생 (onHold)
     const holdStudents = displayStudents.filter(s => s.onHold && !s.withdrawalDate && !(s as any).isScheduled);
-    // 퇴원 학생 (반이동은 제외 - 다른 반에 활성 등록이 있는 경우)
-    const withdrawnStudents = displayStudents.filter(s => s.withdrawalDate && !s.isTransferred);
+    // 퇴원 학생 (이미 퇴원한 학생만, 퇴원 예정 제외, 반이동은 제외)
+    const withdrawnStudents = displayStudents.filter(s =>
+        s.withdrawalDate &&
+        !(s as any).isWithdrawalScheduled &&
+        !s.isTransferred
+    );
 
     // 신입생 판별 (영어용)
     const isNewStudent = (enrollmentDate: string): number => {
@@ -448,10 +473,12 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         });
     }, [activeStudents, isEnglish, classInfo.finalDays]);
 
-    const getRowStyle = (student: TimetableStudent & { isTempMoved?: boolean; isMoved?: boolean }) => {
+    const getRowStyle = (student: TimetableStudent & { isTempMoved?: boolean; isMoved?: boolean; isWithdrawalScheduled?: boolean }) => {
         if (student.isTempMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
         if (student.isMoved && student.underline) return { className: 'bg-green-50 ring-1 ring-green-300', textClass: 'underline decoration-blue-600 text-green-800 font-bold underline-offset-2', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
         if (student.isMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
+        // 퇴원 예정 학생 - 주황색 배경에 취소선
+        if ((student as any).isWithdrawalScheduled) return { className: 'bg-orange-100 ring-1 ring-orange-300', textClass: 'text-orange-800 line-through', subTextClass: 'text-orange-600', englishTextClass: 'text-orange-600' };
         // 반이동 학생 (다른 반에서 이동해 온 학생) - 초록 배경에 검은 글씨
         if (student.isTransferredIn) return { className: 'bg-green-200', textClass: 'text-gray-900 font-bold', subTextClass: 'text-gray-700', englishTextClass: 'text-gray-700' };
         if (student.underline) return { className: 'bg-blue-50', textClass: 'underline decoration-blue-600 text-blue-600 underline-offset-2', subTextClass: 'text-blue-500', englishTextClass: 'text-blue-600' };

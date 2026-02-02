@@ -723,3 +723,290 @@ exports.decryptPhoneNumbers = functions
         return { decrypted };
     });
 
+/**
+ * =========================================================
+ * Cloud Function: Auto-Apply Scheduled Scenarios
+ * =========================================================
+ * Triggered daily at midnight (KST).
+ * Finds scenarios with scheduledApplyStatus='pending' and
+ * scheduledApplyDate=today, then applies them to live data.
+ *
+ * Logic mirrors the client-side publishToLive function:
+ * - Keep class IDs (merge: true)
+ * - Update class data (className, teacher, room, schedule)
+ * - Handle student enrollments (add/remove/move with history)
+ */
+exports.applyScheduledScenarios = functions
+    .region("asia-northeast3")
+    .pubsub.schedule("0 0 * * *") // Every day at midnight
+    .timeZone("Asia/Seoul")
+    .onRun(async (context) => {
+        logger.info("[applyScheduledScenarios] Started.");
+
+        try {
+            // 1. Get today's date in YYYY-MM-DD format (KST)
+            const now = new Date();
+            const kstOffset = 9 * 60 * 60 * 1000; // UTC+9
+            const kstDate = new Date(now.getTime() + kstOffset);
+            const today = kstDate.toISOString().split("T")[0];
+
+            logger.info(`[applyScheduledScenarios] Today (KST): ${today}`);
+
+            // 2. Query scenarios with pending status and today's date
+            const scenariosSnapshot = await db.collection("english_scenarios")
+                .where("scheduledApplyStatus", "==", "pending")
+                .where("scheduledApplyDate", "==", today)
+                .get();
+
+            if (scenariosSnapshot.empty) {
+                logger.info("[applyScheduledScenarios] No scenarios scheduled for today.");
+                return null;
+            }
+
+            logger.info(`[applyScheduledScenarios] Found ${scenariosSnapshot.size} scenario(s) to apply.`);
+
+            // 3. Process each scheduled scenario
+            for (const scenarioDoc of scenariosSnapshot.docs) {
+                const scenario = scenarioDoc.data();
+                const scenarioId = scenarioDoc.id;
+
+                logger.info(`[applyScheduledScenarios] Processing: ${scenario.name} (${scenarioId})`);
+
+                try {
+                    await applyScenarioToLive(scenarioId, scenario);
+
+                    // Update scenario status to 'applied'
+                    await scenarioDoc.ref.update({
+                        scheduledApplyStatus: "applied",
+                        scheduledApplyResult: {
+                            appliedAt: new Date().toISOString(),
+                            appliedBy: "system (scheduled)",
+                        },
+                    });
+
+                    logger.info(`[applyScheduledScenarios] Successfully applied: ${scenario.name}`);
+                } catch (applyError) {
+                    logger.error(`[applyScheduledScenarios] Failed to apply ${scenario.name}:`, applyError);
+
+                    // Update scenario status to 'failed'
+                    await scenarioDoc.ref.update({
+                        scheduledApplyStatus: "failed",
+                        scheduledApplyResult: {
+                            appliedAt: new Date().toISOString(),
+                            appliedBy: "system (scheduled)",
+                            error: applyError.message || "Unknown error",
+                        },
+                    });
+                }
+            }
+
+            logger.info("[applyScheduledScenarios] Completed.");
+        } catch (error) {
+            logger.error("[applyScheduledScenarios] Error:", error);
+        }
+
+        return null;
+    });
+
+/**
+ * Helper: Apply a scenario to live data
+ * Mirrors the client-side publishToLive logic
+ */
+async function applyScenarioToLive(scenarioId, scenario) {
+    const scenarioClasses = scenario.classes || {};
+    const scenarioEnrollments = scenario.enrollments || {};
+
+    const today = new Date().toISOString().split("T")[0];
+
+    // 1. Get current live classes
+    const liveClassesSnapshot = await db.collection("classes")
+        .where("subject", "==", "english")
+        .get();
+
+    const liveClassIds = new Set();
+    const liveClasses = {};
+    liveClassesSnapshot.docs.forEach(doc => {
+        liveClassIds.add(doc.id);
+        liveClasses[doc.id] = doc.data();
+    });
+
+    const scenarioClassIds = new Set(Object.keys(scenarioClasses));
+
+    // 2. Update classes (merge: true to keep existing fields like isActive, createdAt)
+    const classBatch = db.batch();
+    for (const [classId, classData] of Object.entries(scenarioClasses)) {
+        const classRef = db.collection("classes").doc(classId);
+        classBatch.set(classRef, {
+            ...classData,
+            updatedAt: new Date().toISOString(),
+        }, { merge: true });
+    }
+    await classBatch.commit();
+
+    logger.info(`[applyScenarioToLive] Updated ${Object.keys(scenarioClasses).length} classes.`);
+
+    // 3. Build enrollment maps
+    // 현재 실시간 enrollments 맵
+    const existingEnrollmentsSnapshot = await db.collectionGroup("enrollments")
+        .where("subject", "==", "english")
+        .get();
+
+    // Detect class renames (same classId, different className)
+    const renamedClasses = {}; // oldClassName -> newClassName
+    for (const [classId, liveClass] of Object.entries(liveClasses)) {
+        const scenarioClass = scenarioClasses[classId];
+        if (scenarioClass && liveClass.className !== scenarioClass.className) {
+            renamedClasses[liveClass.className] = scenarioClass.className;
+        }
+    }
+
+    // Live enrollments: studentId -> { className, docRef, data }
+    const liveStudentEnrollments = {};
+    existingEnrollmentsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        // Only process active enrollments (no endDate)
+        if (!data.endDate) {
+            const studentId = doc.ref.parent.parent?.id;
+            if (studentId) {
+                liveStudentEnrollments[studentId] = {
+                    className: data.className,
+                    docRef: doc.ref,
+                    data,
+                };
+            }
+        }
+    });
+
+    // Scenario enrollments: studentId -> className
+    const scenarioStudentEnrollments = {};
+    for (const [className, students] of Object.entries(scenarioEnrollments)) {
+        for (const studentId of Object.keys(students)) {
+            scenarioStudentEnrollments[studentId] = className;
+        }
+    }
+
+    // 4. Categorize changes
+    const toEndDate = []; // Set endDate on existing enrollment
+    const toCreate = []; // Create new enrollment
+    const toRename = []; // Class rename (delete + create with same startDate)
+
+    // Process existing students
+    for (const [studentId, liveInfo] of Object.entries(liveStudentEnrollments)) {
+        const newClassName = scenarioStudentEnrollments[studentId];
+
+        if (!newClassName) {
+            // Student removed from scenario
+            toEndDate.push({ docRef: liveInfo.docRef });
+        } else if (newClassName !== liveInfo.className) {
+            // Check if this is a class rename or actual transfer
+            if (renamedClasses[liveInfo.className] === newClassName) {
+                // Class rename (level-up) - preserve startDate
+                toRename.push({
+                    docRef: liveInfo.docRef,
+                    studentId,
+                    oldClassName: liveInfo.className,
+                    newClassName,
+                    data: liveInfo.data,
+                });
+            } else {
+                // Actual transfer - end old, create new
+                toEndDate.push({ docRef: liveInfo.docRef });
+                const newEnrollment = scenarioEnrollments[newClassName]?.[studentId];
+                if (newEnrollment) {
+                    toCreate.push({
+                        studentId,
+                        className: newClassName,
+                        data: {
+                            ...newEnrollment,
+                            subject: "english",
+                            className: newClassName,
+                            startDate: today,
+                        },
+                    });
+                }
+            }
+        }
+        // If same class, no change needed
+    }
+
+    // Process new students (not in live)
+    for (const [studentId, className] of Object.entries(scenarioStudentEnrollments)) {
+        if (!liveStudentEnrollments[studentId]) {
+            const newEnrollment = scenarioEnrollments[className]?.[studentId];
+            if (newEnrollment) {
+                toCreate.push({
+                    studentId,
+                    className,
+                    data: {
+                        ...newEnrollment,
+                        subject: "english",
+                        className,
+                        startDate: today,
+                    },
+                });
+            }
+        }
+    }
+
+    // 5. Execute batched updates
+    // Rename batch (delete old + create new with same startDate)
+    for (let i = 0; i < toRename.length; i += 250) {
+        const batch = db.batch();
+        const chunk = toRename.slice(i, i + 250);
+        for (const item of chunk) {
+            batch.delete(item.docRef);
+            const newRef = db.collection("students").doc(item.studentId)
+                .collection("enrollments").doc(`english_${item.newClassName}`);
+            const newData = { ...item.data };
+            newData.className = item.newClassName;
+            delete newData.endDate;
+            delete newData.withdrawalDate;
+            batch.set(newRef, sanitizeObject(newData));
+        }
+        await batch.commit();
+    }
+
+    // End date batch
+    for (let i = 0; i < toEndDate.length; i += 500) {
+        const batch = db.batch();
+        const chunk = toEndDate.slice(i, i + 500);
+        for (const item of chunk) {
+            batch.update(item.docRef, {
+                endDate: today,
+                withdrawalDate: today,
+            });
+        }
+        await batch.commit();
+    }
+
+    // Create batch
+    for (let i = 0; i < toCreate.length; i += 500) {
+        const batch = db.batch();
+        const chunk = toCreate.slice(i, i + 500);
+        for (const item of chunk) {
+            const ref = db.collection("students").doc(item.studentId)
+                .collection("enrollments").doc(`english_${item.className}`);
+            batch.set(ref, sanitizeObject(item.data));
+        }
+        await batch.commit();
+    }
+
+    logger.info(`[applyScenarioToLive] Enrollments: ${toRename.length} renamed, ${toEndDate.length} ended, ${toCreate.length} created.`);
+}
+
+/**
+ * Helper: Remove undefined values from object (Firestore doesn't accept undefined)
+ */
+function sanitizeObject(obj) {
+    const result = {};
+    for (const [key, value] of Object.entries(obj)) {
+        if (value === undefined) continue;
+        if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+            result[key] = sanitizeObject(value);
+        } else {
+            result[key] = value;
+        }
+    }
+    return result;
+}
+

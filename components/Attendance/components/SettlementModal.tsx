@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { IncentiveConfig, MonthlySettlement } from '../types';
+import { IncentiveConfig, MonthlySettlement, SalaryConfig } from '../types';
 import { formatCurrency } from '../utils';
-import { X, Gift, CheckCircle2, Circle, Calculator, Coins } from 'lucide-react';
+import { X, Gift, CheckCircle2, Circle, Calculator, Coins, Lock, Unlock, AlertTriangle } from 'lucide-react';
 
 interface Props {
     isOpen: boolean;
@@ -10,14 +10,16 @@ interface Props {
     baseSalary: number;
     droppedStudentRate: number;
     incentiveConfig: IncentiveConfig;
+    salaryConfig: SalaryConfig;  // 현재 전역 급여 설정 (스냅샷용)
     data: MonthlySettlement;
     onUpdate: (data: MonthlySettlement) => void;
 }
 
 const SettlementModal: React.FC<Props> = ({
-    isOpen, onClose, monthStr, baseSalary, droppedStudentRate, incentiveConfig, data, onUpdate
+    isOpen, onClose, monthStr, baseSalary, droppedStudentRate, incentiveConfig, salaryConfig, data, onUpdate
 }) => {
     const [localData, setLocalData] = useState<MonthlySettlement>(data);
+    const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
 
     useEffect(() => {
         setLocalData(data);
@@ -25,7 +27,10 @@ const SettlementModal: React.FC<Props> = ({
 
     if (!isOpen) return null;
 
+    const isFinalized = localData.isFinalized === true;
+
     const handleToggle = (field: 'hasBlog' | 'hasRetention') => {
+        // 인센티브 토글은 확정 후에도 수정 가능 (급여 단가/비율만 잠금)
         setLocalData(prev => {
             const newData = { ...prev, [field]: !prev[field] };
             onUpdate(newData);
@@ -34,11 +39,38 @@ const SettlementModal: React.FC<Props> = ({
     };
 
     const handleChange = (field: keyof MonthlySettlement, value: any) => {
+        // 기타 인센티브/메모는 확정 후에도 수정 가능 (급여 단가/비율만 잠금)
         setLocalData(prev => {
             const newData = { ...prev, [field]: value };
             onUpdate(newData);
             return newData;
         });
+    };
+
+    // 정산 확정하기
+    const handleFinalize = () => {
+        const finalizedData: MonthlySettlement = {
+            ...localData,
+            isFinalized: true,
+            finalizedAt: new Date().toISOString(),
+            salaryConfig: salaryConfig, // 현재 전역 설정 스냅샷 저장
+        };
+        onUpdate(finalizedData);
+        setLocalData(finalizedData);
+        setShowFinalizeConfirm(false);
+    };
+
+    // 확정 해제하기
+    const handleUnfinalize = () => {
+        if (!confirm('정산 확정을 해제하시겠습니까?\n\n해제하면 현재 전역 급여 설정으로 다시 계산됩니다.')) return;
+        const unfinalizedData: MonthlySettlement = {
+            ...localData,
+            isFinalized: false,
+            finalizedAt: undefined,
+            salaryConfig: undefined,
+        };
+        onUpdate(unfinalizedData);
+        setLocalData(unfinalizedData);
     }
 
     // Calculate Totals
@@ -172,6 +204,79 @@ const SettlementModal: React.FC<Props> = ({
                                 {formatCurrency(finalTotal)}
                             </span>
                         </div>
+                    </div>
+
+                    {/* Finalization Status & Actions */}
+                    <div className="pt-4 border-t border-gray-200 mt-4">
+                        {isFinalized ? (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                                    <Lock className="text-green-600" size={20} />
+                                    <div className="flex-1">
+                                        <p className="font-bold text-green-700">정산 확정됨</p>
+                                        <p className="text-xs text-green-600">
+                                            {localData.finalizedAt && new Date(localData.finalizedAt).toLocaleDateString('ko-KR', {
+                                                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                            })}
+                                        </p>
+                                    </div>
+                                </div>
+                                {localData.salaryConfig && (
+                                    <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                                        <p className="font-medium mb-1">적용된 급여 설정:</p>
+                                        <p>수수료: {localData.salaryConfig.academyFee}%</p>
+                                        <p>과정: {localData.salaryConfig.items.map(i => `${i.name} ${formatCurrency(i.fixedRate)}`).join(', ')}</p>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={handleUnfinalize}
+                                    className="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                                >
+                                    <Unlock size={18} />
+                                    확정 해제
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                    <AlertTriangle className="text-amber-600" size={20} />
+                                    <div className="flex-1">
+                                        <p className="font-bold text-amber-700">미확정</p>
+                                        <p className="text-xs text-amber-600">급여 설정 변경 시 이 달의 계산도 변경됩니다.</p>
+                                    </div>
+                                </div>
+                                {showFinalizeConfirm ? (
+                                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 space-y-2">
+                                        <p className="text-sm text-blue-800">
+                                            <strong>정산을 확정하시겠습니까?</strong><br />
+                                            현재 급여 설정이 이 달에 고정되어, 이후 설정 변경에 영향받지 않습니다.
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleFinalize}
+                                                className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors"
+                                            >
+                                                확정하기
+                                            </button>
+                                            <button
+                                                onClick={() => setShowFinalizeConfirm(false)}
+                                                className="flex-1 py-2 px-3 bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium text-sm border border-gray-300 transition-colors"
+                                            >
+                                                취소
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => setShowFinalizeConfirm(true)}
+                                        className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                                    >
+                                        <Lock size={18} />
+                                        정산 확정하기
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

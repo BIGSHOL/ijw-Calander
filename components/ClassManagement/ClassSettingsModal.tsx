@@ -189,6 +189,8 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                 textColor: newKeywordTextColor,
                 order: classKeywords.length
             });
+            // 캐시 무효화 - 시간표 즉시 반영
+            queryClient.invalidateQueries({ queryKey: ['classKeywords'] });
             setNewKeyword('');
             setNewKeywordBgColor('#fee2e2');
             setNewKeywordTextColor('#dc2626');
@@ -215,6 +217,8 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                 textColor: editTextColor,
                 order: existing?.order ?? 999
             }, { merge: true });
+            // 캐시 무효화 - 시간표 즉시 반영
+            queryClient.invalidateQueries({ queryKey: ['classKeywords'] });
             setEditingId(null);
         } catch (e) {
             console.error(e);
@@ -233,6 +237,8 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
         if (!confirm(`'${keyword}' 키워드를 삭제하시겠습니까?`)) return;
         try {
             await deleteDoc(doc(db, 'classKeywords', id));
+            // 캐시 무효화 - 시간표 즉시 반영
+            queryClient.invalidateQueries({ queryKey: ['classKeywords'] });
         } catch (e) {
             console.error(e);
             alert('삭제 실패');
