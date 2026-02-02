@@ -50,7 +50,7 @@ const IntegrationMiniGridRow: React.FC<IntegrationMiniGridRowProps> = ({
     if (onlyTime) {
         // 시간 컬럼만 표시 (sticky용)
         return (
-            <div className="flex border-b border-gray-100 h-[32px]">
+            <div className="flex border-b border-gray-100 h-[24px]">
                 <div className="w-[48px] border-r border-gray-100 flex flex-col items-center justify-center bg-gray-50 shrink-0 py-0.5">
                     <span className="text-micro font-bold text-gray-700 tracking-tighter leading-none">{startTime}</span>
                     <span className="text-micro text-gray-500 tracking-tighter leading-none">~{endTime}</span>
@@ -60,7 +60,7 @@ const IntegrationMiniGridRow: React.FC<IntegrationMiniGridRowProps> = ({
     }
 
     return (
-        <div className="flex border-b border-gray-100 h-[32px]">
+        <div className="flex border-b border-gray-100 h-[24px]">
             {/* 시간 컬럼 */}
             {!hideTime && (
                 <div className="w-[48px] border-r border-gray-100 flex flex-col items-center justify-center bg-gray-50 shrink-0 py-0.5">
