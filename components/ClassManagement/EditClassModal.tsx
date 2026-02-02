@@ -10,16 +10,7 @@ import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useSimulationOptional } from '../Timetable/English/context/SimulationContext';
-
-interface ScenarioClass {
-  id?: string;
-  className: string;
-  teacher: string;
-  schedule: { day: string; periodId: string }[];
-  room: string;
-  slotTeachers?: Record<string, string>;
-  slotRooms?: Record<string, string>;
-}
+import { ScenarioClass } from '../Timetable/English/englishUtils';
 
 interface EditClassModalProps {
   classInfo: ClassInfo;
@@ -57,13 +48,6 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const [studentUnderlines, setStudentUnderlines] = useState<Record<string, boolean>>({});  // 학생별 밑줄 강조 (영어용)
   const [studentSlotTeachers, setStudentSlotTeachers] = useState<Record<string, boolean>>({});  // 학생별 부담임 여부 (수학용)
   const [studentStartDates, setStudentStartDates] = useState<Record<string, string>>({});  // 학생별 시작일 (YYYY-MM-DD)
-  const [studentEndDates, setStudentEndDates] = useState<Record<string, string>>({});  // 학생별 종료 예정일 (YYYY-MM-DD)
-  const [endDatePickerOpen, setEndDatePickerOpen] = useState<string | null>(null);  // 종료일 선택기가 열린 학생 ID
-
-  // 반이동 관련 state
-  const [transferMode, setTransferMode] = useState<Record<string, 'add' | 'transfer'>>({});  // 학생별 추가/반이동 선택
-  const [transferFromClass, setTransferFromClass] = useState<Record<string, string>>({});  // 반이동 시 이전 수업명
-  const [showTransferChoice, setShowTransferChoice] = useState<string | null>(null);  // 추가/반이동 선택 UI 표시 중인 학생
 
   const [error, setError] = useState('');
 
@@ -162,30 +146,6 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     if (!allStudents) return [];
     return allStudents.filter(s => studentsToAdd.has(s.id));
   }, [allStudents, studentsToAdd]);
-
-  // 학생의 같은 과목 기존 수업 찾기 (현재 수업 제외)
-  const findExistingSubjectClass = (studentId: string): string | null => {
-    const student = allStudents?.find(s => s.id === studentId);
-    if (!student || !student.enrollments) return null;
-
-    // enrollments에서 현재 과목과 같고, 현재 수업이 아닌 활성 enrollment 찾기
-    for (const enrollment of student.enrollments) {
-      // 이미 종료된 enrollment는 제외
-      if (enrollment.endDate) continue;
-      // 현재 수업과 같은 수업은 제외
-      if (enrollment.className === classInfo.className) continue;
-      // 같은 과목인지 확인 (enrollment.subject 또는 수업 목록에서 확인)
-      const enrolledClass = existingClasses?.find(c => c.className === enrollment.className);
-      if (enrolledClass && enrolledClass.subject === classInfo.subject) {
-        return enrollment.className;
-      }
-      // enrollment에 subject 필드가 있는 경우
-      if (enrollment.subject === classInfo.subject) {
-        return enrollment.className;
-      }
-    }
-    return null;
-  };
 
   // 담임 강사 자동 매칭 (staff 데이터 로드 후)
   useEffect(() => {
@@ -295,67 +255,25 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     setSlotRooms(prev => ({ ...prev, [key]: roomName }));
   };
 
-  // 학생 추가 토글 (기존 같은 과목 수업 확인)
+  // 학생 추가 토글
   const toggleAddStudent = (studentId: string) => {
     const newSet = new Set(studentsToAdd);
     if (newSet.has(studentId)) {
-      // 추가 취소
       newSet.delete(studentId);
-      // 관련 데이터 제거
+      // 시작일도 제거
       setStudentStartDates(prev => {
         const { [studentId]: _, ...rest } = prev;
         return rest;
       });
-      setTransferMode(prev => {
-        const { [studentId]: _, ...rest } = prev;
-        return rest;
-      });
-      setTransferFromClass(prev => {
-        const { [studentId]: _, ...rest } = prev;
-        return rest;
-      });
-      setShowTransferChoice(null);
     } else {
-      // 같은 과목 기존 수업 확인
-      const existingClass = findExistingSubjectClass(studentId);
-      if (existingClass) {
-        // 기존 수업 있음 → 선택 UI 표시
-        setTransferFromClass(prev => ({ ...prev, [studentId]: existingClass }));
-        setShowTransferChoice(studentId);
-      } else {
-        // 기존 수업 없음 → 바로 추가
-        newSet.add(studentId);
-        setStudentStartDates(prev => ({
-          ...prev,
-          [studentId]: new Date().toISOString().split('T')[0]
-        }));
-      }
+      newSet.add(studentId);
+      // 기본 시작일: 오늘
+      setStudentStartDates(prev => ({
+        ...prev,
+        [studentId]: new Date().toISOString().split('T')[0]
+      }));
     }
     setStudentsToAdd(newSet);
-  };
-
-  // 추가/반이동 선택 처리
-  const handleTransferChoice = (studentId: string, choice: 'add' | 'transfer') => {
-    const today = new Date().toISOString().split('T')[0];
-
-    setStudentsToAdd(prev => new Set([...prev, studentId]));
-    setTransferMode(prev => ({ ...prev, [studentId]: choice }));
-    setStudentStartDates(prev => ({ ...prev, [studentId]: today }));
-
-    if (choice === 'transfer') {
-      // 반이동: 기존 수업 종료일도 오늘로 설정 (handleSave에서 처리)
-    }
-
-    setShowTransferChoice(null);
-  };
-
-  // 선택 취소
-  const cancelTransferChoice = (studentId: string) => {
-    setTransferFromClass(prev => {
-      const { [studentId]: _, ...rest } = prev;
-      return rest;
-    });
-    setShowTransferChoice(null);
   };
 
   // 기존 학생 제거 토글
@@ -374,16 +292,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     const newSet = new Set(studentsToAdd);
     newSet.delete(studentId);
     setStudentsToAdd(newSet);
-    // 관련 데이터 제거
+    // 시작일도 제거
     setStudentStartDates(prev => {
-      const { [studentId]: _, ...rest } = prev;
-      return rest;
-    });
-    setTransferMode(prev => {
-      const { [studentId]: _, ...rest } = prev;
-      return rest;
-    });
-    setTransferFromClass(prev => {
       const { [studentId]: _, ...rest } = prev;
       return rest;
     });
@@ -538,8 +448,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         // 1. 수업 정보 업데이트
         await updateClassMutation.mutateAsync(updateData);
 
-        // 2. 학생 추가/제거/등원요일/밑줄/부담임/종료일 변경이 있으면 처리
-        const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0 || Object.keys(studentEndDates).length > 0;
+        // 2. 학생 추가/제거/등원요일/밑줄/부담임 변경이 있으면 처리
+        const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0;
         if (hasStudentChanges) {
           await manageStudentsMutation.mutateAsync({
             className: className.trim(),
@@ -552,10 +462,6 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
             studentUnderlines,
             studentSlotTeachers,
             studentStartDates,  // 학생별 시작일 전달
-            studentEndDates,    // 학생별 종료 예정일 전달
-            // 반이동 정보 전달
-            transferMode,
-            transferFromClass,
           });
         }
 
@@ -719,13 +625,464 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
             </div>
           )}
 
-          {/* Rest of the component remains the same... */}
-          {/* For brevity, I'm truncating here as the rest is unchanged */}
+          {/* 스케줄 탭 */}
           {activeTab === 'schedule' && (
-            <div>Schedule content remains same...</div>
+            <div className="space-y-3">
+              {/* 스케줄 그리드 */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">스케줄 선택</label>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="max-h-56 overflow-y-auto">
+                    {/* 헤더 - Sticky */}
+                    <div className="grid bg-gray-50 border-b border-gray-200 sticky top-0 z-10" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
+                  <div className="p-1 text-center text-[10px] font-semibold text-gray-400 border-r border-gray-200"></div>
+                  {WEEKDAYS.map((day) => (
+                    <div key={day} className="p-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200 last:border-r-0">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 교시 */}
+                {periods.map(periodId => (
+                  <div
+                    key={periodId}
+                    className="grid border-b border-gray-100 last:border-b-0"
+                    style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
+                  >
+                    <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                      {periodId}
+                    </div>
+                    {WEEKDAYS.map((day) => {
+                      const key = `${day}-${periodId}`;
+                      const isSelected = selectedSlots.has(key);
+                      const slotTeacher = slotTeachers[key];
+                      const displayTeacher = slotTeacher || teacher;
+                      const colors = displayTeacher ? getTeacherColor(displayTeacher) : { bgColor: '#fdb813', textColor: '#081429' };
+
+                      // 과목에 맞게 표시할 이름 결정
+                      let displayName = '';
+                      if (isSelected) {
+                        if (slotTeacher) {
+                          const staffMember = findStaffByName(slotTeacher);
+                          displayName = staffMember ? getTeacherDisplayName(staffMember) : slotTeacher;
+                        } else if (teacher) {
+                          const staffMember = findStaffByName(teacher);
+                          displayName = staffMember ? getTeacherDisplayName(staffMember) : teacher;
+                        } else {
+                          displayName = '✓';
+                        }
+                      }
+
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => toggleSlot(day, periodId)}
+                          className={`p-1 transition-colors text-[10px] min-h-[24px] border-r border-gray-200 last:border-r-0 ${isSelected
+                              ? 'font-semibold'
+                              : 'hover:bg-gray-100 text-gray-300'
+                            }`}
+                          style={isSelected ? {
+                            backgroundColor: colors.bgColor,
+                            color: colors.textColor
+                          } : undefined}
+                        >
+                          {displayName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {selectedSlots.size > 0 && (
+              <div className="mt-1.5 flex items-center justify-between">
+                <p className="text-[10px] text-gray-500">{selectedSlots.size}개 교시 선택</p>
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedSchedule(!showAdvancedSchedule)}
+                  className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
+                >
+                  {showAdvancedSchedule ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                  교시별 부담임/강의실 설정
+                </button>
+              </div>
+            )}
+
+            {showAdvancedSchedule && selectedSlots.size > 0 && (
+              <div className="mt-2 space-y-2">
+                {/* 교시별 부담임 설정 */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200 bg-blue-50 font-semibold">교시별 부담임 (비워두면 담임)</p>
+                  {(() => {
+                    const selectedPeriods = new Set<string>();
+                    selectedSlots.forEach(key => {
+                      const [, periodId] = key.split('-');
+                      selectedPeriods.add(periodId);
+                    });
+                    const sortedPeriods = Array.from(selectedPeriods).sort((a, b) => Number(a) - Number(b));
+
+                    return sortedPeriods.map(periodId => (
+                      <div
+                        key={periodId}
+                        className="grid border-b border-gray-100 last:border-b-0"
+                        style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
+                      >
+                        <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                          {periodId}
+                        </div>
+                        {WEEKDAYS.map((day) => {
+                          const key = `${day}-${periodId}`;
+                          const isSelected = selectedSlots.has(key);
+                          if (!isSelected) {
+                            return <div key={key} className="bg-gray-50 min-h-[28px] border-r border-gray-200 last:border-r-0" />;
+                          }
+                          return (
+                            <div key={key} className="p-0.5 border-r border-gray-200 last:border-r-0">
+                              <select
+                                value={slotTeachers[key] || ''}
+                                onChange={(e) => setSlotTeacher(key, e.target.value)}
+                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                              >
+                                <option value="">
+                                  {teacher ? (() => {
+                                    const staffMember = findStaffByName(teacher);
+                                    return staffMember ? getTeacherDisplayName(staffMember) : teacher;
+                                  })() : '담임'}
+                                </option>
+                                {availableTeachers.map(t => {
+                                  const displayName = getTeacherDisplayName(t);
+                                  const saveValue = getTeacherSaveValue(t);
+                                  return (
+                                    <option key={t.id} value={saveValue}>
+                                      {displayName}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ));
+                  })()}
+                </div>
+
+                {/* 교시별 강의실 설정 */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200 bg-purple-50 font-semibold">교시별 강의실 (비워두면 기본 강의실)</p>
+                  {(() => {
+                    const selectedPeriods = new Set<string>();
+                    selectedSlots.forEach(key => {
+                      const [, periodId] = key.split('-');
+                      selectedPeriods.add(periodId);
+                    });
+                    const sortedPeriods = Array.from(selectedPeriods).sort((a, b) => Number(a) - Number(b));
+
+                    return sortedPeriods.map(periodId => (
+                      <div
+                        key={periodId}
+                        className="grid border-b border-gray-100 last:border-b-0"
+                        style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
+                      >
+                        <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                          {periodId}
+                        </div>
+                        {WEEKDAYS.map((day) => {
+                          const key = `${day}-${periodId}`;
+                          const isSelected = selectedSlots.has(key);
+                          if (!isSelected) {
+                            return <div key={key} className="bg-gray-50 min-h-[28px] border-r border-gray-200 last:border-r-0" />;
+                          }
+                          return (
+                            <div key={key} className="p-0.5 border-r border-gray-200 last:border-r-0">
+                              <input
+                                type="text"
+                                value={slotRooms[key] || ''}
+                                onChange={(e) => setSlotRoom(key, e.target.value)}
+                                placeholder={room || '-'}
+                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
+              </div>
+            </div>
           )}
+
+          {/* 학생 탭 */}
           {activeTab === 'students' && (
-            <div>Students content remains same...</div>
+            <div className="space-y-3">
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                {/* 현재 등록된 학생 */}
+                <div className="border-b border-gray-200">
+                  <div className="px-2.5 py-1.5 bg-blue-50 text-xs font-semibold text-blue-700 flex items-center justify-between">
+                    <span>현재 등록된 학생 ({currentStudents.length - studentsToRemove.size}명)</span>
+                    {/* 수학: 등원 요일 설정 안내, 영어: 밑줄 강조 안내 */}
+                    {classInfo.subject === 'math' && classDays.length > 1 && (
+                      <span className="text-[10px] text-blue-500 font-normal">클릭하여 등원 요일 설정 · 체크박스: 부담임</span>
+                    )}
+                    {classInfo.subject === 'math' && classDays.length <= 1 && (
+                      <span className="text-[10px] text-blue-500 font-normal">체크박스: 부담임</span>
+                    )}
+                    {classInfo.subject === 'english' && (
+                      <span className="text-[10px] text-blue-500 font-normal">U: 밑줄 강조</span>
+                    )}
+                  </div>
+                  <div className="max-h-40 overflow-y-auto">
+                    {currentStudents.length === 0 ? (
+                      <div className="p-3 text-center text-gray-400 text-sm">등록된 학생이 없습니다</div>
+                    ) : (
+                      currentStudents.map(student => {
+                        const isMarkedForRemoval = studentsToRemove.has(student.id);
+                        const isExpanded = expandedStudentId === student.id;
+                        const attendanceDaysText = getAttendanceDaysText(student.id);
+                        const hasUnderline = studentUnderlines[student.id] || false;
+                        const isMath = classInfo.subject === 'math';
+                        const isEnglish = classInfo.subject === 'english';
+                        // 수학에서만 등원 요일 클릭 가능
+                        const canExpandForDays = isMath && classDays.length > 1 && !isMarkedForRemoval;
+
+                        return (
+                          <div key={student.id} className={isMarkedForRemoval ? 'bg-red-50' : ''}>
+                            <div
+                              className={`flex items-center justify-between px-2.5 py-1.5 text-sm ${isMarkedForRemoval ? 'line-through text-gray-400' : 'hover:bg-gray-50'} ${canExpandForDays ? 'cursor-pointer' : ''}`}
+                              onClick={() => {
+                                if (canExpandForDays) {
+                                  setExpandedStudentId(isExpanded ? null : student.id);
+                                }
+                              }}
+                            >
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {/* 수학: Calendar 아이콘 */}
+                                {isMath && classDays.length > 1 && !isMarkedForRemoval && (
+                                  <Calendar size={12} className="text-gray-400 flex-shrink-0" />
+                                )}
+                                {/* 수학: 부담임 체크박스 */}
+                                {isMath && !isMarkedForRemoval && (
+                                  <input
+                                    type="checkbox"
+                                    checked={studentSlotTeachers[student.id] || false}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      setStudentSlotTeachers(prev => ({
+                                        ...prev,
+                                        [student.id]: e.target.checked
+                                      }));
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813] flex-shrink-0"
+                                    title="부담임으로 지정"
+                                  />
+                                )}
+                                {/* 영어: 밑줄 토글 버튼 */}
+                                {isEnglish && !isMarkedForRemoval && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleStudentUnderline(student.id);
+                                    }}
+                                    className={`w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded flex-shrink-0 transition-colors ${
+                                      hasUnderline
+                                        ? 'bg-blue-500 text-white underline'
+                                        : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                                    }`}
+                                    title={hasUnderline ? '밑줄 해제' : '밑줄 강조'}
+                                  >
+                                    U
+                                  </button>
+                                )}
+                                <span className={`truncate ${isMarkedForRemoval ? 'text-gray-400' : 'text-gray-800'}`}>
+                                  {student.name}
+                                </span>
+                                <span className="text-[10px] text-gray-400 flex-shrink-0">{formatSchoolGrade(student.school, student.grade)}</span>
+                                {/* 수학에서만 등원 요일 표시 */}
+                                {isMath && attendanceDaysText && !isMarkedForRemoval && (
+                                  <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
+                                    {attendanceDaysText}만
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRemoveStudent(student.id);
+                                }}
+                                className={`p-1 rounded transition-colors flex-shrink-0 ${isMarkedForRemoval
+                                    ? 'text-blue-600 hover:bg-blue-100'
+                                    : 'text-red-500 hover:bg-red-100'
+                                  }`}
+                                title={isMarkedForRemoval ? '제거 취소' : '수업에서 제외'}
+                              >
+                                {isMarkedForRemoval ? (
+                                  <span className="text-xs font-medium">취소</span>
+                                ) : (
+                                  <UserMinus size={14} />
+                                )}
+                              </button>
+                            </div>
+                            {/* 수학: 요일 선택 UI (펼쳐졌을 때) */}
+                            {isMath && isExpanded && classDays.length > 1 && (
+                              <div className="px-2.5 py-2 bg-gray-50 border-t border-gray-100">
+                                <div className="text-[10px] text-gray-500 mb-1.5">등원 요일 선택 (체크 해제하면 해당 요일 미등원)</div>
+                                <div className="flex gap-1 flex-wrap">
+                                  {classDays.map(day => {
+                                    const isAttending = isStudentAttendingDay(student.id, day);
+                                    return (
+                                      <button
+                                        key={day}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleStudentDay(student.id, day);
+                                        }}
+                                        className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                                          isAttending
+                                            ? 'bg-[#fdb813] text-[#081429]'
+                                            : 'bg-gray-200 text-gray-400 line-through'
+                                        }`}
+                                      >
+                                        {day}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 추가 예정 학생 */}
+                {studentsToAdd.size > 0 && (
+                  <div className="border-b border-gray-200">
+                    <div className="px-2.5 py-1.5 bg-green-50 text-xs font-semibold text-green-700 flex items-center justify-between">
+                      <span>추가 예정 ({studentsToAdd.size}명)</span>
+                      <span className="text-[10px] text-green-600 font-normal">시작일을 선택하세요</span>
+                    </div>
+                    <div className="max-h-32 overflow-y-auto">
+                      {studentsToAddInfo.map(student => {
+                        const startDate = studentStartDates[student.id] || new Date().toISOString().split('T')[0];
+                        const today = new Date().toISOString().split('T')[0];
+                        const isScheduled = startDate > today;  // 미래 날짜인 경우 배정 예정
+
+                        return (
+                          <div
+                            key={student.id}
+                            className="px-2.5 py-1.5 text-sm bg-green-50/50 border-b border-green-100 last:border-b-0"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-green-800 font-medium">{student.name}</span>
+                                <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                                {isScheduled && (
+                                  <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                                    배정 예정
+                                  </span>
+                                )}
+                                {/* 부담임 체크박스 (수학만) */}
+                                {classInfo.subject === 'math' && (
+                                  <label className="flex items-center gap-1 ml-1 cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                                    <input
+                                      type="checkbox"
+                                      checked={studentSlotTeachers[student.id] || false}
+                                      onChange={(e) => {
+                                        setStudentSlotTeachers(prev => ({
+                                          ...prev,
+                                          [student.id]: e.target.checked
+                                        }));
+                                      }}
+                                      className="w-3 h-3 text-[#fdb813] rounded focus:ring-[#fdb813]"
+                                    />
+                                    <span className="text-[10px] text-gray-600">부담임</span>
+                                  </label>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => cancelAddStudent(student.id)}
+                                className="text-xs text-gray-500 hover:text-red-500 font-medium"
+                              >
+                                취소
+                              </button>
+                            </div>
+                            {/* 시작일 선택 */}
+                            <div className="flex items-center gap-2 mt-1">
+                              <Calendar size={12} className="text-gray-400" />
+                              <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => {
+                                  setStudentStartDates(prev => ({
+                                    ...prev,
+                                    [student.id]: e.target.value
+                                  }));
+                                }}
+                                className="px-2 py-0.5 text-[10px] border border-gray-200 rounded focus:ring-1 focus:ring-[#fdb813] outline-none"
+                              />
+                              {isScheduled && (
+                                <span className="text-[10px] text-blue-600">{startDate}부터 시작</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 학생 추가 검색 */}
+                <div className="p-2 border-b border-gray-100">
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    placeholder="학생 검색하여 추가..."
+                    className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-[#fdb813] outline-none"
+                  />
+                </div>
+
+                {/* 추가 가능한 학생 목록 */}
+                <div className="max-h-32 overflow-y-auto">
+                  {studentsLoading ? (
+                    <div className="p-3 text-center text-gray-400 text-sm">로딩 중...</div>
+                  ) : availableStudents.length === 0 ? (
+                    <div className="p-3 text-center text-gray-400 text-sm">
+                      {studentSearch ? '검색 결과가 없습니다' : '추가 가능한 학생이 없습니다'}
+                    </div>
+                  ) : (
+                    availableStudents.map(student => (
+                      <label
+                        key={student.id}
+                        className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer transition-colors hover:bg-gray-50 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={studentsToAdd.has(student.id)}
+                          onChange={() => toggleAddStudent(student.id)}
+                          className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813]"
+                        />
+                        <span className="text-gray-800">{student.name}</span>
+                        <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
