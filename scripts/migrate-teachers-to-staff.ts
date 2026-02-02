@@ -28,7 +28,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { db } from '../firebaseConfig.js';
-import { Teacher, StaffMember } from '../types.js';
+import { Teacher, StaffMember } from '../types';
 
 const COL_TEACHERS = '강사목록';
 const COL_STAFF = 'staff';
