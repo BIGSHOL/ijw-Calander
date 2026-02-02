@@ -40,14 +40,15 @@ const app = initializeApp(firebaseConfig);
 import { getFirestore } from "firebase/firestore";
 
 let dbInstance;
+const DATABASE_ID = 'restore260202';  // 'default' 대신 복원된 데이터베이스 사용
 try {
     dbInstance = initializeFirestore(app, {
         localCache: persistentLocalCache({
             tabManager: persistentMultipleTabManager()
         })
-    });
+    }, DATABASE_ID);
 } catch {
-    dbInstance = getFirestore(app);
+    dbInstance = getFirestore(app, DATABASE_ID);
 }
 
 export const db = dbInstance;
