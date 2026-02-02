@@ -51,9 +51,9 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, '.'),
       }
     },
-    // 프로덕션 빌드 시 console.log 제거 (console.error, console.warn 유지)
+    // 프로덕션 빌드 시 console.log/debug/info 제거 (console.error, console.warn 유지)
     esbuild: {
-      drop: isProduction ? ['console', 'debugger'] : [],
+      drop: isProduction ? ['debugger'] : [],
       pure: isProduction ? ['console.log', 'console.info', 'console.debug'] : [],
     },
     // 번들 최적화: 코드 스플리팅 - Addresses Issue #16
