@@ -874,6 +874,20 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                 ? { backgroundColor: matchedKw.bgColor }
                                                 : {};
 
+                                            // LAB실 학생수 계산 (배지 + 툴팁 공용)
+                                            const isLabRoom = !!(cellData?.room && labRooms.includes(cellData.room));
+                                            let mainCount = 0;
+                                            let totalCount = 0;
+                                            if (isLabRoom && cellData?.className) {
+                                                mainCount = getActiveStudentCount(cellData.className, cellData.underline);
+                                                totalCount = mainCount;
+                                                if (cellData.merged && cellData.merged.length > 0) {
+                                                    cellData.merged.forEach(m => {
+                                                        totalCount += getActiveStudentCount(m.className, m.underline);
+                                                    });
+                                                }
+                                            }
+
                                             return (
                                                 <td
                                                     key={cellKey}
@@ -956,19 +970,11 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                         )}
 
                                                         {/* LAB실 학생수 표시 (강의실뷰와 동일 디자인) */}
-                                                        {cellData?.room && labRooms.includes(cellData.room) && cellData.className && (() => {
-                                                            let totalCount = getActiveStudentCount(cellData.className, cellData.underline);
-                                                            if (cellData.merged) {
-                                                                cellData.merged.forEach(m => {
-                                                                    totalCount += getActiveStudentCount(m.className, m.underline);
-                                                                });
-                                                            }
-                                                            return totalCount > 0 ? (
-                                                                <div className="absolute bottom-0.5 left-0.5 bg-indigo-600 text-white text-micro font-bold px-1 rounded-sm shadow-sm z-10 leading-tight">
-                                                                    {totalCount}명
-                                                                </div>
-                                                            ) : null;
-                                                        })()}
+                                                        {isLabRoom && totalCount > 0 && (
+                                                            <div className="absolute bottom-0.5 left-0.5 bg-indigo-600 text-white text-micro font-bold px-1 rounded-sm shadow-sm z-10 leading-tight">
+                                                                {totalCount}명
+                                                            </div>
+                                                        )}
 
                                                         {/* Render Merged Badge & Tooltip */}
                                                         {cellData?.merged && cellData.merged.length > 0 && (
@@ -979,24 +985,42 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                                     <div className="w-48 bg-slate-800 text-white p-2 rounded shadow-xl z-50 text-left pointer-events-none">
                                                                         <div className="flex justify-between items-center bg-slate-700/50 px-2 py-1 -mx-2 -mt-2 mb-2 rounded-t border-b border-slate-700">
                                                                             <span className="text-xxs font-bold text-slate-300">합반 수업 목록</span>
-                                                                            <span className="text-micro bg-slate-700 px-1 rounded ml-1 text-slate-400">총 {cellData.merged.length}개</span>
+                                                                            <span className="text-micro bg-slate-700 px-1 rounded ml-1 text-slate-400">총 {cellData.merged.length + 1}개</span>
                                                                         </div>
                                                                         <div className="flex flex-col gap-1.5">
+                                                                            {/* 메인 수업 */}
+                                                                            <div className="flex justify-between items-center">
+                                                                                <div className="text-xxs font-bold text-slate-200">{cellData.className}</div>
+                                                                                <div className="flex items-center gap-1">
+                                                                                    {isLabRoom && <span className="text-micro text-indigo-300">{mainCount}명</span>}
+                                                                                    {cellData.room && <span className="text-micro bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{cellData.room}</span>}
+                                                                                </div>
+                                                                            </div>
+                                                                            {/* 합반 수업들 */}
                                                                             {cellData.merged.map((m, idx) => {
-                                                                                // Check for recent move
                                                                                 const isMoved = m.lastMovedAt && (() => {
                                                                                     const diff = new Date().getTime() - new Date(m.lastMovedAt).getTime();
                                                                                     return diff / (1000 * 60 * 60 * 24) <= 14;
                                                                                 })();
+                                                                                const mCount = isLabRoom ? getActiveStudentCount(m.className, m.underline) : 0;
                                                                                 return (
                                                                                     <div key={idx} className="flex justify-between items-center" style={isMoved ? { backgroundColor: '#dcfce7', padding: '2px', borderRadius: '4px' } : {}}>
                                                                                         <div className={`text-xxs font-bold ${isMoved ? 'text-green-800' : 'text-slate-200'}`}>{m.className}</div>
-                                                                                        {m.room && <div className="text-micro bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{m.room}</div>}
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            {isLabRoom && mCount > 0 && <span className="text-micro text-indigo-300">{mCount}명</span>}
+                                                                                            {m.room && <span className="text-micro bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{m.room}</span>}
+                                                                                        </div>
                                                                                     </div>
                                                                                 );
                                                                             })}
                                                                         </div>
-                                                                        {/* Arrow */}
+                                                                        {/* 합산 */}
+                                                                        {isLabRoom && totalCount > 0 && (
+                                                                            <div className="mt-1.5 pt-1.5 border-t border-slate-700 flex justify-between items-center">
+                                                                                <span className="text-micro text-slate-400">합계</span>
+                                                                                <span className="text-xxs font-bold text-indigo-300">{totalCount}명</span>
+                                                                            </div>
+                                                                        )}
                                                                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45 transform"></div>
                                                                     </div>
                                                                 }
