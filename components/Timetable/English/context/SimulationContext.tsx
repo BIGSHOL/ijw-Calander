@@ -1309,10 +1309,14 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         }
       }
 
-      // 3. classes 업데이트 (sanitized)
+      // 3. classes 업데이트 (sanitized, merge: true로 기존 필드 보존)
+      // ScenarioClass에 없는 필드(isActive, createdAt, updatedAt, mainTeacher 등)를 유지
       const classBatch = writeBatch(db);
       Object.entries(classesToPublish).forEach(([classId, classData]) => {
-        classBatch.set(doc(db, 'classes', classId), sanitizeForFirestore(classData));
+        classBatch.set(doc(db, 'classes', classId), sanitizeForFirestore({
+          ...classData,
+          updatedAt: new Date().toISOString(),
+        }), { merge: true });
       });
       await classBatch.commit();
 
@@ -1323,6 +1327,16 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       );
 
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+      // 반 이름 변경 감지: 같은 classId인데 className이 바뀐 경우 (레벨업 등)
+      // oldClassName → newClassName 매핑
+      const renamedClasses: Record<string, string> = {};
+      Object.entries(liveClasses).forEach(([classId, liveClass]) => {
+        const scenarioClass = classesToPublish[classId];
+        if (scenarioClass && liveClass.className !== scenarioClass.className) {
+          renamedClasses[liveClass.className] = scenarioClass.className;
+        }
+      });
 
       // 현재 실시간 enrollments 맵 구축: studentId -> { className, docRef, data }
       const liveStudentEnrollments: Record<string, { className: string; docRef: any; data: any }> = {};
@@ -1352,6 +1366,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       // 변경 사항 분류
       const toEndDate: { docRef: any }[] = [];  // 이전 수업 종료 처리
       const toCreate: { ref: any; data: any }[] = [];  // 새 수업 생성
+      const toRename: { docRef: any; studentId: string; oldClassName: string; newClassName: string; data: any }[] = [];  // 반 이름 변경 (이동 아님)
       const unchanged: string[] = [];  // 변경 없음
 
       // 1. 기존 학생들 처리
@@ -1362,19 +1377,31 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
           // 학생이 시나리오에서 제거됨 → 이전 수업 종료
           toEndDate.push({ docRef: liveInfo.docRef });
         } else if (newClassName !== liveInfo.className) {
-          // 학생이 다른 수업으로 이동 → 이전 수업 종료 + 새 수업 생성
-          toEndDate.push({ docRef: liveInfo.docRef });
-          const newEnrollment = enrollmentsToPublish[newClassName]?.[studentId];
-          if (newEnrollment) {
-            toCreate.push({
-              ref: doc(db, 'students', studentId, 'enrollments', `english_${newClassName}`),
-              data: sanitizeForFirestore({
-                ...newEnrollment,
-                subject: 'english',
-                className: newClassName,
-                startDate: today,  // 새 수업 시작일
-              }),
+          // className이 다른 경우: 반 이름 변경인지 실제 이동인지 구분
+          if (renamedClasses[liveInfo.className] === newClassName) {
+            // 반 이름 변경 (레벨업 등) → 기존 enrollment 삭제 + 새 doc 생성 (startDate 유지)
+            toRename.push({
+              docRef: liveInfo.docRef,
+              studentId,
+              oldClassName: liveInfo.className,
+              newClassName,
+              data: liveInfo.data,
             });
+          } else {
+            // 실제 반이동 → 이전 수업 종료 + 새 수업 생성
+            toEndDate.push({ docRef: liveInfo.docRef });
+            const newEnrollment = enrollmentsToPublish[newClassName]?.[studentId];
+            if (newEnrollment) {
+              toCreate.push({
+                ref: doc(db, 'students', studentId, 'enrollments', `english_${newClassName}`),
+                data: sanitizeForFirestore({
+                  ...newEnrollment,
+                  subject: 'english',
+                  className: newClassName,
+                  startDate: today,  // 새 수업 시작일
+                }),
+              });
+            }
           }
         } else {
           // 같은 수업 유지 → 변경 없음
@@ -1400,6 +1427,24 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
           }
         }
       });
+
+      // 반 이름 변경 배치 (기존 doc 삭제 + 새 doc 생성, startDate 유지)
+      for (let i = 0; i < toRename.length; i += 250) {
+        const batch = writeBatch(db);
+        const chunk = toRename.slice(i, i + 250);
+        chunk.forEach(item => {
+          // 기존 enrollment 삭제 (endDate 설정 안 함 → 반이동 흔적 안 남김)
+          batch.delete(item.docRef);
+          // 새 className으로 enrollment 생성 (기존 startDate 유지)
+          const newRef = doc(db, 'students', item.studentId, 'enrollments', `english_${item.newClassName}`);
+          const newData = { ...item.data };
+          newData.className = item.newClassName;
+          delete newData.endDate;
+          delete newData.withdrawalDate;
+          batch.set(newRef, sanitizeForFirestore(newData));
+        });
+        await batch.commit();
+      }
 
       // 종료 처리 배치 (endDate 설정)
       for (let i = 0; i < toEndDate.length; i += 500) {
