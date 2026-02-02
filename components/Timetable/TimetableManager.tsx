@@ -949,6 +949,10 @@ const TimetableManager = ({
                     currentUser={currentUser}
                     studentMap={studentMap} // Pass global student map
                     currentWeekStart={currentMonday}
+                    weekLabel={weekLabel}
+                    goToPrevWeek={goToPrevWeek}
+                    goToNextWeek={goToNextWeek}
+                    goToThisWeek={goToThisWeek}
                 />
             </Suspense>
         );

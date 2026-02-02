@@ -14,7 +14,7 @@ import TeacherOrderModal from './TeacherOrderModal';
 import BackupHistoryModal from './BackupHistoryModal';
 import ScenarioManagementModal from './ScenarioManagementModal';
 import { SimulationProvider, useSimulation } from './context/SimulationContext';
-import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus } from 'lucide-react';
+import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface EnglishTimetableProps {
     onClose?: () => void;
@@ -26,6 +26,11 @@ interface EnglishTimetableProps {
     studentMap: Record<string, any>;
     // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
     currentWeekStart?: Date;
+    // 주차 네비게이션 (공통)
+    weekLabel?: string;
+    goToPrevWeek?: () => void;
+    goToNextWeek?: () => void;
+    goToThisWeek?: () => void;
 }
 
 interface ScheduleCell {
@@ -42,7 +47,7 @@ interface ScheduleCell {
 type ScheduleData = Record<string, ScheduleCell>;
 
 // Inner component that uses SimulationContext
-const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart }) => {
+const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek }) => {
     // Removed local activeTab state, using viewType prop
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
@@ -422,6 +427,32 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </span>
                     {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">SIMULATION</span>}
                 </h1>
+                {/* 주차 네비게이션 */}
+                {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                        <span className="text-sm text-gray-600 font-medium">{weekLabel}</span>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={goToPrevWeek}
+                                className="p-1 border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                            >
+                                <ChevronLeft size={14} />
+                            </button>
+                            <button
+                                onClick={goToThisWeek}
+                                className="px-2 py-0.5 text-xs font-bold border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                            >
+                                이번주
+                            </button>
+                            <button
+                                onClick={goToNextWeek}
+                                className="p-1 border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                            >
+                                <ChevronRight size={14} />
+                            </button>
+                        </div>
+                    </div>
+                )}
                 {/* 시뮬레이션 모드 히스토리 컨트롤 */}
                 {isSimulationMode && (
                     <div className="flex items-center justify-center gap-2 mt-2">
