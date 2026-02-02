@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, getDocs, writeBatch, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
-import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, FileText, GitCompare, Upload } from 'lucide-react';
+import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, FileText, GitCompare, Upload, Calendar, CalendarClock, XCircle } from 'lucide-react';
 import { CLASS_DRAFT_COLLECTION, SCENARIO_COLLECTION } from './englishUtils';
 import { validateScenarioData, calculateScenarioStats, generateScenarioId } from './scenarioUtils';
 import { ScenarioEntry } from '../../../types';
@@ -55,6 +55,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
     const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
     const [newScenarioName, setNewScenarioName] = useState('');
     const [newScenarioDesc, setNewScenarioDesc] = useState('');
+    const [enableScheduledApply, setEnableScheduledApply] = useState(false);
+    const [scheduledApplyDate, setScheduledApplyDate] = useState('');
 
     // Compare State
     const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set());
@@ -129,14 +131,28 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                     currentUser?.displayName || currentUser?.email || 'Unknown'
                 );
 
+                // 예약 적용 설정이 있으면 추가 업데이트
+                if (enableScheduledApply && scheduledApplyDate) {
+                    await updateDoc(doc(db, SCENARIO_COLLECTION, scenarioId), {
+                        scheduledApplyDate: scheduledApplyDate,
+                        scheduledApplyStatus: 'pending',
+                    });
+                }
+
                 const classCount = Object.keys(simulation.scenarioClasses).length;
                 const studentCount = Object.values(simulation.scenarioEnrollments)
                     .reduce((acc, enrollments) => acc + Object.keys(enrollments).length, 0);
 
-                alert(`✅ 시나리오 "${newScenarioName}"가 저장되었습니다.\n(수업: ${classCount}개, 학생: ${studentCount}명)`);
+                let message = `✅ 시나리오 "${newScenarioName}"가 저장되었습니다.\n(수업: ${classCount}개, 학생: ${studentCount}명)`;
+                if (enableScheduledApply && scheduledApplyDate) {
+                    message += `\n\n📅 ${scheduledApplyDate}에 자동 적용 예약됨`;
+                }
+                alert(message);
                 setIsSaveDialogOpen(false);
                 setNewScenarioName('');
                 setNewScenarioDesc('');
+                setEnableScheduledApply(false);
+                setScheduledApplyDate('');
                 setActiveOperation(null);
                 return;
             }
@@ -177,15 +193,26 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                 createdAt: new Date().toISOString(),
                 createdBy: currentUser?.displayName || currentUser?.email || 'Unknown',
                 createdByUid: currentUser?.uid || '',
-                stats
+                stats,
+                // 예약 적용 설정
+                ...(enableScheduledApply && scheduledApplyDate ? {
+                    scheduledApplyDate: scheduledApplyDate,
+                    scheduledApplyStatus: 'pending' as const,
+                } : {}),
             };
 
             await setDoc(doc(db, SCENARIO_COLLECTION, scenarioId), newScenario);
 
-            alert(`✅ 시나리오 "${newScenarioName}"가 저장되었습니다.\n(시간표: ${stats.timetableDocCount}개, 수업: ${stats.classCount}개, 학생: ${stats.studentCount}명)`);
+            let message = `✅ 시나리오 "${newScenarioName}"가 저장되었습니다.\n(시간표: ${stats.timetableDocCount}개, 수업: ${stats.classCount}개, 학생: ${stats.studentCount}명)`;
+            if (enableScheduledApply && scheduledApplyDate) {
+                message += `\n\n📅 ${scheduledApplyDate}에 자동 적용 예약됨`;
+            }
+            alert(message);
             setIsSaveDialogOpen(false);
             setNewScenarioName('');
             setNewScenarioDesc('');
+            setEnableScheduledApply(false);
+            setScheduledApplyDate('');
         } catch (error) {
             console.error('시나리오 저장 실패:', error);
             alert(`시나리오 저장 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
@@ -405,6 +432,21 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         }
     };
 
+    // Cancel scheduled apply
+    const handleCancelScheduledApply = async (scenario: ScenarioEntry) => {
+        if (!confirm(`시나리오 "${scenario.name}"의 자동 적용 예약을 취소하시겠습니까?`)) return;
+
+        try {
+            await updateDoc(doc(db, SCENARIO_COLLECTION, scenario.id), {
+                scheduledApplyStatus: 'cancelled',
+            });
+            alert('✅ 예약이 취소되었습니다.');
+        } catch (error) {
+            console.error('예약 취소 실패:', error);
+            alert('예약 취소에 실패했습니다.');
+        }
+    };
+
     // Toggle scenario for compare
     const toggleCompareSelection = (scenarioId: string) => {
         setSelectedForCompare(prev => {
@@ -549,6 +591,22 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                         {isLatest && <span className="text-xxs bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold">최신</span>}
                                         {isBackup && <span className="text-xxs bg-gray-500 text-white px-1.5 py-0.5 rounded font-bold">자동 백업</span>}
                                         {!validation.isValid && <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded font-bold">손상됨</span>}
+                                        {/* 예약 적용 상태 배지 */}
+                                        {(scenario as any).scheduledApplyStatus === 'pending' && (
+                                            <span className="text-xxs bg-purple-500 text-white px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
+                                                <CalendarClock size={10} />
+                                                {(scenario as any).scheduledApplyDate} 예약
+                                            </span>
+                                        )}
+                                        {(scenario as any).scheduledApplyStatus === 'applied' && (
+                                            <span className="text-xxs bg-green-500 text-white px-1.5 py-0.5 rounded font-bold">적용됨</span>
+                                        )}
+                                        {(scenario as any).scheduledApplyStatus === 'cancelled' && (
+                                            <span className="text-xxs bg-gray-400 text-white px-1.5 py-0.5 rounded font-bold">취소됨</span>
+                                        )}
+                                        {(scenario as any).scheduledApplyStatus === 'failed' && (
+                                            <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded font-bold">실패</span>
+                                        )}
                                     </div>
 
                                     {/* Description */}
@@ -652,6 +710,17 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                         <Trash2 size={14} />
                                                     </button>
                                                 )}
+                                                {/* 예약 취소 버튼 */}
+                                                {(scenario as any).scheduledApplyStatus === 'pending' && canManageSimulation && (
+                                                    <button
+                                                        onClick={() => handleCancelScheduledApply(scenario)}
+                                                        className="flex items-center gap-1 px-2 py-1 bg-gray-500 text-white rounded text-xs font-bold hover:bg-gray-600"
+                                                        title="예약 취소"
+                                                    >
+                                                        <XCircle size={12} />
+                                                        예약 취소
+                                                    </button>
+                                                )}
                                             </>
                                         )}
                                     </div>
@@ -705,10 +774,41 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                     className="w-full px-3 py-2 border rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                 />
                             </div>
+
+                            {/* 예약 적용 설정 */}
+                            <div className="border-t pt-3 mt-3">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={enableScheduledApply}
+                                        onChange={e => setEnableScheduledApply(e.target.checked)}
+                                        className="w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                                        <CalendarClock size={14} className="text-purple-500" />
+                                        자동 적용 예약
+                                    </span>
+                                </label>
+                                {enableScheduledApply && (
+                                    <div className="mt-2 ml-6">
+                                        <label className="block text-xs text-gray-500 mb-1">적용 예약일</label>
+                                        <input
+                                            type="date"
+                                            value={scheduledApplyDate}
+                                            onChange={e => setScheduledApplyDate(e.target.value)}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            지정한 날짜 자정에 자동으로 실제 시간표에 반영됩니다.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className="flex justify-end gap-2 mt-5">
                             <button
-                                onClick={() => { setIsSaveDialogOpen(false); setNewScenarioName(''); setNewScenarioDesc(''); }}
+                                onClick={() => { setIsSaveDialogOpen(false); setNewScenarioName(''); setNewScenarioDesc(''); setEnableScheduledApply(false); setScheduledApplyDate(''); }}
                                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-300 transition-colors"
                             >
                                 취소

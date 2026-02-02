@@ -24,6 +24,15 @@ export interface ScenarioEntry {
     classCount: number;
     studentCount: number;
   };
+
+  // 예약 적용 (Scheduled Auto-Apply)
+  scheduledApplyDate?: string;  // 자동 적용 예약일 (YYYY-MM-DD)
+  scheduledApplyStatus?: 'pending' | 'applied' | 'cancelled' | 'failed';  // 예약 상태
+  scheduledApplyResult?: {
+    appliedAt?: string;          // 실제 적용 일시
+    appliedBy?: string;          // 적용자 (시스템 or 사용자)
+    error?: string;              // 실패 시 에러 메시지
+  };
 }
 
 // ============ TIMETABLE TYPES ============

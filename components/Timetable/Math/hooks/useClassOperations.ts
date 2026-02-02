@@ -1,4 +1,5 @@
 import { doc, setDoc, deleteDoc, updateDoc, collection } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass } from '../../../../types';
 
@@ -11,6 +12,15 @@ const COL_CLASSES = 'classes';
  * 학생 등록: enrollments subcollection
  */
 export const useClassOperations = () => {
+    const queryClient = useQueryClient();
+
+    // 캐시 무효화 헬퍼 함수
+    const invalidateMathCaches = () => {
+        queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+        queryClient.invalidateQueries({ queryKey: ['classes'] });
+    };
+
     // Check for consecutive periods
     const checkConsecutiveSchedule = (schedule: string[], periods: string[]): boolean => {
         const dayMap: Record<string, string[]> = {};
@@ -136,6 +146,9 @@ export const useClassOperations = () => {
     const deleteClass = async (classId: string) => {
         // Soft delete - isActive를 false로 설정
         await updateDoc(doc(db, COL_CLASSES, classId), { isActive: false });
+
+        // 캐시 무효화 - 실시간 반영
+        invalidateMathCaches();
     };
 
     const addStudent = async (
@@ -178,6 +191,9 @@ export const useClassOperations = () => {
             createdAt: now
         });
 
+        // 캐시 무효화 - 실시간 반영
+        invalidateMathCaches();
+
         return newStudentId;
     };
 
@@ -185,6 +201,9 @@ export const useClassOperations = () => {
         // enrollment 문서 삭제
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
         await deleteDoc(enrollmentRef);
+
+        // 캐시 무효화 - 실시간 반영
+        invalidateMathCaches();
     };
 
     const withdrawStudent = async (className: string, studentId: string) => {
@@ -202,6 +221,9 @@ export const useClassOperations = () => {
         await updateDoc(enrollmentRef, {
             withdrawalDate: now.split('T')[0]
         });
+
+        // 캐시 무효화 - 실시간 반영
+        invalidateMathCaches();
     };
 
     const restoreStudent = async (className: string, studentId: string) => {
@@ -221,6 +243,9 @@ export const useClassOperations = () => {
             withdrawalDate: null,
             onHold: false
         });
+
+        // 캐시 무효화 - 실시간 반영
+        invalidateMathCaches();
     };
 
     return {

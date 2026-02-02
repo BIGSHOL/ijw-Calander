@@ -31,7 +31,467 @@ import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
 
+// MathTimetableContent를 외부로 분리하여 Hook 순서 에러 방지
+interface MathTimetableContentProps {
+    weekLabel: string;
+    goToPrevWeek: () => void;
+    goToNextWeek: () => void;
+    goToThisWeek: () => void;
+    searchQuery: string;
+    setSearchQuery: (q: string) => void;
+    viewType: 'teacher' | 'room' | 'class';
+    setIsTeacherOrderModalOpen: (open: boolean) => void;
+    setIsViewSettingsOpen: (open: boolean) => void;
+    pendingMovesCount: number;
+    handleSavePendingMoves: () => void;
+    handleCancelPendingMoves: () => void;
+    isSaving: boolean;
+    mode: 'view' | 'edit';
+    setMode: (mode: 'view' | 'edit') => void;
+    canEditMath: boolean;
+    filteredClasses: TimetableClass[];
+    allResources: string[];
+    orderedSelectedDays: string[];
+    weekDates: Record<string, { date: Date; formatted: string }>;
+    currentPeriods: string[];
+    teachers: Teacher[];
+    columnWidth: 'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide';
+    setColumnWidth: (width: 'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide') => void;
+    rowHeight: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';
+    setRowHeight: (height: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall') => void;
+    fontSize: 'small' | 'normal' | 'large';
+    setFontSize: (size: 'small' | 'normal' | 'large') => void;
+    showClassName: boolean;
+    setShowClassName: (show: boolean) => void;
+    showSchool: boolean;
+    setShowSchool: (show: boolean) => void;
+    showGrade: boolean;
+    setShowGrade: (show: boolean) => void;
+    showEmptyRooms: boolean;
+    showStudents: boolean;
+    setShowStudents: (show: boolean) => void;
+    showHoldStudents: boolean;
+    showWithdrawnStudents: boolean;
+    dragOverClassId: string | null;
+    handleDragStart: (e: React.DragEvent, studentId: string, classId: string) => void;
+    handleDragOver: (e: React.DragEvent, classId: string) => void;
+    handleDragLeave: () => void;
+    handleDrop: (e: React.DragEvent, classId: string) => void;
+    currentSubjectFilter: string;
+    studentMap: Record<string, UnifiedStudent>;
+    timetableViewMode: 'day-based' | 'teacher-based';
+    classKeywords: ClassKeywordColor[];
+    setSelectedClassInfo: (info: ClassInfo | null) => void;
+    setSelectedStudentForModal: (student: UnifiedStudent | null) => void;
+    isAddClassOpen: boolean;
+    setIsAddClassOpen: (open: boolean) => void;
+    newClassName: string;
+    setNewClassName: (name: string) => void;
+    newTeacher: string;
+    setNewTeacher: (teacher: string) => void;
+    newRoom: string;
+    setNewRoom: (room: string) => void;
+    newSubject: string;
+    setNewSubject: (subject: string) => void;
+    newSchedule: string[];
+    toggleScheduleSlot: (day: string, period: string) => void;
+    handleAddClass: () => void;
+    sortedTeachers: string[];
+    isAssistant: boolean;
+    setIsAssistant: (v: boolean) => void;
+    selectedClassInfo: ClassInfo | null;
+    selectedStudentForModal: UnifiedStudent | null;
+    canManageStudents: boolean;
+    mathConfig: { teacherOrder: string[]; weekdayOrder: string[] };
+    handleSaveTeacherOrder: (order: string[]) => void;
+    isTeacherOrderModalOpen: boolean;
+    isViewSettingsOpen: boolean;
+    selectedDays: string[];
+    setSelectedDays: (days: string[]) => void;
+    currentMonday: Date;
+    currentUser: any;
+}
 
+const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
+    weekLabel,
+    goToPrevWeek,
+    goToNextWeek,
+    goToThisWeek,
+    searchQuery,
+    setSearchQuery,
+    viewType,
+    setIsTeacherOrderModalOpen,
+    setIsViewSettingsOpen,
+    pendingMovesCount,
+    handleSavePendingMoves,
+    handleCancelPendingMoves,
+    isSaving,
+    mode,
+    setMode,
+    canEditMath,
+    filteredClasses,
+    allResources,
+    orderedSelectedDays,
+    weekDates,
+    currentPeriods,
+    teachers,
+    columnWidth,
+    setColumnWidth,
+    rowHeight,
+    setRowHeight,
+    fontSize,
+    setFontSize,
+    showClassName,
+    setShowClassName,
+    showSchool,
+    setShowSchool,
+    showGrade,
+    setShowGrade,
+    showEmptyRooms,
+    showStudents,
+    setShowStudents,
+    showHoldStudents,
+    showWithdrawnStudents,
+    dragOverClassId,
+    handleDragStart,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    currentSubjectFilter,
+    studentMap,
+    timetableViewMode,
+    classKeywords,
+    setSelectedClassInfo,
+    setSelectedStudentForModal,
+    isAddClassOpen,
+    setIsAddClassOpen,
+    newClassName,
+    setNewClassName,
+    newTeacher,
+    setNewTeacher,
+    newRoom,
+    setNewRoom,
+    newSubject,
+    setNewSubject,
+    newSchedule,
+    toggleScheduleSlot,
+    handleAddClass,
+    sortedTeachers,
+    isAssistant,
+    setIsAssistant,
+    selectedClassInfo,
+    selectedStudentForModal,
+    canManageStudents,
+    mathConfig,
+    handleSaveTeacherOrder,
+    isTeacherOrderModalOpen,
+    isViewSettingsOpen,
+    selectedDays,
+    setSelectedDays,
+    currentMonday,
+    currentUser,
+}) => {
+    const simulation = useMathSimulation();
+    const { isScenarioMode, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
+    const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const handleToggleSimulation = async () => {
+        if (isScenarioMode) {
+            exitScenarioMode();
+        } else {
+            setLoading(true);
+            try {
+                await enterScenarioMode();
+            } catch (e) {
+                console.error('시뮬레이션 모드 진입 실패:', e);
+                alert('시뮬레이션 모드 진입에 실패했습니다.');
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const handleCopyLiveToDraft = async () => {
+        if (!confirm('현재 실시간 시간표를 복사해 오시겠습니까?\n기존 시뮬레이션 작업 내용은 모두 사라집니다.')) return;
+        setLoading(true);
+        try {
+            await loadFromLive();
+            alert('✅ 현재 시간표를 가져왔습니다.');
+        } catch (e) {
+            console.error('복사 실패:', e);
+            alert('복사 중 오류가 발생했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePublishDraftToLive = async () => {
+        // 권한 체크
+        if (!canEditMath) {
+            alert('❌ 수학 시간표 편집 권한이 없습니다.');
+            return;
+        }
+
+        if (!confirm('⚠️ 시뮬레이션 내용을 실제 시간표에 반영하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+        setLoading(true);
+        try {
+            await publishToLive(currentUser.uid, currentUser.displayName || currentUser.email);
+            alert('✅ 실제 시간표에 반영되었습니다.');
+        } catch (e: any) {
+            console.error('반영 실패:', e);
+            if (e.code === 'permission-denied') {
+                alert('❌ 권한이 없습니다. 관리자에게 문의하세요.');
+            } else {
+                alert('반영 중 오류가 발생했습니다.');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+            </div>
+        );
+    }
+
+    return (
+        <>
+            <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
+                {/* Header Component */}
+                <TimetableHeader
+                    weekLabel={weekLabel}
+                    goToPrevWeek={goToPrevWeek}
+                    goToNextWeek={goToNextWeek}
+                    goToThisWeek={goToThisWeek}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    viewType={viewType}
+                    setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
+                    setIsViewSettingsOpen={setIsViewSettingsOpen}
+                    pendingMovesCount={pendingMovesCount}
+                    handleSavePendingMoves={handleSavePendingMoves}
+                    handleCancelPendingMoves={handleCancelPendingMoves}
+                    isSaving={isSaving}
+                    mode={mode}
+                    setMode={setMode}
+                    canEdit={canEditMath}
+                    isSimulationMode={isScenarioMode}
+                    onToggleSimulation={handleToggleSimulation}
+                    onCopyLiveToDraft={handleCopyLiveToDraft}
+                    onPublishDraftToLive={handlePublishDraftToLive}
+                    onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+                />
+
+                {/* Timetable Content - viewType에 따라 분기 */}
+                {viewType === 'teacher' && (
+                <div className="flex-1 overflow-hidden border-t border-gray-200 p-4">
+                    <TimetableGrid
+                        filteredClasses={filteredClasses}
+                        allResources={allResources}
+                        orderedSelectedDays={orderedSelectedDays}
+                        weekDates={weekDates}
+                        viewType={viewType}
+                        currentPeriods={currentPeriods}
+                        teachers={teachers}
+                        searchQuery={searchQuery}
+                        canEdit={canEditMath}
+                        mode={isScenarioMode ? 'edit' : mode}
+                        columnWidth={columnWidth}
+                        rowHeight={rowHeight}
+                        fontSize={fontSize}
+                        showClassName={showClassName}
+                        showSchool={showSchool}
+                        showGrade={showGrade}
+                        showEmptyRooms={showEmptyRooms}
+                        showStudents={showStudents}
+                        showHoldStudents={showHoldStudents}
+                        showWithdrawnStudents={showWithdrawnStudents}
+                        dragOverClassId={dragOverClassId}
+                        onClassClick={(cls) => {
+                            if (!canEditMath) return;
+                            // TimetableClass -> ClassInfo 변환
+                            const classInfo: ClassInfo = {
+                                className: cls.className,
+                                subject: cls.subject === '수학' ? 'math' : 'english',
+                                teacher: cls.teacher,
+                                room: cls.room,
+                                schedule: cls.schedule,
+                                studentCount: cls.studentIds?.length || cls.studentList?.length || 0,
+                                id: cls.id,
+                            };
+                            setSelectedClassInfo(classInfo);
+                        }}
+                        onDragStart={(e, sId, cId) => {
+                            if (isScenarioMode) {
+                                // 시뮬레이션 모드 드래그 시작
+                                e.dataTransfer.setData('studentId', sId);
+                                e.dataTransfer.setData('fromClassId', cId);
+                                e.dataTransfer.effectAllowed = 'move';
+                            } else if (canEditMath) {
+                                // 라이브 모드 드래그 시작
+                                handleDragStart(e, sId, cId);
+                            }
+                        }}
+                        onDragOver={(e, classId) => {
+                            if (isScenarioMode) {
+                                e.preventDefault();
+                                // 시뮬레이션 모드에서는 별도 상태 없이 브라우저 기본 드래그 효과 사용하거나 필요한 경우 상태 추가
+                            } else {
+                                handleDragOver(e, classId);
+                            }
+                        }}
+                        onDragLeave={(e) => {
+                            if (!isScenarioMode) {
+                                handleDragLeave();
+                            }
+                        }}
+                        onDrop={(e, toClassId) => {
+                            if (isScenarioMode) {
+                                e.preventDefault();
+                                const studentId = e.dataTransfer.getData('studentId');
+                                const fromClassId = e.dataTransfer.getData('fromClassId');
+
+                                if (!studentId || !fromClassId) return;
+                                if (fromClassId === toClassId) return;
+
+                                // classId로 className 찾기 (SimulationContext 사용)
+                                const fromClass = simulation.getScenarioClass(fromClassId);
+                                const toClass = simulation.getScenarioClass(toClassId);
+
+                                if (fromClass && toClass) {
+                                    simulation.moveStudent(fromClass.className, toClass.className, studentId);
+                                }
+                            } else {
+                                handleDrop(e, toClassId);
+                            }
+                        }}
+                        currentSubjectFilter={currentSubjectFilter}
+                        studentMap={studentMap}
+                        timetableViewMode={timetableViewMode}
+                        classKeywords={classKeywords}
+                        onStudentClick={(studentId) => {
+                            const student = studentMap[studentId];
+                            if (student) {
+                                setSelectedStudentForModal(student);
+                            }
+                        }}
+                    />
+                </div>
+                )}
+
+                {/* Math Class Tab - 통합뷰 */}
+                {viewType === 'class' && (
+                    <div className="flex-1 overflow-hidden border-t border-gray-200">
+                        <MathClassTab
+                            classes={filteredClasses}
+                            teachers={sortedTeachers}
+                            teachersData={teachers}
+                            classKeywords={classKeywords}
+                            currentUser={currentUser}
+                            studentMap={studentMap}
+                            isSimulationMode={isScenarioMode}
+                            canSimulation={canEditMath}
+                            onToggleSimulation={handleToggleSimulation}
+                            onCopyLiveToDraft={handleCopyLiveToDraft}
+                            onPublishToLive={handlePublishDraftToLive}
+                            onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+                            canPublish={canEditMath}
+                            currentWeekStart={currentMonday}
+                        />
+                    </div>
+                )}
+
+                {/* Add Class Modal */}
+                <AddClassModal
+                    isOpen={isAddClassOpen}
+                    onClose={() => setIsAddClassOpen(false)}
+                    newClassName={newClassName}
+                    setNewClassName={setNewClassName}
+                    newTeacher={newTeacher}
+                    setNewTeacher={setNewTeacher}
+                    newRoom={newRoom}
+                    setNewRoom={setNewRoom}
+                    newSubject={newSubject}
+                    setNewSubject={setNewSubject}
+                    newSchedule={newSchedule}
+                    toggleScheduleSlot={toggleScheduleSlot}
+                    handleAddClass={handleAddClass}
+                    teacherNames={sortedTeachers}
+                    isAssistant={isAssistant}
+                    setIsAssistant={setIsAssistant}
+                />
+
+                {/* Class Detail Modal - 수업 관리와 동일한 상세 모달 사용 */}
+                {selectedClassInfo && (
+                    <ClassDetailModal
+                        classInfo={selectedClassInfo}
+                        onClose={() => setSelectedClassInfo(null)}
+                    />
+                )}
+
+                {/* Student Detail Modal - 학생관리 권한에 따라 조회/수정 모드 결정 */}
+                {selectedStudentForModal && (
+                    <StudentDetailModal
+                        student={selectedStudentForModal}
+                        onClose={() => setSelectedStudentForModal(null)}
+                        readOnly={!canManageStudents}
+                        currentUser={currentUser}
+                    />
+                )}
+
+                {/* Teacher Order Modal (Math) */}
+                <TeacherOrderModal
+                    isOpen={isTeacherOrderModalOpen}
+                    onClose={() => setIsTeacherOrderModalOpen(false)}
+                    currentOrder={mathConfig.teacherOrder}
+                    allTeachers={sortedTeachers}
+                    onSave={handleSaveTeacherOrder}
+                />
+
+                {/* View Settings Modal (Math) */}
+                <SimpleViewSettingsModal
+                    isOpen={isViewSettingsOpen}
+                    onClose={() => setIsViewSettingsOpen(false)}
+                    columnWidth={columnWidth}
+                    setColumnWidth={setColumnWidth}
+                    rowHeight={rowHeight}
+                    setRowHeight={setRowHeight}
+                    fontSize={fontSize}
+                    setFontSize={setFontSize}
+                    selectedDays={selectedDays}
+                    setSelectedDays={setSelectedDays}
+                    showStudents={showStudents}
+                    setShowStudents={setShowStudents}
+                    showClassName={showClassName}
+                    setShowClassName={setShowClassName}
+                    showSchool={showSchool}
+                    setShowSchool={setShowSchool}
+                    showGrade={showGrade}
+                    setShowGrade={setShowGrade}
+                />
+
+                {/* Scenario Management Modal */}
+                {isScenarioModalOpen && (
+                    <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"><div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full" /></div>}>
+                        <ScenarioManagementModal
+                            isOpen={isScenarioModalOpen}
+                            onClose={() => setIsScenarioModalOpen(false)}
+                            currentUser={currentUser}
+                            isSimulationMode={isScenarioMode}
+                            onLoadScenario={(name) => {
+                                console.log('시나리오 불러오기:', name);
+                            }}
+                        />
+                    </Suspense>
+                )}
+            </div>
+        </>
+    );
+};
 
 // Props interface for external filter control
 interface TimetableManagerProps {
@@ -532,312 +992,87 @@ const TimetableManager = ({
         );
     }
 
-    // Math Timetable Inner Component (uses simulation context)
-    const MathTimetableContent = () => {
-        const simulation = useMathSimulation();
-        const { isScenarioMode, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive, setCurrentScenarioName } = simulation;
-        const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
-        const [loading, setLoading] = useState(false);
-
-        const handleToggleSimulation = async () => {
-            if (isScenarioMode) {
-                exitScenarioMode();
-            } else {
-                setLoading(true);
-                try {
-                    await enterScenarioMode();
-                } catch (e) {
-                    console.error('시뮬레이션 모드 진입 실패:', e);
-                    alert('시뮬레이션 모드 진입에 실패했습니다.');
-                } finally {
-                    setLoading(false);
-                }
-            }
-        };
-
-        const handleCopyLiveToDraft = async () => {
-            if (!confirm('현재 실시간 시간표를 복사해 오시겠습니까?\n기존 시뮬레이션 작업 내용은 모두 사라집니다.')) return;
-            setLoading(true);
-            try {
-                await loadFromLive();
-                alert('✅ 현재 시간표를 가져왔습니다.');
-            } catch (e) {
-                console.error('복사 실패:', e);
-                alert('복사 중 오류가 발생했습니다.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        const handlePublishDraftToLive = async () => {
-            // 권한 체크
-            if (!canEditMath) {
-                alert('❌ 수학 시간표 편집 권한이 없습니다.');
-                return;
-            }
-
-            if (!confirm('⚠️ 시뮬레이션 내용을 실제 시간표에 반영하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
-            setLoading(true);
-            try {
-                await publishToLive(currentUser.uid, currentUser.displayName || currentUser.email);
-                alert('✅ 실제 시간표에 반영되었습니다.');
-            } catch (e: any) {
-                console.error('반영 실패:', e);
-                if (e.code === 'permission-denied') {
-                    alert('❌ 권한이 없습니다. 관리자에게 문의하세요.');
-                } else {
-                    alert('반영 중 오류가 발생했습니다.');
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (loading) {
-            return (
-                <div className="flex items-center justify-center h-full">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
-                </div>
-            );
-        }
-
-        return (
-            <>
-                <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
-                    {/* Header Component */}
-                    <TimetableHeader
-                        weekLabel={weekLabel}
-                        goToPrevWeek={goToPrevWeek}
-                        goToNextWeek={goToNextWeek}
-                        goToThisWeek={goToThisWeek}
-                        searchQuery={searchQuery}
-                        setSearchQuery={setSearchQuery}
-                        viewType={viewType}
-                        setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
-                        setIsViewSettingsOpen={setIsViewSettingsOpen}
-                        pendingMovesCount={pendingMoves.length}
-                        handleSavePendingMoves={handleSavePendingMoves}
-                        handleCancelPendingMoves={handleCancelPendingMoves}
-                        isSaving={isSaving}
-                        mode={mode}
-                        setMode={setMode}
-                        canEdit={canEditMath}
-                        isSimulationMode={isScenarioMode}
-                        onToggleSimulation={handleToggleSimulation}
-                        onCopyLiveToDraft={handleCopyLiveToDraft}
-                        onPublishDraftToLive={handlePublishDraftToLive}
-                        onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
-                    />
-
-                    {/* Timetable Content - viewType에 따라 분기 */}
-                    {viewType === 'teacher' && (
-                    <div className="flex-1 overflow-hidden border-t border-gray-200 p-4">
-                        <TimetableGrid
-                            filteredClasses={filteredClasses}
-                            allResources={allResources}
-                            orderedSelectedDays={orderedSelectedDays}
-                            weekDates={weekDates}
-                            viewType={viewType}
-                            currentPeriods={currentPeriods}
-                            teachers={teachers}
-                            searchQuery={searchQuery}
-                            canEdit={canEditMath}
-                            mode={isScenarioMode ? 'edit' : mode}
-                            columnWidth={columnWidth}
-                            rowHeight={rowHeight}
-                            fontSize={fontSize}
-                            showClassName={showClassName}
-                            showSchool={showSchool}
-                            showGrade={showGrade}
-                            showEmptyRooms={showEmptyRooms}
-                            showStudents={showStudents}
-                            showHoldStudents={showHoldStudents}
-                            showWithdrawnStudents={showWithdrawnStudents}
-                            dragOverClassId={dragOverClassId}
-                            onClassClick={(cls) => {
-                                if (!canEditMath) return;
-                                // TimetableClass -> ClassInfo 변환
-                                const classInfo: ClassInfo = {
-                                    className: cls.className,
-                                    subject: cls.subject === '수학' ? 'math' : 'english',
-                                    teacher: cls.teacher,
-                                    room: cls.room,
-                                    schedule: cls.schedule,
-                                    studentCount: cls.studentIds?.length || cls.studentList?.length || 0,
-                                    id: cls.id,
-                                };
-                                setSelectedClassInfo(classInfo);
-                            }}
-                            onDragStart={(e, sId, cId) => {
-                                if (isScenarioMode) {
-                                    // 시뮬레이션 모드 드래그 시작
-                                    e.dataTransfer.setData('studentId', sId);
-                                    e.dataTransfer.setData('fromClassId', cId);
-                                    e.dataTransfer.effectAllowed = 'move';
-                                } else if (canEditMath) {
-                                    // 라이브 모드 드래그 시작
-                                    handleDragStart(e, sId, cId);
-                                }
-                            }}
-                            onDragOver={(e, classId) => {
-                                if (isScenarioMode) {
-                                    e.preventDefault();
-                                    // 시뮬레이션 모드에서는 별도 상태 없이 브라우저 기본 드래그 효과 사용하거나 필요한 경우 상태 추가
-                                } else {
-                                    handleDragOver(e, classId);
-                                }
-                            }}
-                            onDragLeave={(e) => {
-                                if (!isScenarioMode) {
-                                    handleDragLeave();
-                                }
-                            }}
-                            onDrop={(e, toClassId) => {
-                                if (isScenarioMode) {
-                                    e.preventDefault();
-                                    const studentId = e.dataTransfer.getData('studentId');
-                                    const fromClassId = e.dataTransfer.getData('fromClassId');
-
-                                    if (!studentId || !fromClassId) return;
-                                    if (fromClassId === toClassId) return;
-
-                                    // classId로 className 찾기 (SimulationContext 사용)
-                                    const fromClass = simulation.getScenarioClass(fromClassId);
-                                    const toClass = simulation.getScenarioClass(toClassId);
-
-                                    if (fromClass && toClass) {
-                                        simulation.moveStudent(fromClass.className, toClass.className, studentId);
-                                    }
-                                } else {
-                                    handleDrop(e, toClassId);
-                                }
-                            }}
-                            currentSubjectFilter={currentSubjectFilter}
-                            studentMap={studentMap}
-                            timetableViewMode={timetableViewMode}
-                            classKeywords={classKeywords}
-                            onStudentClick={(studentId) => {
-                                const student = studentMap[studentId];
-                                if (student) {
-                                    setSelectedStudentForModal(student);
-                                }
-                            }}
-                        />
-                    </div>
-                    )}
-
-                    {/* Math Class Tab - 통합뷰 */}
-                    {viewType === 'class' && (
-                        <div className="flex-1 overflow-hidden border-t border-gray-200">
-                            <MathClassTab
-                                classes={filteredClasses}
-                                teachers={sortedTeachers}
-                                teachersData={teachers}
-                                classKeywords={classKeywords}
-                                currentUser={currentUser}
-                                studentMap={studentMap}
-                                isSimulationMode={isScenarioMode}
-                                canSimulation={canEditMath}
-                                onToggleSimulation={handleToggleSimulation}
-                                onCopyLiveToDraft={handleCopyLiveToDraft}
-                                onPublishToLive={handlePublishDraftToLive}
-                                onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
-                                canPublish={canEditMath}
-                            />
-                        </div>
-                    )}
-
-                    {/* Add Class Modal */}
-                    <AddClassModal
-                        isOpen={isAddClassOpen}
-                        onClose={() => setIsAddClassOpen(false)}
-                        newClassName={newClassName}
-                        setNewClassName={setNewClassName}
-                        newTeacher={newTeacher}
-                        setNewTeacher={setNewTeacher}
-                        newRoom={newRoom}
-                        setNewRoom={setNewRoom}
-                        newSubject={newSubject}
-                        setNewSubject={setNewSubject}
-                        newSchedule={newSchedule}
-                        toggleScheduleSlot={toggleScheduleSlot}
-                        handleAddClass={handleAddClass}
-                        teacherNames={sortedTeachers}
-                        isAssistant={isAssistant}
-                        setIsAssistant={setIsAssistant}
-                    />
-
-                    {/* Class Detail Modal - 수업 관리와 동일한 상세 모달 사용 */}
-                    {selectedClassInfo && (
-                        <ClassDetailModal
-                            classInfo={selectedClassInfo}
-                            onClose={() => setSelectedClassInfo(null)}
-                        />
-                    )}
-
-                    {/* Student Detail Modal - 학생관리 권한에 따라 조회/수정 모드 결정 */}
-                    {selectedStudentForModal && (
-                        <StudentDetailModal
-                            student={selectedStudentForModal}
-                            onClose={() => setSelectedStudentForModal(null)}
-                            readOnly={!canManageStudents}
-                            currentUser={currentUser}
-                        />
-                    )}
-
-                    {/* Teacher Order Modal (Math) */}
-                    <TeacherOrderModal
-                        isOpen={isTeacherOrderModalOpen}
-                        onClose={() => setIsTeacherOrderModalOpen(false)}
-                        currentOrder={mathConfig.teacherOrder}
-                        allTeachers={sortedTeachers}
-                        onSave={handleSaveTeacherOrder}
-                    />
-
-                    {/* View Settings Modal (Math) */}
-                    <SimpleViewSettingsModal
-                        isOpen={isViewSettingsOpen}
-                        onClose={() => setIsViewSettingsOpen(false)}
-                        columnWidth={columnWidth}
-                        setColumnWidth={setColumnWidth}
-                        rowHeight={rowHeight}
-                        setRowHeight={setRowHeight}
-                        fontSize={fontSize}
-                        setFontSize={setFontSize}
-                        selectedDays={selectedDays}
-                        setSelectedDays={setSelectedDays}
-                        showStudents={showStudents}
-                        setShowStudents={setShowStudents}
-                        showClassName={showClassName}
-                        setShowClassName={setShowClassName}
-                        showSchool={showSchool}
-                        setShowSchool={setShowSchool}
-                        showGrade={showGrade}
-                        setShowGrade={setShowGrade}
-                    />
-
-                    {/* Scenario Management Modal */}
-                    {isScenarioModalOpen && (
-                        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"><div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full" /></div>}>
-                            <ScenarioManagementModal
-                                isOpen={isScenarioModalOpen}
-                                onClose={() => setIsScenarioModalOpen(false)}
-                                currentUser={currentUser}
-                                isSimulationMode={isScenarioMode}
-                                onLoadScenario={(name) => {
-                                    console.log('시나리오 불러오기:', name);
-                                }}
-                            />
-                        </Suspense>
-                    )}
-                </div>
-            </>
-        );
-    };
-
     return (
         <MathSimulationProvider>
-            <MathTimetableContent />
+            <MathTimetableContent
+                weekLabel={weekLabel}
+                goToPrevWeek={goToPrevWeek}
+                goToNextWeek={goToNextWeek}
+                goToThisWeek={goToThisWeek}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                viewType={viewType}
+                setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
+                setIsViewSettingsOpen={setIsViewSettingsOpen}
+                pendingMovesCount={pendingMoves.length}
+                handleSavePendingMoves={handleSavePendingMoves}
+                handleCancelPendingMoves={handleCancelPendingMoves}
+                isSaving={isSaving}
+                mode={mode}
+                setMode={setMode}
+                canEditMath={canEditMath}
+                filteredClasses={filteredClasses}
+                allResources={allResources}
+                orderedSelectedDays={orderedSelectedDays}
+                weekDates={weekDates}
+                currentPeriods={currentPeriods}
+                teachers={teachers}
+                columnWidth={columnWidth}
+                setColumnWidth={setColumnWidth}
+                rowHeight={rowHeight}
+                setRowHeight={setRowHeight}
+                fontSize={fontSize}
+                setFontSize={setFontSize}
+                showClassName={showClassName}
+                setShowClassName={setShowClassName}
+                showSchool={showSchool}
+                setShowSchool={setShowSchool}
+                showGrade={showGrade}
+                setShowGrade={setShowGrade}
+                showEmptyRooms={showEmptyRooms}
+                showStudents={showStudents}
+                setShowStudents={setShowStudents}
+                showHoldStudents={showHoldStudents}
+                showWithdrawnStudents={showWithdrawnStudents}
+                dragOverClassId={dragOverClassId}
+                handleDragStart={handleDragStart}
+                handleDragOver={handleDragOver}
+                handleDragLeave={handleDragLeave}
+                handleDrop={handleDrop}
+                currentSubjectFilter={currentSubjectFilter}
+                studentMap={studentMap}
+                timetableViewMode={timetableViewMode}
+                classKeywords={classKeywords}
+                setSelectedClassInfo={setSelectedClassInfo}
+                setSelectedStudentForModal={setSelectedStudentForModal}
+                isAddClassOpen={isAddClassOpen}
+                setIsAddClassOpen={setIsAddClassOpen}
+                newClassName={newClassName}
+                setNewClassName={setNewClassName}
+                newTeacher={newTeacher}
+                setNewTeacher={setNewTeacher}
+                newRoom={newRoom}
+                setNewRoom={setNewRoom}
+                newSubject={newSubject}
+                setNewSubject={setNewSubject}
+                newSchedule={newSchedule}
+                toggleScheduleSlot={toggleScheduleSlot}
+                handleAddClass={handleAddClass}
+                sortedTeachers={sortedTeachers}
+                isAssistant={isAssistant}
+                setIsAssistant={setIsAssistant}
+                selectedClassInfo={selectedClassInfo}
+                selectedStudentForModal={selectedStudentForModal}
+                canManageStudents={canManageStudents}
+                mathConfig={mathConfig}
+                handleSaveTeacherOrder={handleSaveTeacherOrder}
+                isTeacherOrderModalOpen={isTeacherOrderModalOpen}
+                isViewSettingsOpen={isViewSettingsOpen}
+                selectedDays={selectedDays}
+                setSelectedDays={setSelectedDays}
+                currentMonday={currentMonday}
+                currentUser={currentUser}
+            />
         </MathSimulationProvider>
     );
 };

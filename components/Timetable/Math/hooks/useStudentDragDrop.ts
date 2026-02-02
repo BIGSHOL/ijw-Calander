@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { doc, writeBatch } from 'firebase/firestore';
+import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass, TimetableStudent } from '../../../../types';
 
@@ -16,6 +17,7 @@ export interface PendingMove {
 }
 
 export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
+    const queryClient = useQueryClient();
     const [draggingStudent, setDraggingStudent] = useState<DraggingStudent | null>(null);
     const [dragOverClassId, setDragOverClassId] = useState<string | null>(null);
 
@@ -115,6 +117,11 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             });
 
             await batch.commit();
+
+            // React Query 캐시 무효화 - 실시간 반영
+            queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+
             setPendingMoves([]);
         } catch (e) {
             console.error(e);

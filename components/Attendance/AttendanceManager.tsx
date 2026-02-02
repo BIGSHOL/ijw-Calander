@@ -335,24 +335,32 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     return uniqueIds.size;
   }, [visibleStudents]);
 
+  // 확정된 월은 저장된 설정 사용, 미확정 월은 전역 설정 사용
+  const effectiveSalaryConfig = useMemo(() =>
+    currentSettlement.isFinalized && currentSettlement.salaryConfig
+      ? currentSettlement.salaryConfig
+      : salaryConfig,
+    [currentSettlement.isFinalized, currentSettlement.salaryConfig, salaryConfig]
+  );
+
   const stats = useMemo(() =>
-    calculateStats(allStudents, visibleStudents, salaryConfig, currentDate),
-    [allStudents, visibleStudents, salaryConfig, currentDate]
+    calculateStats(allStudents, visibleStudents, effectiveSalaryConfig, currentDate),
+    [allStudents, visibleStudents, effectiveSalaryConfig, currentDate]
   );
 
   const finalSalary = useMemo(() => {
     let total = stats.totalSalary;
     // 블로그 인센티브: 고정금 또는 비율 가산
     if (currentSettlement.hasBlog) {
-      const blogBonus = salaryConfig.incentives.blogType === 'percentage'
-        ? Math.round(stats.totalSalary * (salaryConfig.incentives.blogRate ?? 2) / 100)
-        : (salaryConfig.incentives.blogAmount ?? 0);
+      const blogBonus = effectiveSalaryConfig.incentives.blogType === 'percentage'
+        ? Math.round(stats.totalSalary * (effectiveSalaryConfig.incentives.blogRate ?? 2) / 100)
+        : (effectiveSalaryConfig.incentives.blogAmount ?? 0);
       total += blogBonus;
     }
-    if (currentSettlement.hasRetention) total += salaryConfig.incentives.retentionAmount;
+    if (currentSettlement.hasRetention) total += effectiveSalaryConfig.incentives.retentionAmount;
     total += (currentSettlement.otherAmount || 0);
     return total;
-  }, [stats.totalSalary, currentSettlement, salaryConfig.incentives]);
+  }, [stats.totalSalary, currentSettlement, effectiveSalaryConfig.incentives]);
 
   // MOVED: All event handlers (useCallback) must be before early return (React Hooks rules)
   /**
@@ -798,7 +806,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         monthStr={currentDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
         baseSalary={stats.totalSalary}
         droppedStudentRate={stats.droppedStudentRate}
-        incentiveConfig={salaryConfig.incentives}
+        incentiveConfig={effectiveSalaryConfig.incentives}
+        salaryConfig={salaryConfig}  // 스냅샷용 전역 설정 (확정 시 저장됨)
         data={currentSettlement}
         onUpdate={handleSettlementUpdate}
       />

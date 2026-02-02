@@ -462,6 +462,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['classStudents'] });  // Generic 시간표
       queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표
+      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });  // 수학 시간표
       refreshStudents();
 
     } catch (err) {
@@ -520,6 +521,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['classStudents'] });
       queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });  // 수학 시간표
       refreshStudents();
 
     } catch (err) {

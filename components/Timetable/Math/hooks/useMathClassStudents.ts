@@ -14,13 +14,19 @@
  * - Firebase 읽기 비용 60% 이상 절감 (실시간 구독 제거)
  * - 5분 캐싱으로 불필요한 재요청 방지
  *
+ * SYNC WITH ENGLISH (2026-02-02):
+ * - 영어 시간표(useClassStudents.ts)와 동일한 로직 적용
+ * - studentMap 변경 시 캐시 무효화
+ * - 반이동 감지 (isTransferred, isTransferredIn)
+ * - 배정 예정 플래그 (isScheduled)
+ *
  * USAGE:
  * const { classDataMap, isLoading, refetch } = useMathClassStudents(classNames, studentMap);
  * // classDataMap[className] = { studentList: [...], studentIds: [...] }
  */
 
 import { useMemo, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { query, where, collectionGroup, getDocs } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
@@ -45,11 +51,24 @@ export const useMathClassStudents = (
     classNames: string[],
     studentMap: Record<string, any> = {}
 ) => {
+    const queryClient = useQueryClient();
+
     // Use Ref to avoid re-fetch when studentMap reference changes
     const studentMapRef = useRef(studentMap);
+
+    // studentMap이 변경되면 캐시된 데이터를 무효화하여 재계산 트리거
+    // (학생 기본 정보 변경 시 시간표에 반영되도록)
+    const prevStudentMapRef = useRef<Record<string, any> | null>(null);
     useEffect(() => {
         studentMapRef.current = studentMap;
-    }, [studentMap]);
+
+        // studentMap이 실제로 변경되었는지 확인 (초기 로드 제외)
+        if (prevStudentMapRef.current !== null && prevStudentMapRef.current !== studentMap) {
+            // 캐시 무효화하여 재조회 트리거
+            queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+        }
+        prevStudentMapRef.current = studentMap;
+    }, [studentMap, queryClient]);
 
     // Memoize classNames to avoid unnecessary re-fetches
     const classNamesKey = useMemo(() => [...classNames].sort().join(','), [classNames]);
@@ -83,6 +102,37 @@ export const useMathClassStudents = (
             // Get today's date for filtering future enrollments
             const today = new Date().toISOString().split('T')[0];
 
+            // 반이동 감지: 학생별로 활성/종료 등록 수업 목록 수집
+            const studentActiveClasses: Record<string, Set<string>> = {}; // studentId -> Set of active classNames
+            const studentEndedClasses: Record<string, Set<string>> = {};  // studentId -> Set of ended classNames
+
+            // 1차: 모든 enrollment 순회하여 활성/종료 등록 수집
+            snapshot.docs.forEach(doc => {
+                const data = doc.data();
+                const className = data.className as string;
+                const studentId = doc.ref.parent.parent?.id;
+                if (!studentId) return;
+
+                const withdrawalDate = convertTimestampToDate(data.withdrawalDate);
+                const endDate = convertTimestampToDate(data.endDate);
+                const hasEndDate = !!(withdrawalDate || endDate);
+
+                if (!hasEndDate) {
+                    // 활성 등록 (endDate 없음)
+                    if (!studentActiveClasses[studentId]) {
+                        studentActiveClasses[studentId] = new Set();
+                    }
+                    studentActiveClasses[studentId].add(className);
+                } else {
+                    // 종료된 등록 (endDate 있음)
+                    if (!studentEndedClasses[studentId]) {
+                        studentEndedClasses[studentId] = new Set();
+                    }
+                    studentEndedClasses[studentId].add(className);
+                }
+            });
+
+            // 2차: 요청된 수업들의 enrollment 데이터 처리
             snapshot.docs.forEach(doc => {
                 const data = doc.data();
                 const className = data.className as string;
@@ -96,23 +146,35 @@ export const useMathClassStudents = (
 
                 const startDate = convertTimestampToDate(data.enrollmentDate || data.startDate);
                 const withdrawalDate = convertTimestampToDate(data.withdrawalDate);
+                const endDate = convertTimestampToDate(data.endDate);
 
-                // Filter out students with future start dates (not yet started)
-                if (startDate && startDate > today) return;
+                // 미래 시작일 학생도 포함 (대기 섹션에 '배정 예정'으로 표시)
+                const isScheduled = startDate && startDate > today;
 
-                // Filter out withdrawn students
-                if (withdrawalDate) return;
+                // 반이동 여부 체크
+                const hasEndDate = !!(withdrawalDate || endDate);
+                const activeClasses = studentActiveClasses[studentId] || new Set();
+                const endedClasses = studentEndedClasses[studentId] || new Set();
 
-                // Filter out students on hold
-                if (data.onHold) return;
+                // isTransferred: 이 수업에서 종료됐지만 다른 수업에 활성 등록이 있음 (퇴원 섹션에서 제외)
+                const hasActiveInOtherClass = hasEndDate &&
+                    Array.from(activeClasses).some(c => c !== className);
 
+                // isTransferredIn: 이 수업에 활성 등록이 있고, 다른 수업에서 종료된 기록이 있음 (반이동으로 온 학생)
+                const hasEndedInOtherClass = !hasEndDate &&
+                    Array.from(endedClasses).some(c => c !== className);
+
+                // 모든 학생 포함 (퇴원/휴원도 카드에서 별도 섹션으로 표시)
                 classStudentMap[className].add(studentId);
 
                 enrollmentDataMap[className][studentId] = {
                     enrollmentDate: startDate,
-                    withdrawalDate: withdrawalDate,
+                    withdrawalDate: withdrawalDate || endDate,  // endDate도 퇴원으로 처리
                     onHold: data.onHold,
                     attendanceDays: data.attendanceDays || [],
+                    isScheduled,  // 배정 예정 플래그
+                    isTransferred: hasActiveInOtherClass,  // 반이동 나감 (퇴원 섹션에서 제외)
+                    isTransferredIn: hasEndedInOtherClass,  // 반이동 들어옴 (초록색 배경으로 상단 표시)
                 };
             });
 
@@ -131,6 +193,9 @@ export const useMathClassStudents = (
                             return null;
                         }
 
+                        // Skip if student is not active (영어 시간표와 동일)
+                        if (baseStudent.status !== 'active') return null;
+
                         // Priority for enrollment date (학생 관리 수업 탭 기준):
                         // 1. enrollmentData.enrollmentDate (학생 관리 수업 탭의 '시작일' from enrollments subcollection)
                         // 2. baseStudent.startDate (학생 기본정보의 등록일 - fallback)
@@ -148,6 +213,9 @@ export const useMathClassStudents = (
                             onHold: enrollmentData.onHold,
                             isMoved: false,
                             attendanceDays: enrollmentData.attendanceDays || [],
+                            isScheduled: enrollmentData.isScheduled || false,  // 배정 예정
+                            isTransferred: enrollmentData.isTransferred || false,  // 반이동 나감 (퇴원 아님)
+                            isTransferredIn: enrollmentData.isTransferredIn || false,  // 반이동 들어옴 (초록 배경)
                         } as TimetableStudent;
                     })
                     .filter(Boolean) as TimetableStudent[];
@@ -164,9 +232,9 @@ export const useMathClassStudents = (
             return result;
         },
         enabled: classNames.length > 0,
-        staleTime: 1000 * 60 * 5,     // 5분 캐싱
-        gcTime: 1000 * 60 * 15,       // 15분 GC
-        refetchOnWindowFocus: false,  // 창 포커스 시 자동 재요청 비활성화
+        staleTime: 1000 * 30,         // 30초 캐시 (로딩 속도 개선, invalidateQueries로 즉시 반영)
+        gcTime: 1000 * 60 * 5,        // 5분 GC
+        refetchOnWindowFocus: false,  // 창 포커스 시 자동 재요청 비활성화 (성능)
     });
 
     return { classDataMap, isLoading, refetch };

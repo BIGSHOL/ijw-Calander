@@ -36,6 +36,8 @@ interface MathClassTabProps {
     onPublishToLive?: () => void;
     onOpenScenarioModal?: () => void;
     canPublish?: boolean;
+    // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
+    currentWeekStart?: Date;
 }
 
 interface GroupedClass {
@@ -69,6 +71,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     onPublishToLive,
     onOpenScenarioModal,
     canPublish = false,
+    currentWeekStart,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -557,6 +560,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                                                     isSimulationMode={isSimulationMode}
                                                     classStudentData={classDataMap[group.classes[0].name]}
                                                     isTimeColumnOnly={true}
+                                                    currentWeekStart={currentWeekStart}
                                                 />
                                             </div>
                                         )}
@@ -579,6 +583,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                                                 onClassClick={mode === 'edit' && !isSimulationMode ? () => handleClassClick(cls) : undefined}
                                                 onStudentClick={handleStudentClick}
                                                 onRestoreEnrollment={!isSimulationMode ? handleRestoreEnrollment : undefined}
+                                                currentWeekStart={currentWeekStart}
                                             />
                                         ))}
                                     </div>
