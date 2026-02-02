@@ -1038,14 +1038,14 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         </tbody>
                     </table>
 
-                    {/* Bottom Spacer for Input Bar */}
-                    {mode === 'edit' && selectedCells.size > 0 && <div className="h-[200px]" />}
+                    {/* Bottom Spacer for comfortable scrolling */}
+                    {mode === 'edit' && selectedCells.size > 0 && <div className="h-[50px]" />}
                 </div>
             </div>
 
-            {/* Batch Input Bar */}
+            {/* Batch Input Bar - flex-shrink-0으로 스크롤 영역 위에 고정 */}
             {mode === 'edit' && selectedCells.size > 0 && (
-                <div className="absolute bottom-0 left-0 right-0">
+                <div className="flex-shrink-0 border-t border-gray-200 bg-white shadow-lg">
                     <BatchInputBar
                         selectedCells={selectedCells}
                         inputData={inputData}
