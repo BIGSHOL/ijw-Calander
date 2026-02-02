@@ -119,6 +119,23 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             return;
         }
 
+        // 예약 날짜 중복 체크
+        if (enableScheduledApply && scheduledApplyDate) {
+            const existingScheduled = scenarios.find(
+                s => (s as any).scheduledApplyStatus === 'pending' &&
+                     (s as any).scheduledApplyDate === scheduledApplyDate
+            );
+            if (existingScheduled) {
+                const proceed = confirm(
+                    `⚠️ ${scheduledApplyDate}에 이미 예약된 시나리오가 있습니다.\n\n` +
+                    `기존 예약: "${existingScheduled.name}"\n\n` +
+                    `같은 날짜에 여러 시나리오가 예약되면 충돌이 발생할 수 있습니다.\n` +
+                    `그래도 계속하시겠습니까?`
+                );
+                if (!proceed) return;
+            }
+        }
+
         setActiveOperation('saving');
 
         try {
