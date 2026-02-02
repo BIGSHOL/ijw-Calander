@@ -39,6 +39,7 @@ export interface ClassDetail {
   students: ClassStudent[];
   room?: string;
   slotTeachers?: Record<string, string>;  // { "월-4": "부담임명", ... }
+  slotRooms?: Record<string, string>;     // { "월-4": "301", ... }
   memo?: string;  // 수업 메모
 }
 
@@ -62,6 +63,7 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
       let schedule: string[] = [];
       let room = '';
       let slotTeachers: Record<string, string> = {};
+      let slotRooms: Record<string, string> = {};
       let memo = '';
 
       // OPTIMIZATION: Parallelize independent queries (async-parallel)
@@ -89,6 +91,7 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
         teacher = classDoc.teacher || '';
         room = classDoc.room || '';
         slotTeachers = classDoc.slotTeachers || {};
+        slotRooms = classDoc.slotRooms || {};
         memo = classDoc.memo || '';
         // schedule이 ScheduleSlot[] 형식이면 문자열로 변환
         if (classDoc.schedule && Array.isArray(classDoc.schedule)) {
@@ -185,6 +188,7 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
         students,
         room,
         slotTeachers,
+        slotRooms,
         memo,
       };
     },

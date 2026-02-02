@@ -408,6 +408,8 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({ classInfo, onClose,
             schedule: classDetail.schedule,
             teacher: classDetail.teacher,
             room: classDetail.room,
+            slotTeachers: classDetail.slotTeachers,
+            slotRooms: classDetail.slotRooms,
           } : classInfo}
           initialSlotTeachers={classDetail?.slotTeachers}
           onClose={(saved, newClassName) => {
