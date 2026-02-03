@@ -711,7 +711,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         </span>
 
         {/* 수업명 */}
-        <span className="w-40 shrink-0 text-xs text-[#373d41] truncate">
+        <span className={`${compact ? 'flex-1 min-w-0' : 'w-40 shrink-0'} text-xs text-[#373d41] truncate`}>
           {group.className}
         </span>
 
@@ -723,43 +723,35 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           </span>
         </div>
 
-        {/* 스케줄 (빈 공간) */}
-        <div className="w-40 min-w-0 overflow-hidden">
-          <span className="text-xxs text-gray-400 italic">종료됨</span>
-        </div>
+        {/* 시작일 */}
+        <span className="w-16 shrink-0 text-xxs text-[#373d41] text-center">
+          {formatDate(group.startDate)}
+        </span>
 
-        {/* 학생수 (빈 공간) */}
-        <div className="w-10 shrink-0"></div>
+        {/* 종료일 */}
+        <span className="w-16 shrink-0 text-xxs text-[#373d41] text-center">
+          {formatDate(group.endDate)}
+        </span>
 
-        {/* 시작일/종료일 (compact 모드가 아닐 때만) */}
+        {/* 삭제 버튼 (권한이 있는 경우만, compact 모드가 아닐 때) */}
         {!compact && (
-          <>
-            <span className="w-16 shrink-0 text-xxs text-[#373d41] text-center">
-              {formatDate(group.startDate)}
-            </span>
-            <span className="w-14 shrink-0 text-xxs text-[#373d41] text-center">
-              {formatDate(group.endDate)}
-            </span>
-          </>
+          <div className="w-5 shrink-0 flex items-center justify-center">
+            {canManageClassHistory && !readOnly && (
+              <button
+                onClick={(e) => handleDeleteCompletedEnrollment(group, e)}
+                disabled={deletingClass === `${group.subject}_${group.className}`}
+                className="text-red-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="수업 이력 삭제"
+              >
+                {deletingClass === `${group.subject}_${group.className}` ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3 h-3" />
+                )}
+              </button>
+            )}
+          </div>
         )}
-
-        {/* 삭제 버튼 (권한이 있는 경우만 표시) */}
-        <div className="w-5 shrink-0 flex items-center justify-center">
-          {canManageClassHistory && !readOnly && (
-            <button
-              onClick={(e) => handleDeleteCompletedEnrollment(group, e)}
-              disabled={deletingClass === `${group.subject}_${group.className}`}
-              className="text-red-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title="수업 이력 삭제"
-            >
-              {deletingClass === `${group.subject}_${group.className}` ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Trash2 className="w-3 h-3" />
-              )}
-            </button>
-          )}
-        </div>
       </div>
     );
   };
@@ -949,20 +941,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       <div className="mt-4">
         <h3 className="text-xs font-bold text-[#373d41] mb-2">지난 수업 ({completedClasses.length}개)</h3>
         <div className="bg-white border border-gray-200 overflow-hidden">
-          {/* 테이블 헤더 */}
+          {/* 테이블 헤더 - 지난 수업은 상태 대신 시작/종료일 표시 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
             <span className="w-8 shrink-0">과목</span>
-            <span className="w-40 shrink-0">수업명</span>
+            <span className={`${compact ? 'flex-1 min-w-0' : 'w-40'} shrink-0`}>수업명</span>
             <span className="w-14 shrink-0">강사</span>
-            <span className="w-40">상태</span>
-            <span className="w-10 shrink-0"></span>
-            {!compact && (
-              <>
-                <span className="w-16 shrink-0 text-center">시작</span>
-                <span className="w-14 shrink-0 text-center">종료</span>
-              </>
-            )}
-            <span className="w-5 shrink-0"></span>
+            <span className="w-16 shrink-0 text-center">시작</span>
+            <span className="w-16 shrink-0 text-center">종료</span>
+            {!compact && <span className="w-5 shrink-0"></span>}
           </div>
 
           {completedClasses.length === 0 ? (
