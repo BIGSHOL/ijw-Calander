@@ -8,7 +8,7 @@ interface GanttTaskListProps {
 
 const GanttTaskList: React.FC<GanttTaskListProps> = ({ tasks, onToggleTask }) => {
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full max-h-[500px]">
+        <div className="bg-white rounded-sm shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full max-h-[500px]">
             <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                 <h3 className="text-sm font-semibold text-[#373d41] uppercase tracking-wider">실행 목록 (Checklist)</h3>
             </div>
@@ -18,7 +18,7 @@ const GanttTaskList: React.FC<GanttTaskListProps> = ({ tasks, onToggleTask }) =>
                         key={task.id}
                         onClick={() => onToggleTask(task.id)}
                         className={`
-              group flex items-start p-3 rounded-lg cursor-pointer border transition-all duration-200
+              group flex items-start p-3 rounded-sm cursor-pointer border transition-all duration-200
               ${task.completed
                                 ? 'bg-[#fdb813]/10 border-[#fdb813]/30'
                                 : 'bg-white border-transparent hover:border-[#081429]/20 hover:bg-slate-50 hover:shadow-sm'

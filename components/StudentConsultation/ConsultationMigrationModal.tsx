@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { read, utils } from 'xlsx';
-import { X, Upload, Check, Loader2, Database, Plus } from 'lucide-react';
+import { X, Upload, Check, Loader2, Database, Plus, FileText, Users, UserPlus } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
 import { useStaff } from '../../hooks/useStaff';
 import { StaffMember, UnifiedStudent } from '../../types';
@@ -545,16 +545,16 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
     const newStudentCount = migrationItems.filter(i => i.isNewStudent).length;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-[900px] max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
+            <div className="bg-white rounded-sm shadow-2xl w-[900px] max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                 {/* Header */}
-                <div className="bg-[#081429] px-6 py-4 flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                        <Database size={20} className="text-[#fdb813]" />
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
+                        <Database size={18} className="text-[#fdb813]" />
                         MakeEdu 상담 내역 마이그레이션
                     </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-                        <X size={24} />
+                    <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                        <X size={18} />
                     </button>
                 </div>
 
@@ -562,7 +562,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                 <div className="flex-1 overflow-hidden flex flex-col p-6 bg-gray-50">
                     {step === 'load' && (
                         <div className="flex flex-col items-center justify-center h-full gap-6">
-                            <div className="w-full max-w-md p-8 bg-white rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer relative">
+                            <div className="w-full max-w-md p-8 bg-white rounded-sm border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer relative">
                                 <input
                                     type="file"
                                     accept=".xls, .xlsx"
@@ -572,7 +572,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                                 <Upload className="text-gray-400 mb-4" size={48} />
                                 <h3 className="text-lg font-bold text-gray-900 mb-1">상담 내역 엑셀 업로드</h3>
                                 <p className="text-sm text-gray-500 mb-4">MakeEdu에서 내려받은 엑셀 파일(.xls, .xlsx)을 업로드하세요.</p>
-                                <button className="px-4 py-2 bg-[#081429] text-white rounded-md text-sm font-medium">
+                                <button className="px-4 py-2 bg-[#081429] text-white rounded-sm text-sm font-medium">
                                     파일 선택하기
                                 </button>
                             </div>
@@ -596,88 +596,102 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
 
                     {step === 'preview' && (
                         <>
-                            {/* Summary Cards */}
-                            <div className="grid grid-cols-3 gap-4 mb-6">
-                                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                                    <div className="text-sm text-gray-500 mb-1">총 데이터</div>
-                                    <div className="text-2xl font-bold text-gray-900">{migrationItems.length}건</div>
+                            {/* Summary Cards Section */}
+                            <div className="mb-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Database size={16} className="text-gray-600" />
+                                    <h3 className="text-sm font-bold text-gray-700">마이그레이션 요약</h3>
                                 </div>
-                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 shadow-sm">
-                                    <div className="text-sm text-blue-600 mb-1">이전 진행 (전체)</div>
-                                    <div className="text-xl font-bold text-blue-700">{readyCount}건</div>
-                                </div>
-                                <div className="bg-purple-50 p-4 rounded-lg border border-purple-100 shadow-sm">
-                                    <div className="text-sm text-purple-600 mb-1">신규 생성 예정</div>
-                                    <div className="text-xl font-bold text-purple-700">{newStudentCount}건</div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="bg-white p-4 rounded-sm border border-gray-200 shadow-sm">
+                                        <div className="text-sm text-gray-500 mb-1">총 데이터</div>
+                                        <div className="text-2xl font-bold text-gray-900">{migrationItems.length}건</div>
+                                    </div>
+                                    <div className="bg-blue-50 p-4 rounded-sm border border-blue-100 shadow-sm">
+                                        <div className="text-sm text-blue-600 mb-1">이전 진행 (전체)</div>
+                                        <div className="text-xl font-bold text-blue-700">{readyCount}건</div>
+                                    </div>
+                                    <div className="bg-purple-50 p-4 rounded-sm border border-purple-100 shadow-sm">
+                                        <div className="text-sm text-purple-600 mb-1 flex items-center gap-1">
+                                            <UserPlus size={14} />
+                                            신규 생성 예정
+                                        </div>
+                                        <div className="text-xl font-bold text-purple-700">{newStudentCount}건</div>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* ... Rest of preview UI remains same ... */}
-                            {/* To avoid huge replace block, we target closing parts carefully if needed, but here replacing the whole execution block is safer */}
-
-                            <div className="flex-1 overflow-auto border border-gray-200 rounded-lg bg-white">
-                                <table className="w-full text-xs text-left whitespace-nowrap">
-                                    <thead className="bg-gray-100 font-bold text-gray-700 sticky top-0 z-10">
-                                        <tr>
-                                            <th className="px-3 py-2 border-b w-10">No</th>
-                                            <th className="px-3 py-2 border-b w-16">구분</th>
-                                            <th className="px-3 py-2 border-b w-20">이름</th>
-                                            <th className="px-3 py-2 border-b w-20">학교</th>
-                                            <th className="px-3 py-2 border-b w-12">학년</th>
-                                            <th className="px-3 py-2 border-b w-24">보호자연락처</th>
-                                            <th className="px-3 py-2 border-b w-24">원생연락처</th>
-                                            <th className="px-3 py-2 border-b">제목</th>
-                                            <th className="px-3 py-2 border-b w-20">상담자</th>
-                                            <th className="px-3 py-2 border-b w-20">담임선생님</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {migrationItems.map((item, idx) => (
-                                            <tr key={idx} className={`hover:bg-gray-50 ${item.matchStatus !== 'READY' ? 'bg-purple-50/30' : ''}`}>
-                                                <td className="px-3 py-2 text-gray-500 font-mono">{item.no}</td>
-                                                <td className="px-3 py-2 text-gray-700">{item.subject}</td>
-                                                <td className="px-3 py-2 font-medium text-gray-900">
-                                                    {item.studentName}
-                                                    {item.matchStatus === 'NEW_STUDENT' && <span className="text-xxs text-purple-600 ml-1">(신규)</span>}
-                                                </td>
-                                                <td className="px-3 py-2 text-gray-600">{item.schoolName}</td>
-                                                <td className="px-3 py-2 text-gray-600">{item.grade}</td>
-                                                <td className="px-3 py-2 text-gray-500">{item.parentPhone}</td>
-                                                <td className="px-3 py-2 text-gray-500 text-[11px]">{item.studentPhone}</td>
-                                                <td className="px-3 py-2 max-w-[300px]" title={item.notes}>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className={`px-1.5 py-0.5 rounded text-xxs shrink-0 ${
-                                                            item.generatedCategory === 'progress'
-                                                                ? 'bg-blue-100 text-blue-700'
-                                                                : 'bg-gray-100 text-gray-600'
-                                                        }`}>
-                                                            {item.generatedCategory === 'progress' ? '학습 진도' : '일반 상담'}
-                                                        </span>
-                                                        <span className="truncate">{item.generatedTitle}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-3 py-2 text-gray-600">
-                                                    {item.registrar ? (
-                                                        item.matchedConsultant ? (
-                                                            <span className="text-blue-600 font-medium">{item.matchedConsultant.name}</span>
-                                                        ) : (
-                                                            <span className="text-orange-500">{item.registrar}</span>
-                                                        )
-                                                    ) : (
-                                                        <span className="text-gray-300">-</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-3 py-2 text-gray-400">
-                                                    {item.matchedHomeroom ? (
-                                                        <span className="text-green-600">{item.matchedHomeroom.name}</span>
-                                                    ) : (
-                                                        <span className="text-gray-300">-</span>
-                                                    )}
-                                                </td>
+                            {/* Data Preview Section */}
+                            <div className="flex-1 overflow-hidden flex flex-col">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <FileText size={16} className="text-gray-600" />
+                                    <h3 className="text-sm font-bold text-gray-700">데이터 미리보기</h3>
+                                    <span className="text-xs text-gray-500">({migrationItems.length}건)</span>
+                                </div>
+                                <div className="flex-1 overflow-auto border border-gray-200 rounded-sm bg-white">
+                                    <table className="w-full text-xs text-left whitespace-nowrap">
+                                        <thead className="bg-gray-100 font-bold text-gray-700 sticky top-0 z-10">
+                                            <tr>
+                                                <th className="px-3 py-2 border-b w-10">No</th>
+                                                <th className="px-3 py-2 border-b w-16">구분</th>
+                                                <th className="px-3 py-2 border-b w-20">이름</th>
+                                                <th className="px-3 py-2 border-b w-20">학교</th>
+                                                <th className="px-3 py-2 border-b w-12">학년</th>
+                                                <th className="px-3 py-2 border-b w-24">보호자연락처</th>
+                                                <th className="px-3 py-2 border-b w-24">원생연락처</th>
+                                                <th className="px-3 py-2 border-b">제목</th>
+                                                <th className="px-3 py-2 border-b w-20">상담자</th>
+                                                <th className="px-3 py-2 border-b w-20">담임선생님</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {migrationItems.map((item, idx) => (
+                                                <tr key={idx} className={`hover:bg-gray-50 ${item.matchStatus !== 'READY' ? 'bg-purple-50/30' : ''}`}>
+                                                    <td className="px-3 py-2 text-gray-500 font-mono">{item.no}</td>
+                                                    <td className="px-3 py-2 text-gray-700">{item.subject}</td>
+                                                    <td className="px-3 py-2 font-medium text-gray-900">
+                                                        {item.studentName}
+                                                        {item.matchStatus === 'NEW_STUDENT' && <span className="text-xxs text-purple-600 ml-1">(신규)</span>}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-gray-600">{item.schoolName}</td>
+                                                    <td className="px-3 py-2 text-gray-600">{item.grade}</td>
+                                                    <td className="px-3 py-2 text-gray-500">{item.parentPhone}</td>
+                                                    <td className="px-3 py-2 text-gray-500 text-[11px]">{item.studentPhone}</td>
+                                                    <td className="px-3 py-2 max-w-[300px]" title={item.notes}>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={`px-1.5 py-0.5 rounded text-xxs shrink-0 ${
+                                                                item.generatedCategory === 'progress'
+                                                                    ? 'bg-blue-100 text-blue-700'
+                                                                    : 'bg-gray-100 text-gray-600'
+                                                            }`}>
+                                                                {item.generatedCategory === 'progress' ? '학습 진도' : '일반 상담'}
+                                                            </span>
+                                                            <span className="truncate">{item.generatedTitle}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-gray-600">
+                                                        {item.registrar ? (
+                                                            item.matchedConsultant ? (
+                                                                <span className="text-blue-600 font-medium">{item.matchedConsultant.name}</span>
+                                                            ) : (
+                                                                <span className="text-orange-500">{item.registrar}</span>
+                                                            )
+                                                        ) : (
+                                                            <span className="text-gray-300">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-gray-400">
+                                                        {item.matchedHomeroom ? (
+                                                            <span className="text-green-600">{item.matchedHomeroom.name}</span>
+                                                        ) : (
+                                                            <span className="text-gray-300">-</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </>
                     )}
@@ -685,8 +699,8 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                     {step === 'migrating' && (
                         <div className="flex flex-col items-center justify-center h-full gap-6">
                             <div className="relative w-24 h-24">
-                                <div className="absolute inset-0 rounded-full border-4 border-gray-100"></div>
-                                <div className="absolute inset-0 rounded-full border-4 border-[#fdb813] border-t-transparent animate-spin"></div>
+                                <div className="absolute inset-0 rounded-sm border-4 border-gray-100"></div>
+                                <div className="absolute inset-0 rounded-sm border-4 border-[#fdb813] border-t-transparent animate-spin"></div>
                                 <div className="absolute inset-0 flex items-center justify-center font-bold text-xl text-[#081429]">
                                     {progress}%
                                 </div>
@@ -700,7 +714,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
 
                     {step === 'done' && (
                         <div className="flex flex-col items-center justify-center h-full gap-6 animate-in fade-in zoom-in duration-300">
-                            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
+                            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-sm flex items-center justify-center mb-2">
                                 <Check size={40} strokeWidth={3} />
                             </div>
                             <div className="text-center space-y-2">
@@ -738,7 +752,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                         <button
                             onClick={handleMigrate}
                             disabled={readyCount === 0}
-                            className={`flex items-center gap-2 px-5 py-2 rounded-md font-bold text-sm shadow-sm transition-all ${readyCount > 0
+                            className={`flex items-center gap-2 px-5 py-2 rounded-sm font-bold text-sm shadow-sm transition-all ${readyCount > 0
                                 ? 'bg-[#081429] text-white hover:bg-[#112a55]'
                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
@@ -751,7 +765,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                     {step === 'done' && (
                         <button
                             onClick={onSuccess}
-                            className="flex items-center gap-2 px-5 py-2 rounded-md font-bold text-sm shadow-sm bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f]"
+                            className="flex items-center gap-2 px-5 py-2 rounded-sm font-bold text-sm shadow-sm bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f]"
                         >
                             완료 및 새로고침
                         </button>

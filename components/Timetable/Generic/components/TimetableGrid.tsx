@@ -185,7 +185,7 @@ export default function TimetableGrid({
         <thead>
           <tr className="bg-gray-100">
             <th className="border p-2 sticky left-0 bg-gray-100 z-10">
-              <span className={colors.badge + ' px-2 py-1 rounded text-sm'}>
+              <span className={colors.badge + ' px-2 py-1 rounded-sm text-sm'}>
                 {viewType === 'teacher' ? '선생님' : viewType === 'room' ? '강의실' : '수업'}
               </span>
             </th>
@@ -294,7 +294,7 @@ export default function TimetableGrid({
                           return (
                             <div
                               key={cls.id}
-                              className="mb-1 p-2 rounded border"
+                              className="mb-1 p-2 rounded-sm border"
                               style={{
                                 backgroundColor: colors.light,
                                 borderColor: colors.border,

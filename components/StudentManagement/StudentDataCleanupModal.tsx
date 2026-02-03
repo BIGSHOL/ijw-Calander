@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Loader2, Trash2, AlertTriangle, Check, Database, RefreshCw } from 'lucide-react';
+import { X, Loader2, Trash2, AlertTriangle, Check, Database, RefreshCw, BarChart3, Users } from 'lucide-react';
 import { collection, getDocs, doc, writeBatch, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { UnifiedStudent } from '../../types';
@@ -180,13 +180,13 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
       <div
-        className="bg-white rounded-lg shadow-2xl w-[650px] max-h-[80vh] flex flex-col"
+        className="bg-white rounded-sm shadow-2xl w-[650px] max-h-[80vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-[#081429] text-white rounded-t-lg">
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-[#081429] text-white rounded-t-sm">
           <div className="flex items-center gap-2">
             <Database className="w-5 h-5" />
             <h3 className="font-bold">학생 데이터 정리</h3>
@@ -213,116 +213,134 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
           {/* Ready */}
           {step === 'ready' && result && (
             <>
-              {/* 통계 */}
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                <div className="grid grid-cols-4 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold text-[#081429]">{result.total}</div>
-                    <div className="text-xs text-gray-500">전체 학생</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-blue-600">{result.numericIds.length}</div>
-                    <div className="text-xs text-gray-500">숫자 ID</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-red-600">{result.duplicates.length}</div>
-                    <div className="text-xs text-gray-500">중복 (삭제 대상)</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-600">{result.uniqueNumeric.length}</div>
-                    <div className="text-xs text-gray-500">고유 숫자 ID</div>
+              {/* Section: 통계 요약 */}
+              <div className="border-b border-gray-200">
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-gray-600" />
+                  <h4 className="text-sm font-bold text-gray-700">통계 요약</h4>
+                </div>
+                <div className="px-4 py-3">
+                  <div className="grid grid-cols-4 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold text-[#081429]">{result.total}</div>
+                      <div className="text-xs text-gray-500">전체 학생</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-blue-600">{result.numericIds.length}</div>
+                      <div className="text-xs text-gray-500">숫자 ID</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-red-600">{result.duplicates.length}</div>
+                      <div className="text-xs text-gray-500">중복 (삭제 대상)</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-green-600">{result.uniqueNumeric.length}</div>
+                      <div className="text-xs text-gray-500">고유 숫자 ID</div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* 중복 목록 */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {result.duplicates.length > 0 ? (
-                  <>
-                    <div className="flex items-center gap-2 mb-3">
-                      <AlertTriangle className="w-4 h-4 text-red-500" />
-                      <span className="text-sm font-bold text-red-700">
+              {/* Section: 중복 학생 목록 */}
+              <div className="flex-1 overflow-y-auto">
+                {result.duplicates.length > 0 && (
+                  <div className="border-b border-gray-200">
+                    <div className="px-4 py-2 bg-red-50 border-b border-red-200 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-600" />
+                      <h4 className="text-sm font-bold text-red-700">
                         삭제 대상: 시맨틱 ID가 이미 존재하는 숫자 ID 학생
-                      </span>
+                      </h4>
                     </div>
-                    <div className="border rounded overflow-hidden">
-                      <table className="w-full text-xs">
-                        <thead className="bg-gray-100">
-                          <tr>
-                            <th className="px-2 py-1.5 text-left">숫자 ID</th>
-                            <th className="px-2 py-1.5 text-left">이름</th>
-                            <th className="px-2 py-1.5 text-left">학교</th>
-                            <th className="px-2 py-1.5 text-left">학년</th>
-                            <th className="px-2 py-1.5 text-center">수강</th>
-                            <th className="px-2 py-1.5 text-left">원본 ID</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {result.duplicates.slice(0, 50).map(s => (
-                            <tr key={s.id} className="border-t hover:bg-red-50">
-                              <td className="px-2 py-1.5 font-mono text-red-600">{s.id}</td>
-                              <td className="px-2 py-1.5">{s.name}</td>
-                              <td className="px-2 py-1.5">{s.school}</td>
-                              <td className="px-2 py-1.5">{s.grade}</td>
-                              <td className="px-2 py-1.5 text-center">{s.enrollmentCount}</td>
-                              <td className="px-2 py-1.5 text-gray-500 truncate max-w-[150px]">
-                                {s.semanticId}
-                              </td>
+                    <div className="p-4">
+                      <div className="border rounded-sm overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead className="bg-gray-100">
+                            <tr>
+                              <th className="px-2 py-1.5 text-left">숫자 ID</th>
+                              <th className="px-2 py-1.5 text-left">이름</th>
+                              <th className="px-2 py-1.5 text-left">학교</th>
+                              <th className="px-2 py-1.5 text-left">학년</th>
+                              <th className="px-2 py-1.5 text-center">수강</th>
+                              <th className="px-2 py-1.5 text-left">원본 ID</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {result.duplicates.length > 50 && (
-                        <div className="px-2 py-1.5 bg-gray-50 text-xs text-gray-500 text-center">
-                          ... 외 {result.duplicates.length - 50}명
-                        </div>
-                      )}
+                          </thead>
+                          <tbody>
+                            {result.duplicates.slice(0, 50).map(s => (
+                              <tr key={s.id} className="border-t hover:bg-red-50">
+                                <td className="px-2 py-1.5 font-mono text-red-600">{s.id}</td>
+                                <td className="px-2 py-1.5">{s.name}</td>
+                                <td className="px-2 py-1.5">{s.school}</td>
+                                <td className="px-2 py-1.5">{s.grade}</td>
+                                <td className="px-2 py-1.5 text-center">{s.enrollmentCount}</td>
+                                <td className="px-2 py-1.5 text-gray-500 truncate max-w-[150px]">
+                                  {s.semanticId}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {result.duplicates.length > 50 && (
+                          <div className="px-2 py-1.5 bg-gray-50 text-xs text-gray-500 text-center">
+                            ... 외 {result.duplicates.length - 50}명
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Check className="w-12 h-12 mx-auto mb-2 text-green-500" />
-                    <p>삭제할 중복 학생이 없습니다.</p>
                   </div>
                 )}
 
-                {/* 고유 숫자 ID (유지됨) */}
-                {result.uniqueNumeric.length > 0 && (
-                  <div className="mt-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Check className="w-4 h-4 text-green-500" />
-                      <span className="text-sm font-bold text-green-700">
-                        유지될 학생: 시맨틱 ID가 없는 숫자 ID ({result.uniqueNumeric.length}명)
-                      </span>
+                {result.duplicates.length === 0 && (
+                  <div className="border-b border-gray-200">
+                    <div className="px-4 py-2 bg-green-50 border-b border-green-200 flex items-center gap-2">
+                      <Check className="w-4 h-4 text-green-600" />
+                      <h4 className="text-sm font-bold text-green-700">삭제 대상 없음</h4>
                     </div>
-                    <div className="border rounded overflow-hidden">
-                      <table className="w-full text-xs">
-                        <thead className="bg-gray-100">
-                          <tr>
-                            <th className="px-2 py-1.5 text-left">숫자 ID</th>
-                            <th className="px-2 py-1.5 text-left">이름</th>
-                            <th className="px-2 py-1.5 text-left">학교</th>
-                            <th className="px-2 py-1.5 text-left">학년</th>
-                            <th className="px-2 py-1.5 text-center">수강</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {result.uniqueNumeric.slice(0, 20).map(s => (
-                            <tr key={s.id} className="border-t hover:bg-green-50">
-                              <td className="px-2 py-1.5 font-mono text-green-600">{s.id}</td>
-                              <td className="px-2 py-1.5">{s.name}</td>
-                              <td className="px-2 py-1.5">{s.school}</td>
-                              <td className="px-2 py-1.5">{s.grade}</td>
-                              <td className="px-2 py-1.5 text-center">{s.enrollmentCount}</td>
+                    <div className="p-4 text-center text-gray-500">
+                      <Check className="w-12 h-12 mx-auto mb-2 text-green-500" />
+                      <p>삭제할 중복 학생이 없습니다.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Section: 고유 숫자 ID 학생 */}
+                {result.uniqueNumeric.length > 0 && (
+                  <div>
+                    <div className="px-4 py-2 bg-green-50 border-b border-green-200 flex items-center gap-2">
+                      <Users className="w-4 h-4 text-green-600" />
+                      <h4 className="text-sm font-bold text-green-700">
+                        유지될 학생: 시맨틱 ID가 없는 숫자 ID ({result.uniqueNumeric.length}명)
+                      </h4>
+                    </div>
+                    <div className="p-4">
+                      <div className="border rounded-sm overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead className="bg-gray-100">
+                            <tr>
+                              <th className="px-2 py-1.5 text-left">숫자 ID</th>
+                              <th className="px-2 py-1.5 text-left">이름</th>
+                              <th className="px-2 py-1.5 text-left">학교</th>
+                              <th className="px-2 py-1.5 text-left">학년</th>
+                              <th className="px-2 py-1.5 text-center">수강</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {result.uniqueNumeric.length > 20 && (
-                        <div className="px-2 py-1.5 bg-gray-50 text-xs text-gray-500 text-center">
-                          ... 외 {result.uniqueNumeric.length - 20}명
-                        </div>
-                      )}
+                          </thead>
+                          <tbody>
+                            {result.uniqueNumeric.slice(0, 20).map(s => (
+                              <tr key={s.id} className="border-t hover:bg-green-50">
+                                <td className="px-2 py-1.5 font-mono text-green-600">{s.id}</td>
+                                <td className="px-2 py-1.5">{s.name}</td>
+                                <td className="px-2 py-1.5">{s.school}</td>
+                                <td className="px-2 py-1.5">{s.grade}</td>
+                                <td className="px-2 py-1.5 text-center">{s.enrollmentCount}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {result.uniqueNumeric.length > 20 && (
+                          <div className="px-2 py-1.5 bg-gray-50 text-xs text-gray-500 text-center">
+                            ... 외 {result.uniqueNumeric.length - 20}명
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -332,7 +350,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
               <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
                 <button
                   onClick={() => runAnalysis()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-sm"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   다시 분석
@@ -340,14 +358,14 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
                 <div className="flex items-center gap-2">
                   <button
                     onClick={onClose}
-                    className="px-4 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="px-4 py-2 border border-gray-300 rounded-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     닫기
                   </button>
                   {result.uniqueNumeric.length > 0 && (
                     <button
                       onClick={() => handleDelete(true)}
-                      className="px-4 py-2 bg-orange-500 text-white rounded text-sm font-bold hover:bg-orange-600 flex items-center gap-1.5"
+                      className="px-4 py-2 bg-orange-500 text-white rounded-sm text-sm font-bold hover:bg-orange-600 flex items-center gap-1.5"
                     >
                       <Trash2 className="w-4 h-4" />
                       숫자 ID 전체 삭제 ({result.numericIds.length})
@@ -356,7 +374,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
                   {result.duplicates.length > 0 && (
                     <button
                       onClick={() => handleDelete(false)}
-                      className="px-4 py-2 bg-red-500 text-white rounded text-sm font-bold hover:bg-red-600 flex items-center gap-1.5"
+                      className="px-4 py-2 bg-red-500 text-white rounded-sm text-sm font-bold hover:bg-red-600 flex items-center gap-1.5"
                     >
                       <Trash2 className="w-4 h-4" />
                       중복만 삭제 ({result.duplicates.length})
@@ -371,7 +389,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
           {step === 'deleting' && (
             <div className="flex-1 flex flex-col items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-red-500 mb-4" />
-              <div className="w-64 h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
+              <div className="w-64 h-2 bg-gray-200 rounded-sm overflow-hidden mb-3">
                 <div
                   className="h-full bg-red-500 transition-all duration-300"
                   style={{ width: `${(progress.current / progress.total) * 100}%` }}
@@ -385,7 +403,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
           {/* Done */}
           {step === 'done' && (
             <div className="flex-1 flex flex-col items-center justify-center py-12">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-green-100 rounded-sm flex items-center justify-center mb-4">
                 <Check className="w-8 h-8 text-green-600" />
               </div>
               <h4 className="text-lg font-bold text-[#081429] mb-4">삭제 완료!</h4>
@@ -397,7 +415,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
               </div>
               <button
                 onClick={onClose}
-                className="px-6 py-2 bg-[#fdb813] text-[#081429] rounded text-sm font-bold hover:bg-[#e5a711]"
+                className="px-6 py-2 bg-[#fdb813] text-[#081429] rounded-sm text-sm font-bold hover:bg-[#e5a711]"
               >
                 완료
               </button>

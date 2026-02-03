@@ -4,6 +4,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Edit3, Move, Eye, Settings, ArrowRightLeft, Copy, Upload, Save, Image } from 'lucide-react';
+import { addDays, format } from 'date-fns';
 import { EN_PERIODS, EN_WEEKDAYS, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks, isExcludedStudent } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { Teacher, ClassKeywordColor } from '../../../types';
@@ -50,11 +51,12 @@ interface EnglishTeacherTabProps {
     canPublish?: boolean;
     labRooms?: string[];
     studentMap?: Record<string, any>;
+    currentWeekStart?: Date;  // 주차 시작일 (날짜 표시용)
 }
 
 type ViewSize = 'small' | 'medium' | 'large';
 
-const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser, isSimulationMode = false, canSimulation = false, onToggleSimulation, onCopyLiveToDraft, onPublishToLive, onOpenScenarioModal, canPublish = false, labRooms = [], studentMap = {} }) => {
+const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser, isSimulationMode = false, canSimulation = false, onToggleSimulation, onCopyLiveToDraft, onPublishToLive, onOpenScenarioModal, canPublish = false, labRooms = [], studentMap = {}, currentWeekStart }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
@@ -157,6 +159,21 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     const filteredWeekdays = useMemo(() => {
         return EN_WEEKDAYS.filter(day => visibleWeekdays.has(day));
     }, [visibleWeekdays]);
+
+    // 요일별 날짜 계산 (2/12 형식)
+    const weekDates = useMemo(() => {
+        if (!currentWeekStart) return {};
+        const dayToIndex: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
+        const dates: Record<string, string> = {};
+        EN_WEEKDAYS.forEach(day => {
+            const idx = dayToIndex[day];
+            if (idx !== undefined) {
+                const date = addDays(currentWeekStart, idx);
+                dates[day] = format(date, 'M/d');
+            }
+        });
+        return dates;
+    }, [currentWeekStart]);
 
     // 셀 키워드 매칭 Map (성능 최적화: O(n*m) → O(n) + O(1))
     const cellKeywordMap = useMemo(() => {
@@ -631,22 +648,22 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             <div className={`flex items - center justify - between px - 4 py - 2 bg - gray - 50 border - b flex - shrink - 0 relative z - 20`}>
                 <div className="flex items-center gap-2">
                     {/* View Size Controls */}
-                    <div className="flex items-center bg-gray-100 rounded-lg p-0.5 mr-2 flex-shrink-0">
+                    <div className="flex items-center bg-gray-100 rounded-sm p-0.5 mr-2 flex-shrink-0">
                         <button
                             onClick={() => setViewSize('small')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
+                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
                         >
                             작게
                         </button>
                         <button
                             onClick={() => setViewSize('medium')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
+                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
                         >
                             보통
                         </button>
                         <button
                             onClick={() => setViewSize('large')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
+                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
                         >
                             크게
                         </button>
@@ -656,7 +673,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                     {canEditEnglish && (
                         <button
                             onClick={onOpenOrderModal}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs font-bold shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 text-white rounded-sm hover:bg-gray-700 transition-colors text-xs font-bold shadow-sm"
                         >
                             <Settings size={14} />
                             강사 순서
@@ -668,17 +685,17 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                             <div className="h-6 w-px bg-gray-300 mx-2" />
 
                             {/* Mode Toggle */}
-                            <div className="flex bg-gray-200 rounded-lg p-0.5 gap-0.5">
+                            <div className="flex bg-gray-200 rounded-sm p-0.5 gap-0.5">
                                 <button
                                     onClick={() => changeMode('view')}
-                                    className={`px-2 py-0.5 text-xs font-bold rounded transition-all flex items-center ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500'} `}
+                                    className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all flex items-center ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500'} `}
                                 >
                                     <Eye size={10} className="mr-1" />조회
                                 </button>
                                 {canEditEnglish && (
                                     <button
                                         onClick={() => changeMode('edit')}
-                                        className={`px-2 py-0.5 text-xs font-bold rounded transition-all flex items-center ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'} `}
+                                        className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all flex items-center ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'} `}
                                     >
                                         <Edit3 size={10} className="mr-1" />편집
                                     </button>
@@ -686,7 +703,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                 {canEditEnglish && (
                                     <button
                                         onClick={() => changeMode('move')}
-                                        className={`px-2 py-0.5 text-xs font-bold rounded transition-all flex items-center ${mode === 'move' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'} `}
+                                        className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all flex items-center ${mode === 'move' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'} `}
                                     >
                                         <Move size={10} className="mr-1" />이동
                                     </button>
@@ -699,7 +716,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                     <select
                         value={filterTeacher}
                         onChange={(e) => setFilterTeacher(e.target.value)}
-                        className="px-2 py-1 text-xs border rounded"
+                        className="px-2 py-1 text-xs border rounded-sm"
                     >
                         <option value="all">전체 강사</option>
                         {teachers.map(t => {
@@ -714,7 +731,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                     <div className="h-6 w-px bg-gray-300 mx-2" />
 
                     {/* Weekday Visibility Toggles */}
-                    <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
+                    <div className="flex items-center gap-1 bg-gray-100 rounded-sm px-2 py-1">
                         <span className="text-xxs text-gray-500 mr-1">요일:</span>
                         {EN_WEEKDAYS.map(day => (
                             <label key={day} className="flex items-center gap-0.5 cursor-pointer">
@@ -734,7 +751,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         <>
                             <div className="h-6 w-px bg-gray-300 mx-2" />
                             <div
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
                                 onClick={onToggleSimulation}
                             >
                                 <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
@@ -749,7 +766,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                     {canViewEnglish && (
                         <button
                             onClick={() => setExportModalOpen(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-sm font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm"
                             title="시간표 이미지로 내보내기"
                         >
                             <Image size={14} />
@@ -764,7 +781,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                 <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
                     <button
                         onClick={onCopyLiveToDraft}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
                         title="현재 실시간 시간표를 복사해옵니다 (기존 시뮬레이션 데이터 덮어쓰기)"
                     >
                         <Copy size={12} />
@@ -773,7 +790,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                     {canPublish && (
                         <button
                             onClick={onPublishToLive}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
                             title="시뮬레이션 내용을 실제 시간표에 적용합니다 (주의)"
                         >
                             <Upload size={12} />
@@ -782,7 +799,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                     )}
                     <button
                         onClick={onOpenScenarioModal}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
                         title="시나리오 저장/불러오기"
                     >
                         <Save size={12} />
@@ -837,7 +854,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                             border-r border-t border-b
                                         `}
                                         >
-                                            {day}
+                                            {weekDates[day] ? `${weekDates[day]} (${day})` : day}
                                         </th>
                                     ))
                                 ))}
@@ -982,10 +999,10 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                                 position="top"
                                                                 triggerClassName="absolute top-0.5 right-0.5 bg-red-500 text-white text-micro font-bold px-1 rounded-sm shadow-sm z-20 cursor-help pointer-events-auto hover:scale-110 transition-transform"
                                                                 content={
-                                                                    <div className="w-48 bg-slate-800 text-white p-2 rounded shadow-xl z-50 text-left pointer-events-none">
+                                                                    <div className="w-48 bg-slate-800 text-white p-2 rounded-sm shadow-xl z-50 text-left pointer-events-none">
                                                                         <div className="flex justify-between items-center bg-slate-700/50 px-2 py-1 -mx-2 -mt-2 mb-2 rounded-t border-b border-slate-700">
                                                                             <span className="text-xxs font-bold text-slate-300">합반 수업 목록</span>
-                                                                            <span className="text-micro bg-slate-700 px-1 rounded ml-1 text-slate-400">총 {cellData.merged.length + 1}개</span>
+                                                                            <span className="text-micro bg-slate-700 px-1 rounded-sm ml-1 text-slate-400">총 {cellData.merged.length + 1}개</span>
                                                                         </div>
                                                                         <div className="flex flex-col gap-1.5">
                                                                             {/* 메인 수업 */}
@@ -993,7 +1010,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                                                 <div className="text-xxs font-bold text-slate-200">{cellData.className}</div>
                                                                                 <div className="flex items-center gap-1">
                                                                                     {isLabRoom && <span className="text-micro text-indigo-300">{mainCount}명</span>}
-                                                                                    {cellData.room && <span className="text-micro bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{cellData.room}</span>}
+                                                                                    {cellData.room && <span className="text-micro bg-slate-700 px-1.5 py-0.5 rounded-sm text-blue-300 font-mono">{cellData.room}</span>}
                                                                                 </div>
                                                                             </div>
                                                                             {/* 합반 수업들 */}
@@ -1008,7 +1025,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                                                         <div className={`text-xxs font-bold ${isMoved ? 'text-green-800' : 'text-slate-200'}`}>{m.className}</div>
                                                                                         <div className="flex items-center gap-1">
                                                                                             {isLabRoom && mCount > 0 && <span className="text-micro text-indigo-300">{mCount}명</span>}
-                                                                                            {m.room && <span className="text-micro bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{m.room}</span>}
+                                                                                            {m.room && <span className="text-micro bg-slate-700 px-1.5 py-0.5 rounded-sm text-blue-300 font-mono">{m.room}</span>}
                                                                                         </div>
                                                                                     </div>
                                                                                 );

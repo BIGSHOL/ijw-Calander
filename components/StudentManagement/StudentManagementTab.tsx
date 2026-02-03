@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+﻿import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { UnifiedStudent, UserProfile } from '../../types';
 import { useStudents, searchStudentsByQuery } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -163,35 +163,35 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
               <>
                 <button
                   onClick={() => setShowMigrationModal(true)}
-                  className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                  className="p-1.5 text-white hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
                   title="데이터 가져오기"
                 >
                   <Database className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setShowMergeModal(true)}
-                  className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                  className="p-1.5 text-white hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
                   title="중복 학생 병합"
                 >
                   <GitMerge className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setShowDuplicateNamesModal(true)}
-                  className="p-1.5 text-amber-400 hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                  className="p-1.5 text-amber-400 hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
                   title="중복 이름 확인"
                 >
                   <AlertTriangle className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setShowCleanupModal(true)}
-                  className="p-1.5 text-orange-400 hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                  className="p-1.5 text-orange-400 hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
                   title="데이터 정리 (숫자 ID 삭제)"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setShowBulkEnglishNameModal(true)}
-                  className="p-1.5 text-[#fdb813] hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                  className="p-1.5 text-[#fdb813] hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
                   title="일괄 영어이름 업데이트"
                 >
                   <Languages className="w-3.5 h-3.5" />
@@ -201,7 +201,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             {canEdit && (
               <button
                 onClick={() => setIsAddStudentModalOpen(true)}
-                className="p-1.5 text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+                className="p-1.5 text-white hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
                 title="학생 추가"
               >
                 <UserPlus className="w-3.5 h-3.5" />
@@ -213,13 +213,13 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 await refreshStudents();
                 setIsRefreshing(false);
               }}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-sm transition-colors"
               title="새로고침"
               disabled={isRefreshing}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
-            <span className="text-xs text-gray-400 bg-white/10 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-gray-400 bg-white/10 px-2 py-0.5 rounded-sm">
               {filteredStudents.length}/{students.length}명
             </span>
           </div>

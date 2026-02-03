@@ -65,7 +65,7 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
     <>
       {/* Side Panel - No backdrop, positioned relative to modal */}
       <div
-        className={`bg-white rounded-2xl shadow-2xl w-96 h-[90vh] border border-gray-200 transform transition-all duration-300 ease-in-out ${
+        className={`bg-white rounded-sm shadow-2xl w-96 h-[90vh] border border-gray-200 transform transition-all duration-300 ease-in-out ${
           isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
@@ -78,7 +78,7 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-white/80 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-white/80 rounded-sm transition-colors"
             >
               <X size={20} className="text-gray-600" />
             </button>
@@ -95,7 +95,7 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
           {/* Content - Scrollable */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Add Participant Form */}
-            <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+            <div className="bg-amber-50 rounded-sm p-4 border border-amber-200">
               <h4 className="text-sm font-bold text-amber-900 mb-3 flex items-center gap-2">
                 <UserPlus size={16} />
                 참가자 추가
@@ -107,12 +107,12 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
                   onChange={(e) => setNewParticipantName(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAddParticipant()}
                   placeholder="이름 입력"
-                  className="flex-1 px-3 py-2 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+                  className="flex-1 px-3 py-2 border border-amber-300 rounded-sm text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
                 />
                 <button
                   onClick={handleAddParticipant}
                   disabled={!newParticipantName.trim()}
-                  className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg font-bold text-sm hover:bg-[#e5a610] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm font-bold text-sm hover:bg-[#e5a610] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   추가
                 </button>
@@ -138,11 +138,11 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
                   {participants.map((participant) => (
                     <div
                       key={participant.id}
-                      className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-sm transition-shadow"
+                      className="bg-white rounded-sm border border-gray-200 p-3 hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm">
+                          <div className="w-8 h-8 rounded-sm bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm">
                             {participant.name.charAt(0)}
                           </div>
                           <span className="font-medium text-gray-900">
@@ -205,10 +205,10 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
 
             {/* Statistics */}
             {participants.length > 0 && (
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-sm p-4 border border-gray-200">
                 <h4 className="text-sm font-bold text-gray-700 mb-3">출석 현황</h4>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="bg-white rounded-sm p-3 text-center">
                     <div className="flex items-center justify-center mb-1">
                       <CheckCircle size={16} className="text-green-600" />
                     </div>
@@ -217,7 +217,7 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
                     </div>
                     <div className="text-xs text-gray-500 mt-1">참석</div>
                   </div>
-                  <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="bg-white rounded-sm p-3 text-center">
                     <div className="flex items-center justify-center mb-1">
                       <Clock size={16} className="text-yellow-600" />
                     </div>
@@ -226,7 +226,7 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
                     </div>
                     <div className="text-xs text-gray-500 mt-1">대기</div>
                   </div>
-                  <div className="bg-white rounded-lg p-3 text-center">
+                  <div className="bg-white rounded-sm p-3 text-center">
                     <div className="flex items-center justify-center mb-1">
                       <XCircle size={16} className="text-red-600" />
                     </div>

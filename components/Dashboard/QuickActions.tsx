@@ -20,7 +20,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ actions }) => {
   if (actions.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+    <div className="bg-white rounded-sm p-6 shadow-sm border border-gray-100">
       <h3 className="text-lg font-semibold text-[#081429] mb-4">📝 빠른 작업</h3>
       <div className="flex flex-wrap gap-2">
         {actions.map((action) => {
@@ -31,7 +31,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ actions }) => {
             <button
               key={action.id}
               onClick={action.onClick}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-lg transition-all hover:opacity-90 hover:shadow-md"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-sm transition-all hover:opacity-90 hover:shadow-md"
               style={{ backgroundColor: bgColor }}
             >
               <Icon className="w-4 h-4" />

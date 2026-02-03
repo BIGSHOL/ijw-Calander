@@ -6,7 +6,9 @@ import { BillingStats } from './BillingStats';
 // bundle-defer-third-party: xlsx 라이브러리 포함 모달을 lazy loading (-60KB gzip)
 const BillingImportModal = lazy(() => import('./BillingImportModal').then(m => ({ default: m.BillingImportModal })));
 import { useBilling } from '../../hooks/useBilling';
-import { BillingRecord } from '../../types';
+import { useStudents } from '../../hooks/useStudents';
+import { BillingRecord, UnifiedStudent } from '../../types';
+import StudentDetailModal from '../StudentManagement/StudentDetailModal';
 
 interface BillingManagerProps {
   userProfile?: any;
@@ -24,9 +26,12 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
   const [editingRecord, setEditingRecord] = useState<BillingRecord | null>(null);
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
 
   const { records, isLoading, createRecord, updateRecord, deleteRecord, deleteByMonth, importRecords } =
     useBilling(selectedMonth);
+
+  const { students } = useStudents(false); // 재원생만 조회
 
   // 필터링된 레코드
   const filteredRecords = useMemo(() => records.filter((record) => {
@@ -76,13 +81,20 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
     }
   };
 
+  const handleStudentClick = (studentName: string) => {
+    const student = students.find(s => s.name === studentName);
+    if (student) {
+      setSelectedStudent(student);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-emerald-100 rounded-sm flex items-center justify-center">
               <DollarSign className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
@@ -93,14 +105,14 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsImportOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-emerald-600 text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 border border-emerald-600 text-emerald-600 rounded-sm hover:bg-emerald-50 transition-colors"
             >
               <Upload className="w-4 h-4" />
               xlsx 가져오기
             </button>
             <button
               onClick={() => setIsFormOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-sm hover:bg-emerald-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
               수납 추가
@@ -116,7 +128,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-3 py-1.5 border rounded-lg text-sm"
+              className="px-3 py-1.5 border rounded-sm text-sm"
             />
           </div>
 
@@ -127,7 +139,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
               placeholder="학생/수납명 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-3 py-1.5 border rounded-lg text-sm w-48"
+              className="px-3 py-1.5 border rounded-sm text-sm w-48"
             />
           </div>
 
@@ -136,7 +148,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-3 py-1.5 border rounded-lg text-sm"
+              className="px-3 py-1.5 border rounded-sm text-sm"
             >
               <option value="all">전체 상태</option>
               <option value="pending">미납</option>
@@ -144,7 +156,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
             </select>
           </div>
 
-          <button className="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">
+          <button className="flex items-center gap-2 px-3 py-1.5 border rounded-sm text-sm hover:bg-gray-50">
             <Download className="w-4 h-4" />
             내보내기
           </button>
@@ -161,6 +173,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
           isLoading={isLoading}
           onEdit={handleEdit}
           onDelete={(id) => deleteRecord.mutate(id)}
+          onStudentClick={handleStudentClick}
         />
 
         {/* Pagination */}
@@ -187,17 +200,46 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={safePage <= 1}
-                className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-gray-700"
               >
-                <ChevronLeft className="w-4 h-4" />
+                이전
               </button>
-              <span className="px-3 py-1">{safePage} / {totalPages}</span>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (safePage <= 3) {
+                    pageNum = i + 1;
+                  } else if (safePage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = safePage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                        safePage === pageNum
+                          ? 'bg-[#fdb813] text-[#081429]'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={safePage >= totalPages}
-                className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-gray-700"
               >
-                <ChevronRight className="w-4 h-4" />
+                다음
               </button>
             </div>
           </div>
@@ -217,13 +259,22 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
 
       {/* Import Modal */}
       {isImportOpen && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white p-6 rounded-lg">로딩 중...</div></div>}>
+        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white p-6 rounded-sm">로딩 중...</div></div>}>
           <BillingImportModal
             isOpen={isImportOpen}
             onClose={() => setIsImportOpen(false)}
             onImport={handleImport}
           />
         </Suspense>
+      )}
+
+      {/* Student Detail Modal */}
+      {selectedStudent && (
+        <StudentDetailModal
+          student={selectedStudent}
+          onClose={() => setSelectedStudent(null)}
+          currentUser={userProfile}
+        />
       )}
     </div>
   );

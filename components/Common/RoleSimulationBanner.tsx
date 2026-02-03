@@ -84,8 +84,8 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
       <button
         onClick={() => setIsExpanded(true)}
         className="
-          fixed top-3 right-[270px] z-[9999]
-          w-10 h-10 rounded-full
+          fixed top-3 right-[270px] z-[10000]
+          w-10 h-10 rounded-sm
           bg-gray-800 text-gray-300
           hover:bg-gray-700 hover:text-white
           shadow-lg
@@ -118,8 +118,8 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
       <button
         onClick={() => setIsCollapsed(false)}
         className="
-          fixed top-3 right-[270px] z-[9999]
-          px-3 py-2 rounded-full
+          fixed top-3 right-[270px] z-[10000]
+          px-3 py-2 rounded-sm
           bg-amber-500 text-amber-950
           hover:bg-amber-400
           shadow-lg
@@ -140,8 +140,8 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
   return (
     <div
       className={`
-        fixed top-3 right-[270px] z-[9999]
-        rounded-lg shadow-xl
+        fixed top-3 right-[270px] z-[10000]
+        rounded-sm shadow-xl
         transition-all duration-300
         ${isSimulating
           ? 'bg-amber-500 text-amber-950'
@@ -190,7 +190,7 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
         {!isSimulating && (
           <>
             {/* 모드 선택 탭 */}
-            <div className="flex bg-gray-700/50 rounded-md p-0.5">
+            <div className="flex bg-gray-700/50 rounded-sm p-0.5">
               <button
                 onClick={() => setMode('role')}
                 className={`
@@ -228,7 +228,7 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
                   value=""
                   onChange={handleRoleChange}
                   className="
-                    w-full appearance-none pr-8 pl-3 py-2 rounded-md
+                    w-full appearance-none pr-8 pl-3 py-2 rounded-sm
                     text-sm font-medium cursor-pointer
                     bg-gray-700 text-gray-200
                     focus:outline-none focus:ring-2 focus:ring-gray-500
@@ -252,7 +252,7 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
                   value=""
                   onChange={handleUserChange}
                   className="
-                    w-full appearance-none pr-8 pl-3 py-2 rounded-md
+                    w-full appearance-none pr-8 pl-3 py-2 rounded-sm
                     text-sm font-medium cursor-pointer
                     bg-gray-700 text-gray-200
                     focus:outline-none focus:ring-2 focus:ring-gray-500
@@ -292,7 +292,7 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
         {isSimulating && (
           <div className="space-y-3">
             {/* 현재 시뮬레이션 정보 */}
-            <div className="bg-amber-600/30 rounded-md p-3 text-center">
+            <div className="bg-amber-600/30 rounded-sm p-3 text-center">
               {simulationType === 'user' && simulatedUserInfo ? (
                 <>
                   <div className="flex items-center justify-center gap-2 mb-1">
@@ -316,7 +316,7 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
             <button
               onClick={stopSimulation}
               className="
-                w-full px-4 py-2 rounded-md
+                w-full px-4 py-2 rounded-sm
                 bg-amber-700 text-amber-100
                 hover:bg-amber-800
                 transition-colors

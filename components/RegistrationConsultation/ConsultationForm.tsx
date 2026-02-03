@@ -165,16 +165,16 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
         onClose();
     };
 
-    const inputClass = "w-full px-2.5 py-1.5 text-sm border border-slate-300 rounded-md outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500";
+    const inputClass = "w-full px-2.5 py-1.5 text-sm border border-slate-300 rounded-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500";
     const labelClass = "block text-xs font-medium text-slate-600 mb-0.5";
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+            <div className="bg-white rounded-sm shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
                 {/* 헤더 */}
-                <div className="px-5 py-3 border-b flex justify-between items-center bg-slate-50">
+                <div className="px-3 py-2 border-b flex justify-between items-center bg-slate-50">
                     <h2 className="text-lg font-bold" style={{ color: CUSTOM_COLORS.NAVY }}>
                         {initialData ? '상담 기록 수정' : '새 상담 등록'}
                     </h2>
@@ -183,10 +183,10 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-4 overflow-y-auto flex-1">
+                <form onSubmit={handleSubmit} className="p-2 overflow-y-auto flex-1">
                     {/* 1. 접수 정보 */}
-                    <div className="mb-4">
-                        <div className="text-xs font-bold text-slate-500 uppercase mb-2 pb-1 border-b">접수 정보</div>
+                    <div className="mb-2">
+                        <div className="text-xs font-bold text-slate-500 uppercase mb-1.5 pb-1 border-b">접수 정보</div>
                         <div className="grid grid-cols-4 gap-2">
                             <div>
                                 <label className={labelClass}>수신자 <span className="text-red-500">*</span></label>
@@ -232,10 +232,10 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                     </div>
 
                     {/* 2. 학생 + 상담 정보 (2열) */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-2 gap-4 mb-2">
                         {/* 학생 정보 */}
                         <div>
-                            <div className="text-xs font-bold text-slate-500 uppercase mb-2 pb-1 border-b">학생 정보</div>
+                            <div className="text-xs font-bold text-slate-500 uppercase mb-1.5 pb-1 border-b">학생 정보</div>
                             <div className="grid grid-cols-2 gap-2 mb-2">
                                 <div>
                                     <label className={labelClass}>이름 <span className="text-red-500">*</span></label>
@@ -296,7 +296,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
 
                         {/* 상담 정보 */}
                         <div>
-                            <div className="text-xs font-bold text-slate-500 uppercase mb-2 pb-1 border-b">상담 내용</div>
+                            <div className="text-xs font-bold text-slate-500 uppercase mb-1.5 pb-1 border-b">상담 내용</div>
                             <div className="grid grid-cols-2 gap-2 mb-2">
                                 <div>
                                     <label className={labelClass}>상담일</label>
@@ -335,11 +335,11 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                     </div>
 
                     {/* 3. 학생 상세 정보 (접을 수 있는 확장 섹션) */}
-                    <div className="mb-4 border border-blue-200 rounded-lg bg-blue-50/30">
+                    <div className="mb-2 border border-blue-200 rounded-sm bg-blue-50/30">
                         <button
                             type="button"
                             onClick={() => setShowExtendedInfo(!showExtendedInfo)}
-                            className="w-full px-4 py-2 flex items-center justify-between hover:bg-blue-50 transition-colors rounded-lg"
+                            className="w-full px-4 py-2 flex items-center justify-between hover:bg-blue-50 transition-colors rounded-sm"
                         >
                             <div className="flex items-center gap-2">
                                 {showExtendedInfo ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -506,7 +506,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                     <div className="grid grid-cols-2 gap-4">
                         {/* 후속 조치 */}
                         <div>
-                            <div className="text-xs font-bold text-slate-500 uppercase mb-2 pb-1 border-b">후속 조치</div>
+                            <div className="text-xs font-bold text-slate-500 uppercase mb-1.5 pb-1 border-b">후속 조치</div>
                             <div className="grid grid-cols-2 gap-2 mb-2">
                                 <div>
                                     <label className={labelClass}>후속 조치일</label>
@@ -540,7 +540,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                         </div>
 
                         {/* 등록/결제 */}
-                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div className="bg-slate-50 p-3 rounded-sm border border-slate-200">
                             <div className="text-xs font-bold text-slate-500 uppercase mb-2 pb-1 border-b border-slate-200">등록 / 결제</div>
                             <div className="mb-2">
                                 <label className={labelClass}>등록 상태</label>
@@ -591,14 +591,14 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-sm rounded-md border border-slate-300 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
+                            className="px-4 py-2 text-sm rounded-sm border border-slate-300 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
                         >
                             취소
                         </button>
                         <button
                             type="submit"
                             style={{ backgroundColor: CUSTOM_COLORS.NAVY }}
-                            className="px-4 py-2 text-sm rounded-md text-white font-medium hover:opacity-90 shadow-sm transition-all"
+                            className="px-4 py-2 text-sm rounded-sm text-white font-medium hover:opacity-90 shadow-sm transition-all"
                         >
                             {initialData ? '수정 완료' : '등록'}
                         </button>

@@ -188,7 +188,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
         <div className="max-w-7xl mx-auto">
           <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+            <div className="animate-spin rounded-sm h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
           </div>
         </div>
       </div>
@@ -202,7 +202,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
 
         {/* 통계 카드 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-medium text-gray-500">전체 학생</h3>
               <Users className="w-4 h-4 text-blue-500" />
@@ -211,7 +211,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
             <p className="text-xxs text-gray-400 mt-0.5">재원 {activeStudents}명</p>
           </div>
 
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-medium text-gray-500">전체 수업</h3>
               <BookOpen className="w-4 h-4 text-green-500" />
@@ -220,7 +220,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
             <p className="text-xxs text-gray-400 mt-0.5">운영 중인 수업</p>
           </div>
 
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-medium text-gray-500">오늘 수업</h3>
               <Calendar className="w-4 h-4 text-purple-500" />
@@ -229,7 +229,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
             <p className="text-xxs text-gray-400 mt-0.5">{dayOfWeek}요일 수업</p>
           </div>
 
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-medium text-gray-500">강사</h3>
               <UserCheck className="w-4 h-4 text-orange-500" />
@@ -240,7 +240,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
         </div>
 
         {/* 강사별 성과 */}
-        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-[#081429]" />
             <h2 className="text-sm font-bold text-[#081429]">강사별 성과</h2>
@@ -288,7 +288,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
         </div>
 
         {/* 수업 현황 */}
-        <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-[#081429]" />
@@ -299,7 +299,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
             <select
               value={selectedTeacher}
               onChange={(e) => setSelectedTeacher(e.target.value)}
-              className="px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+              className="px-2 py-1 border border-gray-300 rounded-sm text-xs focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
             >
               <option value="all">전체 선생님</option>
               {teacherStats.map(teacher => (
@@ -330,11 +330,11 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
                 return (
                 <div
                   key={cls.id}
-                  className="border border-gray-200 rounded-lg p-2 hover:border-[#fdb813] hover:shadow-md transition-all"
+                  className="border border-gray-200 rounded-sm p-2 hover:border-[#fdb813] hover:shadow-md transition-all"
                 >
                   <div className="flex items-start justify-between mb-1">
                     <h3 className="text-sm font-bold text-[#081429]">{cls.className}</h3>
-                    <span className={`text-xxs px-1.5 py-0.5 rounded-full ${
+                    <span className={`text-xxs px-1.5 py-0.5 rounded-sm ${
                       cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
                       cls.subject === 'english' ? 'bg-green-100 text-green-700' :
                       cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :

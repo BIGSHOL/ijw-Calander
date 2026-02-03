@@ -36,8 +36,13 @@ export interface BillingRecord {
   cashReceipt: string; // 현금영수증
   // 기타
   memo: string; // 메모
+  teacher?: string; // 담임강사
+  discountReason?: string; // 할인사유
+  siblings?: string; // 형제
   createdAt: string; // 등록일시
   updatedAt: string; // 수정일시
+  createdBy?: string; // 등록자
+  updatedBy?: string; // 수정자
 }
 
 /**

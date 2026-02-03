@@ -203,7 +203,7 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
 
     return (
         <div className="max-w-6xl mx-auto">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-sm shadow-sm border border-gray-200 overflow-hidden">
                 {/* Header */}
                 <div className="p-4 border-b border-gray-100 bg-gray-50/50">
                     <div className="flex items-center justify-between">
@@ -215,7 +215,7 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                             </p>
                         </div>
                         {!isMaster && (
-                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full font-bold">읽기 전용</span>
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-sm font-bold">읽기 전용</span>
                         )}
                     </div>
                 </div>
@@ -320,13 +320,13 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                     <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
                         <button
                             onClick={handleResetToDefaults}
-                            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-200 flex items-center gap-2"
+                            className="px-4 py-2 bg-gray-100 text-gray-600 rounded-sm text-sm font-bold hover:bg-gray-200 flex items-center gap-2"
                         >
                             <RotateCcw size={14} /> 기본값으로 초기화
                         </button>
                         <button
                             onClick={handleSave}
-                            className="px-6 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:bg-[#0a1a35] flex items-center gap-2"
+                            className="px-6 py-2 bg-[#081429] text-white rounded-sm text-sm font-bold hover:bg-[#0a1a35] flex items-center gap-2"
                         >
                             <Save size={14} /> 저장
                         </button>

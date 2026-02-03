@@ -56,7 +56,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
               <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
                 <button
                   onClick={() => setSelectedCategory(null)}
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === null
+                  className={`px-3 py-1 rounded-sm text-xs font-bold transition-all border ${selectedCategory === null
                     ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                     : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
                     }`}
@@ -67,7 +67,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(prev => prev === cat ? null : cat)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${selectedCategory === cat
+                    className={`px-3 py-1 rounded-sm text-xs font-bold transition-all border ${selectedCategory === cat
                       ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                       : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
                       }`}
@@ -114,7 +114,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
                 <div
                   key={dept.id}
                   className={`
-                    flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-bold transition-all
+                    flex items-center gap-2 px-3 py-2.5 rounded-sm border text-xs font-bold transition-all
                     ${isHidden
                       ? 'bg-transparent border-gray-700 text-gray-500'
                       : 'bg-[#081429] border-[#fdb813]/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
@@ -140,7 +140,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
                     onClick={() => toggleDeptVisibility(dept.id)}
                     className="flex items-center gap-2 flex-1 text-left"
                   >
-                    <span className={`w-2 h-2 rounded-full ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color?.startsWith('#') ? dept.color : 'white') : undefined }} />
+                    <span className={`w-2 h-2 rounded-sm ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color?.startsWith('#') ? dept.color : 'white') : undefined }} />
                     <span className="truncate flex-1">{dept.name}</span>
                     {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
                   </button>

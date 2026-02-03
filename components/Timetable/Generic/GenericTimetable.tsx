@@ -88,7 +88,7 @@ function GenericTimetable({
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-sm h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
           <div>{config.displayName} 시간표 로딩 중...</div>
         </div>
       </div>
@@ -111,7 +111,7 @@ function GenericTimetable({
       {/* Header */}
       <div className="flex items-center justify-between mb-4 px-4">
         <h2 className="text-2xl font-bold">
-          <span className={config.colors.badge + ' px-3 py-1 rounded'}>
+          <span className={config.colors.badge + ' px-3 py-1 rounded-sm'}>
             {config.displayName}
           </span>
           {' '}시간표
@@ -124,20 +124,20 @@ function GenericTimetable({
             placeholder="검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-3 py-2 border rounded"
+            className="px-3 py-2 border rounded-sm"
           />
 
           {/* View Settings */}
           <button
             onClick={() => setShowStudents(!showStudents)}
-            className="px-3 py-2 border rounded hover:bg-gray-100"
+            className="px-3 py-2 border rounded-sm hover:bg-gray-100"
           >
             {showStudents ? '학생 숨기기' : '학생 보기'}
           </button>
 
           <button
             onClick={() => setShowClassName(!showClassName)}
-            className="px-3 py-2 border rounded hover:bg-gray-100"
+            className="px-3 py-2 border rounded-sm hover:bg-gray-100"
           >
             {showClassName ? '수업명 숨기기' : '수업명 보기'}
           </button>
@@ -146,7 +146,7 @@ function GenericTimetable({
           {canEdit && (
             <button
               onClick={() => setMode(mode === 'view' ? 'edit' : 'view')}
-              className={`px-3 py-2 rounded ${
+              className={`px-3 py-2 rounded-sm ${
                 mode === 'edit'
                   ? 'bg-blue-500 text-white'
                   : 'border hover:bg-gray-100'

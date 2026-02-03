@@ -78,7 +78,7 @@ const StaffSelector: React.FC<StaffSelectorProps> = ({
     return (
       <TabSubNavigation variant="compact" className="px-4 py-3">
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <div className="w-4 h-4 border-2 border-[#fdb813] border-t-transparent rounded-full animate-spin" />
+          <div className="w-4 h-4 border-2 border-[#fdb813] border-t-transparent rounded-sm animate-spin" />
           로딩 중...
         </div>
       </TabSubNavigation>
@@ -94,14 +94,14 @@ const StaffSelector: React.FC<StaffSelectorProps> = ({
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center gap-2 bg-[#081429] text-white pl-4 pr-3 py-2 rounded-lg text-sm font-medium cursor-pointer hover:bg-[#081429]/90 transition-colors focus:outline-none focus:ring-2 focus:ring-[#fdb813] min-w-[200px]"
+            className="flex items-center gap-2 bg-[#081429] text-white pl-4 pr-3 py-2 rounded-sm text-sm font-medium cursor-pointer hover:bg-[#081429]/90 transition-colors focus:outline-none focus:ring-2 focus:ring-[#fdb813] min-w-[200px]"
           >
             <span className="flex-1 text-left">{displayName}</span>
             <ChevronDown className={`w-4 h-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
           </button>
 
           {showDropdown && (
-            <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-white/10 rounded-lg shadow-xl z-50 min-w-[600px] max-h-[400px] overflow-y-auto">
+            <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-white/10 rounded-sm shadow-xl z-50 min-w-[600px] max-h-[400px] overflow-y-auto">
               {/* 내 대시보드 */}
               <div className="p-1.5 border-b border-white/10">
                 <TabButton

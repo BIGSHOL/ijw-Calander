@@ -225,12 +225,12 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                         placeholder="강사 검색..."
                         value={teacherSearchTerm}
                         onChange={(e) => setTeacherSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
+                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-sm text-sm focus:border-[#fdb813] outline-none"
                     />
                 </div>
                 {canEdit && (
                     <div className="flex flex-col gap-2 items-end">
-                        <div className="flex items-center gap-3 bg-gray-50 px-3 py-1 rounded-md border border-gray-200">
+                        <div className="flex items-center gap-3 bg-gray-50 px-3 py-1 rounded-sm border border-gray-200">
                             <span className="text-xs font-bold text-gray-500">표시할 시간표:</span>
                             <label className="flex items-center gap-1.5 cursor-pointer">
                                 <input
@@ -262,19 +262,19 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                 value={newTeacherName}
                                 onChange={(e) => setNewTeacherName(e.target.value)}
                                 placeholder="새 강사 이름"
-                                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-[#fdb813] outline-none w-48"
+                                className="border border-gray-300 rounded-sm px-3 py-2 text-sm focus:border-[#fdb813] outline-none w-48"
                                 onKeyDown={(e) => e.key === 'Enter' && handleAddTeacher()}
                             />
                             <button
                                 onClick={handleAddTeacher}
-                                className="bg-[#081429] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#1e293b] flex items-center gap-1"
+                                className="bg-[#081429] text-white px-4 py-2 rounded-sm text-sm font-bold hover:bg-[#1e293b] flex items-center gap-1"
                             >
                                 <Plus size={16} /> 추가
                             </button>
                             {isMaster && (
                                 <button
                                     onClick={() => setShowMigrationModal(true)}
-                                    className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-purple-700 flex items-center gap-1"
+                                    className="bg-purple-600 text-white px-4 py-2 rounded-sm text-sm font-bold hover:bg-purple-700 flex items-center gap-1"
                                     title="Enrollment 데이터 마이그레이션 (완료됨)"
                                 >
                                     <Database size={16} /> DB 마이그레이션
@@ -289,7 +289,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
             {(canViewMath || canViewEnglish) && (
                 <div className="flex items-center gap-2 mb-4">
                     <span className="text-xs font-bold text-gray-500">과목별 보기:</span>
-                    <div className="flex bg-gray-100 rounded-lg p-0.5">
+                    <div className="flex bg-gray-100 rounded-sm p-0.5">
                         {canViewMath && canViewEnglish && (
                             <button
                                 onClick={() => setTeacherSubjectFilter('all')}
@@ -319,7 +319,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
             )}
 
             {/* Teacher List */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-1 overflow-y-auto">
+            <div className="bg-white rounded-sm shadow-sm border border-gray-200 overflow-hidden flex-1 overflow-y-auto">
                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     {teachers
                         .filter(t => t.name.toLowerCase().includes(teacherSearchTerm.toLowerCase()))
@@ -339,7 +339,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                         .map(teacher => (
                             <div
                                 key={teacher.id}
-                                className={`p-3 border border-gray-100 rounded-lg flex justify-between items-start hover:bg-gray-50 group transition-all ${canEdit ? 'cursor-move' : ''} ${draggedTeacherId === teacher.id ? 'opacity-50 bg-blue-50 border-blue-300' : ''
+                                className={`p-3 border border-gray-100 rounded-sm flex justify-between items-start hover:bg-gray-50 group transition-all ${canEdit ? 'cursor-move' : ''} ${draggedTeacherId === teacher.id ? 'opacity-50 bg-blue-50 border-blue-300' : ''
                                     }`}
                                 draggable={canEdit}
                                 onDragStart={canEdit ? (e) => handleTeacherDragStart(e, teacher.id) : undefined}

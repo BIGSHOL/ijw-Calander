@@ -57,7 +57,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
     // 로딩 상태 - 행 형태 스켈레톤
     if (loading) {
         return (
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-sm border border-gray-200 overflow-hidden">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
                     <div
                         key={n}
@@ -76,7 +76,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
     // 빈 상태 (전체 데이터가 없을 때)
     if (totalCount === 0 && !loading) {
         return (
-            <div className="bg-white border border-[#081429] border-opacity-20 rounded-lg p-12 text-center">
+            <div className="bg-white border border-[#081429] border-opacity-20 rounded-sm p-12 text-center">
                 <div className="mb-4">
                     <FileText className="w-16 h-16 mx-auto text-gray-300" />
                 </div>
@@ -88,7 +88,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
                 </p>
                 <button
                     onClick={onRefresh}
-                    className="border border-[#081429] text-[#081429] px-6 py-2 rounded-lg hover:bg-[#081429] hover:text-white transition-colors"
+                    className="border border-[#081429] text-[#081429] px-6 py-2 rounded-sm hover:bg-[#081429] hover:text-white transition-colors"
                 >
                     새로고침
                 </button>
@@ -123,41 +123,51 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
 
                 <div className="flex items-center gap-2">
                     {/* 페이지네이션 버튼 */}
-                    <div className="flex items-center bg-white rounded-md border border-gray-200">
-                        <button
-                            onClick={() => goToPage(1)}
-                            disabled={!hasPrevPage || loading}
-                            className="p-1 text-gray-500 hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed"
-                            title="첫 페이지"
-                        >
-                            <ChevronsLeft size={16} />
-                        </button>
+                    <div className="flex items-center gap-1">
                         <button
                             onClick={() => goToPage(currentPage - 1)}
                             disabled={!hasPrevPage || loading}
-                            className="p-1 text-gray-500 hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed border-l border-gray-100"
-                            title="이전 페이지"
+                            className="px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
                         >
-                            <ChevronLeft size={16} />
+                            이전
                         </button>
-                        <span className="px-3 text-xs font-medium text-[#373d41]">
-                            {currentPage} / {totalPages || 1}
-                        </span>
+
+                        <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum: number;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                    pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                } else {
+                                    pageNum = currentPage - 2 + i;
+                                }
+
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => goToPage(pageNum)}
+                                        disabled={loading}
+                                        className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                                            currentPage === pageNum
+                                                ? 'bg-[#fdb813] text-[#081429]'
+                                                : 'text-gray-600 hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         <button
                             onClick={() => goToPage(currentPage + 1)}
                             disabled={!hasNextPage || loading}
-                            className="p-1 text-gray-500 hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed border-l border-gray-100"
-                            title="다음 페이지"
+                            className="px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
                         >
-                            <ChevronRight size={16} />
-                        </button>
-                        <button
-                            onClick={() => goToPage(totalPages)}
-                            disabled={!hasNextPage || loading}
-                            className="p-1 text-gray-500 hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed border-l border-gray-100"
-                            title="마지막 페이지"
-                        >
-                            <ChevronsRight size={16} />
+                            다음
                         </button>
                     </div>
 
@@ -171,7 +181,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
                 </div>
             </div>
 
-            <div className="bg-white rounded-lg border border-gray-200 min-w-[1200px]">
+            <div className="bg-white rounded-sm border border-gray-200 min-w-[1200px]">
                 {/* 헤더 행 */}
                 <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-[#373d41]">
                     <span className="w-10 shrink-0 text-center">No</span>

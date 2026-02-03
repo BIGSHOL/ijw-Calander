@@ -206,9 +206,18 @@ interface ClassListProps {
 }
 
 const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading, currentTeacherFilter }) => {
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [itemsPerPage, setItemsPerPage] = React.useState<number>(20);
+
   // 강사 데이터 가져오기 (영어 이름 매칭용)
   const { data: teachersData } = useTeachers();
   const { staff } = useStaff();
+
+  // classes 변경 시 첫 페이지로 리셋
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [classes]);
 
   // Helper to display teacher name as "한글(영어이름)"
   const getTeacherDisplayName = (teacherName: string) => {
@@ -262,7 +271,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
   // 로딩 상태
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-sm border border-gray-200 overflow-hidden">
         <div className="divide-y divide-gray-100">
           {[...Array(8)].map((_, index) => (
             <div key={index} className="px-4 py-3 animate-pulse flex items-center gap-4">
@@ -281,24 +290,31 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
   // 빈 상태
   if (!classes || classes.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <Inbox className="w-16 h-16 text-[#373d41] opacity-50 mb-4" />
-        <h3 className="text-[#081429] font-bold text-lg mb-2">
+      <div className="flex flex-col items-center justify-center py-12">
+        <Inbox className="w-12 h-12 text-[#373d41] opacity-50 mb-3" />
+        <h3 className="text-[#081429] font-bold text-base mb-1.5">
           등록된 수업이 없습니다
         </h3>
-        <p className="text-[#373d41] text-sm">
+        <p className="text-[#373d41] text-xs">
           새 수업을 추가하거나 필터를 조정해보세요.
         </p>
       </div>
     );
   }
 
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(classes.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentClasses = classes.slice(startIndex, endIndex);
+
   // 수업 목록 테이블 (헤더는 ClassManagementTab에서 고정 표시)
   return (
-    <div className="bg-white rounded-t-none rounded-b-lg border border-t-0 border-gray-200 overflow-hidden shadow-sm">
-      {/* 테이블 바디 */}
-      <div className="divide-y divide-gray-100">
-        {classes.map((classInfo) => {
+    <div className="flex flex-col gap-2">
+      <div className="bg-white rounded-t-none rounded-b-lg border border-t-0 border-gray-200 overflow-hidden shadow-sm">
+        {/* 테이블 바디 */}
+        <div className="divide-y divide-gray-100">
+          {currentClasses.map((classInfo) => {
           const { className, teacher, subject, schedule, studentCount, memo } = classInfo;
           const subjectColors = SUBJECT_COLORS[subject as SubjectType] || SUBJECT_COLORS.math;
           const subjectLabel = SUBJECT_LABELS[subject as SubjectType] || subject;
@@ -311,12 +327,12 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
             <div
               key={classInfo.id}
               onClick={() => onClassClick(classInfo)}
-              className="px-4 py-2.5 grid grid-cols-[80px_1fr_100px_100px_1fr_1fr_70px_40px] gap-3 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
+              className="px-3 py-1 grid grid-cols-[80px_1fr_100px_100px_1fr_1fr_70px_40px] gap-2 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
             >
               {/* 과목 배지 */}
               <div className="flex justify-center">
                 <span
-                  className="px-2 py-0.5 rounded text-xs font-semibold"
+                  className="px-1.5 py-0.5 rounded text-xxs font-semibold"
                   style={{
                     backgroundColor: subjectColors.bg,
                     color: subjectColors.text,
@@ -327,17 +343,17 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
               </div>
 
               {/* 수업명 */}
-              <div className="font-semibold text-[#081429] text-sm truncate">
+              <div className="font-semibold text-[#081429] text-xs truncate">
                 {className}
               </div>
 
               {/* 담임 */}
-              <div className="text-[#373d41] text-sm truncate">
+              <div className="text-[#373d41] text-xs truncate">
                 {getTeacherDisplayName(teacher)}
               </div>
 
               {/* 부담임 */}
-              <div className="text-[#373d41] text-sm truncate">
+              <div className="text-[#373d41] text-xs truncate">
                 {classInfo.slotTeachers && Object.keys(classInfo.slotTeachers).length > 0 ? (
                   <span
                     className="text-gray-600"
@@ -360,7 +376,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
               </div>
 
               {/* 메모 */}
-              <div className="text-gray-500 text-xs truncate flex items-center gap-1" title={memo || ''}>
+              <div className="text-gray-500 text-xxs truncate flex items-center gap-1" title={memo || ''}>
                 {memo ? (
                   <>
                     <FileText className="w-3 h-3 text-gray-400 flex-shrink-0" />
@@ -374,7 +390,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
               {/* 학생수 */}
               <div className="flex items-center justify-center gap-1">
                 <Users className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-sm font-medium text-[#081429]">
+                <span className="text-xs font-medium text-[#081429]">
                   {studentCount || 0}
                 </span>
               </div>
@@ -386,7 +402,82 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
             </div>
           );
         })}
+        </div>
       </div>
+
+      {/* 페이지네이션 컨트롤 */}
+      {classes.length > 0 && (
+        <div className="bg-white rounded-sm border border-gray-200 shadow-sm p-2 flex items-center justify-between">
+          {/* 왼쪽: 항목 수 선택 */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-600">페이지당</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+            >
+              <option value={10}>10개</option>
+              <option value={20}>20개</option>
+              <option value={50}>50개</option>
+              <option value={100}>100개</option>
+            </select>
+            <span className="text-xs text-gray-500">
+              {startIndex + 1}-{Math.min(endIndex, classes.length)} / 총 {classes.length}개
+            </span>
+          </div>
+
+          {/* 오른쪽: 페이지 네비게이션 */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-700"
+            >
+              이전
+            </button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                      currentPage === pageNum
+                        ? 'bg-[#fdb813] text-[#081429]'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-700"
+            >
+              다음
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

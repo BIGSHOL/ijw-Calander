@@ -253,7 +253,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+                <div className="animate-spin rounded-sm h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
             </div>
         );
     }
@@ -476,7 +476,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
                 {/* Scenario Management Modal */}
                 {isScenarioModalOpen && (
-                    <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"><div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full" /></div>}>
+                    <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"><div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-sm" /></div>}>
                         <ScenarioManagementModal
                             isOpen={isScenarioModalOpen}
                             onClose={() => setIsScenarioModalOpen(false)}
@@ -888,7 +888,7 @@ const TimetableManager = ({
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+                <div className="animate-spin rounded-sm h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
             </div>
         );
     }
@@ -938,7 +938,7 @@ const TimetableManager = ({
         return (
             <Suspense fallback={
                 <div className="flex items-center justify-center h-64">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+                    <div className="animate-spin rounded-sm h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
                 </div>
             }>
                 <EnglishTimetable

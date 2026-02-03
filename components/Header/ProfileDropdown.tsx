@@ -29,11 +29,11 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 z-[99998]"
+        className="fixed inset-0 z-[10000]"
         onClick={onClose}
       />
       <div
-        className="fixed right-4 top-16 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-[99999] overflow-hidden text-sm"
+        className="fixed right-4 top-16 w-56 bg-white rounded-sm shadow-xl border border-gray-100 py-1 z-[10001] overflow-hidden text-sm"
         style={{ display: isOpen ? 'block' : 'none' }}
       >
         <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">

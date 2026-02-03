@@ -15,6 +15,7 @@ interface StudentInfo {
         staffId: string;
         classId: string;
         className: string;
+        subject?: 'math' | 'english';
     }>;
 }
 
@@ -45,21 +46,51 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [enrollmentType, setEnrollmentType] = useState<'regular' | 'temporary'>('temporary');
 
-    // Filter students: not already in teacher's attendance
-    const availableStudents = useMemo(() => {
-        return allStudents.filter(s => !existingStudentIds.includes(s.id));
-    }, [allStudents, existingStudentIds]);
+    // 섹션별 학생 분류
+    const { currentStudents, teacherStudents, otherStudents } = useMemo(() => {
+        const current: StudentInfo[] = [];
+        const teacher: StudentInfo[] = [];
+        const other: StudentInfo[] = [];
 
-    // Apply search
-    const filteredStudents = useMemo(() => {
-        if (!searchQuery.trim()) return availableStudents;
+        allStudents.forEach(student => {
+            // 1. 현재 출석부에 있는 학생
+            if (existingStudentIds.includes(student.id)) {
+                current.push(student);
+            }
+            // 2. 현재 선생님의 수업에 등록된 학생 (출석부에는 없음)
+            else if (student.enrollments?.some(e =>
+                e.staffId === currentStaffId &&
+                e.subject === currentSubject
+            )) {
+                teacher.push(student);
+            }
+            // 3. 나머지 학생
+            else {
+                other.push(student);
+            }
+        });
+
+        return {
+            currentStudents: current,
+            teacherStudents: teacher,
+            otherStudents: other
+        };
+    }, [allStudents, existingStudentIds, currentStaffId, currentSubject]);
+
+    // 검색 필터 적용
+    const applySearch = (students: StudentInfo[]) => {
+        if (!searchQuery.trim()) return students;
         const query = searchQuery.toLowerCase();
-        return availableStudents.filter(s =>
+        return students.filter(s =>
             (s.name || '').toLowerCase().includes(query) ||
             s.englishName?.toLowerCase().includes(query) ||
             s.school?.toLowerCase().includes(query)
         );
-    }, [availableStudents, searchQuery]);
+    };
+
+    const filteredCurrent = useMemo(() => applySearch(currentStudents), [currentStudents, searchQuery]);
+    const filteredTeacher = useMemo(() => applySearch(teacherStudents), [teacherStudents, searchQuery]);
+    const filteredOther = useMemo(() => applySearch(otherStudents), [otherStudents, searchQuery]);
 
     // Early return AFTER all hooks (React hooks rule)
     if (!isOpen) return null;
@@ -121,124 +152,172 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]" onClick={onClose}>
             <div
-                className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                className="bg-white rounded-sm shadow-xl w-full max-w-lg h-[600px] flex flex-col overflow-hidden relative"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
-                <div className="flex justify-between items-center p-4 border-b bg-indigo-50 border-indigo-100">
-                    <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-indigo-200 text-indigo-800">
-                            <UserPlus size={18} />
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-lg text-indigo-900">학생 추가</h3>
-                            <p className="text-xs text-indigo-600">{currentTeacherName} 선생님 {currentSubject === 'math' ? '수학' : '영어'} 출석부</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-1 hover:bg-white/50 rounded-full transition-colors">
-                        <X size={20} className="text-gray-500" />
+                {/* 닫기 버튼 */}
+                <div className="absolute top-2 right-2 z-10">
+                    <button
+                        onClick={onClose}
+                        className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                        <X size={18} />
                     </button>
                 </div>
 
+                {/* Header */}
+                <div className="px-4 pt-4 pb-3 border-b border-gray-200">
+                    <h3 className="text-base font-bold text-[#081429] flex items-center gap-2">
+                        <UserPlus size={18} />
+                        학생 추가
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1 ml-[26px]">
+                        {currentTeacherName} 선생님 • {currentSubject === 'math' ? '수학' : '영어'} 출석부
+                    </p>
+                </div>
+
                 {/* Search & Filters */}
-                <div className="p-4 border-b bg-gray-50">
-                    <div className="relative">
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <div className="px-4 py-3 border-b bg-gray-50">
+                    <div className="relative mb-2">
+                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
                             placeholder="학생 이름, 학교로 검색..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            className="w-full pl-8 pr-3 py-1.5 border border-gray-200 rounded-sm text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                         />
                     </div>
 
                     {/* Enrollment Type */}
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex gap-2">
                         <button
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-colors ${enrollmentType === 'temporary'
+                            className={`flex-1 py-1 text-xs font-medium rounded-sm border transition-colors ${enrollmentType === 'temporary'
                                 ? 'bg-amber-100 border-amber-300 text-amber-800'
                                 : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                                 }`}
                             onClick={() => setEnrollmentType('temporary')}
                         >
-                            <Target className="inline-block w-4 h-4 mr-1" />
-                            특강/보강 (1회)
+                            <Target className="inline-block w-3.5 h-3.5 mr-1" />
+                            특강/보강
                         </button>
                         <button
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-colors ${enrollmentType === 'regular'
+                            className={`flex-1 py-1 text-xs font-medium rounded-sm border transition-colors ${enrollmentType === 'regular'
                                 ? 'bg-indigo-100 border-indigo-300 text-indigo-800'
                                 : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                                 }`}
                             onClick={() => setEnrollmentType('regular')}
                         >
-                            <BookOpen className="inline-block w-4 h-4 mr-1" />
+                            <BookOpen className="inline-block w-3.5 h-3.5 mr-1" />
                             정규 등록
                         </button>
                     </div>
                 </div>
 
-                {/* Student List */}
-                <div className="p-4 max-h-[40vh] overflow-y-auto custom-scrollbar">
-                    {filteredStudents.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400">
-                            <p className="text-sm">추가할 수 있는 학생이 없습니다.</p>
+                {/* Student List - 섹션별 */}
+                <div className="px-3 py-3 flex-1 overflow-y-auto custom-scrollbar">
+                    {filteredCurrent.length === 0 && filteredTeacher.length === 0 && (searchQuery.trim() ? filteredOther.length === 0 : true) ? (
+                        <div className="text-center py-12 text-gray-400">
+                            {searchQuery.trim() ? (
+                                <p className="text-xs">검색 결과가 없습니다.</p>
+                            ) : (
+                                <div>
+                                    <p className="text-xs mb-1">담임 학생이 없습니다.</p>
+                                    <p className="text-xxs text-gray-400">다른 학생을 추가하려면 검색을 사용하세요.</p>
+                                </div>
+                            )}
                         </div>
                     ) : (
-                        <ul className="space-y-2">
-                            {filteredStudents.map(student => {
-                                const isSelected = selectedStudentIds.has(student.id);
-                                return (
-                                    <li
-                                        key={student.id}
-                                        onClick={() => toggleStudent(student.id)}
-                                        className={`flex justify-between items-center p-3 rounded-lg border cursor-pointer transition-all ${isSelected
-                                            ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-300'
-                                            : 'bg-white border-gray-100 hover:border-gray-200 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-300'
-                                                }`}>
-                                                {isSelected && <Check size={12} className="text-white" />}
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-gray-800">
-                                                    {student.name}
-                                                    {student.englishName && (
-                                                        <span className="ml-1 text-gray-500 font-normal">({student.englishName})</span>
-                                                    )}
-                                                </p>
-                                                <p className="text-xs text-gray-500">
-                                                    {formatSchoolGrade(student.school, student.grade)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                        <div className="space-y-3">
+                            {/* 현재 출석부 학생 */}
+                            {filteredCurrent.length > 0 && (
+                                <div>
+                                    <h4 className="text-[11px] font-bold text-gray-500 mb-1.5 px-1">
+                                        현재 출석부 ({filteredCurrent.length}명)
+                                    </h4>
+                                    <ul className="space-y-1.5">
+                                        {filteredCurrent.map(student => (
+                                            <StudentItem
+                                                key={student.id}
+                                                student={student}
+                                                isSelected={false}
+                                                onToggle={() => { }}
+                                                disabled={true}
+                                            />
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* 담임 학생 (우선 표시) */}
+                            {filteredTeacher.length > 0 && (
+                                <div>
+                                    <h4 className="text-[11px] font-bold text-indigo-600 mb-1.5 px-1">
+                                        담임 학생 ({filteredTeacher.length}명)
+                                    </h4>
+                                    <ul className="space-y-1.5">
+                                        {filteredTeacher.map(student => (
+                                            <StudentItem
+                                                key={student.id}
+                                                student={student}
+                                                isSelected={selectedStudentIds.has(student.id)}
+                                                onToggle={() => toggleStudent(student.id)}
+                                                disabled={false}
+                                            />
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* 전체 학생 - 검색어가 있을 때만 표시 */}
+                            {searchQuery.trim() && filteredOther.length > 0 && (
+                                <div>
+                                    <h4 className="text-[11px] font-bold text-gray-500 mb-1.5 px-1">
+                                        검색 결과 ({filteredOther.length}명)
+                                    </h4>
+                                    <ul className="space-y-1.5">
+                                        {filteredOther.map(student => (
+                                            <StudentItem
+                                                key={student.id}
+                                                student={student}
+                                                isSelected={selectedStudentIds.has(student.id)}
+                                                onToggle={() => toggleStudent(student.id)}
+                                                disabled={false}
+                                            />
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* 검색 안내 메시지 */}
+                            {!searchQuery.trim() && filteredTeacher.length === 0 && filteredCurrent.length === 0 && (
+                                <div className="text-center py-8">
+                                    <Search className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                                    <p className="text-xs text-gray-500">검색을 통해 다른 학생을 찾아보세요</p>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                    <p className="text-sm text-gray-500">
+                <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                    <p className="text-xs text-gray-500 font-medium">
                         {selectedStudentIds.size}명 선택됨
                     </p>
                     <div className="flex gap-2">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                            className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-sm hover:bg-gray-50 transition-colors"
                         >
                             취소
                         </button>
                         <button
                             onClick={handleSubmit}
                             disabled={selectedStudentIds.size === 0 || isSubmitting}
-                            className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${selectedStudentIds.size === 0 || isSubmitting
+                            className={`px-3 py-1.5 text-xs font-bold rounded-sm transition-colors ${selectedStudentIds.size === 0 || isSubmitting
                                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                 : 'bg-indigo-600 text-white hover:bg-indigo-700'
                                 }`}
@@ -249,6 +328,53 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
                 </div>
             </div>
         </div>
+    );
+};
+
+// StudentItem 컴포넌트
+interface StudentItemProps {
+    student: StudentInfo;
+    isSelected: boolean;
+    onToggle: () => void;
+    disabled: boolean;
+}
+
+const StudentItem: React.FC<StudentItemProps> = ({ student, isSelected, onToggle, disabled }) => {
+    return (
+        <li
+            onClick={disabled ? undefined : onToggle}
+            className={`flex justify-between items-center p-2 rounded-sm border transition-all ${disabled
+                ? 'bg-gray-50 border-gray-200 opacity-60 cursor-not-allowed'
+                : isSelected
+                    ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-300 cursor-pointer'
+                    : 'bg-white border-gray-100 hover:border-gray-200 hover:bg-gray-50 cursor-pointer'
+                }`}
+        >
+            <div className="flex items-center gap-2.5">
+                <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center flex-shrink-0 ${disabled
+                    ? 'border-gray-300 bg-gray-100'
+                    : isSelected
+                        ? 'bg-indigo-500 border-indigo-500'
+                        : 'border-gray-300'
+                    }`}>
+                    {isSelected && <Check size={10} className="text-white" />}
+                </div>
+                <div>
+                    <p className="text-xs font-bold text-gray-800 leading-tight">
+                        {student.name}
+                        {student.englishName && (
+                            <span className="ml-1 text-gray-500 font-normal">({student.englishName})</span>
+                        )}
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">
+                        {formatSchoolGrade(student.school, student.grade)}
+                    </p>
+                </div>
+            </div>
+            {disabled && (
+                <span className="text-[10px] text-gray-400 font-medium">이미 추가됨</span>
+            )}
+        </li>
     );
 };
 

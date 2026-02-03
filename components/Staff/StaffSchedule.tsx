@@ -126,7 +126,7 @@ const StaffSchedule: React.FC<StaffScheduleProps> = ({ staff }) => {
               const prevIndex = (currentIndex - 1 + DAYS.length) % DAYS.length;
               setSelectedDay(DAYS[prevIndex].key);
             }}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-sm transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -135,7 +135,7 @@ const StaffSchedule: React.FC<StaffScheduleProps> = ({ staff }) => {
               <button
                 key={day.key}
                 onClick={() => setSelectedDay(day.key)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`px-4 py-2 rounded-sm font-medium transition-colors ${
                   selectedDay === day.key
                     ? 'bg-[#081429] text-white'
                     : day.key === 'sat'
@@ -155,7 +155,7 @@ const StaffSchedule: React.FC<StaffScheduleProps> = ({ staff }) => {
               const nextIndex = (currentIndex + 1) % DAYS.length;
               setSelectedDay(DAYS[nextIndex].key);
             }}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-sm transition-colors"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -175,10 +175,10 @@ const StaffSchedule: React.FC<StaffScheduleProps> = ({ staff }) => {
               return (
                 <div
                   key={member.id}
-                  className={`rounded-lg border-2 p-4 ${getStaffColor(member.role)}`}
+                  className={`rounded-sm border-2 p-4 ${getStaffColor(member.role)}`}
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-lg font-bold">
+                    <div className="w-10 h-10 bg-white rounded-sm flex items-center justify-center text-lg font-bold">
                       {member.name.charAt(0)}
                     </div>
                     <div>
@@ -204,7 +204,7 @@ const StaffSchedule: React.FC<StaffScheduleProps> = ({ staff }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-sm shadow-sm border border-gray-200 p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -214,7 +214,7 @@ const StaffSchedule: React.FC<StaffScheduleProps> = ({ staff }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setViewMode('day')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors ${
               viewMode === 'day'
                 ? 'bg-[#081429] text-white'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -224,7 +224,7 @@ const StaffSchedule: React.FC<StaffScheduleProps> = ({ staff }) => {
           </button>
           <button
             onClick={() => setViewMode('week')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors ${
               viewMode === 'week'
                 ? 'bg-[#081429] text-white'
                 : 'text-gray-600 hover:bg-gray-100'

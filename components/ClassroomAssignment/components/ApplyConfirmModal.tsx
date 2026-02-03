@@ -14,17 +14,17 @@ export const ApplyConfirmModal: React.FC<ApplyConfirmModalProps> = ({
   onCancel,
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-xl w-[400px] max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-800">강의실 배정 적용</h3>
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
-            <X size={16} />
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
+      <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+          <h3 className="text-sm font-bold text-[#081429]">강의실 배정 적용</h3>
+          <button onClick={onCancel} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <X size={18} />
           </button>
         </div>
 
         <div className="flex-1 overflow-auto p-4">
-          <div className="flex items-center gap-2 mb-3 p-2 bg-amber-50 rounded-lg">
+          <div className="flex items-center gap-2 mb-3 p-2 bg-amber-50 rounded-sm">
             <AlertTriangle size={14} className="text-amber-600" />
             <span className="text-xs text-amber-700">
               {changes.length}개 슬롯의 강의실이 변경됩니다.
@@ -45,13 +45,13 @@ export const ApplyConfirmModal: React.FC<ApplyConfirmModalProps> = ({
         <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200">
           <button
             onClick={onCancel}
-            className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-sm hover:bg-gray-200 transition-colors"
           >
             취소
           </button>
           <button
             onClick={onConfirm}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-blue-600 rounded-sm hover:bg-blue-700 transition-colors"
           >
             <Save size={14} />
             적용

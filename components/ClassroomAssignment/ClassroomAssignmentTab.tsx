@@ -358,7 +358,7 @@ const ClassroomAssignmentTab: React.FC = () => {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-sm animate-spin" />
           <span className="text-sm text-gray-500">데이터 로딩 중...</span>
         </div>
       </div>
@@ -454,7 +454,7 @@ const ClassroomAssignmentTab: React.FC = () => {
 
       {/* 토스트 알림 */}
       {toast && (
-        <div className={`absolute top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg text-sm font-medium animate-fade-in ${toast.type === 'success' ? 'bg-emerald-600 text-white' :
+        <div className={`absolute top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-sm shadow-lg text-sm font-medium animate-fade-in ${toast.type === 'success' ? 'bg-emerald-600 text-white' :
           toast.type === 'error' ? 'bg-red-600 text-white' :
             'bg-blue-600 text-white'
           }`}>

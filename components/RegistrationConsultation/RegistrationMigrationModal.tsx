@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Upload, Check, Loader2, Database, AlertCircle } from 'lucide-react';
+import { X, Upload, Check, Loader2, Database, AlertCircle, FileSpreadsheet, Eye, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { read, utils } from 'xlsx';
 import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
@@ -380,166 +380,180 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50 p-4">
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <div className="px-5 py-3 border-b flex justify-between items-center bg-[#081429]">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Database className="w-5 h-5 text-[#fdb813]" />
-            <h2 className="text-lg font-bold text-white">등록 상담 DB 불러오기</h2>
+            <h2 className="text-sm font-bold text-[#081429]">등록 상담 DB 불러오기</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-            <X size={20} />
+          <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <X size={18} />
           </button>
         </div>
 
         {/* 본문 */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="flex-1 overflow-y-auto p-6">
           {/* Step 1: 파일 업로드 */}
           {step === 'upload' && (
-            <div className="text-center">
-              <Upload className="w-16 h-16 mx-auto mb-4 text-[#fdb813]" />
-              <h3 className="text-xl font-bold text-[#081429] mb-2">Excel 파일 업로드</h3>
-              <p className="text-gray-600 mb-6">
-                월별 시트 (예: 1월, 2월, ...)가 포함된 엑셀 파일을 선택하세요.
-              </p>
+            <div>
+              {/* Section: 파일 업로드 */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
+                  <Upload className="w-4 h-4 text-[#fdb813]" />
+                  <h3 className="text-sm font-bold text-[#081429]">Excel 파일 업로드</h3>
+                </div>
 
-              <label className="inline-block">
-                <input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  disabled={loading}
-                />
-                <div className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-lg font-semibold cursor-pointer hover:bg-[#e5a711] transition-colors inline-flex items-center gap-2">
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      처리 중...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-5 h-5" />
-                      파일 선택
-                    </>
+                <div className="text-center">
+                  <Upload className="w-16 h-16 mx-auto mb-4 text-[#fdb813]" />
+                  <p className="text-gray-600 mb-6">
+                    월별 시트 (예: 1월, 2월, ...)가 포함된 엑셀 파일을 선택하세요.
+                  </p>
+
+                  <label className="inline-block">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      disabled={loading}
+                    />
+                    <div className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-sm font-semibold cursor-pointer hover:bg-[#e5a711] transition-colors inline-flex items-center gap-2">
+                      {loading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          처리 중...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-5 h-5" />
+                          파일 선택
+                        </>
+                      )}
+                    </div>
+                  </label>
+
+                  {error && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-sm flex items-start gap-2">
+                      <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700">{error}</p>
+                    </div>
                   )}
                 </div>
-              </label>
-
-              {error && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
+              </div>
             </div>
           )}
 
           {/* Step 2: 시트 선택 */}
           {step === 'sheet-select' && (
             <div>
+              {/* Section: 시트 선택 */}
               <div className="mb-6">
-                <h3 className="text-lg font-bold text-[#081429] mb-2">📋 불러올 시트 선택</h3>
-                <p className="text-sm text-gray-600">
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
+                  <FileSpreadsheet className="w-4 h-4 text-[#fdb813]" />
+                  <h3 className="text-sm font-bold text-[#081429]">불러올 시트 선택</h3>
+                </div>
+
+                <p className="text-sm text-gray-600 mb-4">
                   마이그레이션할 월별 시트를 선택하세요. (기본값: 전체 선택)
                 </p>
-              </div>
 
-              {/* 전체 선택/해제 버튼 */}
-              <div className="mb-4 flex gap-2">
-                <button
-                  onClick={() => setSelectedSheets(new Set(availableSheets))}
-                  className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-                >
-                  전체 선택
-                </button>
-                <button
-                  onClick={() => setSelectedSheets(new Set())}
-                  className="px-3 py-1.5 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
-                >
-                  전체 해제
-                </button>
-              </div>
-
-              {/* 시트 선택 그리드 */}
-              <div className="grid grid-cols-4 gap-3 mb-6">
-                {availableSheets.map(sheetName => (
+                {/* 전체 선택/해제 버튼 */}
+                <div className="mb-4 flex gap-2">
                   <button
-                    key={sheetName}
-                    onClick={() => {
-                      const newSelected = new Set(selectedSheets);
-                      if (newSelected.has(sheetName)) {
-                        newSelected.delete(sheetName);
-                      } else {
-                        newSelected.add(sheetName);
-                      }
-                      setSelectedSheets(newSelected);
-                    }}
-                    className={`px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm ${
-                      selectedSheets.has(sheetName)
-                        ? 'bg-[#fdb813] border-[#fdb813] text-[#081429] shadow-md'
-                        : 'bg-white border-gray-300 text-gray-700 hover:border-[#fdb813]/50'
-                    }`}
+                    onClick={() => setSelectedSheets(new Set(availableSheets))}
+                    className="px-3 py-1.5 bg-blue-500 text-white rounded-sm text-sm font-medium hover:bg-blue-600 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
-                      <span>{sheetName}</span>
-                      {selectedSheets.has(sheetName) && (
-                        <Check size={16} className="ml-2" />
-                      )}
-                    </div>
+                    전체 선택
                   </button>
-                ))}
-              </div>
-
-              {/* 선택된 시트 개수 */}
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900">
-                  <strong>{selectedSheets.size}개</strong> 시트가 선택되었습니다.
-                  {selectedSheets.size > 0 && (
-                    <span className="ml-2 text-blue-700">
-                      ({Array.from(selectedSheets).join(', ')})
-                    </span>
-                  )}
-                </p>
-              </div>
-
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700">{error}</p>
+                  <button
+                    onClick={() => setSelectedSheets(new Set())}
+                    className="px-3 py-1.5 bg-gray-500 text-white rounded-sm text-sm font-medium hover:bg-gray-600 transition-colors"
+                  >
+                    전체 해제
+                  </button>
                 </div>
-              )}
 
-              {/* 액션 버튼 */}
-              <div className="flex justify-between gap-3">
-                <button
-                  onClick={() => {
-                    setStep('upload');
-                    setWorkbookData(null);
-                    setAvailableSheets([]);
-                    setSelectedSheets(new Set());
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  ← 다른 파일 선택
-                </button>
-                <button
-                  onClick={handleParseSelectedSheets}
-                  disabled={selectedSheets.size === 0 || loading}
-                  className="px-6 py-2 bg-[#fdb813] text-[#081429] rounded-lg font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      데이터 분석 중...
-                    </>
-                  ) : (
-                    <>
-                      다음 단계 →
-                    </>
-                  )}
-                </button>
+                {/* 시트 선택 그리드 */}
+                <div className="grid grid-cols-4 gap-3 mb-6">
+                  {availableSheets.map(sheetName => (
+                    <button
+                      key={sheetName}
+                      onClick={() => {
+                        const newSelected = new Set(selectedSheets);
+                        if (newSelected.has(sheetName)) {
+                          newSelected.delete(sheetName);
+                        } else {
+                          newSelected.add(sheetName);
+                        }
+                        setSelectedSheets(newSelected);
+                      }}
+                      className={`px-4 py-3 rounded-sm border-2 transition-all font-medium text-sm ${
+                        selectedSheets.has(sheetName)
+                          ? 'bg-[#fdb813] border-[#fdb813] text-[#081429] shadow-md'
+                          : 'bg-white border-gray-300 text-gray-700 hover:border-[#fdb813]/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{sheetName}</span>
+                        {selectedSheets.has(sheetName) && (
+                          <Check size={16} className="ml-2" />
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* 선택된 시트 개수 */}
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-sm">
+                  <p className="text-sm text-blue-900">
+                    <strong>{selectedSheets.size}개</strong> 시트가 선택되었습니다.
+                    {selectedSheets.size > 0 && (
+                      <span className="ml-2 text-blue-700">
+                        ({Array.from(selectedSheets).join(', ')})
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-sm flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
+
+                {/* 액션 버튼 */}
+                <div className="flex justify-between gap-3">
+                  <button
+                    onClick={() => {
+                      setStep('upload');
+                      setWorkbookData(null);
+                      setAvailableSheets([]);
+                      setSelectedSheets(new Set());
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    ← 다른 파일 선택
+                  </button>
+                  <button
+                    onClick={handleParseSelectedSheets}
+                    disabled={selectedSheets.size === 0 || loading}
+                    className="px-6 py-2 bg-[#fdb813] text-[#081429] rounded-sm font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        데이터 분석 중...
+                      </>
+                    ) : (
+                      <>
+                        다음 단계 →
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -547,187 +561,219 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
           {/* Step 3: 미리보기 */}
           {step === 'preview' && (
             <div>
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h3 className="font-bold text-blue-900 mb-2">📊 마이그레이션 통계</h3>
-                <div className="grid grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">전체 레코드:</span>
-                    <span className="ml-2 font-bold text-blue-900">{stats.total}개</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">신규 추가:</span>
-                    <span className="ml-2 font-bold text-green-600">{stats.new}개</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">중복 스킵:</span>
-                    <span className="ml-2 font-bold text-orange-600">{stats.duplicate}개</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">🔗 학생 연동:</span>
-                    <span className="ml-2 font-bold text-emerald-600">{stats.matched}개</span>
+              {/* Section: 마이그레이션 통계 */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
+                  <Eye className="w-4 h-4 text-[#fdb813]" />
+                  <h3 className="text-sm font-bold text-[#081429]">마이그레이션 통계</h3>
+                </div>
+
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-sm">
+                  <div className="grid grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">전체 레코드:</span>
+                      <span className="ml-2 font-bold text-blue-900">{stats.total}개</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">신규 추가:</span>
+                      <span className="ml-2 font-bold text-green-600">{stats.new}개</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">중복 스킵:</span>
+                      <span className="ml-2 font-bold text-orange-600">{stats.duplicate}개</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">학생 연동:</span>
+                      <span className="ml-2 font-bold text-emerald-600">{stats.matched}개</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* 미리보기 테이블 */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-[#081429]">
-                    데이터 미리보기 (전체 {stats.total}개)
-                  </h4>
-                  <div className="text-xs text-gray-600">
-                    페이지 {currentPage} / {Math.ceil(stats.total / RECORDS_PER_PAGE)}
+              {/* Section: 데이터 미리보기 */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
+                  <Database className="w-4 h-4 text-[#fdb813]" />
+                  <h3 className="text-sm font-bold text-[#081429]">데이터 미리보기</h3>
+                </div>
+
+                <div className="border border-gray-200 rounded-sm overflow-hidden">
+                  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-[#081429]">
+                      전체 {stats.total}개
+                    </h4>
+                    <div className="text-xs text-gray-600">
+                      페이지 {currentPage} / {Math.ceil(stats.total / RECORDS_PER_PAGE)}
+                    </div>
                   </div>
+
+                  <div className="overflow-x-auto max-h-96">
+                    <table className="w-full text-xs">
+                      {TABLE_HEADERS}
+                      <tbody>
+                        {parsedRecords
+                          .slice((currentPage - 1) * RECORDS_PER_PAGE, currentPage * RECORDS_PER_PAGE)
+                          .map((record, idx) => (
+                          <tr
+                            key={idx}
+                            className={`border-b border-gray-100 ${record._isDuplicate ? 'bg-orange-50' : ''}`}
+                          >
+                            <td className="px-2 py-1">
+                              <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">
+                                {record._sheetName}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1 text-gray-500">{record._rowNumber}</td>
+                            <td className="px-2 py-1 font-medium">{record.studentName}</td>
+                            <td className="px-2 py-1 text-gray-600">
+                              {record.schoolName} {record.grade}
+                            </td>
+                            <td className="px-2 py-1 text-gray-600">
+                              {record.consultationDate.substring(0, 10)}
+                            </td>
+                            <td className="px-2 py-1">
+                              <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
+                                {record.subject}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1">
+                              {record._matchedStudentId ? (
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium flex items-center gap-1 w-fit">
+                                  연결됨
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium flex items-center gap-1 w-fit">
+                                  신규
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-2 py-1">
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                record.status.includes('등록') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                {record.status}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1">
+                              {record._isDuplicate ? (
+                                <span className="text-orange-600 font-medium">중복</span>
+                              ) : (
+                                <span className="text-green-600 font-medium">신규</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 페이지네이션 컨트롤 */}
+                  {stats.total > RECORDS_PER_PAGE && (
+                    <div className="bg-gray-50 px-3 py-2 border-t border-gray-200 flex items-center justify-between">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        이전
+                      </button>
+                      <span className="text-xs text-gray-600">
+                        {(currentPage - 1) * RECORDS_PER_PAGE + 1} - {Math.min(currentPage * RECORDS_PER_PAGE, stats.total)} / {stats.total}
+                      </span>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(Math.ceil(stats.total / RECORDS_PER_PAGE), prev + 1))}
+                        disabled={currentPage === Math.ceil(stats.total / RECORDS_PER_PAGE)}
+                        className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        다음
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                <div className="overflow-x-auto max-h-96">
-                  <table className="w-full text-xs">
-                    {TABLE_HEADERS}
-                    <tbody>
-                      {parsedRecords
-                        .slice((currentPage - 1) * RECORDS_PER_PAGE, currentPage * RECORDS_PER_PAGE)
-                        .map((record, idx) => (
-                        <tr
-                          key={idx}
-                          className={`border-b border-gray-100 ${record._isDuplicate ? 'bg-orange-50' : ''}`}
-                        >
-                          <td className="px-2 py-1">
-                            <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">
-                              {record._sheetName}
-                            </span>
-                          </td>
-                          <td className="px-2 py-1 text-gray-500">{record._rowNumber}</td>
-                          <td className="px-2 py-1 font-medium">{record.studentName}</td>
-                          <td className="px-2 py-1 text-gray-600">
-                            {record.schoolName} {record.grade}
-                          </td>
-                          <td className="px-2 py-1 text-gray-600">
-                            {record.consultationDate.substring(0, 10)}
-                          </td>
-                          <td className="px-2 py-1">
-                            <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
-                              {record.subject}
-                            </span>
-                          </td>
-                          <td className="px-2 py-1">
-                            {record._matchedStudentId ? (
-                              <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium flex items-center gap-1 w-fit">
-                                🔗 연결됨
-                              </span>
-                            ) : (
-                              <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium flex items-center gap-1 w-fit">
-                                🆕 신규
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-2 py-1">
-                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                              record.status.includes('등록') ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                            }`}>
-                              {record.status}
-                            </span>
-                          </td>
-                          <td className="px-2 py-1">
-                            {record._isDuplicate ? (
-                              <span className="text-orange-600 font-medium">중복</span>
-                            ) : (
-                              <span className="text-green-600 font-medium">신규</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 페이지네이션 컨트롤 */}
-                {stats.total > RECORDS_PER_PAGE && (
-                  <div className="bg-gray-50 px-3 py-2 border-t border-gray-200 flex items-center justify-between">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      이전
-                    </button>
-                    <span className="text-xs text-gray-600">
-                      {(currentPage - 1) * RECORDS_PER_PAGE + 1} - {Math.min(currentPage * RECORDS_PER_PAGE, stats.total)} / {stats.total}
-                    </span>
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(stats.total / RECORDS_PER_PAGE), prev + 1))}
-                      disabled={currentPage === Math.ceil(stats.total / RECORDS_PER_PAGE)}
-                      className="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      다음
-                    </button>
+                {error && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-sm flex items-start gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700">{error}</p>
                   </div>
                 )}
-              </div>
 
-              {error && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700">{error}</p>
+                {/* 액션 버튼 */}
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    onClick={onClose}
+                    className="px-4 py-2 border border-gray-300 rounded-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleMigrate}
+                    disabled={stats.new === 0}
+                    className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Database className="w-4 h-4" />
+                    {stats.new}개 마이그레이션 실행
+                  </button>
                 </div>
-              )}
-
-              {/* 액션 버튼 */}
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={handleMigrate}
-                  disabled={stats.new === 0}
-                  className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  <Database className="w-4 h-4" />
-                  {stats.new}개 마이그레이션 실행
-                </button>
               </div>
             </div>
           )}
 
-          {/* Step 3: 마이그레이션 중 */}
+          {/* Step 4: 마이그레이션 중 */}
           {step === 'migrating' && (
-            <div className="text-center py-8">
-              <Loader2 className="w-16 h-16 mx-auto mb-4 text-[#fdb813] animate-spin" />
-              <h3 className="text-xl font-bold text-[#081429] mb-2">마이그레이션 진행 중...</h3>
-              <p className="text-gray-600 mb-4">잠시만 기다려주세요.</p>
+            <div>
+              {/* Section: 마이그레이션 진행 */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
+                  <PlayCircle className="w-4 h-4 text-[#fdb813]" />
+                  <h3 className="text-sm font-bold text-[#081429]">마이그레이션 진행 중</h3>
+                </div>
 
-              <div className="w-full max-w-md mx-auto bg-gray-200 rounded-full h-4 overflow-hidden">
-                <div
-                  className="bg-[#fdb813] h-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+                <div className="text-center py-8">
+                  <Loader2 className="w-16 h-16 mx-auto mb-4 text-[#fdb813] animate-spin" />
+                  <p className="text-gray-600 mb-4">잠시만 기다려주세요.</p>
+
+                  <div className="w-full max-w-md mx-auto bg-gray-200 rounded-sm h-4 overflow-hidden">
+                    <div
+                      className="bg-[#fdb813] h-full transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">{progress}% 완료</p>
+                </div>
               </div>
-              <p className="text-sm text-gray-600 mt-2">{progress}% 완료</p>
             </div>
           )}
 
-          {/* Step 4: 완료 */}
+          {/* Step 5: 완료 */}
           {step === 'done' && (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
-                <Check className="w-10 h-10 text-green-600" />
-              </div>
-              <h3 className="text-xl font-bold text-[#081429] mb-2">마이그레이션 완료!</h3>
-              <p className="text-gray-600 mb-6">
-                {stats.new}개의 상담 기록이 성공적으로 추가되었습니다.
-              </p>
+            <div>
+              {/* Section: 완료 */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  <h3 className="text-sm font-bold text-[#081429]">마이그레이션 완료</h3>
+                </div>
 
-              <button
-                onClick={() => {
-                  onSuccess();
-                  onClose();
-                }}
-                className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-lg font-semibold hover:bg-[#e5a711] transition-colors"
-              >
-                확인
-              </button>
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-sm flex items-center justify-center">
+                    <Check className="w-10 h-10 text-green-600" />
+                  </div>
+                  <p className="text-gray-600 mb-6">
+                    {stats.new}개의 상담 기록이 성공적으로 추가되었습니다.
+                  </p>
+
+                  <button
+                    onClick={() => {
+                      onSuccess();
+                      onClose();
+                    }}
+                    className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-sm font-semibold hover:bg-[#e5a711] transition-colors"
+                  >
+                    확인
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Mail, X, User as UserIcon, Trash2, Send } from 'lucide-react';
+import { Mail, X, User as UserIcon, Trash2, Send, Clock, FileText } from 'lucide-react';
 import { TaskMemo } from '../../types';
 
 interface MemoDetailModalProps {
@@ -25,61 +25,86 @@ export const MemoDetailModal: React.FC<MemoDetailModalProps> = ({
   if (!selectedMemo) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
-      <div className="bg-white rounded-xl shadow-2xl w-[400px] overflow-hidden">
-        <div className="p-4 border-b flex items-center justify-between bg-gray-50">
-          <h3 className="font-bold text-gray-800 flex items-center gap-2">
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
+      <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+          <h3 className="text-sm font-bold text-[#081429] flex items-center gap-2">
             <Mail size={16} /> 받은 메모
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={20} />
+          <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <X size={18} />
           </button>
         </div>
-        <div className="p-6">
-          <div className="mb-4">
-            <span className="text-xs font-bold text-gray-500 block mb-1">보낸 사람</span>
-            <div className="text-gray-800 font-bold flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                <UserIcon size={16} />
+
+        <div className="p-6 flex-1 overflow-y-auto space-y-2">
+          {/* Section 1: 메모 정보 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <UserIcon className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">메모 정보</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {/* Sender Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">보낸 사람</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-sm bg-blue-100 flex items-center justify-center text-blue-600">
+                    <UserIcon size={12} />
+                  </div>
+                  <span className="text-xs text-gray-800 font-bold">{selectedMemo.fromName}</span>
+                </div>
               </div>
-              {selectedMemo.fromName}
+
+              {/* Timestamp Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <Clock className="w-3 h-3 text-gray-400 shrink-0" />
+                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">전송 시각</span>
+                <span className="text-xs text-gray-600">
+                  {new Date(selectedMemo.createdAt).toLocaleString('ko-KR')}
+                </span>
+              </div>
             </div>
           </div>
-          <div className="mb-6">
-            <span className="text-xs font-bold text-gray-500 block mb-1">내용</span>
-            <div className="bg-gray-50 p-4 rounded-lg text-gray-700 text-sm whitespace-pre-wrap leading-relaxed border border-gray-100">
-              {selectedMemo.message}
+
+          {/* Section 2: 메모 내용 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <FileText className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">메모 내용</h3>
             </div>
-            <div className="text-right mt-2 text-xs text-gray-400">
-              {new Date(selectedMemo.createdAt).toLocaleString('ko-KR')}
+            <div className="px-2 py-1.5">
+              <div className="bg-gray-50 p-3 rounded-sm text-gray-700 text-xs whitespace-pre-wrap leading-relaxed border border-gray-100 min-h-[80px]">
+                {selectedMemo.message}
+              </div>
             </div>
           </div>
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={() => handleDeleteMemo(selectedMemo.id)}
-              className="mr-auto px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm font-bold flex items-center gap-2"
-            >
-              <Trash2 size={14} /> 삭제
-            </button>
-            <button
-              onClick={() => {
-                handleMarkMemoRead(selectedMemo.id);
-                onClose();
-              }}
-              className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-bold hover:bg-gray-50"
-            >
-              확인 (닫기)
-            </button>
-            <button
-              onClick={() => {
-                onReply(selectedMemo.from);
-                handleMarkMemoRead(selectedMemo.id);
-              }}
-              className="px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-125 flex items-center gap-2"
-            >
-              <Send size={14} /> 답장하기
-            </button>
-          </div>
+        </div>
+
+        <div className="flex gap-2 justify-end p-6 border-t border-gray-200 bg-gray-50 shrink-0">
+          <button
+            onClick={() => handleDeleteMemo(selectedMemo.id)}
+            className="mr-auto px-4 py-2 text-red-500 hover:bg-red-50 rounded-sm text-sm font-bold flex items-center gap-2"
+          >
+            <Trash2 size={14} /> 삭제
+          </button>
+          <button
+            onClick={() => {
+              handleMarkMemoRead(selectedMemo.id);
+              onClose();
+            }}
+            className="px-4 py-2 border border-gray-200 text-gray-600 rounded-sm text-sm font-bold hover:bg-gray-50"
+          >
+            확인 (닫기)
+          </button>
+          <button
+            onClick={() => {
+              onReply(selectedMemo.from);
+              handleMarkMemoRead(selectedMemo.id);
+            }}
+            className="px-4 py-2 bg-[#081429] text-white rounded-sm text-sm font-bold hover:brightness-125 flex items-center gap-2"
+          >
+            <Send size={14} /> 답장하기
+          </button>
         </div>
       </div>
     </div>

@@ -142,9 +142,9 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
     return (
         <div className="space-y-3 max-w-3xl mx-auto pb-12">
             {/* Context Selector Bar */}
-            <div className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-2 sticky top-0 z-20">
+            <div className="bg-white p-2.5 rounded-sm border border-gray-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-2 sticky top-0 z-20">
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    <div className={`p-1.5 rounded-md ${selectedStaffId ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>
+                    <div className={`p-1.5 rounded-sm ${selectedStaffId ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>
                         {selectedStaffId ? <User size={14} /> : <Users size={14} />}
                     </div>
                     <div className="flex-1">
@@ -194,7 +194,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                     {selectedStaffId && (
                         <div className="mr-1">
                             {isCustomConfig ? (
-                                <span className="text-xxs font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">개별 설정</span>
+                                <span className="text-xxs font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-sm">개별 설정</span>
                             ) : (
                                 <span className="text-xxs font-medium text-gray-400 px-1">기본 설정</span>
                             )}
@@ -205,7 +205,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                         <button
                             onClick={handleReset}
                             disabled={isDeleting}
-                            className="px-2 py-1 text-xxs font-bold text-red-600 hover:bg-red-50 rounded-md flex items-center gap-1 transition-colors"
+                            className="px-2 py-1 text-xxs font-bold text-red-600 hover:bg-red-50 rounded-sm flex items-center gap-1 transition-colors"
                             title="개별 설정 삭제 (기본값 복귀)"
                         >
                             <RotateCcw size={10} /> 초기화
@@ -216,7 +216,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                         <button
                             onClick={handleSave}
                             disabled={!hasChanges || isSaving}
-                            className={`px-3 py-1 rounded-md font-bold flex items-center gap-1 transition-all shadow-sm text-xs ${hasChanges
+                            className={`px-3 py-1 rounded-sm font-bold flex items-center gap-1 transition-all shadow-sm text-xs ${hasChanges
                                 ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
                                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                 }`}
@@ -229,17 +229,17 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
             </div>
 
             {!localConfig ? (
-                <div className="p-6 text-center text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 text-xs">
+                <div className="p-6 text-center text-gray-400 bg-white rounded-sm border border-dashed border-gray-200 text-xs">
                     기본 설정 데이터를 불러올 수 없습니다.
                 </div>
             ) : (
                 <>
                     {/* Global Settings */}
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm space-y-2">
+                    <div className="bg-white p-3 rounded-sm border border-gray-200 shadow-sm space-y-2">
                         <h3 className="font-bold text-gray-800 flex items-center gap-1.5 text-xs">
                             <Calculator size={14} className="text-gray-500" /> 기본 정산 설정
                         </h3>
-                        <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-md border border-slate-200">
+                        <div className="flex items-center justify-between bg-slate-50 p-2.5 rounded-sm border border-slate-200">
                             <div className="flex items-center gap-1.5">
                                 <label className="text-[11px] font-bold text-slate-700">카드/행정 수수료 (%)</label>
                                 <div className="group relative">
@@ -255,7 +255,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                     step="0.1"
                                     value={localConfig.academyFee}
                                     onChange={(e) => handleGlobalChange('academyFee', e.target.value)}
-                                    className="w-full pl-2 pr-6 py-1 text-right border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-xs"
+                                    className="w-full pl-2 pr-6 py-1 text-right border border-gray-300 rounded-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-xs"
                                 />
                                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xxs">%</span>
                             </div>
@@ -263,13 +263,13 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                     </div>
 
                     {/* Incentive Settings */}
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm space-y-2">
+                    <div className="bg-white p-3 rounded-sm border border-gray-200 shadow-sm space-y-2">
                         <h3 className="font-bold text-gray-800 flex items-center gap-1.5 text-xs">
                             <Gift size={14} className="text-yellow-600" /> 인센티브 기준 설정
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                             {/* 블로그 포스팅 인센티브 - 고정금/비율 선택 */}
-                            <div className="bg-yellow-50 p-2.5 rounded-md border border-yellow-100">
+                            <div className="bg-yellow-50 p-2.5 rounded-sm border border-yellow-100">
                                 <div className="flex items-center justify-between mb-1">
                                     <label className="block text-xxs font-bold text-gray-600">블로그 포스팅</label>
                                     <div className="flex bg-gray-100 p-0.5 rounded">
@@ -302,7 +302,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                             step="0.1"
                                             value={localConfig.incentives?.blogRate ?? 2}
                                             onChange={(e) => handleIncentiveChange('blogRate', parseFloat(e.target.value) || 0)}
-                                            className="w-full pl-2 pr-6 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
+                                            className="w-full pl-2 pr-6 py-1 border border-gray-200 rounded-sm focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
                                         />
                                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xxs">%</span>
                                     </div>
@@ -313,12 +313,12 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                             type="text"
                                             value={localConfig.incentives?.blogAmount?.toLocaleString() ?? 0}
                                             onChange={(e) => handleIncentiveChange('blogAmount', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
-                                            className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
+                                            className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-sm focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
                                         />
                                     </div>
                                 )}
                             </div>
-                            <div className="bg-yellow-50 p-2.5 rounded-md border border-yellow-100">
+                            <div className="bg-yellow-50 p-2.5 rounded-sm border border-yellow-100">
                                 <label className="block text-xxs font-bold text-gray-600 mb-1">퇴원율 달성 수당 (월)</label>
                                 <div className="relative">
                                     <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xxs">₩</span>
@@ -326,11 +326,11 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                         type="text"
                                         value={localConfig.incentives?.retentionAmount?.toLocaleString() ?? 0}
                                         onChange={(e) => handleIncentiveChange('retentionAmount', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
-                                        className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
+                                        className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-sm focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
                                     />
                                 </div>
                             </div>
-                            <div className="bg-yellow-50 p-2.5 rounded-md border border-yellow-100">
+                            <div className="bg-yellow-50 p-2.5 rounded-sm border border-yellow-100">
                                 <label className="block text-xxs font-bold text-gray-600 mb-1">목표 퇴원율 기준 (%)</label>
                                 <div className="relative">
                                     <input
@@ -338,7 +338,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                         step="0.1"
                                         value={localConfig.incentives?.retentionTargetRate ?? 0}
                                         onChange={(e) => handleIncentiveChange('retentionTargetRate', parseFloat(e.target.value) || 0)}
-                                        className="w-full pl-2 pr-8 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
+                                        className="w-full pl-2 pr-8 py-1 border border-gray-200 rounded-sm focus:ring-1 focus:ring-yellow-500 outline-none text-xs"
                                     />
                                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xxs">이하</span>
                                 </div>
@@ -354,7 +354,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                             {canEdit && (
                                 <button
                                     onClick={handleAddItem}
-                                    className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-md text-xxs font-bold hover:bg-blue-100 transition-colors"
+                                    className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-sm text-xxs font-bold hover:bg-blue-100 transition-colors"
                                 >
                                     <Plus size={12} /> 항목 추가
                                 </button>
@@ -366,11 +366,11 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                 const calculatedRate = calculateClassRate(item, localConfig.academyFee);
 
                                 return (
-                                    <div key={item.id} className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow relative group">
+                                    <div key={item.id} className="bg-white border border-gray-200 rounded-sm p-3 hover:shadow-sm transition-shadow relative group">
                                         {canEdit && (
                                             <button
                                                 onClick={() => handleRemoveItem(item.id)}
-                                                className="absolute right-2 top-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded-full"
+                                                className="absolute right-2 top-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded-sm"
                                                 title="삭제"
                                             >
                                                 <Trash2 size={12} />
@@ -380,7 +380,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                         <div className="flex flex-wrap gap-3 items-center mb-3 pr-6">
                                             {/* Name Input */}
                                             <div className="flex items-center gap-2">
-                                                <div className="relative w-6 h-6 rounded-full overflow-hidden border border-white shadow-sm cursor-pointer hover:scale-105 transition-transform" style={{ backgroundColor: resolveColor(item.color) }}>
+                                                <div className="relative w-6 h-6 rounded-sm overflow-hidden border border-white shadow-sm cursor-pointer hover:scale-105 transition-transform" style={{ backgroundColor: resolveColor(item.color) }}>
                                                     <input
                                                         type="color"
                                                         value={resolveColor(item.color)}
@@ -399,7 +399,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                             </div>
 
                                             {/* Type Toggle */}
-                                            <div className="flex bg-gray-100 p-0.5 rounded-md ml-auto">
+                                            <div className="flex bg-gray-100 p-0.5 rounded-sm ml-auto">
                                                 <button
                                                     onClick={() => handleItemChange(item.id, 'type', 'fixed')}
                                                     className={`px-2 py-0.5 text-xxs font-bold rounded transition-all ${item.type === 'fixed' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
@@ -417,7 +417,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-md border border-slate-100">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-sm border border-slate-100">
                                             {item.type === 'fixed' ? (
                                                 <div className="md:col-span-2">
                                                     <label className="block text-xxs font-bold text-slate-500 mb-1">1회 지급액 (선생님 수령)</label>
@@ -427,7 +427,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                                             type="text"
                                                             value={item.fixedRate.toLocaleString()}
                                                             onChange={(e) => handleItemChange(item.id, 'fixedRate', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
-                                                            className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white outline-none text-xs"
+                                                            className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-sm focus:ring-1 focus:ring-blue-500 bg-white outline-none text-xs"
                                                         />
                                                     </div>
                                                 </div>
@@ -441,7 +441,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                                                 type="text"
                                                                 value={item.baseTuition.toLocaleString()}
                                                                 onChange={(e) => handleItemChange(item.id, 'baseTuition', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
-                                                                className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white outline-none text-xs"
+                                                                className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-sm focus:ring-1 focus:ring-blue-500 bg-white outline-none text-xs"
                                                             />
                                                         </div>
                                                     </div>
@@ -452,7 +452,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                                                 type="number"
                                                                 value={item.ratio}
                                                                 onChange={(e) => handleItemChange(item.id, 'ratio', parseFloat(e.target.value) || 0)}
-                                                                className="w-full pl-2 pr-6 py-1 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 bg-white outline-none text-xs"
+                                                                className="w-full pl-2 pr-6 py-1 border border-gray-200 rounded-sm focus:ring-1 focus:ring-blue-500 bg-white outline-none text-xs"
                                                                 placeholder="예: 45"
                                                             />
                                                             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xxs">%</span>
@@ -464,7 +464,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
 
                                         {/* Preview Calculation */}
                                         <div className="mt-2 flex justify-end items-center border-t border-gray-100 pt-2">
-                                            <div className="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-md border border-blue-100">
+                                            <div className="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-sm border border-blue-100">
                                                 <span className="text-xxs text-blue-400 font-bold">1회당 정산액</span>
                                                 <span className="text-xs font-bold text-blue-600 font-mono">{calculatedRate.toLocaleString()}원</span>
                                             </div>
@@ -475,7 +475,7 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                         </div>
 
                         {localConfig && localConfig.items.length === 0 && (
-                            <div className="text-center py-6 text-gray-400 bg-white rounded-lg border border-dashed border-gray-200">
+                            <div className="text-center py-6 text-gray-400 bg-white rounded-sm border border-dashed border-gray-200">
                                 <Calculator size={24} className="mx-auto mb-2 opacity-20" />
                                 <p className="font-medium text-xs">등록된 급여 설정이 없습니다.</p>
                                 <p className="text-xxs mt-0.5">상단의 '항목 추가' 버튼을 눌러주세요.</p>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock as LockIcon, LogIn, UserPlus } from 'lucide-react';
+import { X, Lock as LockIcon, LogIn, UserPlus, Mail, User, KeyRound } from 'lucide-react';
 import { auth, db } from '../../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
@@ -147,20 +147,20 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
 
     return (
         <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xl flex items-center justify-center z-[100]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xl flex items-start justify-center pt-[8vh] z-[100]"
             onClick={() => canClose && onClose()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="login-modal-title"
         >
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-0 relative overflow-hidden border border-gray-200"
+                className="bg-white rounded-sm shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden p-0 relative border border-gray-200"
                 onClick={(e) => e.stopPropagation()}
             >
 
                 {/* Header */}
-                <div className="bg-[#081429] p-6 text-center">
-                    <div className="bg-[#fdb813] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <div className="bg-[#081429] p-6 text-center shrink-0">
+                    <div className="bg-[#fdb813] w-16 h-16 rounded-sm flex items-center justify-center mx-auto mb-4 shadow-lg">
                         {isSignUp ? <UserPlus size={32} className="text-[#081429]" /> : <LockIcon size={32} className="text-[#081429]" />}
                     </div>
                     <h2 id="login-modal-title" className="text-xl font-bold text-white">
@@ -179,84 +179,182 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                     </button>
                 </div>
 
-                {/* Body */}
-                <div className="p-8">
-                    <form onSubmit={isForgotPassword ? handleForgotPassword : handleAuth} className="space-y-4">
-                        <div>
-                            <label htmlFor={isSignUp ? 'signup-email' : 'login-email'} className="block text-sm font-bold text-gray-700 mb-1">이메일</label>
-                            <input
-                                id={isSignUp ? 'signup-email' : 'login-email'}
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#fdb813] focus:ring-2 focus:ring-[#fdb813]/20 outline-none transition-all font-medium"
-                                placeholder="name@example.com"
-                                required
-                                aria-required="true"
-                                autoComplete="email"
-                            />
-                        </div>
+                {/* Body - Scrollable */}
+                <div className="p-8 overflow-y-auto flex-1">
+                    <form onSubmit={isForgotPassword ? handleForgotPassword : handleAuth} className="space-y-3">
 
-                        {!isForgotPassword && (
-                            <div>
-                                <label htmlFor={isSignUp ? 'signup-password' : 'login-password'} className="block text-sm font-bold text-gray-700 mb-1">비밀번호</label>
-                                <input
-                                    id={isSignUp ? 'signup-password' : 'login-password'}
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#fdb813] focus:ring-2 focus:ring-[#fdb813]/20 outline-none transition-all font-medium"
-                                    placeholder="••••••••"
-                                    required
-                                    aria-required="true"
-                                    autoComplete={isSignUp ? "new-password" : "current-password"}
-                                />
+                        {/* Login Mode: 로그인 정보 */}
+                        {!isSignUp && !isForgotPassword && (
+                            <div className="bg-white border border-gray-200 overflow-hidden">
+                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                    <LogIn className="w-3 h-3 text-[#081429]" />
+                                    <h3 className="text-[#081429] font-bold text-xs">로그인 정보</h3>
+                                </div>
+                                <div className="divide-y divide-gray-100">
+                                    {/* Email Row */}
+                                    <div className="flex items-center gap-2 px-2 py-1.5">
+                                        <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+                                        <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">이메일</span>
+                                        <input
+                                            id="login-email"
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            placeholder="name@example.com"
+                                            required
+                                            aria-required="true"
+                                            autoComplete="email"
+                                        />
+                                    </div>
+                                    {/* Password Row */}
+                                    <div className="flex items-center gap-2 px-2 py-1.5">
+                                        <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
+                                        <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">비밀번호</span>
+                                        <input
+                                            id="login-password"
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            placeholder="••••••••"
+                                            required
+                                            aria-required="true"
+                                            autoComplete="current-password"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         )}
 
+                        {/* Signup Mode: Section 1 - 계정 정보 */}
                         {isSignUp && !isForgotPassword && (
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">비밀번호 확인</label>
-                                <input
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#081429] focus:ring-2 focus:ring-[#081429]/10 outline-none transition-all font-medium"
-                                    placeholder="••••••••"
-                                    required
-                                />
+                            <div className="bg-white border border-gray-200 overflow-hidden">
+                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                    <LockIcon className="w-3 h-3 text-[#081429]" />
+                                    <h3 className="text-[#081429] font-bold text-xs">계정 정보</h3>
+                                </div>
+                                <div className="divide-y divide-gray-100">
+                                    {/* Email Row */}
+                                    <div className="flex items-center gap-2 px-2 py-1.5">
+                                        <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">이메일 <span className="text-red-500">*</span></span>
+                                        <input
+                                            id="signup-email"
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            placeholder="name@example.com"
+                                            required
+                                            aria-required="true"
+                                            autoComplete="email"
+                                        />
+                                    </div>
+                                    {/* Password Row */}
+                                    <div className="flex items-center gap-2 px-2 py-1.5">
+                                        <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
+                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">비밀번호 <span className="text-red-500">*</span></span>
+                                        <input
+                                            id="signup-password"
+                                            type="password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            placeholder="••••••••"
+                                            required
+                                            aria-required="true"
+                                            autoComplete="new-password"
+                                        />
+                                    </div>
+                                    {/* Confirm Password Row */}
+                                    <div className="flex items-center gap-2 px-2 py-1.5">
+                                        <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
+                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">비밀번호 확인 <span className="text-red-500">*</span></span>
+                                        <input
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            placeholder="••••••••"
+                                            required
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         )}
 
+                        {/* Signup Mode: Section 2 - 개인 정보 */}
                         {isSignUp && !isForgotPassword && (
-                            <>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">이름(한글) <span className="text-red-500">*</span></label>
-                                    <input
-                                        type="text"
-                                        value={displayName}
-                                        onChange={(e) => setDisplayName(e.target.value)}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#081429] focus:ring-2 focus:ring-[#081429]/10 outline-none transition-all font-medium"
-                                        placeholder="홍길동"
-                                        required
-                                    />
+                            <div className="bg-white border border-gray-200 overflow-hidden">
+                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                    <User className="w-3 h-3 text-[#081429]" />
+                                    <h3 className="text-[#081429] font-bold text-xs">개인 정보</h3>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">닉네임(영어이름) <span className="text-gray-400 text-xs">(선택)</span></label>
-                                    <input
-                                        type="text"
-                                        value={jobTitle}
-                                        onChange={(e) => setJobTitle(e.target.value)}
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-[#081429] focus:ring-2 focus:ring-[#081429]/10 outline-none transition-all font-medium"
-                                        placeholder="예: John, Alice"
-                                    />
+                                <div className="divide-y divide-gray-100">
+                                    {/* Display Name Row */}
+                                    <div className="flex items-center gap-2 px-2 py-1.5">
+                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">이름(한글) <span className="text-red-500">*</span></span>
+                                        <input
+                                            type="text"
+                                            value={displayName}
+                                            onChange={(e) => setDisplayName(e.target.value)}
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            placeholder="홍길동"
+                                            required
+                                        />
+                                    </div>
+                                    {/* Job Title Row */}
+                                    <div className="flex items-center gap-2 px-2 py-1.5">
+                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">닉네임 <span className="text-gray-400 text-xs">(영어)</span></span>
+                                        <input
+                                            type="text"
+                                            value={jobTitle}
+                                            onChange={(e) => setJobTitle(e.target.value)}
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            placeholder="예: John, Alice"
+                                        />
+                                    </div>
                                 </div>
-                            </>
+                            </div>
+                        )}
+
+                        {/* Forgot Password Mode: 비밀번호 재설정 */}
+                        {isForgotPassword && (
+                            <div className="bg-white border border-gray-200 overflow-hidden">
+                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                    <LockIcon className="w-3 h-3 text-[#081429]" />
+                                    <h3 className="text-[#081429] font-bold text-xs">비밀번호 재설정</h3>
+                                </div>
+                                <div className="divide-y divide-gray-100">
+                                    {/* Instructions */}
+                                    <div className="px-2 py-2">
+                                        <p className="text-xs text-gray-600 leading-relaxed">
+                                            등록된 이메일 주소로 비밀번호 재설정 링크를 보내드립니다.
+                                            이메일을 확인하시고 링크를 클릭하여 새 비밀번호를 설정해주세요.
+                                        </p>
+                                    </div>
+                                    {/* Email Row */}
+                                    <div className="flex items-center gap-2 px-2 py-1.5">
+                                        <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+                                        <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">이메일</span>
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            placeholder="name@example.com"
+                                            required
+                                            autoComplete="email"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
                         {error && (
-                            <div className={`p-3 text-sm rounded-lg flex items-center gap-2 font-medium ${error.includes('생성되었습니다') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-                                <div className={`w-1.5 h-1.5 rounded-full ${error.includes('생성되었습니다') ? 'bg-green-500' : 'bg-red-500'}`} />
+                            <div className={`p-3 text-sm rounded-sm flex items-center gap-2 font-medium ${error.includes('생성되었습니다') || error.includes('전송되었습니다') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                                <div className={`w-1.5 h-1.5 rounded-sm ${error.includes('생성되었습니다') || error.includes('전송되었습니다') ? 'bg-green-500' : 'bg-red-500'}`} />
                                 {error}
                             </div>
                         )}
@@ -264,10 +362,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-3.5 bg-[#081429] text-white rounded-xl font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+                            className="w-full py-3.5 bg-[#081429] text-white rounded-sm font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed mt-4"
                         >
                             {loading ? (
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-sm animate-spin" />
                             ) : (
                                 <>
                                     {isForgotPassword ? <LockIcon size={20} /> : (isSignUp ? <UserPlus size={20} /> : <LogIn size={20} />)}

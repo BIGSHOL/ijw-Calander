@@ -113,7 +113,7 @@ const FixEnglishSubjects = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="bg-white rounded-sm shadow-lg p-6">
           <h1 className="text-2xl font-bold mb-4">영어 수업 Subject 수정</h1>
 
           <div className="mb-6 p-4 bg-blue-50 rounded">
@@ -138,7 +138,7 @@ const FixEnglishSubjects = () => {
           <button
             onClick={handleFix}
             disabled={isRunning}
-            className={`px-6 py-3 rounded-lg font-semibold ${
+            className={`px-6 py-3 rounded-sm font-semibold ${
               isRunning
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-blue-600 hover:bg-blue-700 text-white'

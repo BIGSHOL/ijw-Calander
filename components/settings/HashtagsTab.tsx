@@ -157,7 +157,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#fdb813]" />
+        <div className="animate-spin rounded-sm h-8 w-8 border-b-2 border-[#fdb813]" />
       </div>
     );
   }
@@ -178,7 +178,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
         {hasChanges && (
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg font-bold text-sm hover:bg-[#e5a610] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm font-bold text-sm hover:bg-[#e5a610] transition-colors"
           >
             <Save size={16} />
             변경사항 저장
@@ -187,7 +187,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
       </div>
 
       {/* 새 태그 추가 */}
-      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+      <div className="bg-gray-50 rounded-sm p-4 border border-gray-200">
         <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
           <Plus size={16} />
           새 태그 추가
@@ -200,7 +200,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
               value={newTagName}
               onChange={(e) => setNewTagName(e.target.value)}
               placeholder="예: 학부모상담"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
             />
           </div>
           <div className="w-32">
@@ -210,7 +210,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
               value={newTagId}
               onChange={(e) => setNewTagId(e.target.value)}
               placeholder="자동 생성"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
             />
           </div>
           <div>
@@ -219,12 +219,12 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
               type="color"
               value={newTagColor}
               onChange={(e) => setNewTagColor(e.target.value)}
-              className="w-10 h-10 rounded-lg cursor-pointer border border-gray-300"
+              className="w-10 h-10 rounded-sm cursor-pointer border border-gray-300"
             />
           </div>
           <button
             onClick={handleAddTag}
-            className="px-4 py-2 bg-[#081429] text-white rounded-lg font-bold text-sm hover:bg-[#0a1a35] transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-[#081429] text-white rounded-sm font-bold text-sm hover:bg-[#0a1a35] transition-colors flex items-center gap-2"
           >
             <Plus size={16} />
             추가
@@ -233,7 +233,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
       </div>
 
       {/* 태그 목록 */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-sm border border-gray-200 overflow-hidden">
         <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
           <h4 className="text-sm font-bold text-gray-700">등록된 태그 ({config.tags.length}개)</h4>
         </div>
@@ -245,7 +245,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
             >
               {/* 색상 */}
               <div
-                className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
+                className="w-6 h-6 rounded-sm border-2 border-white shadow-sm"
                 style={{ backgroundColor: tag.color || '#9CA3AF' }}
               />
 
@@ -283,7 +283,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span
-                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
+                        className="inline-flex items-center px-2.5 py-1 rounded-sm text-xs font-bold"
                         style={{
                           backgroundColor: tag.color ? `${tag.color}20` : '#E5E7EB',
                           color: tag.color || '#374151',
@@ -300,7 +300,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => toggleSeminarTag(tag.id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-bold transition-all ${
                         config.seminarTags.includes(tag.id)
                           ? 'bg-amber-100 text-amber-700 border border-amber-200'
                           : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
@@ -335,7 +335,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
       </div>
 
       {/* 참가자 관리 설명 */}
-      <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+      <div className="bg-amber-50 rounded-sm p-4 border border-amber-200">
         <div className="flex items-start gap-3">
           <Settings size={20} className="text-amber-600 mt-0.5" />
           <div>

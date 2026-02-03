@@ -259,7 +259,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
             >
                 <div className="flex flex-wrap items-center gap-3">
                     {/* 뷰 모드 토글 */}
-                    <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10">
+                    <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10">
                         <TabButton
                             active={viewMode === 'list'}
                             onClick={() => handleViewModeChange('list')}
@@ -340,7 +340,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                             <div className="w-px h-4 bg-white/20 mx-1"></div>
 
                             {/* 상담 유형 토글 */}
-                            <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+                            <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
                                 <TabButton
                                     active={!filters.type}
                                     onClick={() => setFilters(prev => ({ ...prev, type: undefined }))}
@@ -375,7 +375,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                     ...prev,
                                     category: e.target.value as ConsultationCategory | undefined || undefined
                                 }))}
-                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
                             >
                                 <option value="">전체 카테고리</option>
                                 {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
@@ -395,7 +395,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                     ...prev,
                                     followUpStatus: e.target.value as any
                                 }))}
-                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
                             >
                                 <option value="all">전체</option>
                                 <option value="needed">후속조치 필요</option>
@@ -410,7 +410,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                             <div className="relative" ref={consultantDropdownRef}>
                                 <button
                                     onClick={() => setShowConsultantDropdown(!showConsultantDropdown)}
-                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-medium transition-colors ${
+                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-sm border text-xs font-medium transition-colors ${
                                         filters.consultantId
                                             ? 'bg-[#fdb813] border-[#fdb813] text-[#081429]'
                                             : 'bg-[#1e293b] border-gray-700 text-white hover:border-gray-500'
@@ -421,7 +421,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                 </button>
 
                                 {showConsultantDropdown && (
-                                    <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-gray-700 rounded-lg shadow-xl z-50 min-w-[320px] max-h-[500px] overflow-y-auto">
+                                    <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-gray-700 rounded-sm shadow-xl z-50 min-w-[320px] max-h-[500px] overflow-y-auto">
                                         {/* 전체 선택 */}
                                         <div className="p-2 border-b border-white/10">
                                             <button
@@ -576,7 +576,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                     placeholder="학생명, 제목, 내용 검색..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="bg-[#1e293b] border border-gray-700 rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-52"
+                                    className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-52"
                                 />
                             </div>
                         </>
@@ -595,7 +595,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                     {viewMode === 'list' && (
                         <button
                             onClick={() => setShowMigrationModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/10 text-white hover:bg-white/20 transition-colors shadow-sm font-bold border border-white/20"
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-white/10 text-white hover:bg-white/20 transition-colors shadow-sm font-bold border border-white/20"
                             title="MakeEdu 데이터 가져오기"
                         >
                             <Upload size={14} />
@@ -606,7 +606,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                     {/* 새 상담 기록 버튼 */}
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
                     >
                         <Plus size={14} />
                         <span>새 상담</span>
@@ -634,7 +634,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                     <>
                         {/* 에러 상태 */}
                         {error && (
-                            <div className="bg-red-50 border border-red-300 rounded-lg p-4 mb-6">
+                            <div className="bg-red-50 border border-red-300 rounded-sm p-4 mb-6">
                                 <p className="text-red-800">데이터를 불러오는 중 오류가 발생했습니다.</p>
                                 <button
                                     onClick={() => refetch()}

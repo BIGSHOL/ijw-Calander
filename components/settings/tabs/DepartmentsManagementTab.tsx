@@ -65,7 +65,7 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Category Management - Moved from System Tab */}
       {canManageCategories && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div className="bg-white rounded-sm shadow-sm border border-gray-200 overflow-hidden mb-6">
           <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
             <h3 className="font-bold flex items-center gap-2 text-gray-800 text-sm">
               <LayoutGrid size={16} /> 카테고리 관리
@@ -75,15 +75,15 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
                 value={categoryManagement.newCategoryName}
                 onChange={e => setCategoryManagement({ newCategoryName: e.target.value })}
                 placeholder="새 카테고리"
-                className="border border-gray-300 rounded-lg px-3 py-1 text-xs focus:border-[#fdb813] outline-none w-32"
+                className="border border-gray-300 rounded-sm px-3 py-1 text-xs focus:border-[#fdb813] outline-none w-32"
               />
-              <button onClick={handleAddCategory} className="bg-[#081429] text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-[#1e293b] transition-colors"><Plus size={14} /></button>
+              <button onClick={handleAddCategory} className="bg-[#081429] text-white px-3 py-1 rounded-sm text-xs font-bold hover:bg-[#1e293b] transition-colors"><Plus size={14} /></button>
             </div>
           </div>
           <div className="p-4 flex flex-wrap gap-2">
             {sysCategories.length === 0 && <span className="text-gray-400 text-xs text-center w-full py-2">등록된 카테고리가 없습니다.</span>}
             {sysCategories.map(cat => (
-              <div key={cat} className="bg-gray-50 rounded-lg pl-3 pr-1 py-1 text-xs font-bold border border-gray-200 flex items-center gap-2 text-gray-700 group">
+              <div key={cat} className="bg-gray-50 rounded-sm pl-3 pr-1 py-1 text-xs font-bold border border-gray-200 flex items-center gap-2 text-gray-700 group">
                 <span>{cat}</span>
                 <button onClick={() => handleDeleteCategory(cat)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 rounded p-0.5 transition-colors"><X size={12} /></button>
               </div>
@@ -100,18 +100,18 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
             placeholder="부서 검색"
             value={departmentFilterState.searchTerm}
             onChange={(e) => setDepartmentFilterState({ ...departmentFilterState, searchTerm: e.target.value })}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:border-[#fdb813] outline-none"
+            className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-sm text-sm focus:border-[#fdb813] outline-none"
           />
         </div>
         {!departmentFilterState.isCreating && canCreateDept && (
-          <button onClick={() => setDepartmentFilterState({ ...departmentFilterState, isCreating: true })} className="px-4 py-2 bg-[#081429] text-white rounded-lg text-xs font-bold hover:bg-[#1e293b] flex items-center gap-1 transition-colors">
+          <button onClick={() => setDepartmentFilterState({ ...departmentFilterState, isCreating: true })} className="px-4 py-2 bg-[#081429] text-white rounded-sm text-xs font-bold hover:bg-[#1e293b] flex items-center gap-1 transition-colors">
             <Plus size={14} /> 새 부서 만들기
           </button>
         )}
       </div>
 
       {departmentFilterState.isCreating && (
-        <div className="bg-white p-4 rounded-xl border border-[#fdb813] space-y-3">
+        <div className="bg-white p-4 rounded-sm border border-[#fdb813] space-y-3">
           <div className="flex gap-2">
             <input type="text" value={newDepartmentForm.name} onChange={(e) => setNewDepartmentForm({ ...newDepartmentForm, name: e.target.value })} placeholder="부서명" className="flex-1 border p-2 rounded" />
 
@@ -206,7 +206,7 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
                 {/* Info */}
                 <div className="col-span-4 flex items-center gap-3 pl-2">
                   {canEditDept && <div className="cursor-grab text-gray-300 hover:text-gray-500"><List size={14} /></div>}
-                  <div className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: dept.color }} />
+                  <div className="w-3 h-3 rounded-sm shrink-0 shadow-sm" style={{ backgroundColor: dept.color }} />
                   <input
                     value={dept.name}
                     readOnly={!canEditDept}
@@ -247,7 +247,7 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
                 {/* Actions */}
                 <div className="col-span-2 flex justify-center">
                   {canDeleteDept && (
-                    <button onClick={() => handleDelete(dept.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <button onClick={() => handleDelete(dept.id)} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-sm transition-colors">
                       <Trash2 size={16} />
                     </button>
                   )}

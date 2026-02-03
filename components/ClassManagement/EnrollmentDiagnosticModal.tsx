@@ -17,7 +17,11 @@ import {
     CheckCircle2,
     User,
     BookOpen,
-    ArrowRight
+    ArrowRight,
+    Stethoscope,
+    AlertTriangle,
+    Activity,
+    Filter
 } from 'lucide-react';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import {
@@ -366,12 +370,12 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
     }, []);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-[95%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
+            <div className="bg-white rounded-sm shadow-2xl w-[95%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
                 {/* 헤더 */}
                 <div className="bg-[#081429] px-6 py-4 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                        <BookOpen size={20} className="text-[#fdb813]" />
+                        <Stethoscope size={20} className="text-[#fdb813]" />
                         전체 Enrollment 정밀 진단
                     </h2>
                     <div className="flex items-center gap-4">
@@ -390,7 +394,7 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
                     <div className="flex-1 flex flex-col items-center justify-center">
                         <Loader2 className="w-12 h-12 animate-spin text-[#fdb813] mb-4" />
                         <p className="text-gray-600 mb-2">모든 학생의 데이터를 분석 중입니다...</p>
-                        <div className="w-64 bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="w-64 bg-gray-100 rounded-sm h-2 overflow-hidden">
                             <div className="bg-[#fdb813] h-full transition-all duration-300" style={{ width: `${progress}%` }} />
                         </div>
                         <p className="text-sm text-gray-400 mt-2">{progress}%</p>
@@ -400,197 +404,224 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
                 {/* 결과 화면 */}
                 {step === 'results' && (
                     <div className="flex-1 flex flex-col overflow-hidden">
-                        {/* 상단 통계 바 */}
-                        <div className="bg-gray-50 border-b px-6 py-4 grid grid-cols-5 gap-4">
-                            <div className="bg-white p-3 rounded border shadow-sm">
-                                <div className="text-xs text-gray-500">총 학생</div>
-                                <div className="text-xl font-bold">{allStudents.length}</div>
-                            </div>
-                            <div className="bg-white p-3 rounded border shadow-sm">
-                                <div className="text-xs text-gray-500">총 Enrollment</div>
-                                <div className="text-xl font-bold text-blue-600">{stats.totalEnrollments}</div>
-                            </div>
-                            <div className={`p-3 rounded border shadow-sm ${stats.matchFailCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
-                                <div className="text-xs text-gray-500">매칭 실패</div>
-                                <div className={`text-xl font-bold ${stats.matchFailCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                    {stats.matchFailCount}
+                        {/* 섹션: 진단 결과 통계 */}
+                        <div className="bg-white border-b">
+                            <div className="px-6 py-3 border-b bg-gray-50">
+                                <div className="flex items-center gap-2">
+                                    <Activity size={16} className="text-gray-600" />
+                                    <h3 className="font-bold text-sm text-gray-700">진단 결과 통계</h3>
                                 </div>
                             </div>
-                            <div className={`p-3 rounded border shadow-sm ${stats.fixRequiredCount > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
-                                <div className="text-xs text-gray-500">복구 필요 (Fix)</div>
-                                <div className={`text-xl font-bold ${stats.fixRequiredCount > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
-                                    {stats.fixRequiredCount}
+                            <div className="px-6 py-4 grid grid-cols-5 gap-4">
+                                <div className="bg-white p-3 rounded border shadow-sm">
+                                    <div className="text-xs text-gray-500">총 학생</div>
+                                    <div className="text-xl font-bold">{allStudents.length}</div>
+                                </div>
+                                <div className="bg-white p-3 rounded border shadow-sm">
+                                    <div className="text-xs text-gray-500">총 Enrollment</div>
+                                    <div className="text-xl font-bold text-blue-600">{stats.totalEnrollments}</div>
+                                </div>
+                                <div className={`p-3 rounded border shadow-sm ${stats.matchFailCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
+                                    <div className="text-xs text-gray-500">매칭 실패</div>
+                                    <div className={`text-xl font-bold ${stats.matchFailCount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                        {stats.matchFailCount}
+                                    </div>
+                                </div>
+                                <div className={`p-3 rounded border shadow-sm ${stats.fixRequiredCount > 0 ? 'bg-orange-50 border-orange-200' : 'bg-white'}`}>
+                                    <div className="text-xs text-gray-500">복구 필요 (Fix)</div>
+                                    <div className={`text-xl font-bold ${stats.fixRequiredCount > 0 ? 'text-orange-600' : 'text-gray-400'}`}>
+                                        {stats.fixRequiredCount}
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-center">
+                                    <button
+                                        onClick={handleFixAll}
+                                        disabled={stats.fixRequiredCount === 0}
+                                        className={`w-full h-full max-h-[70px] flex flex-col items-center justify-center rounded-sm border font-bold transition-all ${stats.fixRequiredCount > 0
+                                            ? 'bg-orange-500 text-white hover:bg-orange-600 border-orange-600 shadow-md'
+                                            : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                                            }`}
+                                    >
+                                        <RefreshCw size={20} className={stats.fixRequiredCount > 0 ? "mb-1" : "mb-1 opacity-50"} />
+                                        <span className="text-xs">일괄 복구 실행</span>
+                                    </button>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-center">
-                                <button
-                                    onClick={handleFixAll}
-                                    disabled={stats.fixRequiredCount === 0}
-                                    className={`w-full h-full max-h-[70px] flex flex-col items-center justify-center rounded-lg border font-bold transition-all ${stats.fixRequiredCount > 0
-                                        ? 'bg-orange-500 text-white hover:bg-orange-600 border-orange-600 shadow-md'
-                                        : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                                        }`}
-                                >
-                                    <RefreshCw size={20} className={stats.fixRequiredCount > 0 ? "mb-1" : "mb-1 opacity-50"} />
-                                    <span className="text-xs">일괄 복구 실행</span>
+                        </div>
+
+                        {/* 섹션: 필터 및 검색 */}
+                        <div className="bg-white border-b">
+                            <div className="px-6 py-3 border-b bg-gray-50">
+                                <div className="flex items-center gap-2">
+                                    <Filter size={16} className="text-gray-600" />
+                                    <h3 className="font-bold text-sm text-gray-700">필터 및 검색</h3>
+                                </div>
+                            </div>
+                            <div className="px-6 py-3 flex gap-3 items-center">
+                                <div className="flex bg-gray-100 p-1 rounded-sm">
+                                    <button
+                                        onClick={() => setFilterType('all')}
+                                        className={`px-3 py-1.5 text-xs font-bold rounded ${filterType === 'all' ? 'bg-white shadow text-black' : 'text-gray-500'}`}
+                                    >
+                                        전체
+                                    </button>
+                                    <button
+                                        onClick={() => setFilterType('has_issues')}
+                                        className={`px-3 py-1.5 text-xs font-bold rounded ${filterType === 'has_issues' ? 'bg-white shadow text-red-600' : 'text-gray-500'}`}
+                                    >
+                                        문제 있음 ({stats.matchFailCount})
+                                    </button>
+                                    <button
+                                        onClick={() => setFilterType('fix_required')}
+                                        className={`px-3 py-1.5 text-xs font-bold rounded ${filterType === 'fix_required' ? 'bg-white shadow text-orange-600' : 'text-gray-500'}`}
+                                    >
+                                        복구 필요 ({stats.fixRequiredCount})
+                                    </button>
+                                    <button
+                                        onClick={() => setFilterType('no_enrollment')}
+                                        className={`px-3 py-1.5 text-xs font-bold rounded ${filterType === 'no_enrollment' ? 'bg-white shadow text-gray-600' : 'text-gray-500'}`}
+                                    >
+                                        미수강 ({stats.missingCount})
+                                    </button>
+                                </div>
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                        placeholder="학생 이름, classID 검색..."
+                                        className="w-full pl-9 pr-3 py-2 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                                    />
+                                </div>
+                                <button onClick={runDiagnostic} className="p-2 hover:bg-gray-100 rounded-sm text-gray-600" title="새로고침">
+                                    <RefreshCw size={18} />
                                 </button>
                             </div>
                         </div>
 
-                        {/* 필터 및 검색 */}
-                        <div className="px-6 py-3 border-b flex gap-3 bg-white items-center">
-                            <div className="flex bg-gray-100 p-1 rounded-lg">
-                                <button
-                                    onClick={() => setFilterType('all')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded ${filterType === 'all' ? 'bg-white shadow text-black' : 'text-gray-500'}`}
-                                >
-                                    전체
-                                </button>
-                                <button
-                                    onClick={() => setFilterType('has_issues')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded ${filterType === 'has_issues' ? 'bg-white shadow text-red-600' : 'text-gray-500'}`}
-                                >
-                                    문제 있음 ({stats.matchFailCount})
-                                </button>
-                                <button
-                                    onClick={() => setFilterType('fix_required')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded ${filterType === 'fix_required' ? 'bg-white shadow text-orange-600' : 'text-gray-500'}`}
-                                >
-                                    복구 필요 ({stats.fixRequiredCount})
-                                </button>
-                                <button
-                                    onClick={() => setFilterType('no_enrollment')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded ${filterType === 'no_enrollment' ? 'bg-white shadow text-gray-600' : 'text-gray-500'}`}
-                                >
-                                    미수강 ({stats.missingCount})
-                                </button>
+                        {/* 섹션: 진단 상세 내역 */}
+                        <div className="flex-1 flex flex-col overflow-hidden bg-white">
+                            <div className="px-6 py-3 border-b bg-gray-50">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 size={16} className="text-gray-600" />
+                                    <h3 className="font-bold text-sm text-gray-700">진단 상세 내역</h3>
+                                    <span className="text-xs text-gray-500 ml-auto">
+                                        {filteredStudents.length}명의 학생
+                                    </span>
+                                </div>
                             </div>
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                    placeholder="학생 이름, classID 검색..."
-                                    className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
-                                />
-                            </div>
-                            <button onClick={runDiagnostic} className="p-2 hover:bg-gray-100 rounded-lg text-gray-600" title="새로고침">
-                                <RefreshCw size={18} />
-                            </button>
-                        </div>
+                            <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
+                                <div className="space-y-4">
+                                    {filteredStudents.map(student => {
+                                        if (student.enrollments.length === 0 && filterType !== 'no_enrollment' && filterType !== 'all') return null;
 
-                        {/* 메인 리스트 */}
-                        <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
-                            <div className="space-y-4">
-                                {filteredStudents.map(student => {
-                                    if (student.enrollments.length === 0 && filterType !== 'no_enrollment' && filterType !== 'all') return null;
-
-                                    return (
-                                        <div key={student.studentId} className="bg-white rounded-lg border shadow-sm overflow-hidden">
-                                            <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-b">
-                                                <div className="flex items-center gap-2">
-                                                    <User size={16} className="text-gray-500" />
-                                                    <span className="font-bold text-gray-800">{student.studentName}</span>
-                                                    <span className="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">
-                                                        {formatSchoolGrade(student.school, student.grade)}
-                                                    </span>
+                                        return (
+                                            <div key={student.studentId} className="bg-white rounded-sm border shadow-sm overflow-hidden">
+                                                <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-b">
+                                                    <div className="flex items-center gap-2">
+                                                        <User size={16} className="text-gray-500" />
+                                                        <span className="font-bold text-gray-800">{student.studentName}</span>
+                                                        <span className="text-xs text-gray-500 bg-gray-200 px-1.5 py-0.5 rounded">
+                                                            {formatSchoolGrade(student.school, student.grade)}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-xs font-mono text-gray-400 select-all">{student.studentId}</span>
                                                 </div>
-                                                <span className="text-xs font-mono text-gray-400 select-all">{student.studentId}</span>
-                                            </div>
 
-                                            {student.enrollments.length === 0 ? (
-                                                <div className="p-4 text-center text-sm text-gray-400 italic bg-gray-50/50">
-                                                    (Enrollment 없음)
-                                                </div>
-                                            ) : (
-                                                <div className="divide-y">
-                                                    {student.enrollments.map(enroll => (
-                                                        <div key={enroll.id} className="p-3 grid grid-cols-[1fr_auto_1fr_auto] gap-4 hover:bg-gray-50 items-center">
-                                                            {/* 왼쪽: Firebase Enrollment 정보 */}
-                                                            <div className="flex flex-col">
-                                                                <div className="flex items-center gap-1 mb-0.5">
-                                                                    <div className="text-xxs text-gray-400 uppercase">Enrollment Data</div>
-                                                                    {enroll._source === 'array_field' && (
-                                                                        <span className="text-micro px-1 py-0.5 bg-yellow-100 text-yellow-700 rounded border border-yellow-200 font-bold leading-none">
-                                                                            Array Format
-                                                                        </span>
-                                                                    )}
-                                                                    {enroll.isMatched && enroll.matchType === 'NAME' && (
-                                                                        <span className="text-micro px-1 py-0.5 bg-blue-100 text-blue-700 rounded border border-blue-200 font-bold leading-none">
-                                                                            ID Update Needed
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="text-sm font-medium text-gray-700">
-                                                                    {enroll.rawClassName || '(이름없음)'}
-                                                                </div>
-                                                                <div className="text-xs text-gray-400 font-mono select-all" title={enroll.rawClassId}>
-                                                                    ID: {enroll.rawClassId}
-                                                                </div>
-                                                            </div>
-
-                                                            {/* 화살표 & 매칭 상태 */}
-                                                            <div className="flex flex-col items-center px-2">
-                                                                {enroll.isMatched ? (
-                                                                    enroll.matchType === 'ID' ? (
-                                                                        <div className="text-green-500 flex flex-col items-center">
-                                                                            <CheckCircle2 size={18} />
-                                                                            <span className="text-xxs font-bold mt-0.5">ID OK</span>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="text-blue-500 flex flex-col items-center">
-                                                                            <CheckCircle2 size={18} />
-                                                                            <span className="text-xxs font-bold mt-0.5">NAME OK</span>
-                                                                        </div>
-                                                                    )
-                                                                ) : (
-                                                                    <div className="text-red-500 flex flex-col items-center">
-                                                                        <Link2Off size={18} />
-                                                                        <span className="text-xxs font-bold mt-0.5">FAIL</span>
-                                                                    </div>
-                                                                )}
-                                                                <ArrowRight size={14} className="text-gray-300 mt-1" />
-                                                            </div>
-
-                                                            {/* 오른쪽: 매칭된 Class 정보 */}
-                                                            <div className="flex flex-col">
-                                                                <div className="text-xxs text-gray-400 uppercase mb-0.5">Matched Class(DB)</div>
-                                                                {enroll.isMatched && enroll.matchedClass ? (
-                                                                    <>
-                                                                        <div className={`text-sm font-medium ${enroll.matchType === 'ID' ? 'text-green-700' : 'text-blue-700'}`}>
-                                                                            {enroll.matchedClass.className}
-                                                                        </div>
-                                                                        <div className="text-xs text-gray-500 flex gap-1">
-                                                                            <span>{enroll.matchedClass.teacher || '강사 미배정'}</span>
-                                                                            <span className="text-gray-300">|</span>
-                                                                            <span className="text-xs text-gray-400 font-mono select-all">
-                                                                                {enroll.matchedClass.id.slice(0, 6)}...
+                                                {student.enrollments.length === 0 ? (
+                                                    <div className="p-4 text-center text-sm text-gray-400 italic bg-gray-50/50">
+                                                        (Enrollment 없음)
+                                                    </div>
+                                                ) : (
+                                                    <div className="divide-y">
+                                                        {student.enrollments.map(enroll => (
+                                                            <div key={enroll.id} className="p-3 grid grid-cols-[1fr_auto_1fr_auto] gap-4 hover:bg-gray-50 items-center">
+                                                                {/* 왼쪽: Firebase Enrollment 정보 */}
+                                                                <div className="flex flex-col">
+                                                                    <div className="flex items-center gap-1 mb-0.5">
+                                                                        <div className="text-xxs text-gray-400 uppercase">Enrollment Data</div>
+                                                                        {enroll._source === 'array_field' && (
+                                                                            <span className="text-micro px-1 py-0.5 bg-yellow-100 text-yellow-700 rounded border border-yellow-200 font-bold leading-none">
+                                                                                Array Format
                                                                             </span>
-                                                                        </div>
-                                                                    </>
-                                                                ) : (
-                                                                    <div className="text-sm text-red-400 italic">
-                                                                        매칭된 수업 없음
+                                                                        )}
+                                                                        {enroll.isMatched && enroll.matchType === 'NAME' && (
+                                                                            <span className="text-micro px-1 py-0.5 bg-blue-100 text-blue-700 rounded border border-blue-200 font-bold leading-none">
+                                                                                ID Update Needed
+                                                                            </span>
+                                                                        )}
                                                                     </div>
-                                                                )}
-                                                            </div>
+                                                                    <div className="text-sm font-medium text-gray-700">
+                                                                        {enroll.rawClassName || '(이름없음)'}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-400 font-mono select-all" title={enroll.rawClassId}>
+                                                                        ID: {enroll.rawClassId}
+                                                                    </div>
+                                                                </div>
 
-                                                            {/* 삭제 버튼 */}
-                                                            <button
-                                                                onClick={() => handleDelete(student.studentId, enroll.id)}
-                                                                disabled={deletingId === enroll.id}
-                                                                className="text-gray-300 hover:text-red-500 p-2 hover:bg-red-50 rounded transition-colors ml-4"
-                                                                title="Enrollment 삭제"
-                                                            >
-                                                                {deletingId === enroll.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
+                                                                {/* 화살표 & 매칭 상태 */}
+                                                                <div className="flex flex-col items-center px-2">
+                                                                    {enroll.isMatched ? (
+                                                                        enroll.matchType === 'ID' ? (
+                                                                            <div className="text-green-500 flex flex-col items-center">
+                                                                                <CheckCircle2 size={18} />
+                                                                                <span className="text-xxs font-bold mt-0.5">ID OK</span>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="text-blue-500 flex flex-col items-center">
+                                                                                <CheckCircle2 size={18} />
+                                                                                <span className="text-xxs font-bold mt-0.5">NAME OK</span>
+                                                                            </div>
+                                                                        )
+                                                                    ) : (
+                                                                        <div className="text-red-500 flex flex-col items-center">
+                                                                            <Link2Off size={18} />
+                                                                            <span className="text-xxs font-bold mt-0.5">FAIL</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <ArrowRight size={14} className="text-gray-300 mt-1" />
+                                                                </div>
+
+                                                                {/* 오른쪽: 매칭된 Class 정보 */}
+                                                                <div className="flex flex-col">
+                                                                    <div className="text-xxs text-gray-400 uppercase mb-0.5">Matched Class(DB)</div>
+                                                                    {enroll.isMatched && enroll.matchedClass ? (
+                                                                        <>
+                                                                            <div className={`text-sm font-medium ${enroll.matchType === 'ID' ? 'text-green-700' : 'text-blue-700'}`}>
+                                                                                {enroll.matchedClass.className}
+                                                                            </div>
+                                                                            <div className="text-xs text-gray-500 flex gap-1">
+                                                                                <span>{enroll.matchedClass.teacher || '강사 미배정'}</span>
+                                                                                <span className="text-gray-300">|</span>
+                                                                                <span className="text-xs text-gray-400 font-mono select-all">
+                                                                                    {enroll.matchedClass.id.slice(0, 6)}...
+                                                                                </span>
+                                                                            </div>
+                                                                        </>
+                                                                    ) : (
+                                                                        <div className="text-sm text-red-400 italic">
+                                                                            매칭된 수업 없음
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* 삭제 버튼 */}
+                                                                <button
+                                                                    onClick={() => handleDelete(student.studentId, enroll.id)}
+                                                                    disabled={deletingId === enroll.id}
+                                                                    className="text-gray-300 hover:text-red-500 p-2 hover:bg-red-50 rounded transition-colors ml-4"
+                                                                    title="Enrollment 삭제"
+                                                                >
+                                                                    {deletingId === enroll.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     </div>

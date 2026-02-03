@@ -285,7 +285,7 @@ const HashtagCombobox: React.FC<HashtagComboboxProps> = ({
       {/* Input Area */}
       <div
         className={`
-          w-full min-h-[42px] px-3 py-2 border border-gray-300 rounded-xl
+          w-full min-h-[42px] px-3 py-2 border border-gray-300 rounded-sm
           focus-within:ring-2 focus-within:ring-[#fdb813] focus-within:border-[#fdb813]
           transition-all cursor-text
           ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
@@ -302,7 +302,7 @@ const HashtagCombobox: React.FC<HashtagComboboxProps> = ({
           {selectedTags.map(tagId => (
             <span
               key={tagId}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-bold"
               style={{
                 backgroundColor: `${getTagColor(tagId)}20`,
                 color: getTagColor(tagId),
@@ -348,7 +348,7 @@ const HashtagCombobox: React.FC<HashtagComboboxProps> = ({
 
       {/* Dropdown */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-80 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-sm shadow-xl max-h-80 overflow-y-auto">
           {/* Default Tags Section */}
           {defaultTags.length > 0 && (
             <div>
@@ -367,7 +367,7 @@ const HashtagCombobox: React.FC<HashtagComboboxProps> = ({
                   `}
                 >
                   <div
-                    className="w-3 h-3 rounded-full"
+                    className="w-3 h-3 rounded-sm"
                     style={{ backgroundColor: tag.color }}
                   />
                   <span className="text-sm font-medium text-gray-700"># {tag.name}</span>

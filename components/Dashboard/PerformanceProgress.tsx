@@ -34,10 +34,10 @@ const PerformanceProgress: React.FC<PerformanceProgressProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-white rounded-sm border border-gray-200 p-6">
         <div className="h-6 bg-gray-200 rounded w-40 mb-4 animate-pulse"></div>
         <div className="flex items-center gap-6">
-          <div className="w-24 h-24 bg-gray-100 rounded-full animate-pulse"></div>
+          <div className="w-24 h-24 bg-gray-100 rounded-sm animate-pulse"></div>
           <div className="flex-1 space-y-2">
             <div className="h-5 bg-gray-200 rounded w-24 animate-pulse"></div>
             <div className="h-4 bg-gray-100 rounded w-32 animate-pulse"></div>
@@ -48,7 +48,7 @@ const PerformanceProgress: React.FC<PerformanceProgressProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-white rounded-sm border border-gray-200 p-6">
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-5 h-5 text-[#fdb813]" />
         <h3 className="text-lg font-semibold text-[#081429]">
@@ -87,9 +87,9 @@ const PerformanceProgress: React.FC<PerformanceProgressProps> = ({
               <div className="text-sm text-gray-500">
                 {topPerformer.consultationCount}건 상담
               </div>
-              <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+              <div className="mt-2 w-full bg-gray-200 rounded-sm h-2">
                 <div
-                  className="bg-[#fdb813] h-2 rounded-full transition-all duration-500"
+                  className="bg-[#fdb813] h-2 rounded-sm transition-all duration-500"
                   style={{ width: `${topPerformer.percentage}%` }}
                 />
               </div>

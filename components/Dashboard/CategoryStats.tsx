@@ -26,13 +26,13 @@ const CategoryStats: React.FC<CategoryStatsProps> = ({ stats, totalCount, loadin
         {[1, 2, 3, 4].map((n) => (
           <div key={n} className="flex items-center gap-3">
             <div className="h-3 bg-gray-100 rounded w-16 animate-pulse"></div>
-            <div className="flex-1 h-2.5 bg-gray-100 rounded-full animate-pulse"></div>
+            <div className="flex-1 h-2.5 bg-gray-100 rounded-sm animate-pulse"></div>
             <div className="h-3 bg-gray-100 rounded w-8 animate-pulse"></div>
           </div>
         ))}
       </div>
     ) : (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-white rounded-sm border border-gray-200 p-6">
         <div className="h-6 bg-gray-200 rounded w-36 mb-4 animate-pulse"></div>
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((n) => (
@@ -68,9 +68,9 @@ const CategoryStats: React.FC<CategoryStatsProps> = ({ stats, totalCount, loadin
                   {stat.count}건 ({stat.percentage}%)
                 </span>
               </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-100 rounded-sm overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-500"
+                  className="h-full rounded-sm transition-all duration-500"
                   style={{
                     width: `${stat.percentage}%`,
                     backgroundColor: config.color,
@@ -85,7 +85,7 @@ const CategoryStats: React.FC<CategoryStatsProps> = ({ stats, totalCount, loadin
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-white rounded-sm border border-gray-200 p-6">
       <h3 className="text-lg font-semibold text-[#081429] mb-4">
         카테고리별 상담
       </h3>
@@ -106,9 +106,9 @@ const CategoryStats: React.FC<CategoryStatsProps> = ({ stats, totalCount, loadin
                 >
                   {config.label}
                 </span>
-                <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
+                <div className="flex-1 bg-gray-100 rounded-sm h-3 overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all duration-500"
+                    className="h-full rounded-sm transition-all duration-500"
                     style={{
                       width: `${stat.percentage}%`,
                       backgroundColor: config.color,

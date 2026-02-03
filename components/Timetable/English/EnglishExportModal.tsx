@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { X, Download, Loader2, Image as ImageIcon, CheckSquare, Square, Users } from 'lucide-react';
+import { X, Download, Loader2, Image as ImageIcon, CheckSquare, Square, Users, Settings, Eye, FileSpreadsheet } from 'lucide-react';
 import { Teacher } from '../../../types';
 import { EN_PERIODS, EN_WEEKDAYS, getCellKey, getTeacherColor } from './englishUtils';
 
@@ -212,19 +212,19 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh]">
       {/* 배경 오버레이 */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60"
         onClick={!isExporting ? onClose : undefined}
       />
 
       {/* 모달 컨텐츠 */}
-      <div className="relative bg-white rounded-xl shadow-2xl w-[500px] max-h-[80vh] flex flex-col">
+      <div className="relative bg-white rounded-sm shadow-2xl w-[500px] max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
+            <div className="p-2 bg-blue-100 rounded-sm">
               <ImageIcon size={20} className="text-blue-600" />
             </div>
             <div>
@@ -235,16 +235,17 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
           {!isExporting && (
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-sm hover:bg-gray-100 transition-colors"
             >
               <X size={20} className="text-gray-500" />
             </button>
           )}
         </div>
 
-        {/* 강사 선택 */}
+        {/* 본문 */}
         <div className="flex-1 overflow-auto p-4">
           {isExporting ? (
+            /* 내보내기 진행 중 */
             <div className="flex flex-col items-center justify-center py-8 gap-4">
               <Loader2 size={48} className="text-blue-500 animate-spin" />
               <p className="text-gray-700 font-medium">
@@ -253,88 +254,156 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
               <p className="text-sm text-gray-500">
                 {progress.current} / {progress.total} 완료
               </p>
-              <div className="w-full max-w-xs bg-gray-200 rounded-full h-2">
+              <div className="w-full max-w-xs bg-gray-200 rounded-sm h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all"
+                  className="bg-blue-600 h-2 rounded-sm transition-all"
                   style={{ width: `${(progress.current / progress.total) * 100}%` }}
                 />
               </div>
             </div>
           ) : (
-            <>
-              {/* 전체 선택/해제 */}
-              <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-100">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Users size={16} />
-                  <span>{selectedTeachers.size}명 선택됨</span>
+            <div className="space-y-2">
+              {/* Section 1: 내보내기 옵션 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <Settings className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">내보내기 옵션</h3>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={selectAll}
-                    className="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                  >
-                    전체 선택
-                  </button>
-                  <button
-                    onClick={selectNone}
-                    className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    선택 해제
-                  </button>
+                <div className="divide-y divide-gray-100">
+                  {/* 파일 형식 */}
+                  <div className="flex items-center gap-2 px-2 py-1.5">
+                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">파일 형식</span>
+                    <div className="flex items-center gap-2 text-xs text-gray-700">
+                      <FileSpreadsheet size={14} className="text-blue-600" />
+                      <span>PNG 이미지 (강사별 개별 파일)</span>
+                    </div>
+                  </div>
+
+                  {/* 필터 정보 */}
+                  <div className="flex items-center gap-2 px-2 py-1.5">
+                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">요일 필터</span>
+                    <div className="flex flex-wrap gap-1">
+                      {filteredWeekdays.map(day => (
+                        <span key={day} className="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
+                          {day}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* 강사 목록 */}
-              <div className="grid grid-cols-2 gap-2">
-                {teachers.map(teacher => {
-                  const isSelected = selectedTeachers.has(teacher);
-                  const colors = getTeacherColor(teacher, teachersData);
-                  const teacherData = teachersData.find(t => t.name === teacher);
-                  const displayName = teacherData?.englishName || teacher;
+              {/* Section 2: 포함할 데이터 (강사 선택) */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <CheckSquare className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">포함할 데이터</h3>
+                </div>
+                <div className="p-2">
+                  {/* 전체 선택/해제 */}
+                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100">
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <Users size={14} />
+                      <span>{selectedTeachers.size}명 선택됨</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={selectAll}
+                        className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded-sm hover:bg-blue-100 transition-colors"
+                      >
+                        전체 선택
+                      </button>
+                      <button
+                        onClick={selectNone}
+                        className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-sm hover:bg-gray-200 transition-colors"
+                      >
+                        선택 해제
+                      </button>
+                    </div>
+                  </div>
 
-                  return (
-                    <button
-                      key={teacher}
-                      onClick={() => toggleTeacher(teacher)}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                        isSelected
-                          ? 'border-blue-400 bg-blue-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      {isSelected ? (
-                        <CheckSquare size={18} className="text-blue-600 flex-shrink-0" />
-                      ) : (
-                        <Square size={18} className="text-gray-400 flex-shrink-0" />
-                      )}
-                      <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: colors.bg }}
-                      />
-                      <span className={`text-sm font-medium truncate ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>
-                        {displayName}
-                      </span>
-                    </button>
-                  );
-                })}
+                  {/* 강사 목록 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {teachers.map(teacher => {
+                      const isSelected = selectedTeachers.has(teacher);
+                      const colors = getTeacherColor(teacher, teachersData);
+                      const teacherData = teachersData.find(t => t.name === teacher);
+                      const displayName = teacherData?.englishName || teacher;
+
+                      return (
+                        <button
+                          key={teacher}
+                          onClick={() => toggleTeacher(teacher)}
+                          className={`flex items-center gap-2 p-2 rounded-sm border transition-all ${
+                            isSelected
+                              ? 'border-blue-400 bg-blue-50'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          {isSelected ? (
+                            <CheckSquare size={16} className="text-blue-600 flex-shrink-0" />
+                          ) : (
+                            <Square size={16} className="text-gray-400 flex-shrink-0" />
+                          )}
+                          <div
+                            className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                            style={{ backgroundColor: colors.bg }}
+                          />
+                          <span className={`text-xs font-medium truncate ${isSelected ? 'text-blue-900' : 'text-gray-700'}`}>
+                            {displayName}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </>
+
+              {/* Section 3: 미리보기 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <Eye className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">미리보기</h3>
+                </div>
+                <div className="px-2 py-1.5">
+                  <div className="text-xs text-gray-600 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-20 text-[#373d41] font-medium">선택 강사</span>
+                      <span className="text-gray-700">{selectedTeachers.size}명</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-20 text-[#373d41] font-medium">파일 개수</span>
+                      <span className="text-gray-700">{selectedTeachers.size}개 PNG 파일</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-20 text-[#373d41] font-medium">포함 내용</span>
+                      <span className="text-gray-700">수업명, 강의실, 합반 정보</span>
+                    </div>
+                    {selectedTeachers.size === 0 && (
+                      <p className="text-xs text-red-500 mt-2">
+                        최소 1명 이상의 강사를 선택해주세요.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* 푸터 */}
+        {/* Section 4: 작업 (푸터) */}
         {!isExporting && (
           <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-sm hover:bg-gray-50 transition-colors font-medium"
             >
               취소
             </button>
             <button
               onClick={handleExport}
               disabled={selectedTeachers.size === 0}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
               <Download size={18} />
               {selectedTeachers.size}명 내보내기

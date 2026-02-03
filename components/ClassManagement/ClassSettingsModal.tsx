@@ -4,7 +4,7 @@ import { ClassKeywordColor } from '../../types';
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, collection, onSnapshot, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { listenerRegistry } from '../../utils/firebaseCleanup';
-import { X, Check, Clock, Hash, DoorOpen, ChevronUp, ChevronDown, FlaskConical } from 'lucide-react';
+import { X, Check, Clock, Hash, DoorOpen, ChevronUp, ChevronDown, FlaskConical, Plus, Settings } from 'lucide-react';
 
 interface ClassSettingsModalProps {
     isOpen: boolean;
@@ -283,7 +283,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                 }`}
             >
                 <div className="flex items-center gap-1.5">
-                    <Clock size={14} />
+                    <Settings size={14} />
                     일반 설정
                 </div>
             </button>
@@ -305,215 +305,228 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
 
     // --- General Tab Content ---
     const renderGeneralTab = () => (
-        <div className="space-y-4">
-            {/* 스케줄 표기 방식 설정 */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <h3 className="font-bold mb-1 flex items-center gap-2 text-blue-700 text-sm">
-                    <Clock size={16} />
-                    스케줄 표기 방식
-                </h3>
-                <p className="text-xs text-gray-500 mb-3">
-                    수업 카드와 상세 정보에서 시간을 어떻게 표시할지 설정합니다.
-                </p>
+        <div className="space-y-2">
+            {/* Section 1: 수업 키워드 관리 */}
+            <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
+                    <Hash className="w-3 h-3 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-xs">수업 키워드 관리</h3>
+                </div>
+                <div className="px-1.5 py-1">
+                    <p className="text-xs text-gray-500 mb-3">
+                        수업명에 특정 단어가 포함되면 색상을 자동으로 적용합니다.
+                    </p>
 
-                {scheduleDisplayLoading ? (
-                    <div className="text-center py-3 text-gray-400 text-xs">로딩 중...</div>
-                ) : (
-                    <div className="space-y-2">
-                        {/* 수학 */}
-                        <div className="flex items-center justify-between p-2 bg-amber-50 rounded-lg border border-amber-200">
-                            <div className="flex items-center gap-2">
-                                <span className="px-1.5 py-0.5 bg-[#fdb813] text-[#081429] rounded text-xs font-bold">수학</span>
-                                <span className="text-xs text-gray-600">
-                                    {scheduleDisplay.math === 'period' ? '월목 4교시' : '월목 20:10~22:00'}
-                                </span>
+                    {/* 키워드 목록 */}
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                        {classKeywords.map(kw => (
+                            <div key={kw.id}>
+                                {editingId === kw.id ? (
+                                    <div className="p-1.5 rounded border-2 border-blue-400 bg-blue-50 space-y-1">
+                                        <input
+                                            type="text"
+                                            value={editKeyword}
+                                            onChange={(e) => setEditKeyword(e.target.value)}
+                                            className="w-full px-1.5 py-0.5 border border-gray-300 rounded text-xs font-semibold outline-none focus:border-blue-400"
+                                            autoFocus
+                                        />
+                                        <div className="flex items-center gap-1">
+                                            <input
+                                                type="color"
+                                                value={editBgColor}
+                                                onChange={(e) => setEditBgColor(e.target.value)}
+                                                className="w-5 h-5 rounded cursor-pointer"
+                                            />
+                                            <input
+                                                type="color"
+                                                value={editTextColor}
+                                                onChange={(e) => setEditTextColor(e.target.value)}
+                                                className="w-5 h-5 rounded cursor-pointer"
+                                            />
+                                            <button
+                                                onClick={() => handleSaveEdit(kw.id)}
+                                                className="flex-1 px-1 py-0.5 bg-blue-600 text-white rounded text-xxs font-bold hover:bg-blue-700"
+                                            >
+                                                <Check size={10} className="inline" />
+                                            </button>
+                                            <button
+                                                onClick={handleCancelEdit}
+                                                className="px-1 py-0.5 bg-gray-400 text-white rounded text-xxs font-bold hover:bg-gray-500"
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div
+                                        className="relative group p-1.5 rounded border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                        style={{ backgroundColor: kw.bgColor, color: kw.textColor }}
+                                        onClick={() => canEdit && handleStartEdit(kw)}
+                                    >
+                                        <span className="text-xs block truncate">{kw.keyword}</span>
+                                        {canEdit && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteKeyword(kw.id, kw.keyword); }}
+                                                className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-white/90 hover:bg-white shadow-sm transition-all"
+                                                title="삭제"
+                                            >
+                                                <X size={10} className="text-red-600" />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex gap-1">
-                                <button
-                                    onClick={() => handleScheduleDisplayChange('math', 'period')}
-                                    disabled={!canEdit}
-                                    className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                                        scheduleDisplay.math === 'period'
-                                            ? 'bg-[#081429] text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    <Hash size={10} className="inline mr-0.5" />
-                                    교시
-                                </button>
-                                <button
-                                    onClick={() => handleScheduleDisplayChange('math', 'time')}
-                                    disabled={!canEdit}
-                                    className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                                        scheduleDisplay.math === 'time'
-                                            ? 'bg-[#081429] text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    <Clock size={10} className="inline mr-0.5" />
-                                    시간대
-                                </button>
+                        ))}
+                        {classKeywords.length === 0 && (
+                            <div className="col-span-full py-4 text-center text-gray-400 text-xs">
+                                등록된 키워드가 없습니다.
                             </div>
-                        </div>
-
-                        {/* 영어 */}
-                        <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-200">
-                            <div className="flex items-center gap-2">
-                                <span className="px-1.5 py-0.5 bg-[#081429] text-white rounded text-xs font-bold">영어</span>
-                                <span className="text-xs text-gray-600">
-                                    {scheduleDisplay.english === 'period' ? '월목 1~3교시' : '월목 14:20~16:20'}
-                                </span>
-                            </div>
-                            <div className="flex gap-1">
-                                <button
-                                    onClick={() => handleScheduleDisplayChange('english', 'period')}
-                                    disabled={!canEdit}
-                                    className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                                        scheduleDisplay.english === 'period'
-                                            ? 'bg-[#081429] text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    <Hash size={10} className="inline mr-0.5" />
-                                    교시
-                                </button>
-                                <button
-                                    onClick={() => handleScheduleDisplayChange('english', 'time')}
-                                    disabled={!canEdit}
-                                    className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                                        scheduleDisplay.english === 'time'
-                                            ? 'bg-[#081429] text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    <Clock size={10} className="inline mr-0.5" />
-                                    시간대
-                                </button>
-                            </div>
-                        </div>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
 
-            {/* 수업 키워드 색상 관리 */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <h3 className="font-bold mb-1 flex items-center gap-2 text-purple-700 text-sm">
-                    🎨 수업 키워드 색상 관리
-                </h3>
-                <p className="text-xs text-gray-500 mb-3">
-                    수업명에 특정 단어가 포함되면 색상을 자동으로 적용합니다.
-                </p>
-
-                {/* 입력 폼 */}
-                {canEdit && (
-                    <div className="flex items-end gap-2 mb-3 p-2 bg-gray-50 rounded-lg border border-gray-100">
-                        <div className="flex-1">
-                            <label className="text-xs font-semibold text-gray-600 block mb-1">키워드</label>
-                            <input
-                                type="text"
-                                placeholder="예: Phonics"
-                                value={newKeyword}
-                                onChange={(e) => setNewKeyword(e.target.value)}
-                                className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-[#fdb813] outline-none"
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-semibold text-gray-600 block mb-1">배경색</label>
-                            <div className="flex items-center gap-1">
-                                <input
-                                    type="color"
-                                    value={newKeywordBgColor}
-                                    onChange={(e) => setNewKeywordBgColor(e.target.value)}
-                                    className="w-6 h-6 rounded cursor-pointer"
-                                />
-                                <span className="text-xxs text-gray-500 font-mono">{newKeywordBgColor}</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label className="text-xs font-semibold text-gray-600 block mb-1">글자색</label>
-                            <div className="flex items-center gap-1">
-                                <input
-                                    type="color"
-                                    value={newKeywordTextColor}
-                                    onChange={(e) => setNewKeywordTextColor(e.target.value)}
-                                    className="w-6 h-6 rounded cursor-pointer"
-                                />
-                                <span className="text-xxs text-gray-500 font-mono">{newKeywordTextColor}</span>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleAddKeyword}
-                            className="px-3 py-1 bg-[#081429] text-white rounded text-xs font-bold hover:brightness-110 whitespace-nowrap"
-                        >
-                            추가
-                        </button>
+            {/* Section 2: 키워드 추가 */}
+            {canEdit && (
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                        <Plus className="w-3 h-3 text-[#081429]" />
+                        <h3 className="text-[#081429] font-bold text-xs">키워드 추가</h3>
                     </div>
-                )}
-
-                {/* 키워드 목록 */}
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
-                    {classKeywords.map(kw => (
-                        <div key={kw.id}>
-                            {editingId === kw.id ? (
-                                <div className="p-1.5 rounded border-2 border-blue-400 bg-blue-50 space-y-1">
+                    <div className="px-1.5 py-1">
+                        <div className="flex items-end gap-2">
+                            <div className="flex-1">
+                                <label className="text-xs font-semibold text-gray-600 block mb-1">키워드</label>
+                                <input
+                                    type="text"
+                                    placeholder="예: Phonics"
+                                    value={newKeyword}
+                                    onChange={(e) => setNewKeyword(e.target.value)}
+                                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-[#fdb813] outline-none"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-gray-600 block mb-1">배경색</label>
+                                <div className="flex items-center gap-1">
                                     <input
-                                        type="text"
-                                        value={editKeyword}
-                                        onChange={(e) => setEditKeyword(e.target.value)}
-                                        className="w-full px-1.5 py-0.5 border border-gray-300 rounded text-xs font-semibold outline-none focus:border-blue-400"
-                                        autoFocus
+                                        type="color"
+                                        value={newKeywordBgColor}
+                                        onChange={(e) => setNewKeywordBgColor(e.target.value)}
+                                        className="w-6 h-6 rounded cursor-pointer"
                                     />
-                                    <div className="flex items-center gap-1">
-                                        <input
-                                            type="color"
-                                            value={editBgColor}
-                                            onChange={(e) => setEditBgColor(e.target.value)}
-                                            className="w-5 h-5 rounded cursor-pointer"
-                                        />
-                                        <input
-                                            type="color"
-                                            value={editTextColor}
-                                            onChange={(e) => setEditTextColor(e.target.value)}
-                                            className="w-5 h-5 rounded cursor-pointer"
-                                        />
-                                        <button
-                                            onClick={() => handleSaveEdit(kw.id)}
-                                            className="flex-1 px-1 py-0.5 bg-blue-600 text-white rounded text-xxs font-bold hover:bg-blue-700"
-                                        >
-                                            <Check size={10} className="inline" />
-                                        </button>
-                                        <button
-                                            onClick={handleCancelEdit}
-                                            className="px-1 py-0.5 bg-gray-400 text-white rounded text-xxs font-bold hover:bg-gray-500"
-                                        >
-                                            <X size={10} />
-                                        </button>
-                                    </div>
+                                    <span className="text-xxs text-gray-500 font-mono">{newKeywordBgColor}</span>
                                 </div>
-                            ) : (
-                                <div
-                                    className="relative group p-1.5 rounded border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                                    style={{ backgroundColor: kw.bgColor, color: kw.textColor }}
-                                    onClick={() => canEdit && handleStartEdit(kw)}
-                                >
-                                    <span className="text-xs block truncate">{kw.keyword}</span>
-                                    {canEdit && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteKeyword(kw.id, kw.keyword); }}
-                                            className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-white/90 hover:bg-white shadow-sm transition-all"
-                                            title="삭제"
-                                        >
-                                            <X size={10} className="text-red-600" />
-                                        </button>
-                                    )}
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-gray-600 block mb-1">글자색</label>
+                                <div className="flex items-center gap-1">
+                                    <input
+                                        type="color"
+                                        value={newKeywordTextColor}
+                                        onChange={(e) => setNewKeywordTextColor(e.target.value)}
+                                        className="w-6 h-6 rounded cursor-pointer"
+                                    />
+                                    <span className="text-xxs text-gray-500 font-mono">{newKeywordTextColor}</span>
                                 </div>
-                            )}
+                            </div>
+                            <button
+                                onClick={handleAddKeyword}
+                                className="px-3 py-1 bg-[#081429] text-white rounded text-xs font-bold hover:brightness-110 whitespace-nowrap"
+                            >
+                                추가
+                            </button>
                         </div>
-                    ))}
-                    {classKeywords.length === 0 && (
-                        <div className="col-span-full py-4 text-center text-gray-400 text-xs">
-                            등록된 키워드가 없습니다.
+                    </div>
+                </div>
+            )}
+
+            {/* Section 3: 스케줄 표기 방식 */}
+            <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
+                    <Clock className="w-3 h-3 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-xs">스케줄 표기 방식</h3>
+                </div>
+                <div className="px-1.5 py-1">
+                    <p className="text-xs text-gray-500 mb-3">
+                        수업 카드와 상세 정보에서 시간을 어떻게 표시할지 설정합니다.
+                    </p>
+
+                    {scheduleDisplayLoading ? (
+                        <div className="text-center py-3 text-gray-400 text-xs">로딩 중...</div>
+                    ) : (
+                        <div className="space-y-2">
+                            {/* 수학 */}
+                            <div className="flex items-center justify-between p-2 bg-amber-50 rounded-sm border border-amber-200">
+                                <div className="flex items-center gap-2">
+                                    <span className="px-1.5 py-0.5 bg-[#fdb813] text-[#081429] rounded text-xs font-bold">수학</span>
+                                    <span className="text-xs text-gray-600">
+                                        {scheduleDisplay.math === 'period' ? '월목 4교시' : '월목 20:10~22:00'}
+                                    </span>
+                                </div>
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => handleScheduleDisplayChange('math', 'period')}
+                                        disabled={!canEdit}
+                                        className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
+                                            scheduleDisplay.math === 'period'
+                                                ? 'bg-[#081429] text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <Hash size={10} className="inline mr-0.5" />
+                                        교시
+                                    </button>
+                                    <button
+                                        onClick={() => handleScheduleDisplayChange('math', 'time')}
+                                        disabled={!canEdit}
+                                        className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
+                                            scheduleDisplay.math === 'time'
+                                                ? 'bg-[#081429] text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <Clock size={10} className="inline mr-0.5" />
+                                        시간대
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* 영어 */}
+                            <div className="flex items-center justify-between p-2 bg-slate-50 rounded-sm border border-slate-200">
+                                <div className="flex items-center gap-2">
+                                    <span className="px-1.5 py-0.5 bg-[#081429] text-white rounded text-xs font-bold">영어</span>
+                                    <span className="text-xs text-gray-600">
+                                        {scheduleDisplay.english === 'period' ? '월목 1~3교시' : '월목 14:20~16:20'}
+                                    </span>
+                                </div>
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => handleScheduleDisplayChange('english', 'period')}
+                                        disabled={!canEdit}
+                                        className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
+                                            scheduleDisplay.english === 'period'
+                                                ? 'bg-[#081429] text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <Hash size={10} className="inline mr-0.5" />
+                                        교시
+                                    </button>
+                                    <button
+                                        onClick={() => handleScheduleDisplayChange('english', 'time')}
+                                        disabled={!canEdit}
+                                        className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
+                                            scheduleDisplay.english === 'time'
+                                                ? 'bg-[#081429] text-white'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <Clock size={10} className="inline mr-0.5" />
+                                        시간대
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -523,111 +536,154 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
 
     // --- Room Tab Content ---
     const renderRoomTab = () => (
-        <div className="space-y-4">
-            {/* LAB실 설정 */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <h3 className="font-bold mb-1 flex items-center gap-2 text-indigo-700 text-sm">
-                    <FlaskConical size={16} />
-                    LAB실 설정
-                </h3>
-                <p className="text-xs text-gray-500 mb-3">
-                    LAB실로 지정된 강의실은 강의실 뷰에서 수업별 학생수가 표시됩니다.
-                </p>
+        <div className="space-y-2">
+            {/* Section 1: 사용 가능한 강의실 */}
+            <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
+                    <DoorOpen className="w-3 h-3 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-xs">사용 가능한 강의실</h3>
+                </div>
+                <div className="px-1.5 py-1">
+                    <p className="text-xs text-gray-500 mb-3">
+                        시간표에 등록된 강의실 목록입니다.
+                    </p>
 
-                {roomsLoading ? (
-                    <div className="text-center py-3 text-gray-400 text-xs">로딩 중...</div>
-                ) : orderedRooms.length === 0 ? (
-                    <div className="py-4 text-center text-gray-400 text-xs">
-                        시간표에 등록된 강의실이 없습니다.
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {orderedRooms.map(room => (
-                            <label
-                                key={room}
-                                className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
-                                    labRooms.includes(room)
-                                        ? 'bg-indigo-50 border-indigo-300 shadow-sm'
-                                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                                } ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={labRooms.includes(room)}
-                                    onChange={() => canEdit && handleToggleLabRoom(room)}
-                                    disabled={!canEdit}
-                                    className="w-4 h-4 rounded text-indigo-600 cursor-pointer"
-                                />
-                                <span className={`text-xs font-bold ${labRooms.includes(room) ? 'text-indigo-700' : 'text-gray-600'}`}>
-                                    {room}
-                                </span>
-                                {labRooms.includes(room) && (
-                                    <FlaskConical size={12} className="text-indigo-500 ml-auto" />
-                                )}
-                            </label>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* 강의실 순서 설정 */}
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <h3 className="font-bold mb-1 flex items-center gap-2 text-teal-700 text-sm">
-                    <DoorOpen size={16} />
-                    강의실 표시 순서
-                </h3>
-                <p className="text-xs text-gray-500 mb-3">
-                    강의실 뷰에서 표시되는 강의실의 순서를 설정합니다. (이 기기에만 적용)
-                </p>
-
-                {roomsLoading ? (
-                    <div className="text-center py-3 text-gray-400 text-xs">로딩 중...</div>
-                ) : orderedRooms.length === 0 ? (
-                    <div className="py-4 text-center text-gray-400 text-xs">
-                        시간표에 등록된 강의실이 없습니다.
-                    </div>
-                ) : (
-                    <div className="space-y-1">
-                        {orderedRooms.map((room, index) => (
-                            <div
-                                key={room}
-                                className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200"
-                            >
-                                <span className="text-micro text-gray-400 w-4 text-center font-mono">{index + 1}</span>
-                                <span className={`text-xs font-bold flex-1 ${labRooms.includes(room) ? 'text-indigo-700' : 'text-gray-700'}`}>
+                    {roomsLoading ? (
+                        <div className="text-center py-3 text-gray-400 text-xs">로딩 중...</div>
+                    ) : orderedRooms.length === 0 ? (
+                        <div className="py-4 text-center text-gray-400 text-xs">
+                            시간표에 등록된 강의실이 없습니다.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                            {orderedRooms.map(room => (
+                                <div
+                                    key={room}
+                                    className={`px-2 py-1.5 rounded-sm border text-center text-xs font-bold ${
+                                        labRooms.includes(room)
+                                            ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                                            : 'bg-gray-50 border-gray-200 text-gray-600'
+                                    }`}
+                                >
                                     {room}
                                     {labRooms.includes(room) && (
                                         <FlaskConical size={10} className="inline ml-1 text-indigo-400" />
                                     )}
-                                </span>
-                                <div className="flex gap-0.5">
-                                    <button
-                                        onClick={() => handleMoveRoom(index, 'up')}
-                                        disabled={index === 0}
-                                        className={`p-1 rounded transition-colors ${
-                                            index === 0
-                                                ? 'text-gray-300 cursor-not-allowed'
-                                                : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'
-                                        }`}
-                                    >
-                                        <ChevronUp size={14} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleMoveRoom(index, 'down')}
-                                        disabled={index === orderedRooms.length - 1}
-                                        className={`p-1 rounded transition-colors ${
-                                            index === orderedRooms.length - 1
-                                                ? 'text-gray-300 cursor-not-allowed'
-                                                : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'
-                                        }`}
-                                    >
-                                        <ChevronDown size={14} />
-                                    </button>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Section 2: 실습실 설정 */}
+            <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
+                    <FlaskConical className="w-3 h-3 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-xs">실습실 설정</h3>
+                </div>
+                <div className="px-1.5 py-1">
+                    <p className="text-xs text-gray-500 mb-3">
+                        실습실로 지정된 강의실은 강의실 뷰에서 수업별 학생수가 표시됩니다.
+                    </p>
+
+                    {roomsLoading ? (
+                        <div className="text-center py-3 text-gray-400 text-xs">로딩 중...</div>
+                    ) : orderedRooms.length === 0 ? (
+                        <div className="py-4 text-center text-gray-400 text-xs">
+                            시간표에 등록된 강의실이 없습니다.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {orderedRooms.map(room => (
+                                <label
+                                    key={room}
+                                    className={`flex items-center gap-2 p-2 rounded-sm border cursor-pointer transition-all ${
+                                        labRooms.includes(room)
+                                            ? 'bg-indigo-50 border-indigo-300 shadow-sm'
+                                            : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                                    } ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={labRooms.includes(room)}
+                                        onChange={() => canEdit && handleToggleLabRoom(room)}
+                                        disabled={!canEdit}
+                                        className="w-4 h-4 rounded text-indigo-600 cursor-pointer"
+                                    />
+                                    <span className={`text-xs font-bold ${labRooms.includes(room) ? 'text-indigo-700' : 'text-gray-600'}`}>
+                                        {room}
+                                    </span>
+                                    {labRooms.includes(room) && (
+                                        <FlaskConical size={12} className="text-indigo-500 ml-auto" />
+                                    )}
+                                </label>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Section 3: 강의실 순서 */}
+            <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
+                    <Settings className="w-3 h-3 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-xs">강의실 순서</h3>
+                </div>
+                <div className="px-1.5 py-1">
+                    <p className="text-xs text-gray-500 mb-3">
+                        강의실 뷰에서 표시되는 강의실의 순서를 설정합니다. (이 기기에만 적용)
+                    </p>
+
+                    {roomsLoading ? (
+                        <div className="text-center py-3 text-gray-400 text-xs">로딩 중...</div>
+                    ) : orderedRooms.length === 0 ? (
+                        <div className="py-4 text-center text-gray-400 text-xs">
+                            시간표에 등록된 강의실이 없습니다.
+                        </div>
+                    ) : (
+                        <div className="space-y-1">
+                            {orderedRooms.map((room, index) => (
+                                <div
+                                    key={room}
+                                    className="flex items-center gap-2 p-2 bg-gray-50 rounded-sm border border-gray-200"
+                                >
+                                    <span className="text-micro text-gray-400 w-4 text-center font-mono">{index + 1}</span>
+                                    <span className={`text-xs font-bold flex-1 ${labRooms.includes(room) ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                        {room}
+                                        {labRooms.includes(room) && (
+                                            <FlaskConical size={10} className="inline ml-1 text-indigo-400" />
+                                        )}
+                                    </span>
+                                    <div className="flex gap-0.5">
+                                        <button
+                                            onClick={() => handleMoveRoom(index, 'up')}
+                                            disabled={index === 0}
+                                            className={`p-1 rounded transition-colors ${
+                                                index === 0
+                                                    ? 'text-gray-300 cursor-not-allowed'
+                                                    : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            <ChevronUp size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleMoveRoom(index, 'down')}
+                                            disabled={index === orderedRooms.length - 1}
+                                            className={`p-1 rounded transition-colors ${
+                                                index === orderedRooms.length - 1
+                                                    ? 'text-gray-300 cursor-not-allowed'
+                                                    : 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                                            }`}
+                                        >
+                                            <ChevronDown size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -648,19 +704,20 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
     // 독립 모달 모드
     return (
         <div
-            className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[200]"
+            className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
+                className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="bg-[#081429] px-4 py-2.5 flex justify-between items-center text-white shrink-0">
-                    <h2 className="text-sm font-bold flex items-center gap-1.5">
-                        ⚙️ 수업 설정
+                <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-200">
+                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-1.5">
+                        <Settings size={16} className="text-[#081429]" />
+                        수업 설정
                     </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+                    <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                         <X size={18} />
                     </button>
                 </div>
@@ -669,7 +726,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                 {renderTabNav()}
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-3">
+                <div className="flex-1 overflow-y-auto p-2">
                     {activeTab === 'general' && renderGeneralTab()}
                     {activeTab === 'room' && renderRoomTab()}
                 </div>

@@ -3,7 +3,7 @@ import React from 'react';
 /**
  * Skeleton Loader Component
  * Addresses Issue #17: Loading states
- * 
+ *
  * Provides skeleton loaders for different content types
  */
 
@@ -23,9 +23,9 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   animation = 'pulse',
 }) => {
   const variantClasses = {
-    text: 'rounded',
-    circular: 'rounded-full',
-    rectangular: 'rounded-md',
+    text: 'rounded-sm',
+    circular: 'rounded-sm',
+    rectangular: 'rounded-sm',
   };
 
   const animationClasses = {
@@ -53,16 +53,16 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
 // Preset skeleton layouts
 export const SkeletonCard: React.FC<{ className?: string }> = ({ className = '' }) => (
-  <div className={`bg-white rounded-lg border border-gray-200 p-4 ${className}`}>
+  <div className={`bg-white rounded-sm border border-gray-200 p-4 ${className}`}>
     <Skeleton variant="rectangular" height={200} className="mb-4" />
     <Skeleton variant="text" className="mb-2" />
     <Skeleton variant="text" width="60%" />
   </div>
 );
 
-export const SkeletonTable: React.FC<{ rows?: number; className?: string }> = ({ 
-  rows = 5, 
-  className = '' 
+export const SkeletonTable: React.FC<{ rows?: number; className?: string }> = ({
+  rows = 5,
+  className = ''
 }) => (
   <div className={`space-y-3 ${className}`}>
     <Skeleton variant="rectangular" height={40} className="mb-4" />
@@ -72,9 +72,9 @@ export const SkeletonTable: React.FC<{ rows?: number; className?: string }> = ({
   </div>
 );
 
-export const SkeletonList: React.FC<{ items?: number; className?: string }> = ({ 
-  items = 5, 
-  className = '' 
+export const SkeletonList: React.FC<{ items?: number; className?: string }> = ({
+  items = 5,
+  className = ''
 }) => (
   <div className={`space-y-3 ${className}`}>
     {Array.from({ length: items }).map((_, i) => (

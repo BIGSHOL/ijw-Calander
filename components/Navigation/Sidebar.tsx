@@ -64,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const MobileMenuButton = () => (
     <button
       onClick={toggleMobileMenu}
-      className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#081429] text-white rounded-lg shadow-lg border border-white/10 hover:bg-[#0a1633] transition-colors"
+      className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#081429] text-white rounded-sm shadow-lg border border-white/10 hover:bg-[#0a1633] transition-colors"
       aria-label={isMobileOpen ? '메뉴 닫기' : '메뉴 열기'}
     >
       {isMobileOpen ? <X size={20} /> : <Menu size={20} />}

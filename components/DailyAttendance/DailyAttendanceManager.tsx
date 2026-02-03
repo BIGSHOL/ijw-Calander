@@ -68,7 +68,7 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 px-4 py-3 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg shadow-sm">
+            <div className="p-1.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-sm shadow-sm">
               <Users className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -78,10 +78,10 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
           </div>
 
           {/* Compact View Mode Toggle */}
-          <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center gap-1.5 bg-gray-100 rounded-sm p-1">
             <button
               onClick={() => setViewMode('cards')}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-sm flex items-center gap-1.5 transition-all ${
                 viewMode === 'cards'
                   ? 'bg-white text-emerald-700 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -92,7 +92,7 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-sm flex items-center gap-1.5 transition-all ${
                 viewMode === 'list'
                   ? 'bg-white text-emerald-700 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -103,7 +103,7 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
             </button>
             <button
               onClick={() => setViewMode('stats')}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-sm flex items-center gap-1.5 transition-all ${
                 viewMode === 'stats'
                   ? 'bg-white text-emerald-700 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -136,7 +136,7 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
             <select
               value={selectedClassId || ''}
               onChange={(e) => handleClassChange(e.target.value || null)}
-              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
             >
               <option value="">전체 수업</option>
               {(classesInRecords.length > 0 ? classesInRecords : classes).map((cls) => (
@@ -151,31 +151,31 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
           <div className="p-3 flex-1 overflow-y-auto">
             <h3 className="text-xs font-semibold text-gray-700 mb-2">오늘의 요약</h3>
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-2 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg border border-emerald-200/50">
+              <div className="p-2 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-sm border border-emerald-200/50">
                 <div className="text-xs text-emerald-600 font-medium mb-0.5">출석</div>
                 <div className="text-lg font-bold text-emerald-700">
                   {filteredRecords.filter(r => r.status === 'present').length}
                 </div>
               </div>
-              <div className="p-2 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg border border-amber-200/50">
+              <div className="p-2 bg-gradient-to-br from-amber-50 to-amber-100 rounded-sm border border-amber-200/50">
                 <div className="text-xs text-amber-600 font-medium mb-0.5">지각</div>
                 <div className="text-lg font-bold text-amber-700">
                   {filteredRecords.filter(r => r.status === 'late').length}
                 </div>
               </div>
-              <div className="p-2 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200/50">
+              <div className="p-2 bg-gradient-to-br from-red-50 to-red-100 rounded-sm border border-red-200/50">
                 <div className="text-xs text-red-600 font-medium mb-0.5">결석</div>
                 <div className="text-lg font-bold text-red-700">
                   {filteredRecords.filter(r => r.status === 'absent').length}
                 </div>
               </div>
-              <div className="p-2 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200/50">
+              <div className="p-2 bg-gradient-to-br from-orange-50 to-orange-100 rounded-sm border border-orange-200/50">
                 <div className="text-xs text-orange-600 font-medium mb-0.5">조퇴</div>
                 <div className="text-lg font-bold text-orange-700">
                   {filteredRecords.filter(r => r.status === 'early_leave').length}
                 </div>
               </div>
-              <div className="col-span-2 p-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200/50">
+              <div className="col-span-2 p-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-sm border border-blue-200/50">
                 <div className="flex items-center justify-between">
                   <div className="text-xs text-blue-600 font-medium">사유결석</div>
                   <div className="text-lg font-bold text-blue-700">
@@ -207,10 +207,10 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
               {/* Subject Filter - Only show in cards view */}
               {viewMode === 'cards' && (
                 <>
-                  <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+                  <div className="flex items-center gap-1 bg-gray-100 rounded-sm p-0.5">
                     <button
                       onClick={() => setSelectedSubject('all')}
-                      className={`px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                      className={`px-2 py-1 rounded-sm text-xs font-medium transition-all ${
                         selectedSubject === 'all'
                           ? 'bg-white text-emerald-700 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
@@ -220,7 +220,7 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
                     </button>
                     <button
                       onClick={() => setSelectedSubject('english')}
-                      className={`px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                      className={`px-2 py-1 rounded-sm text-xs font-medium transition-all ${
                         selectedSubject === 'english'
                           ? 'bg-white text-emerald-700 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
@@ -230,7 +230,7 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
                     </button>
                     <button
                       onClick={() => setSelectedSubject('math')}
-                      className={`px-2 py-1 rounded-md text-xs font-medium transition-all ${
+                      className={`px-2 py-1 rounded-sm text-xs font-medium transition-all ${
                         selectedSubject === 'math'
                           ? 'bg-white text-emerald-700 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'

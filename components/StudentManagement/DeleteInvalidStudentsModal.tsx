@@ -12,7 +12,9 @@ import {
     AlertTriangle,
     Loader2,
     Check,
-    Wrench
+    Wrench,
+    BarChart3,
+    FileText
 } from 'lucide-react';
 import {
     collection,
@@ -196,8 +198,8 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
+            <div className="bg-white rounded-sm shadow-2xl w-[90%] max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
                 {/* 헤더 */}
                 <div className="bg-red-600 px-6 py-4 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -212,7 +214,7 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                 {/* 컨텐츠 */}
                 <div className="flex-1 overflow-y-auto p-6">
                     {error && (
-                        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-sm">
                             <p className="text-sm text-red-700">{error}</p>
                         </div>
                     )}
@@ -225,77 +227,122 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                     )}
 
                     {step === 'preview' && (
-                        <div className="space-y-4">
-                            {/* 통계 */}
-                            <div className="grid grid-cols-4 gap-3">
-                                <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                                    <div className="text-xs text-emerald-700 mb-1">정상</div>
-                                    <div className="text-xl font-bold text-emerald-700">{validCount}</div>
+                        <div className="space-y-2">
+                            {/* Section 1: 통계 요약 */}
+                            <div className="bg-white border border-gray-200 overflow-hidden">
+                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                    <BarChart3 className="w-3 h-3 text-[#081429]" />
+                                    <h3 className="text-[#081429] font-bold text-xs">통계 요약</h3>
                                 </div>
-                                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                    <div className="text-xs text-blue-700 mb-1">수정</div>
-                                    <div className="text-xl font-bold text-blue-700">{fixableCount}</div>
-                                </div>
-                                <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-                                    <div className="text-xs text-red-700 mb-1">삭제(랜덤)</div>
-                                    <div className="text-xl font-bold text-red-700">{randomCount}</div>
-                                </div>
-                                <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
-                                    <div className="text-xs text-amber-700 mb-1">삭제(숫자)</div>
-                                    <div className="text-xl font-bold text-amber-700">{numericCount}</div>
+                                <div className="p-2">
+                                    <div className="grid grid-cols-4 gap-2">
+                                        <div className="bg-emerald-50 p-2 rounded-sm border border-emerald-200">
+                                            <div className="text-xxs text-emerald-700 mb-0.5">정상</div>
+                                            <div className="text-lg font-bold text-emerald-700">{validCount}</div>
+                                        </div>
+                                        <div className="bg-blue-50 p-2 rounded-sm border border-blue-200">
+                                            <div className="text-xxs text-blue-700 mb-0.5">수정</div>
+                                            <div className="text-lg font-bold text-blue-700">{fixableCount}</div>
+                                        </div>
+                                        <div className="bg-red-50 p-2 rounded-sm border border-red-200">
+                                            <div className="text-xxs text-red-700 mb-0.5">랜덤</div>
+                                            <div className="text-lg font-bold text-red-700">{randomCount}</div>
+                                        </div>
+                                        <div className="bg-amber-50 p-2 rounded-sm border border-amber-200">
+                                            <div className="text-xxs text-amber-700 mb-0.5">숫자</div>
+                                            <div className="text-lg font-bold text-amber-700">{numericCount}</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* 수정될 문서 */}
-                            {toFix.length > 0 && (
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                    <p className="text-sm font-medium text-blue-800 mb-2">
-                                        🔧 공백 제거하여 수정될 문서 ({toFix.length}개)
-                                    </p>
-                                    <div className="space-y-1 max-h-24 overflow-y-auto">
-                                        {toFix.slice(0, 5).map(s => (
-                                            <div key={s.id} className="text-xs text-blue-700 font-mono">
-                                                {s.id} → <span className="text-blue-900 font-bold">{s.fixedId}</span>
-                                            </div>
-                                        ))}
-                                        {toFix.length > 5 && <p className="text-xs text-blue-600">... 외 {toFix.length - 5}개</p>}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 경고 */}
+                            {/* Section 2: 삭제 대상 */}
                             {toDelete.length > 0 && (
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                    <div className="flex items-start gap-2">
-                                        <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
-                                        <div>
-                                            <p className="font-medium text-red-800">
-                                                {toDelete.length}개 문서가 삭제됩니다
-                                            </p>
-                                            <p className="text-sm text-red-700 mt-1">
-                                                이 작업은 되돌릴 수 없습니다!
-                                            </p>
+                                <div className="bg-white border border-gray-200 overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                        <Trash2 className="w-3 h-3 text-[#081429]" />
+                                        <h3 className="text-[#081429] font-bold text-xs">삭제 대상</h3>
+                                        <span className="text-xxs text-red-600 ml-1">({toDelete.length}개)</span>
+                                    </div>
+                                    <div className="divide-y divide-gray-100">
+                                        {/* Warning Banner */}
+                                        <div className="px-2 py-1.5 bg-red-50 flex items-start gap-1.5">
+                                            <AlertTriangle className="w-3 h-3 text-red-600 shrink-0 mt-0.5" />
+                                            <div className="flex-1">
+                                                <p className="text-xs font-medium text-red-800">
+                                                    {toDelete.length}개 문서가 영구 삭제됩니다
+                                                </p>
+                                                <p className="text-xxs text-red-700 mt-0.5">
+                                                    이 작업은 되돌릴 수 없습니다!
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Sample List */}
+                                        <div className="px-2 py-1.5">
+                                            <p className="text-xxs text-gray-500 mb-1">샘플 (최대 10개)</p>
+                                            <div className="space-y-1 max-h-32 overflow-y-auto">
+                                                {toDelete.slice(0, 10).map(s => (
+                                                    <div key={s.id} className="flex items-center justify-between gap-2 px-1.5 py-1 bg-gray-50 rounded-sm">
+                                                        <span className="text-xs text-gray-700 font-mono truncate flex-1">{s.id}</span>
+                                                        <span className={`text-xxs px-1.5 py-0.5 rounded-sm shrink-0 ${
+                                                            s.type === 'random'
+                                                                ? 'bg-red-100 text-red-700'
+                                                                : 'bg-amber-100 text-amber-700'
+                                                        }`}>
+                                                            {s.type === 'random' ? '랜덤/테스트' : '숫자'}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {toDelete.length > 10 && (
+                                                <p className="text-xxs text-gray-500 mt-1">... 외 {toDelete.length - 10}개</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* 삭제 대상 샘플 */}
-                            {toDelete.length > 0 && (
-                                <div className="bg-white border border-gray-200 rounded-lg">
-                                    <div className="px-4 py-2 bg-gray-50 border-b">
-                                        <p className="text-sm font-medium">삭제 대상 (샘플 10개)</p>
+                            {/* Section 3: 수정 대상 */}
+                            {toFix.length > 0 && (
+                                <div className="bg-white border border-gray-200 overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                        <Wrench className="w-3 h-3 text-[#081429]" />
+                                        <h3 className="text-[#081429] font-bold text-xs">수정 대상</h3>
+                                        <span className="text-xxs text-blue-600 ml-1">({toFix.length}개)</span>
                                     </div>
-                                    <div className="divide-y max-h-32 overflow-y-auto">
-                                        {toDelete.slice(0, 10).map(s => (
-                                            <div key={s.id} className="px-4 py-2 flex items-center justify-between">
-                                                <span className="text-sm text-gray-600 font-mono truncate max-w-[200px]">{s.id}</span>
-                                                <span className={`text-xs px-2 py-0.5 rounded ${s.type === 'random' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                                                    }`}>
-                                                    {s.type === 'random' ? '랜덤/테스트' : '숫자'}
-                                                </span>
-                                            </div>
-                                        ))}
+                                    <div className="px-2 py-1.5">
+                                        <p className="text-xxs text-blue-600 mb-1.5">공백 제거하여 ID를 수정합니다</p>
+                                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                                            {toFix.slice(0, 5).map(s => (
+                                                <div key={s.id} className="px-1.5 py-1 bg-blue-50 rounded-sm">
+                                                    <div className="flex items-center gap-1 text-xs">
+                                                        <span className="text-blue-600 font-mono">{s.id}</span>
+                                                        <span className="text-blue-400">→</span>
+                                                        <span className="text-blue-900 font-bold font-mono">{s.fixedId}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {toFix.length > 5 && (
+                                            <p className="text-xxs text-blue-600 mt-1">... 외 {toFix.length - 5}개</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Section 4: 유지 대상 */}
+                            {validCount > 0 && (
+                                <div className="bg-white border border-gray-200 overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                        <Check className="w-3 h-3 text-[#081429]" />
+                                        <h3 className="text-[#081429] font-bold text-xs">유지 대상</h3>
+                                        <span className="text-xxs text-emerald-600 ml-1">({validCount}개)</span>
+                                    </div>
+                                    <div className="px-2 py-1.5">
+                                        <p className="text-xs text-gray-700">
+                                            정상 형식의 학생 문서 <span className="font-bold text-emerald-600">{validCount}개</span>는 변경되지 않습니다.
+                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -303,38 +350,60 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                     )}
 
                     {step === 'processing' && (
-                        <div className="text-center py-8 space-y-6">
-                            <Loader2 className="w-16 h-16 animate-spin text-red-600 mx-auto" />
-                            <h3 className="text-xl font-bold text-gray-900">처리 중...</h3>
-                            <div className="w-full bg-gray-200 rounded-full h-3">
-                                <div
-                                    className="bg-red-600 h-full transition-all rounded-full"
-                                    style={{ width: `${progress}%` }}
-                                />
+                        <div className="space-y-2">
+                            {/* Section: 진행 상황 */}
+                            <div className="bg-white border border-gray-200 overflow-hidden">
+                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                    <Loader2 className="w-3 h-3 text-[#081429] animate-spin" />
+                                    <h3 className="text-[#081429] font-bold text-xs">진행 상황</h3>
+                                </div>
+                                <div className="p-4">
+                                    <div className="text-center space-y-4">
+                                        <Loader2 className="w-12 h-12 animate-spin text-red-600 mx-auto" />
+                                        <h3 className="text-lg font-bold text-gray-900">처리 중...</h3>
+                                        <div className="w-full bg-gray-200 rounded-sm h-2.5">
+                                            <div
+                                                className="bg-red-600 h-full transition-all rounded-sm"
+                                                style={{ width: `${progress}%` }}
+                                            />
+                                        </div>
+                                        <p className="text-sm font-medium text-gray-600">{progress}%</p>
+                                    </div>
+                                </div>
                             </div>
-                            <p className="text-sm text-gray-600">{progress}%</p>
                         </div>
                     )}
 
                     {step === 'done' && (
-                        <div className="text-center space-y-4">
-                            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
-                                <Check className="w-10 h-10 text-emerald-600" strokeWidth={3} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-gray-900">완료!</h3>
-                            <div className="flex gap-4 justify-center">
-                                {results.fixed > 0 && (
-                                    <div className="bg-blue-50 px-4 py-2 rounded-lg">
-                                        <span className="text-blue-700 font-bold">{results.fixed}개</span>
-                                        <span className="text-blue-600 text-sm ml-1">수정</span>
+                        <div className="space-y-2">
+                            {/* Section: 결과 요약 */}
+                            <div className="bg-white border border-gray-200 overflow-hidden">
+                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                    <FileText className="w-3 h-3 text-[#081429]" />
+                                    <h3 className="text-[#081429] font-bold text-xs">결과 요약</h3>
+                                </div>
+                                <div className="p-4">
+                                    <div className="text-center space-y-4">
+                                        <div className="w-16 h-16 bg-emerald-100 rounded-sm flex items-center justify-center mx-auto">
+                                            <Check className="w-10 h-10 text-emerald-600" strokeWidth={3} />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-900">완료!</h3>
+                                        <div className="flex gap-3 justify-center">
+                                            {results.fixed > 0 && (
+                                                <div className="bg-blue-50 px-3 py-2 rounded-sm border border-blue-200">
+                                                    <span className="text-blue-700 font-bold text-sm">{results.fixed}개</span>
+                                                    <span className="text-blue-600 text-xs ml-1">수정</span>
+                                                </div>
+                                            )}
+                                            {results.deleted > 0 && (
+                                                <div className="bg-red-50 px-3 py-2 rounded-sm border border-red-200">
+                                                    <span className="text-red-700 font-bold text-sm">{results.deleted}개</span>
+                                                    <span className="text-red-600 text-xs ml-1">삭제</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                )}
-                                {results.deleted > 0 && (
-                                    <div className="bg-red-50 px-4 py-2 rounded-lg">
-                                        <span className="text-red-700 font-bold">{results.deleted}개</span>
-                                        <span className="text-red-600 text-sm ml-1">삭제</span>
-                                    </div>
-                                )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -344,13 +413,13 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                 <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-3">
                     {step === 'preview' && (
                         <>
-                            <button onClick={onClose} className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg">
+                            <button onClick={onClose} className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-sm">
                                 취소
                             </button>
                             {(toDelete.length > 0 || toFix.length > 0) && (
                                 <button
                                     onClick={handleProcess}
-                                    className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg flex items-center gap-2 font-bold"
+                                    className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-sm flex items-center gap-2 font-bold"
                                 >
                                     <Wrench size={16} />
                                     {toFix.length > 0 && `${toFix.length}개 수정`}
@@ -363,7 +432,7 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                     {step === 'done' && (
                         <button
                             onClick={() => { onComplete?.(); onClose(); }}
-                            className="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg"
+                            className="px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-sm"
                         >
                             완료
                         </button>

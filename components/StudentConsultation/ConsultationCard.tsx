@@ -49,15 +49,15 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
         <>
             <div
                 onClick={() => setShowDetail(true)}
-                className="flex items-center gap-2 px-4 py-3 bg-white border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors cursor-pointer text-sm text-[#373d41]"
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors cursor-pointer text-xs text-[#373d41]"
             >
                 {/* No */}
-                <span className="w-10 shrink-0 text-center text-gray-500 font-mono text-xs">
+                <span className="w-10 shrink-0 text-center text-gray-500 font-mono text-xxs">
                     {index}
                 </span>
 
                 {/* 날짜 */}
-                <span className="w-20 shrink-0 text-center text-xs text-gray-500">
+                <span className="w-20 shrink-0 text-center text-xxs text-gray-500">
                     {consultation.date}
                 </span>
 
@@ -67,13 +67,13 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                         (() => {
                             switch (matchedStudent.status) {
                                 case 'prospect':
-                                    return <span className="text-xxs bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-medium border border-orange-200">예비</span>;
+                                    return <span className="text-xxs bg-orange-100 text-orange-800 px-1 py-0.5 rounded font-medium border border-orange-200">예비</span>;
                                 case 'active':
-                                    return <span className="text-xxs bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-medium">재원</span>;
+                                    return <span className="text-xxs bg-green-100 text-green-800 px-1 py-0.5 rounded font-medium">재원</span>;
                                 case 'on_hold':
-                                    return <span className="text-xxs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">휴원/대기</span>;
+                                    return <span className="text-xxs bg-amber-100 text-amber-800 px-1 py-0.5 rounded font-medium">휴원/대기</span>;
                                 case 'withdrawn':
-                                    return <span className="text-xxs bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-medium">퇴원</span>;
+                                    return <span className="text-xxs bg-red-100 text-red-800 px-1 py-0.5 rounded font-medium">퇴원</span>;
                                 default:
                                     return <span className="text-xxs text-gray-400">-</span>;
                             }
@@ -85,7 +85,7 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
 
                 {/* 구분 */}
                 <div className="w-12 shrink-0 text-center flex justify-center">
-                    <span className={`px-1.5 py-0.5 rounded text-xs leading-none ${consultation.type === 'parent'
+                    <span className={`px-1 py-0.5 rounded text-xxs leading-none ${consultation.type === 'parent'
                         ? 'bg-blue-100 text-blue-700'
                         : 'bg-green-100 text-green-700'
                         }`}>
@@ -94,35 +94,35 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                 </div>
 
                 {/* 이름 */}
-                <span className="w-16 shrink-0 text-center font-medium text-[#081429] truncate">
+                <span className="w-16 shrink-0 text-center font-medium text-[#081429] text-xs truncate">
                     {consultation.studentName}
                 </span>
 
                 {/* 학교 */}
-                <span className="w-16 shrink-0 text-center truncate text-xs text-gray-500">
+                <span className="w-16 shrink-0 text-center truncate text-xxs text-gray-500">
                     {matchedStudent?.school || '-'}
                 </span>
 
                 {/* 학년 */}
-                <span className="w-10 shrink-0 text-center truncate text-xs text-gray-500">
+                <span className="w-10 shrink-0 text-center truncate text-xxs text-gray-500">
                     {matchedStudent?.grade || '-'}
                 </span>
 
                 {/* 보호자 연락처 */}
-                <span className="w-24 shrink-0 text-center truncate text-xs text-gray-500 font-mono">
+                <span className="w-24 shrink-0 text-center truncate text-xxs text-gray-500 font-mono">
                     {matchedStudent?.parentPhone || '-'}
                 </span>
 
                 {/* 원생 연락처 */}
-                <span className="w-24 shrink-0 text-center truncate text-xs text-gray-500 font-mono">
+                <span className="w-24 shrink-0 text-center truncate text-xxs text-gray-500 font-mono">
                     {matchedStudent?.studentPhone || '-'}
                 </span>
 
                 {/* 제목 (카테고리 뱃지를 앞으로) */}
-                <div className="flex-1 min-w-0 flex items-center gap-2">
+                <div className="flex-1 min-w-0 flex items-center gap-1.5">
                     {/* 카테고리 뱃지 */}
                     <span
-                        className="px-1.5 py-0.5 rounded text-xxs shrink-0"
+                        className="px-1 py-0.5 rounded text-xxs shrink-0"
                         style={{
                             backgroundColor: `${categoryConfig.color}15`,
                             color: categoryConfig.color
@@ -132,7 +132,7 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                     </span>
                     {/* 후속조치 뱃지 */}
                     {urgency && (
-                        <span className={`px-1.5 py-0.5 rounded text-xxs font-medium shrink-0 ${urgency === 'urgent' ? 'bg-red-600 text-white' :
+                        <span className={`px-1 py-0.5 rounded text-xxs font-medium shrink-0 ${urgency === 'urgent' ? 'bg-red-600 text-white' :
                             urgency === 'pending' ? 'bg-amber-100 text-amber-700' :
                                 'bg-green-100 text-green-700'
                             }`}>
@@ -141,18 +141,18 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                             {urgency === 'done' && '✓'}
                         </span>
                     )}
-                    <span className="truncate text-[#081429]">
+                    <span className="truncate text-[#081429] text-xs">
                         {consultation.title}
                     </span>
                 </div>
 
                 {/* 등록자 */}
-                <span className="w-20 shrink-0 text-center truncate text-xs text-gray-500">
+                <span className="w-20 shrink-0 text-center truncate text-xxs text-gray-500">
                     {registrar}
                 </span>
 
                 {/* 담당선생님 */}
-                <span className="w-20 shrink-0 text-center truncate font-medium text-[#081429]">
+                <span className="w-20 shrink-0 text-center truncate font-medium text-[#081429] text-xs">
                     {consultation.consultantName || '-'}
                 </span>
             </div>

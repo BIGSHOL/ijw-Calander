@@ -228,7 +228,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                             const template = templates.find(t => t.id === e.target.value);
                             if (template) selectTemplate(template);
                         }}
-                        className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1.5 pr-8 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                        className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1.5 pr-8 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
                     >
                         <option value="">프로젝트 선택</option>
                         {projects.length > 0 && (
@@ -274,7 +274,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                                 const template = templates.find(t => t.id === activeTemplateId);
                                 if (template) handleEditStart(template);
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-md text-xs font-bold hover:bg-blue-700 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-sm text-xs font-bold hover:bg-blue-700 transition-colors"
                             title="프로젝트 수정"
                         >
                             <Edit2 size={12} />
@@ -286,7 +286,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                     {canDelete && activeTemplateId && viewMode === 'execute' && (
                         <button
                             onClick={() => handleDeleteTemplate(activeTemplateId)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/90 text-white rounded-md text-xs font-bold hover:bg-red-700 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/90 text-white rounded-sm text-xs font-bold hover:bg-red-700 transition-colors"
                             title="프로젝트 삭제"
                         >
                             <Trash2 size={12} />
@@ -298,7 +298,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                     {viewMode === 'execute' && activeTemplateId && (
                         <button
                             onClick={handleSaveAsTemplate}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-md text-xs font-bold hover:bg-purple-700 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-sm text-xs font-bold hover:bg-purple-700 transition-colors"
                             title="템플릿으로 저장"
                         >
                             <BookmarkPlus size={12} />
@@ -310,7 +310,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                     {canCreate && (
                         <button
                             onClick={() => setViewMode('create')}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-md text-xs font-bold hover:bg-[#fdb813]/90 transition-colors shadow-sm"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-sm text-xs font-bold hover:bg-[#fdb813]/90 transition-colors shadow-sm"
                         >
                             <Plus size={14} />
                             새 프로젝트
@@ -321,7 +321,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                     {(userProfile?.role === 'master' || hasPermission('gantt.edit')) && (
                         <button
                             onClick={() => setIsSettingsOpen(true)}
-                            className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                            className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-sm transition-colors"
                             title="간트 차트 설정"
                         >
                             <Settings size={16} />
@@ -362,7 +362,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                 ) : (
                     // Empty State
                     <div className="h-full flex flex-col items-center justify-center text-center p-12">
-                        <div className="w-24 h-24 bg-gradient-to-br from-blue-50 to-purple-50 rounded-full flex items-center justify-center mb-6 shadow-lg">
+                        <div className="w-24 h-24 bg-gradient-to-br from-blue-50 to-purple-50 rounded-sm flex items-center justify-center mb-6 shadow-lg">
                             <FolderKanban size={48} className="text-blue-500" />
                         </div>
                         <h2 className="text-2xl font-bold text-gray-800 mb-2">프로젝트를 선택하세요</h2>

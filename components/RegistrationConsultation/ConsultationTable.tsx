@@ -99,7 +99,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     const [currentPage, setCurrentPage] = useState(1);
     const [showSettings, setShowSettings] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(loadSavedColumns);
-    const itemsPerPage = 15;
+    const [itemsPerPage, setItemsPerPage] = useState<number>(20);
 
     // 특정 상담에 대한 수정/삭제 권한 확인
     // canManage=true면 모든 상담 수정/삭제 가능
@@ -195,7 +195,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                 return <span className="text-slate-600">{record.counselor || '-'}</span>;
             case 'status':
                 return (
-                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${CONSULTATION_STATUS_COLORS[record.status]}`}>
+                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-sm border ${CONSULTATION_STATUS_COLORS[record.status]}`}>
                         {record.status}
                     </span>
                 );
@@ -233,21 +233,21 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     return (
         <div className="flex flex-col h-full gap-4">
             {/* Header with Search and Settings */}
-            <div className="rounded-xl shadow-sm border p-4 flex flex-col sm:flex-row justify-between items-center gap-4" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
-                <h3 className="hidden sm:flex text-lg font-bold items-center" style={{ color: COLORS.navy }}>
-                    <span className="w-2 h-6 rounded-sm mr-2" style={{ backgroundColor: COLORS.yellow }}></span>
+            <div className="rounded-sm shadow-sm border p-3 flex flex-col sm:flex-row justify-between items-center gap-3" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
+                <h3 className="hidden sm:flex text-base font-bold items-center" style={{ color: COLORS.navy }}>
+                    <span className="w-2 h-5 rounded-sm mr-2" style={{ backgroundColor: COLORS.yellow }}></span>
                     상담 기록 목록
-                    <span className="ml-2 text-xs font-normal px-2 py-0.5 rounded-full" style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.gray }}>{filteredData.length}</span>
+                    <span className="ml-2 text-xxs font-normal px-1.5 py-0.5 rounded-sm" style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.gray }}>{filteredData.length}</span>
                 </h3>
 
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                     <div className="relative flex-1 sm:w-72">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4" style={{ color: COLORS.gray }} />
+                        <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                            <Search className="h-3.5 w-3.5" style={{ color: COLORS.gray }} />
                         </div>
                         <input
                             type="text"
-                            className="block w-full pl-10 pr-3 py-2.5 rounded-xl leading-5 placeholder-slate-400 focus:outline-none focus:ring-2 sm:text-sm transition-all"
+                            className="block w-full pl-9 pr-2.5 py-2 rounded-sm leading-5 placeholder-slate-400 focus:outline-none focus:ring-2 sm:text-xs transition-all"
                             style={{
                                 backgroundColor: `${COLORS.navy}05`,
                                 border: `1px solid ${COLORS.navy}20`,
@@ -265,7 +265,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                     {/* Settings Button */}
                     <button
                         onClick={() => setShowSettings(!showSettings)}
-                        className="p-2.5 rounded-xl border transition-all"
+                        className="p-2 rounded-sm border transition-all"
                         style={{
                             backgroundColor: showSettings ? `${COLORS.yellow}20` : `${COLORS.navy}05`,
                             borderColor: showSettings ? COLORS.yellow : `${COLORS.navy}20`,
@@ -273,14 +273,14 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                         }}
                         title="보기 설정"
                     >
-                        <Settings2 size={18} />
+                        <Settings2 size={16} />
                     </button>
                 </div>
             </div>
 
             {/* Column Settings Panel */}
             {showSettings && (
-                <div className="p-4 rounded-xl shadow-sm border" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
+                <div className="p-4 rounded-sm shadow-sm border" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
                     <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-bold flex items-center gap-2" style={{ color: COLORS.navy }}>
                             <ClipboardList className="w-4 h-4" />
@@ -289,14 +289,14 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                         <div className="flex gap-2">
                             <button
                                 onClick={selectAllColumns}
-                                className="text-xs px-2 py-1 rounded-md transition-colors"
+                                className="text-xs px-2 py-1 rounded-sm transition-colors"
                                 style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.navy }}
                             >
                                 전체 선택
                             </button>
                             <button
                                 onClick={resetColumns}
-                                className="text-xs px-2 py-1 rounded-md transition-colors"
+                                className="text-xs px-2 py-1 rounded-sm transition-colors"
                                 style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.navy }}
                             >
                                 기본값
@@ -310,7 +310,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                         {COLUMNS.map(col => (
                             <label
                                 key={col.key}
-                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all text-sm border"
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-sm cursor-pointer transition-all text-sm border"
                                 style={{
                                     backgroundColor: visibleColumns.has(col.key) ? `${COLORS.yellow}20` : `${COLORS.navy}05`,
                                     borderColor: visibleColumns.has(col.key) ? COLORS.yellow : `${COLORS.navy}15`,
@@ -331,7 +331,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
             )}
 
             {/* Desktop Table View - Full Width with Horizontal Scroll */}
-            <div className="hidden md:block rounded-xl shadow-sm border overflow-hidden flex-1" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
+            <div className="hidden md:block rounded-sm shadow-sm border overflow-hidden flex-1" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
                 <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)]">
                     <table className="w-full" style={{ minWidth: visibleColumnsList.length * 100 + 80 }}>
                         <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
@@ -340,7 +340,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                     <th
                                         key={col.key}
                                         scope="col"
-                                        className="px-3 py-2.5 text-left text-xs font-medium whitespace-nowrap"
+                                        className="px-2 py-1.5 text-left text-xxs font-medium whitespace-nowrap"
                                         style={{ color: COLORS.gray, minWidth: col.minWidth }}
                                     >
                                         {col.label}
@@ -348,7 +348,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                 ))}
                                 <th
                                     scope="col"
-                                    className="px-3 py-2.5 text-right text-xs font-medium sticky right-0 bg-gray-50"
+                                    className="px-2 py-1.5 text-right text-xxs font-medium sticky right-0 bg-gray-50"
                                     style={{ color: COLORS.gray, minWidth: '70px' }}
                                 >
                                     관리
@@ -364,17 +364,17 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                         style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa' }}
                                     >
                                         {visibleColumnsList.map(col => (
-                                            <td key={col.key} className="px-3 py-2.5 whitespace-nowrap text-sm" style={{ minWidth: col.minWidth }}>
+                                            <td key={col.key} className="px-2 py-1.5 whitespace-nowrap text-xs" style={{ minWidth: col.minWidth }}>
                                                 {getCellValue(record, col.key)}
                                             </td>
                                         ))}
-                                        <td className="px-3 py-2.5 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-inherit" style={{ minWidth: '70px' }}>
+                                        <td className="px-2 py-1.5 whitespace-nowrap text-right text-xs font-medium sticky right-0 bg-inherit" style={{ minWidth: '70px' }}>
                                             <div className="flex justify-end space-x-1">
                                                 {/* 수정 버튼 - canManage 또는 본인 작성 상담만 */}
                                                 {canEditRecord(record) && (
                                                     <button
                                                         onClick={() => onEdit(record)}
-                                                        className="p-1.5 rounded-md transition-colors"
+                                                        className="p-1.5 rounded-sm transition-colors"
                                                         style={{ color: COLORS.navy }}
                                                         title="수정"
                                                     >
@@ -385,7 +385,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                 {canConvert && onConvertToStudent && !record.registeredStudentId && (
                                                     <button
                                                         onClick={() => onConvertToStudent(record)}
-                                                        className="p-1.5 rounded-md transition-colors text-green-600 hover:bg-green-50"
+                                                        className="p-1.5 rounded-sm transition-colors text-green-600 hover:bg-green-50"
                                                         title="원생으로 전환"
                                                     >
                                                         <UserPlus size={14} />
@@ -393,7 +393,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                 )}
                                                 {/* 전환 완료 표시 */}
                                                 {record.registeredStudentId && (
-                                                    <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-md whitespace-nowrap" title="이미 원생으로 전환됨">
+                                                    <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-sm whitespace-nowrap" title="이미 원생으로 전환됨">
                                                         ✓ 전환완료
                                                     </span>
                                                 )}
@@ -403,7 +403,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                         onClick={() => {
                                                             if (window.confirm('정말로 삭제하시겠습니까?')) onDelete(record.id);
                                                         }}
-                                                        className="text-red-500 p-1.5 hover:bg-red-50 rounded-md transition-colors"
+                                                        className="text-red-500 p-1.5 hover:bg-red-50 rounded-sm transition-colors"
                                                         title="삭제"
                                                     >
                                                         <Trash2 size={14} />
@@ -429,7 +429,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
             <div className="md:hidden space-y-3">
                 {currentData.length > 0 ? (
                     currentData.map((record) => (
-                        <div key={record.id} className="p-4 rounded-xl shadow-sm border flex flex-col gap-3" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
+                        <div key={record.id} className="p-4 rounded-sm shadow-sm border flex flex-col gap-3" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
                             <div className="flex justify-between items-start">
                                 <div className="flex flex-col">
                                     <div className="flex items-center gap-2 mb-1">
@@ -438,12 +438,12 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                     </div>
                                     <span className="text-sm" style={{ color: COLORS.gray }}>{record.schoolName}</span>
                                 </div>
-                                <span className={`px-2.5 py-1 text-xs font-bold rounded-lg border ${CONSULTATION_STATUS_COLORS[record.status]}`}>
+                                <span className={`px-2.5 py-1 text-xs font-bold rounded-sm border ${CONSULTATION_STATUS_COLORS[record.status]}`}>
                                     {record.status}
                                 </span>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2 text-sm p-3 rounded-lg" style={{ backgroundColor: `${COLORS.navy}05` }}>
+                            <div className="grid grid-cols-2 gap-2 text-sm p-3 rounded-sm" style={{ backgroundColor: `${COLORS.navy}05` }}>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs" style={{ color: COLORS.gray }}>과목</span>
                                     <span className="font-medium" style={{ color: COLORS.navy }}>{record.subject}</span>
@@ -478,7 +478,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                     {canEditRecord(record) && (
                                         <button
                                             onClick={() => onEdit(record)}
-                                            className="p-2 rounded-lg"
+                                            className="p-2 rounded-sm"
                                             style={{ backgroundColor: `${COLORS.yellow}20`, color: COLORS.navy }}
                                         >
                                             <Edit2 size={16} />
@@ -490,7 +490,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                             onClick={() => {
                                                 if (window.confirm('삭제하시겠습니까?')) onDelete(record.id);
                                             }}
-                                            className="p-2 text-red-500 bg-red-50 rounded-lg"
+                                            className="p-2 text-red-500 bg-red-50 rounded-sm"
                                         >
                                             <Trash2 size={16} />
                                         </button>
@@ -500,47 +500,90 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                         </div>
                     ))
                 ) : (
-                    <div className="p-8 rounded-xl text-center" style={{ backgroundColor: 'white', color: COLORS.gray }}>
+                    <div className="p-8 rounded-sm text-center" style={{ backgroundColor: 'white', color: COLORS.gray }}>
                         검색 결과가 없습니다.
                     </div>
                 )}
             </div>
 
             {/* Pagination */}
-            <div className="p-4 rounded-xl shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
-                <p className="text-sm hidden sm:block" style={{ color: COLORS.gray }}>
-                    총 <span className="font-medium" style={{ color: COLORS.navy }}>{filteredData.length}</span>개 중{' '}
-                    <span className="font-medium" style={{ color: COLORS.navy }}>{(currentPage - 1) * itemsPerPage + 1}</span> -{' '}
-                    <span className="font-medium" style={{ color: COLORS.navy }}>{Math.min(currentPage * itemsPerPage, filteredData.length)}</span>
-                </p>
+            <div className="p-3 rounded-sm shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
+                {/* 왼쪽: 항목 수 선택 */}
+                <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: COLORS.gray }}>페이지당</span>
+                    <select
+                        value={itemsPerPage}
+                        onChange={(e) => {
+                            setItemsPerPage(Number(e.target.value));
+                            setCurrentPage(1);
+                        }}
+                        className="px-2 py-1 text-xs rounded-sm border transition-all"
+                        style={{
+                            borderColor: `${COLORS.navy}20`,
+                            color: COLORS.navy,
+                            backgroundColor: 'white'
+                        }}
+                    >
+                        <option value={10}>10개</option>
+                        <option value={20}>20개</option>
+                        <option value={50}>50개</option>
+                        <option value={100}>100개</option>
+                    </select>
+                    <span className="text-xs hidden sm:inline" style={{ color: COLORS.gray }}>
+                        {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredData.length)} / 총 {filteredData.length}개
+                    </span>
+                </div>
 
-                <nav className="flex justify-between w-full sm:w-auto gap-2" aria-label="Pagination">
+                {/* 오른쪽: 페이지 네비게이션 */}
+                <nav className="flex items-center gap-1" aria-label="Pagination">
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className="flex-1 sm:flex-none relative inline-flex justify-center items-center px-4 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{
-                            borderColor: `${COLORS.navy}20`,
-                            color: COLORS.navy,
-                            backgroundColor: 'white'
-                        }}
+                        className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+                        style={{ color: COLORS.navy }}
                     >
-                        <ChevronLeft className="h-4 w-4 mr-1" /> 이전
+                        이전
                     </button>
-                    <span className="sm:hidden flex items-center text-sm font-medium" style={{ color: COLORS.navy }}>
-                        {currentPage} / {totalPages || 1}
-                    </span>
+
+                    <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum: number;
+                            if (totalPages <= 5) {
+                                pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                                pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                            } else {
+                                pageNum = currentPage - 2 + i;
+                            }
+
+                            return (
+                                <button
+                                    key={pageNum}
+                                    onClick={() => handlePageChange(pageNum)}
+                                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                                        currentPage === pageNum
+                                            ? 'text-[#081429]'
+                                            : 'text-gray-600 hover:bg-gray-100'
+                                    }`}
+                                    style={{
+                                        backgroundColor: currentPage === pageNum ? COLORS.yellow : 'transparent'
+                                    }}
+                                >
+                                    {pageNum}
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     <button
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages || totalPages === 0}
-                        className="flex-1 sm:flex-none relative inline-flex justify-center items-center px-4 py-2 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{
-                            borderColor: `${COLORS.navy}20`,
-                            color: COLORS.navy,
-                            backgroundColor: 'white'
-                        }}
+                        className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+                        style={{ color: COLORS.navy }}
                     >
-                        다음 <ChevronRight className="h-4 w-4 ml-1" />
+                        다음
                     </button>
                 </nav>
             </div>

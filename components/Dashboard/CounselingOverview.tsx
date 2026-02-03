@@ -32,9 +32,9 @@ interface CounselingOverviewProps {
 const CounselingOverview: React.FC<CounselingOverviewProps> = ({ data, loading, minimal }) => {
   if (loading) {
     return minimal ? (
-      <div className="h-64 bg-gray-50 rounded-xl animate-pulse" />
+      <div className="h-64 bg-gray-50 rounded-sm animate-pulse" />
     ) : (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-white rounded-sm border border-gray-200 p-6">
         <div className="h-6 bg-gray-200 rounded w-32 mb-4 animate-pulse"></div>
         <div className="h-64 bg-gray-100 rounded animate-pulse"></div>
       </div>
@@ -114,7 +114,7 @@ const CounselingOverview: React.FC<CounselingOverviewProps> = ({ data, loading, 
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-white rounded-sm border border-gray-200 p-6">
       <h3 className="text-lg font-semibold text-[#081429] mb-4">
         일별 상담 현황
       </h3>

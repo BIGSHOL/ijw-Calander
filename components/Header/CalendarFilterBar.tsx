@@ -32,7 +32,7 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
   setIsCalendarSettingsOpen,
 }) => {
   return (
-    <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
+    <div className="bg-[#081429] h-10 flex items-center px-6 border-b border-gray-700 relative z-30 text-xs">
 
       {/* Main Filter Toggle */}
       <button
@@ -72,13 +72,13 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
       {/* View Toggles - Moved from Top Header */}
       <div className="flex items-center gap-2 ml-auto pl-4 border-l border-gray-700 h-[24px] my-auto">
         {/* Daily/Weekly/Monthly */}
-        <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+        <div className="flex bg-black/20 p-0.5 rounded-sm border border-white/5">
           {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((m) => (
             <button
               key={m}
               onClick={() => setViewMode(m)}
               className={`
-                px-2 py-0.5 rounded-md text-xs font-bold transition-all
+                px-2 py-0.5 rounded-sm text-xs font-bold transition-all
                 ${viewMode === m
                   ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -87,14 +87,14 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
             >
               {m === 'daily' && '일간'}
               {m === 'weekly' && '주간'}
-              {m === 'monthly' && '월간'}
+              {m === 'monthly' && '월별'}
               {m === 'yearly' && '연간'}
             </button>
           ))}
         </div>
 
         {/* Column View Toggle (1단/2단/3단) */}
-        <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+        <div className="flex bg-black/20 p-0.5 rounded-sm border border-white/5">
           {([1, 2, 3] as const)
             .filter(cols => viewMode !== 'yearly' || cols !== 3)
             .map((cols) => (
@@ -102,7 +102,7 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
                 key={cols}
                 onClick={() => setViewColumns(cols)}
                 className={`
-                  px-2 py-0.5 rounded-md text-xs font-bold transition-all
+                  px-2 py-0.5 rounded-sm text-xs font-bold transition-all
                   ${viewColumns === cols
                     ? 'bg-[#fdb813] text-[#081429] shadow-sm'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -117,7 +117,7 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
         {/* Settings Button - 우측 끝 */}
         <button
           onClick={() => setIsCalendarSettingsOpen(true)}
-          className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-colors ml-2"
+          className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-sm transition-colors ml-2"
           title="연간 일정 설정"
         >
           <Settings size={16} />

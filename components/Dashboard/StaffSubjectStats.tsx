@@ -18,7 +18,7 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
       <div className="space-y-3">
         {[1, 2, 3, 4].map((n) => (
           <div key={n} className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gray-100 rounded-full animate-pulse"></div>
+            <div className="w-8 h-8 bg-gray-100 rounded-sm animate-pulse"></div>
             <div className="flex-1">
               <div className="h-3 bg-gray-100 rounded w-16 mb-1 animate-pulse"></div>
               <div className="h-2 bg-gray-50 rounded w-12 animate-pulse"></div>
@@ -28,7 +28,7 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
         ))}
       </div>
     ) : (
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="bg-white rounded-sm border border-gray-200 p-4">
         <div className="h-5 bg-gray-200 rounded w-32 mb-3 animate-pulse"></div>
         <div className="space-y-2">
           {[1, 2, 3, 4].map((n) => (
@@ -49,7 +49,7 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
         상담 기록 없음
       </div>
     ) : (
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="bg-white rounded-sm border border-gray-200 p-4">
         <h3 className="text-sm font-semibold text-[#081429] mb-2">선생님별 상담</h3>
         <p className="text-xs text-gray-400 text-center py-4">상담 기록 없음</p>
       </div>
@@ -70,11 +70,11 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
           return (
             <div
               key={staff.id}
-              className={`flex items-center gap-3 p-2 rounded-xl transition-colors ${
+              className={`flex items-center gap-3 p-2 rounded-sm transition-colors ${
                 idx === 0 ? 'bg-amber-50' : 'hover:bg-gray-50'
               }`}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+              <div className={`w-8 h-8 rounded-sm flex items-center justify-center text-sm font-bold ${
                 idx === 0 ? 'bg-amber-100 text-amber-700' :
                 idx === 1 ? 'bg-gray-200 text-gray-600' :
                 idx === 2 ? 'bg-orange-100 text-orange-600' :
@@ -118,7 +118,7 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-white rounded-sm border border-gray-200 p-6">
       <h3 className="text-lg font-semibold text-[#081429] mb-5">선생님별 상담 통계</h3>
 
       {/* 선생님 목록 - 대시보드 스타일 */}
@@ -133,7 +133,7 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
           return (
             <div
               key={staff.id}
-              className={`flex items-center gap-4 p-3 rounded-xl transition-colors ${
+              className={`flex items-center gap-4 p-3 rounded-sm transition-colors ${
                 idx === 0 ? 'bg-amber-50 border border-amber-200' :
                 idx === 1 ? 'bg-gray-50 border border-gray-200' :
                 idx === 2 ? 'bg-orange-50 border border-orange-200' :
@@ -141,7 +141,7 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
               }`}
             >
               {/* 순위 뱃지 */}
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+              <div className={`w-10 h-10 rounded-sm flex items-center justify-center text-sm font-bold ${
                 idx === 0 ? 'bg-amber-100 text-amber-700' :
                 idx === 1 ? 'bg-gray-200 text-gray-600' :
                 idx === 2 ? 'bg-orange-100 text-orange-600' :

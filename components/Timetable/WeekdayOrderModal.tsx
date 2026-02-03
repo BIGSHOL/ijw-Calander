@@ -62,7 +62,7 @@ const SortableItem = ({ id, onMoveUp, onMoveDown, isFirst, isLast }: SortableIte
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="flex items-center justify-between p-2 bg-white border rounded mb-1.5 shadow-sm group hover:border-green-300 transition-colors">
+        <div ref={setNodeRef} style={style} className="flex items-center justify-between p-2 bg-white border rounded-sm mb-1.5 shadow-sm group hover:border-green-300 transition-colors">
             <div className="flex items-center gap-2 flex-1">
                 <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 p-1">
                     <GripVertical size={16} />
@@ -73,14 +73,14 @@ const SortableItem = ({ id, onMoveUp, onMoveDown, isFirst, isLast }: SortableIte
                 <button
                     onClick={onMoveUp}
                     disabled={isFirst}
-                    className={`p-1 rounded hover:bg-gray-100 ${isFirst ? 'text-gray-200 cursor-not-allowed' : 'text-gray-500 hover:text-green-600'}`}
+                    className={`p-1 rounded-sm hover:bg-gray-100 ${isFirst ? 'text-gray-200 cursor-not-allowed' : 'text-gray-500 hover:text-green-600'}`}
                 >
                     <ChevronUp size={16} />
                 </button>
                 <button
                     onClick={onMoveDown}
                     disabled={isLast}
-                    className={`p-1 rounded hover:bg-gray-100 ${isLast ? 'text-gray-200 cursor-not-allowed' : 'text-gray-500 hover:text-green-600'}`}
+                    className={`p-1 rounded-sm hover:bg-gray-100 ${isLast ? 'text-gray-200 cursor-not-allowed' : 'text-gray-500 hover:text-green-600'}`}
                 >
                     <ChevronDown size={16} />
                 </button>
@@ -149,12 +149,12 @@ const WeekdayOrderModal: React.FC<WeekdayOrderModalProps> = ({ isOpen, onClose, 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-xl w-[400px] max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                <div className="flex justify-between items-center p-4 border-b bg-green-700 text-white rounded-t-lg">
-                    <h2 className="text-base font-bold">요일 순서 설정</h2>
-                    <button onClick={onClose} className="text-green-200 hover:text-white transition-colors">
-                        <X size={20} />
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]" onClick={onClose}>
+            <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                    <h2 className="text-sm font-bold text-[#081429]">요일 순서 설정</h2>
+                    <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                        <X size={18} />
                     </button>
                 </div>
 
@@ -182,11 +182,11 @@ const WeekdayOrderModal: React.FC<WeekdayOrderModalProps> = ({ isOpen, onClose, 
                     </DndContext>
                 </div>
 
-                <div className="p-4 border-t bg-white rounded-b-lg flex justify-end">
+                <div className="p-4 border-t bg-white rounded-sm flex justify-end">
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-bold text-sm transition-colors disabled:opacity-50"
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-sm font-bold text-sm transition-colors disabled:opacity-50"
                     >
                         {isSaving ? '저장 중...' : '저장'}
                     </button>

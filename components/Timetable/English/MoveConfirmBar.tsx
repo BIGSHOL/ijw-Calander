@@ -20,14 +20,14 @@ const MoveConfirmBar: React.FC<MoveConfirmBarProps> = ({ hasChanges, cancelMoveC
             <div className="flex gap-2">
                 <button
                     onClick={cancelMoveChanges}
-                    className="px-3 py-0.5 rounded bg-white border border-gray-300 text-gray-600 text-xs font-medium hover:bg-gray-100 transition-colors"
+                    className="px-3 py-0.5 rounded-sm bg-white border border-gray-300 text-gray-600 text-xs font-medium hover:bg-gray-100 transition-colors"
                 >
                     되돌리기
                 </button>
 
                 <button
                     onClick={saveMoveChanges}
-                    className="px-4 py-0.5 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition-colors"
+                    className="px-4 py-0.5 rounded-sm bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition-colors"
                 >
                     확인
                 </button>

@@ -2,7 +2,7 @@
 // 시뮬레이션 모드 학생 배정 모달
 
 import React, { useState, useMemo } from 'react';
-import { X, Search, UserPlus, UserMinus, Users, ArrowRight } from 'lucide-react';
+import { X, Search, UserPlus, UserMinus, Users, ArrowRight, FlaskConical, Save, RotateCcw } from 'lucide-react';
 import { useScenario, ScenarioEnrollment } from './context/SimulationContext';
 import { UnifiedStudent } from '../../../types';
 
@@ -112,70 +112,90 @@ const SimulationStudentModal: React.FC<SimulationStudentModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]" onClick={onClose}>
             <div
-                className="bg-white rounded-xl shadow-2xl w-[600px] max-h-[80vh] flex flex-col overflow-hidden"
+                className="bg-white rounded-sm shadow-2xl w-[600px] max-h-[85vh] flex flex-col overflow-hidden"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex justify-between items-center px-5 py-4 bg-indigo-600 text-white">
                     <div className="flex items-center gap-2">
-                        <Users size={20} />
+                        <FlaskConical size={20} />
                         <h2 className="text-lg font-bold">{className} - 학생 배정</h2>
-                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded">시뮬레이션</span>
+                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded-sm">시뮬레이션</span>
                     </div>
-                    <button onClick={onClose} className="text-white/80 hover:text-white p-1 rounded-full hover:bg-white/20">
+                    <button onClick={onClose} className="text-white/80 hover:text-white p-1 rounded-sm hover:bg-white/20">
                         <X size={20} />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-hidden flex flex-col">
-                    {/* 현재 학생 목록 */}
-                    <div className="p-4 border-b">
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                                <Users size={16} className="text-indigo-500" />
-                                현재 배정된 학생 ({currentStudents.length}명)
-                            </h3>
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    {/* Section 1: 시뮬레이션 정보 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <FlaskConical className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">시뮬레이션 정보</h3>
+                        </div>
+                        <div className="px-2 py-1.5">
+                            <div className="bg-indigo-50 border border-indigo-200 px-3 py-2 space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-indigo-900">현재 수업:</span>
+                                    <span className="text-xs text-indigo-700">{className}</span>
+                                </div>
+                                <div className="text-xxs text-indigo-600">
+                                    시뮬레이션 모드에서 변경사항은 임시로 저장됩니다. 시나리오로 저장하여 적용하세요.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 2: 학생 목록 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <div className="flex items-center gap-1">
+                                <Users className="w-3 h-3 text-[#081429]" />
+                                <h3 className="text-[#081429] font-bold text-xs">학생 목록</h3>
+                                <span className="text-xxs text-gray-500 ml-1">({currentStudents.length}명)</span>
+                            </div>
                             <button
                                 onClick={() => setShowAddPanel(!showAddPanel)}
-                                className={`flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                                className={`flex items-center gap-1 px-2 py-1 text-xxs font-bold rounded-sm transition-colors ${
                                     showAddPanel
                                         ? 'bg-gray-200 text-gray-700'
                                         : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
                                 }`}
                             >
-                                <UserPlus size={14} />
+                                <UserPlus size={12} />
                                 {showAddPanel ? '닫기' : '학생 추가'}
                             </button>
                         </div>
 
                         <div className="max-h-[200px] overflow-y-auto">
                             {currentStudents.length === 0 ? (
-                                <div className="text-center py-8 text-gray-400">
+                                <div className="text-center py-8 text-gray-400 text-xs">
                                     배정된 학생이 없습니다
                                 </div>
                             ) : (
-                                <div className="space-y-1">
+                                <div className="p-2 space-y-1">
                                     {currentStudents.map(student => (
                                         <div
                                             key={student.id}
-                                            className="flex items-center justify-between p-2 bg-gray-50 rounded-lg hover:bg-gray-100"
+                                            className="flex items-center justify-between p-2 bg-gray-50 rounded-sm hover:bg-gray-100 border border-gray-200"
                                         >
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium text-gray-900">{student.name}</span>
+                                                <span className="font-medium text-gray-900 text-xs">{student.name}</span>
                                                 {student.englishName && (
-                                                    <span className="text-xs text-gray-500">({student.englishName})</span>
+                                                    <span className="text-xxs text-gray-500">({student.englishName})</span>
                                                 )}
-                                                <span className="text-xs text-gray-400">{student.school} {student.grade}</span>
+                                                <span className="text-xxs text-gray-400">{student.school} {student.grade}</span>
                                             </div>
                                             <button
                                                 onClick={() => handleRemoveStudent(student.id, student.name)}
-                                                className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                                className="p-1 text-red-500 hover:bg-red-50 rounded-sm"
                                                 title="제거"
                                             >
-                                                <UserMinus size={16} />
+                                                <UserMinus size={14} />
                                             </button>
                                         </div>
                                     ))}
@@ -184,99 +204,112 @@ const SimulationStudentModal: React.FC<SimulationStudentModalProps> = ({
                         </div>
                     </div>
 
-                    {/* 학생 추가 패널 */}
+                    {/* Section 3: 학생 추가 */}
                     {showAddPanel && (
-                        <div className="flex-1 overflow-hidden flex flex-col p-4 bg-gray-50">
-                            {/* 검색 */}
-                            <div className="relative mb-3">
-                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="학생 이름, 영어이름, 학교로 검색..."
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500"
-                                />
+                        <div className="bg-white border border-gray-200 overflow-hidden">
+                            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                <UserPlus className="w-3 h-3 text-[#081429]" />
+                                <h3 className="text-[#081429] font-bold text-xs">학생 추가</h3>
                             </div>
+                            <div className="p-2 space-y-2">
+                                {/* 검색 */}
+                                <div className="relative">
+                                    <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="학생 이름, 영어이름, 학교로 검색..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded-sm text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                    />
+                                </div>
 
-                            <div className="flex-1 overflow-y-auto">
-                                {/* 미배정 학생 */}
-                                {availableStudents.length > 0 && (
-                                    <div className="mb-4">
-                                        <h4 className="text-xs font-bold text-gray-500 mb-2">미배정 학생 ({availableStudents.length}명)</h4>
-                                        <div className="space-y-1">
-                                            {availableStudents.slice(0, 20).map(student => (
-                                                <div
-                                                    key={student.id}
-                                                    className="flex items-center justify-between p-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300"
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-medium text-gray-900">{student.name}</span>
-                                                        {student.englishName && (
-                                                            <span className="text-xs text-gray-500">({student.englishName})</span>
-                                                        )}
-                                                        <span className="text-xs text-gray-400">{student.school} {student.grade}</span>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => handleAddStudent(student.id, student.name || '')}
-                                                        className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded"
+                                <div className="max-h-[300px] overflow-y-auto space-y-2">
+                                    {/* 미배정 학생 */}
+                                    {availableStudents.length > 0 && (
+                                        <div>
+                                            <div className="flex items-center gap-1 mb-1.5">
+                                                <span className="text-xxs font-bold text-gray-500">미배정 학생</span>
+                                                <span className="text-xxs text-gray-400">({availableStudents.length}명)</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                {availableStudents.slice(0, 20).map(student => (
+                                                    <div
+                                                        key={student.id}
+                                                        className="flex items-center justify-between p-2 bg-white rounded-sm border border-gray-200 hover:border-indigo-300"
                                                     >
-                                                        <UserPlus size={14} />
-                                                        추가
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            {availableStudents.length > 20 && (
-                                                <div className="text-xs text-gray-500 text-center py-2">
-                                                    +{availableStudents.length - 20}명 더 있음 (검색으로 찾기)
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* 다른 수업에 배정된 학생 (이동 가능) */}
-                                {studentsInOtherClasses.length > 0 && (
-                                    <div>
-                                        <h4 className="text-xs font-bold text-gray-500 mb-2">다른 수업 학생 - 이동 가능 ({studentsInOtherClasses.length}명)</h4>
-                                        <div className="space-y-1">
-                                            {studentsInOtherClasses.slice(0, 10).map(({ student, currentClass }) => (
-                                                <div
-                                                    key={student.id}
-                                                    className="flex items-center justify-between p-2 bg-white rounded-lg border border-orange-200 hover:border-orange-300"
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-medium text-gray-900">{student.name}</span>
-                                                        {student.englishName && (
-                                                            <span className="text-xs text-gray-500">({student.englishName})</span>
-                                                        )}
-                                                        <span className="text-xs px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded">
-                                                            {currentClass}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium text-gray-900 text-xs">{student.name}</span>
+                                                            {student.englishName && (
+                                                                <span className="text-xxs text-gray-500">({student.englishName})</span>
+                                                            )}
+                                                            <span className="text-xxs text-gray-400">{student.school} {student.grade}</span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleAddStudent(student.id, student.name || '')}
+                                                            className="flex items-center gap-1 px-2 py-1 text-xxs font-bold text-indigo-600 hover:bg-indigo-50 rounded-sm"
+                                                        >
+                                                            <UserPlus size={12} />
+                                                            추가
+                                                        </button>
                                                     </div>
-                                                    <button
-                                                        onClick={() => handleMoveStudent(student.id, currentClass, student.name || '')}
-                                                        className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-orange-600 hover:bg-orange-50 rounded"
-                                                    >
-                                                        <ArrowRight size={14} />
-                                                        이동
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            {studentsInOtherClasses.length > 10 && (
-                                                <div className="text-xs text-gray-500 text-center py-2">
-                                                    +{studentsInOtherClasses.length - 10}명 더 있음 (검색으로 찾기)
-                                                </div>
-                                            )}
+                                                ))}
+                                                {availableStudents.length > 20 && (
+                                                    <div className="text-xxs text-gray-500 text-center py-1.5 bg-gray-50 rounded-sm">
+                                                        +{availableStudents.length - 20}명 더 있음 (검색으로 찾기)
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {availableStudents.length === 0 && studentsInOtherClasses.length === 0 && (
-                                    <div className="text-center py-8 text-gray-400">
-                                        {searchTerm ? '검색 결과가 없습니다' : '추가할 수 있는 학생이 없습니다'}
-                                    </div>
-                                )}
+                                    {/* 다른 수업에 배정된 학생 (이동 가능) */}
+                                    {studentsInOtherClasses.length > 0 && (
+                                        <div>
+                                            <div className="flex items-center gap-1 mb-1.5">
+                                                <span className="text-xxs font-bold text-gray-500">다른 수업 학생</span>
+                                                <span className="text-xxs text-gray-400">({studentsInOtherClasses.length}명)</span>
+                                                <span className="text-xxs text-orange-600 ml-1">- 이동 가능</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                {studentsInOtherClasses.slice(0, 10).map(({ student, currentClass }) => (
+                                                    <div
+                                                        key={student.id}
+                                                        className="flex items-center justify-between p-2 bg-white rounded-sm border border-orange-200 hover:border-orange-300"
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium text-gray-900 text-xs">{student.name}</span>
+                                                            {student.englishName && (
+                                                                <span className="text-xxs text-gray-500">({student.englishName})</span>
+                                                            )}
+                                                            <span className="text-xxs px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-sm">
+                                                                {currentClass}
+                                                            </span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleMoveStudent(student.id, currentClass, student.name || '')}
+                                                            className="flex items-center gap-1 px-2 py-1 text-xxs font-bold text-orange-600 hover:bg-orange-50 rounded-sm"
+                                                        >
+                                                            <ArrowRight size={12} />
+                                                            이동
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {studentsInOtherClasses.length > 10 && (
+                                                    <div className="text-xxs text-gray-500 text-center py-1.5 bg-gray-50 rounded-sm">
+                                                        +{studentsInOtherClasses.length - 10}명 더 있음 (검색으로 찾기)
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {availableStudents.length === 0 && studentsInOtherClasses.length === 0 && (
+                                        <div className="text-center py-8 text-gray-400 text-xs">
+                                            {searchTerm ? '검색 결과가 없습니다' : '추가할 수 있는 학생이 없습니다'}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -286,7 +319,7 @@ const SimulationStudentModal: React.FC<SimulationStudentModalProps> = ({
                 <div className="flex justify-end gap-2 px-5 py-4 bg-gray-50 border-t">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                        className="px-4 py-2 text-sm font-bold text-gray-600 hover:bg-gray-200 rounded-sm transition-colors"
                     >
                         닫기
                     </button>

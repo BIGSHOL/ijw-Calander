@@ -589,7 +589,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="검색..."
-              className="w-48 pl-9 pr-8 py-1.5 bg-white/10 border border-white/20 rounded-lg text-xs text-white placeholder-gray-400 focus:bg-white/20 focus:border-[#fdb813] focus:outline-none transition-colors"
+              className="w-48 pl-9 pr-8 py-1.5 bg-white/10 border border-white/20 rounded-sm text-xs text-white placeholder-gray-400 focus:bg-white/20 focus:border-[#fdb813] focus:outline-none transition-colors"
             />
             {searchQuery && (
               <button
@@ -634,7 +634,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                   <button
                     onClick={handleBulkDelete}
                     disabled={selectedIds.size === 0}
-                    className="flex items-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-3 py-2 bg-red-500 text-white rounded-sm text-xs font-bold hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Trash2 size={14} />
                     삭제
@@ -664,7 +664,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                 setEditingResource(null);
                 setIsAddModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg text-xs font-bold hover:bg-[#fdb813]/90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm text-xs font-bold hover:bg-[#fdb813]/90 transition-colors"
             >
               <Plus size={14} />
               추가
@@ -701,7 +701,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                   onDrop={(e) => handleDrop(e, main)}
                   onDragEnd={handleDragEnd}
                   onClick={() => handleMainClick(main)}
-                  className={`flex flex-col items-center gap-2 p-4 min-w-[100px] rounded-xl border-2 cursor-pointer transition-all group ${
+                  className={`flex flex-col items-center gap-2 p-4 min-w-[100px] rounded-sm border-2 cursor-pointer transition-all group ${
                     draggedCategory === main
                       ? 'border-[#fdb813] opacity-50'
                       : 'border-gray-200 hover:border-[#fdb813] hover:bg-[#fdb813]/5'
@@ -728,7 +728,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
               <Clock size={14} className="text-[#fdb813]" />
               <h3 className="text-xs font-bold text-[#081429]">최근 추가</h3>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-sm border border-gray-200 overflow-hidden">
               <div className="divide-y divide-gray-100">
                 {recentResources.map(resource => (
                   <ResourceCard
@@ -774,7 +774,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                   onDrop={(e) => handleSubDrop(e, sub)}
                   onDragEnd={handleSubDragEnd}
                   onClick={() => handleSubClick(sub)}
-                  className={`flex flex-col items-center gap-2 p-3 min-w-[90px] rounded-xl border-2 cursor-pointer transition-all group ${
+                  className={`flex flex-col items-center gap-2 p-3 min-w-[90px] rounded-sm border-2 cursor-pointer transition-all group ${
                     draggedSubCategory === sub
                       ? 'border-[#081429] opacity-50'
                       : 'border-gray-200 hover:border-[#081429] hover:bg-[#081429]/5'
@@ -811,7 +811,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                       setEditingResource(null);
                       setIsAddModalOpen(true);
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-lg text-sm font-medium hover:bg-[#081429]/90 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-sm text-sm font-medium hover:bg-[#081429]/90 transition-colors"
                   >
                     <Plus size={14} />
                     리소스 추가하기
@@ -822,7 +822,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
           ) : (
             <div className="h-full overflow-y-auto">
               {/* 리소스 테이블 */}
-              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-sm border border-gray-200 overflow-hidden">
                 <ResourceTableHeader
                   sortField={sortField}
                   sortDirection={sortDirection}

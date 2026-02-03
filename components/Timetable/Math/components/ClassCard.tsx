@@ -460,7 +460,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     {/* Schedule Tooltip - Portal을 사용하여 DOM 최상위에 렌더링 */}
                     {showScheduleTooltip && scheduleInfo.length > 0 && createPortal(
                         <div
-                            className="fixed bg-gray-900 text-white text-xs rounded-lg shadow-xl p-2 min-w-[140px] whitespace-nowrap pointer-events-none"
+                            className="fixed bg-gray-900 text-white text-xs rounded-sm shadow-xl p-2 min-w-[140px] whitespace-nowrap pointer-events-none"
                             style={{
                                 left: tooltipPosition.x,
                                 top: tooltipPosition.y,
@@ -595,26 +595,26 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         {(showHoldStudents || showWithdrawnStudents) && (
                             <div className="flex-shrink-0">
                                 {showHoldStudents && (
-                                    <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                                        <div className="text-xxs font-bold text-violet-600">대기 ({commonStudents.hold.length}명)</div>
+                                    <div className="px-1 py-0.5 bg-pink-50 border-b border-pink-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                        <div className="text-xxs font-bold text-pink-600">대기 ({commonStudents.hold.length}명)</div>
                                         {commonStudents.hold.length > 0 ? (
-                                            <ul className="flex flex-col">
+                                            <ul className="flex flex-col gap-0.5">
                                                 {commonStudents.hold.map(s => (
-                                                    <li key={s.id} className="text-xxs leading-tight text-violet-800 truncate">{s.name}</li>
+                                                    <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate">{s.name}</li>
                                                 ))}
                                             </ul>
                                         ) : (
-                                            <span className="text-xxs text-violet-300">-</span>
+                                            <span className="text-xxs text-pink-300">-</span>
                                         )}
                                     </div>
                                 )}
                                 {showWithdrawnStudents && (
-                                    <div className="px-0.5 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                    <div className="px-1 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
                                         <div className="text-xxs font-bold text-gray-600">퇴원 ({commonStudents.withdrawn.length}명)</div>
                                         {commonStudents.withdrawn.length > 0 ? (
-                                            <ul className="flex flex-col">
+                                            <ul className="flex flex-col gap-0.5">
                                                 {commonStudents.withdrawn.map(s => (
-                                                    <li key={s.id} className="text-xxs leading-tight text-gray-700 truncate">{s.name}</li>
+                                                    <li key={s.id} className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate">{s.name}</li>
                                                 ))}
                                             </ul>
                                         ) : (
@@ -668,32 +668,32 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             <div className="flex-shrink-0">
                                 {/* 대기생 Section */}
                                 {showHoldStudents && (
-                                    <div className="px-0.5 py-0.5 bg-violet-50 border-b border-violet-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
-                                        <div className="text-xxs font-bold text-violet-600">대기 ({holdStudents.length}명)</div>
+                                    <div className="px-1 py-0.5 bg-pink-50 border-b border-pink-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                        <div className="text-xxs font-bold text-pink-600">대기 ({holdStudents.length}명)</div>
                                         {holdStudents.length > 0 ? (
-                                            <ul className="flex flex-col">
+                                            <ul className="flex flex-col gap-0.5">
                                                 {holdStudents.map(s => (
-                                                    <li key={s.id} className="text-xxs leading-tight text-violet-800 truncate" title={s.name}>
+                                                    <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate" title={s.name}>
                                                         {s.name}
                                                     </li>
                                                 ))}
                                             </ul>
                                         ) : (
-                                            <span className="text-xxs text-violet-300">-</span>
+                                            <span className="text-xxs text-pink-300">-</span>
                                         )}
                                     </div>
                                 )}
 
                                 {/* 퇴원생 Section */}
                                 {showWithdrawnStudents && (
-                                    <div className="px-0.5 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                    <div className="px-1 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
                                         <div className="text-xxs font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
                                         {withdrawnStudents.length > 0 ? (
-                                            <ul className="flex flex-col">
+                                            <ul className="flex flex-col gap-0.5">
                                                 {withdrawnStudents.map(s => (
                                                     <li
                                                         key={s.id}
-                                                        className="text-xxs leading-tight text-gray-700 truncate"
+                                                        className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate"
                                                         title={s.withdrawalDate ? `${s.name} (퇴원: ${s.withdrawalDate})` : s.name}
                                                     >
                                                         {s.name}

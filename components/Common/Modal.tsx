@@ -12,8 +12,22 @@ export interface ModalProps {
   closeOnEscape?: boolean;
   footer?: React.ReactNode;
   className?: string;
+  /** 컴팩트 모드 - StudentDetailModal 스타일 (작은 패딩, 작은 폰트) */
+  compact?: boolean;
+  /** 고정 높이 - 모달 높이 고정 (예: h-[600px]) */
+  fixedHeight?: string;
 }
 
+/**
+ * 통일된 모달 디자인 시스템
+ *
+ * 기준: StudentDetailModal (컴팩트 모드)
+ * - Overlay: bg-black/50 z-[100]
+ * - Modal: bg-white rounded-sm shadow-xl (미세 라운드 2px)
+ * - Header: px-3 py-2, text-sm font-bold text-[#081429]
+ * - Close: p-1 rounded-sm, X size={18}
+ * - Colors: Primary=#fdb813, Dark=#081429
+ */
 const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -25,15 +39,18 @@ const Modal: React.FC<ModalProps> = ({
   closeOnEscape = true,
   footer,
   className = '',
+  compact = false,
+  fixedHeight,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
+  // 모달 크기 클래스 (StudentDetailModal 기준: max-w-lg)
   const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
+    sm: 'max-w-sm',      // 384px
+    md: 'max-w-lg',      // 512px (기준)
+    lg: 'max-w-2xl',     // 672px
+    xl: 'max-w-4xl',     // 896px
     full: 'max-w-full mx-4',
   };
 
@@ -92,53 +109,65 @@ const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
+  // 컴팩트 모드 스타일 (StudentDetailModal 기준)
+  const headerPadding = compact ? 'px-3 py-2' : 'px-4 py-3';
+  const titleSize = compact ? 'text-sm' : 'text-base';
+  const contentPadding = compact ? 'p-3' : 'px-4 py-3';
+  const footerPadding = compact ? 'px-3 py-2' : 'px-4 py-3';
+  const closeIconSize = compact ? 18 : 20;
+
   return (
     <div
-      className="fixed inset-0 z-[1050] flex items-center justify-center p-2 md:p-4"
+      className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] p-2 md:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? 'modal-title' : undefined}
     >
+      {/* Overlay - StudentDetailModal 기준: bg-black/50 */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/50 transition-opacity"
         onClick={() => closeOnBackdropClick && onClose()}
         aria-hidden="true"
       />
 
+      {/* Modal Container - 미세 라운드 (rounded-sm = 2px) */}
       <div
         ref={modalRef}
         className={`
-          relative bg-white rounded-lg shadow-2xl w-full ${sizeClasses[size]}
-          max-h-[90vh] overflow-hidden flex flex-col
+          relative bg-white rounded-sm shadow-xl w-full ${sizeClasses[size]}
+          ${fixedHeight || 'max-h-[85vh]'} overflow-hidden flex flex-col
           ${className}
         `}
         tabIndex={-1}
       >
+        {/* Header - StudentDetailModal 기준: px-3 py-2, text-sm font-bold text-[#081429] */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 border-b border-gray-200">
+          <div className={`flex items-center justify-between ${headerPadding} border-b border-gray-200`}>
             {title && (
-              <h2 id="modal-title" className="text-xl font-bold text-gray-900">
+              <h2 id="modal-title" className={`${titleSize} font-bold text-[#081429]`}>
                 {title}
               </h2>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="ml-auto p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                className="ml-auto p-1 rounded-sm text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:ring-offset-2"
                 aria-label="닫기"
               >
-                <X size={20} />
+                <X size={closeIconSize} />
               </button>
             )}
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 md:px-6 md:py-4">
+        {/* Content - StudentDetailModal 기준: p-3, overflow-y-auto */}
+        <div className={`flex-1 overflow-y-auto ${contentPadding}`}>
           {children}
         </div>
 
+        {/* Footer (optional) */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-4 py-3 md:px-6 md:py-4 border-t border-gray-200 bg-gray-50">
+          <div className={`flex items-center justify-end gap-2 ${footerPadding} border-t border-gray-200 bg-gray-50`}>
             {footer}
           </div>
         )}

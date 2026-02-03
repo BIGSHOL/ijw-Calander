@@ -48,7 +48,7 @@ export const StrategySettingsPanel: React.FC<StrategySettingsPanelProps> = ({
                 <button
                   key={id}
                   onClick={() => onPresetChange(id)}
-                  className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+                  className={`px-2.5 py-1 text-xs rounded-sm border transition-colors ${
                     preset === id
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-white text-gray-600 border-gray-300 hover:border-blue-300 hover:bg-blue-50'

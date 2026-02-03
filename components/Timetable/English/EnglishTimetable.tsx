@@ -425,7 +425,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             : (publishedScenarioName || '인재원 본원 통합 영어시간표')
                         }
                     </span>
-                    {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">SIMULATION</span>}
+                    {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
                 </h1>
                 {/* 주차 네비게이션 */}
                 {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
@@ -434,19 +434,19 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={goToPrevWeek}
-                                className="p-1 border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
                             >
                                 <ChevronLeft size={14} />
                             </button>
                             <button
                                 onClick={goToThisWeek}
-                                className="px-2 py-0.5 text-xs font-bold border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                className="px-2 py-0.5 text-xs font-bold border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
                             >
                                 이번주
                             </button>
                             <button
                                 onClick={goToNextWeek}
-                                className="p-1 border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
                             >
                                 <ChevronRight size={14} />
                             </button>
@@ -459,7 +459,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         <button
                             onClick={undo}
                             disabled={!canUndo}
-                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${canUndo ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${canUndo ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                             title="되돌리기 (Ctrl+Z)"
                         >
                             <Undo2 size={14} />
@@ -468,7 +468,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         <button
                             onClick={redo}
                             disabled={!canRedo}
-                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${canRedo ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${canRedo ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                             title="다시 실행 (Ctrl+Y)"
                         >
                             <Redo2 size={14} />
@@ -476,7 +476,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         </button>
                         <button
                             onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${history.length > 0 ? 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-400'}`}
+                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${history.length > 0 ? 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-400'}`}
                             title="변경 히스토리 보기"
                         >
                             <History size={14} />
@@ -520,7 +520,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             return (
                                 <div
                                     key={entry.id}
-                                    className={`flex items-center gap-2 px-2 py-1 rounded text-xs ${
+                                    className={`flex items-center gap-2 px-2 py-1 rounded-sm text-xs ${
                                         isCurrent
                                             ? 'bg-indigo-200 text-indigo-900 font-bold'
                                             : isPast
@@ -533,7 +533,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     {entry.targetClass && (
                                         <button
                                             onClick={handleJumpTo}
-                                            className="p-1 text-indigo-500 hover:bg-indigo-100 rounded transition-colors"
+                                            className="p-1 text-indigo-500 hover:bg-indigo-100 rounded-sm transition-colors"
                                             title={`'${entry.targetClass}' 수업으로 이동`}
                                         >
                                             <Focus size={14} />
@@ -581,6 +581,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     canPublish={isMaster || hasPermission('timetable.english.simulation')}
                                     labRooms={labRooms}
                                     studentMap={studentMap}
+                                    currentWeekStart={currentWeekStart}
                                 />
 
                                 <TeacherOrderModal
@@ -621,6 +622,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 currentUser={currentUser}
                                 labRooms={labRooms}
                                 studentMap={studentMap}
+                                currentWeekStart={currentWeekStart}
                             />
                         )}
                     </>

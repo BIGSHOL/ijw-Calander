@@ -141,21 +141,21 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+        <div className="bg-amber-50 rounded-sm p-4 border border-amber-200">
           <div className="flex items-center gap-2 mb-1">
             <Clock className="w-4 h-4 text-amber-600" />
             <span className="text-sm text-amber-800 font-medium">승인 대기</span>
           </div>
           <div className="text-2xl font-bold text-amber-700">{stats.pending}</div>
         </div>
-        <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+        <div className="bg-emerald-50 rounded-sm p-4 border border-emerald-200">
           <div className="flex items-center gap-2 mb-1">
             <Check className="w-4 h-4 text-emerald-600" />
             <span className="text-sm text-emerald-800 font-medium">승인됨</span>
           </div>
           <div className="text-2xl font-bold text-emerald-700">{stats.approved}</div>
         </div>
-        <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+        <div className="bg-red-50 rounded-sm p-4 border border-red-200">
           <div className="flex items-center gap-2 mb-1">
             <X className="w-4 h-4 text-red-600" />
             <span className="text-sm text-red-800 font-medium">반려됨</span>
@@ -171,7 +171,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StaffLeave['status'] | 'all')}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+            className="px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
           >
             <option value="all">전체 상태</option>
             {Object.entries(LEAVE_STATUS_LABELS).map(([value, label]) => (
@@ -181,7 +181,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-lg hover:bg-[#0a1a35] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-sm hover:bg-[#0a1a35] transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span>휴가 신청</span>
@@ -190,7 +190,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
 
       {/* Add Leave Form */}
       {showAddForm && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-sm border border-gray-200 p-4">
           <h3 className="font-semibold text-[#081429] mb-4">새 휴가 신청</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -198,7 +198,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
               <select
                 value={newLeave.staffId}
                 onChange={(e) => setNewLeave(prev => ({ ...prev, staffId: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
               >
                 <option value="">선택하세요</option>
                 {staff.filter(s => s.status === 'active').map(s => (
@@ -211,7 +211,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
               <select
                 value={newLeave.type}
                 onChange={(e) => setNewLeave(prev => ({ ...prev, type: e.target.value as StaffLeave['type'] }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
               >
                 {Object.entries(LEAVE_TYPE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
@@ -224,7 +224,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
                 type="date"
                 value={newLeave.startDate}
                 onChange={(e) => setNewLeave(prev => ({ ...prev, startDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
               />
             </div>
             <div>
@@ -233,7 +233,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
                 type="date"
                 value={newLeave.endDate}
                 onChange={(e) => setNewLeave(prev => ({ ...prev, endDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
               />
             </div>
             <div className="col-span-2">
@@ -243,20 +243,20 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
                 value={newLeave.reason}
                 onChange={(e) => setNewLeave(prev => ({ ...prev, reason: e.target.value }))}
                 placeholder="휴가 사유를 입력하세요"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
               />
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <button
               onClick={() => setShowAddForm(false)}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-sm transition-colors"
             >
               취소
             </button>
             <button
               onClick={handleAddLeave}
-              className="px-4 py-2 bg-[#081429] text-white rounded-lg hover:bg-[#0a1a35] transition-colors"
+              className="px-4 py-2 bg-[#081429] text-white rounded-sm hover:bg-[#0a1a35] transition-colors"
             >
               신청
             </button>
@@ -265,7 +265,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
       )}
 
       {/* Leave List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-sm shadow-sm border border-gray-200">
         {filteredLeaves.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
@@ -305,7 +305,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
                       <button
                         onClick={() => handleApprove(leave.id)}
                         disabled={isApproving}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white rounded-sm hover:bg-emerald-600 transition-colors disabled:opacity-50"
                       >
                         <Check className="w-4 h-4" />
                         <span>승인</span>
@@ -313,7 +313,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
                       <button
                         onClick={() => handleReject(leave.id)}
                         disabled={isRejecting}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-sm hover:bg-red-600 transition-colors disabled:opacity-50"
                       >
                         <X className="w-4 h-4" />
                         <span>반려</span>

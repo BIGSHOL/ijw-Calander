@@ -40,7 +40,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
       {onRefresh && (
         <button
           onClick={onRefresh}
-          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-[#081429] hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-[#081429] hover:bg-gray-100 rounded-sm transition-colors"
           title="새로고침"
         >
           <RefreshCw className="w-4 h-4" />

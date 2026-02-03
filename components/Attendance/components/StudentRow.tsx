@@ -122,12 +122,12 @@ const StudentRow = React.memo(({
         >
           <span className="truncate">{student.name}</span>
           {isNew && (
-            <span className="inline-flex items-center px-1 py-0.5 rounded-full bg-[#fdb813] text-[#081429] text-nano font-extrabold">
+            <span className="inline-flex items-center px-1 py-0.5 rounded-sm bg-[#fdb813] text-[#081429] text-nano font-extrabold">
               N
             </span>
           )}
           {isLeaving && (
-            <span className="inline-flex items-center p-0.5 rounded-full bg-red-100 text-red-600" title="퇴원 예정">
+            <span className="inline-flex items-center p-0.5 rounded-sm bg-red-100 text-red-600" title="퇴원 예정">
               <LogOut size={10} />
             </span>
           )}
@@ -142,7 +142,7 @@ const StudentRow = React.memo(({
             ref={salaryBtnRef}
             type="button"
             onClick={toggleDropdown}
-            className={`text-micro px-1.5 py-0.5 rounded-full w-fit font-bold ${badgeClass} ${onSalarySettingChange ? 'cursor-pointer hover:opacity-80 active:scale-95 transition-all' : ''}`}
+            className={`text-micro px-1.5 py-0.5 rounded-sm w-fit font-bold ${badgeClass} ${onSalarySettingChange ? 'cursor-pointer hover:opacity-80 active:scale-95 transition-all' : ''}`}
             style={badgeStyle}
             title={onSalarySettingChange ? '클릭하여 급여 설정 변경' : undefined}
           >
@@ -152,7 +152,7 @@ const StudentRow = React.memo(({
           {showSalaryDropdown && onSalarySettingChange && dropdownPos && createPortal(
             <div
               ref={salaryDropdownRef}
-              className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
+              className="fixed bg-white rounded-sm shadow-xl border border-gray-200 py-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
               style={{ top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
             >
               <div className="px-2 py-1 text-micro font-semibold text-gray-400 border-b border-gray-100">
@@ -167,7 +167,7 @@ const StudentRow = React.memo(({
                 }}
                 className={`w-full text-left px-2 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-1.5 ${!salarySettingOverrideId ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}
               >
-                <span className="w-2 h-2 rounded-full bg-gray-300"></span>
+                <span className="w-2 h-2 rounded-sm bg-gray-300"></span>
                 자동 (학교 기반)
               </button>
               {/* 급여 설정 항목들 */}
@@ -185,7 +185,7 @@ const StudentRow = React.memo(({
                     className={`w-full text-left px-2 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-1.5 ${isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-600'}`}
                   >
                     <span
-                      className="w-2 h-2 rounded-full border"
+                      className="w-2 h-2 rounded-sm border"
                       style={{ backgroundColor: itemBadgeStyle?.backgroundColor, borderColor: itemBadgeStyle?.borderColor }}
                     ></span>
                     {item.name}

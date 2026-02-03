@@ -15,23 +15,23 @@ const SessionSettingsModal: React.FC<SessionSettingsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[200]"
+      className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
+        className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-[#081429] px-4 py-2.5 flex justify-between items-center text-white shrink-0">
-          <h2 className="text-sm font-bold flex items-center gap-1.5">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-1.5">
             <Calendar size={16} className="text-[#fdb813]" />
             세션 기간 설정
             <span className="ml-2 px-1.5 py-0.5 bg-yellow-500 text-xxs font-bold rounded">관리자</span>
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
           >
             <X size={18} />
           </button>

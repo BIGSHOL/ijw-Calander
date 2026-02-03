@@ -17,7 +17,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
 }) => {
   if (!resource) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50 rounded-xl border border-gray-200">
+      <div className="h-full flex items-center justify-center bg-gray-50 rounded-sm border border-gray-200">
         <div className="text-center text-gray-400">
           <Link2 size={48} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">리소스를 선택하세요</p>
@@ -46,7 +46,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="h-full flex flex-col bg-white rounded-sm border border-gray-200 overflow-hidden">
       {/* 헤더 */}
       <div className="p-4 border-b border-gray-200 bg-[#081429]">
         <div className="flex items-start justify-between">
@@ -93,7 +93,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
       <div className="flex-1 overflow-y-auto p-6">
         {/* 대형 아이콘 */}
         <div className="flex justify-center mb-6">
-          <div className="w-24 h-24 rounded-2xl bg-[#081429]/5 flex items-center justify-center">
+          <div className="w-24 h-24 rounded-sm bg-[#081429]/5 flex items-center justify-center">
             <span className="text-5xl">{resource.icon || typeIcon}</span>
           </div>
         </div>
@@ -105,7 +105,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
 
         {/* 타입 배지 */}
         <div className="flex justify-center mb-4">
-          <span className="text-xs font-medium px-3 py-1 rounded-full bg-[#fdb813]/20 text-[#081429]">
+          <span className="text-xs font-medium px-3 py-1 rounded-sm bg-[#fdb813]/20 text-[#081429]">
             {typeIcon} {typeLabel}
           </span>
         </div>
@@ -118,7 +118,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
         )}
 
         {/* 정보 카드 */}
-        <div className="space-y-3 bg-gray-50 rounded-xl p-4">
+        <div className="space-y-3 bg-gray-50 rounded-sm p-4">
           {/* 카테고리 */}
           <div className="flex items-start gap-3">
             <Tag size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
@@ -160,7 +160,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
             href={resource.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#081429] text-white rounded-xl text-sm font-medium hover:bg-[#081429]/90 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#081429] text-white rounded-sm text-sm font-medium hover:bg-[#081429]/90 transition-colors"
           >
             <ExternalLink size={16} />
             새 탭에서 열기

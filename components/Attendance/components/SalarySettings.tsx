@@ -93,22 +93,22 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
     };
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={onClose}>
             <div
-                className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                className="bg-white rounded-sm shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center p-5 border-b border-gray-100 shrink-0">
                     <div className="flex items-center gap-2">
-                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                        <div className="p-2 bg-blue-50 text-blue-600 rounded-sm">
                             <Calculator size={20} />
                         </div>
                         <h2 className="text-xl font-bold text-gray-800">
                             급여 및 인센티브 설정
-                            {readOnly && <span className="ml-2 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md font-normal">조회 전용</span>}
+                            {readOnly && <span className="ml-2 text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-sm font-normal">조회 전용</span>}
                         </h2>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-sm transition-colors">
                         <X size={20} className="text-gray-500" />
                     </button>
                 </div>
@@ -117,11 +117,11 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                 <div className="overflow-y-auto custom-scrollbar p-6 space-y-8 flex-1">
 
                     {/* Global Settings */}
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                    <div className="bg-slate-50 p-4 rounded-sm border border-slate-200 space-y-4">
                         <h3 className="font-bold text-gray-800 flex items-center gap-2">
                             <Calculator size={16} className="text-gray-500" /> 기본 정산 설정
                         </h3>
-                        <div className={`flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200 ${readOnly ? 'bg-gray-50' : ''}`}>
+                        <div className={`flex items-center justify-between bg-white p-3 rounded-sm border border-gray-200 ${readOnly ? 'bg-gray-50' : ''}`}>
                             <div className="flex items-center gap-2">
                                 <label className="text-sm font-medium text-slate-700">카드/행정 수수료 (%)</label>
                                 <div className="group relative">
@@ -138,7 +138,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                     value={localConfig.academyFee}
                                     onChange={(e) => handleGlobalChange('academyFee', e.target.value)}
                                     disabled={readOnly}
-                                    className="w-full pl-3 pr-8 py-2 text-right border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                    className="w-full pl-3 pr-8 py-2 text-right border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
                                 />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
                             </div>
@@ -146,20 +146,20 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                     </div>
 
                     {/* Incentive Settings */}
-                    <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 space-y-4">
+                    <div className="bg-yellow-50 p-4 rounded-sm border border-yellow-200 space-y-4">
                         <h3 className="font-bold text-yellow-800 flex items-center gap-2">
                             <Gift size={16} className="text-yellow-600" /> 인센티브 기준 설정
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* 블로그 포스팅 인센티브 - 고정금/비율 선택 */}
-                            <div className="bg-white p-3 rounded-lg border border-yellow-100 md:col-span-2">
+                            <div className="bg-white p-3 rounded-sm border border-yellow-100 md:col-span-2">
                                 <div className="flex items-center justify-between mb-2">
                                     <label className="block text-xs font-bold text-gray-500">블로그 포스팅 인센티브</label>
-                                    <div className="flex bg-gray-100 p-0.5 rounded-lg">
+                                    <div className="flex bg-gray-100 p-0.5 rounded-sm">
                                         <button
                                             onClick={() => handleIncentiveChange('blogType', 'fixed')}
                                             disabled={readOnly}
-                                            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                                            className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-all ${
                                                 localConfig.incentives?.blogType === 'fixed'
                                                     ? 'bg-white text-yellow-700 shadow-sm'
                                                     : 'text-gray-500 hover:text-gray-700'
@@ -170,7 +170,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                         <button
                                             onClick={() => handleIncentiveChange('blogType', 'percentage')}
                                             disabled={readOnly}
-                                            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                                            className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-all ${
                                                 localConfig.incentives?.blogType === 'percentage'
                                                     ? 'bg-white text-yellow-700 shadow-sm'
                                                     : 'text-gray-500 hover:text-gray-700'
@@ -188,7 +188,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                             value={localConfig.incentives?.blogRate ?? 2}
                                             onChange={(e) => handleIncentiveChange('blogRate', parseFloat(e.target.value) || 0)}
                                             disabled={readOnly}
-                                            className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                            className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
                                         />
                                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
                                         <p className="text-xxs text-gray-400 mt-1">기본 수업료의 {localConfig.incentives?.blogRate ?? 2}%가 추가 지급됩니다.</p>
@@ -201,12 +201,12 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                             value={localConfig.incentives?.blogAmount?.toLocaleString() ?? 0}
                                             onChange={(e) => handleIncentiveChange('blogAmount', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
                                             disabled={readOnly}
-                                            className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                            className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
                                         />
                                     </div>
                                 )}
                             </div>
-                            <div className="bg-white p-3 rounded-lg border border-yellow-100">
+                            <div className="bg-white p-3 rounded-sm border border-yellow-100">
                                 <label className="block text-xs font-bold text-gray-500 mb-1">퇴원율 달성 수당 (월)</label>
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">₩</span>
@@ -215,11 +215,11 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                         value={localConfig.incentives?.retentionAmount?.toLocaleString() ?? 0}
                                         onChange={(e) => handleIncentiveChange('retentionAmount', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
                                         disabled={readOnly}
-                                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
                                     />
                                 </div>
                             </div>
-                            <div className="bg-white p-3 rounded-lg border border-yellow-100">
+                            <div className="bg-white p-3 rounded-sm border border-yellow-100">
                                 <label className="block text-xs font-bold text-gray-500 mb-1">목표 퇴원율 기준 (%)</label>
                                 <div className="relative">
                                     <input
@@ -228,7 +228,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                         value={localConfig.incentives?.retentionTargetRate ?? 0}
                                         onChange={(e) => handleIncentiveChange('retentionTargetRate', parseFloat(e.target.value) || 0)}
                                         disabled={readOnly}
-                                        className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
+                                        className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:text-gray-500"
                                     />
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">이하</span>
                                 </div>
@@ -244,7 +244,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                             {!readOnly && (
                                 <button
                                     onClick={handleAddItem}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-sm text-sm font-medium hover:bg-blue-100 transition-colors"
                                 >
                                     <Plus size={16} /> 항목 추가
                                 </button>
@@ -255,7 +255,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                             const calculatedRate = calculateClassRate(item, localConfig.academyFee);
 
                             return (
-                                <div key={item.id} className="border border-gray-200 rounded-xl p-5 hover:border-blue-200 transition-colors relative group">
+                                <div key={item.id} className="border border-gray-200 rounded-sm p-5 hover:border-blue-200 transition-colors relative group">
                                     {!readOnly && (
                                         <button
                                             onClick={() => handleRemoveItem(item.id)}
@@ -281,7 +281,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
 
                                         {/* Color Picker */}
                                         <div className="flex items-center gap-2">
-                                            <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-200 cursor-pointer shadow-sm hover:scale-110 transition-transform">
+                                            <div className="relative w-8 h-8 rounded-sm overflow-hidden border border-gray-200 cursor-pointer shadow-sm hover:scale-110 transition-transform">
                                                 <input
                                                     type="color"
                                                     value={resolveColor(item.color)}
@@ -294,11 +294,11 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                         </div>
 
                                         {/* Type Toggle */}
-                                        <div className="flex bg-gray-100 p-1 rounded-lg ml-auto">
+                                        <div className="flex bg-gray-100 p-1 rounded-sm ml-auto">
                                             <button
                                                 onClick={() => handleItemChange(item.id, 'type', 'fixed')}
                                                 disabled={readOnly}
-                                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${item.type === 'fixed' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'} ${readOnly ? 'cursor-not-allowed' : ''}
+                                                className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-all ${item.type === 'fixed' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'} ${readOnly ? 'cursor-not-allowed' : ''}
                                                     `}
                                             >
                                                 고정급
@@ -306,7 +306,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                             <button
                                                 onClick={() => handleItemChange(item.id, 'type', 'percentage')}
                                                 disabled={readOnly}
-                                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${item.type === 'percentage' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'} ${readOnly ? 'cursor-not-allowed' : ''}
+                                                className={`px-3 py-1.5 text-xs font-medium rounded-sm transition-all ${item.type === 'percentage' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'} ${readOnly ? 'cursor-not-allowed' : ''}
                                                     `}
                                             >
                                                 비율제
@@ -314,7 +314,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/50 p-4 rounded-lg">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/50 p-4 rounded-sm">
                                         {item.type === 'fixed' ? (
                                             <div className="md:col-span-2">
                                                 <label className="block text-xs font-medium text-gray-500 mb-1">1회 지급액 (선생님 수령)</label>
@@ -325,7 +325,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                                         value={item.fixedRate.toLocaleString()}
                                                         onChange={(e) => handleItemChange(item.id, 'fixedRate', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
                                                         disabled={readOnly}
-                                                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-500"
+                                                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-500"
                                                     />
                                                 </div>
                                             </div>
@@ -340,7 +340,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                                             value={item.baseTuition.toLocaleString()}
                                                             onChange={(e) => handleItemChange(item.id, 'baseTuition', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
                                                             disabled={readOnly}
-                                                            className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-500"
+                                                            className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-500"
                                                         />
                                                     </div>
                                                 </div>
@@ -352,7 +352,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                                             value={item.ratio}
                                                             onChange={(e) => handleItemChange(item.id, 'ratio', parseFloat(e.target.value) || 0)}
                                                             disabled={readOnly}
-                                                            className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-500"
+                                                            className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-500"
                                                             placeholder="예: 45"
                                                         />
                                                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
@@ -374,7 +374,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                         })}
 
                         {localConfig.items.length === 0 && (
-                            <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                            <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-sm border border-dashed border-gray-200">
                                 등록된 급여 설정이 없습니다.<br />상단의 '항목 추가' 버튼을 눌러주세요.
                             </div>
                         )}
@@ -385,7 +385,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                     <div className="p-5 bg-gray-50 border-t border-gray-100 flex justify-end shrink-0">
                         <button
                             onClick={handleSave}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors font-medium shadow-sm"
+                            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-sm hover:bg-blue-700 active:bg-blue-800 transition-colors font-medium shadow-sm"
                         >
                             <Save size={18} />
                             설정 저장

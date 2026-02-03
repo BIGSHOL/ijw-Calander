@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Loader2, User, School, Phone, MapPin, Cake, FileText, ChevronDown, ChevronRight } from 'lucide-react';
+import { X, UserPlus, Loader2, User, School, Phone, MapPin, Cake, FileText } from 'lucide-react';
 import { db } from '../../firebaseConfig';
 import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -64,23 +64,7 @@ const normalizeSchoolName = (school: string): string => {
         .replace(/고등학교$/g, '고');
 };
 
-// 섹션 토글 타입
-type SectionKey = 'basic' | 'school' | 'contact' | 'address' | 'extra';
-
 const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSuccess }) => {
-    // 섹션 펼침 상태 (기본정보, 학교정보, 연락처는 기본 펼침)
-    const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>({
-        basic: true,
-        school: true,
-        contact: true,
-        address: false,
-        extra: false,
-    });
-
-    const toggleSection = (key: SectionKey) => {
-        setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
-    };
-
     const {
         values,
         errors,
@@ -211,426 +195,350 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
     const handleClose = () => {
         if (isSubmitting) return;
         resetForm();
-        setExpandedSections({
-            basic: true,
-            school: true,
-            contact: true,
-            address: false,
-            extra: false,
-        });
         onClose();
     };
 
     if (!isOpen) return null;
 
-    // 섹션 헤더 컴포넌트
-    const SectionHeader = ({
-        icon: Icon,
-        title,
-        sectionKey,
-        required: isRequired = false
-    }: {
-        icon: any;
-        title: string;
-        sectionKey: SectionKey;
-        required?: boolean;
-    }) => (
-        <button
-            type="button"
-            onClick={() => toggleSection(sectionKey)}
-            className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors rounded-t-lg border-b border-gray-200"
-        >
-            {expandedSections[sectionKey] ? (
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-            ) : (
-                <ChevronRight className="w-4 h-4 text-gray-500" />
-            )}
-            <Icon className="w-4 h-4 text-[#081429]" />
-            <span className="text-sm font-bold text-[#081429]">{title}</span>
-            {isRequired && <span className="text-red-500 text-xs">*</span>}
-        </button>
-    );
-
     // 입력 필드 클래스
     const inputClass = (hasError: boolean) =>
-        `w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] focus:outline-none ${
+        `flex-1 px-2 py-1 text-xs border focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none ${
             hasError ? 'border-red-400 bg-red-50' : 'border-gray-300'
         }`;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleClose}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={handleClose}>
             <div
-                className="bg-white rounded-xl shadow-2xl w-[600px] max-h-[90vh] overflow-hidden flex flex-col"
+                className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
-                <div className="p-3 border-b border-gray-200 flex items-center justify-between bg-[#081429] text-white rounded-t-xl shrink-0">
-                    <div className="flex items-center gap-2">
-                        <UserPlus size={18} />
-                        <h3 className="font-bold text-sm">새 학생 등록</h3>
-                    </div>
+                {/* 헤더 */}
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
+                        <UserPlus size={16} className="text-[#fdb813]" />
+                        새 학생 등록
+                    </h2>
                     <button
                         onClick={handleClose}
                         disabled={isSubmitting}
-                        className="text-white/70 hover:text-white transition-colors disabled:opacity-50"
+                        className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
                     >
                         <X size={18} />
                     </button>
                 </div>
 
                 {/* Form - Scrollable */}
-                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-                    <div className="p-4 space-y-3">
-                        {/* 기본 정보 섹션 */}
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                            <SectionHeader icon={User} title="기본 정보" sectionKey="basic" required />
-                            {expandedSections.basic && (
-                                <div className="p-3 space-y-2.5">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {/* 이름 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                이름 <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={values.name}
-                                                onChange={(e) => handleChange('name', e.target.value)}
-                                                onBlur={() => handleBlur('name')}
-                                                className={inputClass(touched.name && !!errors.name)}
-                                                placeholder="홍길동"
-                                                autoFocus
-                                            />
-                                            {touched.name && errors.name && (
-                                                <p className="mt-0.5 text-xs text-red-500">{errors.name}</p>
-                                            )}
-                                        </div>
-                                        {/* 영어 이름 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                영어 이름
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={values.englishName}
-                                                onChange={(e) => handleChange('englishName', e.target.value)}
-                                                className={inputClass(false)}
-                                                placeholder="Hong Gil Dong"
-                                            />
-                                        </div>
-                                    </div>
-                                    {/* 성별 */}
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            성별 <span className="text-red-500">*</span>
-                                        </label>
-                                        <div className="flex items-center gap-4">
-                                            <label className="flex items-center gap-1.5 cursor-pointer">
-                                                <input
-                                                    type="radio"
-                                                    name="gender"
-                                                    checked={values.gender === 'male'}
-                                                    onChange={() => handleChange('gender', 'male')}
-                                                    className="w-3.5 h-3.5 text-[#fdb813] focus:ring-[#fdb813]"
-                                                />
-                                                <span className="text-sm">남</span>
-                                            </label>
-                                            <label className="flex items-center gap-1.5 cursor-pointer">
-                                                <input
-                                                    type="radio"
-                                                    name="gender"
-                                                    checked={values.gender === 'female'}
-                                                    onChange={() => handleChange('gender', 'female')}
-                                                    className="w-3.5 h-3.5 text-[#fdb813] focus:ring-[#fdb813]"
-                                                />
-                                                <span className="text-sm">여</span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {/* Section 1: 기본 정보 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <User className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
                         </div>
-
-                        {/* 학교 정보 섹션 */}
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                            <SectionHeader icon={School} title="학교 정보" sectionKey="school" required />
-                            {expandedSections.school && (
-                                <div className="p-3">
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {/* 학교 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                학교 <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={values.school}
-                                                onChange={(e) => handleChange('school', e.target.value)}
-                                                onBlur={() => handleBlur('school')}
-                                                className={inputClass(touched.school && !!errors.school)}
-                                                placeholder="칠성초"
-                                            />
-                                            {touched.school && errors.school && (
-                                                <p className="mt-0.5 text-xs text-red-500">{errors.school}</p>
-                                            )}
-                                        </div>
-                                        {/* 학년 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                학년 <span className="text-red-500">*</span>
-                                            </label>
-                                            <select
-                                                value={values.grade}
-                                                onChange={(e) => handleChange('grade', e.target.value)}
-                                                onBlur={() => handleBlur('grade')}
-                                                className={inputClass(touched.grade && !!errors.grade)}
-                                            >
-                                                <option value="">선택</option>
-                                                {GRADE_OPTIONS.map(opt => (
-                                                    <option key={opt} value={opt}>{opt}</option>
-                                                ))}
-                                            </select>
-                                            {touched.grade && errors.grade && (
-                                                <p className="mt-0.5 text-xs text-red-500">{errors.grade}</p>
-                                            )}
-                                        </div>
-                                        {/* 졸업연도 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                졸업연도
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={values.graduationYear}
-                                                onChange={(e) => handleChange('graduationYear', e.target.value)}
-                                                className={inputClass(false)}
-                                                placeholder="2026"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 연락처 섹션 */}
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                            <SectionHeader icon={Phone} title="연락처" sectionKey="contact" />
-                            {expandedSections.contact && (
-                                <div className="p-3 space-y-2.5">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {/* 원생 휴대폰 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                원생 휴대폰
-                                            </label>
-                                            <input
-                                                type="tel"
-                                                value={values.studentPhone}
-                                                onChange={(e) => handleChange('studentPhone', e.target.value)}
-                                                onBlur={() => handleBlur('studentPhone')}
-                                                className={inputClass(touched.studentPhone && !!errors.studentPhone)}
-                                                placeholder="010-0000-0000"
-                                            />
-                                            {touched.studentPhone && errors.studentPhone && (
-                                                <p className="mt-0.5 text-xs text-red-500">{errors.studentPhone}</p>
-                                            )}
-                                        </div>
-                                        {/* 집전화 */}
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                집전화
-                                            </label>
-                                            <input
-                                                type="tel"
-                                                value={values.homePhone}
-                                                onChange={(e) => handleChange('homePhone', e.target.value)}
-                                                className={inputClass(false)}
-                                                placeholder="053-000-0000"
-                                            />
-                                        </div>
-                                    </div>
-                                    {/* 보호자 연락처 */}
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            보호자 연락처 (SMS 수신)
-                                        </label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="tel"
-                                                value={values.parentPhone}
-                                                onChange={(e) => handleChange('parentPhone', e.target.value)}
-                                                onBlur={() => handleBlur('parentPhone')}
-                                                className={`flex-1 ${inputClass(touched.parentPhone && !!errors.parentPhone)}`}
-                                                placeholder="010-0000-0000"
-                                            />
-                                            <select
-                                                value={values.parentRelation}
-                                                onChange={(e) => handleChange('parentRelation', e.target.value)}
-                                                className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#fdb813] focus:outline-none"
-                                            >
-                                                {RELATION_OPTIONS.map(opt => (
-                                                    <option key={opt} value={opt}>{opt}</option>
-                                                ))}
-                                            </select>
-                                            <input
-                                                type="text"
-                                                value={values.parentName}
-                                                onChange={(e) => handleChange('parentName', e.target.value)}
-                                                className="w-24 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#fdb813] focus:outline-none"
-                                                placeholder="보호자명"
-                                            />
-                                        </div>
-                                        {touched.parentPhone && errors.parentPhone && (
-                                            <p className="mt-0.5 text-xs text-red-500">{errors.parentPhone}</p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 주소 섹션 */}
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                            <SectionHeader icon={MapPin} title="주소" sectionKey="address" />
-                            {expandedSections.address && (
-                                <div className="p-3 space-y-2.5">
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                우편번호
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={values.zipCode}
-                                                onChange={(e) => handleChange('zipCode', e.target.value)}
-                                                className={inputClass(false)}
-                                                placeholder="12345"
-                                            />
-                                        </div>
-                                        <div className="col-span-2">
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                주소
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={values.address}
-                                                onChange={(e) => handleChange('address', e.target.value)}
-                                                className={inputClass(false)}
-                                                placeholder="대구 북구..."
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            상세주소
-                                        </label>
+                        <div className="divide-y divide-gray-100">
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">이름 <span className="text-red-500">*</span></span>
+                                <input
+                                    type="text"
+                                    value={values.name}
+                                    onChange={(e) => handleChange('name', e.target.value)}
+                                    onBlur={() => handleBlur('name')}
+                                    className={inputClass(touched.name && !!errors.name)}
+                                    placeholder="홍길동"
+                                    autoFocus
+                                />
+                                {touched.name && errors.name && (
+                                    <span className="text-xxs text-red-500 shrink-0">{errors.name}</span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">영어이름</span>
+                                <input
+                                    type="text"
+                                    value={values.englishName}
+                                    onChange={(e) => handleChange('englishName', e.target.value)}
+                                    className={inputClass(false)}
+                                    placeholder="Hong Gil Dong"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">성별 <span className="text-red-500">*</span></span>
+                                <div className="flex items-center gap-4">
+                                    <label className="flex items-center gap-1.5 cursor-pointer">
                                         <input
-                                            type="text"
-                                            value={values.addressDetail}
-                                            onChange={(e) => handleChange('addressDetail', e.target.value)}
-                                            className={inputClass(false)}
-                                            placeholder="상세주소"
+                                            type="radio"
+                                            name="gender"
+                                            checked={values.gender === 'male'}
+                                            onChange={() => handleChange('gender', 'male')}
+                                            className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
                                         />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 추가 정보 섹션 */}
-                        <div className="border border-gray-200 rounded-lg overflow-hidden">
-                            <SectionHeader icon={Cake} title="추가 정보" sectionKey="extra" />
-                            {expandedSections.extra && (
-                                <div className="p-3 space-y-2.5">
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                생년월일
-                                            </label>
-                                            <input
-                                                type="date"
-                                                value={values.birthDate}
-                                                onChange={(e) => handleChange('birthDate', e.target.value)}
-                                                className={inputClass(false)}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                닉네임
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={values.nickname}
-                                                onChange={(e) => handleChange('nickname', e.target.value)}
-                                                className={inputClass(false)}
-                                                placeholder="별명"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">
-                                                등록일
-                                            </label>
-                                            <input
-                                                type="date"
-                                                value={values.startDate}
-                                                onChange={(e) => handleChange('startDate', e.target.value)}
-                                                className={inputClass(false)}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            입학동기
-                                        </label>
+                                        <span className="text-xs">남</span>
+                                    </label>
+                                    <label className="flex items-center gap-1.5 cursor-pointer">
                                         <input
-                                            type="text"
-                                            value={values.enrollmentReason}
-                                            onChange={(e) => handleChange('enrollmentReason', e.target.value)}
-                                            className={inputClass(false)}
-                                            placeholder="추천, 블로그, 인터넷검색 등"
+                                            type="radio"
+                                            name="gender"
+                                            checked={values.gender === 'female'}
+                                            onChange={() => handleChange('gender', 'female')}
+                                            className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
                                         />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                                            메모
-                                        </label>
-                                        <textarea
-                                            value={values.memo}
-                                            onChange={(e) => handleChange('memo', e.target.value)}
-                                            className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-[#fdb813] focus:outline-none resize-none"
-                                            rows={2}
-                                            placeholder="특이사항이나 메모"
-                                        />
-                                    </div>
+                                        <span className="text-xs">여</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 2: 학교 정보 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <School className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">학교 정보</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">학교 <span className="text-red-500">*</span></span>
+                                <input
+                                    type="text"
+                                    value={values.school}
+                                    onChange={(e) => handleChange('school', e.target.value)}
+                                    onBlur={() => handleBlur('school')}
+                                    className={inputClass(touched.school && !!errors.school)}
+                                    placeholder="칠성초"
+                                />
+                                {touched.school && errors.school && (
+                                    <span className="text-xxs text-red-500 shrink-0">{errors.school}</span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">학년 <span className="text-red-500">*</span></span>
+                                <select
+                                    value={values.grade}
+                                    onChange={(e) => handleChange('grade', e.target.value)}
+                                    onBlur={() => handleBlur('grade')}
+                                    className={inputClass(touched.grade && !!errors.grade)}
+                                >
+                                    <option value="">선택</option>
+                                    {GRADE_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                                {touched.grade && errors.grade && (
+                                    <span className="text-xxs text-red-500 shrink-0">{errors.grade}</span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">졸업연도</span>
+                                <input
+                                    type="text"
+                                    value={values.graduationYear}
+                                    onChange={(e) => handleChange('graduationYear', e.target.value)}
+                                    className={inputClass(false)}
+                                    placeholder="2026"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 3: 연락처 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <Phone className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">연락처</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">원생폰</span>
+                                <input
+                                    type="tel"
+                                    value={values.studentPhone}
+                                    onChange={(e) => handleChange('studentPhone', e.target.value)}
+                                    onBlur={() => handleBlur('studentPhone')}
+                                    className={inputClass(touched.studentPhone && !!errors.studentPhone)}
+                                    placeholder="010-0000-0000"
+                                />
+                                {touched.studentPhone && errors.studentPhone && (
+                                    <span className="text-xxs text-red-500 shrink-0">{errors.studentPhone}</span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">집전화</span>
+                                <input
+                                    type="tel"
+                                    value={values.homePhone}
+                                    onChange={(e) => handleChange('homePhone', e.target.value)}
+                                    className={inputClass(false)}
+                                    placeholder="053-000-0000"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">보호자</span>
+                                <div className="flex gap-1 flex-1">
+                                    <input
+                                        type="tel"
+                                        value={values.parentPhone}
+                                        onChange={(e) => handleChange('parentPhone', e.target.value)}
+                                        onBlur={() => handleBlur('parentPhone')}
+                                        className={`${inputClass(touched.parentPhone && !!errors.parentPhone)} max-w-[140px]`}
+                                        placeholder="010-0000-0000"
+                                    />
+                                    <select
+                                        value={values.parentRelation}
+                                        onChange={(e) => handleChange('parentRelation', e.target.value)}
+                                        className="w-14 px-1 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                    >
+                                        {RELATION_OPTIONS.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                    <input
+                                        type="text"
+                                        value={values.parentName}
+                                        onChange={(e) => handleChange('parentName', e.target.value)}
+                                        className="w-20 px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                        placeholder="보호자명"
+                                    />
+                                </div>
+                            </div>
+                            {touched.parentPhone && errors.parentPhone && (
+                                <div className="px-2 py-1">
+                                    <span className="text-xxs text-red-500">{errors.parentPhone}</span>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Footer Buttons - Fixed */}
-                    <div className="sticky bottom-0 bg-white border-t border-gray-200 p-3 flex gap-2">
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            disabled={isSubmitting}
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                        >
-                            취소
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="flex-1 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg text-sm font-bold hover:bg-[#fdb813]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 size={16} className="animate-spin" />
-                                    <span>등록 중...</span>
-                                </>
-                            ) : (
-                                <span>학생 등록</span>
-                            )}
-                        </button>
+                    {/* Section 4: 주소 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <MapPin className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">주소</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">우편번호</span>
+                                <input
+                                    type="text"
+                                    value={values.zipCode}
+                                    onChange={(e) => handleChange('zipCode', e.target.value)}
+                                    className={`${inputClass(false)} max-w-[100px]`}
+                                    placeholder="12345"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">주소</span>
+                                <input
+                                    type="text"
+                                    value={values.address}
+                                    onChange={(e) => handleChange('address', e.target.value)}
+                                    className={inputClass(false)}
+                                    placeholder="대구 북구..."
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">상세주소</span>
+                                <input
+                                    type="text"
+                                    value={values.addressDetail}
+                                    onChange={(e) => handleChange('addressDetail', e.target.value)}
+                                    className={inputClass(false)}
+                                    placeholder="상세주소"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 5: 추가 정보 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <Cake className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">추가 정보</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">생년월일</span>
+                                <input
+                                    type="date"
+                                    value={values.birthDate}
+                                    onChange={(e) => handleChange('birthDate', e.target.value)}
+                                    className={`${inputClass(false)} max-w-[150px]`}
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">닉네임</span>
+                                <input
+                                    type="text"
+                                    value={values.nickname}
+                                    onChange={(e) => handleChange('nickname', e.target.value)}
+                                    className={inputClass(false)}
+                                    placeholder="별명"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">등록일</span>
+                                <input
+                                    type="date"
+                                    value={values.startDate}
+                                    onChange={(e) => handleChange('startDate', e.target.value)}
+                                    className={`${inputClass(false)} max-w-[150px]`}
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">입학동기</span>
+                                <input
+                                    type="text"
+                                    value={values.enrollmentReason}
+                                    onChange={(e) => handleChange('enrollmentReason', e.target.value)}
+                                    className={inputClass(false)}
+                                    placeholder="추천, 블로그, 인터넷검색 등"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 6: 메모 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <FileText className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">메모</h3>
+                        </div>
+                        <div className="p-2">
+                            <textarea
+                                value={values.memo}
+                                onChange={(e) => handleChange('memo', e.target.value)}
+                                className="w-full px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none resize-none"
+                                rows={2}
+                                placeholder="특이사항이나 메모"
+                            />
+                        </div>
                     </div>
                 </form>
+
+                {/* Footer */}
+                <div className="px-3 py-2 border-t border-gray-200 flex justify-end gap-2 bg-gray-50 shrink-0">
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        disabled={isSubmitting}
+                        className="px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    >
+                        취소
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="px-3 py-1.5 bg-[#fdb813] text-[#081429] text-xs font-semibold hover:bg-[#e5a60f] transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 size={14} className="animate-spin" />
+                                등록 중...
+                            </>
+                        ) : (
+                            '학생 등록'
+                        )}
+                    </button>
+                </div>
             </div>
         </div>
     );

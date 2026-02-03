@@ -133,7 +133,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
         </button>
 
         {showRoomDropdown && (
-          <div className="absolute top-full left-0 mt-1 z-50 bg-[#0d1f3c] border border-gray-600 rounded-lg shadow-xl p-3 min-w-[280px]">
+          <div className="absolute top-full left-0 mt-1 z-50 bg-[#0d1f3c] border border-gray-600 rounded-sm shadow-xl p-3 min-w-[280px]">
             {/* 전체 선택 */}
             <div className="mb-2 pb-2 border-b border-gray-700">
               <button
@@ -190,7 +190,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
         </button>
 
         {showSettings && (
-          <div className="absolute top-full left-0 mt-1 z-50 bg-[#0d1f3c] border border-gray-600 rounded-lg shadow-xl p-3 min-w-[280px]">
+          <div className="absolute top-full left-0 mt-1 z-50 bg-[#0d1f3c] border border-gray-600 rounded-sm shadow-xl p-3 min-w-[280px]">
             {/* 시간대 설정 */}
             <div className="mb-3 pb-2 border-b border-gray-700">
               <div className="text-xxs font-bold text-[#fdb813] mb-1.5">표시 시간대</div>
