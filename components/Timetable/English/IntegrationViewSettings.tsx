@@ -309,7 +309,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                         <span className="text-sm font-bold text-gray-800">
                             통합 시간표 뷰 설정
                         </span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                        <span className="text-xs px-2 py-0.5 rounded-sm bg-gray-100 text-gray-600 border border-gray-200">
                             실험 기능
                         </span>
                     </div>
@@ -325,7 +325,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                 {/* Content */}
                 <div className="flex-1 overflow-auto p-4 space-y-4 text-xs text-gray-800">
                     {/* 1. View Mode */}
-                    <section className="border border-gray-200 rounded-lg p-3 space-y-2">
+                    <section className="border border-gray-200 rounded-sm p-3 space-y-2">
                         <div className="font-bold text-gray-700 mb-1">뷰 모드</div>
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
@@ -350,13 +350,13 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                     </section>
 
                     {/* 2. Custom Group Settings */}
-                    <section className="border border-gray-200 rounded-lg p-3 space-y-3">
+                    <section className="border border-gray-200 rounded-sm p-3 space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="font-bold text-gray-700">커스텀 그룹 구성</span>
                             <button
                                 type="button"
                                 onClick={handleAddGroup}
-                                className="px-2 py-1 rounded border border-indigo-900 text-indigo-900 text-xs hover:bg-gray-50"
+                                className="px-2 py-1 rounded-sm border border-indigo-900 text-indigo-900 text-xs hover:bg-gray-50"
                             >
                                 + 그룹 추가
                             </button>
@@ -388,7 +388,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                     </section>
 
                     {/* 3. Others Group Options */}
-                    <section className="border border-gray-200 rounded-lg p-3 space-y-2">
+                    <section className="border border-gray-200 rounded-sm p-3 space-y-2">
                         <div className="flex items-center justify-between">
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input
@@ -408,7 +408,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                                     type="text"
                                     value={othersGroupTitle}
                                     onChange={handleOthersTitleChange}
-                                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
+                                    className="flex-1 border border-gray-300 rounded-sm px-2 py-1 text-xs"
                                 />
                             </div>
                         )}
@@ -418,7 +418,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                     </section>
 
                     {/* 4. Filter Hidden Teachers */}
-                    <section className="border border-gray-200 rounded-lg p-3 space-y-2">
+                    <section className="border border-gray-200 rounded-sm p-3 space-y-2">
                         <div className="flex items-center justify-between mb-2">
                             <span className="font-bold text-gray-700">강사 설정 (표시/숨김)</span>
                             <div className="text-xxs text-gray-400 space-x-2">
@@ -427,7 +427,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                             </div>
                         </div>
 
-                        <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="bg-gray-50 border border-gray-200 rounded-sm overflow-hidden">
                             {/* Header */}
                             <div className="flex items-center text-xxs font-bold text-gray-500 bg-gray-100 border-b border-gray-200 px-2 py-1.5">
                                 <div className="flex-1">강사명</div>
@@ -447,7 +447,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                                             {/* Name Badge */}
                                             <div className="flex-1 flex items-center">
                                                 <div
-                                                    className={`px-2 py-0.5 rounded text-xs font-bold border ${isScheduleHidden ? 'opacity-50 line-through' : ''}`}
+                                                    className={`px-2 py-0.5 rounded-sm text-xs font-bold border ${isScheduleHidden ? 'opacity-50 line-through' : ''}`}
                                                     style={{ backgroundColor: colors.bg, color: colors.text, borderColor: 'rgba(0,0,0,0.1)' }}
                                                 >
                                                     {teacher}
@@ -460,7 +460,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                                                     type="checkbox"
                                                     checked={isScheduleHidden || false}
                                                     onChange={() => handleToggleHiddenTeacher(teacher)}
-                                                    className="rounded border-gray-300 text-red-500 focus:ring-red-500 cursor-pointer"
+                                                    className="rounded-sm border-gray-300 text-red-500 focus:ring-red-500 cursor-pointer"
                                                     title="체크 시 시간표에서 숨김"
                                                 />
                                             </div>
@@ -471,7 +471,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                                                     type="checkbox"
                                                     checked={isLegendHidden || false}
                                                     onChange={() => handleToggleLegendTeacher(teacher)}
-                                                    className="rounded border-gray-300 text-gray-500 focus:ring-gray-500 cursor-pointer"
+                                                    className="rounded-sm border-gray-300 text-gray-500 focus:ring-gray-500 cursor-pointer"
                                                     title="체크 시 강사 목록에서 제외"
                                                 />
                                             </div>
@@ -493,7 +493,7 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-3 py-1.5 text-xs rounded border border-gray-300 text-gray-700 bg-white hover:bg-gray-100"
+                        className="px-3 py-1.5 text-xs rounded-sm border border-gray-300 text-gray-700 bg-white hover:bg-gray-100"
                     >
                         닫기
                     </button>
@@ -559,7 +559,7 @@ const GroupCard = React.memo<GroupCardProps>(({
     const checkedClassIds = group.classes || [];
 
     return (
-        <div className="border border-gray-200 rounded-md p-2 space-y-2 bg-white">
+        <div className="border border-gray-200 rounded-sm p-2 space-y-2 bg-white">
             {/* Group Title + Delete Button */}
             <div className="flex items-center justify-between gap-2">
                 <input
@@ -571,7 +571,7 @@ const GroupCard = React.memo<GroupCardProps>(({
                             onTitleChange(localTitle);
                         }
                     }}
-                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
+                    className="flex-1 border border-gray-300 rounded-sm px-2 py-1 text-xs"
                     placeholder="그룹 제목"
                 />
                 <div className="flex items-center gap-1">
@@ -579,7 +579,7 @@ const GroupCard = React.memo<GroupCardProps>(({
                         type="button"
                         onClick={onMoveUp}
                         disabled={isFirst}
-                        className={`p-1 rounded text-xs border ${isFirst ? 'text-gray-300 border-gray-200' : 'text-gray-500 border-gray-300 hover:bg-gray-50'}`}
+                        className={`p-1 rounded-sm text-xs border ${isFirst ? 'text-gray-300 border-gray-200' : 'text-gray-500 border-gray-300 hover:bg-gray-50'}`}
                         title="위로 이동"
                     >
                         ▲
@@ -588,7 +588,7 @@ const GroupCard = React.memo<GroupCardProps>(({
                         type="button"
                         onClick={onMoveDown}
                         disabled={isLast}
-                        className={`p-1 rounded text-xs border ${isLast ? 'text-gray-300 border-gray-200' : 'text-gray-500 border-gray-300 hover:bg-gray-50'}`}
+                        className={`p-1 rounded-sm text-xs border ${isLast ? 'text-gray-300 border-gray-200' : 'text-gray-500 border-gray-300 hover:bg-gray-50'}`}
                         title="아래로 이동"
                     >
                         ▼
@@ -596,7 +596,7 @@ const GroupCard = React.memo<GroupCardProps>(({
                     <button
                         type="button"
                         onClick={onDelete}
-                        className="ml-1 text-xs text-red-500 hover:text-red-600 px-2 py-1 border border-red-200 rounded hover:bg-red-50"
+                        className="ml-1 text-xs text-red-500 hover:text-red-600 px-2 py-1 border border-red-200 rounded-sm hover:bg-red-50"
                     >
                         삭제
                     </button>
@@ -604,18 +604,18 @@ const GroupCard = React.memo<GroupCardProps>(({
             </div>
 
             {/* Injae Period Toggle */}
-            <label className="flex items-center gap-2 text-xs cursor-pointer px-1 py-1.5 bg-amber-50 rounded border border-amber-200">
+            <label className="flex items-center gap-2 text-xs cursor-pointer px-1 py-1.5 bg-amber-50 rounded-sm border border-amber-200">
                 <input
                     type="checkbox"
                     checked={group.useInjaePeriod || false}
                     onChange={(e) => onToggleInjaePeriod(e.target.checked)}
-                    className="rounded border-amber-300 text-amber-600 focus:ring-amber-500 h-3 w-3"
+                    className="rounded-sm border-amber-300 text-amber-600 focus:ring-amber-500 h-3 w-3"
                 />
                 <span className="text-amber-700 font-medium">인재원 시간표 사용 (55분 단위)</span>
             </label>
 
             {/* Selected Classes (Ordered List) */}
-            <div className="space-y-1 bg-gray-50 p-2 rounded border border-gray-100">
+            <div className="space-y-1 bg-gray-50 p-2 rounded-sm border border-gray-100">
                 <div className="text-xxs text-gray-500 font-bold mb-1">
                     선택된 수업 (순서 변경 가능)
                 </div>
@@ -625,13 +625,13 @@ const GroupCard = React.memo<GroupCardProps>(({
                     </div>
                 )}
                 {checkedClassIds.map((classId, idx) => (
-                    <div key={`${classId}-${idx}`} className="flex items-center justify-between text-xs bg-white px-2 py-1.5 rounded border border-gray-200 shadow-sm">
+                    <div key={`${classId}-${idx}`} className="flex items-center justify-between text-xs bg-white px-2 py-1.5 rounded-sm border border-gray-200 shadow-sm">
                         <span className="font-medium text-gray-700 truncate flex-1">{classIdToName[classId] || classId}</span>
                         <div className="flex items-center gap-1 ml-2">
                             <button
                                 onClick={() => onMoveClass(idx, 'up')}
                                 disabled={idx === 0}
-                                className={`p-0.5 rounded ${idx === 0 ? 'text-gray-200' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                                className={`p-0.5 rounded-sm ${idx === 0 ? 'text-gray-200' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
                                 title="위로"
                             >
                                 ▲
@@ -639,7 +639,7 @@ const GroupCard = React.memo<GroupCardProps>(({
                             <button
                                 onClick={() => onMoveClass(idx, 'down')}
                                 disabled={idx === checkedClassIds.length - 1}
-                                className={`p-0.5 rounded ${idx === checkedClassIds.length - 1 ? 'text-gray-200' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                                className={`p-0.5 rounded-sm ${idx === checkedClassIds.length - 1 ? 'text-gray-200' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
                                 title="아래로"
                             >
                                 ▼
@@ -666,7 +666,7 @@ const GroupCard = React.memo<GroupCardProps>(({
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="수업 검색..."
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    className="w-full border border-gray-300 rounded-sm px-2 py-1 text-xs bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                 />
             </div>
 
@@ -689,7 +689,7 @@ const GroupCard = React.memo<GroupCardProps>(({
                         return (
                             <label
                                 key={entry.classId}
-                                className="flex items-center gap-2 cursor-pointer px-1 py-0.5 hover:bg-gray-50 rounded"
+                                className="flex items-center gap-2 cursor-pointer px-1 py-0.5 hover:bg-gray-50 rounded-sm"
                             >
                                 <input
                                     type="checkbox"
@@ -697,7 +697,7 @@ const GroupCard = React.memo<GroupCardProps>(({
                                     onChange={() =>
                                         onToggleClass(entry.classId, true)
                                     }
-                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-3 w-3"
+                                    className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500 h-3 w-3"
                                 />
                                 <span
                                     className={`truncate text-xs ${assignedToOther

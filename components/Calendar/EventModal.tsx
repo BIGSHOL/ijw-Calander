@@ -70,26 +70,25 @@ const EventModal: React.FC<EventModalProps> = ({
     templateEvent
   });
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 gap-4 p-4" onClick={onClose}>
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', transform: 'translateZ(0)', transition: 'none', zIndex: 9998, display: isOpen ? 'flex' : 'none' }} onClick={onClose}>
       {/* Main Event Modal */}
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-0 relative h-[90vh] overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-[#081429] p-4 flex justify-between items-center text-white">
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            {existingEvent ? (state.isViewMode ? <Eye size={20} className="text-[#fdb813]" /> : <Edit3 size={20} className="text-[#fdb813]" />) : <Plus size={20} className="text-[#fdb813]" />}
+      <div className="bg-white rounded-sm shadow-xl max-w-2xl relative max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        {/* Header - StudentDetailModal 스타일 */}
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
+            {existingEvent ? (state.isViewMode ? <Eye size={16} className="text-[#fdb813]" /> : <Edit3 size={16} className="text-[#fdb813]" />) : <Plus size={16} className="text-[#fdb813]" />}
             {state.isViewMode ? '일정 상세' : (existingEvent ? '일정 수정' : '새 일정 추가')}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <X size={24} />
+            <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={state.handleSubmit} className="p-6 space-y-3 overflow-y-auto h-[calc(90vh-64px)]">
+        <form onSubmit={state.handleSubmit} className="flex-1 overflow-y-auto p-3 space-y-3">
           <EventFormFields
             title={state.title}
             description={state.description}
@@ -192,17 +191,19 @@ const EventModal: React.FC<EventModalProps> = ({
       </div>
 
       {/* Seminar Management Side Panel */}
-      <div onClick={(e) => e.stopPropagation()}>
-        <SeminarPanel
-          isOpen={state.isPanelOpen}
-          eventTitle={state.title}
-          seminarData={state.seminarData}
-          students={state.students}
-          users={users}
-          onClose={() => state.setIsPanelOpen(false)}
-          onUpdateSeminarData={(data) => state.setSeminarData(data)}
-        />
-      </div>
+      {state.isPanelOpen && (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2" onClick={(e) => e.stopPropagation()}>
+          <SeminarPanel
+            isOpen={state.isPanelOpen}
+            eventTitle={state.title}
+            seminarData={state.seminarData}
+            students={state.students}
+            users={users}
+            onClose={() => state.setIsPanelOpen(false)}
+            onUpdateSeminarData={(data) => state.setSeminarData(data)}
+          />
+        </div>
+      )}
     </div>
   );
 };

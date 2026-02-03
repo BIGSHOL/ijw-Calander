@@ -30,7 +30,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
 
   return (
     <nav 
-      className="flex bg-black/20 p-0.5 rounded-lg border border-white/5" 
+      className="flex bg-black/20 p-0.5 rounded-sm border border-white/5" 
       role="navigation"
       aria-label="주 메뉴 탐색"
     >

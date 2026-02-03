@@ -1221,13 +1221,13 @@ const App: React.FC = () => {
             <div className="fixed bottom-6 right-6 z-50 flex gap-3 animate-in slide-in-from-bottom-4 duration-300">
               <button
                 onClick={handleCancelPendingMoves}
-                className="px-4 py-3 bg-white text-gray-700 rounded-xl font-bold shadow-lg border border-gray-200 hover:bg-gray-50 transition-all flex items-center gap-2"
+                className="px-4 py-3 bg-white text-gray-700 rounded-sm font-bold shadow-lg border border-gray-200 hover:bg-gray-50 transition-all flex items-center gap-2"
               >
                 취소
               </button>
               <button
                 onClick={handleSavePendingMoves}
-                className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-xl font-bold shadow-lg hover:brightness-110 transition-all flex items-center gap-2"
+                className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-sm font-bold shadow-lg hover:brightness-110 transition-all flex items-center gap-2"
               >
                 <span className="bg-[#081429] text-white px-2 py-0.5 rounded-full text-xs font-black">{pendingEventMoves.length}</span>
                 변경사항 저장

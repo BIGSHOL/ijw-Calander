@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot, doc, getDocs, writeBatch, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
-import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, FileText, GitCompare, Upload } from 'lucide-react';
+import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, FileText, GitCompare, Upload, CalendarClock } from 'lucide-react';
 import { ScenarioEntry } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useMathSimulationOptional } from './context/SimulationContext';
@@ -71,6 +71,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
     const [editingDesc, setEditingDesc] = useState('');
+    const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
 
     // Save Dialog State
     const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
@@ -404,228 +405,335 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
         }
     };
 
+    const selectedScenario = selectedScenarioId ? scenarios.find(s => s.id === selectedScenarioId) : null;
+
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh] p-4" onClick={onClose}>
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b bg-purple-600 text-white rounded-t-xl">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <div className="flex items-center gap-2">
-                        <FileText size={20} />
-                        <h2 className="font-bold text-lg">시나리오 관리</h2>
-                        <span className="text-xs bg-purple-500 px-2 py-0.5 rounded-full">{scenarios.length}개</span>
+                        <FileText size={18} />
+                        <h2 className="text-sm font-bold text-[#081429]">시나리오 관리</h2>
+                        <span className="text-xs bg-purple-500 px-2 py-0.5 rounded-sm text-white">{scenarios.length}개</span>
                     </div>
-                    <button onClick={onClose} className="text-purple-200 hover:text-white transition-colors">
-                        <X size={20} />
+                    <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                        <X size={18} />
                     </button>
-                </div>
-
-                {/* Action Bar */}
-                <div className="p-3 border-b bg-purple-50 flex items-center justify-end gap-2">
-                    {isSimulationMode && canEdit && (
-                        <button
-                            onClick={() => setIsSaveDialogOpen(true)}
-                            disabled={activeOperation !== null}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition-colors"
-                        >
-                            <Save size={14} />
-                            현재 상태 저장
-                        </button>
-                    )}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {loading ? (
                         <div className="flex items-center justify-center py-12 text-gray-400">
-                            <div className="animate-spin w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full mr-2" />
+                            <div className="animate-spin w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-sm mr-2" />
                             로딩 중...
                         </div>
-                    ) : scenarios.length === 0 ? (
-                        <div className="text-center py-12 text-gray-400">
-                            <FileText size={48} className="mx-auto mb-3 opacity-30" />
-                            <p className="font-medium">저장된 시나리오가 없습니다.</p>
-                            <p className="text-sm mt-1">시뮬레이션 모드에서 "현재 상태 저장"을 눌러 시나리오를 생성하세요.</p>
-                        </div>
                     ) : (
-                        scenarios.map((scenario, index) => {
-                            const validation = validateScenarioData(scenario);
-                            const isLatest = index === 0;
-                            const isOwner = scenario.createdByUid === currentUser?.uid;
-                            const canModify = isMaster || isOwner || canManageSimulation;
-                            const isBackup = scenario.id.startsWith('backup_');
+                        <>
+                            {/* Section 1: 시나리오 목록 */}
+                            <div className="bg-white border border-gray-200 overflow-hidden">
+                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                    <FileText className="w-3 h-3 text-[#081429]" />
+                                    <h3 className="text-[#081429] font-bold text-xs">시나리오 목록</h3>
+                                    <span className="text-xs text-gray-400 ml-auto">{scenarios.length}개</span>
+                                </div>
+                                <div className="p-2 space-y-2 max-h-[300px] overflow-y-auto">
+                                    {scenarios.length === 0 ? (
+                                        <div className="text-center py-8 text-gray-400">
+                                            <FileText size={32} className="mx-auto mb-2 opacity-30" />
+                                            <p className="text-xs font-medium">저장된 시나리오가 없습니다.</p>
+                                            <p className="text-xxs mt-1">시뮬레이션 모드에서 새 시나리오를 저장하세요.</p>
+                                        </div>
+                                    ) : (
+                                        scenarios.map((scenario, index) => {
+                                            const validation = validateScenarioData(scenario);
+                                            const isLatest = index === 0;
+                                            const isBackup = scenario.id.startsWith('backup_');
+                                            const isSelected = selectedScenarioId === scenario.id;
 
-                            return (
-                                <div
-                                    key={scenario.id}
-                                    className={`p-3 rounded-lg border transition-colors ${
-                                        !validation.isValid
-                                            ? 'bg-red-50 border-red-200'
-                                            : isLatest
-                                                ? 'bg-blue-50 border-blue-200'
-                                                : 'bg-white border-gray-200 hover:border-gray-300'
-                                    }`}
-                                >
-                                    {/* Name + Badges */}
-                                    <div className="flex items-center gap-2 mb-1">
-                                        {editingId === scenario.id ? (
-                                            <input
-                                                type="text"
-                                                value={editingName}
-                                                onChange={e => setEditingName(e.target.value)}
-                                                className="flex-1 px-2 py-1 border rounded text-sm font-bold"
-                                                autoFocus
-                                            />
-                                        ) : (
-                                            <span className="font-bold text-gray-800">{scenario.name}</span>
-                                        )}
-                                        {isLatest && <span className="text-xxs bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold">최신</span>}
-                                        {isBackup && <span className="text-xxs bg-gray-500 text-white px-1.5 py-0.5 rounded font-bold">자동 백업</span>}
-                                        {!validation.isValid && <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded font-bold">손상됨</span>}
+                                            return (
+                                                <div
+                                                    key={scenario.id}
+                                                    onClick={() => setSelectedScenarioId(isSelected ? null : scenario.id)}
+                                                    className={`p-2 rounded-sm border cursor-pointer transition-all ${
+                                                        !validation.isValid
+                                                            ? 'bg-red-50 border-red-200'
+                                                            : isSelected
+                                                                ? 'bg-purple-50 border-purple-300 shadow-sm'
+                                                                : isLatest
+                                                                    ? 'bg-blue-50 border-blue-200 hover:border-blue-300'
+                                                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-sm text-gray-800 flex-1">{scenario.name}</span>
+                                                        {isLatest && <span className="text-xxs bg-blue-500 text-white px-1.5 py-0.5 rounded-sm font-bold">최신</span>}
+                                                        {isBackup && <span className="text-xxs bg-gray-500 text-white px-1.5 py-0.5 rounded-sm font-bold">백업</span>}
+                                                        {!validation.isValid && <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded-sm font-bold">손상됨</span>}
+                                                    </div>
+                                                    {scenario.description && (
+                                                        <p className="text-xs text-gray-500 mt-1">{scenario.description}</p>
+                                                    )}
+                                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xxs text-gray-400 mt-1">
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock size={10} />
+                                                            {formatDate(scenario.createdAt)}
+                                                        </span>
+                                                        <span className="flex items-center gap-1">
+                                                            <User size={10} />
+                                                            {scenario.createdBy}
+                                                        </span>
+                                                        {scenario.stats && (
+                                                            <span>
+                                                                수업 {scenario.stats.classCount}개 / 학생 {scenario.stats.studentCount}명
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Section 2: 선택한 시나리오 정보 */}
+                            {selectedScenario && (
+                                <div className="bg-white border border-gray-200 overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                        <FileText className="w-3 h-3 text-[#081429]" />
+                                        <h3 className="text-[#081429] font-bold text-xs">선택한 시나리오 정보</h3>
                                     </div>
+                                    <div className="divide-y divide-gray-100">
+                                        {/* Name Row */}
+                                        <div className="flex items-center gap-2 px-2 py-1.5">
+                                            <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">이름</span>
+                                            {editingId === selectedScenario.id ? (
+                                                <input
+                                                    type="text"
+                                                    value={editingName}
+                                                    onChange={e => setEditingName(e.target.value)}
+                                                    className="flex-1 px-2 py-1 border rounded-sm text-xs font-bold"
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <span className="flex-1 text-xs text-[#081429] font-bold">{selectedScenario.name}</span>
+                                            )}
+                                        </div>
 
-                                    {/* Description */}
-                                    {editingId === scenario.id ? (
-                                        <textarea
-                                            value={editingDesc}
-                                            onChange={e => setEditingDesc(e.target.value)}
-                                            placeholder="설명 (선택사항)"
-                                            className="w-full px-2 py-1 border rounded text-xs mb-2 resize-none"
-                                            rows={2}
-                                        />
-                                    ) : scenario.description ? (
-                                        <p className="text-xs text-gray-500 mb-2">{scenario.description}</p>
-                                    ) : null}
+                                        {/* Description Row */}
+                                        <div className="flex items-start gap-2 px-2 py-1.5">
+                                            <span className="w-16 shrink-0 text-xs font-medium text-[#373d41] mt-1">설명</span>
+                                            {editingId === selectedScenario.id ? (
+                                                <textarea
+                                                    value={editingDesc}
+                                                    onChange={e => setEditingDesc(e.target.value)}
+                                                    placeholder="설명 (선택사항)"
+                                                    className="flex-1 px-2 py-1 border rounded-sm text-xs resize-none"
+                                                    rows={2}
+                                                />
+                                            ) : (
+                                                <span className="flex-1 text-xs text-gray-500">
+                                                    {selectedScenario.description || '(설명 없음)'}
+                                                </span>
+                                            )}
+                                        </div>
 
-                                    {/* Metadata */}
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-2">
-                                        <span className="flex items-center gap-1">
-                                            <Clock size={10} />
-                                            {formatDate(scenario.createdAt)}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <User size={10} />
-                                            {scenario.createdBy}
-                                        </span>
-                                        {scenario.stats && (
-                                            <span>
-                                                시간표 {scenario.stats.timetableDocCount}개 / 수업 {scenario.stats.classCount}개 / 학생 {scenario.stats.studentCount}명
+                                        {/* Stats Row */}
+                                        {selectedScenario.stats && (
+                                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">통계</span>
+                                                <div className="flex-1 flex gap-3 text-xs text-gray-600">
+                                                    <span>수업: <strong>{selectedScenario.stats.classCount}개</strong></span>
+                                                    <span>학생: <strong>{selectedScenario.stats.studentCount}명</strong></span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Created By Row */}
+                                        <div className="flex items-center gap-2 px-2 py-1.5">
+                                            <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">작성자</span>
+                                            <span className="flex-1 text-xs text-gray-600 flex items-center gap-1">
+                                                <User size={10} />
+                                                {selectedScenario.createdBy}
                                             </span>
+                                        </div>
+
+                                        {/* Created At Row */}
+                                        <div className="flex items-center gap-2 px-2 py-1.5">
+                                            <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">생성일</span>
+                                            <span className="flex-1 text-xs text-gray-600 flex items-center gap-1">
+                                                <Clock size={10} />
+                                                {formatDate(selectedScenario.createdAt)}
+                                            </span>
+                                        </div>
+
+                                        {/* Scheduled Apply Date (if exists) */}
+                                        {(selectedScenario as any).scheduledApplyDate && (
+                                            <div className="flex items-center gap-2 px-2 py-1.5 bg-amber-50">
+                                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">예정 반영</span>
+                                                <span className="flex-1 text-xs text-amber-700 flex items-center gap-1">
+                                                    <CalendarClock size={10} />
+                                                    {formatDate((selectedScenario as any).scheduledApplyDate)}
+                                                </span>
+                                            </div>
                                         )}
                                     </div>
 
-                                    {/* Actions */}
-                                    <div className="flex items-center gap-2">
-                                        {editingId === scenario.id ? (
-                                            <>
-                                                <button
-                                                    onClick={() => handleUpdateScenario(scenario.id)}
-                                                    className="flex items-center gap-1 px-2 py-1 bg-green-500 text-white rounded text-xs font-bold hover:bg-green-600"
-                                                >
-                                                    <Check size={12} />
-                                                    저장
-                                                </button>
-                                                <button
-                                                    onClick={() => { setEditingId(null); setEditingName(''); setEditingDesc(''); }}
-                                                    className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300"
-                                                >
-                                                    취소
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                {isSimulationMode && canEdit && validation.isValid && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleLoadScenario(scenario)}
-                                                            disabled={activeOperation !== null}
-                                                            className="flex items-center gap-1 px-2 py-1 bg-blue-500 text-white rounded text-xs font-bold hover:bg-blue-600 disabled:opacity-50"
-                                                        >
-                                                            {activeOperation === scenario.id ? (
-                                                                <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
-                                                            ) : (
-                                                                <Download size={12} />
-                                                            )}
-                                                            불러오기
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleOverwriteScenario(scenario)}
-                                                            disabled={activeOperation !== null}
-                                                            className="flex items-center gap-1 px-2 py-1 bg-orange-500 text-white rounded text-xs font-bold hover:bg-orange-600 disabled:opacity-50"
-                                                            title="현재 상태를 이 시나리오에 덮어쓰기"
-                                                        >
-                                                            {activeOperation === `overwrite_${scenario.id}` ? (
-                                                                <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
-                                                            ) : (
-                                                                <Upload size={12} />
-                                                            )}
-                                                            덮어쓰기
-                                                        </button>
-                                                    </>
-                                                )}
-                                                {canModify && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingId(scenario.id);
-                                                            setEditingName(scenario.name);
-                                                            setEditingDesc(scenario.description || '');
-                                                        }}
-                                                        className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
-                                                        title="편집"
-                                                    >
-                                                        <Pencil size={14} />
-                                                    </button>
-                                                )}
-                                                {canManageSimulation && (
-                                                    <button
-                                                        onClick={() => handleDeleteScenario(scenario)}
-                                                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                                                        title="삭제"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {/* Error display */}
-                                    {!validation.isValid && (
-                                        <div className="mt-2 p-2 bg-red-100 rounded text-xs text-red-700 flex items-center gap-1">
-                                            <AlertTriangle size={12} />
-                                            {validation.error}
+                                    {/* Edit Actions */}
+                                    {editingId === selectedScenario.id && (
+                                        <div className="flex items-center gap-2 px-2 py-2 bg-gray-50 border-t">
+                                            <button
+                                                onClick={() => handleUpdateScenario(selectedScenario.id)}
+                                                className="flex items-center gap-1 px-2 py-1 bg-green-500 text-white rounded-sm text-xs font-bold hover:bg-green-600"
+                                            >
+                                                <Check size={12} />
+                                                저장
+                                            </button>
+                                            <button
+                                                onClick={() => { setEditingId(null); setEditingName(''); setEditingDesc(''); }}
+                                                className="px-2 py-1 bg-gray-200 text-gray-700 rounded-sm text-xs font-bold hover:bg-gray-300"
+                                            >
+                                                취소
+                                            </button>
                                         </div>
                                     )}
                                 </div>
-                            );
-                        })
+                            )}
+
+                            {/* Section 3: 새 시나리오 저장 */}
+                            {isSimulationMode && canEdit && (
+                                <div className="bg-white border border-gray-200 overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                        <Save className="w-3 h-3 text-[#081429]" />
+                                        <h3 className="text-[#081429] font-bold text-xs">새 시나리오 저장</h3>
+                                    </div>
+                                    <div className="p-3">
+                                        <p className="text-xs text-gray-500 mb-2">현재 시뮬레이션 상태를 새 시나리오로 저장합니다.</p>
+                                        <button
+                                            onClick={() => setIsSaveDialogOpen(true)}
+                                            disabled={activeOperation !== null}
+                                            className="w-full flex items-center justify-center gap-1 px-3 py-2 bg-purple-600 text-white rounded-sm text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                                        >
+                                            <Save size={14} />
+                                            현재 상태 저장
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Section 4: 작업 */}
+                            {selectedScenario && (
+                                <div className="bg-white border border-gray-200 overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                        <GitCompare className="w-3 h-3 text-[#081429]" />
+                                        <h3 className="text-[#081429] font-bold text-xs">작업</h3>
+                                    </div>
+                                    <div className="p-3">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {/* Load Button */}
+                                            {isSimulationMode && canEdit && validateScenarioData(selectedScenario).isValid && (
+                                                <button
+                                                    onClick={() => handleLoadScenario(selectedScenario)}
+                                                    disabled={activeOperation !== null}
+                                                    className="flex items-center justify-center gap-1 px-3 py-2 bg-blue-500 text-white rounded-sm text-xs font-bold hover:bg-blue-600 disabled:opacity-50 transition-colors"
+                                                >
+                                                    {activeOperation === selectedScenario.id ? (
+                                                        <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-sm" />
+                                                    ) : (
+                                                        <Download size={12} />
+                                                    )}
+                                                    불러오기
+                                                </button>
+                                            )}
+
+                                            {/* Overwrite Button */}
+                                            {isSimulationMode && canEdit && (
+                                                <button
+                                                    onClick={() => handleOverwriteScenario(selectedScenario)}
+                                                    disabled={activeOperation !== null}
+                                                    className="flex items-center justify-center gap-1 px-3 py-2 bg-orange-500 text-white rounded-sm text-xs font-bold hover:bg-orange-600 disabled:opacity-50 transition-colors"
+                                                    title="현재 상태를 이 시나리오에 덮어쓰기"
+                                                >
+                                                    {activeOperation === `overwrite_${selectedScenario.id}` ? (
+                                                        <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-sm" />
+                                                    ) : (
+                                                        <Upload size={12} />
+                                                    )}
+                                                    덮어쓰기
+                                                </button>
+                                            )}
+
+                                            {/* Edit Button */}
+                                            {(() => {
+                                                const isOwner = selectedScenario.createdByUid === currentUser?.uid;
+                                                const canModify = isMaster || isOwner || canManageSimulation;
+                                                return canModify && editingId !== selectedScenario.id && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingId(selectedScenario.id);
+                                                            setEditingName(selectedScenario.name);
+                                                            setEditingDesc(selectedScenario.description || '');
+                                                        }}
+                                                        className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-500 text-white rounded-sm text-xs font-bold hover:bg-gray-600 transition-colors"
+                                                    >
+                                                        <Pencil size={12} />
+                                                        편집
+                                                    </button>
+                                                );
+                                            })()}
+
+                                            {/* Delete Button */}
+                                            {canManageSimulation && (
+                                                <button
+                                                    onClick={() => handleDeleteScenario(selectedScenario)}
+                                                    className="flex items-center justify-center gap-1 px-3 py-2 bg-red-500 text-white rounded-sm text-xs font-bold hover:bg-red-600 transition-colors"
+                                                >
+                                                    <Trash2 size={12} />
+                                                    삭제
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Error display */}
+                                        {!validateScenarioData(selectedScenario).isValid && (
+                                            <div className="mt-2 p-2 bg-red-100 rounded-sm text-xs text-red-700 flex items-center gap-1">
+                                                <AlertTriangle size={12} />
+                                                {validateScenarioData(selectedScenario).error}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="p-3 border-t bg-gray-50 text-xs text-gray-500 text-center rounded-b-xl">
+                <div className="p-3 border-t bg-gray-50 text-xs text-gray-500 text-center">
                     시나리오는 Draft 컬렉션에만 적용됩니다. 실제 시간표에 반영하려면 "실제 반영" 버튼을 사용하세요.
                 </div>
             </div>
 
             {/* Save Dialog Overlay */}
             {isSaveDialogOpen && (
-                <div className="fixed inset-0 bg-black/30 z-[60] flex items-center justify-center p-4" onClick={() => setIsSaveDialogOpen(false)}>
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh] p-4" onClick={() => setIsSaveDialogOpen(false)}>
+                    <div className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden p-5" onClick={e => e.stopPropagation()}>
                         <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                             <Save size={18} className="text-purple-600" />
                             시나리오 저장
                         </h3>
                         <div className="space-y-3">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">시나리오 이름 *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">시나리오 이름 <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     value={newScenarioName}
                                     onChange={e => setNewScenarioName(e.target.value)}
                                     placeholder="예: 1월 시간표 확정안"
-                                    className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-3 py-2 border rounded-sm text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                     autoFocus
                                 />
                             </div>
@@ -636,21 +744,21 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                     onChange={e => setNewScenarioDesc(e.target.value)}
                                     placeholder="예: 신입생 3명 추가, B반 시간 변경 반영"
                                     rows={3}
-                                    className="w-full px-3 py-2 border rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-3 py-2 border rounded-sm text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                 />
                             </div>
                         </div>
                         <div className="flex justify-end gap-2 mt-5">
                             <button
                                 onClick={() => { setIsSaveDialogOpen(false); setNewScenarioName(''); setNewScenarioDesc(''); }}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-300 transition-colors"
+                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-sm text-sm font-bold hover:bg-gray-300 transition-colors"
                             >
                                 취소
                             </button>
                             <button
                                 onClick={handleSaveScenario}
                                 disabled={activeOperation === 'saving' || !newScenarioName.trim()}
-                                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                                className="px-4 py-2 bg-purple-600 text-white rounded-sm text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition-colors"
                             >
                                 {activeOperation === 'saving' ? '저장 중...' : '저장'}
                             </button>

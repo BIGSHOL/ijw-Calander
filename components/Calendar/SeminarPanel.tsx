@@ -122,7 +122,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
     <>
       {/* Side Panel */}
       <div
-        className={`bg-white rounded-2xl shadow-2xl w-96 h-[90vh] border border-gray-200 transform transition-all duration-300 ease-in-out ${
+        className={`bg-white rounded-sm shadow-2xl w-96 h-[90vh] border border-gray-200 transform transition-all duration-300 ease-in-out ${
           isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
@@ -135,7 +135,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-white/80 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-white/80 rounded-sm transition-colors"
             >
               <X size={20} className="text-gray-600" />
             </button>
@@ -152,7 +152,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
           {/* Fixed Header - 연사 정보 & 참석 현황 */}
           <div className="p-4 space-y-3 border-b border-gray-200 bg-gray-50">
             {/* 연사 정보 */}
-            <div className="bg-purple-50 rounded-xl p-3 border border-purple-200">
+            <div className="bg-purple-50 rounded-sm p-3 border border-purple-200">
               <h4 className="text-sm font-bold text-purple-900 mb-2">연사 정보</h4>
               <div className="space-y-2">
                 <div>
@@ -162,7 +162,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                     value={speaker}
                     onChange={(e) => setSpeaker(e.target.value)}
                     placeholder="연사 이름"
-                    className="w-full px-3 py-1.5 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                    className="w-full px-3 py-1.5 border border-purple-300 rounded-sm text-sm focus:ring-2 focus:ring-purple-500 outline-none"
                   />
                 </div>
                 <div>
@@ -172,7 +172,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                     value={speakerContact}
                     onChange={(e) => setSpeakerContact(e.target.value)}
                     placeholder="010-0000-0000"
-                    className="w-full px-3 py-1.5 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                    className="w-full px-3 py-1.5 border border-purple-300 rounded-sm text-sm focus:ring-2 focus:ring-purple-500 outline-none"
                   />
                 </div>
                 <div>
@@ -182,23 +182,23 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                     onChange={(e) => setSpeakerBio(e.target.value)}
                     placeholder="연사 소개"
                     rows={2}
-                    className="w-full px-3 py-1.5 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none resize-none"
+                    className="w-full px-3 py-1.5 border border-purple-300 rounded-sm text-sm focus:ring-2 focus:ring-purple-500 outline-none resize-none"
                   />
                 </div>
               </div>
             </div>
 
             {/* 참석 현황 - Compact */}
-            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-2.5 border border-purple-200">
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-sm p-2.5 border border-purple-200">
               <h4 className="text-xs font-bold text-purple-900 mb-1.5">참석 현황</h4>
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white rounded-lg p-2 text-center">
+                <div className="bg-white rounded-sm p-2 text-center">
                   <div className="text-xl font-bold text-purple-600">
                     {attendees.length}
                   </div>
                   <div className="text-xs text-gray-500">총 참석자</div>
                 </div>
-                <div className="bg-white rounded-lg p-2 text-center">
+                <div className="bg-white rounded-sm p-2 text-center">
                   <div className="text-xl font-bold text-blue-600">
                     {attendees.filter(a => a.isCurrentStudent).length}
                   </div>
@@ -217,7 +217,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                 <h4 className="text-sm font-bold text-gray-700">참석자 목록</h4>
                 <button
                   onClick={() => setIsAddingAttendee(true)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-sm text-xs font-bold hover:bg-purple-700 transition-colors"
                 >
                   <UserPlus size={14} />
                   추가
@@ -233,14 +233,14 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                     value={attendeeSearch}
                     onChange={(e) => setAttendeeSearch(e.target.value)}
                     placeholder="참석자 이름 또는 전화번호 검색"
-                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-purple-500 outline-none"
                   />
                 </div>
               )}
 
               {/* 참석자 추가 폼 */}
               {isAddingAttendee && (
-                <div className="bg-white rounded-lg border-2 border-purple-300 p-4 space-y-3">
+                <div className="bg-white rounded-sm border-2 border-purple-300 p-4 space-y-3">
                   <div className="flex items-center justify-between mb-2">
                     <h5 className="text-sm font-bold text-gray-900">새 참석자</h5>
                     <button
@@ -256,7 +256,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
 
                   {/* 재원생 여부 */}
                   <div className="flex gap-2">
-                    <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border-2 rounded-lg cursor-pointer transition-colors"
+                    <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border-2 rounded-sm cursor-pointer transition-colors"
                       style={{
                         borderColor: newAttendee.isCurrentStudent === false ? '#9333ea' : '#e5e7eb',
                         backgroundColor: newAttendee.isCurrentStudent === false ? '#f3e8ff' : '#fff'
@@ -271,7 +271,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                       />
                       <span className="text-sm font-bold">비재원생</span>
                     </label>
-                    <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border-2 rounded-lg cursor-pointer transition-colors"
+                    <label className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border-2 rounded-sm cursor-pointer transition-colors"
                       style={{
                         borderColor: newAttendee.isCurrentStudent === true ? '#9333ea' : '#e5e7eb',
                         backgroundColor: newAttendee.isCurrentStudent === true ? '#f3e8ff' : '#fff'
@@ -297,10 +297,10 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                         value={studentSearch}
                         onChange={(e) => setStudentSearch(e.target.value)}
                         placeholder="학생 이름 검색"
-                        className="w-full pl-9 pr-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                        className="w-full pl-9 pr-3 py-2 border border-purple-300 rounded-sm text-sm focus:ring-2 focus:ring-purple-500 outline-none"
                       />
                       {studentSearch && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-purple-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-purple-300 rounded-sm shadow-lg max-h-48 overflow-y-auto">
                           {filteredStudents.length > 0 ? (
                             filteredStudents.slice(0, 10).map((student) => (
                               <button
@@ -330,7 +330,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                         value={newAttendee.name || ''}
                         onChange={(e) => setNewAttendee({ ...newAttendee, name: e.target.value })}
                         placeholder="이름 *"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm"
                         disabled={newAttendee.isCurrentStudent && !!newAttendee.studentId}
                       />
                     </div>
@@ -340,7 +340,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                         value={newAttendee.phone || ''}
                         onChange={(e) => setNewAttendee({ ...newAttendee, phone: e.target.value })}
                         placeholder="전화번호 *"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm"
                       />
                     </div>
                   </div>
@@ -352,7 +352,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                         <select
                           value={newAttendee.gender || ''}
                           onChange={(e) => setNewAttendee({ ...newAttendee, gender: e.target.value as any })}
-                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          className="px-3 py-2 border border-gray-300 rounded-sm text-sm"
                         >
                           <option value="">성별</option>
                           <option value="male">남</option>
@@ -361,7 +361,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                         <select
                           value={newAttendee.ageGroup || ''}
                           onChange={(e) => setNewAttendee({ ...newAttendee, ageGroup: e.target.value as any })}
-                          className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          className="px-3 py-2 border border-gray-300 rounded-sm text-sm"
                         >
                           <option value="">연령대</option>
                           <option value="elementary">초등</option>
@@ -375,14 +375,14 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                         value={newAttendee.grade || ''}
                         onChange={(e) => setNewAttendee({ ...newAttendee, grade: e.target.value })}
                         placeholder="학년 (예: 초6, 중2)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm"
                       />
                       <input
                         type="text"
                         value={newAttendee.address || ''}
                         onChange={(e) => setNewAttendee({ ...newAttendee, address: e.target.value })}
                         placeholder="주소 (간략히)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm"
                       />
                     </div>
                   )}
@@ -394,7 +394,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                       value={newAttendee.registrationSource || ''}
                       onChange={(e) => setNewAttendee({ ...newAttendee, registrationSource: e.target.value })}
                       placeholder="신청 경로 (예: 지인소개, 온라인)"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm"
                     />
                     <label className="flex items-center gap-2">
                       <input
@@ -419,7 +419,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                           assignedStaffName: teacher ? teacher.email.split('@')[0] : undefined
                         });
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm"
                     >
                       <option value="">담당 선생님 선택</option>
                       {users.map((user) => (
@@ -436,13 +436,13 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                     onChange={(e) => setNewAttendee({ ...newAttendee, memo: e.target.value })}
                     placeholder="메모"
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm resize-none"
                   />
 
                   {/* 저장 버튼 */}
                   <button
                     onClick={handleAddAttendee}
-                    className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 transition-colors"
+                    className="w-full px-4 py-2 bg-purple-600 text-white rounded-sm font-bold hover:bg-purple-700 transition-colors"
                   >
                     참석자 추가
                   </button>
@@ -465,7 +465,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                   {filteredAttendees.map((attendee) => (
                     <div
                       key={attendee.id}
-                      className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-sm transition-shadow"
+                      className="bg-white rounded-sm border border-gray-200 p-3 hover:shadow-sm transition-shadow"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -507,7 +507,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
           <div className="p-4 border-t border-gray-200">
             <button
               onClick={handleSave}
-              className="w-full px-4 py-2.5 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+              className="w-full px-4 py-2.5 bg-purple-600 text-white rounded-sm font-bold hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
             >
               <Save size={18} />
               저장

@@ -19,6 +19,13 @@ export interface TabButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEle
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
   children?: React.ReactNode;
+  /**
+   * ARIA 접근성 속성
+   */
+  role?: 'tab' | 'button';
+  'aria-selected'?: boolean;
+  'aria-pressed'?: boolean;
+  'aria-label'?: string;
 }
 
 /**
@@ -27,7 +34,7 @@ export interface TabButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEle
  * 디자인 규격 (DESIGN_SYSTEM.md 준수):
  * - 텍스트: text-xs font-bold
  * - 패딩: px-3 py-1.5
- * - 모서리: rounded-lg
+ * - 모서리: rounded-sm
  * - 간격: gap-1.5 (아이콘과 텍스트)
  *
  * Variants:
@@ -69,7 +76,7 @@ export const TabButton = React.forwardRef<HTMLButtonElement, TabButtonProps>(
       ? (active ? 'tab-active' : 'tab-inactive')
       : variant;
 
-    const baseStyles = 'inline-flex items-center justify-center font-bold rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-[#fdb813]/50 disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseStyles = 'inline-flex items-center justify-center font-bold rounded-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#fdb813]/50 disabled:opacity-50 disabled:cursor-not-allowed';
 
     const variantStyles: Record<TabButtonVariant, string> = {
       'tab-active': 'bg-[#fdb813] text-[#081429] shadow-sm hover:bg-[#fdb813]/90',
@@ -105,11 +112,30 @@ export const TabButton = React.forwardRef<HTMLButtonElement, TabButtonProps>(
       </span>
     ) : null;
 
+    // 접근성 속성 자동 설정
+    const accessibilityProps: React.ButtonHTMLAttributes<HTMLButtonElement> = {};
+
+    // role이 명시되지 않은 경우 기본값 설정
+    if (!props.role) {
+      accessibilityProps.role = 'button';
+    }
+
+    // active prop이 있고 role이 tab인 경우 aria-selected 자동 설정
+    if (props.role === 'tab' && active !== undefined && !props['aria-selected']) {
+      accessibilityProps['aria-selected'] = active;
+    }
+
+    // active prop이 있고 토글 버튼인 경우 aria-pressed 자동 설정
+    if (variant === 'tab-toggle' && active !== undefined && !props['aria-pressed']) {
+      accessibilityProps['aria-pressed'] = active;
+    }
+
     return (
       <button
         ref={ref}
         className={combinedClassName}
         disabled={disabled}
+        {...accessibilityProps}
         {...props}
       >
         {iconElement && iconPosition === 'left' && iconElement}

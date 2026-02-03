@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+﻿import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedStudent } from '../../types';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
@@ -43,17 +43,17 @@ const StudentList: React.FC<StudentListProps> = ({
     switch (status) {
       case 'prospect':
       case 'prospective':  // 예비 상태 (두 가지 표기 지원)
-        return <span className="text-micro bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-medium">예비</span>;
+        return <span className="text-micro bg-blue-100 text-blue-800 px-1 py-0.5 rounded-sm font-medium">예비</span>;
       case 'active':
-        return <span className="text-micro bg-green-100 text-green-800 px-1 py-0.5 rounded font-medium">재원</span>;
+        return <span className="text-micro bg-green-100 text-green-800 px-1 py-0.5 rounded-sm font-medium">재원</span>;
       case 'on_hold':
-        return <span className="text-micro bg-amber-100 text-amber-800 px-1 py-0.5 rounded font-medium">휴원/대기</span>;
+        return <span className="text-micro bg-amber-100 text-amber-800 px-1 py-0.5 rounded-sm font-medium">휴원/대기</span>;
       case 'withdrawn':
-        return <span className="text-micro bg-gray-200 text-gray-600 px-1 py-0.5 rounded font-medium">퇴원</span>;
+        return <span className="text-micro bg-gray-200 text-gray-600 px-1 py-0.5 rounded-sm font-medium">퇴원</span>;
       default:
         // status가 없거나 인식되지 않는 경우 기본값으로 "재원" 표시
         // (status 필드가 없는 기존 학생 데이터 호환)
-        return <span className="text-micro bg-green-100 text-green-800 px-1 py-0.5 rounded font-medium">재원</span>;
+        return <span className="text-micro bg-green-100 text-green-800 px-1 py-0.5 rounded-sm font-medium">재원</span>;
     }
   };
 
@@ -70,8 +70,9 @@ const StudentList: React.FC<StudentListProps> = ({
             <select
               value={pageSize}
               onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="text-xxs border border-gray-300 rounded px-1 py-0.5 bg-white text-[#373d41] focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
+              className="text-xxs border border-gray-300 rounded-sm px-1 py-0.5 bg-white text-[#373d41] focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
             >
+              <option value={10}>10개</option>
               <option value={20}>20개</option>
               <option value={50}>50개</option>
               <option value={100}>100개</option>
@@ -80,41 +81,50 @@ const StudentList: React.FC<StudentListProps> = ({
 
           {/* 오른쪽: 페이지네이션 */}
           {totalPages > 1 && (
-            <div className="flex items-center gap-0">
-              <button
-                onClick={() => handlePageChange(1)}
-                disabled={currentPage === 1}
-                className="p-0.5 text-[#373d41] hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed"
-                title="첫 페이지"
-              >
-                <ChevronsLeft className="w-3 h-3" />
-              </button>
+            <div className="flex items-center gap-0.5">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="p-0.5 text-[#373d41] hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed"
-                title="이전 페이지"
+                className="px-1.5 py-0.5 text-xxs text-[#373d41] hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
               >
-                <ChevronLeft className="w-3 h-3" />
+                이전
               </button>
-              <span className="text-xxs text-[#373d41] px-1 font-medium">
-                {currentPage}/{totalPages}
-              </span>
+
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`w-5 h-5 rounded-full text-xxs font-bold transition-colors ${
+                        currentPage === pageNum
+                          ? 'bg-[#fdb813] text-[#081429]'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="p-0.5 text-[#373d41] hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed"
-                title="다음 페이지"
+                className="px-1.5 py-0.5 text-xxs text-[#373d41] hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
               >
-                <ChevronRight className="w-3 h-3" />
-              </button>
-              <button
-                onClick={() => handlePageChange(totalPages)}
-                disabled={currentPage === totalPages}
-                className="p-0.5 text-[#373d41] hover:text-[#081429] disabled:opacity-30 disabled:cursor-not-allowed"
-                title="마지막 페이지"
-              >
-                <ChevronsRight className="w-3 h-3" />
+                다음
               </button>
             </div>
           )}
@@ -157,7 +167,7 @@ const StudentList: React.FC<StudentListProps> = ({
                       </span>
                     )}
                     {student.isOldWithdrawn && (
-                      <span className="text-micro bg-[#fdb813]/20 text-[#fdb813] px-1 rounded font-medium">과거</span>
+                      <span className="text-micro bg-[#fdb813]/20 text-[#fdb813] px-1 rounded-sm font-medium">과거</span>
                     )}
                     {(student.school || student.grade) && (
                       <span className="text-xxs text-gray-400">
@@ -198,7 +208,7 @@ const StudentList: React.FC<StudentListProps> = ({
                           return (
                             <span
                               key={subject}
-                              className={`text-micro px-1 rounded font-medium ${subjectColors[subject] || 'bg-gray-100 text-gray-700'}`}
+                              className={`text-micro px-1 rounded-sm font-medium ${subjectColors[subject] || 'bg-gray-100 text-gray-700'}`}
                             >
                               {subjectNames[subject] || subject}
                             </span>

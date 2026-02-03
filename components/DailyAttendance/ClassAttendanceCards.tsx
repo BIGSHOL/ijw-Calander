@@ -208,7 +208,7 @@ const ClassAttendanceCards: React.FC<ClassAttendanceCardsProps> = ({
         return (
           <div
             key={summary.classId}
-            className="bg-white rounded-lg shadow-sm overflow-hidden transition-all"
+            className="bg-white rounded-sm shadow-sm overflow-hidden transition-all"
           >
             {/* 헤더 - 클릭 가능 */}
             <button
@@ -239,7 +239,7 @@ const ClassAttendanceCards: React.FC<ClassAttendanceCardsProps> = ({
               <div className="flex items-center gap-3">
                 {/* 진행률 바 */}
                 <div className="hidden sm:flex items-center gap-1.5">
-                  <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="w-20 h-1.5 bg-gray-200 rounded-sm overflow-hidden">
                     <div
                       className={`h-full transition-all ${
                         completionRate === 100 ? 'bg-emerald-500' : 'bg-blue-500'

@@ -458,22 +458,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[100]"
+        className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
         onClick={onClose}
       >
         <div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-0 relative h-[85vh] overflow-hidden border border-gray-200 flex flex-col"
+          className="bg-white rounded-sm shadow-xl w-full max-w-4xl p-0 relative max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
           onClick={(e) => e.stopPropagation()}
         >
 
           {/* Header */}
-          <div className="bg-[#081429] p-4 flex justify-between items-center text-white shrink-0">
-            <h2 className="text-lg font-bold flex items-center gap-2">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+            <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
               <FolderKanban size={20} className="text-[#fdb813]" />
               시스템 관리
             </h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-              <X size={24} />
+            <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+              <X size={18} />
             </button>
           </div>
 
@@ -487,7 +487,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 )}
 
                 {/* 1.5 Display Settings */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-200">
                   <h3 className="font-bold mb-4 flex gap-2"><CalendarClock size={18} /> 화면 설정</h3>
 
                   {/* Dark Mode Toggle */}
@@ -506,11 +506,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           document.documentElement.classList.remove('dark');
                         }
                       }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${storage.getBoolean(STORAGE_KEYS.DARK_MODE, false) ? 'bg-[#081429]' : 'bg-gray-200'
+                      className={`relative inline-flex h-6 w-11 items-center rounded-sm transition-colors ${storage.getBoolean(STORAGE_KEYS.DARK_MODE, false) ? 'bg-[#081429]' : 'bg-gray-200'
                         }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${storage.getBoolean(STORAGE_KEYS.DARK_MODE, false) ? 'translate-x-6' : 'translate-x-1'
+                        className={`inline-block h-4 w-4 transform rounded-sm bg-white transition-transform ${storage.getBoolean(STORAGE_KEYS.DARK_MODE, false) ? 'translate-x-6' : 'translate-x-1'
                           }`}
                       />
                     </button>
@@ -519,7 +519,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 {/* 2. System Config (Data Retention) */}
                 {isMaster && (
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                  <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-200">
                     <h3 className="font-bold mb-4 flex gap-2"><Database size={18} /> 데이터 보존 및 아카이브</h3>
                     <div className="space-y-4">
                       {/* Lookback Years Config */}
@@ -528,7 +528,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div className="flex items-center gap-2">
                           <input type="number" value={lookbackYears} onChange={(e) => setLookbackYears(Number(e.target.value))} className="border p-2 rounded w-20 text-center" />
                           <span className="text-sm text-gray-600">년</span>
-                          <button onClick={() => handleUpdateLookback(lookbackYears)} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-200">저장</button>
+                          <button onClick={() => handleUpdateLookback(lookbackYears)} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-sm text-sm font-bold hover:bg-gray-200">저장</button>
                         </div>
                       </div>
 
@@ -542,9 +542,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
                         <button
                           onClick={onToggleArchived}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showArchived ? 'bg-[#fdb813]' : 'bg-gray-200'}`}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-sm transition-colors ${showArchived ? 'bg-[#fdb813]' : 'bg-gray-200'}`}
                         >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showArchived ? 'translate-x-6' : 'translate-x-1'}`} />
+                          <span className={`inline-block h-4 w-4 transform rounded-sm bg-white transition-transform ${showArchived ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                       </div>
                     </div>
@@ -575,4 +575,3 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 };
 
 export default SettingsModal;
-

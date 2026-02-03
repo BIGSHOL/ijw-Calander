@@ -2,6 +2,7 @@
 // 영어 강의실별 시간표 탭 - 자동 생성, 읽기 전용
 
 import React, { useMemo, useState } from 'react';
+import { addDays, format } from 'date-fns';
 import { EN_PERIODS, EN_WEEKDAYS, getContrastColor, formatClassNameWithBreaks } from './englishUtils';
 import { ClassKeywordColor, Teacher } from '../../../types';
 import PortalTooltip from '../../Common/PortalTooltip';
@@ -35,11 +36,12 @@ interface EnglishRoomTabProps {
     currentUser: any;
     labRooms?: string[];
     studentMap?: Record<string, any>;
+    currentWeekStart?: Date;  // 주차 시작일 (날짜 표시용)
 }
 
 type ViewSize = 'small' | 'medium' | 'large';
 
-const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData, teachersData, classKeywords = [], currentUser, labRooms = [], studentMap = {} }) => {
+const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData, teachersData, classKeywords = [], currentUser, labRooms = [], studentMap = {}, currentWeekStart }) => {
     const [viewSize, setViewSize] = useState<ViewSize>('medium');
     const [filterRoom, setFilterRoom] = useState<string>('all');
     const [visibleWeekdays, setVisibleWeekdays] = useState<Set<string>>(new Set(EN_WEEKDAYS));
@@ -86,6 +88,21 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
     const filteredWeekdays = useMemo(() => {
         return EN_WEEKDAYS.filter(day => visibleWeekdays.has(day));
     }, [visibleWeekdays]);
+
+    // 요일별 날짜 계산 (2/12 형식)
+    const weekDates = useMemo(() => {
+        if (!currentWeekStart) return {};
+        const dayToIndex: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
+        const dates: Record<string, string> = {};
+        EN_WEEKDAYS.forEach(day => {
+            const idx = dayToIndex[day];
+            if (idx !== undefined) {
+                const date = addDays(currentWeekStart, idx);
+                dates[day] = format(date, 'M/d');
+            }
+        });
+        return dates;
+    }, [currentWeekStart]);
 
     // Toggle weekday visibility
     const toggleWeekday = (day: string) => {
@@ -182,22 +199,22 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
             <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b flex-shrink-0 relative z-20">
                 <div className="flex items-center gap-2">
                     {/* View Size Controls */}
-                    <div className="flex items-center bg-gray-100 rounded-lg p-0.5 mr-2 flex-shrink-0">
+                    <div className="flex items-center bg-gray-100 rounded-sm p-0.5 mr-2 flex-shrink-0">
                         <button
                             onClick={() => setViewSize('small')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                         >
                             작게
                         </button>
                         <button
                             onClick={() => setViewSize('medium')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                         >
                             보통
                         </button>
                         <button
                             onClick={() => setViewSize('large')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                         >
                             크게
                         </button>
@@ -207,7 +224,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                     <select
                         value={filterRoom}
                         onChange={(e) => setFilterRoom(e.target.value)}
-                        className="px-2 py-1 text-xs border rounded"
+                        className="px-2 py-1 text-xs border rounded-sm"
                     >
                         <option value="all">전체 강의실</option>
                         {rooms.map(r => (
@@ -218,7 +235,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                     <div className="h-6 w-px bg-gray-300 mx-2" />
 
                     {/* Weekday Visibility Toggles */}
-                    <div className="flex items-center gap-1 bg-gray-100 rounded-lg px-2 py-1">
+                    <div className="flex items-center gap-1 bg-gray-100 rounded-sm px-2 py-1">
                         <span className="text-xxs text-gray-500 mr-1">요일:</span>
                         {EN_WEEKDAYS.map(day => (
                             <label key={day} className="flex items-center gap-0.5 cursor-pointer">
@@ -279,7 +296,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                                 border-r border-t border-b
                                             `}
                                         >
-                                            {day}
+                                            {weekDates[day] ? `${weekDates[day]} (${day})` : day}
                                         </th>
                                     ))
                                 ))}
@@ -371,10 +388,10 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                                                     position="top"
                                                                     triggerClassName="absolute top-0.5 right-0.5 bg-red-500 text-white text-micro font-bold px-1 rounded-sm shadow-sm z-20 cursor-help pointer-events-auto hover:scale-110 transition-transform"
                                                                     content={
-                                                                        <div className="w-48 bg-slate-800 text-white p-2 rounded shadow-xl z-50 text-left pointer-events-none">
+                                                                        <div className="w-48 bg-slate-800 text-white p-2 rounded-sm shadow-xl z-50 text-left pointer-events-none">
                                                                             <div className="flex justify-between items-center bg-slate-700/50 px-2 py-1 -mx-2 -mt-2 mb-2 rounded-t border-b border-slate-700">
                                                                                 <span className="text-xxs font-bold text-slate-300">합반 수업 목록</span>
-                                                                                <span className="text-micro bg-slate-700 px-1 rounded ml-1 text-slate-400">총 {cellData.merged.length + 1}개</span>
+                                                                                <span className="text-micro bg-slate-700 px-1 rounded-sm ml-1 text-slate-400">총 {cellData.merged.length + 1}개</span>
                                                                             </div>
                                                                             <div className="flex flex-col gap-1.5">
                                                                                 {/* 메인 수업 */}
@@ -382,7 +399,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                                                                     <div className="text-xxs font-bold text-slate-200">{cellData.className}</div>
                                                                                     <div className="flex items-center gap-1">
                                                                                         {isLabRoom && <span className="text-micro text-indigo-300">{mainCount}명</span>}
-                                                                                        {cellData.room && <span className="text-micro bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{cellData.room}</span>}
+                                                                                        {cellData.room && <span className="text-micro bg-slate-700 px-1.5 py-0.5 rounded-sm text-blue-300 font-mono">{cellData.room}</span>}
                                                                                     </div>
                                                                                 </div>
                                                                                 {/* 합반 수업들 */}
@@ -397,7 +414,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                                                                             <div className={`text-xxs font-bold ${isMoved ? 'text-green-800' : 'text-slate-200'}`}>{m.className}</div>
                                                                                             <div className="flex items-center gap-1">
                                                                                                 {isLabRoom && mCount > 0 && <span className="text-micro text-indigo-300">{mCount}명</span>}
-                                                                                                {m.room && <span className="text-micro bg-slate-700 px-1.5 py-0.5 rounded text-blue-300 font-mono">{m.room}</span>}
+                                                                                                {m.room && <span className="text-micro bg-slate-700 px-1.5 py-0.5 rounded-sm text-blue-300 font-mono">{m.room}</span>}
                                                                                             </div>
                                                                                         </div>
                                                                                     );

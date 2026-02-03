@@ -3,7 +3,7 @@ import React from 'react';
 /**
  * Standardized Input Component
  * Addresses Issue #27, #28: Form accessibility and validation
- * 
+ *
  * Features:
  * - Proper label association
  * - Error state with screen reader announcements
@@ -51,7 +51,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     };
 
     const baseClasses = `
-      block rounded-md border transition-all
+      block rounded-sm border transition-all
       focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1
       disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50
       ${fullWidth ? 'w-full' : ''}

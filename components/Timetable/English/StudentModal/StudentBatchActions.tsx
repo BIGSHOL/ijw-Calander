@@ -37,7 +37,7 @@ const StudentBatchActions: React.FC<StudentBatchActionsProps> = ({
             <button
                 onClick={onDeleteAll}
                 disabled={studentCount === 0}
-                className="text-red-500 hover:text-red-600 font-bold text-sm flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed px-2 py-1 hover:bg-red-50 rounded"
+                className="text-red-500 hover:text-red-600 font-bold text-sm flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed px-2 py-1 hover:bg-red-50 rounded-sm"
             >
                 <Trash2 size={14} /> 삭제
             </button>
@@ -47,12 +47,12 @@ const StudentBatchActions: React.FC<StudentBatchActionsProps> = ({
                 <button
                     onClick={() => setIsManageMenuOpen(!isManageMenuOpen)}
                     disabled={studentCount === 0}
-                    className="text-gray-600 hover:text-gray-800 font-bold text-sm flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed px-2 py-1 hover:bg-gray-200 rounded"
+                    className="text-gray-600 hover:text-gray-800 font-bold text-sm flex items-center gap-1 disabled:opacity-30 disabled:cursor-not-allowed px-2 py-1 hover:bg-gray-200 rounded-sm"
                 >
                     <Settings size={14} /> 일괄 관리
                 </button>
                 {isManageMenuOpen && (
-                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden z-10">
+                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-white border border-gray-200 rounded-sm shadow-xl overflow-hidden z-10">
                         <button
                             onClick={() => {
                                 onBatchDeleteEnglishName();

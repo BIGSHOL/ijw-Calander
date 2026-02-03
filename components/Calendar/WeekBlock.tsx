@@ -286,7 +286,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                 <span className={`font-extrabold leading-none mt-0.5 ${isHoliday ? 'text-base' : 'text-sm'}`}>{dayNum}</span>
                 {isHoliday && (
                   <span
-                    className="text-nano text-red-600 font-bold bg-red-100 px-1 py-0.5 rounded-full mt-0.5 border border-red-200 max-w-[90%] truncate block text-center"
+                    className="text-nano text-red-600 font-bold bg-red-100 px-1 py-0.5 rounded-sm mt-0.5 border border-red-200 max-w-[90%] truncate block text-center"
                     title={holiday.name}
                   >
                     {holiday.name}
@@ -453,7 +453,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                     />
                     {/* Pending indicator */}
                     {isPending && (
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full border-2 border-white z-20" />
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-sm border-2 border-white z-20" />
                     )}
                     {/* Recurrence indicator */}
                     {event.recurrenceGroupId && pos.isStart && (
@@ -474,7 +474,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
       {/* Custom Tooltip Portal/Overlay - Header color #081429 */}
       {hoveredEvent && tooltipPos && (
         <div
-          className="fixed z-[9999] w-72 bg-white rounded-lg shadow-2xl border border-gray-200 pointer-events-none text-left animate-in fade-in zoom-in-95 duration-100"
+          className="fixed z-[110] w-72 bg-white rounded-sm shadow-2xl border border-gray-200 pointer-events-none text-left animate-in fade-in zoom-in-95 duration-100"
           style={{
             left: `${Math.min(tooltipPos.x - 144, window.innerWidth - 300)}px`,
             top: `${Math.min(tooltipPos.y, window.innerHeight - 200)}px`

@@ -499,7 +499,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         <div className="max-w-7xl mx-auto">
           <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+            <div className="animate-spin rounded-sm h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
           </div>
         </div>
       </div>
@@ -513,7 +513,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
 
         {/* 통계 카드 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-medium text-gray-500">전체 수업</h3>
               <BookOpen className="w-4 h-4 text-blue-500" />
@@ -522,7 +522,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
             <p className="text-xxs text-gray-400 mt-0.5">담당 중인 수업</p>
           </div>
 
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-medium text-gray-500">오늘 수업</h3>
               <Calendar className="w-4 h-4 text-green-500" />
@@ -531,7 +531,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
             <p className="text-xxs text-gray-400 mt-0.5">{dayOfWeek}요일 수업</p>
           </div>
 
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-medium text-gray-500">내 학생</h3>
               <Users className="w-4 h-4 text-purple-500" />
@@ -540,7 +540,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
             <p className="text-xxs text-gray-400 mt-0.5">담당 학생 수</p>
           </div>
 
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
+          <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-1">
               <h3 className="text-xs font-medium text-gray-500">상담 예정</h3>
               <Clock className="w-4 h-4 text-orange-500" />
@@ -553,7 +553,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         {/* 내 수업 | 내 학생 2단 레이아웃 */}
         <div className="grid grid-cols-2 gap-3">
           {/* 내 수업 목록 */}
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 flex flex-col">
+          <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-[#081429]" />
@@ -590,7 +590,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                   setClassFilter('all');
                   setClassPage(1);
                 }}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                className={`px-3 py-1 text-xs rounded-sm transition-colors ${
                   classFilter === 'all'
                     ? 'bg-[#081429] text-white font-bold'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -603,7 +603,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                   setClassFilter('main');
                   setClassPage(1);
                 }}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                className={`px-3 py-1 text-xs rounded-sm transition-colors ${
                   classFilter === 'main'
                     ? 'bg-blue-600 text-white font-bold'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -616,7 +616,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                   setClassFilter('sub');
                   setClassPage(1);
                 }}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                className={`px-3 py-1 text-xs rounded-sm transition-colors ${
                   classFilter === 'sub'
                     ? 'bg-gray-600 text-white font-bold'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -689,7 +689,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                             </div>
                           </td>
                           <td className="px-2">
-                            <span className={`text-xxs px-1.5 py-0.5 rounded-full ${cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
+                            <span className={`text-xxs px-1.5 py-0.5 rounded-sm ${cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
                               cls.subject === 'english' ? 'bg-green-100 text-green-700' :
                                 cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
                                   'bg-orange-100 text-orange-700'
@@ -748,7 +748,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
           </div>
 
           {/* 내 학생 목록 */}
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 flex flex-col">
+          <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-[#081429]" />

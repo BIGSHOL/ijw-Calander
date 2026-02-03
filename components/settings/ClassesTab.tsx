@@ -152,7 +152,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-20">
             {/* 스케줄 표기 방식 설정 */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+            <div className="bg-white p-5 rounded-sm shadow-sm border border-gray-200">
                 <h3 className="font-bold mb-1 flex items-center gap-2 text-blue-700">
                     <Clock size={18} />
                     스케줄 표기 방식
@@ -166,7 +166,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                 ) : (
                     <div className="space-y-4">
                         {/* 수학 */}
-                        <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
+                        <div className="flex items-center justify-between p-3 bg-amber-50 rounded-sm border border-amber-200">
                             <div className="flex items-center gap-2">
                                 <span className="px-2 py-1 bg-[#fdb813] text-[#081429] rounded text-xs font-bold">수학</span>
                                 <span className="text-sm text-gray-600">
@@ -177,7 +177,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                 <button
                                     onClick={() => handleScheduleDisplayChange('math', 'period')}
                                     disabled={!canEdit}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                    className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors ${
                                         scheduleDisplay.math === 'period'
                                             ? 'bg-[#081429] text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -189,7 +189,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                 <button
                                     onClick={() => handleScheduleDisplayChange('math', 'time')}
                                     disabled={!canEdit}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                    className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors ${
                                         scheduleDisplay.math === 'time'
                                             ? 'bg-[#081429] text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -202,7 +202,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                         </div>
 
                         {/* 영어 */}
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
                             <div className="flex items-center gap-2">
                                 <span className="px-2 py-1 bg-[#081429] text-white rounded text-xs font-bold">영어</span>
                                 <span className="text-sm text-gray-600">
@@ -213,7 +213,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                 <button
                                     onClick={() => handleScheduleDisplayChange('english', 'period')}
                                     disabled={!canEdit}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                    className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors ${
                                         scheduleDisplay.english === 'period'
                                             ? 'bg-[#081429] text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -225,7 +225,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                 <button
                                     onClick={() => handleScheduleDisplayChange('english', 'time')}
                                     disabled={!canEdit}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                                    className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors ${
                                         scheduleDisplay.english === 'time'
                                             ? 'bg-[#081429] text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -241,7 +241,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
             </div>
 
             {/* 수업 키워드 색상 관리 */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+            <div className="bg-white p-5 rounded-sm shadow-sm border border-gray-200">
                 <h3 className="font-bold mb-1 flex items-center gap-2 text-purple-700">
                     🎨 수업 키워드 색상 관리
                 </h3>
@@ -253,7 +253,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
 
                 {/* 입력 폼 - 더 컴팩트하게 */}
                 {canEdit && (
-                    <div className="flex items-end gap-2 mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="flex items-end gap-2 mb-4 p-3 bg-gray-50 rounded-sm border border-gray-100">
                         <div className="flex-1">
                             <label className="text-xs font-semibold text-gray-600 block mb-1">키워드</label>
                             <input
@@ -291,7 +291,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                         </div>
                         <button
                             onClick={handleAddKeyword}
-                            className="px-4 py-1.5 bg-[#081429] text-white rounded-lg text-sm font-bold hover:brightness-110 whitespace-nowrap"
+                            className="px-4 py-1.5 bg-[#081429] text-white rounded-sm text-sm font-bold hover:brightness-110 whitespace-nowrap"
                         >
                             추가
                         </button>
@@ -304,7 +304,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                         <div key={kw.id}>
                             {editingId === kw.id ? (
                                 // 수정 모드
-                                <div className="p-2 rounded-lg border-2 border-blue-400 bg-blue-50 space-y-2">
+                                <div className="p-2 rounded-sm border-2 border-blue-400 bg-blue-50 space-y-2">
                                     <input
                                         type="text"
                                         value={editKeyword}
@@ -344,7 +344,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                             ) : (
                                 // 일반 표시 모드
                                 <div
-                                    className="relative group p-2.5 rounded-lg border shadow-sm hover:shadow-md transition-shadow"
+                                    className="relative group p-2.5 rounded-sm border shadow-sm hover:shadow-md transition-shadow"
                                     style={{ backgroundColor: kw.bgColor, color: kw.textColor }}
                                 >
                                     <span className="text-sm block truncate">{kw.keyword}</span>

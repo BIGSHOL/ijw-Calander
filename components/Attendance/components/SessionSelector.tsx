@@ -54,7 +54,7 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors min-w-[180px]"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 rounded-sm text-xs font-medium hover:bg-gray-50 transition-colors min-w-[180px]"
       >
         <Calendar size={14} className="text-blue-500" />
         <span className="flex-1 text-left truncate">{displayText}</span>
@@ -62,7 +62,7 @@ const SessionSelector: React.FC<SessionSelectorProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full min-w-[220px] bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full min-w-[220px] bg-white border border-gray-200 rounded-sm shadow-lg overflow-hidden">
           {filteredSessions.length === 0 ? (
             <div className="px-3 py-4 text-xs text-gray-400 text-center">
               {getCategoryLabel(category)} 세션이 설정되지 않았습니다.

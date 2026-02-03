@@ -166,7 +166,7 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
           <button
             onClick={() => refetch()}
             disabled={loading}
-            className="p-1.5 bg-white border border-[#081429]/20 rounded-lg hover:bg-[#081429]/5 disabled:opacity-50"
+            className="p-1.5 bg-white border border-[#081429]/20 rounded-sm hover:bg-[#081429]/5 disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 text-[#081429] ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -183,12 +183,12 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
         {/* 상담 필요 카드 */}
         <div
           onClick={() => setShowNeedingConsultationModal(true)}
-          className={`bg-white rounded-xl border p-3 cursor-pointer transition-all hover:shadow-md ${
+          className={`bg-white rounded-sm border p-3 cursor-pointer transition-all hover:shadow-md ${
             stats.studentsNeedingConsultation.length > 0 ? 'border-[#fdb813] bg-[#fdb813]/5' : 'border-[#081429]/10'
           }`}
         >
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+            <div className={`w-8 h-8 rounded-sm flex items-center justify-center ${
               stats.studentsNeedingConsultation.length > 0 ? 'bg-[#fdb813]/20' : 'bg-[#373d41]/10'
             }`}>
               <AlertCircle className={`w-4 h-4 ${stats.studentsNeedingConsultation.length > 0 ? 'text-[#fdb813]' : 'text-[#373d41]/50'}`} />
@@ -203,14 +203,14 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
         </div>
 
         {/* 상담 완료율 - 항상 이번 달 기준 */}
-        <div className="bg-white rounded-xl border border-[#081429]/10 p-3">
+        <div className="bg-white rounded-sm border border-[#081429]/10 p-3">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-medium text-[#373d41]">{completionRateTitle}</span>
             <span className="text-sm font-bold text-[#081429]">{percentage}%</span>
           </div>
-          <div className="h-2 bg-[#081429]/10 rounded-full overflow-hidden">
+          <div className="h-2 bg-[#081429]/10 rounded-sm overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${percentage >= 100 ? 'bg-[#fdb813]' : 'bg-[#081429]'}`}
+              className={`h-full rounded-sm transition-all duration-500 ${percentage >= 100 ? 'bg-[#fdb813]' : 'bg-[#081429]'}`}
               style={{ width: `${percentage}%` }}
             />
           </div>
@@ -224,20 +224,20 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
       {/* 하단: 차트 + 카테고리 + 선생님별 */}
       <div className="grid grid-cols-12 gap-3">
         {/* 일별 차트 - 더 넓게 */}
-        <div className="col-span-6 bg-white rounded-xl border border-[#081429]/10 p-4">
+        <div className="col-span-6 bg-white rounded-sm border border-[#081429]/10 p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-[#081429]">일별 상담 현황</h3>
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 bg-[#081429] rounded-full" />
+                <div className="w-2.5 h-2.5 bg-[#081429] rounded-sm" />
                 <span className="text-[#373d41]">학부모</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 bg-[#fdb813] rounded-full" />
+                <div className="w-2.5 h-2.5 bg-[#fdb813] rounded-sm" />
                 <span className="text-[#373d41]">학생</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 bg-[#f59e0b] rounded-full border border-[#f59e0b]" />
+                <div className="w-2.5 h-2.5 bg-[#f59e0b] rounded-sm border border-[#f59e0b]" />
                 <span className="text-[#373d41]">총합</span>
               </div>
             </div>
@@ -248,7 +248,7 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
         </div>
 
         {/* 카테고리별 분포 */}
-        <div className="col-span-3 bg-white rounded-xl border border-[#081429]/10 p-4">
+        <div className="col-span-3 bg-white rounded-sm border border-[#081429]/10 p-4">
           <h3 className="text-sm font-semibold text-[#081429] mb-3">카테고리별 분포</h3>
           <CategoryStats
             stats={stats.categoryStats}
@@ -260,7 +260,7 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
 
         {/* 선생님별 상담 */}
         <div
-          className="col-span-3 bg-white rounded-xl border border-[#081429]/10 p-4 cursor-pointer hover:shadow-md transition-shadow"
+          className="col-span-3 bg-white rounded-sm border border-[#081429]/10 p-4 cursor-pointer hover:shadow-md transition-shadow"
           onClick={() => setShowStaffModal(true)}
         >
           <div className="flex items-center justify-between mb-3">
@@ -314,9 +314,9 @@ const MiniCard: React.FC<MiniCardProps> = ({ icon, label, value, loading, color 
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-[#081429]/10 p-2.5">
+      <div className="bg-white rounded-sm border border-[#081429]/10 p-2.5">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-[#081429]/5 rounded-lg animate-pulse" />
+          <div className="w-7 h-7 bg-[#081429]/5 rounded-sm animate-pulse" />
           <div className="flex-1">
             <div className="h-5 bg-[#081429]/5 rounded w-10 animate-pulse" />
             <div className="h-3 bg-[#081429]/5 rounded w-8 mt-1 animate-pulse" />
@@ -327,9 +327,9 @@ const MiniCard: React.FC<MiniCardProps> = ({ icon, label, value, loading, color 
   }
 
   return (
-    <div className="bg-white rounded-xl border border-[#081429]/10 p-2.5 hover:shadow-sm transition-shadow">
+    <div className="bg-white rounded-sm border border-[#081429]/10 p-2.5 hover:shadow-sm transition-shadow">
       <div className="flex items-center gap-2">
-        <div className={`w-7 h-7 ${colors.bg} rounded-lg flex items-center justify-center`}>
+        <div className={`w-7 h-7 ${colors.bg} rounded-sm flex items-center justify-center`}>
           <div className={colors.icon}>{icon}</div>
         </div>
         <div>
@@ -351,10 +351,10 @@ const StaffStatsModal: React.FC<StaffStatsModalProps> = ({ stats, onClose }) => 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-[#081429]/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 overflow-hidden">
+      <div className="relative bg-white rounded-sm shadow-2xl max-w-2xl w-full mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#081429]/10 bg-[#081429]">
           <h2 className="text-lg font-bold text-white">선생님별 상담 통계</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-sm transition-colors">
             <X className="w-5 h-5 text-white" />
           </button>
         </div>
@@ -375,7 +375,7 @@ const StaffStatsModal: React.FC<StaffStatsModalProps> = ({ stats, onClose }) => 
                 return (
                   <div
                     key={staff.id}
-                    className={`flex items-center gap-4 p-3 rounded-xl transition-colors ${
+                    className={`flex items-center gap-4 p-3 rounded-sm transition-colors ${
                       idx === 0 ? 'bg-amber-50 border border-amber-200' :
                       idx === 1 ? 'bg-gray-50 border border-gray-200' :
                       idx === 2 ? 'bg-orange-50 border border-orange-200' :
@@ -383,7 +383,7 @@ const StaffStatsModal: React.FC<StaffStatsModalProps> = ({ stats, onClose }) => 
                     }`}
                   >
                     {/* 순위 뱃지 */}
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                    <div className={`w-10 h-10 rounded-sm flex items-center justify-center text-sm font-bold ${
                       idx === 0 ? 'bg-amber-100 text-amber-700' :
                       idx === 1 ? 'bg-gray-200 text-gray-600' :
                       idx === 2 ? 'bg-orange-100 text-orange-600' :
@@ -481,7 +481,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-[#081429]/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full mx-4 overflow-hidden">
+      <div className="relative bg-white rounded-sm shadow-lg max-w-md w-full mx-4 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#081429]/10 bg-[#fdb813]">
           <div>
             <h3 className="text-sm font-semibold text-[#081429]">상담 필요 학생 ({filteredStudents.length}명)</h3>
@@ -496,7 +496,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
         {!hasPlaceholderData && (
           <div className="px-4 py-2 border-b border-[#081429]/10 bg-[#081429]/5 flex items-center gap-2">
             {/* 과목 필터 */}
-            <div className="flex bg-white rounded-md p-0.5 border border-[#081429]/10">
+            <div className="flex bg-white rounded-sm p-0.5 border border-[#081429]/10">
               <button
                 onClick={() => setSubjectFilter('all')}
                 className={`px-2 py-0.5 text-xxs font-medium rounded transition-colors ${
@@ -531,7 +531,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
                 placeholder="이름 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-6 pr-2 py-1 text-xs border border-[#081429]/10 rounded-md focus:outline-none focus:border-[#fdb813] bg-white"
+                className="w-full pl-6 pr-2 py-1 text-xs border border-[#081429]/10 rounded-sm focus:outline-none focus:border-[#fdb813] bg-white"
               />
             </div>
           </div>
@@ -583,7 +583,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
         <div className="px-4 py-2.5 bg-[#081429]/5 border-t border-[#081429]/10">
           <button
             onClick={onClose}
-            className="w-full px-3 py-1.5 bg-[#081429] text-white text-sm font-medium rounded-lg hover:bg-[#081429]/90"
+            className="w-full px-3 py-1.5 bg-[#081429] text-white text-sm font-medium rounded-sm hover:bg-[#081429]/90"
           >
             닫기
           </button>

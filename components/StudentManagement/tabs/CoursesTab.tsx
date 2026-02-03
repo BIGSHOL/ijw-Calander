@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { UnifiedStudent, UserProfile } from '../../../types';
 import { BookOpen, Plus, User, X, Loader2, Users, Trash2 } from 'lucide-react';
 import AssignClassModal from '../AssignClassModal';
@@ -176,7 +176,7 @@ const ScheduleBadge: React.FC<ScheduleBadgeProps> = ({ schedule, subject }) => {
               return (
                 <span
                   key={day}
-                  className={`px-1 py-0.5 text-micro font-bold ${dayIdx === 0 ? 'rounded-l' : ''} ${dayIdx === entry.days.length - 1 ? 'rounded-r' : ''}`}
+                  className={`px-1 py-0.5 text-micro font-bold ${dayIdx === 0 ? 'rounded-l-sm' : ''} ${dayIdx === entry.days.length - 1 ? 'rounded-r-sm' : ''}`}
                   style={{ backgroundColor: colors.bg, color: colors.text }}
                 >
                   {day}
@@ -550,7 +550,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
   if (loadingTeachers) {
     return (
       <div className="text-center py-6">
-        <div className="animate-spin w-5 h-5 border-2 border-[#fdb813] border-t-transparent rounded-full mx-auto mb-2"></div>
+        <div className="animate-spin w-5 h-5 border-2 border-[#fdb813] border-t-transparent rounded-sm mx-auto mb-2"></div>
         <p className="text-gray-500 text-xs">수업 정보 불러오는 중...</p>
       </div>
     );
@@ -633,7 +633,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       >
         {/* 과목 뱃지 */}
         <span
-          className="w-8 shrink-0 text-micro px-1 py-0.5 rounded font-semibold text-center"
+          className="w-8 shrink-0 text-micro px-1 py-0.5 rounded-sm font-semibold text-center"
           style={{
             backgroundColor: subjectColor.bg,
             color: subjectColor.text,
@@ -651,7 +651,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         <div className="w-14 shrink-0 flex items-center gap-0.5">
           <User className="w-3 h-3 text-gray-400" />
           <span className="text-xxs text-[#373d41] truncate">
-            {mainTeacher || visibleTeachers[0] || '-'}
+            {mainTeacher || visibleTeachers[0] || actualClass?.teacher || '-'}
           </span>
         </div>
 
@@ -685,7 +685,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           <button
             onClick={(e) => handleRemoveEnrollment(group, e)}
             disabled={isDeleting}
-            className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+            className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-sm transition-colors disabled:opacity-50"
             title="수업 배정 취소"
           >
             {isDeleting ? (
@@ -704,6 +704,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
     const subjectColor = SUBJECT_COLORS[group.subject];
     const firstTeacherStaffId = group.teachers[0];
     const firstTeacherName = getTeacherByIdOrName(firstTeacherStaffId)?.name;
+    // staffId가 없을 때 수업 정보에서 teacher 가져오기 (영어 수업 호환성)
+    const actualClass = allClasses.find(
+      c => c.className === group.className && c.subject === group.subject
+    );
 
     return (
       <div
@@ -712,7 +716,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       >
         {/* 과목 뱃지 */}
         <span
-          className="w-8 shrink-0 text-micro px-1 py-0.5 rounded font-semibold text-center"
+          className="w-8 shrink-0 text-micro px-1 py-0.5 rounded-sm font-semibold text-center"
           style={{
             backgroundColor: subjectColor.bg,
             color: subjectColor.text,
@@ -722,7 +726,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         </span>
 
         {/* 수업명 */}
-        <span className={`${compact ? 'flex-1 min-w-0' : 'w-40 shrink-0'} text-xs text-[#373d41] truncate`}>
+        <span className="w-40 shrink-0 text-xs text-[#373d41] truncate">
           {group.className}
         </span>
 
@@ -730,9 +734,15 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         <div className="w-14 shrink-0 flex items-center gap-0.5">
           <User className="w-3 h-3 text-gray-400" />
           <span className="text-xxs text-[#373d41] truncate">
-            {firstTeacherName || '-'}
+            {firstTeacherName || actualClass?.teacher || '-'}
           </span>
         </div>
+
+        {/* 스케줄 자리 (빈 공간) */}
+        <span className="w-40"></span>
+
+        {/* 인원 자리 (빈 공간) */}
+        <span className="w-10 shrink-0"></span>
 
         {/* 시작일 */}
         <span className="w-16 shrink-0 text-xxs text-[#373d41] text-center">
@@ -780,7 +790,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         {!readOnly && (
           <button
             onClick={() => setIsAssignModalOpen(true)}
-            className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
+            className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
           >
             <Plus className="w-3 h-3" />
             배정
@@ -838,7 +848,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
             ({scheduledEnrollments.length}개)
           </span>
           {scheduledEnrollments.length > 0 && (
-            <span className="text-xxs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+            <span className="text-xxs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-sm">
               🗓️ 시작일 전
             </span>
           )}
@@ -893,7 +903,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                     <div className="w-14 shrink-0 flex items-center gap-0.5">
                       <User className="w-3 h-3 text-gray-400" />
                       <span className="text-xxs text-[#373d41] truncate">
-                        {getMainTeacher(group) || '-'}
+                        {getTeacherByIdOrName(getMainTeacher(group))?.name || actualClass?.teacher || '-'}
                       </span>
                     </div>
 
@@ -930,7 +940,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                       <button
                         onClick={(e) => handleRemoveEnrollment(group, e)}
                         disabled={isDeleting}
-                        className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                        className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-sm transition-colors disabled:opacity-50"
                         title="수업 배정 취소"
                       >
                         {isDeleting ? (
@@ -952,11 +962,13 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       <div className="mt-4">
         <h3 className="text-xs font-bold text-[#373d41] mb-2">지난 수업 ({completedClasses.length}개)</h3>
         <div className="bg-white border border-gray-200 overflow-hidden">
-          {/* 테이블 헤더 - 지난 수업은 상태 대신 시작/종료일 표시 */}
+          {/* 테이블 헤더 - 수강중인 수업과 열 위치 동일하게 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
             <span className="w-8 shrink-0">과목</span>
-            <span className={`${compact ? 'flex-1 min-w-0' : 'w-40'} shrink-0`}>수업명</span>
+            <span className="w-40 shrink-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
+            <span className="w-40"></span>{/* 스케줄 자리 */}
+            <span className="w-10 shrink-0"></span>{/* 인원 자리 */}
             <span className="w-16 shrink-0 text-center">시작</span>
             <span className="w-16 shrink-0 text-center">종료</span>
             {!compact && <span className="w-5 shrink-0"></span>}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Edit, Trash2, Phone, Mail, Calendar, Shield, ShieldCheck, ShieldAlert, Building, User, CheckCircle, XCircle, Clock, Briefcase, Eye, EyeOff, Globe, AlertTriangle, KeyRound, Send, Loader2, Lock } from 'lucide-react';
+import { X, Edit, Trash2, Phone, Mail, Calendar, Shield, ShieldCheck, ShieldAlert, Building, User, CheckCircle, XCircle, Clock, Briefcase, Eye, EyeOff, Globe, AlertTriangle, KeyRound, Send, Loader2, Lock, AlignLeft } from 'lucide-react';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserRole } from '../../types';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -175,13 +175,13 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gradient-to-r from-[#081429] to-[#0a1a35]">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold shadow-md"
+              className="w-10 h-10 rounded-sm flex items-center justify-center text-lg font-bold shadow-md"
               style={{
                 backgroundColor: staff.role === 'teacher' && staff.bgColor ? staff.bgColor : '#fdb813',
                 color: staff.role === 'teacher' && staff.textColor ? staff.textColor : '#081429',
@@ -190,97 +190,93 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
               {staff.name.charAt(0)}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
                 {staff.name}
                 {staff.englishName && (
-                  <span className="text-sm font-normal text-gray-300">({staff.englishName})</span>
+                  <span className="text-xs font-normal text-gray-500">({staff.englishName})</span>
                 )}
               </h2>
               {staff.jobTitle && (
-                <p className="text-xs text-[#fdb813]">{staff.jobTitle}</p>
+                <p className="text-xs text-gray-500">{staff.jobTitle}</p>
               )}
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-white"
+            className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X size={18} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {/* 기본 정보 섹션 */}
-          <section>
-            <h3 className="text-sm font-bold text-[#081429] mb-3 flex items-center gap-2">
-              <User className="w-4 h-4" />
-              기본 정보
-            </h3>
-            <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
-              <div>
-                <label className="text-xs text-gray-500">직책</label>
-                <div className="mt-1">{getRoleBadge(staff.role)}</div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-2">
+          {/* Section 1: 기본 정보 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <User className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {/* Name Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">이름</span>
+                <span className="text-sm text-[#081429] font-medium">{staff.name}</span>
+                {staff.englishName && (
+                  <span className="text-xs text-gray-500">({staff.englishName})</span>
+                )}
               </div>
-              <div>
-                <label className="text-xs text-gray-500">상태</label>
-                <div className="mt-1">{getStatusBadge(staff.status)}</div>
+
+              {/* Role Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">직책</span>
+                <div>{getRoleBadge(staff.role)}</div>
               </div>
-              <div>
-                <label className="text-xs text-gray-500 flex items-center gap-1">
-                  <Mail className="w-3 h-3" /> 이메일
-                </label>
-                <p className="text-sm text-[#081429] mt-1">{staff.email || '-'}</p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 flex items-center gap-1">
-                  <Phone className="w-3 h-3" /> 전화번호
-                </label>
-                <p className="text-sm text-[#081429] mt-1">{staff.phone || '-'}</p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 flex items-center gap-1">
-                  <Calendar className="w-3 h-3" /> 입사일
-                </label>
-                <p className="text-sm text-[#081429] mt-1">{staff.hireDate || '-'}</p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 flex items-center gap-1">
-                  <Briefcase className="w-3 h-3" /> 호칭
-                </label>
-                <p className="text-sm text-[#081429] mt-1">{staff.jobTitle || '-'}</p>
+
+              {/* Job Title Row */}
+              {staff.jobTitle && (
+                <div className="flex items-center gap-2 px-2 py-1.5">
+                  <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">호칭</span>
+                  <span className="text-sm text-[#081429]">{staff.jobTitle}</span>
+                </div>
+              )}
+
+              {/* Status Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">상태</span>
+                <div>{getStatusBadge(staff.status)}</div>
               </div>
             </div>
-          </section>
+          </div>
 
-          {/* 시스템 계정 정보 섹션 */}
-          <section>
-            <h3 className="text-sm font-bold text-[#081429] mb-3 flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              시스템 계정 정보
-            </h3>
-            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-              {/* 계정 연동 상태 */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">계정 연동</span>
+          {/* Section 2: 시스템 권한 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <Shield className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">시스템 권한</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {/* Account Link Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">계정 연동</span>
                 {staff.uid ? (
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-1 rounded">
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
                     <CheckCircle className="w-3.5 h-3.5" />
                     연동됨
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                     <XCircle className="w-3.5 h-3.5" />
                     미연동
                   </span>
                 )}
               </div>
 
-              {/* 시스템 역할 */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">시스템 역할</span>
+              {/* System Role Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">시스템 역할</span>
                 {systemRoleStyle ? (
-                  <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded ${systemRoleStyle.bg} ${systemRoleStyle.text}`}>
+                  <span className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded ${systemRoleStyle.bg} ${systemRoleStyle.text}`}>
                     {systemRoleStyle.icon}
                     {systemRoleStyle.label}
                   </span>
@@ -289,11 +285,11 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                 )}
               </div>
 
-              {/* 승인 상태 */}
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">승인 상태</span>
+              {/* Approval Status Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">승인 상태</span>
                 {approvalStyle ? (
-                  <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded ${approvalStyle.bg} ${approvalStyle.text}`}>
+                  <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded ${approvalStyle.bg} ${approvalStyle.text}`}>
                     {approvalStyle.icon}
                     {approvalStyle.label}
                   </span>
@@ -301,36 +297,53 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                   <span className="text-xs text-gray-400">-</span>
                 )}
               </div>
-
-              {/* 비밀번호 재설정 (연동된 계정만) */}
-              {staff.uid && canEdit && (
-                <div className="pt-3 border-t border-gray-200">
-                  <button
-                    onClick={openPasswordResetModal}
-                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
-                  >
-                    <KeyRound className="w-4 h-4" />
-                    비밀번호 재설정
-                  </button>
-                </div>
-              )}
-
             </div>
-          </section>
+          </div>
 
-          {/* 강사 전용 정보 (role === 'teacher') */}
-          {staff.role === 'teacher' && (
-            <section>
-              <h3 className="text-sm font-bold text-[#081429] mb-3 flex items-center gap-2">
-                <Building className="w-4 h-4" />
-                강사 정보
-              </h3>
-              <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-                {/* 담당 과목 */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">담당 과목</span>
+          {/* Section 3: 연락처 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <Phone className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">연락처</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {/* Email Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">이메일</span>
+                <span className="text-sm text-[#081429]">{staff.email || '-'}</span>
+              </div>
+
+              {/* Phone Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <Phone className="w-3 h-3 text-gray-400 shrink-0" />
+                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">전화번호</span>
+                <span className="text-sm text-[#081429]">{staff.phone || '-'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: 근무 정보 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <Briefcase className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">근무 정보</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {/* Hire Date Row */}
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
+                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">입사일</span>
+                <span className="text-sm text-[#081429]">{staff.hireDate || '-'}</span>
+              </div>
+
+              {/* Department/Subject Row (Teacher Only) */}
+              {staff.role === 'teacher' && staff.subjects && staff.subjects.length > 0 && (
+                <div className="flex items-center gap-2 px-2 py-1.5">
+                  <Building className="w-3 h-3 text-gray-400 shrink-0" />
+                  <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">담당 과목</span>
                   <div className="flex gap-1.5">
-                    {staff.subjects?.map((subject) => (
+                    {staff.subjects.map((subject) => (
                       <span
                         key={subject}
                         className={`text-xs px-2 py-0.5 rounded font-medium ${
@@ -339,19 +352,24 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                       >
                         {subject === 'math' ? '수학' : '영어'}
                       </span>
-                    )) || <span className="text-xs text-gray-400">-</span>}
+                    ))}
                   </div>
                 </div>
+              )}
 
-                {/* 기본 강의실 */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">기본 강의실</span>
-                  <span className="text-sm text-[#081429]">{staff.defaultRoom || '-'}</span>
+              {/* Default Room Row (Teacher Only) */}
+              {staff.role === 'teacher' && staff.defaultRoom && (
+                <div className="flex items-center gap-2 px-2 py-1.5">
+                  <Building className="w-3 h-3 text-gray-400 shrink-0" />
+                  <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">기본 강의실</span>
+                  <span className="text-sm text-[#081429]">{staff.defaultRoom}</span>
                 </div>
+              )}
 
-                {/* 시간표 색상 */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">시간표 색상</span>
+              {/* Color Settings (Teacher Only) */}
+              {staff.role === 'teacher' && (
+                <div className="flex items-center gap-2 px-2 py-1.5">
+                  <span className="w-16 shrink-0 text-xs font-medium text-[#373d41] ml-5">시간표 색상</span>
                   <div className="flex items-center gap-2">
                     <div
                       className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center text-xs font-bold"
@@ -365,84 +383,114 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                     <span className="text-xs text-gray-500">{staff.bgColor || '#3b82f6'}</span>
                   </div>
                 </div>
+              )}
 
-                {/* 원어민 / 숨김 여부 */}
-                <div className="flex gap-3">
-                  {staff.isNative && (
-                    <span className="flex items-center gap-1 text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded">
-                      <Globe className="w-3 h-3" />
-                      원어민
-                    </span>
-                  )}
-                  {staff.isHiddenInTimetable && (
-                    <span className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
-                      <EyeOff className="w-3 h-3" />
-                      시간표 숨김
-                    </span>
-                  )}
+              {/* Attributes (Teacher Only) */}
+              {staff.role === 'teacher' && (staff.isNative || staff.isHiddenInTimetable) && (
+                <div className="flex items-center gap-2 px-2 py-1.5">
+                  <span className="w-16 shrink-0 text-xs font-medium text-[#373d41] ml-5">속성</span>
+                  <div className="flex gap-2">
+                    {staff.isNative && (
+                      <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded">
+                        <Globe className="w-3 h-3" />
+                        원어민
+                      </span>
+                    )}
+                    {staff.isHiddenInTimetable && (
+                      <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                        <EyeOff className="w-3 h-3" />
+                        시간표 숨김
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </section>
-          )}
+              )}
+            </div>
+          </div>
 
-          {/* 메모 */}
+          {/* Section 5: 계정 관리 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <KeyRound className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">계정 관리</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {/* Password Reset Button (Only if account is linked and user can edit) */}
+              {staff.uid && canEdit && (
+                <div className="px-2 py-2">
+                  <button
+                    onClick={openPasswordResetModal}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-sm transition-colors"
+                  >
+                    <Lock className="w-4 h-4" />
+                    비밀번호 재설정
+                  </button>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="px-2 py-2 flex gap-2">
+                <button
+                  onClick={canEdit ? onEdit : undefined}
+                  disabled={!canEdit}
+                  title={getEditTooltip()}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-sm transition-colors ${
+                    canEdit
+                      ? 'bg-[#081429] text-white hover:bg-[#0a1a35] cursor-pointer'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  수정
+                </button>
+                <button
+                  onClick={canDelete ? () => setShowDeleteConfirm(true) : undefined}
+                  disabled={!canDelete}
+                  title={getDeleteTooltip()}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-sm transition-colors ${
+                    canDelete
+                      ? 'text-red-600 bg-red-50 hover:bg-red-100 cursor-pointer'
+                      : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                  }`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  삭제
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Memo Section (if exists) */}
           {staff.memo && (
-            <section>
-              <h3 className="text-sm font-bold text-[#081429] mb-3">메모</h3>
-              <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                <AlignLeft className="w-3 h-3 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-xs">메모</h3>
+              </div>
+              <div className="px-2 py-2">
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{staff.memo}</p>
               </div>
-            </section>
+            </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex justify-between">
-          <div>
-            <button
-              onClick={canDelete ? () => setShowDeleteConfirm(true) : undefined}
-              disabled={!canDelete}
-              title={getDeleteTooltip()}
-              className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg transition-colors ${
-                canDelete
-                  ? 'text-red-600 hover:bg-red-50 cursor-pointer'
-                  : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-              }`}
-            >
-              <Trash2 className="w-4 h-4" />
-              삭제
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              닫기
-            </button>
-            <button
-              onClick={canEdit ? onEdit : undefined}
-              disabled={!canEdit}
-              title={getEditTooltip()}
-              className={`flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg transition-colors ${
-                canEdit
-                  ? 'bg-[#081429] text-white hover:bg-[#0a1a35] cursor-pointer'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              <Edit className="w-4 h-4" />
-              수정
-            </button>
-          </div>
+        <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-sm transition-colors"
+          >
+            닫기
+          </button>
         </div>
       </div>
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-[8vh] z-[60]">
+          <div className="bg-white rounded-sm shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-sm bg-red-100 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
               </div>
               <div className="flex-1">
@@ -464,18 +512,18 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isDeleting}
-                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-sm transition-colors disabled:opacity-50"
               >
                 취소
               </button>
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-red-600 text-white rounded-sm hover:bg-red-700 transition-colors disabled:opacity-50"
               >
                 {isDeleting ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-sm animate-spin" />
                     삭제 중...
                   </>
                 ) : (
@@ -492,13 +540,13 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
 
       {/* 비밀번호 재설정 모달 */}
       {showPasswordResetModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60]">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-[8vh] z-[60]">
+          <div className="bg-white rounded-sm shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* 헤더 */}
             <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-sm bg-white/20 flex items-center justify-center">
                     <KeyRound className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -508,7 +556,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                 </div>
                 <button
                   onClick={() => setShowPasswordResetModal(false)}
-                  className="p-1 hover:bg-white/20 rounded-lg transition-colors text-white"
+                  className="p-1 hover:bg-white/20 rounded-sm transition-colors text-white"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -516,12 +564,12 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
             </div>
 
             {/* 컨텐츠 */}
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-4 flex-1 overflow-y-auto">
               {/* 모드 선택 탭 */}
-              <div className="flex rounded-lg bg-gray-100 p-1">
+              <div className="flex rounded-sm bg-gray-100 p-1">
                 <button
                   onClick={() => { setPasswordResetMode('email'); setResetResult(null); }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-md transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-sm transition-colors ${
                     passwordResetMode === 'email'
                       ? 'bg-white text-[#081429] shadow'
                       : 'text-gray-500 hover:text-gray-700'
@@ -532,7 +580,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                 </button>
                 <button
                   onClick={() => { setPasswordResetMode('direct'); setResetResult(null); }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-md transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-sm transition-colors ${
                     passwordResetMode === 'direct'
                       ? 'bg-white text-[#081429] shadow'
                       : 'text-gray-500 hover:text-gray-700'
@@ -546,7 +594,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
               {/* 이메일 발송 모드 */}
               {passwordResetMode === 'email' && (
                 <div className="space-y-4">
-                  <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="bg-blue-50 rounded-sm p-4">
                     <p className="text-sm text-blue-800">
                       <strong>{staff.email}</strong>로 비밀번호 재설정 링크가 포함된 이메일을 발송합니다.
                     </p>
@@ -558,7 +606,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                   <button
                     onClick={handleSendPasswordResetEmail}
                     disabled={isSendingReset || !staff.email}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSendingReset ? (
                       <>
@@ -578,7 +626,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
               {/* 직접 설정 모드 */}
               {passwordResetMode === 'direct' && (
                 <div className="space-y-4">
-                  <div className="bg-amber-50 rounded-lg p-4">
+                  <div className="bg-amber-50 rounded-sm p-4">
                     <p className="text-sm text-amber-800">
                       관리자가 직접 임시 비밀번호를 설정합니다.
                     </p>
@@ -596,14 +644,14 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="임시 비밀번호 입력"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                     />
                   </div>
 
                   <button
                     onClick={handleSetTempPassword}
                     disabled={isSendingReset || !newPassword || newPassword.length < 6}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-amber-600 text-white rounded-sm font-medium hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSendingReset ? (
                       <>
@@ -622,7 +670,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
 
               {/* 결과 메시지 */}
               {resetResult && (
-                <div className={`rounded-lg p-4 ${resetResult.success ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                <div className={`rounded-sm p-4 ${resetResult.success ? 'bg-emerald-50' : 'bg-red-50'}`}>
                   <div className="flex items-start gap-3">
                     {resetResult.success ? (
                       <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -641,7 +689,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
             <div className="px-5 py-3 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={() => setShowPasswordResetModal(false)}
-                className="w-full py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="w-full py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-sm transition-colors"
               >
                 닫기
               </button>

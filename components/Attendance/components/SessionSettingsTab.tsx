@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Trash2, Save, AlertCircle } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Trash2, Save, AlertCircle, BookOpen, Settings as SettingsIcon } from 'lucide-react';
 import { SessionPeriod, DateRange } from '../types';
 import { useSessionPeriods, useBatchSaveSessionPeriods } from '../../../hooks/useSessionPeriods';
 import { formatDateKey, parseLocalDate, getCategoryLabel, mergeOverlappingRanges } from '../utils';
@@ -58,7 +58,7 @@ const MiniCalendar: React.FC<{
   }, [dragRange]);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-2">
+    <div className="bg-white border border-gray-200 rounded-sm p-2">
       {/* 월 헤더 */}
       <div className="text-center text-xs font-bold text-gray-700 mb-1">
         {month}월
@@ -288,48 +288,57 @@ const SessionSettingsTab: React.FC<SessionSettingsTabProps> = ({
 
   return (
     <div
-      className="space-y-4 select-none"
+      className="space-y-2 select-none"
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
-        <Calendar size={16} className="text-blue-500" />
-        연간 세션 기간 설정
-      </div>
-
-      {/* 연도 / 과목 선택 */}
-      <div className="flex gap-3 items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setSelectedYear(y => y - 1)}
-            className="p-1.5 hover:bg-gray-100 rounded"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <span className="text-lg font-bold w-20 text-center">{selectedYear}년</span>
-          <button
-            onClick={() => setSelectedYear(y => y + 1)}
-            className="p-1.5 hover:bg-gray-100 rounded"
-          >
-            <ChevronRight size={18} />
-          </button>
+      {/* Section 1: 세션 정보 */}
+      <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+          <Calendar className="w-3 h-3 text-[#081429]" />
+          <h3 className="text-[#081429] font-bold text-xs">세션 정보</h3>
         </div>
+        <div className="divide-y divide-gray-100">
+          {/* Year / Category Selection Row */}
+          <div className="px-2 py-1.5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">년도</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setSelectedYear(y => y - 1)}
+                  className="p-1 hover:bg-gray-100 rounded"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="text-sm font-bold w-16 text-center">{selectedYear}년</span>
+                <button
+                  onClick={() => setSelectedYear(y => y + 1)}
+                  className="p-1 hover:bg-gray-100 rounded"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
 
-        <div className="flex gap-1">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-colors ${
-                selectedCategory === cat
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {getCategoryLabel(cat)}
-            </button>
-          ))}
+            <div className="flex items-center gap-2">
+              <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">과목</span>
+              <div className="flex gap-1">
+                {CATEGORIES.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1 text-xs font-bold rounded-sm transition-colors ${
+                      selectedCategory === cat
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {getCategoryLabel(cat)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -339,94 +348,121 @@ const SessionSettingsTab: React.FC<SessionSettingsTabProps> = ({
         </div>
       ) : (
         <>
-          {/* 12개월 달력 그리드 */}
-          <div className="grid grid-cols-4 gap-2">
-            {MONTHS.map(month => (
-              <MiniCalendar
-                key={month}
-                year={selectedYear}
-                month={month}
-                selectedRanges={editingRangesByMonth[month] || []}
-                dragRange={dragRange}
-                onMouseDown={handleMouseDown}
-                onMouseEnter={handleMouseEnter}
-              />
-            ))}
+          {/* Section 2: 기간 설정 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <BookOpen className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">기간 설정</h3>
+            </div>
+            <div className="p-2">
+              <div className="text-xs text-gray-500 mb-2">
+                달력에서 드래그하여 세션 기간을 설정하세요
+              </div>
+
+              {/* 12개월 달력 그리드 */}
+              <div className="grid grid-cols-4 gap-2">
+                {MONTHS.map(month => (
+                  <MiniCalendar
+                    key={month}
+                    year={selectedYear}
+                    month={month}
+                    selectedRanges={editingRangesByMonth[month] || []}
+                    dragRange={dragRange}
+                    onMouseDown={handleMouseDown}
+                    onMouseEnter={handleMouseEnter}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* 설정된 월 요약 */}
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-gray-600">
-                설정된 세션 ({configuredMonths.length}개월)
-              </span>
+          {/* Section 3: 설정 요약 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center gap-1">
+                <SettingsIcon className="w-3 h-3 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-xs">설정 요약</h3>
+              </div>
               {configuredMonths.length > 0 && (
                 <button
                   onClick={handleClearAll}
-                  className="text-xs text-red-500 hover:text-red-600"
+                  className="text-xs text-red-500 hover:text-red-600 font-medium"
                 >
                   전체 삭제
                 </button>
               )}
             </div>
+            <div className="p-2">
+              {configuredMonths.length === 0 ? (
+                <div className="text-xs text-gray-400">
+                  설정된 세션이 없습니다.
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-gray-600 mb-1">
+                    설정된 세션 ({configuredMonths.length}개월)
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {configuredMonths.map(month => {
+                      const ranges = editingRangesByMonth[month] || [];
+                      const rangeStr = ranges.map(r => {
+                        const s = parseLocalDate(r.startDate);
+                        const e = parseLocalDate(r.endDate);
+                        return `${s.getDate()}~${e.getDate()}`;
+                      }).join(', ');
 
-            {configuredMonths.length === 0 ? (
-              <div className="text-xs text-gray-400">
-                달력에서 드래그하여 세션 기간을 설정하세요.
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {configuredMonths.map(month => {
-                  const ranges = editingRangesByMonth[month] || [];
-                  const rangeStr = ranges.map(r => {
-                    const s = parseLocalDate(r.startDate);
-                    const e = parseLocalDate(r.endDate);
-                    return `${s.getDate()}~${e.getDate()}`;
-                  }).join(', ');
-
-                  return (
-                    <div
-                      key={month}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-200 rounded text-xs text-blue-700"
-                    >
-                      <span className="font-bold">{month}월</span>
-                      <span className="text-blue-500">({rangeStr})</span>
-                      <button
-                        onClick={() => handleClearMonth(month)}
-                        className="text-blue-400 hover:text-red-500 ml-0.5"
-                      >
-                        <Trash2 size={10} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 저장 버튼 */}
-          <div className="flex gap-2 pt-2 border-t border-gray-100">
-            <button
-              onClick={handleSave}
-              disabled={!hasChanges || batchSaveMutation.isPending}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-bold rounded-lg transition-colors ${
-                hasChanges
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              <Save size={16} />
-              {batchSaveMutation.isPending ? '저장 중...' : '저장'}
-            </button>
-          </div>
-
-          {/* 변경사항 알림 */}
-          {hasChanges && (
-            <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded">
-              <AlertCircle size={14} />
-              저장되지 않은 변경사항이 있습니다.
+                      return (
+                        <div
+                          key={month}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-200 rounded text-xs text-blue-700"
+                        >
+                          <span className="font-bold">{month}월</span>
+                          <span className="text-blue-500">({rangeStr})</span>
+                          <button
+                            onClick={() => handleClearMonth(month)}
+                            className="text-blue-400 hover:text-red-500 ml-0.5"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Section 4: 작업 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <Save className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">작업</h3>
+            </div>
+            <div className="p-2">
+              {/* 변경사항 알림 */}
+              {hasChanges && (
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 px-2 py-1.5 rounded mb-2 border border-amber-100">
+                  <AlertCircle size={14} />
+                  저장되지 않은 변경사항이 있습니다.
+                </div>
+              )}
+
+              {/* 저장 버튼 */}
+              <button
+                onClick={handleSave}
+                disabled={!hasChanges || batchSaveMutation.isPending}
+                className={`w-full flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-bold rounded-sm transition-colors ${
+                  hasChanges
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <Save size={16} />
+                {batchSaveMutation.isPending ? '저장 중...' : '저장'}
+              </button>
+            </div>
+          </div>
         </>
       )}
     </div>

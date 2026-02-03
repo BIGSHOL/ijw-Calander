@@ -38,7 +38,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 onClick={() => setIsOpen(!isOpen)}
                 className={`
           flex items-center justify-center gap-0.5 min-w-fit px-0.5 @xs:px-1 @sm:px-2 py-0.5 @xs:py-1 @sm:py-1.5
-          rounded-md @sm:rounded-lg transition-all duration-200 group
+          rounded-sm @sm:rounded-sm transition-all duration-200 group
           ${isOpen ? 'bg-gray-100 text-[#081429]' : 'hover:bg-gray-100 text-[#373d41]'}
           ${className}
         `}
@@ -54,7 +54,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             </button>
 
             {isOpen && (
-                <div className="absolute z-50 min-w-[120px] mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-80 overflow-auto animate-in fade-in slide-in-from-top-2 duration-150 p-2 scrollbar-hide">
+                <div className="absolute z-50 min-w-[120px] mt-2 bg-white border border-gray-100 rounded-sm shadow-xl max-h-80 overflow-auto animate-in fade-in slide-in-from-top-2 duration-150 p-2 scrollbar-hide">
                     <div className="flex flex-col gap-1">
                         {options.map((option) => (
                             <button
@@ -64,7 +64,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                     setIsOpen(false);
                                 }}
                                 className={`
-                  flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap
+                  flex items-center justify-between w-full px-3 py-2 rounded-sm text-sm font-bold transition-colors whitespace-nowrap
                   ${option.value === value
                                         ? 'bg-[#fdb813]/10 text-[#081429]'
                                         : 'text-gray-600 hover:bg-gray-50 hover:text-[#081429]'}

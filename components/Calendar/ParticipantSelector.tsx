@@ -39,25 +39,25 @@ const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
 }) => {
   return (
     <div>
-      <label className="block text-xs font-extrabold text-[#373d41] uppercase tracking-wider mb-2 flex items-center gap-1">
-        <Users size={14} className="text-[#fdb813]" /> 참가자
+      <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
+        <Users size={12} className="text-[#fdb813]" /> 참가자
       </label>
       <div className="relative">
         <button
           type="button"
           onClick={() => setIsParticipantsDropdownOpen(!isParticipantsDropdownOpen)}
-          className="w-full text-left px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#fdb813] focus:border-[#fdb813] bg-white flex justify-between items-center outline-none transition-all"
+          className="w-full text-left px-3 py-2 text-sm border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] bg-white flex justify-between items-center outline-none transition-all"
         >
-          <span className={`text-sm font-medium ${participants.length === 0 ? 'text-gray-400' : 'text-gray-800'}`}>
+          <span className={`text-sm ${participants.length === 0 ? 'text-gray-400' : 'text-gray-800'}`}>
             {participants.length === 0
               ? '참가자를 선택하세요'
               : `${participants[0]} 외 ${participants.length - 1}명`}
           </span>
-          {isParticipantsDropdownOpen ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
+          {isParticipantsDropdownOpen ? <ChevronUp size={14} className="text-gray-500" /> : <ChevronDown size={14} className="text-gray-500" />}
         </button>
 
         {isParticipantsDropdownOpen && (
-          <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-white border border-gray-200 rounded-sm shadow-xl z-50 max-h-60 overflow-y-auto">
             {users
               .filter(u => u.status === 'approved')
               .sort((a, b) => {
@@ -100,7 +100,7 @@ const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
                 };
 
                 return (
-                  <div key={u.uid} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors group">
+                  <div key={u.uid} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-sm transition-colors group">
                     <label className="flex items-center gap-3 cursor-pointer flex-1">
                       <input
                         type="checkbox"
@@ -131,7 +131,7 @@ const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
                         }}
                         disabled={!canEditStatus}
                         className={`
-                              text-xxs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border flex items-center gap-1 transition-all
+                              text-xxs px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider border flex items-center gap-1 transition-all
                               ${currentStatus === 'joined' ? 'bg-green-100 text-green-700 border-green-200' : ''}
                               ${currentStatus === 'declined' ? 'bg-red-100 text-red-700 border-red-200' : ''}
                               ${currentStatus === 'pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : ''}
@@ -150,9 +150,9 @@ const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
         )}
       </div>
       {participants.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
+        <div className="flex flex-wrap gap-1 mt-1.5">
           {participants.map(p => (
-            <span key={p} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+            <span key={p} className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs bg-gray-100 text-gray-700">
               {p}
               {!isViewMode && canEditCurrent && (
                 <button
@@ -162,7 +162,7 @@ const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
                   }}
                   className="ml-1 text-gray-400 hover:text-gray-600"
                 >
-                  <X size={12} />
+                  <X size={10} />
                 </button>
               )}
             </span>

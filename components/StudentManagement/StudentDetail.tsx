@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { UnifiedStudent, UserProfile } from '../../types';
 import BasicInfoTab from './tabs/BasicInfoTab';
 import CoursesTab from './tabs/CoursesTab';
 import GradesTab from './tabs/GradesTab';
 import ConsultationsTab from './tabs/ConsultationsTab';
 import AttendanceTab from './tabs/AttendanceTab';
+import BillingTab from './tabs/BillingTab';
 import WithdrawalModal from './WithdrawalModal';
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
-import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar } from 'lucide-react';
+import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard } from 'lucide-react';
 
 interface StudentDetailProps {
   student: UnifiedStudent;
@@ -18,7 +19,7 @@ interface StudentDetailProps {
   // compact 모드(모달)에서는 퇴원처리 버튼이 항상 숨겨짐 - 학생관리에서만 처리
 }
 
-type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations';
+type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations' | 'billing';
 
 const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false, readOnly = false, currentUser }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
@@ -38,6 +39,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
     { id: 'grades', label: '성적', icon: <GraduationCap className="w-3 h-3" /> },
     { id: 'attendance', label: '출결', icon: <Calendar className="w-3 h-3" /> },
     { id: 'consultations', label: '상담', icon: <MessageSquare className="w-3 h-3" /> },
+    { id: 'billing', label: '수납', icon: <CreditCard className="w-3 h-3" /> },
   ];
 
   const isWithdrawn = student.status === 'withdrawn';
@@ -91,7 +93,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
               {isWithdrawn ? (
                 <button
                   onClick={handleReactivate}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-emerald-600 text-white rounded-sm hover:bg-emerald-700 transition-colors"
                 >
                   <UserCheck className="w-3 h-3" />
                   <span>재원 복구</span>
@@ -99,7 +101,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
               ) : (
                 <button
                   onClick={() => setShowWithdrawalModal(true)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded-sm hover:bg-red-200 transition-colors"
                 >
                   <UserMinus className="w-3 h-3" />
                   <span>퇴원 처리</span>
@@ -108,7 +110,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
               {canDeleteStudent && (
                 <button
                   onClick={handleDelete}
-                  className="flex items-center gap-1 p-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-red-100 hover:text-red-700 transition-colors"
+                  className="flex items-center gap-1 p-1 text-xs bg-gray-100 text-gray-600 rounded-sm hover:bg-red-100 hover:text-red-700 transition-colors"
                   title="학생 삭제"
                 >
                   <Trash2 className="w-3 h-3" />
@@ -145,6 +147,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
         {activeTab === 'grades' && <GradesTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
         {activeTab === 'attendance' && <AttendanceTab student={student} readOnly={readOnly || !canEditStudent} />}
         {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
+        {activeTab === 'billing' && <BillingTab student={student} />}
       </div>
 
       {/* 퇴원 처리 모달 */}

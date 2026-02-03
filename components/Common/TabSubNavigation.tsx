@@ -44,18 +44,22 @@ export const TabSubNavigation: React.FC<TabSubNavigationProps> = ({
   };
 
   return (
-    <div className={`
-      bg-[#081429]
-      ${showBorder ? 'border-t border-white/10' : ''}
-      ${variantClasses[variant]}
-      flex items-center
-      text-xs
-      shadow-md
-      z-20
-      ${className}
-    `}>
+    <nav
+      role="navigation"
+      aria-label="필터 및 보기 옵션"
+      className={`
+        bg-[#081429]
+        ${showBorder ? 'border-t border-white/10' : ''}
+        ${variantClasses[variant]}
+        flex items-center
+        text-xs
+        shadow-md
+        z-20
+        ${className}
+      `}
+    >
       {children}
-    </div>
+    </nav>
   );
 };
 

@@ -25,14 +25,14 @@ export const StatsCard: React.FC<StatsCardProps> = ({
     const hasTrendData = trend !== undefined;
 
     return (
-        <div className="bg-white rounded-lg shadow-sm p-3 border border-slate-100 flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-1.5">
+        <div className="bg-white rounded-sm shadow-sm p-1.5 border border-slate-100 flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-0.5">
                 <div>
                     <h3 className="text-xxs font-medium text-slate-500 mb-0.5">{title}</h3>
-                    <div className="text-lg font-bold text-slate-900">{value}</div>
+                    <div className="text-base font-bold text-slate-900">{value}</div>
                 </div>
-                <div className={`p-1.5 rounded-lg ${colorClass} bg-opacity-10 text-opacity-100`}>
-                    {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-4 h-4' })}
+                <div className={`p-1 rounded-sm ${colorClass} bg-opacity-10 text-opacity-100`}>
+                    {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-3.5 h-3.5' })}
                 </div>
             </div>
 
@@ -40,7 +40,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                 {hasTrendData ? (
                     <>
                         <span className={`flex items-center font-medium ${trend > 0 ? 'text-emerald-600' : trend < 0 ? 'text-red-500' : 'text-slate-500'}`}>
-                            {trend > 0 ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : trend < 0 ? <ArrowDownRight className="w-3 h-3 mr-0.5" /> : <Minus className="w-3 h-3 mr-0.5" />}
+                            {trend > 0 ? <ArrowUpRight className="w-2.5 h-2.5 mr-0.5" /> : trend < 0 ? <ArrowDownRight className="w-2.5 h-2.5 mr-0.5" /> : <Minus className="w-2.5 h-2.5 mr-0.5" />}
                             {trendValue !== undefined && (
                                 <span className="mr-0.5">
                                     {trendValue > 0 ? `+${trendValue}` : trendValue}건

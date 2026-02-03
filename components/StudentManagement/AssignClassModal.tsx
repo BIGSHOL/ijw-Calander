@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { X, BookOpen, Loader2, Plus, Search, AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { X, BookOpen, Loader2, Plus, Search, AlertCircle, Clock, CheckCircle, Settings } from 'lucide-react';
 import { db } from '../../firebaseConfig';
 import { doc, setDoc, Timestamp } from 'firebase/firestore';
 import { UnifiedStudent, SubjectType } from '../../types';
-import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useClasses } from '../../hooks/useClasses';
 import { SUBJECT_LABELS, SUBJECT_COLORS } from '../../utils/styleUtils';
 import { useQueryClient } from '@tanstack/react-query';
@@ -152,13 +151,13 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleClose}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]" onClick={handleClose}>
             <div
-                className="bg-white rounded-lg shadow-2xl w-[420px] max-h-[85vh] flex flex-col"
+                className="bg-white rounded-sm shadow-2xl w-[420px] max-h-[85vh] flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header - Compact */}
-                <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between bg-[#081429] text-white rounded-t-lg shrink-0">
+                <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between bg-[#081429] text-white rounded-t-sm shrink-0">
                     <div className="flex items-center gap-1.5">
                         <BookOpen size={16} />
                         <h3 className="font-bold text-sm">수업 배정</h3>
@@ -176,165 +175,192 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                 {/* Content - Compact */}
                 <div className="p-3 flex-1 overflow-y-auto">
                     {error && (
-                        <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-800">
+                        <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-sm text-xs text-red-800">
                             {error}
                         </div>
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-3">
-                        {/* 과목 선택 - Compact */}
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                                과목 <span className="text-red-500">*</span>
-                            </label>
-                            <div className="grid grid-cols-4 gap-1.5">
-                                {AVAILABLE_SUBJECTS.map(subject => {
-                                    const colors = SUBJECT_COLORS[subject];
-                                    return (
-                                        <button
-                                            key={subject}
-                                            type="button"
-                                            onClick={() => {
-                                                setSelectedSubject(subject);
-                                                setSelectedClassName('');
-                                                setSearchQuery('');
-                                            }}
-                                            className={`py-1.5 rounded text-xs font-bold transition-colors ${selectedSubject === subject
-                                                ? `shadow-sm text-white`
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
-                                            style={selectedSubject === subject ? {
-                                                backgroundColor: colors.bg,
-                                                color: colors.text
-                                            } : undefined}
-                                        >
-                                            {SUBJECT_LABELS[subject]}
-                                        </button>
-                                    );
-                                })}
+                        {/* Section 1: 수업 선택 */}
+                        <div className="space-y-2.5">
+                            {/* Section Header */}
+                            <div className="flex items-center gap-1.5 pb-1.5 border-b border-gray-200">
+                                <BookOpen size={14} className="text-[#fdb813]" />
+                                <h4 className="text-xs font-bold text-gray-900">수업 선택</h4>
                             </div>
-                        </div>
 
-                        {/* 수업 검색 */}
-                        <div>
-                            <div className="relative">
-                                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
-                                <input
-                                    type="text"
-                                    placeholder="수업명 또는 강사명 검색..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
-                                />
-                            </div>
-                        </div>
-
-                        {/* 수업 시작일 선택 */}
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                                수업 시작일 <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
-                            />
-                            <p className="mt-1 text-xxs text-gray-500">
-                                💡 미래 날짜를 선택하면 해당 날짜부터 수업이 시작됩니다
-                            </p>
-                        </div>
-
-                        {/* 부담임 여부 (수학 과목 전용) */}
-                        {selectedSubject === 'math' && (
-                            <div className="flex items-start gap-2">
-                                <input
-                                    type="checkbox"
-                                    id="isSlotTeacher"
-                                    checked={isSlotTeacher}
-                                    onChange={(e) => setIsSlotTeacher(e.target.checked)}
-                                    className="mt-0.5 w-4 h-4 text-[#fdb813] bg-gray-100 border-gray-300 rounded focus:ring-[#fdb813] focus:ring-2"
-                                />
-                                <label htmlFor="isSlotTeacher" className="flex-1 cursor-pointer">
-                                    <div className="text-xs font-bold text-gray-700">부담임으로 배정</div>
-                                    <p className="text-xxs text-gray-500 mt-0.5">
-                                        별도 수업으로 생성된 부담임 수업인 경우 체크
-                                    </p>
+                            {/* 과목 선택 - Compact */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                                    과목 <span className="text-red-500">*</span>
                                 </label>
-                            </div>
-                        )}
-
-                        {/* 이미 배정된 수업 안내 */}
-                        {activeEnrollments.length > 0 && (
-                            <div className="p-2 bg-amber-50 border border-amber-200 rounded">
-                                <div className="flex items-center gap-1.5 mb-1.5">
-                                    <AlertCircle size={12} className="text-amber-600" />
-                                    <span className="text-xs font-bold text-amber-800">이미 배정된 수업</span>
-                                </div>
-                                <div className="space-y-1">
-                                    {activeEnrollments.map((e, idx) => (
-                                        <div key={idx} className="flex items-center gap-1.5 text-xxs text-amber-700">
-                                            {e.isScheduled ? (
-                                                <Clock size={10} className="text-blue-500" />
-                                            ) : (
-                                                <CheckCircle size={10} className="text-green-500" />
-                                            )}
-                                            <span className="font-medium">{e.className}</span>
-                                            {e.isScheduled && (
-                                                <span className="text-blue-600">({e.startDate} 배정 예정)</span>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 수업 선택 - Compact */}
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                                수업 선택 <span className="text-red-500">*</span>
-                            </label>
-
-                            {isLoading ? (
-                                <div className="flex items-center justify-center py-6 text-gray-500">
-                                    <Loader2 size={16} className="animate-spin mr-1.5" />
-                                    <span className="text-xs">로딩 중...</span>
-                                </div>
-                            ) : availableClasses.length === 0 ? (
-                                <div className="p-3 text-center text-gray-500 text-xs bg-gray-50 rounded border border-gray-200">
-                                    {searchQuery ? '검색 결과가 없습니다' : '배정 가능한 수업이 없습니다'}
-                                </div>
-                            ) : (
-                                <div className="max-h-[220px] overflow-y-auto border border-gray-300 rounded">
-                                    {availableClasses.map((cls) => (
-                                        <label
-                                            key={cls.id}
-                                            className={`flex items-center gap-2 p-2 border-b last:border-b-0 cursor-pointer transition-colors ${selectedClassName === cls.className
-                                                    ? 'bg-[#fdb813]/10 border-l-2 border-l-[#fdb813]'
-                                                    : 'hover:bg-gray-50'
+                                <div className="grid grid-cols-4 gap-1.5">
+                                    {AVAILABLE_SUBJECTS.map(subject => {
+                                        const colors = SUBJECT_COLORS[subject];
+                                        return (
+                                            <button
+                                                key={subject}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedSubject(subject);
+                                                    setSelectedClassName('');
+                                                    setSearchQuery('');
+                                                }}
+                                                className={`py-1.5 rounded-sm text-xs font-bold transition-colors ${selectedSubject === subject
+                                                    ? `shadow-sm text-white`
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name="className"
-                                                value={cls.className}
-                                                checked={selectedClassName === cls.className}
-                                                onChange={(e) => setSelectedClassName(e.target.value)}
-                                                className="w-3.5 h-3.5 text-[#fdb813] focus:ring-[#fdb813]"
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-bold text-xs text-[#081429] truncate">
-                                                    {cls.className}
+                                                style={selectedSubject === subject ? {
+                                                    backgroundColor: colors.bg,
+                                                    color: colors.text
+                                                } : undefined}
+                                            >
+                                                {SUBJECT_LABELS[subject]}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 수업 검색 */}
+                            <div>
+                                <div className="relative">
+                                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                                    <input
+                                        type="text"
+                                        placeholder="수업명 또는 강사명 검색..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 수업 선택 목록 - Compact */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                                    수업 목록 <span className="text-red-500">*</span>
+                                </label>
+
+                                {isLoading ? (
+                                    <div className="flex items-center justify-center py-6 text-gray-500">
+                                        <Loader2 size={16} className="animate-spin mr-1.5" />
+                                        <span className="text-xs">로딩 중...</span>
+                                    </div>
+                                ) : availableClasses.length === 0 ? (
+                                    <div className="p-3 text-center text-gray-500 text-xs bg-gray-50 rounded-sm border border-gray-200">
+                                        {searchQuery ? '검색 결과가 없습니다' : '배정 가능한 수업이 없습니다'}
+                                    </div>
+                                ) : (
+                                    <div className="max-h-[220px] overflow-y-auto border border-gray-300 rounded-sm">
+                                        {availableClasses.map((cls) => (
+                                            <label
+                                                key={cls.id}
+                                                className={`flex items-center gap-2 p-2 border-b last:border-b-0 cursor-pointer transition-colors ${selectedClassName === cls.className
+                                                        ? 'bg-[#fdb813]/10 border-l-2 border-l-[#fdb813]'
+                                                        : 'hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="className"
+                                                    value={cls.className}
+                                                    checked={selectedClassName === cls.className}
+                                                    onChange={(e) => setSelectedClassName(e.target.value)}
+                                                    className="w-3.5 h-3.5 text-[#fdb813] focus:ring-[#fdb813]"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-bold text-xs text-[#081429] truncate">
+                                                        {cls.className}
+                                                    </div>
+                                                    <div className="text-xxs text-gray-600 mt-0.5">
+                                                        {cls.teacher} · {cls.studentCount || 0}명
+                                                    </div>
                                                 </div>
-                                                <div className="text-xxs text-gray-600 mt-0.5">
-                                                    {cls.teacher} · {cls.studentCount || 0}명
-                                                </div>
-                                            </div>
-                                        </label>
-                                    ))}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Section 2: 배정 설정 */}
+                        <div className="space-y-2.5">
+                            {/* Section Header */}
+                            <div className="flex items-center gap-1.5 pb-1.5 border-b border-gray-200">
+                                <Settings size={14} className="text-[#fdb813]" />
+                                <h4 className="text-xs font-bold text-gray-900">배정 설정</h4>
+                            </div>
+
+                            {/* 수업 시작일 선택 */}
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                                    수업 시작일 <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
+                                />
+                                <p className="mt-1 text-xxs text-gray-500">
+                                    미래 날짜를 선택하면 해당 날짜부터 수업이 시작됩니다
+                                </p>
+                            </div>
+
+                            {/* 부담임 여부 (수학 과목 전용) */}
+                            {selectedSubject === 'math' && (
+                                <div className="flex items-start gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="isSlotTeacher"
+                                        checked={isSlotTeacher}
+                                        onChange={(e) => setIsSlotTeacher(e.target.checked)}
+                                        className="mt-0.5 w-4 h-4 text-[#fdb813] bg-gray-100 border-gray-300 rounded-sm focus:ring-[#fdb813] focus:ring-2"
+                                    />
+                                    <label htmlFor="isSlotTeacher" className="flex-1 cursor-pointer">
+                                        <div className="text-xs font-bold text-gray-700">부담임으로 배정</div>
+                                        <p className="text-xxs text-gray-500 mt-0.5">
+                                            별도 수업으로 생성된 부담임 수업인 경우 체크
+                                        </p>
+                                    </label>
                                 </div>
                             )}
                         </div>
+
+                        {/* Section 3: 현재 배정 */}
+                        {activeEnrollments.length > 0 && (
+                            <div className="space-y-2.5">
+                                {/* Section Header */}
+                                <div className="flex items-center gap-1.5 pb-1.5 border-b border-gray-200">
+                                    <CheckCircle size={14} className="text-[#fdb813]" />
+                                    <h4 className="text-xs font-bold text-gray-900">현재 배정</h4>
+                                </div>
+
+                                {/* 이미 배정된 수업 안내 */}
+                                <div className="p-2 bg-amber-50 border border-amber-200 rounded-sm">
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                        <AlertCircle size={12} className="text-amber-600" />
+                                        <span className="text-xs font-bold text-amber-800">활성 수업</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        {activeEnrollments.map((e, idx) => (
+                                            <div key={idx} className="flex items-center gap-1.5 text-xxs text-amber-700">
+                                                {e.isScheduled ? (
+                                                    <Clock size={10} className="text-blue-500" />
+                                                ) : (
+                                                    <CheckCircle size={10} className="text-green-500" />
+                                                )}
+                                                <span className="font-medium">{e.className}</span>
+                                                {e.isScheduled && (
+                                                    <span className="text-blue-600">({e.startDate} 배정 예정)</span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Footer Buttons - Compact */}
                         <div className="flex gap-1.5 pt-2">
@@ -342,14 +368,14 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                 type="button"
                                 onClick={handleClose}
                                 disabled={isSubmitting}
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded-sm text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
                             >
                                 취소
                             </button>
                             <button
                                 type="submit"
                                 disabled={isSubmitting || !selectedClassName}
-                                className="flex-1 px-3 py-2 bg-[#fdb813] text-[#081429] rounded text-xs font-bold hover:bg-[#fdb813]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                className="flex-1 px-3 py-2 bg-[#fdb813] text-[#081429] rounded-sm text-xs font-bold hover:bg-[#fdb813]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
                                 {isSubmitting ? (
                                     <>

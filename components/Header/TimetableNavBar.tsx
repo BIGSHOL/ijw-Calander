@@ -29,7 +29,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
   setIsTimetableSettingsOpen,
 }) => {
   return (
-    <div className="bg-[#1e293b] h-10 flex items-center px-4 md:px-6 border-b border-gray-700 relative z-40 text-xs">
+    <div className="bg-[#081429] h-10 flex items-center px-6 border-b border-gray-700 relative z-30 text-xs">
       {/* Main Filter Toggle - Only show for Math */
         /* Removed Global Option Settings Button */
       }
@@ -44,16 +44,16 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           title="과목 선택"
         >
           {hasPermission('timetable.math.view') && (
-            <option value="math">📐 수학</option>
+            <option value="math">수학</option>
           )}
           {hasPermission('timetable.english.view') && (
-            <option value="english">📚 영어</option>
+            <option value="english">영어</option>
           )}
           {hasPermission('timetable.science.view') && (
-            <option value="science">🔬 과학</option>
+            <option value="science">과학</option>
           )}
           {hasPermission('timetable.korean.view') && (
-            <option value="korean">📖 국어</option>
+            <option value="korean">국어</option>
           )}
         </select>
 
@@ -72,7 +72,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
             title="클릭하여 보기방식 전환"
           >
             {timetableViewType === 'class'
-              ? <><ClipboardList size={12} className="inline" /> 통합</>
+              ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
               : timetableViewType === 'teacher'
                 ? <><UserIcon size={12} className="inline" /> 강사</>
                 : <><Building size={12} className="inline" /> 강의실</>}
@@ -96,7 +96,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
             title="클릭하여 보기방식 전환"
           >
             {timetableViewType === 'class'
-              ? <><ClipboardList size={12} className="inline" /> 통합</>
+              ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
               : mathViewMode === 'teacher-based'
                 ? <><UserIcon size={12} className="inline" /> 강사</>
                 : <><CalendarIcon size={12} className="inline" /> 날짜</>}

@@ -499,7 +499,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-sm animate-spin mx-auto mb-4"></div>
           <p className="text-gray-500">출석부를 불러오는 중...</p>
         </div>
       </div>
@@ -574,9 +574,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       <div className="px-4 py-2 flex items-center gap-2 flex-shrink-0 border-b border-gray-100 overflow-x-auto">
         <div
           onClick={() => setSettlementModalOpen(true)}
-          className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-blue-300 transition-colors flex-shrink-0"
+          className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-blue-300 transition-colors flex-shrink-0"
         >
-          <div className="w-7 h-7 bg-blue-50 text-[#081429] rounded-md flex items-center justify-center">
+          <div className="w-7 h-7 bg-blue-50 text-[#081429] rounded-sm flex items-center justify-center">
             <span className="text-sm font-bold leading-none">₩</span>
           </div>
           <div>
@@ -585,8 +585,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </div>
         </div>
 
-        <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 flex-shrink-0">
-          <div className="p-1.5 bg-gray-50 text-[#081429] rounded-md">
+        <div className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 flex-shrink-0">
+          <div className="p-1.5 bg-gray-50 text-[#081429] rounded-sm">
             <Users size={16} />
           </div>
           <div>
@@ -597,9 +597,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
         <div
           onClick={() => setListModal({ isOpen: true, type: 'new' })}
-          className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-yellow-300 transition-colors flex-shrink-0"
+          className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-yellow-300 transition-colors flex-shrink-0"
         >
-          <div className="p-1.5 bg-yellow-100 text-[#081429] rounded-md">
+          <div className="p-1.5 bg-yellow-100 text-[#081429] rounded-sm">
             <UserPlus size={16} />
           </div>
           <div>
@@ -610,9 +610,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
         <div
           onClick={() => setListModal({ isOpen: true, type: 'dropped' })}
-          className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-red-300 transition-colors flex-shrink-0"
+          className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-red-300 transition-colors flex-shrink-0"
         >
-          <div className="p-1.5 bg-red-50 text-red-600 rounded-md">
+          <div className="p-1.5 bg-red-50 text-red-600 rounded-sm">
             <UserMinus size={16} />
           </div>
           <div>
@@ -621,7 +621,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </div>
         </div>
 
-        <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 flex-shrink-0">
+        <div className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 flex-shrink-0">
           <div>
             <p className="text-xxs text-gray-600 font-medium">출석률</p>
             <p className="text-sm font-bold text-[#373d41]">
@@ -632,7 +632,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
         {/* 주말 회색 처리 체크박스 */}
         <label
-          className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-gray-300 transition-colors flex-shrink-0"
+          className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-gray-300 transition-colors flex-shrink-0"
           title="체크하면 주말(토/일) 열이 회색으로 표시됩니다"
         >
           <input
@@ -648,10 +648,10 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         </label>
 
         {/* 수업/이름 뷰 전환 토글 */}
-        <div className="flex bg-gray-100 rounded-lg p-0.5 flex-shrink-0">
+        <div className="flex bg-gray-100 rounded-sm p-0.5 flex-shrink-0">
           <button
             onClick={() => handleSortModeChange('class')}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-colors ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-bold transition-colors ${
               sortMode === 'class'
                 ? 'bg-[#081429] text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
@@ -662,7 +662,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </button>
           <button
             onClick={() => handleSortModeChange('name')}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-colors ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-bold transition-colors ${
               sortMode === 'name'
                 ? 'bg-[#081429] text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
@@ -684,7 +684,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             refetch();
           }}
           disabled={isLoadingStudents}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
             isLoadingStudents
               ? 'bg-gray-400 text-white cursor-wait'
               : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -702,7 +702,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         {(canManageSessions || isMasterOrAdmin) && (
           <button
             onClick={() => setSessionSettingsModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg font-bold text-xs hover:bg-amber-600 transition-colors shadow-sm flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-sm font-bold text-xs hover:bg-amber-600 transition-colors shadow-sm flex-shrink-0"
             title="세션 기간 설정 (관리자)"
           >
             <Calendar size={14} />
@@ -714,7 +714,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           <button
             onClick={handleDirectExport}
             disabled={isExporting}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
               isExporting
                 ? 'bg-gray-400 text-white cursor-wait'
                 : 'bg-emerald-600 text-white hover:bg-emerald-700'
@@ -729,7 +729,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 {canManageSessions && (
           <button
             onClick={() => setSettingsModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 text-white rounded-lg font-bold text-xs hover:bg-gray-600 transition-colors shadow-sm flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 text-white rounded-sm font-bold text-xs hover:bg-gray-600 transition-colors shadow-sm flex-shrink-0"
             title="급여 설정"
           >
             <Settings size={14} />

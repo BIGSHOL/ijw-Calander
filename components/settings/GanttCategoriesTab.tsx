@@ -207,7 +207,7 @@ const GanttCategoriesTab = ({ isMaster }: GanttCategoriesTabProps) => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-sm bg-blue-100 flex items-center justify-center">
                         <List size={20} className="text-blue-600" />
                     </div>
                     <div>
@@ -224,7 +224,7 @@ const GanttCategoriesTab = ({ isMaster }: GanttCategoriesTabProps) => {
                 <input
                     type="text"
                     placeholder="카테고리 검색..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-sm text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -232,14 +232,14 @@ const GanttCategoriesTab = ({ isMaster }: GanttCategoriesTabProps) => {
 
             {/* Add New */}
             {isMaster && (
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-sm p-4">
                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">새 카테고리 추가</h4>
                     <div className="flex gap-3 items-end">
                         <div className="flex-1">
                             <label className="text-xs font-medium text-gray-500 mb-1 block">카테고리명</label>
                             <input
                                 type="text"
-                                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500"
+                                className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-sm text-sm outline-none focus:border-blue-500"
                                 placeholder="예: 디자인"
                                 value={newLabel}
                                 onChange={(e) => setNewLabel(e.target.value)}
@@ -270,7 +270,7 @@ const GanttCategoriesTab = ({ isMaster }: GanttCategoriesTabProps) => {
                         <button
                             onClick={handleAdd}
                             disabled={!newLabel.trim()}
-                            className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition shadow-sm h-[42px]"
+                            className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-sm text-sm font-medium transition shadow-sm h-[42px]"
                         >
                             <Plus size={16} />
                             추가
@@ -280,7 +280,7 @@ const GanttCategoriesTab = ({ isMaster }: GanttCategoriesTabProps) => {
             )}
 
             {/* List */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
                 <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">등록된 카테고리</span>
                     <span className="text-xs text-gray-400">드래그하여 순서 변경</span>
@@ -350,7 +350,7 @@ const GanttCategoriesTab = ({ isMaster }: GanttCategoriesTabProps) => {
                 </div>
             </div>
 
-            <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl p-3">
+            <div className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-sm p-3">
                 <span className="text-blue-500 font-bold">💡</span>
                 <span>배경색은 밝은 파스텔 톤, 글자색은 진한 색상을 선택하면 가독성이 좋습니다.</span>
             </div>

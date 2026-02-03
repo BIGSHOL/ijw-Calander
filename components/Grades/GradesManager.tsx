@@ -464,7 +464,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
         <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           <div className="flex flex-wrap items-center gap-3">
             {/* 과목 토글 */}
-            <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+            <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
               <TabButton
                 active={subjectFilter === 'all'}
                 onClick={() => onSubjectFilterChange?.('all')}
@@ -500,7 +500,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="시험명 검색..."
-                className="bg-[#1e293b] border border-gray-700 rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
+                className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
               />
             </div>
           </div>
@@ -526,7 +526,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
             {canManageExams ? (
               <button
                 onClick={() => setIsCreatingExam(true)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
               >
                 <Plus size={14} />
                 <span>시험 등록</span>
@@ -612,7 +612,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
               </div>
               <button
                 onClick={() => setSelectedStudentForDetail(null)}
-                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-1.5 hover:bg-gray-100 rounded-sm transition-colors"
               >
                 <X size={18} />
               </button>

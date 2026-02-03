@@ -5,7 +5,7 @@ import Modal from './Modal';
 /**
  * Global Search Component
  * Addresses Issue #10: Global search functionality
- * 
+ *
  * Features:
  * - Cmd/Ctrl+K keyboard shortcut
  * - Search across students, events, classes
@@ -219,7 +219,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({
                                 onClose();
                               }}
                               className={`
-                                w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors
+                                w-full flex items-center gap-3 px-3 py-2 rounded-sm text-left transition-colors
                                 ${
                                   isSelected
                                     ? 'bg-accent text-primary'

@@ -23,19 +23,19 @@ const ClassCard: React.FC<ClassCardProps> = ({ classInfo, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className="bg-white border-2 rounded-xl p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
+      className="bg-white border-2 rounded-sm p-2 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group"
       style={{
         borderColor: subjectColors.border,
         backgroundColor: subjectColors.light
       }}
     >
       {/* 제목 및 과목 배지 */}
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="text-[#081429] font-bold text-base flex-1 pr-2 leading-tight">
+      <div className="flex items-start justify-between mb-1">
+        <h3 className="text-[#081429] font-bold text-sm flex-1 pr-2 leading-tight">
           {className}
         </h3>
         <span
-          className="px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm shrink-0"
+          className="px-1.5 py-0.5 rounded-sm text-xxs font-bold shadow-sm shrink-0"
           style={{
             backgroundColor: subjectColors.bg,
             color: subjectColors.text,
@@ -47,16 +47,16 @@ const ClassCard: React.FC<ClassCardProps> = ({ classInfo, onClick }) => {
       </div>
 
       {/* 강사 정보 */}
-      <div className="flex items-center gap-2 mb-2 text-[#373d41] text-sm">
-        <User className="w-4 h-4 opacity-60" />
+      <div className="flex items-center gap-1.5 mb-1 text-[#373d41] text-xs">
+        <User className="w-3.5 h-3.5 opacity-60" />
         <span>{teacher || '미정'}</span>
       </div>
 
       {/* 학생 수 */}
-      <div className="flex items-center gap-2 mb-2">
-        <Users className="w-4 h-4 text-[#373d41] opacity-60" />
+      <div className="flex items-center gap-1.5 mb-1">
+        <Users className="w-3.5 h-3.5 text-[#373d41] opacity-60" />
         <span
-          className="font-bold text-sm px-2 py-0.5 rounded"
+          className="font-bold text-xs px-1.5 py-0.5 rounded"
           style={{
             backgroundColor: subjectColors.bg,
             color: subjectColors.text
@@ -67,14 +67,14 @@ const ClassCard: React.FC<ClassCardProps> = ({ classInfo, onClick }) => {
       </div>
 
       {/* 스케줄 */}
-      <div className="flex items-start gap-2 text-[#373d41] text-sm mb-3">
-        <Clock className="w-4 h-4 mt-0.5 flex-shrink-0 opacity-60" />
-        <span className="line-clamp-2 text-xs">{scheduleText}</span>
+      <div className="flex items-start gap-1.5 text-[#373d41] text-xs mb-1.5">
+        <Clock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 opacity-60" />
+        <span className="line-clamp-2 text-xxs">{scheduleText}</span>
       </div>
 
       {/* 하단 바 */}
-      <div className="pt-3 border-t" style={{ borderColor: `${subjectColors.border}40` }}>
-        <div className="flex items-center justify-between text-xs">
+      <div className="pt-1.5 border-t" style={{ borderColor: `${subjectColors.border}40` }}>
+        <div className="flex items-center justify-between text-xxs">
           <span className="flex items-center gap-1 text-[#373d41] opacity-70">
             <BookOpen className="w-3 h-3" />
             {subjectLabel}

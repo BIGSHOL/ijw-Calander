@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { UnifiedStudent } from '../../../types';
 import { Calendar as CalendarIcon, TrendingUp, TrendingDown, CheckCircle2, XCircle, BookOpen } from 'lucide-react';
 import { useAttendanceRecords } from '../../../hooks/useAttendance';
@@ -363,19 +363,19 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
         <div className="flex items-center gap-1">
           <button
             onClick={handlePrevMonth}
-            className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+            className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-sm hover:bg-gray-200 transition-colors"
           >
             ‹
           </button>
           <button
             onClick={handleToday}
-            className="px-2 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+            className="px-2 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-sm hover:bg-gray-50 transition-colors"
           >
             {selectedMonth.getFullYear()}년 {selectedMonth.getMonth() + 1}월
           </button>
           <button
             onClick={handleNextMonth}
-            className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+            className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-sm hover:bg-gray-200 transition-colors"
           >
             ›
           </button>
@@ -389,7 +389,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
           >
             <option value="all">전체 수업</option>
             {classList.map((cls) => (
@@ -403,25 +403,25 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
 
       {/* 통계 카드 - 컴팩트 (1행 4열) */}
       <div className="grid grid-cols-4 gap-1.5">
-        <div className="bg-white border border-green-200 rounded p-1.5">
+        <div className="bg-white border border-green-200 rounded-sm p-1.5">
           <p className="text-micro text-gray-500">출석률</p>
           <p className="text-base font-bold text-green-600">{stats.attendanceRate}%</p>
           <p className="text-xxs text-gray-400">{stats.presentCount}일</p>
         </div>
 
-        <div className="bg-white border border-red-200 rounded p-1.5">
+        <div className="bg-white border border-red-200 rounded-sm p-1.5">
           <p className="text-micro text-gray-500">결석률</p>
           <p className="text-base font-bold text-red-600">{stats.absentRate}%</p>
           <p className="text-xxs text-gray-400">{stats.absentCount}일</p>
         </div>
 
-        <div className="bg-white border border-orange-200 rounded p-1.5">
+        <div className="bg-white border border-orange-200 rounded-sm p-1.5">
           <p className="text-micro text-gray-500">지각</p>
           <p className="text-base font-bold text-orange-600">{stats.lateCount}</p>
           <p className="text-xxs text-gray-400">일</p>
         </div>
 
-        <div className="bg-white border border-orange-200 rounded p-1.5">
+        <div className="bg-white border border-orange-200 rounded-sm p-1.5">
           <p className="text-micro text-gray-500">조퇴</p>
           <p className="text-base font-bold text-orange-600">{stats.earlyLeaveCount}</p>
           <p className="text-xxs text-gray-400">일</p>
@@ -429,7 +429,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
       </div>
 
       {/* 달력 뷰 */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
         {/* 요일 헤더 */}
         <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
           {WEEKDAYS.map((day, idx) => (
@@ -483,7 +483,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
                 {statusInfo && (
                   <div className="mt-0.5">
                     <div
-                      className="text-micro font-semibold rounded px-1 py-0.5 text-center"
+                      className="text-micro font-semibold rounded-sm px-1 py-0.5 text-center"
                       style={{ backgroundColor: statusInfo.bg, color: statusInfo.text }}
                     >
                       {statusInfo.label}
@@ -494,7 +494,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
                 {/* 메모 툴팁 (있을 경우) */}
                 {day.memo && (
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 hidden group-hover:block z-10">
-                    <div className="bg-gray-800 text-white text-micro rounded px-2 py-1 whitespace-nowrap shadow-lg">
+                    <div className="bg-gray-800 text-white text-micro rounded-sm px-2 py-1 whitespace-nowrap shadow-lg">
                       {day.memo}
                     </div>
                   </div>
@@ -506,13 +506,13 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
       </div>
 
       {/* 범례 */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+      <div className="bg-gray-50 border border-gray-200 rounded-sm p-2">
         <p className="text-xs font-medium text-gray-600 mb-1">범례</p>
         <div className="flex flex-wrap gap-2">
           {Object.entries(ATTENDANCE_STATUS).map(([value, info]) => (
             <div key={value} className="flex items-center gap-1">
               <div
-                className="w-3 h-3 rounded"
+                className="w-3 h-3 rounded-sm"
                 style={{ backgroundColor: info.bg }}
               />
               <span className="text-xs text-gray-700">{info.label}</span>

@@ -62,7 +62,7 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
     return (
       <button
         onClick={() => onTabSelect(singleTab)}
-        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+        className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all flex items-center gap-1.5 ${
           active
             ? 'bg-[#fdb813] text-[#081429] shadow-sm'
             : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -93,7 +93,7 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
       onMouseLeave={handleMouseLeave}
     >
       <button
-        className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 ${
+        className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all flex items-center gap-1.5 ${
           isActive
             ? 'bg-[#fdb813] text-[#081429] shadow-sm'
             : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -113,7 +113,7 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
 
       {isOpen && (
         <div
-          className="absolute top-full left-0 min-w-[140px] bg-[#1e293b] border border-white/10 rounded-lg shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute top-full left-0 min-w-[140px] bg-[#1e293b] border border-white/10 rounded-sm shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-2 duration-150"
           role="menu"
           aria-label={`${group.label} 하위 메뉴`}
           onMouseEnter={handleMouseEnter}

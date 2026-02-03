@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { UnifiedStudent, StudentScore, GRADE_COLORS, calculateGrade, UserProfile } from '../../../types';
 import { useStudentScores, useDeleteScore, calculateScoreStats } from '../../../hooks/useStudentGrades';
 import { useExams } from '../../../hooks/useExams';
@@ -293,7 +293,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     e.stopPropagation();
                                     setIsAddingLevelTest(true);
                                 }}
-                                className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-600 text-white rounded text-xxs hover:bg-indigo-700 transition-colors"
+                                className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-600 text-white rounded-sm text-xxs hover:bg-indigo-700 transition-colors"
                             >
                                 <Plus size={10} />
                                 추가
@@ -315,11 +315,11 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                 {levelTests.slice(0, 3).map((test) => (
                                     <div
                                         key={test.id}
-                                        className="flex items-center gap-2 p-1.5 bg-gray-50 rounded hover:bg-indigo-50 transition-colors group"
+                                        className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-indigo-50 transition-colors group"
                                     >
                                         <div className="flex-1">
                                             <div className="flex items-center gap-1.5">
-                                                <span className={`px-1.5 py-0.5 rounded text-micro font-medium ${
+                                                <span className={`px-1.5 py-0.5 rounded-sm text-micro font-medium ${
                                                     test.subject === 'math'
                                                         ? 'bg-blue-100 text-blue-700'
                                                         : 'bg-purple-100 text-purple-700'
@@ -375,7 +375,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     e.stopPropagation();
                                     setIsAddingGoal(true);
                                 }}
-                                className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-600 text-white rounded text-xxs hover:bg-amber-700 transition-colors"
+                                className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-600 text-white rounded-sm text-xxs hover:bg-amber-700 transition-colors"
                             >
                                 <Plus size={10} />
                                 추가
@@ -401,11 +401,11 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     return (
                                         <div
                                             key={goal.id}
-                                            className="flex items-center gap-2 p-1.5 bg-gray-50 rounded hover:bg-amber-50 transition-colors group"
+                                            className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-amber-50 transition-colors group"
                                         >
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className={`px-1.5 py-0.5 rounded text-micro font-medium ${
+                                                    <span className={`px-1.5 py-0.5 rounded-sm text-micro font-medium ${
                                                         goal.subject === 'math'
                                                             ? 'bg-blue-100 text-blue-700'
                                                             : 'bg-purple-100 text-purple-700'
@@ -476,7 +476,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     e.stopPropagation();
                                     setIsAddingComment(true);
                                 }}
-                                className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-600 text-white rounded text-xxs hover:bg-emerald-700 transition-colors"
+                                className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-600 text-white rounded-sm text-xxs hover:bg-emerald-700 transition-colors"
                             >
                                 <Plus size={10} />
                                 추가
@@ -508,7 +508,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     return (
                                         <div
                                             key={comment.id}
-                                            className={`p-1.5 rounded border hover:shadow-sm transition-all group ${colorClass}`}
+                                            className={`p-1.5 rounded-sm border hover:shadow-sm transition-all group ${colorClass}`}
                                         >
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="flex-1 min-w-0">
@@ -518,7 +518,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                                             {categoryInfo.label}
                                                         </span>
                                                         {comment.subject && comment.subject !== 'all' && (
-                                                            <span className={`px-1 py-0.5 rounded text-micro font-medium ${
+                                                            <span className={`px-1 py-0.5 rounded-sm text-micro font-medium ${
                                                                 comment.subject === 'math'
                                                                     ? 'bg-blue-100 text-blue-700'
                                                                     : 'bg-purple-100 text-purple-700'
@@ -536,7 +536,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0">
                                                         <button
                                                             onClick={() => setEditingComment(comment)}
-                                                            className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded transition-all"
+                                                            className="p-1 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-sm transition-all"
                                                         >
                                                             <Edit2 size={11} />
                                                         </button>
@@ -546,7 +546,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                                                     deleteGradeComment.mutateAsync({ id: comment.id, studentId: student.id });
                                                                 }
                                                             }}
-                                                            className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                                                            className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-sm transition-all"
                                                         >
                                                             <Trash2 size={11} />
                                                         </button>
@@ -569,7 +569,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                     {/* 주요 KPI 카드 (2행) */}
                     <div className="grid grid-cols-4 gap-2">
                         {/* 평균 점수 */}
-                        <div className="bg-blue-50 p-2 border border-blue-100 rounded">
+                        <div className="bg-blue-50 p-2 border border-blue-100 rounded-sm">
                             <div className="flex items-center justify-between mb-0.5">
                                 <span className="text-micro font-medium text-blue-600">전체 평균</span>
                                 <BarChart3 size={10} className="text-blue-400" />
@@ -583,7 +583,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                         </div>
 
                         {/* 최근 3개 평균 */}
-                        <div className="bg-indigo-50 p-2 border border-indigo-100 rounded">
+                        <div className="bg-indigo-50 p-2 border border-indigo-100 rounded-sm">
                             <div className="flex items-center justify-between mb-0.5">
                                 <span className="text-micro font-medium text-indigo-600">최근 평균</span>
                                 <TrendingUp size={10} className="text-indigo-400" />
@@ -600,7 +600,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                         </div>
 
                         {/* 목표 달성률 */}
-                        <div className="bg-amber-50 p-2 border border-amber-100 rounded">
+                        <div className="bg-amber-50 p-2 border border-amber-100 rounded-sm">
                             <div className="flex items-center justify-between mb-0.5">
                                 <span className="text-micro font-medium text-amber-600">목표 달성</span>
                                 <Target size={10} className="text-amber-400" />
@@ -614,7 +614,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                         </div>
 
                         {/* 성적 안정성 */}
-                        <div className="bg-emerald-50 p-2 border border-emerald-100 rounded">
+                        <div className="bg-emerald-50 p-2 border border-emerald-100 rounded-sm">
                             <div className="flex items-center justify-between mb-0.5">
                                 <span className="text-micro font-medium text-emerald-600">안정성</span>
                                 <Award size={10} className="text-emerald-400" />
@@ -633,7 +633,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                         <div className="grid grid-cols-2 gap-2">
                             {/* 수학 평균 */}
                             {kpiStats.mathAvg > 0 && (
-                                <div className="bg-blue-50 p-2 border border-blue-100 rounded">
+                                <div className="bg-blue-50 p-2 border border-blue-100 rounded-sm">
                                     <div className="flex items-center justify-between mb-0.5">
                                         <span className="text-micro font-medium text-blue-600">수학 평균</span>
                                         <BookOpen size={10} className="text-blue-400" />
@@ -651,7 +651,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
 
                             {/* 영어 평균 */}
                             {kpiStats.englishAvg > 0 && (
-                                <div className="bg-purple-50 p-2 border border-purple-100 rounded">
+                                <div className="bg-purple-50 p-2 border border-purple-100 rounded-sm">
                                     <div className="flex items-center justify-between mb-0.5">
                                         <span className="text-micro font-medium text-purple-600">영어 평균</span>
                                         <BookOpen size={10} className="text-purple-400" />
@@ -671,7 +671,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
 
                     {/* Phase 4: 자동 인사이트 */}
                     {insights.length > 0 && (
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded p-2">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-sm p-2">
                             <h5 className="text-xs font-bold text-[#081429] mb-1.5 flex items-center gap-1">
                                 <AlertCircle size={12} className="text-blue-600" />
                                 AI 학습 인사이트
@@ -688,7 +688,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     return (
                                         <div
                                             key={idx}
-                                            className={`flex items-start gap-1.5 p-1.5 rounded border ${colors[insight.type]}`}
+                                            className={`flex items-start gap-1.5 p-1.5 rounded-sm border ${colors[insight.type]}`}
                                         >
                                             <span className="text-sm shrink-0">{insight.icon}</span>
                                             <p className="text-xs leading-relaxed flex-1">{insight.message}</p>
@@ -767,7 +767,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                             {!readOnly && (
                                 <button
                                     onClick={() => setIsAddingScore(true)}
-                                    className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[#081429] text-white rounded text-micro font-medium hover:bg-[#0f2847] transition-colors"
+                                    className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[#081429] text-white rounded-sm text-micro font-medium hover:bg-[#0f2847] transition-colors"
                                 >
                                     <Plus size={10} />
                                     입력
@@ -775,7 +775,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                             )}
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className={`flex items-center gap-0.5 px-1 py-0.5 rounded text-micro transition-colors ${
+                                className={`flex items-center gap-0.5 px-1 py-0.5 rounded-sm text-micro transition-colors ${
                                     activeFilterCount > 0
                                         ? 'bg-indigo-100 text-indigo-700'
                                         : 'text-gray-500 hover:bg-gray-100'
@@ -795,7 +795,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                             <select
                                 value={subjectFilter}
                                 onChange={(e) => setSubjectFilter(e.target.value as any)}
-                                className="text-micro border border-gray-200 rounded px-1 py-0.5 bg-white focus:ring-1 focus:ring-indigo-500 focus:outline-none flex-1"
+                                className="text-micro border border-gray-200 rounded-sm px-1 py-0.5 bg-white focus:ring-1 focus:ring-indigo-500 focus:outline-none flex-1"
                             >
                                 <option value="all">전체</option>
                                 <option value="math">수학</option>
@@ -805,7 +805,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                             <select
                                 value={examTypeFilter}
                                 onChange={(e) => setExamTypeFilter(e.target.value)}
-                                className="text-micro border border-gray-200 rounded px-1 py-0.5 bg-white focus:ring-1 focus:ring-indigo-500 focus:outline-none flex-1"
+                                className="text-micro border border-gray-200 rounded-sm px-1 py-0.5 bg-white focus:ring-1 focus:ring-indigo-500 focus:outline-none flex-1"
                             >
                                 <option value="all">전체 유형</option>
                                 <option value="mock">모의고사</option>
@@ -820,7 +820,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                         setExamTypeFilter('all');
                                         setSearchQuery('');
                                     }}
-                                    className="text-micro text-red-500 hover:text-red-600 px-1 py-0.5 hover:bg-red-50 rounded transition-colors shrink-0"
+                                    className="text-micro text-red-500 hover:text-red-600 px-1 py-0.5 hover:bg-red-50 rounded-sm transition-colors shrink-0"
                                 >
                                     <X size={10} />
                                 </button>
@@ -841,7 +841,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
 
                 {scores.length === 0 ? (
                     <div className="p-4 text-center">
-                        <div className="w-8 h-8 mx-auto mb-2 bg-gray-100 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 mx-auto mb-2 bg-gray-100 rounded-sm flex items-center justify-center">
                             {activeFilterCount > 0 ? (
                                 <Search className="w-4 h-4 text-gray-400" />
                             ) : (
@@ -894,7 +894,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     </span>
 
                                     {/* 과목 */}
-                                    <span className={`w-8 shrink-0 px-1 py-0.5 rounded text-micro font-medium text-center ${
+                                    <span className={`w-8 shrink-0 px-1 py-0.5 rounded-sm text-micro font-medium text-center ${
                                         score.subject === 'math'
                                             ? 'bg-blue-100 text-blue-700'
                                             : 'bg-purple-100 text-purple-700'
@@ -917,7 +917,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     {/* 등급 */}
                                     <span className="w-8 shrink-0 text-center">
                                         {gradeColor ? (
-                                            <span className={`text-micro px-1 py-0.5 rounded font-bold ${gradeColor.bg} ${gradeColor.text}`}>
+                                            <span className={`text-micro px-1 py-0.5 rounded-sm font-bold ${gradeColor.bg} ${gradeColor.text}`}>
                                                 {score.grade}
                                             </span>
                                         ) : (
@@ -929,7 +929,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     {!readOnly && (
                                         <button
                                             onClick={() => handleDeleteScore(score.id)}
-                                            className="w-5 shrink-0 opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                                            className="w-5 shrink-0 opacity-0 group-hover:opacity-100 p-0.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-sm transition-all"
                                         >
                                             <Trash2 size={12} />
                                         </button>

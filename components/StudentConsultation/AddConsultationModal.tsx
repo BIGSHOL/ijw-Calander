@@ -1,16 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStudents } from '../../hooks/useStudents';
-import { useStaff } from '../../hooks/useStaff'; // Added
+import { useStaff } from '../../hooks/useStaff';
 import { useCreateConsultation, useUpdateConsultation } from '../../hooks/useConsultationMutations';
 import { Consultation, ConsultationCategory, CATEGORY_CONFIG, UserProfile } from '../../types';
-import { X, Search, Loader2, User, Users, Clock, Calendar, MessageSquare, Edit2 } from 'lucide-react';
+import { X, Search, Loader2, User, Users, Clock, Calendar, MessageSquare, Edit2, FileText, BookOpen, AlertCircle } from 'lucide-react';
 
 interface AddConsultationModalProps {
     onClose: () => void;
     onSuccess: () => void;
     preSelectedStudentId?: string;
     editingConsultation?: Consultation;
-    userProfile?: UserProfile | null; // 시뮬레이션 지원
+    userProfile?: UserProfile | null;
 }
 
 // 현재 시간을 HH:MM 형식으로 반환
@@ -26,7 +26,6 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
     editingConsultation,
     userProfile,
 }) => {
-    // 시뮬레이션 지원: userProfile이 전달되면 사용, 아니면 null 처리
     const currentUser = userProfile ? {
         uid: userProfile.uid,
         displayName: userProfile.displayName,
@@ -42,7 +41,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
     const [studentSearch, setStudentSearch] = useState('');
     const [showStudentDropdown, setShowStudentDropdown] = useState(false);
 
-    // 폼 상태 - 초기값 설정
+    // 폼 상태
     const [studentId, setStudentId] = useState(editingConsultation?.studentId || preSelectedStudentId || '');
     const [consultantId, setConsultantId] = useState(editingConsultation?.consultantId || currentUser?.uid || '');
     const [type, setType] = useState<'parent' | 'student'>(editingConsultation?.type || 'parent');
@@ -77,7 +76,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
         return Array.from(new Set(selectedStudent.enrollments.map(e => e.subject)));
     }, [selectedStudent]);
 
-    // 초기 consultantId 설정 (staff 로딩 후 본인 매칭)
+    // 초기 consultantId 설정
     useEffect(() => {
         if (isEditing || !staff.length) return;
         const currentStaff = staff.find(s =>
@@ -89,9 +88,9 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
         }
     }, [staff, currentUser, isEditing]);
 
-    // 과목에 따른 담당선생님 자동 선택 (신규 작성 시에만 동작)
+    // 과목에 따른 담당선생님 자동 선택
     useEffect(() => {
-        if (isEditing) return; // 수정 모드에서는 자동 변경 방지
+        if (isEditing) return;
         if (!studentId || !selectedStudent || !subject || subject === 'other') return;
 
         const enrollment = selectedStudent.enrollments?.find(e => e.subject === subject);
@@ -105,7 +104,6 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
 
     // preSelectedStudentId가 있을 때 학생 검색창에 이름 표시
     useEffect(() => {
-        // 수정 모드일 때도 학생 이름 표시
         const targetId = editingConsultation?.studentId || preSelectedStudentId;
         if (targetId && students.length > 0) {
             const student = students.find(s => s.id === targetId);
@@ -115,7 +113,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
         }
     }, [preSelectedStudentId, editingConsultation, students]);
 
-    // 학생 선택 시 과목 자동 설정 (신규 작성 시에만)
+    // 학생 선택 시 과목 자동 설정
     useEffect(() => {
         if (isEditing) return;
         if (studentSubjects.length === 1) {
@@ -209,297 +207,270 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
             <div
-                className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
+                className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden"
                 onClick={e => e.stopPropagation()}
             >
                 {/* 헤더 */}
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
-                    <div className="flex items-center gap-2">
-                        {isEditing ? <Edit2 className="w-5 h-5 text-[#fdb813]" /> : <MessageSquare className="w-5 h-5 text-[#fdb813]" />}
-                        <h2 className="text-lg font-bold text-[#081429]">{isEditing ? '상담 기록 수정' : '새 상담 기록'}</h2>
-                    </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
-                        <X size={20} />
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
+                        {isEditing ? <Edit2 className="w-4 h-4 text-[#fdb813]" /> : <MessageSquare className="w-4 h-4 text-[#fdb813]" />}
+                        {isEditing ? '상담 기록 수정' : '새 상담 기록'}
+                    </h2>
+                    <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                        <X size={18} />
                     </button>
                 </div>
 
                 {/* 폼 */}
-                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
-                    {/* 학생 선택 (검색) */}
-                    <div className="relative">
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                            학생 <span className="text-red-500">*</span>
-                        </label>
-                        {/* 수정 모드 이거나 preSelectedStudentId가 있으면 잠금 처리 느낌, 하지만 수정 모드에서는 변경 가능하게? 아니면 고정? 요구사항 없으므로 변경 가능하게 둠. 단, 초기값은 세팅됨. */}
-                        {/* preSelectedStudentId가 있을 때만 잠금 (특정 학생 컨텍스트에서 생성 시) */}
-                        {preSelectedStudentId ? (
-                            <div className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 flex justify-between items-center">
-                                <span>{selectedStudent?.name} {selectedStudent?.grade ? `(${selectedStudent.grade})` : ''}</span>
-                                <span className="text-xs text-gray-400">학생 고정</span>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="relative">
-                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        value={studentSearch}
-                                        onChange={(e) => {
-                                            setStudentSearch(e.target.value);
-                                            setShowStudentDropdown(true);
-                                            if (!e.target.value) setStudentId('');
-                                        }}
-                                        onFocus={() => setShowStudentDropdown(true)}
-                                        placeholder="학생 이름 검색..."
-                                        className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#fdb813] focus:border-[#fdb813] focus:outline-none"
-                                        disabled={studentsLoading}
-                                    />
-                                </div>
-                                {showStudentDropdown && filteredStudents.length > 0 && (
-                                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                        {filteredStudents.map(student => (
-                                            <button
-                                                key={student.id}
-                                                type="button"
-                                                onClick={() => handleSelectStudent(student)}
-                                                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${studentId === student.id ? 'bg-[#fdb813]/10' : ''
-                                                    }`}
-                                            >
-                                                <span className="font-medium text-gray-800">{student.name}</span>
-                                                <span className="text-xs text-gray-500">
-                                                    {student.grade || ''} {student.school || ''}
-                                                </span>
-                                            </button>
-                                        ))}
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {/* Section 1: 학생 정보 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <User className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">학생 정보</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">학생 <span className="text-red-500">*</span></span>
+                                {preSelectedStudentId ? (
+                                    <div className="flex-1 bg-gray-50 border border-gray-200 px-2 py-1 text-xs text-gray-700 flex justify-between items-center">
+                                        <span>{selectedStudent?.name} {selectedStudent?.grade ? `(${selectedStudent.grade})` : ''}</span>
+                                        <span className="text-xxs text-gray-400">고정</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex-1 relative">
+                                        <div className="relative">
+                                            <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                value={studentSearch}
+                                                onChange={(e) => {
+                                                    setStudentSearch(e.target.value);
+                                                    setShowStudentDropdown(true);
+                                                    if (!e.target.value) setStudentId('');
+                                                }}
+                                                onFocus={() => setShowStudentDropdown(true)}
+                                                placeholder="학생 이름 검색..."
+                                                className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                                disabled={studentsLoading}
+                                            />
+                                        </div>
+                                        {showStudentDropdown && filteredStudents.length > 0 && (
+                                            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 shadow-lg max-h-36 overflow-y-auto">
+                                                {filteredStudents.map(student => (
+                                                    <button
+                                                        key={student.id}
+                                                        type="button"
+                                                        onClick={() => handleSelectStudent(student)}
+                                                        className={`w-full px-2 py-1.5 text-left text-xs hover:bg-gray-50 flex items-center justify-between ${studentId === student.id ? 'bg-[#fdb813]/10' : ''}`}
+                                                    >
+                                                        <span className="font-medium text-gray-800">{student.name}</span>
+                                                        <span className="text-xxs text-gray-500">
+                                                            {student.grade || ''} {student.school || ''}
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
-                            </>
-                        )}
-                    </div>
-
-                    {/* ... (나머지 폼 필드) ... */}
-
-                    {/* 상담 유형 + 카테고리 */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1.5">상담 유형</label>
-                            <div className="flex gap-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setType('parent')}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors ${type === 'parent'
-                                        ? 'bg-[#081429] text-white'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">유형</span>
+                                <div className="flex gap-1 flex-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setType('parent')}
+                                        className={`flex-1 py-1 text-xs font-medium flex items-center justify-center gap-1 transition-colors ${type === 'parent'
+                                            ? 'bg-[#081429] text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                    >
+                                        <Users size={10} />
+                                        학부모
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setType('student')}
+                                        className={`flex-1 py-1 text-xs font-medium flex items-center justify-center gap-1 transition-colors ${type === 'student'
+                                            ? 'bg-[#081429] text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                    >
+                                        <User size={10} />
+                                        학생
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">카테고리</span>
+                                <select
+                                    value={category}
+                                    onChange={(e) => setCategory(e.target.value as ConsultationCategory)}
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none"
                                 >
-                                    <Users size={12} />
-                                    학부모
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setType('student')}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors ${type === 'student'
-                                        ? 'bg-[#081429] text-white'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                    {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
+                                        <option key={key} value={key}>
+                                            {config.icon} {config.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">과목</span>
+                                <div className="flex gap-1 flex-1">
+                                    {studentSubjects.length === 0 ? (
+                                        <span className="text-xxs text-gray-400 py-0.5">등록 과목 없음</span>
+                                    ) : (
+                                        <>
+                                            {studentSubjects.includes('math') && (
+                                                <button type="button" onClick={() => setSubject('math')} className={`px-2 py-0.5 text-xxs font-medium transition-colors ${subject === 'math' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}>수학</button>
+                                            )}
+                                            {studentSubjects.includes('english') && (
+                                                <button type="button" onClick={() => setSubject('english')} className={`px-2 py-0.5 text-xxs font-medium transition-colors ${subject === 'english' ? 'bg-purple-500 text-white' : 'bg-purple-50 text-purple-600 hover:bg-purple-100'}`}>영어</button>
+                                            )}
+                                            {studentSubjects.length === 2 && (
+                                                <button type="button" onClick={() => setSubject('other')} className={`px-2 py-0.5 text-xxs font-medium transition-colors ${subject === 'other' ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>전체</button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">담당자</span>
+                                <select
+                                    value={consultantId}
+                                    onChange={(e) => setConsultantId(e.target.value)}
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none"
                                 >
-                                    <User size={12} />
-                                    학생
-                                </button>
+                                    {(() => {
+                                        const currentStaff = staff.find(s =>
+                                            s.uid === currentUser?.uid ||
+                                            s.email === currentUser?.email
+                                        );
+                                        if (currentStaff) {
+                                            const displayRole = currentStaff.systemRole?.toUpperCase() || currentStaff.role;
+                                            return (
+                                                <option value={currentStaff.id}>
+                                                    {currentStaff.name} ({displayRole}) - 본인
+                                                </option>
+                                            );
+                                        }
+                                        return (
+                                            <option value={currentUser?.uid || ''}>
+                                                {currentUser?.displayName || '본인'} (Desk)
+                                            </option>
+                                        );
+                                    })()}
+                                    {staff
+                                        .filter(s => s.uid !== currentUser?.uid && s.email !== currentUser?.email)
+                                        .map(s => {
+                                            const displayRole = s.systemRole?.toUpperCase() || s.role;
+                                            return (
+                                                <option key={s.id} value={s.id}>
+                                                    {s.name} {displayRole ? `(${displayRole})` : ''}
+                                                </option>
+                                            );
+                                        })}
+                                </select>
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1.5">카테고리</label>
-                            <select
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value as ConsultationCategory)}
-                                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
-                            >
-                                {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
-                                    <option key={key} value={key}>
-                                        {config.icon} {config.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
                     </div>
 
-                    {/* 날짜/시간/소요시간 */}
-                    <div className="grid grid-cols-3 gap-3">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                                <Calendar size={12} className="inline mr-1" />날짜
-                            </label>
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="w-full text-sm border border-gray-200 rounded-lg px-2 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
-                            />
+                    {/* Section 2: 일시 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <Clock className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">일시</h3>
                         </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                                <Clock size={12} className="inline mr-1" />시간
-                            </label>
-                            <input
-                                type="time"
-                                value={time}
-                                onChange={(e) => setTime(e.target.value)}
-                                className="w-full text-sm border border-gray-200 rounded-lg px-2 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1.5">소요(분)</label>
-                            <input
-                                type="number"
-                                value={duration}
-                                onChange={(e) => setDuration(e.target.value)}
-                                className="w-full text-sm border border-gray-200 rounded-lg px-2 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
-                                placeholder="30"
-                            />
-                        </div>
-                    </div>
-
-                    {/* 관련 과목 (학생의 등록 과목만 표시) */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">관련 과목</label>
-                        <div className="flex gap-2">
-                            {studentSubjects.length === 0 ? (
-                                <span className="text-xs text-gray-400 py-2">등록 과목 없음 (기타로 저장)</span>
-                            ) : (
-                                <>
-                                    {studentSubjects.includes('math') && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setSubject('math')}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${subject === 'math'
-                                                ? 'bg-blue-500 text-white'
-                                                : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                                                }`}
-                                        >
-                                            수학
-                                        </button>
-                                    )}
-                                    {studentSubjects.includes('english') && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setSubject('english')}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${subject === 'english'
-                                                ? 'bg-purple-500 text-white'
-                                                : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
-                                                }`}
-                                        >
-                                            영어
-                                        </button>
-                                    )}
-                                    {studentSubjects.length === 2 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setSubject('other')}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${subject === 'other'
-                                                ? 'bg-gray-600 text-white'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            전체
-                                        </button>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* 상담 담당자 */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">상담 담당자</label>
-                        <select
-                            value={consultantId}
-                            onChange={(e) => setConsultantId(e.target.value)}
-                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
-                        >
-                            {/* 본인 옵션: staff에서 uid 또는 email로 매칭 */}
-                            {(() => {
-                                const currentStaff = staff.find(s =>
-                                    s.uid === currentUser?.uid ||
-                                    s.email === currentUser?.email
-                                );
-                                if (currentStaff) {
-                                    // 본인이 staff에 등록되어 있으면 해당 정보 표시
-                                    // systemRole이 있으면 우선 표시, 없으면 role 표시
-                                    const displayRole = currentStaff.systemRole?.toUpperCase() || currentStaff.role;
-                                    return (
-                                        <option value={currentStaff.id}>
-                                            {currentStaff.name} ({displayRole}) - 본인
-                                        </option>
-                                    );
-                                }
-                                // staff에 없으면 기본 표시
-                                return (
-                                    <option value={currentUser?.uid || ''}>
-                                        {currentUser?.displayName || '본인'} (Desk)
-                                    </option>
-                                );
-                            })()}
-                            {staff
-                                .filter(s => s.uid !== currentUser?.uid && s.email !== currentUser?.email)
-                                .map(s => {
-                                    const displayRole = s.systemRole?.toUpperCase() || s.role;
-                                    return (
-                                        <option key={s.id} value={s.id}>
-                                            {s.name} {displayRole ? `(${displayRole})` : ''}
-                                        </option>
-                                    );
-                                })}
-                        </select>
-                    </div>
-
-                    {/* 학부모 정보 (학부모 상담 시) */}
-                    {type === 'parent' && (
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1.5">학부모 이름</label>
+                        <div className="divide-y divide-gray-100">
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">날짜</span>
                                 <input
-                                    type="text"
-                                    value={parentName}
-                                    onChange={(e) => setParentName(e.target.value)}
-                                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
-                                    placeholder="홍길동"
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none max-w-[150px]"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1.5">관계</label>
-                                <select
-                                    value={parentRelation}
-                                    onChange={(e) => setParentRelation(e.target.value)}
-                                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
-                                >
-                                    <option value="">선택</option>
-                                    <option value="부">부</option>
-                                    <option value="모">모</option>
-                                    <option value="조부모">조부모</option>
-                                    <option value="기타">기타</option>
-                                </select>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">시간</span>
+                                <input
+                                    type="time"
+                                    value={time}
+                                    onChange={(e) => setTime(e.target.value)}
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none max-w-[120px]"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">소요(분)</span>
+                                <input
+                                    type="number"
+                                    value={duration}
+                                    onChange={(e) => setDuration(e.target.value)}
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none max-w-[80px]"
+                                    placeholder="30"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 3: 학부모 정보 (학부모 상담 시) */}
+                    {type === 'parent' && (
+                        <div className="bg-white border border-gray-200 overflow-hidden">
+                            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                <Users className="w-3 h-3 text-[#081429]" />
+                                <h3 className="text-[#081429] font-bold text-xs">학부모 정보</h3>
+                            </div>
+                            <div className="divide-y divide-gray-100">
+                                <div className="flex items-center gap-2 px-2 py-1.5">
+                                    <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">이름</span>
+                                    <input
+                                        type="text"
+                                        value={parentName}
+                                        onChange={(e) => setParentName(e.target.value)}
+                                        className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                        placeholder="홍길동"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2 px-2 py-1.5">
+                                    <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">관계</span>
+                                    <select
+                                        value={parentRelation}
+                                        onChange={(e) => setParentRelation(e.target.value)}
+                                        className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none max-w-[100px]"
+                                    >
+                                        <option value="">선택</option>
+                                        <option value="부">부</option>
+                                        <option value="모">모</option>
+                                        <option value="조부모">조부모</option>
+                                        <option value="기타">기타</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {/* 학생 컨디션 (학생 상담 시) */}
+                    {/* Section 3: 학생 컨디션 (학생 상담 시) */}
                     {type === 'student' && (
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1.5">학생 컨디션</label>
-                            <div className="flex gap-2">
+                        <div className="bg-white border border-gray-200 overflow-hidden">
+                            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                <User className="w-3 h-3 text-[#081429]" />
+                                <h3 className="text-[#081429] font-bold text-xs">학생 컨디션</h3>
+                            </div>
+                            <div className="flex gap-1 p-2">
                                 {[
-                                    { value: 'positive', label: '😊 긍정적', color: 'green' },
-                                    { value: 'neutral', label: '😐 보통', color: 'gray' },
-                                    { value: 'negative', label: '😔 부정적', color: 'red' },
+                                    { value: 'positive', label: '긍정적', color: 'green' },
+                                    { value: 'neutral', label: '보통', color: 'gray' },
+                                    { value: 'negative', label: '부정적', color: 'red' },
                                 ].map(mood => (
                                     <button
                                         key={mood.value}
                                         type="button"
                                         onClick={() => setStudentMood(mood.value as any)}
-                                        className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${studentMood === mood.value
+                                        className={`flex-1 py-1 text-xs font-medium transition-colors ${studentMood === mood.value
                                             ? mood.color === 'green' ? 'bg-green-500 text-white'
                                                 : mood.color === 'red' ? 'bg-red-500 text-white'
                                                     : 'bg-gray-500 text-white'
@@ -513,74 +484,82 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                         </div>
                     )}
 
-                    {/* 제목 */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                            제목 <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
-                            placeholder="상담 제목을 입력하세요"
-                            required
-                        />
+                    {/* Section 4: 상담 내용 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <FileText className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">상담 내용</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">제목 <span className="text-red-500">*</span></span>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                    placeholder="상담 제목을 입력하세요"
+                                    required
+                                />
+                            </div>
+                            <div className="px-2 py-1.5">
+                                <span className="text-xs font-medium text-[#373d41] block mb-1">내용 <span className="text-red-500">*</span></span>
+                                <textarea
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    className="w-full text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none resize-none"
+                                    rows={4}
+                                    placeholder="상담 내용을 입력하세요"
+                                    required
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                    {/* 내용 */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                            내용 <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#fdb813] focus:outline-none resize-none"
-                            rows={4}
-                            placeholder="상담 내용을 입력하세요"
-                            required
-                        />
-                    </div>
-
-                    {/* 후속 조치 */}
-                    <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={followUpNeeded}
-                                onChange={(e) => setFollowUpNeeded(e.target.checked)}
-                                className="w-4 h-4 text-[#fdb813] focus:ring-[#fdb813] rounded"
-                            />
-                            <span className="text-xs font-medium text-gray-600">후속 조치 필요</span>
-                        </label>
-                        {followUpNeeded && (
-                            <input
-                                type="date"
-                                value={followUpDate}
-                                onChange={(e) => setFollowUpDate(e.target.value)}
-                                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#fdb813] focus:outline-none"
-                                required={followUpNeeded}
-                            />
-                        )}
+                    {/* Section 5: 후속 조치 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <AlertCircle className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">후속 조치</h3>
+                        </div>
+                        <div className="flex items-center gap-2 px-2 py-1.5">
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={followUpNeeded}
+                                    onChange={(e) => setFollowUpNeeded(e.target.checked)}
+                                    className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
+                                />
+                                <span className="text-xs font-medium text-[#373d41]">후속 조치 필요</span>
+                            </label>
+                            {followUpNeeded && (
+                                <input
+                                    type="date"
+                                    value={followUpDate}
+                                    onChange={(e) => setFollowUpDate(e.target.value)}
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none max-w-[150px]"
+                                    required={followUpNeeded}
+                                />
+                            )}
+                        </div>
                     </div>
                 </form>
 
                 {/* 푸터 */}
-                <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2 bg-gray-50">
+                <div className="px-3 py-2 border-t border-gray-200 flex justify-end gap-2 bg-gray-50 shrink-0">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                        className="px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-200 transition-colors"
                     >
                         취소
                     </button>
                     <button
                         onClick={handleSubmit}
                         disabled={(isEditing ? updateConsultation.isPending : createConsultation.isPending) || !studentId || !title || !content}
-                        className="px-4 py-2 text-sm bg-[#fdb813] text-[#081429] font-semibold rounded-lg hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="px-3 py-1.5 text-xs bg-[#fdb813] text-[#081429] font-semibold hover:bg-[#e5a60f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
-                        {(isEditing ? updateConsultation.isPending : createConsultation.isPending) && <Loader2 size={14} className="animate-spin" />}
+                        {(isEditing ? updateConsultation.isPending : createConsultation.isPending) && <Loader2 size={12} className="animate-spin" />}
                         {isEditing ? '수정 저장' : '저장'}
                     </button>
                 </div>

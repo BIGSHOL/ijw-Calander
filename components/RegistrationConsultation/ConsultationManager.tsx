@@ -280,7 +280,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     <div className="h-4 w-px bg-white/10"></div> */}
 
                     {/* View Switcher Tabs */}
-                    <div className="flex bg-white/10 p-0.5 rounded-lg border border-white/10">
+                    <div className="flex bg-white/10 p-0.5 rounded-sm border border-white/10">
                         <TabButton
                             active={view === 'dashboard'}
                             onClick={() => setView('dashboard')}
@@ -359,7 +359,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                 <div className="flex items-center gap-3">
                     {/* View Column Toggle - Only for Yearly View */}
                     {view === 'yearly' && (
-                        <div className="flex bg-black/20 p-0.5 rounded-lg border border-white/5">
+                        <div className="flex bg-black/20 p-0.5 rounded-sm border border-white/5">
                             {([1, 2] as const).map((cols) => (
                                 <TabButton
                                     key={cols}
@@ -376,7 +376,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     {(canConvert || canManage) && (
                         <button
                             onClick={() => setShowMigrationModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg shadow-lg hover:shadow-green-500/30 transition-all text-xs font-bold"
+                            className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-sm shadow-lg hover:shadow-green-500/30 transition-all text-xs font-bold"
                         >
                             <Upload size={16} />
                             DB 불러오기
@@ -387,7 +387,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     {canCreate && (
                         <button
                             onClick={openAddModal}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-lg shadow-lg hover:shadow-blue-500/30 transition-all text-xs font-bold"
+                            className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-sm shadow-lg hover:shadow-blue-500/30 transition-all text-xs font-bold"
                         >
                             <Plus size={16} />
                             상담 등록
@@ -398,7 +398,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
 
             {/* Mobile Header */}
             <div className="md:hidden sticky top-0 z-20 bg-slate-50 pt-2 pb-2 px-4">
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between px-2 py-3">
+                <div className="bg-white rounded-sm shadow-sm border border-slate-200 flex items-center justify-between px-2 py-3">
                     <button
                         onClick={handlePrevMonth}
                         className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
@@ -477,7 +477,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     {view === 'yearly' && (
                         <div className="flex flex-col md:flex-row gap-4 h-full">
                             {/* Current Year View */}
-                            <div className="flex-1 flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="flex-1 flex flex-col h-full bg-white rounded-sm shadow-sm border border-gray-200 overflow-hidden">
                                 <ConsultationYearView
                                     data={consultations}
                                     currentYear={selectedYear === 'all' ? new Date().getFullYear() : parseInt(selectedYear, 10)}
@@ -487,7 +487,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
 
                             {/* Previous Year Comparison View (2 Columns) */}
                             {viewColumns === 2 && (
-                                <div className="flex-1 flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden animate-in slide-in-from-right duration-300">
+                                <div className="flex-1 flex flex-col h-full bg-white rounded-sm shadow-sm border border-gray-200 overflow-hidden animate-in slide-in-from-right duration-300">
                                     <ConsultationYearView
                                         data={consultations}
                                         currentYear={(selectedYear === 'all' ? new Date().getFullYear() : parseInt(selectedYear, 10)) - 1} // 1년 전
@@ -504,7 +504,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
             {canCreate && (
                 <button
                     onClick={openAddModal}
-                    className="md:hidden fixed bottom-24 right-5 bg-indigo-600 text-white p-4 rounded-full shadow-lg shadow-indigo-400/50 z-40 hover:scale-105 active:scale-95 transition-all"
+                    className="md:hidden fixed bottom-24 right-5 bg-indigo-600 text-white p-4 rounded-sm shadow-lg shadow-indigo-400/50 z-40 hover:scale-105 active:scale-95 transition-all"
                 >
                     <Plus size={28} strokeWidth={2.5} />
                 </button>

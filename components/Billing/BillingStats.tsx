@@ -71,9 +71,9 @@ export const BillingStats: React.FC<BillingStatsProps> = ({ records, selectedMon
         {statCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div key={index} className={`p-4 rounded-xl ${stat.bgColor}`}>
+            <div key={index} className={`p-4 rounded-sm ${stat.bgColor}`}>
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center`}>
+                <div className={`w-10 h-10 ${stat.color} rounded-sm flex items-center justify-center`}>
                   <Icon className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -90,7 +90,7 @@ export const BillingStats: React.FC<BillingStatsProps> = ({ records, selectedMon
       </div>
 
       {stats.pendingCount > 0 && (
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-sm flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-yellow-600" />
           <span className="text-sm text-yellow-700">
             미납 건이 {stats.pendingCount}건 ({stats.totalUnpaid.toLocaleString()}원) 있습니다.

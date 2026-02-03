@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Edit, ChevronDown, ChevronUp, Users, UserMinus, Calendar } from 'lucide-react';
+import { X, Edit, ChevronDown, ChevronUp, Users, UserMinus, Calendar, User, FileText, BookOpen } from 'lucide-react';
 import { useUpdateClass, UpdateClassData, useManageClassStudents } from '../../hooks/useClassMutations';
 import { ClassInfo, useClasses } from '../../hooks/useClasses';
 import { useClassDetail, ClassStudent } from '../../hooks/useClassDetail';
@@ -479,8 +479,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const finalStudentCount = currentStudents.length - studentsToRemove.size + studentsToAdd.size;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
         <div className="bg-[#081429] text-white px-4 py-3">
           <div className="flex items-center justify-between mb-2">
@@ -548,111 +548,125 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         </div>
 
         {/* 본문 - 고정 높이 */}
-        <div className="flex-1 overflow-y-auto p-4" style={{ minHeight: '400px' }}>
+        <div className="flex-1 overflow-y-auto p-3" style={{ minHeight: '400px' }}>
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-red-700 text-sm mb-4">
+            <div className="bg-red-50 border border-red-200 px-3 py-2 text-red-700 text-xs mb-3">
               {error}
             </div>
           )}
 
           {/* 기본 정보 탭 */}
           {activeTab === 'info' && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    수업명 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={className}
-                    onChange={(e) => setClassName(e.target.value)}
-                    placeholder="예: LT1a"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
-                  />
+            <div className="space-y-2">
+              {/* 기본 정보 섹션 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <User className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    담임 <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={teacher}
-                    onChange={(e) => setTeacher(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
-                  >
-                    <option value="">선택해주세요</option>
-                    {availableTeachers.map(t => {
-                      const displayName = getTeacherDisplayName(t);
-                      const saveValue = getTeacherSaveValue(t);
-                      return (
-                        <option key={t.id} value={saveValue}>
-                          {displayName}
-                        </option>
-                      );
-                    })}
-                  </select>
+                <div className="divide-y divide-gray-100">
+                  <div className="flex items-center gap-2 px-2 py-1">
+                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">
+                      수업명 <span className="text-red-500">*</span>
+                    </span>
+                    <input
+                      type="text"
+                      value={className}
+                      onChange={(e) => setClassName(e.target.value)}
+                      placeholder="예: LT1a"
+                      className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 px-2 py-1">
+                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">
+                      담임 <span className="text-red-500">*</span>
+                    </span>
+                    <select
+                      value={teacher}
+                      onChange={(e) => setTeacher(e.target.value)}
+                      className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                    >
+                      <option value="">선택해주세요</option>
+                      {availableTeachers.map(t => {
+                        const displayName = getTeacherDisplayName(t);
+                        const saveValue = getTeacherSaveValue(t);
+                        return (
+                          <option key={t.id} value={saveValue}>
+                            {displayName}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
                   {availableTeachers.length === 0 && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      ⚠️ {SUBJECT_LABELS[classInfo.subject]} 과목 강사가 없습니다. 직원 관리에서 추가해주세요.
-                    </p>
+                    <div className="px-2 py-1">
+                      <p className="text-xxs text-amber-600">
+                        ⚠️ {SUBJECT_LABELS[classInfo.subject]} 과목 강사가 없습니다.
+                      </p>
+                    </div>
                   )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">강의실</label>
-                  <input
-                    type="text"
-                    value={room}
-                    onChange={(e) => setRoom(e.target.value)}
-                    placeholder="예: 302"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none"
-                  />
+                  <div className="flex items-center gap-2 px-2 py-1">
+                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">강의실</span>
+                    <input
+                      type="text"
+                      value={room}
+                      onChange={(e) => setRoom(e.target.value)}
+                      placeholder="예: 302"
+                      className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* 메모 */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">메모</label>
-                <textarea
-                  value={memo}
-                  onChange={(e) => setMemo(e.target.value)}
-                  placeholder="수업에 대한 메모를 입력하세요..."
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent outline-none resize-none"
-                />
+              {/* 메모 섹션 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <FileText className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">메모</h3>
+                </div>
+                <div className="p-2">
+                  <textarea
+                    value={memo}
+                    onChange={(e) => setMemo(e.target.value)}
+                    placeholder="수업에 대한 메모를 입력하세요..."
+                    rows={3}
+                    className="w-full px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none resize-none"
+                  />
+                </div>
               </div>
             </div>
           )}
 
           {/* 스케줄 탭 */}
           {activeTab === 'schedule' && (
-            <div className="space-y-3">
-              {/* 스케줄 그리드 */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">스케줄 선택</label>
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="max-h-56 overflow-y-auto">
-                    {/* 헤더 - Sticky */}
-                    <div className="grid bg-gray-50 border-b border-gray-200 sticky top-0 z-10" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
-                  <div className="p-1 text-center text-[10px] font-semibold text-gray-400 border-r border-gray-200"></div>
-                  {WEEKDAYS.map((day) => (
-                    <div key={day} className="p-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200 last:border-r-0">
-                      {day}
-                    </div>
-                  ))}
+            <div className="space-y-2">
+              {/* 스케줄 선택 섹션 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <Calendar className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">스케줄</h3>
                 </div>
+                <div className="max-h-56 overflow-y-auto">
+                  {/* 헤더 - Sticky */}
+                  <div className="grid bg-gray-100 border-b border-gray-200 sticky top-0 z-10" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}>
+                    <div className="p-1 text-center text-xxs font-semibold text-gray-400 border-r border-gray-200"></div>
+                    {WEEKDAYS.map((day) => (
+                      <div key={day} className="p-1 text-center text-xs font-semibold text-gray-600 border-r border-gray-200 last:border-r-0">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
 
-                {/* 교시 */}
-                {periods.map(periodId => (
-                  <div
-                    key={periodId}
-                    className="grid border-b border-gray-100 last:border-b-0"
-                    style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
-                  >
-                    <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
-                      {periodId}
-                    </div>
+                  {/* 교시 */}
+                  {periods.map(periodId => (
+                    <div
+                      key={periodId}
+                      className="grid border-b border-gray-100 last:border-b-0"
+                      style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
+                    >
+                      <div className="p-1 text-center text-xxs text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                        {periodId}
+                      </div>
                     {WEEKDAYS.map((day) => {
                       const key = `${day}-${periodId}`;
                       const isSelected = selectedSlots.has(key);
@@ -693,29 +707,31 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                       );
                     })}
                   </div>
-                ))}
+                  ))}
+                </div>
+                {selectedSlots.size > 0 && (
+                  <div className="px-2 py-1.5 border-t border-gray-100 flex items-center justify-between">
+                    <p className="text-xxs text-gray-500">{selectedSlots.size}개 교시 선택</p>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedSchedule(!showAdvancedSchedule)}
+                      className="text-xxs text-blue-600 hover:underline flex items-center gap-0.5"
+                    >
+                      {showAdvancedSchedule ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                      교시별 부담임/강의실 설정
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
 
-            {selectedSlots.size > 0 && (
-              <div className="mt-1.5 flex items-center justify-between">
-                <p className="text-[10px] text-gray-500">{selectedSlots.size}개 교시 선택</p>
-                <button
-                  type="button"
-                  onClick={() => setShowAdvancedSchedule(!showAdvancedSchedule)}
-                  className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
-                >
-                  {showAdvancedSchedule ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                  교시별 부담임/강의실 설정
-                </button>
-              </div>
-            )}
-
-            {showAdvancedSchedule && selectedSlots.size > 0 && (
-              <div className="mt-2 space-y-2">
-                {/* 교시별 부담임 설정 */}
-                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200 bg-blue-50 font-semibold">교시별 부담임 (비워두면 담임)</p>
+              {/* 교시별 부담임 섹션 */}
+              {showAdvancedSchedule && selectedSlots.size > 0 && (
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                    <Users className="w-3 h-3 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-xs">교시별 부담임</h3>
+                    <span className="text-xxs text-gray-400 ml-1">(비워두면 담임)</span>
+                  </div>
                   {(() => {
                     const selectedPeriods = new Set<string>();
                     selectedSlots.forEach(key => {
@@ -769,10 +785,16 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                     ));
                   })()}
                 </div>
+              )}
 
-                {/* 교시별 강의실 설정 */}
-                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <p className="text-[10px] text-gray-500 px-2 py-1 border-b border-gray-200 bg-purple-50 font-semibold">교시별 강의실 (비워두면 기본 강의실)</p>
+              {/* 교시별 강의실 섹션 */}
+              {showAdvancedSchedule && selectedSlots.size > 0 && (
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                    <BookOpen className="w-3 h-3 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-xs">교시별 강의실</h3>
+                    <span className="text-xxs text-gray-400 ml-1">(비워두면 기본)</span>
+                  </div>
                   {(() => {
                     const selectedPeriods = new Set<string>();
                     selectedSlots.forEach(key => {
@@ -787,7 +809,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                         className="grid border-b border-gray-100 last:border-b-0"
                         style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS.length}, 1fr)` }}
                       >
-                        <div className="p-1 text-center text-[10px] text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
+                        <div className="p-1 text-center text-xxs text-gray-400 bg-gray-50 flex items-center justify-center border-r border-gray-200">
                           {periodId}
                         </div>
                         {WEEKDAYS.map((day) => {
@@ -803,7 +825,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                 value={slotRooms[key] || ''}
                                 onChange={(e) => setSlotRoom(key, e.target.value)}
                                 placeholder={room || '-'}
-                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                                className="w-full h-full px-1 py-0.5 border border-gray-200 text-xxs focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
                               />
                             </div>
                           );
@@ -812,31 +834,29 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                     ));
                   })()}
                 </div>
-              </div>
-            )}
-              </div>
+              )}
             </div>
           )}
 
           {/* 학생 탭 */}
           {activeTab === 'students' && (
-            <div className="space-y-3">
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                {/* 현재 등록된 학생 */}
-                <div className="border-b border-gray-200">
-                  <div className="px-2.5 py-1.5 bg-blue-50 text-xs font-semibold text-blue-700 flex items-center justify-between">
-                    <span>현재 등록된 학생 ({currentStudents.length - studentsToRemove.size}명)</span>
-                    {/* 수학: 등원 요일 설정 안내, 영어: 밑줄 강조 안내 */}
-                    {classInfo.subject === 'math' && classDays.length > 1 && (
-                      <span className="text-[10px] text-blue-500 font-normal">클릭하여 등원 요일 설정 · 체크박스: 부담임</span>
-                    )}
-                    {classInfo.subject === 'math' && classDays.length <= 1 && (
-                      <span className="text-[10px] text-blue-500 font-normal">체크박스: 부담임</span>
-                    )}
-                    {classInfo.subject === 'english' && (
-                      <span className="text-[10px] text-blue-500 font-normal">U: 밑줄 강조</span>
-                    )}
-                  </div>
+            <div className="space-y-2">
+              {/* 현재 등록된 학생 섹션 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <Users className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">현재 등록된 학생</h3>
+                  <span className="text-xxs text-gray-500 ml-1">({currentStudents.length - studentsToRemove.size}명)</span>
+                  {classInfo.subject === 'math' && classDays.length > 1 && (
+                    <span className="text-xxs text-blue-500 ml-auto">클릭: 등원요일 · 체크박스: 부담임</span>
+                  )}
+                  {classInfo.subject === 'math' && classDays.length <= 1 && (
+                    <span className="text-xxs text-blue-500 ml-auto">체크박스: 부담임</span>
+                  )}
+                  {classInfo.subject === 'english' && (
+                    <span className="text-xxs text-blue-500 ml-auto">U: 밑줄 강조</span>
+                  )}
+                </div>
                   <div className="max-h-40 overflow-y-auto">
                     {currentStudents.length === 0 ? (
                       <div className="p-3 text-center text-gray-400 text-sm">등록된 학생이 없습니다</div>
@@ -964,15 +984,17 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                       })
                     )}
                   </div>
-                </div>
+              </div>
 
-                {/* 추가 예정 학생 */}
-                {studentsToAdd.size > 0 && (
-                  <div className="border-b border-gray-200">
-                    <div className="px-2.5 py-1.5 bg-green-50 text-xs font-semibold text-green-700 flex items-center justify-between">
-                      <span>추가 예정 ({studentsToAdd.size}명)</span>
-                      <span className="text-[10px] text-green-600 font-normal">시작일을 선택하세요</span>
-                    </div>
+              {/* 추가 예정 학생 섹션 */}
+              {studentsToAdd.size > 0 && (
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                    <Calendar className="w-3 h-3 text-green-600" />
+                    <h3 className="text-[#081429] font-bold text-xs">추가 예정</h3>
+                    <span className="text-xxs text-green-600 ml-1">({studentsToAdd.size}명)</span>
+                    <span className="text-xxs text-gray-400 ml-auto">시작일을 선택하세요</span>
+                  </div>
                     <div className="max-h-32 overflow-y-auto">
                       {studentsToAddInfo.map(student => {
                         const startDate = studentStartDates[student.id] || new Date().toISOString().split('T')[0];
@@ -1041,42 +1063,45 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                         );
                       })}
                     </div>
-                  </div>
-                )}
+                </div>
+              )}
 
-                {/* 학생 추가 검색 */}
+              {/* 학생 추가 섹션 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <BookOpen className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">학생 추가</h3>
+                </div>
                 <div className="p-2 border-b border-gray-100">
                   <input
                     type="text"
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
                     placeholder="학생 검색하여 추가..."
-                    className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-[#fdb813] outline-none"
+                    className="w-full px-2 py-1 border border-gray-300 text-xs focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
                   />
                 </div>
-
-                {/* 추가 가능한 학생 목록 */}
                 <div className="max-h-32 overflow-y-auto">
                   {studentsLoading ? (
-                    <div className="p-3 text-center text-gray-400 text-sm">로딩 중...</div>
+                    <div className="p-3 text-center text-gray-400 text-xs">로딩 중...</div>
                   ) : availableStudents.length === 0 ? (
-                    <div className="p-3 text-center text-gray-400 text-sm">
+                    <div className="p-3 text-center text-gray-400 text-xs">
                       {studentSearch ? '검색 결과가 없습니다' : '추가 가능한 학생이 없습니다'}
                     </div>
                   ) : (
                     availableStudents.map(student => (
                       <label
                         key={student.id}
-                        className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer transition-colors hover:bg-gray-50 text-sm"
+                        className="flex items-center gap-2 px-2 py-1 cursor-pointer transition-colors hover:bg-gray-50 text-xs"
                       >
                         <input
                           type="checkbox"
                           checked={studentsToAdd.has(student.id)}
                           onChange={() => toggleAddStudent(student.id)}
-                          className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813]"
+                          className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
                         />
                         <span className="text-gray-800">{student.name}</span>
-                        <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                        <span className="text-xxs text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
                       </label>
                     ))
                   )}

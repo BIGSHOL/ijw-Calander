@@ -196,7 +196,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
 
   return (
     <>
-      <table ref={ref} className="border-separate border-spacing-0 w-full min-w-full text-sm text-left bg-white border border-gray-200 rounded-lg shadow-sm table-fixed">
+      <table ref={ref} className="border-separate border-spacing-0 w-full min-w-full text-sm text-left bg-white border border-gray-200 rounded-sm shadow-sm table-fixed">
         <thead className="bg-[#081429] text-white font-medium sticky top-0 z-[100] shadow-md">
           <tr>
             {/* Sticky Left Columns - Compact width */}
@@ -301,7 +301,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
 
       {contextMenu && (
         <div
-          className="context-menu-container fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] animate-in fade-in zoom-in-95 duration-100 origin-top-left"
+          className="context-menu-container fixed z-50 bg-white rounded-sm shadow-xl border border-gray-200 py-1 min-w-[180px] animate-in fade-in zoom-in-95 duration-100 origin-top-left"
           style={{ top: Math.min(contextMenu.y, window.innerHeight - 250), left: Math.min(contextMenu.x, window.innerWidth - 200) }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -402,7 +402,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
                   <button
                     key={colorOption.key}
                     onClick={() => handleColorSelect(colorOption.key)}
-                    className={`w-8 h-8 rounded-lg border-2 transition-all hover:scale-110 ${
+                    className={`w-8 h-8 rounded-sm border-2 transition-all hover:scale-110 ${
                       contextMenu.currentColor === colorOption.key
                         ? 'border-blue-500 ring-2 ring-blue-200'
                         : 'border-gray-200 hover:border-gray-400'
@@ -435,7 +435,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
       {/* 날짜 헤더 우클릭 컨텍스트 메뉴 (열 숨기기) */}
       {dateContextMenu && createPortal(
         <div
-          className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+          className="fixed bg-white rounded-sm shadow-xl border border-gray-200 py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
           style={{ top: dateContextMenu.y, left: dateContextMenu.x, zIndex: 9999 }}
           onClick={(e) => e.stopPropagation()}
         >

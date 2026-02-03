@@ -4,7 +4,7 @@ import { Check, X, AlertTriangle, Info, Circle } from 'lucide-react';
 /**
  * Accessible Badge Component
  * Addresses Issue #43: Color-only indicators
- * 
+ *
  * Provides visual indicators beyond just color for accessibility
  */
 
@@ -81,7 +81,7 @@ const Badge: React.FC<BadgeProps> = ({
   return (
     <span
       className={`
-        inline-flex items-center rounded-full font-medium border
+        inline-flex items-center rounded-sm font-medium border
         ${config.className}
         ${sizeClasses[size]}
         ${className}
@@ -90,7 +90,7 @@ const Badge: React.FC<BadgeProps> = ({
     >
       {dot && (
         <span
-          className={`w-2 h-2 rounded-full ${config.dotColor}`}
+          className={`w-2 h-2 rounded-sm ${config.dotColor}`}
           aria-hidden="true"
         />
       )}

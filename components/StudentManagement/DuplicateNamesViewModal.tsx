@@ -9,7 +9,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { X, Users, AlertTriangle, ChevronDown, ChevronRight, Trash2, RefreshCw, FileWarning } from 'lucide-react';
+import { X, Users, AlertTriangle, ChevronDown, ChevronRight, Trash2, RefreshCw, FileWarning, Filter, Settings, BarChart3 } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
 import { UnifiedStudent } from '../../types';
 import { doc, deleteDoc, setDoc } from 'firebase/firestore';
@@ -459,12 +459,12 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
 
   const getStatusBadge = (student: UnifiedStudent) => {
     if (student.status === 'withdrawn') {
-      return <span className="px-1.5 py-0.5 text-micro bg-gray-200 text-gray-600 rounded">퇴원</span>;
+      return <span className="px-1.5 py-0.5 text-micro bg-gray-200 text-gray-600 rounded-sm">퇴원</span>;
     }
     if (student.status === 'prospect' || student.status === 'prospective') {
-      return <span className="px-1.5 py-0.5 text-micro bg-blue-100 text-blue-600 rounded">상담</span>;
+      return <span className="px-1.5 py-0.5 text-micro bg-blue-100 text-blue-600 rounded-sm">상담</span>;
     }
-    return <span className="px-1.5 py-0.5 text-micro bg-green-100 text-green-600 rounded">재원</span>;
+    return <span className="px-1.5 py-0.5 text-micro bg-green-100 text-green-600 rounded-sm">재원</span>;
   };
 
   const getEnrollmentInfo = (student: UnifiedStudent) => {
@@ -473,7 +473,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
     return (
       <div className="flex flex-wrap gap-1">
         {active.map((e, i) => (
-          <span key={i} className="px-1.5 py-0.5 text-micro bg-amber-100 text-amber-700 rounded">
+          <span key={i} className="px-1.5 py-0.5 text-micro bg-amber-100 text-amber-700 rounded-sm">
             {e.subject === 'math' ? '수학' : '영어'}: {e.className}
           </span>
         ))}
@@ -482,380 +482,467 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-[#081429] rounded-t-lg">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-[#081429] rounded-t-sm">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-400" />
             <h2 className="text-lg font-bold text-white">중복 이름 학생 확인</h2>
-            <span className="text-xs text-gray-400 bg-white/10 px-2 py-0.5 rounded">
+            <span className="text-xs text-gray-400 bg-white/10 px-2 py-0.5 rounded-sm">
               임시 UI
             </span>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+            className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-sm transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* 통계 */}
-        <div className="p-4 bg-amber-50 border-b border-amber-200 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-amber-600" />
-                <span className="text-sm font-medium text-amber-800">
-                  {duplicateGroups.length}개 이름에서 {totalDuplicateStudents}명 중복
-                </span>
-              </div>
-              {noEnrollmentDuplicates.length > 0 && (
-                <span className="text-xs text-red-600">
-                  (수강 없음: {noEnrollmentDuplicates.length}명)
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {noEnrollmentDuplicates.length > 0 && (
-                <button
-                  onClick={handleDeleteAllNoEnrollment}
-                  disabled={isBatchDeleting}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-white bg-red-500 hover:bg-red-600 rounded transition-colors disabled:opacity-50"
-                >
-                  {isBatchDeleting ? (
-                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3 h-3" />
-                  )}
-                  <span>수강 없는 중복 일괄 삭제 ({noEnrollmentDuplicates.length})</span>
-                </button>
-              )}
-              <button
-                onClick={expandAll}
-                className="px-2 py-1 text-xs text-amber-700 hover:bg-amber-100 rounded transition-colors"
-              >
-                모두 펼치기
-              </button>
-              <button
-                onClick={collapseAll}
-                className="px-2 py-1 text-xs text-amber-700 hover:bg-amber-100 rounded transition-colors"
-              >
-                모두 접기
-              </button>
-            </div>
-          </div>
-          {/* ID-데이터 불일치 */}
-          {mismatchedStudents.length > 0 && (
-            <div className="flex items-center justify-between pt-2 border-t border-amber-200">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-purple-600" />
-                <span className="text-sm font-medium text-purple-800">
-                  ID-데이터 불일치: {mismatchedStudents.length}명
-                </span>
-                <span className="text-xs text-purple-600">
-                  (문서 ID의 이름과 실제 이름이 다름)
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowMismatchOnly(prev => !prev)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    showMismatchOnly
-                      ? 'bg-purple-500 text-white'
-                      : 'text-purple-700 hover:bg-purple-100'
-                  }`}
-                >
-                  {showMismatchOnly ? '전체 보기' : '불일치만 보기'}
-                </button>
-                <button
-                  onClick={handleFixAllMismatched}
-                  disabled={isBatchDeleting}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-white bg-green-500 hover:bg-green-600 rounded transition-colors disabled:opacity-50"
-                  title="name 필드를 문서 ID의 이름으로 수정"
-                >
-                  {isBatchDeleting ? (
-                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-3 h-3" />
-                  )}
-                  <span>이름 일괄 수정 ({mismatchedStudents.length})</span>
-                </button>
-                <button
-                  onClick={handleDeleteAllMismatched}
-                  disabled={isBatchDeleting}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-white bg-red-500 hover:bg-red-600 rounded transition-colors disabled:opacity-50"
-                  title="불일치 학생 전체 삭제"
-                >
-                  {isBatchDeleting ? (
-                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3 h-3" />
-                  )}
-                  <span>삭제</span>
-                </button>
-              </div>
-            </div>
-          )}
-          {/* 예비 → 재원 변경 */}
-          {prospectStudents.length > 0 && (
-            <div className="flex items-center justify-between pt-2 border-t border-amber-200">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-800">
-                  예비 상태: {prospectStudents.length}명
-                </span>
-                <span className="text-xs text-blue-600">
-                  (재원으로 변경 필요)
-                </span>
-              </div>
-              <button
-                onClick={handleConvertProspectToActive}
-                disabled={isBatchDeleting}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-white bg-blue-500 hover:bg-blue-600 rounded transition-colors disabled:opacity-50"
-                title="예비 학생을 재원으로 일괄 변경"
-              >
-                {isBatchDeleting ? (
-                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <RefreshCw className="w-3 h-3" />
-                )}
-                <span>전체 재원으로 변경 ({prospectStudents.length})</span>
-              </button>
-            </div>
-          )}
-          {/* 이상한 형태 학생 문서 */}
-          {abnormalStudents.length > 0 && (
-            <div className="flex items-center justify-between pt-2 border-t border-amber-200">
-              <div className="flex items-center gap-2">
-                <FileWarning className="w-4 h-4 text-orange-600" />
-                <span className="text-sm font-medium text-orange-800">
-                  이상한 문서: {abnormalStudents.length}개
-                </span>
-                <span className="text-xs text-orange-600">
-                  (이름없음, 숫자ID, 자동생성ID 등)
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowAbnormalList(prev => !prev)}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
-                    showAbnormalList
-                      ? 'bg-orange-500 text-white'
-                      : 'text-orange-700 hover:bg-orange-100'
-                  }`}
-                >
-                  {showAbnormalList ? '목록 숨기기' : '목록 보기'}
-                </button>
-                <button
-                  onClick={handleDeleteAllAbnormal}
-                  disabled={isBatchDeleting}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-white bg-red-500 hover:bg-red-600 rounded transition-colors disabled:opacity-50"
-                  title="이상한 형태의 학생 문서 전체 삭제"
-                >
-                  {isBatchDeleting ? (
-                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3 h-3" />
-                  )}
-                  <span>전체 삭제 ({abnormalStudents.length})</span>
-                </button>
-              </div>
-            </div>
-          )}
-          {/* 이상한 학생 목록 표시 */}
-          {showAbnormalList && abnormalStudents.length > 0 && (
-            <div className="mt-2 max-h-40 overflow-y-auto border border-orange-200 rounded bg-orange-50">
-              <table className="w-full text-xs">
-                <thead className="bg-orange-100 sticky top-0">
-                  <tr>
-                    <th className="px-2 py-1 text-left text-orange-700">ID</th>
-                    <th className="px-2 py-1 text-left text-orange-700">이름</th>
-                    <th className="px-2 py-1 text-left text-orange-700">유형</th>
-                    <th className="px-2 py-1 text-left text-orange-700">학교</th>
-                    <th className="px-2 py-1 text-center text-orange-700">삭제</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-orange-100">
-                  {abnormalStudents.map(student => (
-                    <tr key={student.id} className="hover:bg-orange-100">
-                      <td className="px-2 py-1 font-mono text-gray-600 max-w-[120px] truncate" title={student.id}>
-                        {student.id.slice(0, 15)}...
-                      </td>
-                      <td className="px-2 py-1 text-gray-700">{student.name || '(없음)'}</td>
-                      <td className="px-2 py-1">
-                        <span className="px-1.5 py-0.5 bg-orange-200 text-orange-700 rounded text-micro">
-                          {getAbnormalType(student)}
-                        </span>
-                      </td>
-                      <td className="px-2 py-1 text-gray-600">{student.school || '-'}</td>
-                      <td className="px-2 py-1 text-center">
-                        <button
-                          onClick={() => handleDeleteStudent(student.id, student.name || student.id)}
-                          disabled={deletingId === student.id}
-                          className="p-1 text-red-500 hover:bg-red-100 rounded disabled:opacity-50"
-                        >
-                          {deletingId === student.id ? (
-                            <div className="w-3 h-3 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <Trash2 className="w-3 h-3" />
-                          )}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
         {/* 목록 */}
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
-            <div className="flex items-center justify-center h-40">
+            <div className="flex items-start justify-center pt-[8vh] h-40">
               <div className="text-center text-gray-500">
-                <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full mx-auto mb-2" />
+                <div className="animate-spin w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-sm mx-auto mb-2" />
                 <p className="text-sm">학생 데이터 로딩 중...</p>
               </div>
             </div>
-          ) : duplicateGroups.length === 0 ? (
-            <div className="flex items-center justify-center h-40">
-              <div className="text-center text-gray-500">
-                <Users className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">중복된 이름이 없습니다.</p>
-              </div>
-            </div>
           ) : (
-            <div className="space-y-2">
-              {duplicateGroups
-                .filter(group => !showMismatchOnly || group.students.some(s => isIdMismatched(s)))
-                .map((group) => {
-                const isExpanded = expandedNames.has(group.key);
-                const hasMismatch = group.students.some(s => isIdMismatched(s));
-                return (
-                  <div key={group.key} className="border border-gray-200 rounded-lg overflow-hidden">
-                    {/* 그룹 헤더 */}
-                    <div className="flex items-center justify-between p-3 bg-gray-50">
-                      <button
-                        onClick={() => toggleExpand(group.key)}
-                        className="flex items-center gap-3 hover:bg-gray-100 rounded px-2 py-1 -ml-2 transition-colors"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-gray-500" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-gray-500" />
-                        )}
-                        <span className="font-bold text-[#081429]">{group.name}</span>
-                        {(group.school || group.grade) && (
-                          <span className="text-xs text-gray-500">
-                            {group.school} {group.grade}
-                          </span>
-                        )}
-                        <span className="text-xs text-red-600 bg-red-100 px-1.5 py-0.5 rounded font-medium">
-                          {group.students.length}명
+            <div className="space-y-3">
+              {/* Section 1: 필터 및 설정 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <Filter className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">필터 및 설정</h3>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {/* 불일치만 보기 토글 */}
+                  {mismatchedStudents.length > 0 && (
+                    <div className="flex items-center justify-between px-2 py-1.5">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-3 h-3 text-purple-600" />
+                        <span className="text-xs font-medium text-[#373d41]">ID-데이터 불일치</span>
+                        <span className="text-xs text-purple-600">
+                          {mismatchedStudents.length}명
                         </span>
-                        {hasMismatch && (
-                          <span className="text-xs text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded font-medium">
-                            ID불일치
-                          </span>
-                        )}
-                      </button>
+                      </div>
                       <button
-                        onClick={() => handleDeleteGroup(group)}
-                        disabled={deletingId === `group_${group.key}`}
-                        className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                        title="그룹 전체 삭제"
+                        onClick={() => setShowMismatchOnly(prev => !prev)}
+                        className={`px-2 py-1 text-xs rounded-sm transition-colors ${
+                          showMismatchOnly
+                            ? 'bg-purple-500 text-white'
+                            : 'text-purple-700 hover:bg-purple-100'
+                        }`}
                       >
-                        {deletingId === `group_${group.key}` ? (
-                          <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <Trash2 className="w-3.5 h-3.5" />
-                        )}
-                        <span>전체 삭제</span>
+                        {showMismatchOnly ? '전체 보기' : '불일치만 보기'}
                       </button>
                     </div>
+                  )}
 
-                    {/* 그룹 상세 */}
-                    {isExpanded && (
-                      <div className="border-t border-gray-200">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-100">
-                            <tr>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">ID</th>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">상태</th>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">학교</th>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">학년</th>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">연락처</th>
-                              <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">수강</th>
-                              <th className="px-3 py-2 text-center text-xs font-medium text-gray-600">삭제</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {group.students.map((student, index) => {
-                              const isMismatched = isIdMismatched(student);
-                              return (
-                              <tr
-                                key={student.id}
-                                className={`hover:bg-gray-50 ${index === 0 ? 'bg-green-50' : ''} ${isMismatched ? 'bg-purple-50' : ''}`}
-                              >
-                                <td className="px-3 py-2">
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className={`text-xs font-mono ${isMismatched ? 'text-purple-600' : 'text-gray-400'}`}>
-                                      {student.id.slice(0, 12)}...
-                                    </span>
-                                    {isMismatched && (
-                                      <span className="text-micro text-purple-500">
-                                        ID이름: {extractNameFromId(student.id)}
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="px-3 py-2">{getStatusBadge(student)}</td>
-                                <td className="px-3 py-2 text-gray-700">{student.school || '-'}</td>
-                                <td className="px-3 py-2 text-gray-700">{student.grade || '-'}</td>
-                                <td className="px-3 py-2 text-gray-700 text-xs">
-                                  {student.studentPhone || student.parentPhone || '-'}
-                                </td>
-                                <td className="px-3 py-2">{getEnrollmentInfo(student)}</td>
-                                <td className="px-3 py-2 text-center">
-                                  <button
-                                    onClick={() => handleDeleteStudent(student.id, student.name)}
-                                    disabled={deletingId === student.id}
-                                    className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                                    title="학생 삭제"
-                                  >
-                                    {deletingId === student.id ? (
-                                      <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                      <Trash2 className="w-4 h-4" />
-                                    )}
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                            })}
-                          </tbody>
-                        </table>
+                  {/* 이상한 형태 목록 토글 */}
+                  {abnormalStudents.length > 0 && (
+                    <div className="flex items-center justify-between px-2 py-1.5">
+                      <div className="flex items-center gap-2">
+                        <FileWarning className="w-3 h-3 text-orange-600" />
+                        <span className="text-xs font-medium text-[#373d41]">이상한 문서</span>
+                        <span className="text-xs text-orange-600">
+                          {abnormalStudents.length}개
+                        </span>
                       </div>
-                    )}
+                      <button
+                        onClick={() => setShowAbnormalList(prev => !prev)}
+                        className={`px-2 py-1 text-xs rounded-sm transition-colors ${
+                          showAbnormalList
+                            ? 'bg-orange-500 text-white'
+                            : 'text-orange-700 hover:bg-orange-100'
+                        }`}
+                      >
+                        {showAbnormalList ? '목록 숨기기' : '목록 보기'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Section 2: 통계 요약 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <BarChart3 className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">통계 요약</h3>
+                </div>
+                <div className="p-2 space-y-2">
+                  {/* 중복 그룹 통계 */}
+                  <div className="flex items-center gap-3 p-2 bg-amber-50 rounded-sm border border-amber-100">
+                    <Users className="w-4 h-4 text-amber-600 shrink-0" />
+                    <div className="flex-1">
+                      <div className="text-xs font-medium text-amber-800">
+                        중복 그룹: {duplicateGroups.length}개
+                      </div>
+                      <div className="text-xs text-amber-600">
+                        총 {totalDuplicateStudents}명
+                        {noEnrollmentDuplicates.length > 0 && (
+                          <span className="ml-2 text-red-600">
+                            (수강 없음: {noEnrollmentDuplicates.length}명)
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                );
-              })}
+
+                  {/* ID-데이터 불일치 통계 */}
+                  {mismatchedStudents.length > 0 && (
+                    <div className="flex items-center gap-3 p-2 bg-purple-50 rounded-sm border border-purple-100">
+                      <AlertTriangle className="w-4 h-4 text-purple-600 shrink-0" />
+                      <div className="flex-1">
+                        <div className="text-xs font-medium text-purple-800">
+                          ID-데이터 불일치: {mismatchedStudents.length}명
+                        </div>
+                        <div className="text-xs text-purple-600">
+                          문서 ID의 이름과 실제 이름이 다름
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 예비 상태 통계 */}
+                  {prospectStudents.length > 0 && (
+                    <div className="flex items-center gap-3 p-2 bg-blue-50 rounded-sm border border-blue-100">
+                      <Users className="w-4 h-4 text-blue-600 shrink-0" />
+                      <div className="flex-1">
+                        <div className="text-xs font-medium text-blue-800">
+                          예비 상태: {prospectStudents.length}명
+                        </div>
+                        <div className="text-xs text-blue-600">
+                          재원으로 변경 필요
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 이상한 문서 통계 */}
+                  {abnormalStudents.length > 0 && (
+                    <div className="flex items-center gap-3 p-2 bg-orange-50 rounded-sm border border-orange-100">
+                      <FileWarning className="w-4 h-4 text-orange-600 shrink-0" />
+                      <div className="flex-1">
+                        <div className="text-xs font-medium text-orange-800">
+                          이상한 문서: {abnormalStudents.length}개
+                        </div>
+                        <div className="text-xs text-orange-600">
+                          이름없음, 숫자ID, 자동생성ID 등
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 이상한 학생 목록 표시 (토글) */}
+              {showAbnormalList && abnormalStudents.length > 0 && (
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  <div className="flex items-center gap-1 px-2 py-1.5 bg-orange-50 border-b border-orange-200">
+                    <FileWarning className="w-3 h-3 text-orange-600" />
+                    <h3 className="text-orange-800 font-bold text-xs">이상한 문서 상세 목록</h3>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-orange-100 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-1 text-left text-orange-700">ID</th>
+                          <th className="px-2 py-1 text-left text-orange-700">이름</th>
+                          <th className="px-2 py-1 text-left text-orange-700">유형</th>
+                          <th className="px-2 py-1 text-left text-orange-700">학교</th>
+                          <th className="px-2 py-1 text-center text-orange-700">삭제</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-orange-100">
+                        {abnormalStudents.map(student => (
+                          <tr key={student.id} className="hover:bg-orange-50">
+                            <td className="px-2 py-1 font-mono text-gray-600 max-w-[120px] truncate" title={student.id}>
+                              {student.id.slice(0, 15)}...
+                            </td>
+                            <td className="px-2 py-1 text-gray-700">{student.name || '(없음)'}</td>
+                            <td className="px-2 py-1">
+                              <span className="px-1.5 py-0.5 bg-orange-200 text-orange-700 rounded-sm text-micro">
+                                {getAbnormalType(student)}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1 text-gray-600">{student.school || '-'}</td>
+                            <td className="px-2 py-1 text-center">
+                              <button
+                                onClick={() => handleDeleteStudent(student.id, student.name || student.id)}
+                                disabled={deletingId === student.id}
+                                className="p-1 text-red-500 hover:bg-red-100 rounded-sm disabled:opacity-50"
+                              >
+                                {deletingId === student.id ? (
+                                  <div className="w-3 h-3 border-2 border-red-500 border-t-transparent rounded-sm animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3 h-3" />
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Section 3: 중복 그룹 목록 */}
+              {duplicateGroups.length === 0 ? (
+                <div className="flex items-start justify-center pt-[8vh] h-40">
+                  <div className="text-center text-gray-500">
+                    <Users className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">중복된 이름이 없습니다.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                    <div className="flex items-center gap-1">
+                      <Users className="w-3 h-3 text-[#081429]" />
+                      <h3 className="text-[#081429] font-bold text-xs">중복 그룹 목록</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={expandAll}
+                        className="px-2 py-1 text-xs text-amber-700 hover:bg-amber-100 rounded-sm transition-colors"
+                      >
+                        모두 펼치기
+                      </button>
+                      <button
+                        onClick={collapseAll}
+                        className="px-2 py-1 text-xs text-amber-700 hover:bg-amber-100 rounded-sm transition-colors"
+                      >
+                        모두 접기
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-2 space-y-2 max-h-[40vh] overflow-y-auto">
+                    {duplicateGroups
+                      .filter(group => !showMismatchOnly || group.students.some(s => isIdMismatched(s)))
+                      .map((group) => {
+                      const isExpanded = expandedNames.has(group.key);
+                      const hasMismatch = group.students.some(s => isIdMismatched(s));
+                      return (
+                        <div key={group.key} className="border border-gray-200 rounded-sm overflow-hidden">
+                          {/* 그룹 헤더 */}
+                          <div className="flex items-center justify-between p-3 bg-gray-50">
+                            <button
+                              onClick={() => toggleExpand(group.key)}
+                              className="flex items-center gap-3 hover:bg-gray-100 rounded-sm px-2 py-1 -ml-2 transition-colors"
+                            >
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-gray-500" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-gray-500" />
+                              )}
+                              <span className="font-bold text-[#081429]">{group.name}</span>
+                              {(group.school || group.grade) && (
+                                <span className="text-xs text-gray-500">
+                                  {group.school} {group.grade}
+                                </span>
+                              )}
+                              <span className="text-xs text-red-600 bg-red-100 px-1.5 py-0.5 rounded-sm font-medium">
+                                {group.students.length}명
+                              </span>
+                              {hasMismatch && (
+                                <span className="text-xs text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-sm font-medium">
+                                  ID불일치
+                                </span>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteGroup(group)}
+                              disabled={deletingId === `group_${group.key}`}
+                              className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded-sm transition-colors disabled:opacity-50"
+                              title="그룹 전체 삭제"
+                            >
+                              {deletingId === `group_${group.key}` ? (
+                                <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-sm animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                              <span>전체 삭제</span>
+                            </button>
+                          </div>
+
+                          {/* 그룹 상세 */}
+                          {isExpanded && (
+                            <div className="border-t border-gray-200">
+                              <table className="w-full text-sm">
+                                <thead className="bg-gray-100">
+                                  <tr>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">ID</th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">상태</th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">학교</th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">학년</th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">연락처</th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600">수강</th>
+                                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-600">삭제</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                  {group.students.map((student, index) => {
+                                    const isMismatched = isIdMismatched(student);
+                                    return (
+                                    <tr
+                                      key={student.id}
+                                      className={`hover:bg-gray-50 ${index === 0 ? 'bg-green-50' : ''} ${isMismatched ? 'bg-purple-50' : ''}`}
+                                    >
+                                      <td className="px-3 py-2">
+                                        <div className="flex flex-col gap-0.5">
+                                          <span className={`text-xs font-mono ${isMismatched ? 'text-purple-600' : 'text-gray-400'}`}>
+                                            {student.id.slice(0, 12)}...
+                                          </span>
+                                          {isMismatched && (
+                                            <span className="text-micro text-purple-500">
+                                              ID이름: {extractNameFromId(student.id)}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="px-3 py-2">{getStatusBadge(student)}</td>
+                                      <td className="px-3 py-2 text-gray-700">{student.school || '-'}</td>
+                                      <td className="px-3 py-2 text-gray-700">{student.grade || '-'}</td>
+                                      <td className="px-3 py-2 text-gray-700 text-xs">
+                                        {student.studentPhone || student.parentPhone || '-'}
+                                      </td>
+                                      <td className="px-3 py-2">{getEnrollmentInfo(student)}</td>
+                                      <td className="px-3 py-2 text-center">
+                                        <button
+                                          onClick={() => handleDeleteStudent(student.id, student.name)}
+                                          disabled={deletingId === student.id}
+                                          className="p-1 text-red-500 hover:bg-red-50 rounded-sm transition-colors disabled:opacity-50"
+                                          title="학생 삭제"
+                                        >
+                                          {deletingId === student.id ? (
+                                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-sm animate-spin" />
+                                          ) : (
+                                            <Trash2 className="w-4 h-4" />
+                                          )}
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Section 4: 작업 버튼 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <Settings className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">일괄 작업</h3>
+                </div>
+                <div className="p-2 space-y-2">
+                  {/* 수강 없는 중복 학생 삭제 */}
+                  {noEnrollmentDuplicates.length > 0 && (
+                    <button
+                      onClick={handleDeleteAllNoEnrollment}
+                      disabled={isBatchDeleting}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs text-white bg-red-500 hover:bg-red-600 rounded-sm transition-colors disabled:opacity-50"
+                    >
+                      {isBatchDeleting ? (
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-sm animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3 h-3" />
+                      )}
+                      <span>수강 없는 중복 학생 일괄 삭제 ({noEnrollmentDuplicates.length}명)</span>
+                    </button>
+                  )}
+
+                  {/* ID-데이터 불일치 수정 */}
+                  {mismatchedStudents.length > 0 && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleFixAllMismatched}
+                        disabled={isBatchDeleting}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs text-white bg-green-500 hover:bg-green-600 rounded-sm transition-colors disabled:opacity-50"
+                        title="name 필드를 문서 ID의 이름으로 수정"
+                      >
+                        {isBatchDeleting ? (
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-sm animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3 h-3" />
+                        )}
+                        <span>ID 불일치 이름 일괄 수정 ({mismatchedStudents.length}명)</span>
+                      </button>
+                      <button
+                        onClick={handleDeleteAllMismatched}
+                        disabled={isBatchDeleting}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs text-white bg-red-500 hover:bg-red-600 rounded-sm transition-colors disabled:opacity-50"
+                        title="불일치 학생 전체 삭제"
+                      >
+                        {isBatchDeleting ? (
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-sm animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3 h-3" />
+                        )}
+                        <span>삭제 ({mismatchedStudents.length}명)</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 예비 → 재원 변경 */}
+                  {prospectStudents.length > 0 && (
+                    <button
+                      onClick={handleConvertProspectToActive}
+                      disabled={isBatchDeleting}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs text-white bg-blue-500 hover:bg-blue-600 rounded-sm transition-colors disabled:opacity-50"
+                      title="예비 학생을 재원으로 일괄 변경"
+                    >
+                      {isBatchDeleting ? (
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-sm animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3 h-3" />
+                      )}
+                      <span>예비 → 재원 일괄 변경 ({prospectStudents.length}명)</span>
+                    </button>
+                  )}
+
+                  {/* 이상한 문서 삭제 */}
+                  {abnormalStudents.length > 0 && (
+                    <button
+                      onClick={handleDeleteAllAbnormal}
+                      disabled={isBatchDeleting}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs text-white bg-orange-500 hover:bg-orange-600 rounded-sm transition-colors disabled:opacity-50"
+                      title="이상한 형태의 학생 문서 전체 삭제"
+                    >
+                      {isBatchDeleting ? (
+                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-sm animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3 h-3" />
+                      )}
+                      <span>이상한 문서 전체 삭제 ({abnormalStudents.length}개)</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
 
         {/* 푸터 */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+        <div className="p-4 border-t border-gray-200 bg-gray-50 rounded-b-sm">
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-500">
               * 녹색 배경 = 대표 학생 | 보라색 배경 = ID-이름 불일치 (이름 수정 필요)
             </p>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-sm hover:bg-gray-300 transition-colors"
             >
               닫기
             </button>

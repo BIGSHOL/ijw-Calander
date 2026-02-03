@@ -75,32 +75,32 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[250]"
+            className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]"
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-xl shadow-2xl w-[400px] max-h-[85vh] overflow-y-auto"
+                className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="p-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
-                    <h3 className="font-bold text-sm text-[#081429] flex items-center gap-2">
-                        <SlidersHorizontal size={16} className="text-[#fdb813]" />
-                        보기 설정
-                    </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                        <X size={16} />
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 sticky top-0 bg-white z-10">
+                    <div className="flex items-center gap-2">
+                        <SlidersHorizontal size={18} className="text-[#fdb813]" />
+                        <h3 className="text-sm font-bold text-[#081429]">보기 설정</h3>
+                    </div>
+                    <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                        <X size={18} />
                     </button>
                 </div>
 
-                <div className="p-4 pb-3 space-y-4">
+                <div className="flex-1 overflow-y-auto p-4 pb-3 space-y-4">
                     {/* 요일 표시 설정 */}
                     <div className="space-y-3">
                         <div className="text-xs font-bold text-[#fdb813]">요일 표시</div>
                         <div className="flex gap-2">
                             <button
                                 onClick={toggleWeekdays}
-                                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${
+                                className={`flex-1 py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                     hasWeekdays
                                         ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                                         : 'bg-gray-100 text-gray-400 border-gray-200'
@@ -110,7 +110,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                             </button>
                             <button
                                 onClick={toggleWeekends}
-                                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border ${
+                                className={`flex-1 py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                     hasWeekends
                                         ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                                         : 'bg-gray-100 text-gray-400 border-gray-200'
@@ -129,7 +129,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                         <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={() => setShowStudents(!showStudents)}
-                                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all border ${
+                                className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                     showStudents
                                         ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                                         : 'bg-gray-100 text-gray-400 border-gray-200'
@@ -139,7 +139,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                             </button>
                             <button
                                 onClick={() => setShowClassName(!showClassName)}
-                                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all border ${
+                                className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                     showClassName
                                         ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                                         : 'bg-gray-100 text-gray-400 border-gray-200'
@@ -149,7 +149,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                             </button>
                             <button
                                 onClick={() => setShowSchool(!showSchool)}
-                                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all border ${
+                                className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                     showSchool
                                         ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                                         : 'bg-gray-100 text-gray-400 border-gray-200'
@@ -159,7 +159,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                             </button>
                             <button
                                 onClick={() => setShowGrade(!showGrade)}
-                                className={`py-2 px-3 rounded-lg text-xs font-bold transition-all border ${
+                                className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                     showGrade
                                         ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
                                         : 'bg-gray-100 text-gray-400 border-gray-200'
@@ -184,7 +184,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                     <button
                                         key={w}
                                         onClick={() => setColumnWidth(w)}
-                                        className={`flex-1 py-1.5 text-xxs rounded border ${
+                                        className={`flex-1 py-1.5 text-xxs rounded-sm border ${
                                             columnWidth === w
                                                 ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold'
                                                 : 'border-gray-300 text-gray-500 hover:bg-gray-50'
@@ -204,7 +204,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                     <button
                                         key={h}
                                         onClick={() => setRowHeight(h)}
-                                        className={`flex-1 py-1.5 text-xxs rounded border ${
+                                        className={`flex-1 py-1.5 text-xxs rounded-sm border ${
                                             rowHeight === h
                                                 ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold'
                                                 : 'border-gray-300 text-gray-500 hover:bg-gray-50'
@@ -224,7 +224,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                     <button
                                         key={f}
                                         onClick={() => setFontSize(f)}
-                                        className={`flex-1 py-2 text-xs rounded-lg border ${
+                                        className={`flex-1 py-2 text-xs rounded-sm border ${
                                             fontSize === f
                                                 ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold'
                                                 : 'border-gray-300 text-gray-500 hover:bg-gray-50'

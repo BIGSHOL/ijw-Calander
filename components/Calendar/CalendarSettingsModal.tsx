@@ -208,16 +208,16 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[200]"
+      className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
+        className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-[#081429] px-4 py-2.5 flex justify-between items-center text-white shrink-0">
-          <h2 className="text-sm font-bold flex items-center gap-1.5">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-1.5">
             <span className="text-[#fdb813]">📅</span>
             연간 일정 설정
           </h2>
@@ -225,14 +225,14 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
             {hasChanges && (
               <button
                 onClick={handleSaveChanges}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-md font-bold text-xs hover:bg-[#e5a610] transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-sm font-bold text-xs hover:bg-[#e5a610] transition-colors"
               >
                 저장
               </button>
             )}
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X size={18} />
             </button>
@@ -287,40 +287,64 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3">
           {activeTab === 'departments' && (
-            <DepartmentsManagementTab
-              localDepartments={localDepartments}
-              sysCategories={sysCategories}
-              currentUserProfile={currentUser}
-              newDepartmentForm={newDepartmentForm}
-              categoryManagement={categoryManagement}
-              departmentFilterState={departmentFilterState}
-              canManageCategories={canManageCategories}
-              canCreateDept={canCreateDept}
-              canEditDept={canEditDept}
-              canDeleteDept={canDeleteDept}
-              isMaster={isMaster}
-              isAdmin={isAdmin}
-              setNewDepartmentForm={setNewDepartmentForm}
-              setCategoryManagement={setCategoryManagement}
-              setDepartmentFilterState={setDepartmentFilterState}
-              setLocalDepartments={setLocalDepartments}
-              handleAddCategory={handleAddCategory}
-              handleDeleteCategory={handleDeleteCategory}
-              handleAdd={handleAdd}
-              handleDelete={handleDelete}
-              handleLocalDeptUpdate={handleLocalDeptUpdate}
-              markChanged={markChanged}
-            />
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                <Building2 className="w-3 h-3 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-xs">부서 관리</h3>
+              </div>
+              <div className="p-2">
+                <DepartmentsManagementTab
+                  localDepartments={localDepartments}
+                  sysCategories={sysCategories}
+                  currentUserProfile={currentUser}
+                  newDepartmentForm={newDepartmentForm}
+                  categoryManagement={categoryManagement}
+                  departmentFilterState={departmentFilterState}
+                  canManageCategories={canManageCategories}
+                  canCreateDept={canCreateDept}
+                  canEditDept={canEditDept}
+                  canDeleteDept={canDeleteDept}
+                  isMaster={isMaster}
+                  isAdmin={isAdmin}
+                  setNewDepartmentForm={setNewDepartmentForm}
+                  setCategoryManagement={setCategoryManagement}
+                  setDepartmentFilterState={setDepartmentFilterState}
+                  setLocalDepartments={setLocalDepartments}
+                  handleAddCategory={handleAddCategory}
+                  handleDeleteCategory={handleDeleteCategory}
+                  handleAdd={handleAdd}
+                  handleDelete={handleDelete}
+                  handleLocalDeptUpdate={handleLocalDeptUpdate}
+                  markChanged={markChanged}
+                />
+              </div>
+            </div>
           )}
           {activeTab === 'permissions' && (isMaster || isAdmin) && (
-            <DepartmentPermissionsTab
-              departments={departments}
-              users={users}
-              currentUser={currentUser}
-            />
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                <Shield className="w-3 h-3 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-xs">부서 권한</h3>
+              </div>
+              <div className="p-2">
+                <DepartmentPermissionsTab
+                  departments={departments}
+                  users={users}
+                  currentUser={currentUser}
+                />
+              </div>
+            </div>
           )}
           {activeTab === 'hashtags' && (
-            <HashtagsTab isMaster={isMaster} />
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                <Hash className="w-3 h-3 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-xs">해시태그 관리</h3>
+              </div>
+              <div className="p-2">
+                <HashtagsTab isMaster={isMaster} />
+              </div>
+            </div>
           )}
         </div>
       </div>

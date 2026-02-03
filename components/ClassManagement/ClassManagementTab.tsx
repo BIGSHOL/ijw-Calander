@@ -253,7 +253,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
         <TabSubNavigation variant="compact" className="px-6 py-2 border-b border-white/10">
           <div className="flex flex-wrap items-center gap-2 w-full">
               {/* 과목 토글 */}
-              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm flex-shrink-0">
+              <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0">
                 {subjectFilters.map(({ value, label, icon }) => (
                   <TabButton
                     key={value}
@@ -268,7 +268,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
               </div>
 
               {/* 담임/부담임 필터 */}
-              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm flex-shrink-0">
+              <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0">
                 <button
                   onClick={() => setFilters({ ...filters, teacherRole: 'all' })}
                   className={`px-3 py-1 rounded text-xs font-bold transition-all ${
@@ -306,7 +306,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                 <div className="relative" ref={teacherDropdownRef}>
                   <button
                     onClick={() => setShowTeacherDropdown(!showTeacherDropdown)}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md border text-xs font-medium transition-colors ${
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-sm border text-xs font-medium transition-colors ${
                       filters.teacher !== 'all'
                         ? 'bg-[#fdb813] border-[#fdb813] text-[#081429]'
                         : 'bg-[#1e293b] border-gray-700 text-white hover:border-gray-500'
@@ -317,7 +317,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                   </button>
 
                   {showTeacherDropdown && (
-                    <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-gray-700 rounded-lg shadow-xl z-50 min-w-[320px] max-h-[500px] overflow-y-auto">
+                    <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-gray-700 rounded-sm shadow-xl z-50 min-w-[320px] max-h-[500px] overflow-y-auto">
                       {/* 전체 선택 */}
                       <div className="p-2 border-b border-white/10">
                         <button
@@ -463,7 +463,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
               )}
 
               {/* 요일 필터 */}
-              <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm flex-shrink-0">
+              <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0">
                 {ALL_DAYS.map(day => {
                   const isSelected = filters.selectedDays.includes(day);
                   const toggleDay = () => {
@@ -501,7 +501,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
               <select
                 value={filters.sortBy}
                 onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
-                className="flex-shrink-0 appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                className="flex-shrink-0 appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
               >
                 <option value="name">수업명순</option>
                 <option value="studentCount">학생수순</option>
@@ -516,7 +516,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                   placeholder="수업명, 강사명 검색..."
                   value={filters.searchQuery}
                   onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                  className="bg-[#1e293b] border border-gray-700 rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
+                  className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
                 />
               </div>
 
@@ -530,7 +530,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                 {canEditClass && (
                   <button
                     onClick={() => setShowSettingsModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gray-700 text-white hover:bg-gray-600 transition-colors shadow-sm font-bold"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-gray-700 text-white hover:bg-gray-600 transition-colors shadow-sm font-bold"
                     title="수업 설정"
                   >
                     <Settings size={14} />
@@ -540,7 +540,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                 {canCreateClass ? (
                   <button
                     onClick={() => setShowAddModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
                   >
                     <Plus size={14} />
                     <span>새 수업</span>
@@ -575,7 +575,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
       >
         {/* 에러 상태 */}
         {error && (
-          <div className="bg-red-50 border border-red-300 rounded-lg p-4 mb-6">
+          <div className="bg-red-50 border border-red-300 rounded-sm p-4 mb-6">
             <p className="text-red-800">데이터를 불러오는 중 오류가 발생했습니다.</p>
             <button
               onClick={() => window.location.reload()}

@@ -5,7 +5,7 @@ const MigrationTab: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* 헤더 */}
-      <div className="bg-gradient-to-r from-green-500 to-blue-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-green-500 to-blue-600 rounded-sm p-6 text-white">
         <div className="flex items-center gap-3 mb-2">
           <Database className="w-8 h-8" />
           <h2 className="text-2xl font-bold">데이터 마이그레이션 완료</h2>
@@ -17,8 +17,8 @@ const MigrationTab: React.FC = () => {
       </div>
 
       {/* 현재 상태 */}
-      <div className="bg-white rounded-lg border-2 border-green-200 p-6">
-        <div className="p-3 rounded-lg bg-green-50 border-2 border-green-200">
+      <div className="bg-white rounded-sm border-2 border-green-200 p-6">
+        <div className="p-3 rounded-sm bg-green-50 border-2 border-green-200">
           <div className="flex items-center gap-2 text-sm">
             <CheckCircle2 className="w-5 h-5 text-green-600" />
             <span className="font-semibold text-green-800">통일된 구조 사용 중</span>
@@ -27,7 +27,7 @@ const MigrationTab: React.FC = () => {
         </div>
 
         <div className="mt-4 space-y-2 text-sm text-gray-700">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-sm p-4">
             <div className="text-sm text-blue-800">
               <p className="font-semibold mb-2">현재 데이터 구조:</p>
               <ul className="list-disc list-inside space-y-1 text-blue-700">
@@ -45,7 +45,7 @@ const MigrationTab: React.FC = () => {
       </div>
 
       {/* 완료 안내 */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border-2 border-green-200 p-6">
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-sm border-2 border-green-200 p-6">
         <h3 className="text-lg font-bold text-gray-800 mb-3">마이그레이션 완료 체크리스트</h3>
         <div className="space-y-2 text-sm text-gray-700">
           <p>✅ 수학/영어 시간표 → <code className="bg-gray-100 px-1 rounded">classes</code> 컬렉션 사용</p>

@@ -87,7 +87,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
             {activeList.map((student, idx) => (
                 <div
                     key={student.id}
-                    className={`flex items-center justify-between py-2 px-3 rounded-lg transition-colors group ${editingStudentId === student.id ? 'bg-indigo-50 border border-indigo-200' : (student.isMoved ? 'bg-green-50 hover:bg-green-100' : 'bg-gray-50 hover:bg-gray-100')}`}
+                    className={`flex items-center justify-between py-2 px-3 rounded-sm transition-colors group ${editingStudentId === student.id ? 'bg-indigo-50 border border-indigo-200' : (student.isMoved ? 'bg-green-50 hover:bg-green-100' : 'bg-gray-50 hover:bg-gray-100')}`}
                 >
                     {editingStudentId === student.id ? (
                         // Editing Mode
@@ -97,7 +97,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                     <input
                                         value={editForm.name}
                                         onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                                        className="w-full text-xs p-1 border rounded"
+                                        className="w-full text-xs p-1 border rounded-sm"
                                         placeholder="이름"
                                     />
                                 </div>
@@ -105,7 +105,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                     <input
                                         value={editForm.englishName}
                                         onChange={e => setEditForm({ ...editForm, englishName: e.target.value })}
-                                        className="w-full text-xs p-1 border rounded"
+                                        className="w-full text-xs p-1 border rounded-sm"
                                         placeholder="E.Name"
                                     />
                                 </div>
@@ -113,7 +113,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                     <input
                                         value={editForm.school}
                                         onChange={e => setEditForm({ ...editForm, school: e.target.value })}
-                                        className="w-full text-xs p-1 border rounded"
+                                        className="w-full text-xs p-1 border rounded-sm"
                                         placeholder="학교"
                                     />
                                 </div>
@@ -121,16 +121,16 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                     <input
                                         value={editForm.grade}
                                         onChange={e => setEditForm({ ...editForm, grade: e.target.value })}
-                                        className="w-full text-xs p-1 border rounded text-center"
+                                        className="w-full text-xs p-1 border rounded-sm text-center"
                                         placeholder="N"
                                     />
                                 </div>
                             </div>
                             <div className="flex gap-1">
-                                <button onClick={saveEditing} className="p-1 text-green-600 hover:bg-green-100 rounded">
+                                <button onClick={saveEditing} className="p-1 text-green-600 hover:bg-green-100 rounded-sm">
                                     <Check size={16} />
                                 </button>
-                                <button onClick={cancelEditing} className="p-1 text-gray-400 hover:bg-gray-200 rounded">
+                                <button onClick={cancelEditing} className="p-1 text-gray-400 hover:bg-gray-200 rounded-sm">
                                     <X size={16} />
                                 </button>
                             </div>
@@ -139,7 +139,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                         // View Mode
                         <>
                             <div className={`flex items-center gap-3 flex-1 ${canEdit ? 'cursor-pointer' : ''}`} onClick={() => canEdit && startEditing(student)}>
-                                <span className="w-5 h-5 rounded-full bg-[#081429] text-[#fdb813] text-xxs font-bold flex items-center justify-center shrink-0">
+                                <span className="w-5 h-5 rounded-sm bg-[#081429] text-[#fdb813] text-xxs font-bold flex items-center justify-center shrink-0">
                                     {idx + 1}
                                 </span>
                                 <span className={`font-bold text-sm ${student.underline ? 'underline text-blue-600' : 'text-[#373d41]'} ${student.isMoved ? 'text-blue-600' : ''}`}>
@@ -170,7 +170,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                                         // Original logic: if red/pink, toggle between them or off?
                                                         // Original code:
                                                         // if diffDays <= 30 -> 1 month.
-                                                        // Click logic: 
+                                                        // Click logic:
                                                         // defined in original as:
                                                         /*
                                                         if (diffDays <= 30) {
@@ -188,7 +188,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                                 }
                                                 onUpdate(student.id, { enrollmentDate: nextDate, onHold: false, withdrawalDate: undefined, isMoved: false });
                                             }}
-                                            className={`px-2 py-0.5 text-xxs flex items-center justify-center rounded border transition-colors ${student.enrollmentDate
+                                            className={`px-2 py-0.5 text-xxs flex items-center justify-center rounded-sm border transition-colors ${student.enrollmentDate
                                                 ? (() => {
                                                     const start = new Date(student.enrollmentDate);
                                                     const today = new Date();
@@ -205,7 +205,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                         {/* 밑줄 버튼 */}
                                         <button
                                             onClick={() => onUpdate(student.id, { underline: !student.underline })}
-                                            className={`p-1 rounded border transition-colors ${student.underline ? 'bg-blue-600 text-white border-blue-600 shadow-inner' : 'bg-white text-gray-400 border-gray-200 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-200'}`}
+                                            className={`p-1 rounded-sm border transition-colors ${student.underline ? 'bg-blue-600 text-white border-blue-600 shadow-inner' : 'bg-white text-gray-400 border-gray-200 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-200'}`}
                                             title="밑줄 강조"
                                         >
                                             <Underline size={12} />
@@ -220,7 +220,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                                     onUpdate(student.id, { isMoved: true, enrollmentDate: undefined, withdrawalDate: undefined });
                                                 }
                                             }}
-                                            className={`px-2 py-0.5 text-xxs flex items-center justify-center gap-1 rounded border transition-colors ${student.isMoved
+                                            className={`px-2 py-0.5 text-xxs flex items-center justify-center gap-1 rounded-sm border transition-colors ${student.isMoved
                                                 ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
                                                 : 'bg-white text-gray-400 border-gray-200 hover:bg-green-50 hover:text-green-600'
                                                 }`}
@@ -240,7 +240,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                                     onUpdate(student.id, { withdrawalDate: new Date().toISOString().split('T')[0], onHold: false, enrollmentDate: undefined, isMoved: false });
                                                 }
                                             }}
-                                            className="px-2 py-0.5 text-xxs rounded border border-gray-200 text-gray-400 hover:bg-gray-800 hover:text-white hover:border-gray-800 transition-colors"
+                                            className="px-2 py-0.5 text-xxs rounded-sm border border-gray-200 text-gray-400 hover:bg-gray-800 hover:text-white hover:border-gray-800 transition-colors"
                                         >
                                             퇴원
                                         </button>
@@ -248,7 +248,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                         {/* 대기 버튼 */}
                                         <button
                                             onClick={() => onUpdate(student.id, { onHold: !student.onHold, enrollmentDate: undefined, withdrawalDate: undefined })}
-                                            className={`px-2 py-0.5 text-xxs rounded border transition-colors ${student.onHold ? 'bg-yellow-400 text-black border-yellow-500 hover:bg-yellow-500 font-bold' : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'}`}
+                                            className={`px-2 py-0.5 text-xxs rounded-sm border transition-colors ${student.onHold ? 'bg-yellow-400 text-black border-yellow-500 hover:bg-yellow-500 font-bold' : 'bg-white text-gray-400 border-gray-200 hover:bg-gray-50'}`}
                                         >
                                             대기
                                         </button>
@@ -256,7 +256,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                         {/* 삭제 버튼 */}
                                         <button
                                             onClick={() => onRemove(student.id)}
-                                            className="px-2 py-0.5 text-xxs rounded border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                                            className="px-2 py-0.5 text-xxs rounded-sm border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
                                         >
                                             삭제
                                         </button>
@@ -280,7 +280,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                         {withdrawnList.map((student) => (
                             <div
                                 key={student.id}
-                                className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50"
+                                className="flex items-center justify-between py-2 px-3 rounded-sm bg-gray-50"
                             >
                                 <div className="flex items-center gap-3 flex-1">
                                     <span className="font-bold text-sm text-gray-400 line-through">
@@ -298,13 +298,13 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                         <>
                                             <button
                                                 onClick={() => onUpdate(student.id, { withdrawalDate: undefined })}
-                                                className="px-2 py-0.5 text-xxs rounded border transition-colors bg-black text-white border-black hover:bg-gray-800"
+                                                className="px-2 py-0.5 text-xxs rounded-sm border transition-colors bg-black text-white border-black hover:bg-gray-800"
                                             >
                                                 퇴원 취소
                                             </button>
                                             <button
                                                 onClick={() => onRemove(student.id)}
-                                                className="px-2 py-0.5 text-xxs rounded border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                                                className="px-2 py-0.5 text-xxs rounded-sm border border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
                                             >
                                                 삭제
                                             </button>

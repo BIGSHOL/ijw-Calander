@@ -17,7 +17,7 @@ export const PendingApprovalOverlay: React.FC<PendingApprovalOverlayProps> = ({
 }) => {
   return (
     <div className="fixed inset-0 bg-[#081429] z-50 flex flex-col items-center justify-center text-white p-8 text-center animate-in fade-in duration-300">
-      <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center p-2 mb-6 shadow-lg shadow-[#fdb813]/20">
+      <div className="w-24 h-24 bg-white rounded-sm flex items-center justify-center p-2 mb-6 shadow-lg shadow-[#fdb813]/20">
         <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
       </div>
       <h2 className="text-3xl font-black mb-4">관리자 승인 대기중</h2>
@@ -28,7 +28,7 @@ export const PendingApprovalOverlay: React.FC<PendingApprovalOverlayProps> = ({
       </p>
       <button
         onClick={onLogout}
-        className="px-6 py-3 bg-white text-[#081429] font-bold rounded-xl hover:bg-gray-100 transition-colors flex items-center gap-2"
+        className="px-6 py-3 bg-white text-[#081429] font-bold rounded-sm hover:bg-gray-100 transition-colors flex items-center gap-2"
       >
         <LogOut size={20} /> 로그아웃
       </button>

@@ -48,7 +48,7 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
 
   return (
     <div
-      className={`bg-white rounded-lg p-3 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
+      className={`bg-white rounded-sm p-3 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
         onClick ? 'cursor-pointer hover:border-gray-300' : ''
       }`}
       onClick={onClick}

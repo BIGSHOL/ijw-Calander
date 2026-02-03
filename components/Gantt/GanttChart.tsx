@@ -304,7 +304,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                 <div className="flex justify-between items-end mb-8">
                     <div>
                         <div className="flex items-center gap-2 text-yellow-400 mb-1">
-                            <div className="w-2 h-2 rounded-full bg-yellow-400"></div>
+                            <div className="w-2 h-2 rounded-sm bg-yellow-400"></div>
                             <span className="text-xs font-bold tracking-wider">프로젝트</span>
                             <ChevronRight size={14} className="text-gray-400" />
                         </div>
@@ -323,7 +323,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                     <div className="flex items-center gap-3">
                         {/* Filter Button - Will be implemented in Phase 8 */}
                         <button
-                            className="text-gray-500 hover:text-gray-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-100 transition-all opacity-50 cursor-not-allowed"
+                            className="text-gray-500 hover:text-gray-800 px-3 py-2 rounded-sm text-sm font-medium flex items-center gap-2 hover:bg-gray-100 transition-all opacity-50 cursor-not-allowed"
                             title="필터 기능은 곧 추가됩니다"
                             disabled
                         >
@@ -333,7 +333,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                         {/* Settings Button */}
                         <button
                             onClick={() => setIsSettingsOpen(true)}
-                            className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-100 transition-all"
+                            className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-sm text-sm font-medium flex items-center gap-2 hover:bg-gray-100 transition-all"
                             title="간트 차트 설정"
                         >
                             <Settings size={16} /> 설정
@@ -343,7 +343,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                         {onSaveAsTemplate && (
                             <button
                                 onClick={onSaveAsTemplate}
-                                className="text-gray-500 hover:text-gray-800 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-gray-100 transition-all border border-gray-200"
+                                className="text-gray-500 hover:text-gray-800 px-3 py-2 rounded-sm text-sm font-medium flex items-center gap-2 hover:bg-gray-100 transition-all border border-gray-200"
                             >
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 01-2-2V5a2 2 0 012-2h4.586" />
@@ -353,7 +353,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 bg-[#202532] p-1 rounded-full border border-gray-200">
+                    <div className="flex items-center gap-2 bg-[#202532] p-1 rounded-sm border border-gray-200">
                         <ZoomOut size={14} className="text-gray-400 ml-2" />
                         <input
                             type="range"
@@ -364,12 +364,12 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                 setDayWidth(Number(e.target.value));
                                 setIsFitToScreen(false);
                             }}
-                            className="w-24 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                            className="w-24 h-1 bg-slate-700 rounded-sm appearance-none cursor-pointer accent-emerald-500"
                         />
                         <ZoomIn size={14} className="text-gray-400 mr-2" />
                         <button
                             onClick={() => setIsFitToScreen(true)}
-                            className="p-1 rounded-full hover:bg-white/10 text-gray-500"
+                            className="p-1 rounded-sm hover:bg-white/10 text-gray-500"
                         >
                             <Maximize size={14} />
                         </button>
@@ -540,7 +540,7 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                             >
                                                 {/* Bar - Pill Style with Gradient */}
                                                 <div
-                                                    className={`absolute h-[38px] rounded-full flex items-center justify-center gap-2 px-4 ${theme.bg} shadow-xl transition duration-300 hover:scale-105 hover:-translate-y-0.5 cursor-pointer z-10 hover:z-50 group/bar border border-white/20`}
+                                                    className={`absolute h-[38px] rounded-sm flex items-center justify-center gap-2 px-4 ${theme.bg} shadow-xl transition duration-300 hover:scale-105 hover:-translate-y-0.5 cursor-pointer z-10 hover:z-50 group/bar border border-white/20`}
                                                     style={{
                                                         left: task.startOffset * dayWidth,
                                                         width: Math.max(dayWidth * task.duration, 70),
@@ -558,8 +558,8 @@ const GanttChart: React.FC<GanttChartProps> = ({ tasks, title = "Website Redesig
                                                     )}
 
                                                     {/* Tooltip */}
-                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/bar:block z-[9999] w-max max-w-xs">
-                                                        <div className="bg-white text-gray-800 text-xs rounded-lg p-3 shadow-xl border border-gray-200">
+                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/bar:block z-[110] w-max max-w-xs">
+                                                        <div className="bg-white text-gray-800 text-xs rounded-sm p-3 shadow-xl border border-gray-200">
                                                             <div className="font-bold mb-1 text-sm text-gray-900">{task.title}</div>
                                                             <div className="text-gray-500 mb-2">{task.description}</div>
 

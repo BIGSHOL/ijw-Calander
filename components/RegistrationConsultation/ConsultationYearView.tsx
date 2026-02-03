@@ -196,10 +196,10 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
         <div className="flex flex-col h-full overflow-hidden">
             {/* Year Navigation Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 flex-shrink-0">
-                <div className="flex items-center gap-1 p-1 bg-[#f8fafc] rounded-xl border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-1 p-1 bg-[#f8fafc] rounded-sm border border-gray-200 shadow-sm">
                     <button
                         onClick={() => onYearChange(currentYear - 1)}
-                        className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
+                        className="p-1.5 hover:bg-white hover:shadow-md rounded-sm transition-all text-gray-400 hover:text-[#081429]"
                     >
                         <ChevronLeft size={16} strokeWidth={3} />
                     </button>
@@ -208,7 +208,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                     </span>
                     <button
                         onClick={() => onYearChange(currentYear + 1)}
-                        className="p-1.5 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-[#081429]"
+                        className="p-1.5 hover:bg-white hover:shadow-md rounded-sm transition-all text-gray-400 hover:text-[#081429]"
                     >
                         <ChevronRight size={16} strokeWidth={3} />
                     </button>
@@ -220,14 +220,14 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                         <button
                             key={opt.key}
                             onClick={() => toggleFilter(opt.key)}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all border ${activeFilters.has(opt.key)
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-sm text-xs font-medium transition-all border ${activeFilters.has(opt.key)
                                 ? 'border-transparent shadow-sm'
                                 : 'border-gray-200 bg-gray-50 text-gray-400'
                                 }`}
                             style={activeFilters.has(opt.key) ? { backgroundColor: opt.color + '20', color: opt.color, borderColor: opt.color } : {}}
                         >
                             <div
-                                className="w-2.5 h-2.5 rounded-full"
+                                className="w-2.5 h-2.5 rounded-sm"
                                 style={{ backgroundColor: activeFilters.has(opt.key) ? opt.color : '#d1d5db' }}
                             />
                             {opt.label}
@@ -265,7 +265,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                 key={month.toString()}
                                 onClick={() => setSelectedMonth(month)}
                                 className={`
-                                    bg-white rounded-md sm:rounded-lg shadow-sm border p-1.5 sm:p-2 transition-all cursor-pointer
+                                    bg-white rounded-sm sm:rounded-sm shadow-sm border p-1.5 sm:p-2 transition-all cursor-pointer
                                     ${isSelected ? 'ring-2 ring-[#fdb813] border-transparent' : 'border-gray-100 hover:border-[#fdb813]/50'}
                                 `}
                             >
@@ -276,7 +276,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                     <div className="flex gap-1 items-center">
                                         {monthCount > 0 && (
                                             <span
-                                                className="text-nano sm:text-xxs px-1.5 py-0.5 rounded-full font-bold"
+                                                className="text-nano sm:text-xxs px-1.5 py-0.5 rounded-sm font-bold"
                                                 style={{ backgroundColor: COLORS.yellow, color: COLORS.navy }}
                                             >
                                                 {monthCount}
@@ -284,7 +284,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                         )}
                                         {isSelected && (
                                             <span
-                                                className="text-[6px] sm:text-nano px-1 py-0.5 rounded-full font-bold"
+                                                className="text-[6px] sm:text-nano px-1 py-0.5 rounded-sm font-bold"
                                                 style={{ backgroundColor: COLORS.yellow, color: COLORS.navy }}
                                             >
                                                 선택됨
@@ -352,7 +352,7 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                             selectedMonthData.slice(0, 20).map(record => (
                                 <div
                                     key={record.id}
-                                    className="flex-shrink-0 w-36 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-all cursor-pointer overflow-hidden"
+                                    className="flex-shrink-0 w-36 bg-white rounded-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer overflow-hidden"
                                 >
                                     <div className="h-1" style={{ backgroundColor: COLORS.yellow }} />
                                     <div className="p-2">

@@ -300,7 +300,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         return (
             <div className="flex items-center justify-center h-full bg-gray-100">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-sm animate-spin"></div>
                     <span className="text-sm text-gray-500 font-medium">설정 로딩중...</span>
                 </div>
             </div>
@@ -314,17 +314,17 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 <div className="flex items-center gap-3">
                     {/* Mode Toggle - 시뮬레이션 모드에서는 항상 수정모드이므로 숨김 */}
                     {!isSimulationMode && (
-                        <div className="flex bg-gray-200 rounded-lg p-0.5">
+                        <div className="flex bg-gray-200 rounded-sm p-0.5">
                             <button
                                 onClick={() => setMode('view')}
-                                className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                                className={`px-3 py-1 text-xs font-bold rounded-sm transition-all ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                             >
                                 👁️ 조회
                             </button>
                             {canEditEnglish && (
                                 <button
                                     onClick={() => setMode('edit')}
-                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                                    className={`px-3 py-1 text-xs font-bold rounded-sm transition-all ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
                                 >
                                     <Edit className="inline-block w-3 h-3 mr-1" />
                                     수정
@@ -341,28 +341,28 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             placeholder="수업명 검색..."
-                            className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-full w-48 focus:ring-2 focus:ring-indigo-400 outline-none shadow-sm"
+                            className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-sm w-48 focus:ring-2 focus:ring-indigo-400 outline-none shadow-sm"
                         />
                     </div>
 
                     {/* Student Stats Badges */}
                     <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xxs font-bold">
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-sm text-xxs font-bold">
                             재원 {studentStats.active}
                         </span>
-                        <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full text-xxs font-bold">
+                        <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded-sm text-xxs font-bold">
                             신입1 {studentStats.new1}
                         </span>
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xxs font-bold">
+                        <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-sm text-xxs font-bold">
                             신입2 {studentStats.new2}
                         </span>
                         {studentStats.waiting > 0 && (
-                            <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xxs font-bold">
+                            <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-sm text-xxs font-bold">
                                 대기 {studentStats.waiting}
                             </span>
                         )}
                         {studentStats.withdrawn > 0 && (
-                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xxs font-bold">
+                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-sm text-xxs font-bold">
                                 퇴원 {studentStats.withdrawn}
                             </span>
                         )}
@@ -376,20 +376,20 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     {/* Batch Save Controls (Visible when changes exist) */}
                     {moveChanges.size > 0 && mode === 'edit' && (
                         <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-                            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-sm">
                                 {moveChanges.size}명
                             </span>
                             <button
                                 onClick={handleSaveChanges}
                                 disabled={isSaving}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-sm text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
                             >
                                 {isSaving ? '...' : '💾'}
                             </button>
                             <button
                                 onClick={handleCancelChanges}
                                 disabled={isSaving}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-bold shadow-sm transition-colors"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-sm text-xs font-bold shadow-sm transition-colors"
                             >
                                 ✖
                             </button>
@@ -409,7 +409,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                 e.stopPropagation();
                                 setIsDisplayOptionsOpen(!isDisplayOptionsOpen);
                             }}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold shadow-sm"
                         >
                             <Eye size={14} />
                             <span className="hidden md:inline">표시 옵션</span>
@@ -418,7 +418,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
                         {isDisplayOptionsOpen && (
                             <div
-                                className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-2 min-w-[180px]"
+                                className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-sm border border-gray-200 z-20 py-2 min-w-[180px]"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
@@ -432,7 +432,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 showStudents: e.target.checked
                                             }
                                         })}
-                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                     />
                                     <Users size={14} className="text-gray-500" />
                                     <span className="text-xs text-gray-700">학생 목록</span>
@@ -449,7 +449,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 showRoom: e.target.checked
                                             }
                                         })}
-                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                     />
                                     <Home size={14} className="text-gray-500" />
                                     <span className="text-xs text-gray-700">강의실</span>
@@ -466,7 +466,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 showTeacher: e.target.checked
                                             }
                                         })}
-                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                     />
                                     <User size={14} className="text-gray-500" />
                                     <span className="text-xs text-gray-700">담임 정보</span>
@@ -483,7 +483,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 showSchedule: e.target.checked
                                             }
                                         })}
-                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                        className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                     />
                                     <CalendarDays size={14} className="text-gray-500" />
                                     <span className="text-xs text-gray-700">스케줄</span>
@@ -495,7 +495,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     {mode === 'edit' && canEditEnglish && (
                         <button
                             onClick={() => setIsSettingsOpen(true)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold shadow-sm"
                         >
                             <Settings size={14} />
                             뷰 설정
@@ -504,7 +504,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     {mode === 'edit' && canEditEnglish && !isSimulationMode && (
                         <button
                             onClick={() => setIsLevelSettingsOpen(true)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-xs font-bold shadow-sm"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold shadow-sm"
                         >
                             <Settings size={14} />
                             레벨 설정
@@ -514,7 +514,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     {/* Simulation Mode Toggle */}
                     {canSimulation && (
                         <div
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
                             onClick={onToggleSimulation}
                         >
                             <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
@@ -531,7 +531,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
                     <button
                         onClick={onCopyLiveToDraft}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
                         title="현재 실시간 시간표를 복사해옵니다 (기존 시뮬레이션 데이터 덮어쓰기)"
                     >
                         <Copy size={12} />
@@ -540,7 +540,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     {canPublish && (
                         <button
                             onClick={onPublishToLive}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
                             title="시뮬레이션 내용을 실제 시간표에 적용합니다 (주의)"
                         >
                             <Upload size={12} />
@@ -549,7 +549,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     )}
                     <button
                         onClick={onOpenScenarioModal}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
                         title="시나리오 저장/불러오기"
                     >
                         <Save size={12} />
@@ -577,7 +577,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     return (
                         <div
                             key={teacher}
-                            className="px-2 py-0.5 rounded text-xs font-bold shadow-sm border border-black/5"
+                            className="px-2 py-0.5 rounded-sm text-xs font-bold shadow-sm border border-black/5"
                             style={{ backgroundColor: colors.bg, color: colors.text }}
                         >
                             {displayName}
@@ -599,11 +599,11 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                 {/* Group Header */}
                                 <div className="bg-gray-800 text-white px-4 py-2 font-bold text-sm flex items-center gap-2">
                                     <span>🕒 {group.label}</span>
-                                    <span className="text-xs bg-gray-600 px-2 py-0.5 rounded text-gray-200 font-normal">
+                                    <span className="text-xs bg-gray-600 px-2 py-0.5 rounded-sm text-gray-200 font-normal">
                                         {group.classes.length}개 수업
                                     </span>
                                     {group.useInjaePeriod && (
-                                        <span className="text-xs bg-amber-500 px-2 py-0.5 rounded text-white font-medium">
+                                        <span className="text-xs bg-amber-500 px-2 py-0.5 rounded-sm text-white font-medium">
                                             인재원 시간표
                                         </span>
                                     )}

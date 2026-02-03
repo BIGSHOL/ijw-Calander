@@ -61,19 +61,19 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 <div className="flex items-center gap-1">
                     <button
                         onClick={goToPrevWeek}
-                        className="p-1 border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
                     >
                         <ChevronLeft size={14} />
                     </button>
                     <button
                         onClick={goToThisWeek}
-                        className="px-2 py-0.5 text-xxs font-bold border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        className="px-2 py-0.5 text-xxs font-bold border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
                     >
                         이번주
                     </button>
                     <button
                         onClick={goToNextWeek}
-                        className="p-1 border border-gray-300 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
                     >
                         <ChevronRight size={14} />
                     </button>
@@ -87,7 +87,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     <>
                         <div
                             onClick={onToggleSimulation}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border cursor-pointer transition-all ${isSimulationMode
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border cursor-pointer transition-all ${isSimulationMode
                                 ? 'bg-orange-50 border-orange-300 hover:bg-orange-100'
                                 : 'bg-white border-gray-300 hover:bg-gray-50'
                                 }`}
@@ -103,7 +103,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                             <>
                                 <button
                                     onClick={onCopyLiveToDraft}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
                                     title="현재 실시간 시간표를 복사해옵니다 (기존 시뮬레이션 데이터 덮어쓰기)"
                                 >
                                     <Copy size={12} />
@@ -112,7 +112,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                 {canEdit && (
                                     <button
                                         onClick={onPublishDraftToLive}
-                                        className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
+                                        className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
                                         title="시뮬레이션 내용을 실제 시간표에 적용합니다 (주의)"
                                     >
                                         <Upload size={12} />
@@ -122,7 +122,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
                                 <button
                                     onClick={onOpenScenarioModal}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-lg text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
+                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
                                     title="시나리오 저장/불러오기"
                                 >
                                     <Save size={12} />
@@ -137,10 +137,10 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 )}
 
                 {/* Mode Toggle - 조회/수정 모드 */}
-                <div className="flex bg-gray-200 rounded-lg p-0.5">
+                <div className="flex bg-gray-200 rounded-sm p-0.5">
                     <button
                         onClick={() => setMode('view')}
-                        className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
                     >
                         <Eye size={12} />
                         조회
@@ -148,7 +148,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     {canEdit && (
                         <button
                             onClick={() => setMode('edit')}
-                            className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                            className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
                         >
                             <Edit size={12} />
                             수정
@@ -167,7 +167,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="학생 검색..."
-                        className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-md bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
+                        className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
                     />
                     {searchQuery && (
                         <button
@@ -186,7 +186,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 {viewType === 'teacher' && (
                     <button
                         onClick={() => setIsTeacherOrderModalOpen(true)}
-                        className="px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                        className="px-2 py-1 border border-gray-300 rounded-sm text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
                         title="강사 순서 설정"
                     >
                         ↕️ 강사 순서
@@ -196,7 +196,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 {/* View Settings */}
                 <button
                     onClick={() => setIsViewSettingsOpen(true)}
-                    className="px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
+                    className="px-2 py-1 border border-gray-300 rounded-sm text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
                     title="보기 설정"
                 >
                     <SlidersHorizontal size={12} />
@@ -205,21 +205,21 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
                 {/* Pending Moves */}
                 {pendingMovesCount > 0 && (
-                    <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-md px-2 py-1">
+                    <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-sm px-2 py-1">
                         <span className="text-xs font-bold text-orange-600">
                             {pendingMovesCount}건 변경
                         </span>
                         <button
                             onClick={handleSavePendingMoves}
                             disabled={isSaving}
-                            className="px-2 py-0.5 bg-green-500 text-white rounded text-xs font-bold hover:bg-green-600 disabled:opacity-50"
+                            className="px-2 py-0.5 bg-green-500 text-white rounded-sm text-xs font-bold hover:bg-green-600 disabled:opacity-50"
                         >
                             {isSaving ? '저장중...' : '💾 저장'}
                         </button>
                         <button
                             onClick={handleCancelPendingMoves}
                             disabled={isSaving}
-                            className="px-2 py-0.5 bg-gray-500 text-white rounded text-xs font-bold hover:bg-gray-600 disabled:opacity-50"
+                            className="px-2 py-0.5 bg-gray-500 text-white rounded-sm text-xs font-bold hover:bg-gray-600 disabled:opacity-50"
                         >
                             ↩ 취소
                         </button>

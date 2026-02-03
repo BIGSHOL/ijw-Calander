@@ -1,6 +1,6 @@
 // StudentModal.tsx - 영어 통합 뷰 학생 관리 모달
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Users, Save } from 'lucide-react';
+import { X, Users, Save, BookOpen, Settings } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, getDoc, collectionGroup, writeBatch, setDoc, deleteDoc } from 'firebase/firestore';
@@ -491,11 +491,11 @@ const StudentModal: React.FC<StudentModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50 p-4"
             onClick={handleClose}
         >
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col overflow-hidden"
+                className="bg-white rounded-sm shadow-2xl w-full max-w-xl flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
 
@@ -504,68 +504,103 @@ const StudentModal: React.FC<StudentModalProps> = ({
                     <h2 className="text-sm font-bold flex items-center gap-2">
                         <Users size={18} className="text-[#fdb813]" />
                         {fullClassName} - 학생 관리
-                        {isDirty && <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded ml-2">변경사항 있음</span>}
+                        {isDirty && <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded-sm ml-2">변경사항 있음</span>}
                     </h2>
                     <button
                         onClick={handleClose}
-                        className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                        className="p-1 hover:bg-white/20 rounded-sm transition-colors"
                     >
                         <X size={18} />
                     </button>
                 </div>
 
-                {/* Class Info Row */}
-                <div className="px-5 py-2 border-b border-gray-200 flex items-center gap-2 text-sm">
-                    <span className="text-gray-500">담당강사</span>
-                    <span className="text-[#373d41] font-bold">{teacher || classTeacher || '-'}</span>
-                    <span className="text-gray-300">|</span>
-                    <span className="bg-[#fdb813] text-[#081429] px-2 py-0.5 rounded font-bold text-xs">
-                        {students.length}명
-                    </span>
-                </div>
+                {/* Body - Scrollable */}
+                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2 max-h-[500px]">
 
-                {/* Student List */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 min-h-[150px] max-h-[300px]">
-                    <StudentListTable
-                        students={sortedStudents}
-                        loading={loading}
-                        classDocId={classDocId}
-                        className={className}
-                        canEdit={canEditEnglish}
-                        onUpdate={handleUpdateStudent}
-                        onRemove={handleRemoveStudent}
-                        useEnrollmentsMode={useEnrollmentsMode}
-                    />
+                    {/* Section 1: 수업 정보 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <BookOpen className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">수업 정보</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            {/* Class Name Row */}
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">수업명</span>
+                                <span className="flex-1 text-xs text-[#081429] font-bold">{fullClassName}</span>
+                            </div>
+
+                            {/* Teacher Row */}
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">담당강사</span>
+                                <span className="flex-1 text-xs text-[#373d41]">{teacher || classTeacher || '-'}</span>
+                            </div>
+
+                            {/* Student Count Row */}
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">학생 수</span>
+                                <span className="bg-[#fdb813] text-[#081429] px-2 py-0.5 rounded-sm font-bold text-xs">
+                                    {students.length}명
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 2: 학생 목록 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <Users className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">학생 목록</h3>
+                        </div>
+                        <div className="p-2">
+                            <StudentListTable
+                                students={sortedStudents}
+                                loading={loading}
+                                classDocId={classDocId}
+                                className={className}
+                                canEdit={canEditEnglish}
+                                onUpdate={handleUpdateStudent}
+                                onRemove={handleRemoveStudent}
+                                useEnrollmentsMode={useEnrollmentsMode}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Section 3: 일괄 작업 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <Settings className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">일괄 작업</h3>
+                        </div>
+                        <div className="p-2">
+                            <StudentBatchActions
+                                studentCount={students.length}
+                                canEdit={canEditEnglish}
+                                onDeleteAll={handleDeleteAll}
+                                onBatchDeleteEnglishName={handleBatchDeleteEnglishName}
+                                onBatchGradePromotion={handleBatchGradePromotion}
+                            />
+                        </div>
+                    </div>
+
                 </div>
 
                 {/* Footer */}
-                <div className="px-5 py-3 border-t border-gray-200 flex items-center justify-between bg-gray-50">
-                    <div className="flex items-center gap-2">
-                        <StudentBatchActions
-                            studentCount={students.length}
-                            canEdit={canEditEnglish}
-                            onDeleteAll={handleDeleteAll}
-                            onBatchDeleteEnglishName={handleBatchDeleteEnglishName}
-                            onBatchGradePromotion={handleBatchGradePromotion}
-                        />
-                    </div>
-
-                    <div className="flex gap-2">
-                        {isDirty && (
-                            <button
-                                onClick={handleSaveChanges}
-                                className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm hover:bg-indigo-700 transition-colors flex items-center gap-1 animate-pulse"
-                            >
-                                <Save size={14} /> 저장
-                            </button>
-                        )}
+                <div className="px-5 py-3 border-t border-gray-200 flex items-center justify-end gap-2 bg-gray-50">
+                    {isDirty && (
                         <button
-                            onClick={handleClose}
-                            className="px-6 py-2 bg-[#081429] text-white rounded-lg font-bold text-sm hover:bg-[#0a1a35] transition-colors"
+                            onClick={handleSaveChanges}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-sm font-bold text-sm hover:bg-indigo-700 transition-colors flex items-center gap-1 animate-pulse"
                         >
-                            {isDirty ? '취소' : '닫기'}
+                            <Save size={14} /> 저장
                         </button>
-                    </div>
+                    )}
+                    <button
+                        onClick={handleClose}
+                        className="px-6 py-2 bg-[#081429] text-white rounded-sm font-bold text-sm hover:bg-[#0a1a35] transition-colors"
+                    >
+                        {isDirty ? '취소' : '닫기'}
+                    </button>
                 </div>
             </div>
         </div>

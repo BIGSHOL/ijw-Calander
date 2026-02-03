@@ -4,7 +4,7 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 /**
  * Error Boundary Component
  * Addresses Issue #18: Better error handling
- * 
+ *
  * Features:
  * - Catches JavaScript errors in child components
  * - Displays user-friendly error messages
@@ -38,10 +38,10 @@ class ErrorBoundary extends Component<Props, State> {
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         console.error("Uncaught error:", error, errorInfo);
         this.setState({ error, errorInfo });
-        
+
         // Call custom error handler if provided
         this.props.onError?.(error, errorInfo);
-        
+
         // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
     }
 
@@ -54,9 +54,9 @@ class ErrorBoundary extends Component<Props, State> {
 
             return (
                 <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-50 p-8">
-                    <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+                    <div className="max-w-md w-full bg-white rounded-sm shadow-lg p-8 text-center">
                         {/* Error Icon */}
-                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="w-16 h-16 bg-red-100 rounded-sm flex items-center justify-center mx-auto mb-4">
                             <AlertTriangle className="w-8 h-8 text-red-600" />
                         </div>
 
@@ -92,14 +92,14 @@ class ErrorBoundary extends Component<Props, State> {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => window.location.href = '/'}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-sm hover:bg-gray-200 transition font-medium"
                             >
                                 <Home size={18} />
                                 홈으로
                             </button>
                             <button
                                 onClick={() => window.location.reload()}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition font-medium"
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-accent text-white rounded-sm hover:bg-accent/90 transition font-medium"
                             >
                                 <RefreshCw size={18} />
                                 새로고침

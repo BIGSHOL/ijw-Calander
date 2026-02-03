@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { X, Loader2, ChevronDown, ChevronRight, Check, AlertTriangle, GitMerge, Users } from 'lucide-react';
+import { X, Loader2, ChevronDown, ChevronRight, Check, AlertTriangle, GitMerge, Users, BarChart3, Settings, TrendingUp } from 'lucide-react';
 import { collection, doc, getDocs, writeBatch, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { UnifiedStudent } from '../../types';
@@ -271,9 +271,9 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
             {student.id.length > 20 ? student.id.substring(0, 20) + '...' : student.id}
           </span>
           {isPrimary && (
-            <span className="text-xxs bg-[#fdb813] text-[#081429] px-1 rounded font-bold">추천</span>
+            <span className="text-xxs bg-[#fdb813] text-[#081429] px-1 rounded-sm font-bold">추천</span>
           )}
-          <span className={`text-xxs px-1 rounded ${
+          <span className={`text-xxs px-1 rounded-sm ${
             student.status === 'active' ? 'bg-green-100 text-green-700' :
             student.status === 'withdrawn' ? 'bg-gray-100 text-gray-600' :
             'bg-blue-100 text-blue-700'
@@ -296,13 +296,13 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
       <div
-        className="bg-white rounded-lg shadow-2xl w-[600px] max-h-[80vh] flex flex-col"
+        className="bg-white rounded-sm shadow-2xl w-[600px] max-h-[80vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-[#081429] text-white rounded-t-lg">
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-[#081429] text-white rounded-t-sm">
           <div className="flex items-center gap-2">
             <GitMerge className="w-5 h-5" />
             <h3 className="font-bold">학생 중복 병합</h3>
@@ -329,112 +329,152 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
           {/* Preview */}
           {step === 'preview' && (
             <>
-              {/* 통계 */}
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-4">
-                    <span>전체 <strong>{students.length}</strong>명</span>
-                    <span>중복 그룹 <strong className="text-orange-600">{totalGroups}</strong>개</span>
-                    <span>병합 대상 <strong className="text-red-600">{totalDuplicates}</strong>명</span>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {/* Section 1: 병합 통계 */}
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                    <BarChart3 className="w-3 h-3 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-xs">병합 통계</h3>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={selectAllGroups}
-                      className="text-xs text-blue-600 hover:underline"
-                    >
-                      모두 선택
-                    </button>
-                    <span className="text-gray-300">|</span>
-                    <button
-                      onClick={deselectAllGroups}
-                      className="text-xs text-gray-500 hover:underline"
-                    >
-                      선택 해제
-                    </button>
+                  <div className="divide-y divide-gray-100">
+                    <div className="flex items-center gap-2 px-2 py-1.5">
+                      <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">전체 학생</span>
+                      <span className="flex-1 text-xs text-[#081429]">
+                        <strong>{students.length}</strong>명
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-2 py-1.5">
+                      <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">중복 그룹</span>
+                      <span className="flex-1 text-xs text-orange-600">
+                        <strong>{totalGroups}</strong>개
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-2 py-1.5">
+                      <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">병합 대상</span>
+                      <span className="flex-1 text-xs text-red-600">
+                        <strong>{totalDuplicates}</strong>명
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 px-2 py-1.5">
+                      <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">선택 그룹</span>
+                      <span className="flex-1 text-xs text-[#081429]">
+                        <strong>{selectedGroups}</strong>개
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* 그룹 목록 */}
-              <div className="flex-1 overflow-y-auto">
-                {duplicateGroups.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                    <Users className="w-12 h-12 mb-3 text-gray-300" />
-                    <p>중복된 학생이 없습니다</p>
-                    <p className="text-xs text-gray-400 mt-1">이름 + 학교 + 학년이 같은 학생을 찾습니다</p>
+                {/* Section 2: 중복 그룹 목록 */}
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                    <Users className="w-3 h-3 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-xs">중복 그룹 목록</h3>
                   </div>
-                ) : (
-                  duplicateGroups.map(group => {
-                    const isExpanded = expandedGroups.has(group.key);
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {duplicateGroups.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                        <Users className="w-12 h-12 mb-3 text-gray-300" />
+                        <p className="text-sm">중복된 학생이 없습니다</p>
+                        <p className="text-xs text-gray-400 mt-1">이름 + 학교 + 학년이 같은 학생을 찾습니다</p>
+                      </div>
+                    ) : (
+                      duplicateGroups.map(group => {
+                        const isExpanded = expandedGroups.has(group.key);
 
-                    return (
-                      <div key={group.key} className="border-b border-gray-100">
-                        {/* 그룹 헤더 */}
-                        <div
-                          className={`flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-gray-50 ${
-                            group.isSelected ? 'bg-[#fdb813]/10' : ''
-                          }`}
-                          onClick={() => toggleExpand(group.key)}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={group.isSelected}
-                            onChange={() => toggleGroupSelection(group.key)}
-                            onClick={e => e.stopPropagation()}
-                            className="w-4 h-4 text-[#fdb813] rounded border-gray-300 focus:ring-[#fdb813]"
-                          />
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-gray-400" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-gray-400" />
-                          )}
-                          <div className="flex-1">
-                            <span className="font-bold text-sm text-[#081429]">{group.name}</span>
-                            {(group.school || group.grade) && (
-                              <span className="text-xs text-gray-500 ml-2">
-                                {group.school} {group.grade}
+                        return (
+                          <div key={group.key} className="border-b border-gray-100 last:border-b-0">
+                            {/* 그룹 헤더 */}
+                            <div
+                              className={`flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-gray-50 ${
+                                group.isSelected ? 'bg-[#fdb813]/10' : ''
+                              }`}
+                              onClick={() => toggleExpand(group.key)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={group.isSelected}
+                                onChange={() => toggleGroupSelection(group.key)}
+                                onClick={e => e.stopPropagation()}
+                                className="w-4 h-4 text-[#fdb813] rounded-sm border-gray-300 focus:ring-[#fdb813]"
+                              />
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                              )}
+                              <div className="flex-1">
+                                <span className="font-bold text-xs text-[#081429]">{group.name}</span>
+                                {(group.school || group.grade) && (
+                                  <span className="text-xs text-gray-500 ml-2">
+                                    {group.school} {group.grade}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-sm">
+                                {group.students.length}명
                               </span>
+                            </div>
+
+                            {/* 학생 목록 */}
+                            {isExpanded && (
+                              <div className="px-2 pb-2 pl-10 space-y-1">
+                                {group.students.map(student => {
+                                  const isPrimary = student.id === group.primaryId;
+                                  return (
+                                    <div
+                                      key={student.id}
+                                      className={`flex items-center gap-2 p-2 rounded-sm cursor-pointer ${
+                                        isPrimary
+                                          ? 'bg-[#fdb813]/20 border border-[#fdb813]'
+                                          : 'bg-gray-50 hover:bg-gray-100'
+                                      }`}
+                                      onClick={() => setPrimaryStudent(group.key, student.id)}
+                                    >
+                                      <input
+                                        type="radio"
+                                        name={`primary-${group.key}`}
+                                        checked={isPrimary}
+                                        onChange={() => setPrimaryStudent(group.key, student.id)}
+                                        className="w-4 h-4 text-[#fdb813] focus:ring-[#fdb813]"
+                                      />
+                                      <div className="flex-1">
+                                        {renderStudentInfo(student, isPrimary)}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             )}
                           </div>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                            {group.students.length}명
-                          </span>
-                        </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
 
-                        {/* 학생 목록 */}
-                        {isExpanded && (
-                          <div className="px-4 pb-3 pl-10 space-y-1">
-                            {group.students.map(student => {
-                              const isPrimary = student.id === group.primaryId;
-                              return (
-                                <div
-                                  key={student.id}
-                                  className={`flex items-center gap-2 p-2 rounded cursor-pointer ${
-                                    isPrimary
-                                      ? 'bg-[#fdb813]/20 border border-[#fdb813]'
-                                      : 'bg-gray-50 hover:bg-gray-100'
-                                  }`}
-                                  onClick={() => setPrimaryStudent(group.key, student.id)}
-                                >
-                                  <input
-                                    type="radio"
-                                    name={`primary-${group.key}`}
-                                    checked={isPrimary}
-                                    onChange={() => setPrimaryStudent(group.key, student.id)}
-                                    className="w-4 h-4 text-[#fdb813] focus:ring-[#fdb813]"
-                                  />
-                                  <div className="flex-1">
-                                    {renderStudentInfo(student, isPrimary)}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                {/* Section 3: 작업 설정 */}
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                    <Settings className="w-3 h-3 text-[#081429]" />
+                    <h3 className="text-[#081429] font-bold text-xs">작업 설정</h3>
+                  </div>
+                  <div className="px-2 py-1.5">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={selectAllGroups}
+                        className="px-3 py-1 text-xs text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-sm font-medium transition-colors"
+                      >
+                        모두 선택
+                      </button>
+                      <button
+                        onClick={deselectAllGroups}
+                        className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-50 border border-gray-300 rounded-sm font-medium transition-colors"
+                      >
+                        선택 해제
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Footer */}
@@ -445,14 +485,14 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={onClose}
-                    className="px-4 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="px-4 py-2 border border-gray-300 rounded-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     취소
                   </button>
                   <button
                     onClick={handleMerge}
                     disabled={selectedGroups === 0}
-                    className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded text-sm font-bold hover:bg-[#e5a711] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm text-sm font-bold hover:bg-[#e5a711] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     <GitMerge className="w-4 h-4" />
                     선택 그룹 병합 ({selectedGroups})
@@ -464,57 +504,98 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
 
           {/* Processing */}
           {step === 'processing' && (
-            <div className="flex-1 flex flex-col items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-[#fdb813] mb-4" />
-              <div className="w-64 h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
-                <div
-                  className="h-full bg-[#fdb813] transition-all duration-300"
-                  style={{ width: `${(progress.current / progress.total) * 100}%` }}
-                />
+            <div className="flex-1 overflow-y-auto p-4">
+              {/* Section 1: 진행 상황 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <TrendingUp className="w-3 h-3 text-[#081429]" />
+                  <h3 className="text-[#081429] font-bold text-xs">진행 상황</h3>
+                </div>
+                <div className="p-4">
+                  <div className="flex flex-col items-center justify-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#fdb813] mb-4" />
+                    <div className="w-full max-w-md h-2 bg-gray-200 rounded-sm overflow-hidden mb-3">
+                      <div
+                        className="h-full bg-[#fdb813] transition-all duration-300"
+                        style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">
+                      {progress.currentGroup} 처리 중...
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {progress.current} / {progress.total} 그룹
+                    </p>
+                  </div>
+                </div>
               </div>
-              <p className="text-sm text-gray-600 mb-1">
-                {progress.currentGroup} 처리 중...
-              </p>
-              <p className="text-xs text-gray-400">
-                {progress.current} / {progress.total} 그룹
-              </p>
             </div>
           )}
 
           {/* Done */}
           {step === 'done' && result && (
-            <div className="flex-1 flex flex-col items-center justify-center py-12">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <Check className="w-8 h-8 text-green-600" />
-              </div>
-              <h4 className="text-lg font-bold text-[#081429] mb-4">병합 완료!</h4>
-              <div className="text-center space-y-1 text-sm text-gray-600 mb-6">
-                <p>처리된 그룹: <strong>{result.processedGroups}</strong>개</p>
-                <p>이전된 수강정보: <strong>{result.transferredEnrollments}</strong>개</p>
-                <p>삭제된 학생: <strong>{result.deletedStudents}</strong>명</p>
-              </div>
-              {result.errors.length > 0 && (
-                <div className="w-full max-w-md p-3 bg-red-50 border border-red-200 rounded mb-4">
-                  <div className="flex items-center gap-2 text-red-700 text-sm mb-2">
-                    <AlertTriangle className="w-4 h-4" />
-                    <span className="font-bold">오류 발생 ({result.errors.length}건)</span>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {/* Section 1: 결과 요약 */}
+              <div className="bg-white border border-gray-200 overflow-hidden">
+                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                  <Check className="w-3 h-3 text-green-600" />
+                  <h3 className="text-[#081429] font-bold text-xs">결과 요약</h3>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  <div className="flex items-center gap-2 px-2 py-1.5">
+                    <span className="w-24 shrink-0 text-xs font-medium text-[#373d41]">처리된 그룹</span>
+                    <span className="flex-1 text-xs">
+                      <strong className="text-green-600">{result.processedGroups}</strong>개
+                    </span>
                   </div>
-                  <ul className="text-xs text-red-600 space-y-1">
-                    {result.errors.slice(0, 5).map((err, i) => (
-                      <li key={i}>{err}</li>
-                    ))}
-                    {result.errors.length > 5 && (
-                      <li>... 외 {result.errors.length - 5}건</li>
-                    )}
-                  </ul>
+                  <div className="flex items-center gap-2 px-2 py-1.5">
+                    <span className="w-24 shrink-0 text-xs font-medium text-[#373d41]">이전된 수강정보</span>
+                    <span className="flex-1 text-xs">
+                      <strong className="text-blue-600">{result.transferredEnrollments}</strong>개
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 px-2 py-1.5">
+                    <span className="w-24 shrink-0 text-xs font-medium text-[#373d41]">삭제된 학생</span>
+                    <span className="flex-1 text-xs">
+                      <strong className="text-orange-600">{result.deletedStudents}</strong>명
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: 오류 목록 (if any) */}
+              {result.errors.length > 0 && (
+                <div className="bg-white border border-red-200 overflow-hidden">
+                  <div className="flex items-center gap-1 px-2 py-1.5 bg-red-50 border-b border-red-200">
+                    <AlertTriangle className="w-3 h-3 text-red-600" />
+                    <h3 className="text-red-600 font-bold text-xs">오류 목록 ({result.errors.length}건)</h3>
+                  </div>
+                  <div className="p-2 max-h-[200px] overflow-y-auto">
+                    <ul className="text-xs text-red-600 space-y-1">
+                      {result.errors.map((err, i) => (
+                        <li key={i} className="px-2 py-1 bg-red-50 rounded-sm">
+                          {err}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               )}
-              <button
-                onClick={onClose}
-                className="px-6 py-2 bg-[#fdb813] text-[#081429] rounded text-sm font-bold hover:bg-[#e5a711]"
-              >
-                완료
-              </button>
+
+              {/* Success Message */}
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="w-16 h-16 bg-green-100 rounded-sm flex items-center justify-center mb-4">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+                <h4 className="text-lg font-bold text-[#081429] mb-2">병합 완료!</h4>
+                <p className="text-sm text-gray-600 mb-6">학생 중복 병합이 성공적으로 완료되었습니다.</p>
+                <button
+                  onClick={onClose}
+                  className="px-6 py-2 bg-[#fdb813] text-[#081429] rounded-sm text-sm font-bold hover:bg-[#e5a711]"
+                >
+                  완료
+                </button>
+              </div>
             </div>
           )}
         </div>

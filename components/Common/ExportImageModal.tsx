@@ -116,33 +116,33 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh]">
       {/* 배경 오버레이 */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />
 
       {/* 모달 컨텐츠 */}
-      <div className="relative bg-white rounded-xl shadow-2xl w-[95vw] max-w-6xl max-h-[90vh] flex flex-col">
+      <div className="relative bg-white rounded-sm shadow-xl w-[95vw] max-w-6xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
+            <div className="p-2 bg-blue-100 rounded-sm">
               <ImageIcon size={20} className="text-blue-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+              <h2 className="text-sm font-bold text-[#081429]">{title}</h2>
               {subtitle && (
-                <p className="text-sm text-gray-500">{subtitle}</p>
+                <p className="text-xs text-gray-500">{subtitle}</p>
               )}
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <X size={20} className="text-gray-500" />
+            <X size={18} />
           </button>
         </div>
 
@@ -156,13 +156,13 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center h-full gap-4">
-              <div className="p-4 bg-red-100 rounded-full">
+              <div className="p-4 bg-red-100 rounded-sm">
                 <X size={32} className="text-red-500" />
               </div>
               <p className="text-red-600 font-medium">{error}</p>
               <button
                 onClick={generatePreview}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-sm hover:bg-blue-700 transition-colors"
               >
                 다시 시도
               </button>
@@ -170,7 +170,7 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
           ) : previewImage ? (
             <div
               ref={previewContainerRef}
-              className="h-full overflow-auto bg-gray-200 rounded-lg p-4"
+              className="h-full overflow-auto bg-gray-200 rounded-sm p-4"
               style={{
                 backgroundImage: 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%), linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)',
                 backgroundSize: '20px 20px',
@@ -192,13 +192,13 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
         </div>
 
         {/* 푸터 (컨트롤) */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white rounded-b-xl">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white rounded-b-sm shrink-0">
           {/* 줌 컨트롤 */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleZoomOut}
               disabled={zoom <= 20 || !previewImage}
-              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-sm border border-gray-200 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="축소"
             >
               <ZoomOut size={18} className="text-gray-600" />
@@ -209,7 +209,7 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
             <button
               onClick={handleZoomIn}
               disabled={zoom >= 100 || !previewImage}
-              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-sm border border-gray-200 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="확대"
             >
               <ZoomIn size={18} className="text-gray-600" />
@@ -220,14 +220,14 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-sm hover:bg-gray-200 transition-colors font-medium"
             >
               취소
             </button>
             <button
               onClick={handleDownload}
               disabled={!previewImage || isGenerating}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
               <Download size={18} />
               이미지 저장

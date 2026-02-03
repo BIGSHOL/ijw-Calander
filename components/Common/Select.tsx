@@ -51,7 +51,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     };
 
     const baseClasses = `
-      block rounded-md border appearance-none bg-white transition-all
+      block rounded-sm border appearance-none bg-white transition-all
       focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1
       disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50
       pr-10

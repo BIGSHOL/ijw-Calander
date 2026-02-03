@@ -257,7 +257,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
             placeholder="사용자 검색..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs focus:border-[#fdb813] outline-none"
+            className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-sm text-xs focus:border-[#fdb813] outline-none"
           />
         </div>
         <div className="text-xxs text-gray-400">
@@ -277,7 +277,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
           return (
             <div
               key={user.uid}
-              className={`bg-white rounded-lg border border-gray-200 overflow-hidden ${isSaving ? 'opacity-50' : ''}`}
+              className={`bg-white rounded-sm border border-gray-200 overflow-hidden ${isSaving ? 'opacity-50' : ''}`}
             >
               {/* 헤더 - 클릭하면 펼침/접힘 */}
               <div
@@ -293,7 +293,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                   )}
 
                   {/* 아이콘 */}
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${user.role === 'master' ? 'bg-[#fdb813] text-[#081429]' :
+                  <div className={`w-6 h-6 rounded-sm flex items-center justify-center shrink-0 ${user.role === 'master' ? 'bg-[#fdb813] text-[#081429]' :
                       user.role === 'admin' ? 'bg-indigo-600 text-white' :
                         'bg-gray-100 text-gray-500'
                     }`}>
@@ -436,7 +436,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                                     >
                                       <div className="flex items-center gap-1 min-w-0 flex-1">
                                         <div
-                                          className="w-2 h-2 rounded-full shrink-0"
+                                          className="w-2 h-2 rounded-sm shrink-0"
                                           style={{ backgroundColor: dept.color }}
                                         />
                                         <span className="text-xxs font-medium text-gray-600 truncate">

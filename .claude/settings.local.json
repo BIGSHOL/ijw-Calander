@@ -47,7 +47,9 @@
       "mcp__ide__getDiagnostics",
       "Read(//d/**)",
       "Read(//f/ijw-calander/**)",
-      "Read(//c/Users/user/.claude/skills/**)"
+      "Read(//c/Users/user/.claude/skills/**)",
+      "Bash(find:*)",
+      "Read(//d/ijw-calander/**)"
     ],
     "additionalDirectories": [
       "d:\\ijw-calander\\components\\Timetable\\English",

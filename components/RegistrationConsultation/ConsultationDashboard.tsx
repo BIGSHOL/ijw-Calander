@@ -25,7 +25,7 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
     };
 
     return (
-        <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100 flex flex-col h-full">
+        <div className="bg-white p-3 rounded-sm shadow-sm border border-slate-100 flex flex-col h-full">
             <h3 className="text-sm font-bold text-slate-800 mb-3">{title}</h3>
             <div className="flex flex-row items-center justify-between flex-1 gap-3">
                 {/* Chart Side */}
@@ -76,14 +76,14 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
                             key={index}
                             onMouseEnter={() => setActiveIndex(index)}
                             onMouseLeave={() => setActiveIndex(null)}
-                            className={`flex items-center justify-between text-xs p-1.5 rounded-lg transition-all duration-300 cursor-pointer border ${activeIndex === index
+                            className={`flex items-center justify-between text-xs p-1.5 rounded-sm transition-all duration-300 cursor-pointer border ${activeIndex === index
                                 ? 'bg-white border-indigo-200 shadow-sm'
                                 : 'bg-transparent border-transparent hover:bg-slate-50'
                                 }`}
                         >
                             <div className="flex items-center">
                                 <div
-                                    className={`w-2 h-2 rounded-full mr-2 shadow-sm transition-all duration-300 ${activeIndex === index ? 'ring-1 ring-offset-1 ring-indigo-200' : ''}`}
+                                    className={`w-2 h-2 rounded-sm mr-2 shadow-sm transition-all duration-300 ${activeIndex === index ? 'ring-1 ring-offset-1 ring-indigo-200' : ''}`}
                                     style={{ backgroundColor: CONSULTATION_CHART_COLORS[index % CONSULTATION_CHART_COLORS.length] }}
                                 ></div>
                                 <span className={`font-medium transition-colors text-[11px] ${activeIndex === index ? 'text-slate-900' : 'text-slate-600'}`}>
@@ -307,7 +307,7 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
             </div>
 
             {/* Charts Row 2 */}
-            <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+            <div className="bg-white p-3 rounded-sm shadow-sm border border-slate-100">
                 <h3 className="text-sm font-bold text-slate-800 mb-2">일별 상담 추이</h3>
                 <div className="h-40" style={{ minHeight: '160px' }}>
                     <ResponsiveContainer width="100%" height="100%" minHeight={160}>

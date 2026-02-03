@@ -70,8 +70,8 @@ const ScenarioCompareModal: React.FC<ScenarioCompareModalProps> = ({
       <button
         onClick={() => setIsCollapsed(false)}
         className="
-          fixed top-4 left-1/2 -translate-x-1/2 z-[70]
-          px-4 py-2 rounded-full
+          fixed top-4 left-1/2 -translate-x-1/2 z-[100]
+          px-4 py-2 rounded-sm
           bg-indigo-600 text-white
           hover:bg-indigo-500
           shadow-xl
@@ -92,10 +92,10 @@ const ScenarioCompareModal: React.FC<ScenarioCompareModalProps> = ({
 
   return (
     <div
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-[70] animate-in slide-in-from-top duration-200"
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top duration-200"
       onClick={e => e.stopPropagation()}
     >
-      <div className="bg-white rounded-xl shadow-2xl border-2 border-indigo-200 overflow-hidden">
+      <div className="bg-white rounded-sm shadow-2xl border-2 border-indigo-200 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 bg-indigo-600 text-white">
           <div className="flex items-center gap-2">
@@ -105,14 +105,14 @@ const ScenarioCompareModal: React.FC<ScenarioCompareModalProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setIsCollapsed(true)}
-              className="p-1 hover:bg-indigo-500 rounded transition-colors"
+              className="p-1 hover:bg-indigo-500 rounded-sm transition-colors"
               title="접기"
             >
               <ChevronUp size={16} />
             </button>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-indigo-500 rounded transition-colors"
+              className="p-1 hover:bg-indigo-500 rounded-sm transition-colors"
               title="닫기"
             >
               <X size={16} />
@@ -132,7 +132,7 @@ const ScenarioCompareModal: React.FC<ScenarioCompareModalProps> = ({
                 onClick={() => handleLoadScenario(scenario)}
                 disabled={isLoading || loadingId !== null}
                 className={`
-                  relative flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-sm
+                  relative flex items-center gap-2 px-4 py-2 rounded-sm font-bold text-sm
                   transition-all duration-200 min-w-[120px]
                   ${isCurrent
                     ? 'bg-indigo-600 text-white ring-2 ring-indigo-300 ring-offset-2'
@@ -144,7 +144,7 @@ const ScenarioCompareModal: React.FC<ScenarioCompareModalProps> = ({
               >
                 {/* 단축키 뱃지 */}
                 <span className={`
-                  absolute -top-2 -left-2 w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold
+                  absolute -top-2 -left-2 w-5 h-5 rounded-sm text-xs flex items-center justify-center font-bold
                   ${isCurrent ? 'bg-indigo-400 text-white' : 'bg-gray-300 text-gray-600'}
                 `}>
                   {idx + 1}
@@ -166,9 +166,9 @@ const ScenarioCompareModal: React.FC<ScenarioCompareModalProps> = ({
 
         {/* 안내 텍스트 */}
         <div className="px-4 py-2 bg-gray-100 text-xs text-gray-500 text-center border-t">
-          숫자키 <kbd className="px-1.5 py-0.5 bg-white rounded border font-mono">1</kbd>
-          <kbd className="px-1.5 py-0.5 bg-white rounded border font-mono mx-1">2</kbd>
-          {scenarios.length > 2 && <kbd className="px-1.5 py-0.5 bg-white rounded border font-mono">3</kbd>}
+          숫자키 <kbd className="px-1.5 py-0.5 bg-white rounded-sm border font-mono">1</kbd>
+          <kbd className="px-1.5 py-0.5 bg-white rounded-sm border font-mono mx-1">2</kbd>
+          {scenarios.length > 2 && <kbd className="px-1.5 py-0.5 bg-white rounded-sm border font-mono">3</kbd>}
           {' '}으로 빠르게 전환
         </div>
       </div>

@@ -23,22 +23,22 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[200]"
+      className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
+        className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-[#081429] px-4 py-2.5 flex justify-between items-center text-white shrink-0">
-          <h2 className="text-sm font-bold flex items-center gap-1.5">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-1.5">
             <span className="text-[#fdb813]">⚙️</span>
             간트 차트 설정
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
           >
             <X size={18} />
           </button>
@@ -77,10 +77,26 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3">
           {activeTab === 'departments' && (
-            <DepartmentsTab isMaster={currentUser?.role === 'master'} />
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                <Building2 className="w-3 h-3 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-xs">부서 관리</h3>
+              </div>
+              <div className="p-2">
+                <DepartmentsTab isMaster={currentUser?.role === 'master'} />
+              </div>
+            </div>
           )}
           {activeTab === 'categories' && (
-            <GanttCategoriesTab isMaster={currentUser?.role === 'master'} />
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                <Tag className="w-3 h-3 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-xs">카테고리 관리</h3>
+              </div>
+              <div className="p-2">
+                <GanttCategoriesTab isMaster={currentUser?.role === 'master'} />
+              </div>
+            </div>
           )}
         </div>
       </div>

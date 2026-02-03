@@ -213,14 +213,14 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
             <TabSubNavigation variant="compact" className="border-b border-white/10 sticky top-0 z-30 print:hidden">
                 <div className="w-full px-4 sm:px-6 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="bg-[#fdb813] p-1.5 rounded-lg hidden sm:block">
+                        <div className="bg-[#fdb813] p-1.5 rounded-sm hidden sm:block">
                             <FileText className="text-[#081429] h-3.5 w-3.5" />
                         </div>
 
-                        <div className="flex items-center bg-white/10 rounded-lg p-1">
+                        <div className="flex items-center bg-white/10 rounded-sm p-1">
                             <button
                                 onClick={() => handlePeriodChange('prev')}
-                                className="p-1 hover:bg-white/10 rounded-md text-gray-300 transition-colors"
+                                className="p-1 hover:bg-white/10 rounded-sm text-gray-300 transition-colors"
                                 aria-label="이전 달로 이동"
                             >
                                 <ChevronLeft size={20} />
@@ -239,7 +239,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                             </div>
                             <button
                                 onClick={() => handlePeriodChange('next')}
-                                className="p-1 hover:bg-white/10 rounded-md text-gray-300 transition-colors"
+                                className="p-1 hover:bg-white/10 rounded-sm text-gray-300 transition-colors"
                                 aria-label="다음 달로 이동"
                             >
                                 <ChevronRight size={20} />
@@ -260,7 +260,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                         {viewMode === 'dashboard' && (
                             <button
                                 onClick={handleOpenForm}
-                                className="bg-[#fdb813] hover:brightness-110 text-[#081429] px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+                                className="bg-[#fdb813] hover:brightness-110 text-[#081429] px-3 py-1 rounded-sm text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
                                 aria-label="신규 등록"
                             >
                                 <Plus size={14} />
@@ -276,7 +276,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
                 {/* Empty State */}
                 {entries.length === 0 && viewMode === 'dashboard' && (
-                    <div className="mb-8 p-8 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-center bg-white/50">
+                    <div className="mb-8 p-8 border-2 border-dashed border-gray-300 rounded-sm flex flex-col items-center justify-center text-center bg-white/50">
                         <h3 className="text-lg font-semibold text-[#081429] mb-2">{currentPeriod} 데이터가 없습니다.</h3>
                         <p className="text-[#373d41] mb-6 max-w-md">
                             새로운 데이터를 직접 등록하거나, 구글 시트에서 가져오거나, 지난달 데이터를 복사하여 시작할 수 있습니다.
@@ -284,7 +284,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                         <div className="flex gap-3 flex-wrap justify-center">
                             <button
                                 onClick={handleCopyPrevious}
-                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-[#373d41] rounded-lg hover:bg-gray-50 hover:border-[#fdb813] transition-all shadow-sm"
+                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-[#373d41] rounded-sm hover:bg-gray-50 hover:border-[#fdb813] transition-all shadow-sm"
                                 aria-label="지난달 사업장 목록 가져오기"
                             >
                                 <Copy size={18} className="text-[#fdb813]" />
@@ -293,7 +293,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
                             <button
                                 onClick={handleOpenForm}
-                                className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-lg hover:brightness-110 shadow-sm font-bold"
+                                className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm hover:brightness-110 shadow-sm font-bold"
                                 aria-label="직접 등록하기"
                             >
                                 <Plus size={18} />
@@ -306,16 +306,16 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                 {/* Dashboard Widgets */}
                 {entries.length > 0 && viewMode === 'dashboard' && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 print:hidden">
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="bg-white p-6 rounded-sm border border-gray-200 shadow-sm">
                             <p className="text-sm font-medium text-[#373d41] mb-1">{currentPeriod} 총 예상 수강료</p>
                             <h2 className="text-3xl font-bold text-[#081429]">{formattedTotal}<span className="text-lg font-normal text-gray-400 ml-1">원</span></h2>
                         </div>
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="bg-white p-6 rounded-sm border border-gray-200 shadow-sm">
                             <p className="text-sm font-medium text-[#373d41] mb-1">등록 사업장 수</p>
                             <h2 className="text-3xl font-bold text-[#081429]">{entries.length}<span className="text-lg font-normal text-gray-400 ml-1">개소</span></h2>
                         </div>
                         <div
-                            className="bg-gradient-to-br from-[#081429] to-[#1e3a5f] p-6 rounded-xl border border-transparent shadow-sm text-white cursor-pointer relative overflow-hidden group"
+                            className="bg-gradient-to-br from-[#081429] to-[#1e3a5f] p-6 rounded-sm border border-transparent shadow-sm text-white cursor-pointer relative overflow-hidden group"
                             onClick={handleGenerateAI}
                         >
                             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -334,7 +334,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
                 {/* AI Report Section */}
                 {aiReport && viewMode === 'dashboard' && (
-                    <div className="mb-8 bg-white rounded-xl border border-[#fdb813]/30 shadow-sm overflow-hidden print:hidden">
+                    <div className="mb-8 bg-white rounded-sm border border-[#fdb813]/30 shadow-sm overflow-hidden print:hidden">
                         <div className="bg-[#081429] px-6 py-4 border-b border-white/10 flex justify-between items-center">
                             <h3 className="font-semibold text-white flex items-center gap-2">
                                 <Sparkles className="text-[#fdb813]" size={18} />
@@ -363,7 +363,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
                 {/* Data Table / Report View */}
                 {(entries.length > 0 || viewMode === 'report') && (
-                    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden ${viewMode === 'report' ? "p-8 print:p-0 print:border-0 print:shadow-none print:w-full" : ""}`}>
+                    <div className={`bg-white rounded-sm border border-gray-200 shadow-sm overflow-hidden ${viewMode === 'report' ? "p-8 print:p-0 print:border-0 print:shadow-none print:w-full" : ""}`}>
 
                         {viewMode === 'report' && (
                             <div>

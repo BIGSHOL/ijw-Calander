@@ -37,7 +37,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd }) => {
                             placeholder="이름"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
                             onKeyDown={handleKeyDown}
                         />
                     </div>
@@ -48,7 +48,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd }) => {
                             placeholder="영어이름"
                             value={englishName}
                             onChange={(e) => setEnglishName(e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
                             onKeyDown={handleKeyDown}
                         />
                     </div>
@@ -59,7 +59,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd }) => {
                             placeholder="학교"
                             value={school}
                             onChange={(e) => setSchool(e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
                             onKeyDown={handleKeyDown}
                         />
                     </div>
@@ -70,7 +70,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd }) => {
                             placeholder="학년"
                             value={grade}
                             onChange={(e) => setGrade(e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
                             onKeyDown={handleKeyDown}
                         />
                     </div>
@@ -78,7 +78,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd }) => {
                 <button
                     onClick={handleSubmit}
                     disabled={!name.trim()}
-                    className="px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded font-bold text-xs hover:bg-[#e5a712] disabled:opacity-50 h-[34px] self-end"
+                    className="px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-sm font-bold text-xs hover:bg-[#e5a712] disabled:opacity-50 h-[34px] self-end"
                 >
                     추가
                 </button>

@@ -33,7 +33,7 @@ export const MergeSuggestionPanel: React.FC<MergeSuggestionPanelProps> = ({
           {suggestions.map((suggestion) => (
             <div
               key={suggestion.id}
-              className="bg-purple-50 border border-purple-200 rounded-lg p-2"
+              className="bg-purple-50 border border-purple-200 rounded-sm p-2"
             >
               <div className="text-[11px] font-medium text-purple-800 mb-1">
                 {suggestion.slots.map(s => s.className).join(' + ')}

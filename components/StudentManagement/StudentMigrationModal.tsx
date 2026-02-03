@@ -6,12 +6,70 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { Database, X, Upload, AlertCircle, Check, Loader2, FileSpreadsheet } from 'lucide-react';
+import { Database, X, Upload, AlertCircle, Check, Loader2, FileSpreadsheet, Settings, BarChart3 } from 'lucide-react';
 import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { UnifiedStudent } from '../../types';
 import { read, utils } from 'xlsx';
 import { generateAttendanceNumber } from '../../utils/attendanceNumberGenerator';
+
+// ============================================================
+// TYPE DEFINITIONS
+// ============================================================
+
+interface StudentMigrationModalProps {
+  onClose: () => void;
+}
+
+// 변경 내역 타입
+interface StudentChangeInfo {
+  excelData: ExcelStudentData;
+  isNew: boolean;
+  existingData?: UnifiedStudent;
+  changedFields: string[];
+}
+
+// Excel 데이터 타입
+interface ExcelStudentData {
+  이름: string;
+  성별: '남' | '여';
+  출결번호?: string;
+  학교?: string;
+  학년?: string;
+  원생연락처?: string;
+  보호자연락처?: string;
+  보호자구분?: string;
+  보호자이름?: string;
+  기타보호자이름?: string;
+  기타보호자연락처?: string;
+  집전화?: string;
+  입학일?: string;
+  주소1?: string;
+  주소2?: string;
+  우편번호?: string;
+  메모?: string;
+  수업?: string;
+  반?: string;
+  담임강사?: string;
+  기타항목1?: string;
+  기타항목2?: string;
+  원생고유번호?: string;
+  생일?: string;
+  닉네임?: string;
+  원생이메일?: string;
+  입학동기?: string;
+  현금영수증발급번호?: string;
+  현금영수증발급구분?: string;
+  수납기준청구일?: string;
+  할인액?: string;
+  보호자출결알림?: string;
+  기타보호자출결알림?: string;
+  졸업연도?: string;
+}
+
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
 
 /**
  * 학교명 정규화 (전체 이름 → 축약형)
@@ -81,55 +139,9 @@ const formatPhoneNumber = (phone?: string): string | undefined => {
   return phone.trim();
 };
 
-interface StudentMigrationModalProps {
-  onClose: () => void;
-}
-
-// 변경 내역 타입
-interface StudentChangeInfo {
-  excelData: ExcelStudentData;
-  isNew: boolean;
-  existingData?: UnifiedStudent;
-  changedFields: string[];
-}
-
-// Excel 데이터 타입
-interface ExcelStudentData {
-  이름: string;
-  성별: '남' | '여';
-  출결번호?: string;
-  학교?: string;
-  학년?: string;
-  원생연락처?: string;
-  보호자연락처?: string;
-  보호자구분?: string;
-  보호자이름?: string;
-  기타보호자이름?: string;
-  기타보호자연락처?: string;
-  집전화?: string;
-  입학일?: string;
-  주소1?: string;
-  주소2?: string;
-  우편번호?: string;
-  메모?: string;
-  수업?: string;
-  반?: string;
-  담임강사?: string;
-  기타항목1?: string;
-  기타항목2?: string;
-  원생고유번호?: string;
-  생일?: string;
-  닉네임?: string;
-  원생이메일?: string;
-  입학동기?: string;
-  현금영수증발급번호?: string;
-  현금영수증발급구분?: string;
-  수납기준청구일?: string;
-  할인액?: string;
-  보호자출결알림?: string;
-  기타보호자출결알림?: string;
-  졸업연도?: string;
-}
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 
 const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }) => {
   const [step, setStep] = useState<'load' | 'preview' | 'migrating' | 'done'>('load');
@@ -148,7 +160,10 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1단계: 파일 업로드 핸들러
+  // ============================================================
+  // FILE UPLOAD HANDLER
+  // ============================================================
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -320,7 +335,10 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
     }
   };
 
-  // 2단계: 마이그레이션 실행
+  // ============================================================
+  // MIGRATION EXECUTION HANDLER
+  // ============================================================
+
   const handleMigrate = async () => {
     if (rawData.length === 0) return;
 
@@ -562,9 +580,327 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
     }
   };
 
+  // ============================================================
+  // RENDER HELPERS
+  // ============================================================
+
+  const renderErrorMessage = () => {
+    if (!error) return null;
+
+    return (
+      <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-sm flex items-start gap-3">
+        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <p className="text-sm font-medium text-red-900">오류</p>
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      </div>
+    );
+  };
+
+  const renderLoadStep = () => (
+    <div className="text-center space-y-4">
+      <div className="w-16 h-16 bg-blue-100 rounded-sm flex items-center justify-center mx-auto">
+        <FileSpreadsheet className="w-8 h-8 text-blue-600" />
+      </div>
+      <div>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">학생 데이터 파일 업로드</h3>
+        <p className="text-gray-600 text-sm mb-4">
+          원생목록 Excel 또는 JSON 파일을 업로드하세요.
+        </p>
+
+        {/* Section: 마이그레이션 특징 */}
+        <div className="bg-blue-50 border border-blue-200 rounded-sm overflow-hidden text-left mb-6">
+          <div className="px-4 py-2 bg-blue-100/50 border-b border-blue-200 flex items-center gap-2">
+            <Settings className="w-4 h-4 text-blue-700" />
+            <h4 className="text-sm font-bold text-blue-900">마이그레이션 특징</h4>
+          </div>
+          <div className="p-4">
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• 기존 학생과 이름 매칭 → 데이터 보완</li>
+              <li>• 새로운 학생 → 추가</li>
+              <li>• 영어 수업 자동 매핑 (약어 변환)</li>
+              <li>• 학교명 자동 축약 (초등학교→초, 중학교→중, 고등학교→고)</li>
+              <li>• 전화번호 자동 포맷 (1093659838→010-9365-9838)</li>
+              <li>• 수학 수업은 수동 배정 필요</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Section: 지원 파일 형식 */}
+        <div className="bg-gray-50 border border-gray-200 rounded-sm overflow-hidden text-left">
+          <div className="px-4 py-2 bg-gray-100 border-b border-gray-200 flex items-center gap-2">
+            <FileSpreadsheet className="w-4 h-4 text-gray-700" />
+            <h4 className="text-sm font-bold text-gray-900">지원 파일 형식</h4>
+          </div>
+          <div className="p-4">
+            <ul className="text-sm text-gray-600 space-y-1">
+              <li>• Excel 파일: .xlsx, .xls</li>
+              <li>• JSON 파일: .json</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* 파일 업로드 영역 */}
+      <div className="mt-6">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls,.json"
+          onChange={handleFileUpload}
+          className="hidden"
+          id="student-file-upload"
+        />
+        <label
+          htmlFor="student-file-upload"
+          className={`
+            flex flex-col items-center justify-center
+            border-2 border-dashed rounded-sm p-8 cursor-pointer
+            transition-colors
+            ${loading
+              ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
+              : 'border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-400'
+            }
+          `}
+        >
+          <Upload className={`w-12 h-12 mb-3 ${loading ? 'text-gray-400' : 'text-blue-500'}`} />
+          <p className={`text-sm font-medium ${loading ? 'text-gray-500' : 'text-gray-700'}`}>
+            {loading ? '파일 처리 중...' : '클릭하여 파일 선택'}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            또는 파일을 드래그하여 놓으세요
+          </p>
+        </label>
+      </div>
+    </div>
+  );
+
+  const renderPreviewStep = () => (
+    <div className="space-y-4">
+      {/* Section: 통계 요약 */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <BarChart3 className="w-4 h-4 text-gray-700" />
+          <h4 className="text-sm font-bold text-gray-900">통계 요약</h4>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white p-4 rounded-sm border border-gray-200 shadow-sm">
+            <div className="text-sm text-gray-500 mb-1">총 데이터</div>
+            <div className="text-2xl font-bold text-gray-900">{totalCount}명</div>
+          </div>
+          <div className="bg-green-50 p-4 rounded-sm border border-green-200 shadow-sm">
+            <div className="text-sm text-green-700 mb-1">신규 추가</div>
+            <div className="text-2xl font-bold text-green-700">{newCount}명</div>
+          </div>
+          <div className="bg-blue-50 p-4 rounded-sm border border-blue-200 shadow-sm">
+            <div className="text-sm text-blue-700 mb-1">기존 업데이트</div>
+            <div className="text-2xl font-bold text-blue-700">{updateCount}명</div>
+          </div>
+        </div>
+      </div>
+
+      {/* 주의사항 */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-sm p-4">
+        <p className="text-sm text-yellow-800 font-medium mb-2">⚠️ 주의사항:</p>
+        <ul className="text-sm text-yellow-700 space-y-1 ml-4">
+          <li>• 기존 학생 데이터는 보존되며 새로운 정보만 추가됩니다</li>
+          <li>• 영어 이름은 기존 데이터를 유지합니다 (엑셀에 없음)</li>
+          <li>• 수학 수업은 자동 매핑되지 않으므로 수동 배정 필요</li>
+          <li>• 실행 전 백업을 권장합니다</li>
+        </ul>
+      </div>
+
+      {/* Section: 상세 변경 내역 */}
+      <div className="bg-gray-50 border border-gray-200 rounded-sm overflow-hidden">
+        {/* 필터 탭 */}
+        <div className="flex items-center border-b border-gray-200 bg-white px-3 py-2">
+          <span className="text-sm text-gray-600 mr-3">필터:</span>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setDetailFilter('all')}
+              className={`px-3 py-1 text-xs rounded-sm transition-colors ${
+                detailFilter === 'all'
+                  ? 'bg-[#081429] text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              전체 ({totalCount})
+            </button>
+            <button
+              onClick={() => setDetailFilter('new')}
+              className={`px-3 py-1 text-xs rounded-sm transition-colors ${
+                detailFilter === 'new'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-green-50 text-green-700 hover:bg-green-100'
+              }`}
+            >
+              신규 ({newCount})
+            </button>
+            <button
+              onClick={() => setDetailFilter('update')}
+              className={`px-3 py-1 text-xs rounded-sm transition-colors ${
+                detailFilter === 'update'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+              }`}
+            >
+              업데이트 ({updateCount})
+            </button>
+          </div>
+        </div>
+
+        {/* 학생 목록 */}
+        <div className="max-h-[300px] overflow-y-auto">
+          {changeDetails
+            .filter(item => {
+              if (detailFilter === 'new') return item.isNew;
+              if (detailFilter === 'update') return !item.isNew;
+              return true;
+            })
+            .map((item, idx) => (
+              <div
+                key={idx}
+                className={`flex items-start gap-3 px-4 py-2 border-b border-gray-100 text-xs ${
+                  item.isNew ? 'bg-green-50/50' : 'bg-white'
+                }`}
+              >
+                {/* 번호 */}
+                <span className="text-gray-400 w-8 shrink-0 text-right">{idx + 1}.</span>
+
+                {/* 상태 배지 */}
+                <span
+                  className={`shrink-0 px-1.5 py-0.5 rounded-sm text-xxs font-bold ${
+                    item.isNew
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}
+                >
+                  {item.isNew ? '신규' : '업데이트'}
+                </span>
+
+                {/* 학생 정보 */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900">{item.excelData.이름}</span>
+                    <span className="text-gray-500">({item.excelData.학년})</span>
+                    <span className="text-gray-400 truncate">{normalizeSchoolName(item.excelData.학교)}</span>
+                  </div>
+
+                  {/* 변경 내역 (업데이트의 경우) */}
+                  {!item.isNew && item.changedFields.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {item.changedFields.map((field, i) => (
+                        <span
+                          key={i}
+                          className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-sm text-xxs"
+                        >
+                          {field} 변경
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 신규 학생의 경우 주요 정보 표시 */}
+                  {item.isNew && (
+                    <div className="mt-1 text-xxs text-gray-500">
+                      {item.excelData.보호자연락처 && (
+                        <span className="mr-2">📞 {item.excelData.보호자연락처}</span>
+                      )}
+                      {item.excelData.기타항목1 && (
+                        <span className="mr-2">📚 {item.excelData.기타항목1}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 출결번호 */}
+                <span className="text-xxs text-gray-400 shrink-0">
+                  {item.excelData.출결번호 || '자동생성'}
+                </span>
+              </div>
+            ))}
+        </div>
+
+        {/* 목록이 비어있을 때 */}
+        {changeDetails.filter(item => {
+          if (detailFilter === 'new') return item.isNew;
+          if (detailFilter === 'update') return !item.isNew;
+          return true;
+        }).length === 0 && (
+          <div className="py-8 text-center text-gray-400 text-sm">
+            해당 조건의 학생이 없습니다.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderMigratingStep = () => (
+    <div className="text-center space-y-6">
+      <Loader2 className="w-16 h-16 animate-spin text-[#fdb813] mx-auto" />
+      <div>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">마이그레이션 진행 중...</h3>
+        <p className="text-gray-600 text-sm">잠시만 기다려주세요.</p>
+      </div>
+      <div className="w-full bg-gray-200 rounded-sm h-3 overflow-hidden">
+        <div
+          className="bg-[#fdb813] h-full transition-all duration-300 rounded-sm"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className="text-sm text-gray-600">{progress}% 완료</p>
+    </div>
+  );
+
+  const renderDoneStep = () => (
+    <div className="text-center space-y-4">
+      <div className="w-16 h-16 bg-green-100 rounded-sm flex items-center justify-center mx-auto">
+        <Check className="w-10 h-10 text-green-600" strokeWidth={3} />
+      </div>
+      <div>
+        <h3 className="text-2xl font-bold text-[#081429]">마이그레이션 완료!</h3>
+        <p className="text-gray-600 mt-2">
+          총 <span className="text-green-600 font-bold">{totalCount}</span>명의 학생 데이터가 저장되었습니다.
+        </p>
+
+        {/* Section: 통계 요약 */}
+        <div className="mt-4 grid grid-cols-2 gap-3 max-w-md mx-auto">
+          <div className="bg-green-50 p-3 rounded-sm border border-green-200">
+            <p className="text-xs text-green-700">신규 추가</p>
+            <p className="text-xl font-bold text-green-700">{newCount}명</p>
+          </div>
+          <div className="bg-blue-50 p-3 rounded-sm border border-blue-200">
+            <p className="text-xs text-blue-700">업데이트</p>
+            <p className="text-xl font-bold text-blue-700">{updateCount}명</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Section: 다음 단계 */}
+      <div className="bg-gray-50 border border-gray-200 rounded-sm overflow-hidden text-left">
+        <div className="px-4 py-2 bg-gray-100 border-b border-gray-200 flex items-center gap-2">
+          <Check className="w-4 h-4 text-gray-700" />
+          <h4 className="text-sm font-bold text-gray-900">다음 단계</h4>
+        </div>
+        <div className="p-4">
+          <ul className="text-sm text-gray-600 space-y-1">
+            <li>1. 학생 목록을 새로고침하여 확인</li>
+            <li>2. 영어 수업 자동 배정 (선택)</li>
+            <li>3. 수학 수업 수동 배정 필요</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ============================================================
+  // MAIN RENDER
+  // ============================================================
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-[90%] max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
+      <div className="bg-white rounded-sm shadow-2xl w-[90%] max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* 헤더 */}
         <div className="bg-[#081429] px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -578,285 +914,12 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
         {/* 컨텐츠 */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* 에러 메시지 */}
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-red-900">오류</p>
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-            </div>
-          )}
+          {renderErrorMessage()}
 
-          {/* 1단계: 파일 업로드 */}
-          {step === 'load' && (
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                <FileSpreadsheet className="w-8 h-8 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">학생 데이터 파일 업로드</h3>
-                <p className="text-gray-600 text-sm mb-4">
-                  원생목록 Excel 또는 JSON 파일을 업로드하세요.
-                </p>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left space-y-2 mb-6">
-                  <p className="text-sm text-blue-900 font-medium">📋 마이그레이션 특징:</p>
-                  <ul className="text-sm text-blue-800 space-y-1 ml-4">
-                    <li>• 기존 학생과 이름 매칭 → 데이터 보완</li>
-                    <li>• 새로운 학생 → 추가</li>
-                    <li>• 영어 수업 자동 매핑 (약어 변환)</li>
-                    <li>• 학교명 자동 축약 (초등학교→초, 중학교→중, 고등학교→고)</li>
-                    <li>• 전화번호 자동 포맷 (1093659838→010-9365-9838)</li>
-                    <li>• 수학 수업은 수동 배정 필요</li>
-                  </ul>
-                </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-left space-y-2">
-                  <p className="text-sm text-gray-700 font-medium">📁 지원 파일 형식:</p>
-                  <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                    <li>• Excel 파일: .xlsx, .xls</li>
-                    <li>• JSON 파일: .json</li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* 파일 업로드 영역 */}
-              <div className="mt-6">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls,.json"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="student-file-upload"
-                />
-                <label
-                  htmlFor="student-file-upload"
-                  className={`
-                    flex flex-col items-center justify-center
-                    border-2 border-dashed rounded-lg p-8 cursor-pointer
-                    transition-colors
-                    ${loading
-                      ? 'border-gray-300 bg-gray-50 cursor-not-allowed'
-                      : 'border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-400'
-                    }
-                  `}
-                >
-                  <Upload className={`w-12 h-12 mb-3 ${loading ? 'text-gray-400' : 'text-blue-500'}`} />
-                  <p className={`text-sm font-medium ${loading ? 'text-gray-500' : 'text-gray-700'}`}>
-                    {loading ? '파일 처리 중...' : '클릭하여 파일 선택'}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    또는 파일을 드래그하여 놓으세요
-                  </p>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* 2단계: 미리보기 */}
-          {step === 'preview' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                  <div className="text-sm text-gray-500 mb-1">총 데이터</div>
-                  <div className="text-2xl font-bold text-gray-900">{totalCount}명</div>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200 shadow-sm">
-                  <div className="text-sm text-green-700 mb-1">신규 추가</div>
-                  <div className="text-2xl font-bold text-green-700">{newCount}명</div>
-                </div>
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 shadow-sm">
-                  <div className="text-sm text-blue-700 mb-1">기존 업데이트</div>
-                  <div className="text-2xl font-bold text-blue-700">{updateCount}명</div>
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-800 font-medium mb-2">⚠️ 주의사항:</p>
-                <ul className="text-sm text-yellow-700 space-y-1 ml-4">
-                  <li>• 기존 학생 데이터는 보존되며 새로운 정보만 추가됩니다</li>
-                  <li>• 영어 이름은 기존 데이터를 유지합니다 (엑셀에 없음)</li>
-                  <li>• 수학 수업은 자동 매핑되지 않으므로 수동 배정 필요</li>
-                  <li>• 실행 전 백업을 권장합니다</li>
-                </ul>
-              </div>
-
-              {/* 전체 학생 상세 목록 */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
-                {/* 필터 탭 */}
-                <div className="flex items-center border-b border-gray-200 bg-white px-3 py-2">
-                  <span className="text-sm text-gray-600 mr-3">필터:</span>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => setDetailFilter('all')}
-                      className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                        detailFilter === 'all'
-                          ? 'bg-[#081429] text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      전체 ({totalCount})
-                    </button>
-                    <button
-                      onClick={() => setDetailFilter('new')}
-                      className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                        detailFilter === 'new'
-                          ? 'bg-green-600 text-white'
-                          : 'bg-green-50 text-green-700 hover:bg-green-100'
-                      }`}
-                    >
-                      신규 ({newCount})
-                    </button>
-                    <button
-                      onClick={() => setDetailFilter('update')}
-                      className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                        detailFilter === 'update'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                      }`}
-                    >
-                      업데이트 ({updateCount})
-                    </button>
-                  </div>
-                </div>
-
-                {/* 학생 목록 */}
-                <div className="max-h-[300px] overflow-y-auto">
-                  {changeDetails
-                    .filter(item => {
-                      if (detailFilter === 'new') return item.isNew;
-                      if (detailFilter === 'update') return !item.isNew;
-                      return true;
-                    })
-                    .map((item, idx) => (
-                      <div
-                        key={idx}
-                        className={`flex items-start gap-3 px-4 py-2 border-b border-gray-100 text-xs ${
-                          item.isNew ? 'bg-green-50/50' : 'bg-white'
-                        }`}
-                      >
-                        {/* 번호 */}
-                        <span className="text-gray-400 w-8 shrink-0 text-right">{idx + 1}.</span>
-
-                        {/* 상태 배지 */}
-                        <span
-                          className={`shrink-0 px-1.5 py-0.5 rounded text-xxs font-bold ${
-                            item.isNew
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-blue-100 text-blue-700'
-                          }`}
-                        >
-                          {item.isNew ? '신규' : '업데이트'}
-                        </span>
-
-                        {/* 학생 정보 */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900">{item.excelData.이름}</span>
-                            <span className="text-gray-500">({item.excelData.학년})</span>
-                            <span className="text-gray-400 truncate">{normalizeSchoolName(item.excelData.학교)}</span>
-                          </div>
-
-                          {/* 변경 내역 (업데이트의 경우) */}
-                          {!item.isNew && item.changedFields.length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {item.changedFields.map((field, i) => (
-                                <span
-                                  key={i}
-                                  className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-xxs"
-                                >
-                                  {field} 변경
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* 신규 학생의 경우 주요 정보 표시 */}
-                          {item.isNew && (
-                            <div className="mt-1 text-xxs text-gray-500">
-                              {item.excelData.보호자연락처 && (
-                                <span className="mr-2">📞 {item.excelData.보호자연락처}</span>
-                              )}
-                              {item.excelData.기타항목1 && (
-                                <span className="mr-2">📚 {item.excelData.기타항목1}</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* 출결번호 */}
-                        <span className="text-xxs text-gray-400 shrink-0">
-                          {item.excelData.출결번호 || '자동생성'}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-
-                {/* 목록이 비어있을 때 */}
-                {changeDetails.filter(item => {
-                  if (detailFilter === 'new') return item.isNew;
-                  if (detailFilter === 'update') return !item.isNew;
-                  return true;
-                }).length === 0 && (
-                  <div className="py-8 text-center text-gray-400 text-sm">
-                    해당 조건의 학생이 없습니다.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* 3단계: 마이그레이션 중 */}
-          {step === 'migrating' && (
-            <div className="text-center space-y-6">
-              <Loader2 className="w-16 h-16 animate-spin text-[#fdb813] mx-auto" />
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">마이그레이션 진행 중...</h3>
-                <p className="text-gray-600 text-sm">잠시만 기다려주세요.</p>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                <div
-                  className="bg-[#fdb813] h-full transition-all duration-300 rounded-full"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="text-sm text-gray-600">{progress}% 완료</p>
-            </div>
-          )}
-
-          {/* 4단계: 완료 */}
-          {step === 'done' && (
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <Check className="w-10 h-10 text-green-600" strokeWidth={3} />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-[#081429]">마이그레이션 완료!</h3>
-                <p className="text-gray-600 mt-2">
-                  총 <span className="text-green-600 font-bold">{totalCount}</span>명의 학생 데이터가 저장되었습니다.
-                </p>
-                <div className="mt-4 grid grid-cols-2 gap-3 max-w-md mx-auto">
-                  <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                    <p className="text-xs text-green-700">신규 추가</p>
-                    <p className="text-xl font-bold text-green-700">{newCount}명</p>
-                  </div>
-                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <p className="text-xs text-blue-700">업데이트</p>
-                    <p className="text-xl font-bold text-blue-700">{updateCount}명</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-left">
-                <p className="text-sm text-gray-700 font-medium mb-2">📝 다음 단계:</p>
-                <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                  <li>1. 학생 목록을 새로고침하여 확인</li>
-                  <li>2. 영어 수업 자동 배정 (선택)</li>
-                  <li>3. 수학 수업 수동 배정 필요</li>
-                </ul>
-              </div>
-            </div>
-          )}
+          {step === 'load' && renderLoadStep()}
+          {step === 'preview' && renderPreviewStep()}
+          {step === 'migrating' && renderMigratingStep()}
+          {step === 'done' && renderDoneStep()}
         </div>
 
         {/* 푸터 버튼 */}
@@ -864,7 +927,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
           {step === 'load' && (
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-sm transition-colors"
             >
               취소
             </button>
@@ -874,13 +937,13 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             <>
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-sm transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={handleMigrate}
-                className="px-4 py-2 bg-[#fdb813] text-[#081429] hover:bg-[#fdb813]/90 rounded-lg transition-colors flex items-center gap-2 font-bold"
+                className="px-4 py-2 bg-[#fdb813] text-[#081429] hover:bg-[#fdb813]/90 rounded-sm transition-colors flex items-center gap-2 font-bold"
               >
                 <Upload size={16} />
                 {totalCount}명 마이그레이션 실행
@@ -891,7 +954,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
           {step === 'done' && (
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-[#081429] text-white hover:bg-[#081429]/90 rounded-lg transition-colors"
+              className="px-4 py-2 bg-[#081429] text-white hover:bg-[#081429]/90 rounded-sm transition-colors"
             >
               닫기
             </button>

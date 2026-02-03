@@ -159,7 +159,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-sm bg-purple-100 flex items-center justify-center">
                         <Building2 size={20} className="text-purple-600" />
                     </div>
                     <div>
@@ -176,7 +176,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                 <input
                     type="text"
                     placeholder="부서 검색..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-sm text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -184,7 +184,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
 
             {/* Add New Department */}
             {isMaster && (
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <div className="bg-gray-50 border border-gray-200 rounded-sm p-4">
                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">새 부서 추가</h4>
                     <div className="flex gap-3 items-end">
                         <div className="flex-1">
@@ -192,7 +192,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                             <input
                                 type="text"
                                 placeholder="예: 마케팅팀"
-                                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-purple-400 transition"
+                                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-sm text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-purple-400 transition"
                                 value={newLabel}
                                 onChange={(e) => setNewLabel(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleAddDepartment()}
@@ -205,14 +205,14 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                                     type="color"
                                     value={newColor}
                                     onChange={(e) => setNewColor(e.target.value)}
-                                    className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer"
+                                    className="w-9 h-9 rounded-sm border border-gray-200 cursor-pointer"
                                     title="색상 선택"
                                 />
                                 <input
                                     type="text"
                                     value={newColor}
                                     onChange={(e) => setNewColor(e.target.value)}
-                                    className="w-20 px-2 py-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-600 font-mono outline-none focus:border-purple-400"
+                                    className="w-20 px-2 py-2 bg-white border border-gray-200 rounded-sm text-xs text-gray-600 font-mono outline-none focus:border-purple-400"
                                     placeholder="#3b82f6"
                                 />
                             </div>
@@ -220,7 +220,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                         <div>
                             <label className="text-xs font-medium text-gray-500 mb-1 block">미리보기</label>
                             <div
-                                className="w-24 h-9 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm"
+                                className="w-24 h-9 rounded-sm flex items-center justify-center text-white text-xs font-bold shadow-sm"
                                 style={{ backgroundColor: newColor }}
                             >
                                 {newLabel || '미리보기'}
@@ -229,7 +229,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                         <button
                             onClick={handleAddDepartment}
                             disabled={!newLabel.trim()}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition shadow-sm"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-sm text-sm font-medium transition shadow-sm"
                         >
                             <Plus size={16} />
                             추가
@@ -239,7 +239,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
             )}
 
             {/* Departments List */}
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
                 <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">등록된 부서</span>
                     <span className="text-xs text-gray-400">드래그하여 순서 변경</span>
@@ -272,7 +272,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
 
                                 {/* Color Badge */}
                                 <div
-                                    className="w-8 h-8 rounded-lg flex-shrink-0 shadow-sm"
+                                    className="w-8 h-8 rounded-sm flex-shrink-0 shadow-sm"
                                     style={{ backgroundColor: dept.color }}
                                 />
 
@@ -283,7 +283,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                                             type="text"
                                             value={editingLabel}
                                             onChange={(e) => setEditingLabel(e.target.value)}
-                                            className="flex-1 px-3 py-1.5 bg-white border border-purple-400 rounded-lg text-sm text-gray-800 outline-none"
+                                            className="flex-1 px-3 py-1.5 bg-white border border-purple-400 rounded-sm text-sm text-gray-800 outline-none"
                                             autoFocus
                                         />
                                         <div className="flex items-center gap-2">
@@ -291,24 +291,24 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                                                 type="color"
                                                 value={editingColor}
                                                 onChange={(e) => setEditingColor(e.target.value)}
-                                                className="w-8 h-8 rounded-lg border border-gray-200 cursor-pointer"
+                                                className="w-8 h-8 rounded-sm border border-gray-200 cursor-pointer"
                                             />
                                             <input
                                                 type="text"
                                                 value={editingColor}
                                                 onChange={(e) => setEditingColor(e.target.value)}
-                                                className="w-20 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-600 font-mono outline-none"
+                                                className="w-20 px-2 py-1.5 bg-white border border-gray-200 rounded-sm text-xs text-gray-600 font-mono outline-none"
                                             />
                                         </div>
                                         <button
                                             onClick={() => handleUpdateDepartment(dept.id)}
-                                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                                            className="p-2 text-green-600 hover:bg-green-50 rounded-sm transition"
                                         >
                                             <Check size={16} />
                                         </button>
                                         <button
                                             onClick={() => setEditingId(null)}
-                                            className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition"
+                                            className="p-2 text-gray-400 hover:bg-gray-100 rounded-sm transition"
                                         >
                                             <X size={16} />
                                         </button>
@@ -323,14 +323,14 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
                                             <div className="flex items-center gap-1">
                                                 <button
                                                     onClick={() => startEdit(dept)}
-                                                    className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                                                    className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-sm transition"
                                                     title="수정"
                                                 >
                                                     <Edit size={14} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteDepartment(dept.id, dept.label)}
-                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-sm transition"
                                                     title="삭제"
                                                 >
                                                     <Trash2 size={14} />
@@ -346,7 +346,7 @@ const DepartmentsTab = ({ isMaster }: DepartmentsTabProps) => {
             </div>
 
             {/* Footer Info */}
-            <div className="flex items-start gap-2 text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-xl p-3">
+            <div className="flex items-start gap-2 text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-sm p-3">
                 <span className="text-blue-500 font-bold">💡</span>
                 <span>사용자 설정에서 각 사용자의 소속 부서를 지정하면, 해당 부서에 공개된 간트 프로젝트를 볼 수 있습니다.</span>
             </div>

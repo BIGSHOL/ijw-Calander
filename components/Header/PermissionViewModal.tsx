@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Eye, X, ClipboardList, Check } from 'lucide-react';
+import { Eye, X, ClipboardList, Check, Shield } from 'lucide-react';
 import { UserProfile, ROLE_LABELS, AppTab, TAB_META } from '../../types';
 
 interface PermissionViewModalProps {
@@ -66,65 +66,85 @@ export const PermissionViewModal: React.FC<PermissionViewModalProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/50 z-[99998]"
+        className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
         onClick={onClose}
       />
-      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[500px] md:max-h-[80vh] bg-white rounded-2xl shadow-2xl z-[99999] overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-          <h3 className="font-bold text-gray-800 flex items-center gap-2">
+      <div className="fixed left-1/2 top-[8vh] -translate-x-1/2 w-[500px] max-h-[85vh] bg-white rounded-sm shadow-xl z-[110] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+          <h3 className="text-sm font-bold text-[#081429] flex items-center gap-2">
             <Eye size={18} /> 내 권한
           </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={20} />
+          <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <X size={18} />
           </button>
         </div>
-        <div className="p-4 overflow-y-auto flex-1 text-sm">
-          {/* Role Info */}
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-blue-800 font-bold">역할: {ROLE_LABELS[userProfile?.role || 'guest']}</p>
-            {userProfile?.role === 'master' && (
-              <p className="text-blue-600 text-xs mt-1">Master는 모든 권한을 보유합니다.</p>
-            )}
-          </div>
-
-          {/* Tab Permissions */}
-          <div className="mb-4">
-            <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-              <ClipboardList size={14} className="inline mr-1" />허용된 탭
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {accessibleTabs.map(tab => {
-                const meta = TAB_META[tab];
-                if (!meta) return null;
-                return (
-                  <span key={tab} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                    {meta.icon} {meta.label}
+        <div className="p-4 overflow-y-auto flex-1 space-y-2">
+          {/* Section 1: 역할 정보 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <Shield className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">역할 정보</h3>
+            </div>
+            <div className="px-2 py-2">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 bg-blue-50 text-blue-800 rounded text-xs font-bold">
+                  {ROLE_LABELS[userProfile?.role || 'guest']}
+                </span>
+                {userProfile?.role === 'master' && (
+                  <span className="text-xxs text-blue-600">
+                    Master는 모든 권한을 보유합니다.
                   </span>
-                );
-              })}
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Role Permissions */}
+          {/* Section 2: 접근 가능한 탭 */}
+          <div className="bg-white border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+              <Eye className="w-3 h-3 text-[#081429]" />
+              <h3 className="text-[#081429] font-bold text-xs">접근 가능한 탭</h3>
+            </div>
+            <div className="px-2 py-2">
+              <div className="flex flex-wrap gap-2">
+                {accessibleTabs.map(tab => {
+                  const meta = TAB_META[tab];
+                  if (!meta) return null;
+                  return (
+                    <span key={tab} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                      {meta.icon} {meta.label}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: 상세 권한 */}
           {userProfile?.role !== 'master' && (
-            <div>
-              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                ✅ 허용된 권한
-              </h4>
-              <div className="space-y-1 max-h-60 overflow-y-auto">
-                {(() => {
-                  const userPerms = rolePermissions[userProfile?.role as keyof typeof rolePermissions] || {};
-                  const enabledPerms = Object.entries(userPerms).filter(([, v]) => v);
-                  if (enabledPerms.length === 0) {
-                    return <p className="text-gray-400 text-xs">설정된 권한이 없습니다.</p>;
-                  }
-                  return enabledPerms.map(([permId]) => (
-                    <div key={permId} className="flex items-center gap-2 text-xs text-gray-600 py-1">
-                      <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center"><Check size={10} /></span>
-                      {permLabels[permId] || permId}
-                    </div>
-                  ));
-                })()}
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                <ClipboardList className="w-3 h-3 text-[#081429]" />
+                <h3 className="text-[#081429] font-bold text-xs">상세 권한</h3>
+              </div>
+              <div className="px-2 py-2">
+                <div className="space-y-1 max-h-60 overflow-y-auto">
+                  {(() => {
+                    const userPerms = rolePermissions[userProfile?.role as keyof typeof rolePermissions] || {};
+                    const enabledPerms = Object.entries(userPerms).filter(([, v]) => v);
+                    if (enabledPerms.length === 0) {
+                      return <p className="text-gray-400 text-xs">설정된 권한이 없습니다.</p>;
+                    }
+                    return enabledPerms.map(([permId]) => (
+                      <div key={permId} className="flex items-center gap-2 text-xs text-gray-600 py-1">
+                        <span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center shrink-0">
+                          <Check size={10} />
+                        </span>
+                        <span>{permLabels[permId] || permId}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
               </div>
             </div>
           )}

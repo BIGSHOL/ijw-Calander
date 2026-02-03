@@ -124,7 +124,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
 
       {/* 타입 */}
       <div className="w-24 flex-shrink-0">
-        <span className="text-xxs font-medium px-2 py-0.5 rounded-full bg-[#081429]/10 text-[#081429] inline-flex items-center gap-1">
+        <span className="text-xxs font-medium px-2 py-0.5 rounded-sm bg-[#081429]/10 text-[#081429] inline-flex items-center gap-1">
           <span>{typeIcon}</span>
           <span>{typeLabel}</span>
         </span>

@@ -30,14 +30,14 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, subtext }) => (
-  <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+  <div className="bg-white rounded-sm p-6 shadow-sm border border-gray-200">
     <div className="flex items-start justify-between">
       <div>
         <p className="text-sm font-medium text-gray-500">{title}</p>
         <p className={`text-3xl font-bold mt-2 ${color}`}>{value}</p>
         {subtext && <p className="text-sm text-gray-400 mt-1">{subtext}</p>}
       </div>
-      <div className={`p-3 rounded-lg ${color.replace('text-', 'bg-').replace('-600', '-100')}`}>
+      <div className={`p-3 rounded-sm ${color.replace('text-', 'bg-').replace('-600', '-100')}`}>
         <Icon className={`w-6 h-6 ${color}`} />
       </div>
     </div>
@@ -167,11 +167,11 @@ const AttendanceStats: React.FC<AttendanceStatsProps> = ({ date, records }) => {
       </div>
 
       {/* Status Distribution */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-sm p-6 shadow-sm border border-gray-200">
         <h3 className="text-lg font-medium text-gray-900 mb-4">출결 현황</h3>
 
         {/* Progress Bar */}
-        <div className="h-8 rounded-full overflow-hidden flex bg-gray-100">
+        <div className="h-8 rounded-sm overflow-hidden flex bg-gray-100">
           {statusDistribution.map(({ status, count, percentage }) => {
             if (count === 0) return null;
             const colors = ATTENDANCE_STATUS_COLORS[status];
@@ -200,7 +200,7 @@ const AttendanceStats: React.FC<AttendanceStatsProps> = ({ date, records }) => {
             const colors = ATTENDANCE_STATUS_COLORS[status];
             return (
               <div key={status} className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${colors.bg}`} />
+                <span className={`w-3 h-3 rounded-sm ${colors.bg}`} />
                 <span className="text-sm text-gray-600">
                   {ATTENDANCE_STATUS_LABELS[status]}: {count}명 ({percentage}%)
                 </span>
@@ -211,7 +211,7 @@ const AttendanceStats: React.FC<AttendanceStatsProps> = ({ date, records }) => {
       </div>
 
       {/* Stats by Class */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-sm p-6 shadow-sm border border-gray-200">
         <h3 className="text-lg font-medium text-gray-900 mb-4">수업별 출결 현황</h3>
 
         <div className="space-y-4">
@@ -223,7 +223,7 @@ const AttendanceStats: React.FC<AttendanceStatsProps> = ({ date, records }) => {
               </div>
 
               {/* Mini Progress Bar */}
-              <div className="h-2 rounded-full overflow-hidden flex bg-gray-100">
+              <div className="h-2 rounded-sm overflow-hidden flex bg-gray-100">
                 {classData.present > 0 && (
                   <div
                     className="h-full bg-emerald-500"

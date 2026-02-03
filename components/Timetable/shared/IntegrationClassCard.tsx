@@ -104,14 +104,17 @@ const StudentItem: React.FC<StudentItemProps> = ({
             style={hoverStyle}
         >
             <span className={`font-medium truncate flex items-center gap-0.5 ${isHovered && isClickable ? '' : style.textClass}`}>
-                <span className="truncate max-w-[70px]">{student.name}</span>
+                <span className="shrink-0">{student.name}</span>
                 {showEnglishName && student.englishName && (
-                    <span className={`font-normal ${isHovered && isClickable ? '' : (style.englishTextClass || 'text-gray-500')}`}>
+                    <span
+                        className={`font-normal truncate max-w-[60px] ${isHovered && isClickable ? '' : (style.englishTextClass || 'text-gray-500')}`}
+                        title={student.englishName}
+                    >
                         ({student.englishName})
                     </span>
                 )}
                 {partialDaysBadge && (
-                    <span className="text-micro font-bold text-orange-600 bg-orange-100 px-0.5 rounded shrink-0">
+                    <span className="text-micro font-bold text-orange-600 bg-orange-100 px-0.5 rounded-sm shrink-0">
                         {partialDaysBadge.join('')}
                     </span>
                 )}
@@ -567,7 +570,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                                 {/* Schedule Tooltip (영어 조회 모드에서만 마우스 오버 시 실제 스케줄 표시) */}
                                 {isEnglish && mode !== 'edit' && showScheduleTooltip && scheduleInfo.length > 0 && (
-                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-50 p-2 min-w-[140px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white text-xs rounded-sm shadow-xl z-50 p-2 min-w-[140px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
                                         <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-700">
                                             <Clock size={12} className="text-yellow-400" />
                                             <span className="font-bold">수업 시간</span>
@@ -592,7 +595,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                         {onToggleHidden && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
-                                                className="absolute top-1 right-7 p-1 rounded hover:bg-black/10 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                className="absolute top-1 right-7 p-1 rounded-sm hover:bg-black/10 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
                                                 title={isHidden ? "보이기" : "숨기기"}
                                             >
                                                 {isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -601,7 +604,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                         {isEnglish && (englishLevels.length > 0 || (isSimulationMode && onEditClass)) && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-                                                className="absolute top-1 right-1 p-1 rounded hover:bg-black/10 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                className="absolute top-1 right-1 p-1 rounded-sm hover:bg-black/10 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
                                             >
                                                 <MoreVertical size={14} />
                                             </button>
@@ -609,7 +612,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                                         {/* Level Up/Down Dropdown (영어 전용) */}
                                         {isEnglish && isMenuOpen && (
-                                            <div className="absolute top-8 right-1 bg-white shadow-lg rounded-lg border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                                            <div className="absolute top-8 right-1 bg-white shadow-lg rounded-sm border border-gray-200 z-20 py-1 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
                                                 {/* 시뮬레이션 모드: 수업 편집 버튼 */}
                                                 {isSimulationMode && onEditClass && (
                                                     <>
@@ -849,9 +852,9 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 title={student.enrollmentDate ? `수업시작: ${student.enrollmentDate}` : '배정 예정'}
                                                 onClick={() => onStudentClick?.(student.id)}
                                             >
-                                                <div className="flex items-center truncate flex-1 min-w-0">
-                                                    <span className="font-medium truncate">{student.name}</span>
-                                                    {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate">({student.englishName})</span>}
+                                                <div className="flex items-center flex-1 min-w-0">
+                                                    <span className="font-medium shrink-0">{student.name}</span>
+                                                    {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
                                                 </div>
                                                 <span className="text-xxs shrink-0 text-amber-600 text-right leading-none ml-1">
                                                     {formatSchoolGrade(student.school, student.grade)}
@@ -869,9 +872,9 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 title={student.enrollmentDate ? `수업시작: ${student.enrollmentDate}` : '휴원'}
                                                 onClick={() => onStudentClick?.(student.id)}
                                             >
-                                                <div className="flex items-center truncate flex-1 min-w-0">
-                                                    <span className="font-medium truncate">{student.name}</span>
-                                                    {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate">({student.englishName})</span>}
+                                                <div className="flex items-center flex-1 min-w-0">
+                                                    <span className="font-medium shrink-0">{student.name}</span>
+                                                    {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
                                                 </div>
                                                 <span className="text-xxs shrink-0 text-amber-600 text-right leading-none ml-1">
                                                     {formatSchoolGrade(student.school, student.grade)}
@@ -898,9 +901,9 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
                                                 onClick={() => onStudentClick?.(student.id)}
                                             >
-                                                <div className="flex items-center truncate flex-1 min-w-0">
-                                                    <span className="font-medium truncate">{student.name}</span>
-                                                    {isEnglish && student.englishName && <span className="ml-1 text-gray-400 truncate">({student.englishName})</span>}
+                                                <div className="flex items-center flex-1 min-w-0">
+                                                    <span className="font-medium shrink-0">{student.name}</span>
+                                                    {isEnglish && student.englishName && <span className="ml-1 text-gray-400 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
                                                 </div>
                                                 <span className="text-xxs shrink-0 text-gray-300 text-right leading-none ml-1">
                                                     {formatSchoolGrade(student.school, student.grade)}

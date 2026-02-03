@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, onSnapshot, doc, getDocs, writeBatch, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
-import { X, RotateCcw, Clock, User, AlertTriangle, Pencil, Trash2, Check } from 'lucide-react';
+import { X, RotateCcw, Clock, User, AlertTriangle, Pencil, Trash2, Check, Database, Eye, FileText } from 'lucide-react';
 import { CLASS_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
 
@@ -83,6 +83,7 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
     const [restoring, setRestoring] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
+    const [selectedBackup, setSelectedBackup] = useState<BackupEntry | null>(null);
 
     const { hasPermission } = usePermissions(currentUser);
     const canRestore = hasPermission('timetable.english.backup.restore') || currentUser?.role === 'master';
@@ -134,6 +135,9 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
 
         try {
             await deleteDoc(doc(db, BACKUP_COLLECTION, backup.id));
+            if (selectedBackup?.id === backup.id) {
+                setSelectedBackup(null);
+            }
         } catch (error) {
             console.error('Failed to delete backup:', error);
             alert('백업 삭제에 실패했습니다.');
@@ -328,9 +332,9 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50" onClick={onClose}>
             <div
-                className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+                className="bg-white rounded-sm shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -338,13 +342,13 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
                     <div className="flex items-center gap-2">
                         <Clock className="text-blue-600" size={20} />
                         <h2 className="text-lg font-bold text-gray-800">백업 기록</h2>
-                        <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-full">
+                        <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded-sm">
                             최근 {MAX_BACKUPS}개
                         </span>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                        className="p-1 rounded-sm hover:bg-gray-200 transition-colors"
                     >
                         <X size={20} className="text-gray-500" />
                     </button>
@@ -363,150 +367,267 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
                             <span className="text-xs">시뮬레이션 모드에서 "실제 반영" 시 자동으로 백업됩니다.</span>
                         </div>
                     ) : (
-                        <div className="space-y-2">
-                            {backups.map((backup, index) => {
-                                // Validate each backup for display
-                                const validation = validateBackupData(backup);
-                                const isCorrupted = !validation.isValid;
-                                const isPreRestoreBackup = backup.isPreRestoreBackup === true;
+                        <div className="space-y-3">
+                            {/* Section 1: 백업 목록 */}
+                            <div className="bg-white border border-gray-200 overflow-hidden">
+                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                    <Database className="w-3 h-3 text-[#081429]" />
+                                    <h3 className="text-[#081429] font-bold text-xs">백업 목록</h3>
+                                </div>
+                                <div className="divide-y divide-gray-100">
+                                    {backups.map((backup, index) => {
+                                        // Validate each backup for display
+                                        const validation = validateBackupData(backup);
+                                        const isCorrupted = !validation.isValid;
+                                        const isPreRestoreBackup = backup.isPreRestoreBackup === true;
+                                        const isSelected = selectedBackup?.id === backup.id;
 
-                                return (
-                                    <div
-                                        key={backup.id}
-                                        className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${isCorrupted
-                                            ? 'bg-red-50 border-red-300'
-                                            : isPreRestoreBackup
-                                                ? 'bg-purple-50 border-purple-200'
-                                                : index === 0
-                                                    ? 'bg-blue-50 border-blue-200'
-                                                    : 'bg-white border-gray-200 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        <div className="flex-1">
-                                            {/* 백업 이름 (편집 모드) */}
-                                            {editingId === backup.id ? (
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <input
-                                                        type="text"
-                                                        value={editingName}
-                                                        onChange={(e) => setEditingName(e.target.value)}
-                                                        placeholder="백업 이름 입력..."
-                                                        className="flex-1 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                                        autoFocus
-                                                        onKeyPress={(e) => e.key === 'Enter' && handleUpdateName(backup.id)}
-                                                    />
-                                                    <button
-                                                        onClick={() => handleUpdateName(backup.id)}
-                                                        className="p-1 text-green-600 hover:bg-green-100 rounded"
-                                                    >
-                                                        <Check size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => { setEditingId(null); setEditingName(''); }}
-                                                        className="p-1 text-gray-400 hover:bg-gray-200 rounded"
-                                                    >
-                                                        <X size={16} />
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                /* 백업 이름 (보기 모드) */
-                                                backup.name && (
-                                                    <div className="text-sm font-bold text-indigo-700 mb-1">
-                                                        📌 {backup.name}
+                                        return (
+                                            <div
+                                                key={backup.id}
+                                                onClick={() => setSelectedBackup(backup)}
+                                                className={`flex items-center justify-between p-3 transition-colors cursor-pointer ${
+                                                    isCorrupted
+                                                        ? 'bg-red-50 hover:bg-red-100'
+                                                        : isPreRestoreBackup
+                                                            ? 'bg-purple-50 hover:bg-purple-100'
+                                                            : isSelected
+                                                                ? 'bg-blue-50'
+                                                                : index === 0
+                                                                    ? 'bg-green-50 hover:bg-green-100'
+                                                                    : 'bg-white hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                <div className="flex-1 min-w-0">
+                                                    {/* 백업 이름 (편집 모드) */}
+                                                    {editingId === backup.id ? (
+                                                        <div className="flex items-center gap-2 mb-1" onClick={(e) => e.stopPropagation()}>
+                                                            <input
+                                                                type="text"
+                                                                value={editingName}
+                                                                onChange={(e) => setEditingName(e.target.value)}
+                                                                placeholder="백업 이름 입력..."
+                                                                className="flex-1 px-2 py-1 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                                autoFocus
+                                                                onKeyPress={(e) => e.key === 'Enter' && handleUpdateName(backup.id)}
+                                                            />
+                                                            <button
+                                                                onClick={() => handleUpdateName(backup.id)}
+                                                                className="p-1 text-green-600 hover:bg-green-100 rounded-sm"
+                                                            >
+                                                                <Check size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { setEditingId(null); setEditingName(''); }}
+                                                                className="p-1 text-gray-400 hover:bg-gray-200 rounded-sm"
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        /* 백업 이름 (보기 모드) */
+                                                        backup.name && (
+                                                            <div className="text-sm font-bold text-indigo-700 mb-1 truncate">
+                                                                <FileText className="inline w-3 h-3 mr-1" />
+                                                                {backup.name}
+                                                            </div>
+                                                        )
+                                                    )}
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <Clock size={12} className="text-gray-400 shrink-0" />
+                                                        <span className={`font-semibold text-sm truncate ${isCorrupted ? 'text-red-700' : isPreRestoreBackup ? 'text-purple-700' : 'text-gray-800'}`}>
+                                                            {backup.createdAt ? formatDate(backup.createdAt) : '(날짜 정보 없음)'}
+                                                        </span>
+                                                        {index === 0 && !isCorrupted && !isPreRestoreBackup && (
+                                                            <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-sm shrink-0">
+                                                                최신
+                                                            </span>
+                                                        )}
+                                                        {isPreRestoreBackup && (
+                                                            <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-sm shrink-0">
+                                                                자동백업
+                                                            </span>
+                                                        )}
+                                                        {isCorrupted && (
+                                                            <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-sm shrink-0">
+                                                                손상됨
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                )
-                                            )}
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className={`font-semibold ${isCorrupted ? 'text-red-700' : isPreRestoreBackup ? 'text-purple-700' : 'text-gray-800'}`}>
-                                                    {backup.createdAt ? formatDate(backup.createdAt) : '(날짜 정보 없음)'}
-                                                </span>
-                                                {index === 0 && !isCorrupted && !isPreRestoreBackup && (
-                                                    <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">
-                                                        최신
-                                                    </span>
-                                                )}
-                                                {isPreRestoreBackup && (
-                                                    <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full">
-                                                        복원 전 자동백업
-                                                    </span>
-                                                )}
-                                                {isCorrupted && (
-                                                    <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full">
-                                                        손상됨
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-3 text-sm text-gray-500">
-                                                <span className="flex items-center gap-1">
-                                                    <User size={12} />
-                                                    {formatCreator(backup)}
-                                                </span>
-                                                {backup.createdAt && (
-                                                    <span className="text-gray-400">
-                                                        {getRelativeTime(backup.createdAt)}
-                                                    </span>
-                                                )}
-                                                {backup.studentData && (
-                                                    <span className="text-blue-600 font-medium">
-                                                        {getStudentCount(backup)}명 / {Object.keys(backup.studentData).length}수업
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {isCorrupted && (
-                                                <div className="mt-2 text-xs text-red-600 bg-red-100 px-2 py-1 rounded">
-                                                    {validation.error}
+                                                    <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                                                        <span className="flex items-center gap-1">
+                                                            <User size={12} />
+                                                            <span className="truncate">{formatCreator(backup)}</span>
+                                                        </span>
+                                                        {backup.createdAt && (
+                                                            <span className="text-gray-400">
+                                                                {getRelativeTime(backup.createdAt)}
+                                                            </span>
+                                                        )}
+                                                        {backup.studentData && (
+                                                            <span className="text-blue-600 font-medium">
+                                                                {getStudentCount(backup)}명 / {Object.keys(backup.studentData).length}수업
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {isCorrupted && (
+                                                        <div className="mt-2 text-xs text-red-600 bg-red-100 px-2 py-1 rounded-sm">
+                                                            {validation.error}
+                                                        </div>
+                                                    )}
+                                                    {isPreRestoreBackup && backup.restoringTo && (
+                                                        <div className="mt-2 text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded-sm truncate">
+                                                            복원 대상: {backup.restoringTo}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                            {isPreRestoreBackup && backup.restoringTo && (
-                                                <div className="mt-2 text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                                                    복원 대상: {backup.restoringTo}
+
+                                                {/* 버튼 영역 */}
+                                                <div className="flex items-center gap-1 shrink-0 ml-3" onClick={(e) => e.stopPropagation()}>
+                                                    {/* 이름 수정 버튼 */}
+                                                    {isMaster && editingId !== backup.id && (
+                                                        <button
+                                                            onClick={() => { setEditingId(backup.id); setEditingName(backup.name || ''); }}
+                                                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-sm transition-colors"
+                                                            title="이름 수정"
+                                                        >
+                                                            <Pencil size={14} />
+                                                        </button>
+                                                    )}
+                                                    {/* 삭제 버튼 */}
+                                                    {isMaster && (
+                                                        <button
+                                                            onClick={() => handleDelete(backup)}
+                                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-sm transition-colors"
+                                                            title="백업 삭제"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
                                                 </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Section 2: 선택한 백업 정보 */}
+                            {selectedBackup && (
+                                <div className="bg-white border border-gray-200 overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                        <Database className="w-3 h-3 text-[#081429]" />
+                                        <h3 className="text-[#081429] font-bold text-xs">선택한 백업 정보</h3>
+                                    </div>
+                                    <div className="p-3 space-y-2">
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-gray-500 shrink-0">백업 시점:</span>
+                                                <span className="font-medium text-gray-800 truncate">{formatDate(selectedBackup.createdAt)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-gray-500 shrink-0">생성자:</span>
+                                                <span className="font-medium text-gray-800 truncate">{formatCreator(selectedBackup)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-gray-500 shrink-0">수업 수:</span>
+                                                <span className="font-medium text-gray-800">{Object.keys(selectedBackup.data).length}개</span>
+                                            </div>
+                                            {selectedBackup.studentData && (
+                                                <>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-gray-500 shrink-0">학생 수:</span>
+                                                        <span className="font-medium text-gray-800">{getStudentCount(selectedBackup)}명</span>
+                                                    </div>
+                                                </>
                                             )}
                                         </div>
+                                    </div>
+                                </div>
+                            )}
 
-                                        {/* 버튼 영역 */}
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            {/* 이름 수정 버튼 */}
-                                            {isMaster && editingId !== backup.id && (
+                            {/* Section 3: 미리보기 */}
+                            {selectedBackup && (
+                                <div className="bg-white border border-gray-200 overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                        <Eye className="w-3 h-3 text-[#081429]" />
+                                        <h3 className="text-[#081429] font-bold text-xs">미리보기</h3>
+                                    </div>
+                                    <div className="p-3">
+                                        <div className="bg-gray-50 border border-gray-200 rounded-sm p-3 max-h-48 overflow-y-auto">
+                                            <div className="space-y-1.5">
+                                                <div className="text-xs font-bold text-gray-700 mb-2">수업 데이터 ({Object.keys(selectedBackup.data).length}개)</div>
+                                                {Object.keys(selectedBackup.data).slice(0, 10).map((key) => (
+                                                    <div key={key} className="text-xs text-gray-600 font-mono truncate">
+                                                        {key}
+                                                    </div>
+                                                ))}
+                                                {Object.keys(selectedBackup.data).length > 10 && (
+                                                    <div className="text-xs text-gray-400 italic">
+                                                        ... 외 {Object.keys(selectedBackup.data).length - 10}개
+                                                    </div>
+                                                )}
+                                                {selectedBackup.studentData && (
+                                                    <>
+                                                        <div className="text-xs font-bold text-gray-700 mt-3 mb-2">학생 데이터 ({Object.keys(selectedBackup.studentData).length}개)</div>
+                                                        {Object.keys(selectedBackup.studentData).slice(0, 5).map((key) => (
+                                                            <div key={key} className="text-xs text-gray-600 font-mono truncate">
+                                                                {key}
+                                                            </div>
+                                                        ))}
+                                                        {Object.keys(selectedBackup.studentData).length > 5 && (
+                                                            <div className="text-xs text-gray-400 italic">
+                                                                ... 외 {Object.keys(selectedBackup.studentData).length - 5}개
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Section 4: 작업 */}
+                            {selectedBackup && (
+                                <div className="bg-white border border-gray-200 overflow-hidden">
+                                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                        <RotateCcw className="w-3 h-3 text-[#081429]" />
+                                        <h3 className="text-[#081429] font-bold text-xs">작업</h3>
+                                    </div>
+                                    <div className="p-3">
+                                        <div className="flex items-center gap-2">
+                                            {/* 복원 버튼 */}
+                                            {canRestore && (
                                                 <button
-                                                    onClick={() => { setEditingId(backup.id); setEditingName(backup.name || ''); }}
-                                                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                                    title="이름 수정"
+                                                    onClick={() => handleRestore(selectedBackup)}
+                                                    disabled={restoring === selectedBackup.id || !validateBackupData(selectedBackup).isValid}
+                                                    className={`flex items-center gap-1.5 px-4 py-2 rounded-sm text-sm font-medium transition-colors ${
+                                                        restoring === selectedBackup.id
+                                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                            : !validateBackupData(selectedBackup).isValid
+                                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                                    }`}
+                                                    title={!validateBackupData(selectedBackup).isValid ? '손상된 백업은 복원할 수 없습니다' : '이 백업으로 복원'}
                                                 >
-                                                    <Pencil size={14} />
+                                                    <RotateCcw size={14} className={restoring === selectedBackup.id ? 'animate-spin' : ''} />
+                                                    {restoring === selectedBackup.id ? '복원 중...' : '이 백업으로 복원'}
                                                 </button>
                                             )}
                                             {/* 삭제 버튼 */}
                                             {isMaster && (
                                                 <button
-                                                    onClick={() => handleDelete(backup)}
-                                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="백업 삭제"
+                                                    onClick={() => handleDelete(selectedBackup)}
+                                                    className="flex items-center gap-1.5 px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-sm text-sm font-medium transition-colors"
                                                 >
                                                     <Trash2 size={14} />
-                                                </button>
-                                            )}
-                                            {/* 복원 버튼 */}
-                                            {canRestore && (
-                                                <button
-                                                    onClick={() => handleRestore(backup)}
-                                                    disabled={restoring === backup.id || isCorrupted}
-                                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${restoring === backup.id
-                                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                        : isCorrupted
-                                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                                                        }`}
-                                                    title={isCorrupted ? '손상된 백업은 복원할 수 없습니다' : '이 백업으로 복원'}
-                                                >
-                                                    <RotateCcw size={14} className={restoring === backup.id ? 'animate-spin' : ''} />
-                                                    {restoring === backup.id ? '복원 중...' : '복원'}
+                                                    삭제
                                                 </button>
                                             )}
                                         </div>
                                     </div>
-                                );
-                            })}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

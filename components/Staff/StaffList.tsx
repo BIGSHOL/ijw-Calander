@@ -86,7 +86,7 @@ const StaffList: React.FC<StaffListProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="bg-white rounded-sm shadow-sm border border-gray-200">
       {/* Pagination - Top */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-200 bg-gray-50">
@@ -112,19 +112,46 @@ const StaffList: React.FC<StaffListProps> = ({
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-0.5 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-2 py-0.5 text-xs hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed text-gray-700"
             >
-              <ChevronLeft className="w-4 h-4" />
+              이전
             </button>
-            <span className="text-xs font-medium text-gray-700">
-              {currentPage} / {totalPages}
-            </span>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                      currentPage === pageNum
+                        ? 'bg-[#fdb813] text-[#081429]'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-0.5 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-2 py-0.5 text-xs hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed text-gray-700"
             >
-              <ChevronRight className="w-4 h-4" />
+              다음
             </button>
           </div>
         </div>
@@ -172,7 +199,7 @@ const StaffList: React.FC<StaffListProps> = ({
                 <td className="px-2 py-1.5">
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                      className="w-6 h-6 rounded-sm flex items-center justify-center text-xs font-medium flex-shrink-0"
                       style={{
                         backgroundColor: member.role === 'teacher' && member.bgColor ? member.bgColor : '#081429',
                         color: member.role === 'teacher' && member.textColor ? member.textColor : '#ffffff'

@@ -79,7 +79,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
       <div className="flex items-center justify-between mb-2">
         <button
           onClick={handlePrevMonth}
-          className="p-0.5 hover:bg-gray-100 rounded-md transition-colors"
+          className="p-0.5 hover:bg-gray-100 rounded-sm transition-colors"
         >
           <ChevronLeft className="w-4 h-4 text-gray-600" />
         </button>
@@ -92,7 +92,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
 
         <button
           onClick={handleNextMonth}
-          className="p-0.5 hover:bg-gray-100 rounded-md transition-colors"
+          className="p-0.5 hover:bg-gray-100 rounded-sm transition-colors"
         >
           <ChevronRight className="w-4 h-4 text-gray-600" />
         </button>
@@ -102,7 +102,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
       <div className="flex justify-center mb-2">
         <button
           onClick={handleToday}
-          className="px-2.5 py-0.5 text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full hover:bg-emerald-100 transition-colors"
+          className="px-2.5 py-0.5 text-xs font-medium text-emerald-600 bg-emerald-50 rounded-sm hover:bg-emerald-100 transition-colors"
         >
           오늘
         </button>
@@ -138,7 +138,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
             <button
               key={day.dateString}
               onClick={() => onDateChange(day.dateString)}
-              className={`h-7 w-full rounded-md text-xs font-semibold transition-all
+              className={`h-7 w-full rounded-sm text-xs font-semibold transition-all
                 ${dateIsSelected
                   ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-sm scale-105'
                   : dateIsToday

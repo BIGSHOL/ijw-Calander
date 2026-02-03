@@ -100,7 +100,7 @@ export function GridDropdown<T = string>({
       className={`
         flex items-center justify-between gap-1.5
         px-3 py-1.5
-        bg-[#1e293b] border border-gray-700 rounded-lg
+        bg-[#1e293b] border border-gray-700 rounded-sm
         text-xs font-medium text-white
         hover:border-gray-500
         focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]
@@ -128,7 +128,7 @@ export function GridDropdown<T = string>({
         <div
           className="
             absolute top-full left-0 mt-1 z-50
-            bg-white border border-gray-200 rounded-lg shadow-lg
+            bg-white border border-gray-200 rounded-sm shadow-lg
             p-2
             min-w-[200px] max-w-[400px]
             animate-in fade-in duration-200
@@ -162,7 +162,7 @@ export function GridDropdown<T = string>({
                     {option.label}
                   </span>
                   {option.value === selected && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#fdb813] rounded-full border border-white" />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#fdb813] rounded-sm border border-white" />
                   )}
                 </button>
               ))}

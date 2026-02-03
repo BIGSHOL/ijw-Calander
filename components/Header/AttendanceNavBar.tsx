@@ -102,7 +102,7 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
     <TabSubNavigation variant="compact" className="justify-between px-6 border-b border-white/10 z-30">
       <div className="flex items-center gap-3">
         {/* Subject Toggle */}
-        <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+        <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
           {(canManageMath || isMasterOrAdmin) && (
             <TabButton
               active={attendanceSubject === 'math'}
@@ -131,7 +131,7 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
             <select
               value={attendanceStaffId || ''}
               onChange={(e) => setAttendanceStaffId(e.target.value || undefined)}
-              className="appearance-none bg-[#1e293b] border border-gray-700 rounded-md px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+              className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
             >
               {availableTeachers.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
@@ -145,7 +145,7 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
         <div className="w-px h-4 bg-white/20 mx-1"></div>
 
         {/* View Mode Toggle (월별/세션) */}
-        <div className="flex bg-white/10 rounded-lg p-0.5 border border-white/10 shadow-sm">
+        <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
           <TabButton
             active={attendanceViewMode === 'monthly'}
             onClick={() => {
@@ -169,7 +169,7 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
             icon={<CalendarIcon size={14} />}
             className="px-2 py-0.5"
           >
-            세션{sessions.length === 0 && attendanceViewMode !== 'session' ? '' : ''}
+            세션별{sessions.length === 0 && attendanceViewMode !== 'session' ? '' : ''}
           </TabButton>
         </div>
 
@@ -207,7 +207,7 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
         {/* Add Student Button (Special Attendance) */}
         <button
           onClick={() => setIsAttendanceAddStudentModalOpen(true)}
-          className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm ml-2"
+          className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm ml-2"
           title="특강/보강 학생 출석부 추가"
         >
           <UserPlus size={14} />

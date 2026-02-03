@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ClipboardList, FileText, Bell } from 'lucide-react';
+import { ClipboardList, FileText, Users, Bell, Settings, X } from 'lucide-react';
 import { Consultation, CATEGORY_CONFIG } from '../../types';
 import { useDeleteConsultation, useCompleteFollowUp } from '../../hooks/useConsultationMutations';
 import { getFollowUpUrgency, getFollowUpDaysLeft } from '../../hooks/useStudentConsultations';
@@ -71,220 +71,278 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4" onClick={onClose}>
+            <div className="bg-white rounded-sm shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                 {/* 헤더 */}
-                <div className="bg-[#081429] text-white px-6 py-4 flex justify-between items-center sticky top-0 z-10">
-                    <div>
-                        <h2 className="text-xl font-bold">상담 상세</h2>
-                        <p className="text-sm text-gray-300 mt-1">{typeLabel}</p>
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setShowEditModal(true)}
-                            className="bg-[#fdb813] hover:bg-[#e5a711] text-[#081429] px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                        >
-                            수정
-                        </button>
-                        <button
-                            onClick={() => setShowDeleteConfirm(true)}
-                            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                        >
-                            삭제
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                        >
-                            닫기
-                        </button>
-                    </div>
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 sticky top-0 bg-white z-10">
+                    <h2 className="text-sm font-bold text-[#081429]">상담 상세 - {typeLabel}</h2>
+                    <button
+                        onClick={onClose}
+                        className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                        <X size={18} />
+                    </button>
                 </div>
 
                 {/* 내용 */}
-                <div className="p-6 space-y-6">
-                    {/* 기본 정보 */}
-                    <section>
-                        <h3 className="text-lg font-bold text-[#081429] mb-3 flex items-center gap-2">
-                            <ClipboardList className="inline-block w-5 h-5 mr-1" />
-                            기본 정보
-                        </h3>
-                        <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                            <div className="flex items-center gap-2">
-                                <span className="text-2xl">{typeIcon}</span>
-                                <span className="font-semibold text-[#081429]">{consultation.studentName}</span>
+                <div className="flex-1 overflow-y-auto p-6 space-y-2">
+                    {/* Section 1: 상담 기본 정보 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <ClipboardList className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">상담 기본 정보</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            {/* Type & Category Row */}
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">유형</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-lg">{typeIcon}</span>
+                                    <span className="text-xs font-medium text-[#081429]">{typeLabel}</span>
+                                </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                    <span className="text-[#373d41]">상담자:</span>
-                                    <span className="ml-2 text-[#081429] font-medium">
-                                        {registrar}
+
+                            {/* Category Row */}
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">카테고리</span>
+                                <span className="text-xs text-[#081429]">
+                                    {categoryConfig.icon} {categoryConfig.label}
+                                </span>
+                            </div>
+
+                            {/* Date Row */}
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">날짜</span>
+                                <span className="text-xs text-[#081429] font-medium">
+                                    {consultation.date}
+                                    {consultation.time && ` ${consultation.time}`}
+                                </span>
+                            </div>
+
+                            {/* Duration Row */}
+                            {consultation.duration && (
+                                <div className="flex items-center gap-2 px-2 py-1.5">
+                                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">소요 시간</span>
+                                    <span className="text-xs text-[#081429] font-medium">
+                                        {consultation.duration}분
                                     </span>
                                 </div>
-                                <div>
-                                    <span className="text-[#373d41]">담임선생님:</span>
-                                    <span className="ml-2 text-[#081429] font-medium">
-                                        {consultation.consultantName}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-[#373d41]">날짜:</span>
-                                    <span className="ml-2 text-[#081429] font-medium">
-                                        {consultation.date}
-                                        {consultation.time && ` ${consultation.time}`}
-                                    </span>
-                                </div>
-                                {consultation.duration && (
-                                    <div>
-                                        <span className="text-[#373d41]">소요 시간:</span>
-                                        <span className="ml-2 text-[#081429] font-medium">
-                                            {consultation.duration}분
-                                        </span>
-                                    </div>
-                                )}
-                                <div>
-                                    <span className="text-[#373d41]">카테고리:</span>
-                                    <span className="ml-2 text-[#081429] font-medium">
-                                        {categoryConfig.icon} {categoryConfig.label}
-                                    </span>
-                                </div>
+                            )}
+
+                            {/* Registrar Row */}
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">상담자</span>
+                                <span className="text-xs text-[#081429] font-medium">{registrar}</span>
+                            </div>
+
+                            {/* Consultant Row */}
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">담임선생님</span>
+                                <span className="text-xs text-[#081429] font-medium">
+                                    {consultation.consultantName}
+                                </span>
                             </div>
 
                             {/* 학부모 상담 정보 */}
                             {consultation.type === 'parent' && consultation.parentName && (
-                                <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                                    <div>
-                                        <span className="text-[#373d41]">학부모:</span>
-                                        <span className="ml-2 text-[#081429] font-medium">
+                                <>
+                                    <div className="flex items-center gap-2 px-2 py-1.5">
+                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">학부모</span>
+                                        <span className="text-xs text-[#081429] font-medium">
                                             {consultation.parentName}
+                                            {consultation.parentRelation && (
+                                                <span className="ml-1 text-[#373d41]">
+                                                    ({consultation.parentRelation})
+                                                </span>
+                                            )}
                                         </span>
-                                        {consultation.parentRelation && (
-                                            <span className="ml-1 text-[#373d41]">
-                                                ({consultation.parentRelation})
-                                            </span>
-                                        )}
                                     </div>
                                     {consultation.parentContact && (
-                                        <div>
-                                            <span className="text-[#373d41]">연락처:</span>
-                                            <span className="ml-2 text-[#081429] font-medium">
+                                        <div className="flex items-center gap-2 px-2 py-1.5">
+                                            <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">연락처</span>
+                                            <span className="text-xs text-[#081429] font-medium">
                                                 {consultation.parentContact}
                                             </span>
                                         </div>
                                     )}
-                                </div>
+                                </>
                             )}
 
                             {/* 학생 상담 컨디션 */}
                             {consultation.type === 'student' && consultation.studentMood && (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                    <span className="text-[#373d41]">학생 컨디션:</span>
-                                    {consultation.studentMood === 'positive' && (
-                                        <span className="ml-2 text-green-600 font-medium">😊 긍정적</span>
-                                    )}
-                                    {consultation.studentMood === 'neutral' && (
-                                        <span className="ml-2 text-gray-600 font-medium">😐 보통</span>
-                                    )}
-                                    {consultation.studentMood === 'negative' && (
-                                        <span className="ml-2 text-red-600 font-medium">😔 부정적</span>
-                                    )}
+                                <div className="flex items-center gap-2 px-2 py-1.5">
+                                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">학생 컨디션</span>
+                                    <span className="text-xs">
+                                        {consultation.studentMood === 'positive' && (
+                                            <span className="text-green-600 font-medium">😊 긍정적</span>
+                                        )}
+                                        {consultation.studentMood === 'neutral' && (
+                                            <span className="text-gray-600 font-medium">😐 보통</span>
+                                        )}
+                                        {consultation.studentMood === 'negative' && (
+                                            <span className="text-red-600 font-medium">😔 부정적</span>
+                                        )}
+                                    </span>
                                 </div>
                             )}
                         </div>
-                    </section>
+                    </div>
 
-                    {/* 상담 내용 */}
-                    <section>
-                        <h3 className="text-lg font-bold text-[#081429] mb-3 flex items-center gap-2">
-                            <FileText className="inline-block w-5 h-5 mr-1" />
-                            상담 내용
-                        </h3>
-                        <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="font-semibold text-[#081429] mb-2">
-                                {consultation.title}
-                            </h4>
-                            <div className="text-[#373d41] whitespace-pre-wrap">
-                                {consultation.content}
+                    {/* Section 2: 상담 내용 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <FileText className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">상담 내용</h3>
+                        </div>
+                        <div className="p-2">
+                            <div className="px-2 py-1.5">
+                                <h4 className="text-xs font-semibold text-[#081429] mb-2">
+                                    {consultation.title}
+                                </h4>
+                                <div className="text-xs text-[#373d41] whitespace-pre-wrap">
+                                    {consultation.content}
+                                </div>
                             </div>
                         </div>
-                    </section>
+                    </div>
 
-                    {/* 후속 조치 */}
+                    {/* Section 3: 학생 정보 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <Users className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">학생 정보</h3>
+                        </div>
+                        <div className="divide-y divide-gray-100">
+                            {/* Student Name Row */}
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">이름</span>
+                                <span className="text-xs font-semibold text-[#081429]">{consultation.studentName}</span>
+                            </div>
+
+                            {/* School Row */}
+                            {consultation.school && (
+                                <div className="flex items-center gap-2 px-2 py-1.5">
+                                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">학교</span>
+                                    <span className="text-xs text-[#081429]">{consultation.school}</span>
+                                </div>
+                            )}
+
+                            {/* Grade Row */}
+                            {consultation.grade && (
+                                <div className="flex items-center gap-2 px-2 py-1.5">
+                                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">학년</span>
+                                    <span className="text-xs text-[#081429]">{consultation.grade}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Section 4: 후속 조치 */}
                     {consultation.followUpNeeded && (
-                        <section>
-                            <h3 className="text-lg font-bold text-[#081429] mb-3 flex items-center gap-2">
-                                <Bell className="inline-block w-5 h-5 mr-1" />
-                                후속 조치
-                            </h3>
-                            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-sm text-[#373d41]">상태:</span>
-                                    {urgency === 'urgent' && consultation.followUpDate && (
-                                        <span className="bg-red-600 text-white px-3 py-1 rounded text-sm font-semibold">
-                                            긴급 {getFollowUpDaysLeft(consultation.followUpDate)}일 남음
-                                        </span>
-                                    )}
-                                    {urgency === 'pending' && (
-                                        <span className="bg-[#fdb813] text-[#081429] px-3 py-1 rounded text-sm font-semibold">
-                                            대기 중
-                                        </span>
-                                    )}
-                                    {urgency === 'done' && (
-                                        <span className="bg-green-600 text-white px-3 py-1 rounded text-sm font-semibold">
-                                            완료
-                                        </span>
-                                    )}
+                        <div className="bg-white border border-gray-200 overflow-hidden">
+                            <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                <Bell className="w-3 h-3 text-[#081429]" />
+                                <h3 className="text-[#081429] font-bold text-xs">후속 조치</h3>
+                            </div>
+                            <div className="divide-y divide-gray-100">
+                                {/* Status Row */}
+                                <div className="flex items-center gap-2 px-2 py-1.5">
+                                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">상태</span>
+                                    <div>
+                                        {urgency === 'urgent' && consultation.followUpDate && (
+                                            <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-semibold">
+                                                긴급 {getFollowUpDaysLeft(consultation.followUpDate)}일 남음
+                                            </span>
+                                        )}
+                                        {urgency === 'pending' && (
+                                            <span className="bg-[#fdb813] text-[#081429] px-2 py-0.5 rounded text-xs font-semibold">
+                                                대기 중
+                                            </span>
+                                        )}
+                                        {urgency === 'done' && (
+                                            <span className="bg-green-600 text-white px-2 py-0.5 rounded text-xs font-semibold">
+                                                완료
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
+                                {/* Follow-up Date Row */}
                                 {consultation.followUpDate && (
-                                    <div>
-                                        <span className="text-sm text-[#373d41]">예정일:</span>
-                                        <span className="ml-2 text-[#081429] font-medium">
+                                    <div className="flex items-center gap-2 px-2 py-1.5">
+                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">예정일</span>
+                                        <span className="text-xs text-[#081429] font-medium">
                                             {consultation.followUpDate}
                                         </span>
                                     </div>
                                 )}
 
+                                {/* Completion Notes Row */}
                                 {consultation.followUpDone && consultation.followUpNotes && (
-                                    <div>
-                                        <span className="text-sm text-[#373d41]">완료 메모:</span>
-                                        <p className="mt-1 text-sm text-[#081429]">
+                                    <div className="px-2 py-1.5">
+                                        <span className="text-xs font-medium text-[#373d41] block mb-1">완료 메모</span>
+                                        <p className="text-xs text-[#081429] whitespace-pre-wrap">
                                             {consultation.followUpNotes}
                                         </p>
                                     </div>
                                 )}
 
+                                {/* Complete Follow-up Form */}
                                 {!consultation.followUpDone && (
-                                    <div className="mt-4 pt-4 border-t border-gray-200">
-                                        <label className="block text-sm font-medium text-[#373d41] mb-2">
+                                    <div className="px-2 py-2">
+                                        <label className="block text-xs font-medium text-[#373d41] mb-1.5">
                                             완료 메모 (선택)
                                         </label>
                                         <textarea
                                             value={followUpNotes}
                                             onChange={(e) => setFollowUpNotes(e.target.value)}
-                                            className="w-full border border-[#081429] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                                            className="w-full border border-gray-300 rounded-sm px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
                                             rows={3}
                                             placeholder="후속 조치 결과를 입력하세요..."
                                         />
                                         <button
                                             onClick={handleCompleteFollowUp}
                                             disabled={completeFollowUp.isPending}
-                                            className="mt-3 bg-[#fdb813] text-[#081429] px-6 py-2 rounded-lg font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50"
+                                            className="mt-2 bg-[#fdb813] text-[#081429] px-4 py-1.5 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50"
                                         >
                                             {completeFollowUp.isPending ? '처리 중...' : '후속 조치 완료'}
                                         </button>
                                     </div>
                                 )}
                             </div>
-                        </section>
+                        </div>
                     )}
+
+                    {/* Section 5: 작업 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <Settings className="w-3 h-3 text-[#081429]" />
+                            <h3 className="text-[#081429] font-bold text-xs">작업</h3>
+                        </div>
+                        <div className="p-2">
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowEditModal(true)}
+                                    className="bg-[#fdb813] hover:bg-[#e5a711] text-[#081429] px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors"
+                                >
+                                    수정
+                                </button>
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors"
+                                >
+                                    삭제
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* 삭제 확인 모달 */}
             {showDeleteConfirm && (
-                <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                    <div className="bg-white rounded-lg p-6 max-w-md" onClick={(e) => e.stopPropagation()}>
+                <div className="absolute inset-0 bg-black bg-opacity-70 flex items-start justify-center pt-[8vh]" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white rounded-sm p-6 max-w-md" onClick={(e) => e.stopPropagation()}>
                         <h3 className="text-lg font-bold text-[#081429] mb-4">
                             정말 삭제하시겠습니까?
                         </h3>
@@ -294,14 +352,14 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                         <div className="flex gap-3 justify-end">
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
-                                className="border border-[#081429] text-[#081429] px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                                className="border border-[#081429] text-[#081429] px-4 py-2 rounded-sm hover:bg-gray-50 transition-colors"
                             >
                                 취소
                             </button>
                             <button
                                 onClick={handleDelete}
                                 disabled={deleteConsultation.isPending}
-                                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                                className="bg-red-600 text-white px-4 py-2 rounded-sm hover:bg-red-700 transition-colors disabled:opacity-50"
                             >
                                 {deleteConsultation.isPending ? '삭제 중...' : '삭제'}
                             </button>
@@ -312,8 +370,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
 
             {/* 수정 모달 (AddConsultationModal 재사용) */}
             {showEditModal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50" onClick={(e) => e.stopPropagation()}>
-                    <div className="bg-white w-full max-w-2xl h-[90vh] rounded-lg shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[8vh] bg-black bg-opacity-50" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white w-full max-w-2xl h-[90vh] rounded-sm shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
                         <AddConsultationModal
                             onClose={() => setShowEditModal(false)}
                             onSuccess={() => {

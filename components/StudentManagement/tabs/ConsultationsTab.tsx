@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { UnifiedStudent, Consultation, CATEGORY_CONFIG, UserProfile } from '../../../types';
 import { MessageSquare, Plus, ClipboardList } from 'lucide-react';
 import { useStudentConsultations, getFollowUpUrgency, getFollowUpDaysLeft } from '../../../hooks/useStudentConsultations';
@@ -49,7 +49,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
   if (loading) {
     return (
       <div className="text-center py-6">
-        <div className="animate-spin w-5 h-5 border-2 border-[#fdb813] border-t-transparent rounded-full mx-auto mb-2"></div>
+        <div className="animate-spin w-5 h-5 border-2 border-[#fdb813] border-t-transparent rounded-sm mx-auto mb-2"></div>
         <p className="text-gray-500 text-xs">상담 기록 불러오는 중...</p>
       </div>
     );
@@ -59,19 +59,19 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
     <div className="space-y-4">
       {/* 등록 상담 이력 (최초 상담 기록) */}
       {registrationHistory.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-sm p-3">
           <div className="flex items-center gap-2 mb-2">
             <ClipboardList className="w-4 h-4 text-blue-700" />
             <h3 className="text-xs font-bold text-blue-900">등록 상담 이력 ({registrationHistory.length}건)</h3>
           </div>
           <div className="space-y-2">
             {registrationHistory.map(record => (
-              <div key={record.id} className="bg-white rounded-md p-2 border border-blue-100">
+              <div key={record.id} className="bg-white rounded-sm p-2 border border-blue-100">
                 <div className="flex justify-between items-start mb-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-blue-900">{record.consultationDate?.slice(0, 10) || '-'}</span>
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">{record.subject}</span>
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">{record.status}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded-sm bg-blue-100 text-blue-700">{record.subject}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded-sm bg-green-100 text-green-700">{record.status}</span>
                   </div>
                   <span className="text-xs text-gray-500">{record.counselor || '-'}</span>
                 </div>
@@ -97,7 +97,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
           {!readOnly && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
+              className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
             >
               <Plus className="w-3 h-3" />
               추가
@@ -148,7 +148,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
                   </span>
 
                   {/* 구분 (학부모/학생) */}
-                  <span className={`w-10 shrink-0 px-1 py-0.5 rounded text-micro font-medium text-center ${
+                  <span className={`w-10 shrink-0 px-1 py-0.5 rounded-sm text-micro font-medium text-center ${
                     consultation.type === 'parent'
                       ? 'bg-blue-100 text-blue-700'
                       : 'bg-green-100 text-green-700'
@@ -158,7 +158,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
 
                   {/* 분류 */}
                   <span
-                    className="w-10 shrink-0 px-1 py-0.5 rounded text-micro font-medium text-center"
+                    className="w-10 shrink-0 px-1 py-0.5 rounded-sm text-micro font-medium text-center"
                     style={{
                       backgroundColor: `${categoryConfig.color}15`,
                       color: categoryConfig.color
@@ -170,7 +170,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
                   {/* 제목 + 후속조치 */}
                   <div className="flex-1 min-w-0 flex items-center gap-1">
                     {urgency && (
-                      <span className={`px-1 py-0.5 rounded text-micro font-medium shrink-0 ${
+                      <span className={`px-1 py-0.5 rounded-sm text-micro font-medium shrink-0 ${
                         urgency === 'urgent' ? 'bg-red-600 text-white' :
                         urgency === 'pending' ? 'bg-amber-100 text-amber-700' :
                         'bg-green-100 text-green-700'

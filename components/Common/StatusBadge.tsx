@@ -15,7 +15,7 @@ import {
 /**
  * Accessible Status Badge Component
  * Addresses Issue #43: Color-only indicators for colorblind accessibility
- * 
+ *
  * Features:
  * - Combines color, icon, and text label
  * - ARIA label for screen readers
@@ -178,8 +178,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   return (
     <span
       className={`
-        inline-flex items-center gap-1 
-        rounded-full border font-semibold
+        inline-flex items-center gap-1
+        rounded-sm border font-semibold
         ${config.color}
         ${SIZE_CLASSES[size]}
         ${className}
@@ -207,8 +207,8 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({
   return (
     <span
       className={`
-        inline-flex items-center gap-1 
-        rounded-full border font-semibold
+        inline-flex items-center gap-1
+        rounded-sm border font-semibold
         ${config.color}
         ${SIZE_CLASSES[size]}
         ${className}
