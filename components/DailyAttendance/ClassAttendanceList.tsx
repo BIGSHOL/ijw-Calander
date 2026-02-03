@@ -57,6 +57,8 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteValue, setNoteValue] = useState('');
   const [updatingRecordIds, setUpdatingRecordIds] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // Mutations for updating status
   const batchUpdateMutation = useBatchAttendanceUpdate();
@@ -93,6 +95,11 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
         record.className.toLowerCase().includes(query)
     );
   }, [records, searchQuery]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedRecords = filteredRecords.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   // Handle status change with duplicate request prevention and atomic batch update
   const handleStatusChange = async (recordId: string, status: AttendanceStatus) => {
@@ -182,51 +189,54 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
           type="text"
           placeholder="학생 또는 수업 검색..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
         />
       </div>
 
       {/* Records List */}
-      <div className="bg-white rounded-sm shadow-sm border border-gray-200 overflow-hidden">
+      <div className="rounded-sm shadow-sm border overflow-hidden" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
                 학생
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
                 수업
               </th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: '#373d41' }}>
                 출결 상태
               </th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: '#373d41' }}>
                 입실/퇴실
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
                 메모
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filteredRecords.map((record) => {
+            {paginatedRecords.map((record, idx) => {
               const statusColor = ATTENDANCE_STATUS_COLORS[record.status];
 
               return (
-                <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={record.id} className="hover:bg-gray-50 transition-colors" style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa' }}>
                   {/* Student Name */}
-                  <td className="px-4 py-3">
+                  <td className="px-2 py-1.5 text-xs">
                     <span className="font-medium text-gray-900">{record.studentName}</span>
                   </td>
 
                   {/* Class Name */}
-                  <td className="px-4 py-3">
+                  <td className="px-2 py-1.5 text-xs">
                     <span className="text-sm text-gray-600">{record.className}</span>
                   </td>
 
                   {/* Status Buttons */}
-                  <td className="px-4 py-3">
+                  <td className="px-2 py-1.5 text-xs">
                     <div className="flex items-center justify-center gap-1">
                       {STATUS_BUTTONS.map(({ status, icon: Icon, label, activeClass }) => {
                         const isUpdating = updatingRecordIds.has(record.id);
@@ -252,7 +262,7 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
                   </td>
 
                   {/* Check-in/Check-out Time */}
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-2 py-1.5 text-xs text-center">
                     <div className="text-sm text-gray-600">
                       {record.checkInTime && (
                         <span className="text-emerald-600">{record.checkInTime}</span>
@@ -268,7 +278,7 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
                   </td>
 
                   {/* Note */}
-                  <td className="px-4 py-3">
+                  <td className="px-2 py-1.5 text-xs">
                     {editingNoteId === record.id ? (
                       <div className="flex items-center gap-2">
                         <input
@@ -310,6 +320,58 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {filteredRecords.length > 0 && (
+        <div className="p-3 rounded-sm shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="px-2 py-1 text-xs rounded-sm border transition-all"
+              style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
+            >
+              <option value={10}>10개</option>
+              <option value={20}>20개</option>
+              <option value={50}>50개</option>
+              <option value={100}>100개</option>
+            </select>
+            <span className="text-xs hidden sm:inline" style={{ color: '#373d41' }}>
+              {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, filteredRecords.length)} / 총 {filteredRecords.length}개
+            </span>
+          </div>
+          <nav className="flex items-center gap-1" aria-label="Pagination">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+              style={{ color: '#081429' }}
+            >이전</button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) pageNum = i + 1;
+                else if (safePage <= 3) pageNum = i + 1;
+                else if (safePage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                else pageNum = safePage - 2 + i;
+                return (
+                  <button key={pageNum} onClick={() => setCurrentPage(pageNum)}
+                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${safePage === pageNum ? 'text-[#081429]' : 'text-gray-600 hover:bg-gray-100'}`}
+                    style={{ backgroundColor: safePage === pageNum ? '#fdb813' : 'transparent' }}
+                  >{pageNum}</button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+              style={{ color: '#081429' }}
+            >다음</button>
+          </nav>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="flex items-center gap-4 text-xs text-gray-500 mt-4">

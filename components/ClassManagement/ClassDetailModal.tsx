@@ -12,7 +12,7 @@ import { useStaff } from '../../hooks/useStaff';
 import { useClassStats } from '../../hooks/useClassStats';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useSimulationOptional } from '../Timetable/English/context/SimulationContext';
-import { ScenarioClass } from '../Timetable/English/englishUtils';
+import { ScenarioClass } from '../Timetable/English/context/SimulationContext';
 
 interface ClassDetailModalProps {
   classInfo: ClassInfo;

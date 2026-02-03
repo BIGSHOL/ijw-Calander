@@ -1,6 +1,7 @@
 import React from 'react';
 import { Exam, StudentScore, EXAM_TYPE_LABELS, GRADE_COLORS, calculateGrade } from '../../types';
 import { GraduationCap, ChevronDown, ChevronRight, Trash2, Loader2 } from 'lucide-react';
+import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 
 interface ExamListViewProps {
   filteredExams: Exam[];
@@ -70,10 +71,11 @@ const ExamListView: React.FC<ExamListViewProps> = ({
 
                 {/* 과목 뱃지 */}
                 <span className="w-14 shrink-0 text-center">
-                  <span className={`inline-block px-1.5 py-0.5 text-xs rounded ${exam.subject === 'math' ? 'bg-blue-100 text-blue-700' :
-                      exam.subject === 'english' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
+                  <span className={`inline-block px-1.5 py-0.5 text-xs rounded font-medium ${
+                      exam.subject === 'both' ? SUBJECT_COLORS.other.badge :
+                      SUBJECT_COLORS[exam.subject as SubjectType]?.badge || SUBJECT_COLORS.other.badge
                     }`}>
-                    {exam.subject === 'both' ? '통합' : exam.subject === 'math' ? '수학' : '영어'}
+                    {exam.subject === 'both' ? '통합' : SUBJECT_LABELS[exam.subject as SubjectType] || exam.subject}
                   </span>
                 </span>
 

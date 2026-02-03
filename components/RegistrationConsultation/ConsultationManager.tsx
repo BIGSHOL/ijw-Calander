@@ -7,9 +7,10 @@ import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
 import { ConsultationForm } from './ConsultationForm';
-import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, ClipboardList, Upload, Loader2 } from 'lucide-react';
+import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, Upload, Loader2, Search, Settings2 } from 'lucide-react';
 import { TabSubNavigation } from '../Common/TabSubNavigation';
 import { TabButton } from '../Common/TabButton';
+import { VideoLoading } from '../Common/VideoLoading';
 
 const RegistrationMigrationModal = lazy(() => import('./RegistrationMigrationModal'));
 
@@ -32,6 +33,10 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
     const [viewColumns, setViewColumns] = useState<1 | 2>(1); // 1단/2단 보기 상태
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
+
+    // Search & Settings State (lifted from ConsultationTable)
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showSettings, setShowSettings] = useState(false);
 
     // Modal State
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -254,16 +259,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
 
     // Loading state
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-[60vh]">
-                <div className="text-center">
-                    <div className="mb-4">
-                        <ClipboardList className="w-16 h-16 mx-auto text-gray-300" />
-                    </div>
-                    <p className="text-gray-500">상담 데이터를 불러오는 중...</p>
-                </div>
-            </div>
-        );
+        return <VideoLoading className="flex-1 h-full" />;
     }
 
     return (
@@ -357,6 +353,36 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {/* Search & Settings - Only for Table View */}
+                    {view === 'table' && (
+                        <>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                                    <Search className="h-3.5 w-3.5 text-gray-400" />
+                                </div>
+                                <input
+                                    type="text"
+                                    className="block w-56 pl-8 pr-2.5 py-1.5 rounded-sm text-xs leading-5 placeholder-gray-500 bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] transition-all"
+                                    placeholder="학생명, 번호, 담당자 검색..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            <button
+                                onClick={() => setShowSettings(!showSettings)}
+                                className="p-1.5 rounded-sm border transition-all"
+                                style={{
+                                    backgroundColor: showSettings ? 'rgba(253,184,19,0.2)' : 'rgba(255,255,255,0.1)',
+                                    borderColor: showSettings ? '#fdb813' : 'rgba(255,255,255,0.2)',
+                                    color: showSettings ? '#fdb813' : 'rgba(255,255,255,0.6)'
+                                }}
+                                title="보기 설정"
+                            >
+                                <Settings2 size={14} />
+                            </button>
+                        </>
+                    )}
+
                     {/* View Column Toggle - Only for Yearly View */}
                     {view === 'yearly' && (
                         <div className="flex bg-black/20 p-0.5 rounded-sm border border-white/5">
@@ -471,6 +497,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                             canEdit={canEdit}
                             canManage={canManage}
                             canConvert={canConvert}
+                            searchTerm={searchTerm}
+                            showSettings={showSettings}
+                            onShowSettingsChange={setShowSettings}
                         />
                     )}
 

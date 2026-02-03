@@ -5,6 +5,7 @@ import { db } from '../../../firebaseConfig';
 import DashboardHeader from '../DashboardHeader';
 import { Users, BookOpen, TrendingUp, Calendar, DollarSign, UserCheck, Clock } from 'lucide-react';
 import { isTeacherMatch, isTeacherInSlotTeachers, isSlotTeacherMatch } from '../../../utils/teacherUtils';
+import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../../utils/styleUtils';
 
 interface ManagerDashboardProps {
   userProfile: UserProfile;
@@ -334,15 +335,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
                 >
                   <div className="flex items-start justify-between mb-1">
                     <h3 className="text-sm font-bold text-[#081429]">{cls.className}</h3>
-                    <span className={`text-xxs px-1.5 py-0.5 rounded-sm ${
-                      cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
-                      cls.subject === 'english' ? 'bg-green-100 text-green-700' :
-                      cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
-                      'bg-orange-100 text-orange-700'
-                    }`}>
-                      {cls.subject === 'math' ? '수학' :
-                       cls.subject === 'english' ? '영어' :
-                       cls.subject === 'science' ? '과학' : '국어'}
+                    <span className={`text-xxs px-1.5 py-0.5 rounded-sm font-medium ${SUBJECT_COLORS[cls.subject as SubjectType]?.badge || SUBJECT_COLORS.other.badge}`}>
+                      {SUBJECT_LABELS[cls.subject as SubjectType] || cls.subject}
                     </span>
                   </div>
 

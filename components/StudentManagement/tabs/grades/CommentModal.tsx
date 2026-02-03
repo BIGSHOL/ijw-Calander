@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { GradeComment, GradeCommentCategory, COMMENT_CATEGORY_LABELS } from '../../../../types';
 import { getCurrentPeriod } from '../../../../hooks/useGradeProfile';
 import { MessageSquare, Loader2, X, Tag, FileText } from 'lucide-react';
+import { SUBJECT_COLORS, SubjectType } from '../../../../utils/styleUtils';
 
 interface CommentModalProps {
     onClose: () => void;
@@ -162,7 +163,7 @@ const CommentModal: React.FC<CommentModalProps> = ({ onClose, studentId, student
                                 </span>
                                 {subject !== 'all' && (
                                     <span className={`px-1 py-0.5 rounded-sm text-micro font-medium ${
-                                        subject === 'math' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                                        SUBJECT_COLORS[subject as SubjectType]?.badge || SUBJECT_COLORS.other.badge
                                     }`}>
                                         {subject === 'math' ? '수학' : '영어'}
                                     </span>

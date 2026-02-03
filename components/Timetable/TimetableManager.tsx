@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { TimetableClass, Teacher, ClassKeywordColor, SubjectType } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
+import { VideoLoading } from '../Common/VideoLoading';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, getMonth, getYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
 // Performance: bundle-dynamic-imports - EnglishTimetable lazy load (초기 번들 ~150KB 절감)
@@ -85,20 +86,7 @@ interface MathTimetableContentProps {
     setSelectedStudentForModal: (student: UnifiedStudent | null) => void;
     isAddClassOpen: boolean;
     setIsAddClassOpen: (open: boolean) => void;
-    newClassName: string;
-    setNewClassName: (name: string) => void;
-    newTeacher: string;
-    setNewTeacher: (teacher: string) => void;
-    newRoom: string;
-    setNewRoom: (room: string) => void;
-    newSubject: string;
-    setNewSubject: (subject: string) => void;
-    newSchedule: string[];
-    toggleScheduleSlot: (day: string, period: string) => void;
-    handleAddClass: () => void;
     sortedTeachers: string[];
-    isAssistant: boolean;
-    setIsAssistant: (v: boolean) => void;
     selectedClassInfo: ClassInfo | null;
     selectedStudentForModal: UnifiedStudent | null;
     canManageStudents: boolean;
@@ -165,20 +153,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     setSelectedStudentForModal,
     isAddClassOpen,
     setIsAddClassOpen,
-    newClassName,
-    setNewClassName,
-    newTeacher,
-    setNewTeacher,
-    newRoom,
-    setNewRoom,
-    newSubject,
-    setNewSubject,
-    newSchedule,
-    toggleScheduleSlot,
-    handleAddClass,
     sortedTeachers,
-    isAssistant,
-    setIsAssistant,
     selectedClassInfo,
     selectedStudentForModal,
     canManageStudents,
@@ -406,24 +381,12 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 )}
 
                 {/* Add Class Modal */}
-                <AddClassModal
-                    isOpen={isAddClassOpen}
-                    onClose={() => setIsAddClassOpen(false)}
-                    newClassName={newClassName}
-                    setNewClassName={setNewClassName}
-                    newTeacher={newTeacher}
-                    setNewTeacher={setNewTeacher}
-                    newRoom={newRoom}
-                    setNewRoom={setNewRoom}
-                    newSubject={newSubject}
-                    setNewSubject={setNewSubject}
-                    newSchedule={newSchedule}
-                    toggleScheduleSlot={toggleScheduleSlot}
-                    handleAddClass={handleAddClass}
-                    teacherNames={sortedTeachers}
-                    isAssistant={isAssistant}
-                    setIsAssistant={setIsAssistant}
-                />
+                {isAddClassOpen && (
+                    <AddClassModal
+                        onClose={() => setIsAddClassOpen(false)}
+                        defaultSubject="math"
+                    />
+                )}
 
                 {/* Class Detail Modal - 수업 관리와 동일한 상세 모달 사용 */}
                 {selectedClassInfo && (
@@ -476,7 +439,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
                 {/* Scenario Management Modal */}
                 {isScenarioModalOpen && (
-                    <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"><div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-sm" /></div>}>
+                    <Suspense fallback={<div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50"><VideoLoading className="h-screen" /></div>}>
                         <ScenarioManagementModal
                             isOpen={isScenarioModalOpen}
                             onClose={() => setIsScenarioModalOpen(false)}
@@ -568,16 +531,11 @@ const TimetableManager = ({
         mathConfig,
         isTeacherOrderModalOpen,
         setIsTeacherOrderModalOpen,
-        isWeekdayOrderModalOpen,
-        setIsWeekdayOrderModalOpen,
         handleSaveTeacherOrder,
-        handleSaveWeekdayOrder
     } = useMathConfig();
 
     // Hook Integration: Class Operations
     const {
-        checkConsecutiveSchedule,
-        addClass,
         updateClass,
         deleteClass,
         addStudent,
@@ -671,14 +629,6 @@ const TimetableManager = ({
     );
     const showStudents = externalShowStudents ?? internalShowStudents;
     const setShowStudents = onShowStudentsChange ?? setInternalShowStudents;
-
-    // New Class Form
-    const [newClassName, setNewClassName] = useState('');
-    const [newTeacher, setNewTeacher] = useState('');
-    const [newRoom, setNewRoom] = useState('');
-    const [newSubject, setNewSubject] = useState('수학');
-    const [newSchedule, setNewSchedule] = useState<string[]>([]);
-    const [isAssistant, setIsAssistant] = useState(false);
 
     // Timetable View Mode: 'day-based' (월화수목금토일) vs 'teacher-based' (월목/화금/주말/수요일)
     const [internalTimetableViewMode, setInternalTimetableViewMode] = useState<'day-based' | 'teacher-based'>(
@@ -844,44 +794,7 @@ const TimetableManager = ({
 
 
 
-    // checkConsecutiveSchedule moved to useClassOperations hook
-
-    // Add new class
-    const handleAddClass = async () => {
-        try {
-            await addClass(classes, {
-                className: newClassName,
-                teacher: newTeacher,
-                room: newRoom,
-                subject: newSubject,
-                schedule: newSchedule,
-                isAssistant: isAssistant
-            }, currentPeriods);
-
-            setNewClassName('');
-            setNewTeacher('');
-            setNewRoom('');
-            setNewSubject(currentSubjectFilter);
-            setNewSchedule([]);
-            setIsAssistant(false);
-            setIsAddClassOpen(false);
-        } catch (e: any) {
-            console.error(e);
-            alert(e.message || '수업 추가 실패');
-        }
-    };
-
-    // Drag handlers moved to useStudentDragDrop hook
-
-    const toggleScheduleSlot = (day: string, period: string) => {
-        const slot = `${day} ${period}`;
-        setNewSchedule(prev => prev.includes(slot) ? prev.filter(s => s !== slot) : [...prev, slot]);
-    };
-
     const openAddModal = () => {
-        setNewSubject(currentSubjectFilter);
-        setNewSchedule([]);
-        setIsAssistant(false);
         setIsAddClassOpen(true);
     };
 
@@ -936,11 +849,7 @@ const TimetableManager = ({
 
     if (subjectTab === 'english') {
         return (
-            <Suspense fallback={
-                <div className="flex items-center justify-center h-64">
-                    <div className="animate-spin rounded-sm h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
-                </div>
-            }>
+            <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
                 <EnglishTimetable
                     onSwitchToMath={() => setSubjectTab('math')}
                     viewType={viewType}
@@ -961,11 +870,7 @@ const TimetableManager = ({
     // Performance Note (async-suspense-boundaries): Generic Timetable with Suspense
     if (subjectTab === 'science') {
         return (
-            <Suspense fallback={
-                <div className="flex items-center justify-center h-64">
-                    <div className="text-gray-500">과학 시간표 로딩 중...</div>
-                </div>
-            }>
+            <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
                 <GenericTimetable
                     subject="science"
                     currentUser={currentUser}
@@ -980,11 +885,7 @@ const TimetableManager = ({
 
     if (subjectTab === 'korean') {
         return (
-            <Suspense fallback={
-                <div className="flex items-center justify-center h-64">
-                    <div className="text-gray-500">국어 시간표 로딩 중...</div>
-                </div>
-            }>
+            <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
                 <GenericTimetable
                     subject="korean"
                     currentUser={currentUser}
@@ -1052,20 +953,7 @@ const TimetableManager = ({
                 setSelectedStudentForModal={setSelectedStudentForModal}
                 isAddClassOpen={isAddClassOpen}
                 setIsAddClassOpen={setIsAddClassOpen}
-                newClassName={newClassName}
-                setNewClassName={setNewClassName}
-                newTeacher={newTeacher}
-                setNewTeacher={setNewTeacher}
-                newRoom={newRoom}
-                setNewRoom={setNewRoom}
-                newSubject={newSubject}
-                setNewSubject={setNewSubject}
-                newSchedule={newSchedule}
-                toggleScheduleSlot={toggleScheduleSlot}
-                handleAddClass={handleAddClass}
                 sortedTeachers={sortedTeachers}
-                isAssistant={isAssistant}
-                setIsAssistant={setIsAssistant}
                 selectedClassInfo={selectedClassInfo}
                 selectedStudentForModal={selectedStudentForModal}
                 canManageStudents={canManageStudents}

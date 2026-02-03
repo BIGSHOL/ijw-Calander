@@ -319,6 +319,9 @@ export function useConsultationStats(
 
         if (!className) return;
 
+        // 활성 수강만 처리 (퇴원/보류 제외)
+        if (enrollData.withdrawalDate || enrollData.onHold) return;
+
         // 수업별 학생 집합에 추가
         if (!classStudentCount.has(className)) {
           classStudentCount.set(className, new Set());

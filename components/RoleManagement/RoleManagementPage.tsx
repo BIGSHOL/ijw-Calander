@@ -165,6 +165,16 @@ const PERMISSION_CATEGORIES = [
       { id: 'gantt.delete' as PermissionId, label: '삭제' },
     ]
   },
+  {
+    id: 'withdrawal',
+    label: '퇴원',
+    icon: '🚪',
+    permissions: [
+      { id: 'withdrawal.view' as PermissionId, label: '조회' },
+      { id: 'withdrawal.edit' as PermissionId, label: '수정' },
+      { id: 'withdrawal.reactivate' as PermissionId, label: '재원복구' },
+    ]
+  },
 ];
 
 const ROLES_TO_SHOW = ROLE_HIERARCHY.filter(r => r !== 'master') as UserRole[];

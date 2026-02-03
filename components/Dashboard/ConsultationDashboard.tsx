@@ -7,6 +7,7 @@ import { UserProfile } from '../../types';
 import CounselingOverview from './CounselingOverview';
 import CategoryStats from './CategoryStats';
 import StaffSubjectStats from './StaffSubjectStats';
+import { SUBJECT_COLORS } from '../../utils/styleUtils';
 
 /** 날짜로부터 경과일 계산 */
 const getDaysSince = (dateStr: string): number => {
@@ -401,10 +402,10 @@ const StaffStatsModal: React.FC<StaffStatsModalProps> = ({ stats, onClose }) => 
                         {hasMath && (
                           <div className="flex items-center gap-1.5">
                             <span className="text-gray-600">수학</span>
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-medium rounded">
+                            <span className="px-2 py-0.5 font-medium rounded-sm" style={{ backgroundColor: SUBJECT_COLORS.math.light, color: SUBJECT_COLORS.math.bg }}>
                               {staff.mathCount}/{staff.mathTotal}
                             </span>
-                            <span className="text-blue-600 font-medium">
+                            <span className="font-medium" style={{ color: SUBJECT_COLORS.math.bg }}>
                               ({mathPercentage}%)
                             </span>
                           </div>
@@ -415,10 +416,10 @@ const StaffStatsModal: React.FC<StaffStatsModalProps> = ({ stats, onClose }) => 
                         {hasEnglish && (
                           <div className="flex items-center gap-1.5">
                             <span className="text-gray-600">영어</span>
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 font-medium rounded">
+                            <span className="px-2 py-0.5 font-medium rounded-sm" style={{ backgroundColor: SUBJECT_COLORS.english.light, color: SUBJECT_COLORS.english.bg }}>
                               {staff.englishCount}/{staff.englishTotal}
                             </span>
-                            <span className="text-emerald-600 font-medium">
+                            <span className="font-medium" style={{ color: SUBJECT_COLORS.english.bg }}>
                               ({englishPercentage}%)
                             </span>
                           </div>
@@ -456,6 +457,8 @@ interface NeedingConsultationModalProps {
 const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ students, onClose, canManageAll = true }) => {
   const [subjectFilter, setSubjectFilter] = useState<'all' | 'math' | 'english'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // 관리 권한이 없으면 placeholder 데이터인지 확인
   const hasPlaceholderData = students.length > 0 && students[0]?.studentId?.startsWith('placeholder-');
@@ -477,6 +480,17 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
 
     return result;
   }, [students, subjectFilter, searchQuery]);
+
+  // 페이지네이션 계산
+  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedStudents = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredStudents.slice(start, start + pageSize);
+  }, [filteredStudents, safePage, pageSize]);
+
+  // 필터 변경 시 페이지 초기화
+  React.useEffect(() => { setCurrentPage(1); }, [subjectFilter, searchQuery]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -508,7 +522,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
               <button
                 onClick={() => setSubjectFilter('math')}
                 className={`px-2 py-0.5 text-xxs font-medium rounded transition-colors ${
-                  subjectFilter === 'math' ? 'bg-[#081429] text-white' : 'text-[#373d41] hover:bg-[#081429]/10'
+                  subjectFilter === 'math' ? SUBJECT_COLORS.math.badge : 'text-[#373d41] hover:bg-[#081429]/10'
                 }`}
               >
                 수학
@@ -516,7 +530,7 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
               <button
                 onClick={() => setSubjectFilter('english')}
                 className={`px-2 py-0.5 text-xxs font-medium rounded transition-colors ${
-                  subjectFilter === 'english' ? 'bg-[#fdb813] text-[#081429]' : 'text-[#373d41] hover:bg-[#081429]/10'
+                  subjectFilter === 'english' ? SUBJECT_COLORS.english.badge : 'text-[#373d41] hover:bg-[#081429]/10'
                 }`}
               >
                 영어
@@ -537,9 +551,8 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
           </div>
         )}
 
-        <div className="max-h-72 overflow-y-auto">
+        <div className="max-h-80 overflow-y-auto">
           {hasPlaceholderData ? (
-            // 관리 권한이 없으면 본인 담당 학생 수만 표시
             <div className="text-center py-8">
               <AlertCircle className="w-12 h-12 text-[#fdb813] mx-auto mb-3" />
               <p className="text-base font-medium text-[#081429] mb-1">
@@ -557,30 +570,99 @@ const NeedingConsultationModal: React.FC<NeedingConsultationModalProps> = ({ stu
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-[#081429]/5">
-              {filteredStudents.map((student, idx) => (
-                <div key={`${student.studentId}-${student.subject}-${idx}`} className="px-4 py-2 hover:bg-[#081429]/5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[#081429] min-w-[60px]">{student.studentName}</span>
-                    <span className={`text-xxs px-1.5 py-0.5 rounded font-medium ${
-                      student.subject === 'math'
-                        ? 'bg-[#081429]/10 text-[#081429]'
-                        : 'bg-[#fdb813]/30 text-[#081429]'
-                    }`}>
-                      {student.subject === 'math' ? '수학' : '영어'}
-                    </span>
-                  </div>
-                  <span className="text-xxs text-[#373d41]">
-                    {student.lastConsultationDate
-                      ? `최근: ${student.lastConsultationDate} (${getDaysSince(student.lastConsultationDate)}일 전)`
-                      : '상담 기록 없음'}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <table className="w-full">
+              <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>이름</th>
+                  <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>과목</th>
+                  <th className="px-4 py-1.5 text-right text-xxs font-medium" style={{ color: '#373d41' }}>최근 상담</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {paginatedStudents.map((student, idx) => (
+                  <tr
+                    key={`${student.studentId}-${student.subject}-${idx}`}
+                    className="hover:bg-gray-50 transition-colors"
+                    style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa' }}
+                  >
+                    <td className="px-4 py-1.5 text-xs font-medium" style={{ color: '#081429' }}>{student.studentName}</td>
+                    <td className="px-2 py-1.5">
+                      <span className={`text-xxs px-1.5 py-0.5 rounded-sm font-medium ${
+                        student.subject === 'math'
+                          ? SUBJECT_COLORS.math.badge
+                          : SUBJECT_COLORS.english.badge
+                      }`}>
+                        {student.subject === 'math' ? '수학' : '영어'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-1.5 text-right text-xxs" style={{ color: '#373d41' }}>
+                      {student.lastConsultationDate
+                        ? `${student.lastConsultationDate} (${getDaysSince(student.lastConsultationDate)}일 전)`
+                        : '상담 기록 없음'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
-        <div className="px-4 py-2.5 bg-[#081429]/5 border-t border-[#081429]/10">
+
+        {/* Pagination */}
+        {filteredStudents.length > 0 && !hasPlaceholderData && (
+          <div className="px-3 py-2 flex items-center justify-between" style={{ backgroundColor: 'white', borderTop: '1px solid #08142915' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
+              <select
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                className="px-2 py-0.5 text-xs rounded-sm border transition-all"
+                style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
+              >
+                <option value={10}>10개</option>
+                <option value={20}>20개</option>
+                <option value={50}>50개</option>
+              </select>
+              <span className="text-xxs" style={{ color: '#373d41' }}>
+                {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, filteredStudents.length)} / 총 {filteredStudents.length}개
+              </span>
+            </div>
+            <nav className="flex items-center gap-1" aria-label="Pagination">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                className="px-1.5 py-0.5 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+                style={{ color: '#081429' }}
+              >이전</button>
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) pageNum = i + 1;
+                  else if (safePage <= 3) pageNum = i + 1;
+                  else if (safePage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                  else pageNum = safePage - 2 + i;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-5 h-5 rounded-full text-xxs font-bold transition-colors ${
+                        safePage === pageNum ? 'text-[#081429]' : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                      style={{ backgroundColor: safePage === pageNum ? '#fdb813' : 'transparent' }}
+                    >{pageNum}</button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="px-1.5 py-0.5 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+                style={{ color: '#081429' }}
+              >다음</button>
+            </nav>
+          </div>
+        )}
+
+        <div className="px-4 py-2.5 border-t" style={{ backgroundColor: '#08142905', borderColor: '#08142910' }}>
           <button
             onClick={onClose}
             className="w-full px-3 py-1.5 bg-[#081429] text-white text-sm font-medium rounded-sm hover:bg-[#081429]/90"

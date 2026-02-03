@@ -40,6 +40,8 @@ interface Props {
   // 숨긴 날짜 열
   hiddenDates?: Set<string>;
   onHiddenDatesChange?: (newHidden: Set<string>) => void;
+  // 전체 페이지 기준 그룹별 학생 수
+  totalGroupCounts?: Map<string, number>;
 }
 
 interface ContextMenuState {
@@ -77,7 +79,8 @@ const Table = forwardRef<HTMLTableElement, Props>(({
   holidays = [],
   sortMode = 'class',
   hiddenDates = new Set<string>(),
-  onHiddenDatesChange
+  onHiddenDatesChange,
+  totalGroupCounts
 }, ref) => {
   // 세션 모드에 따라 표시할 날짜 결정
   const days = useMemo(() => {
@@ -288,6 +291,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               holidayDateSet={holidayDateSet}
               holidayNameMap={holidayNameMap}
               sortMode={sortMode}
+              totalGroupCounts={totalGroupCounts}
             />
           ) : (
             <tr>

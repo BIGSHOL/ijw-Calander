@@ -104,81 +104,76 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
         <div className="overflow-x-auto">
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
-                    <p className="text-sm text-[#373d41]">
-                        총 <span className="font-semibold text-[#081429]">{totalCount}</span>개의 상담 기록
-                        {loading && <Loader2 className="inline-block w-3 h-3 ml-1 animate-spin text-[#fdb813]" />}
+                    <p className="text-sm" style={{ color: '#373d41' }}>
+                        총 <span className="font-semibold" style={{ color: '#081429' }}>{totalCount}</span>개의 상담 기록
+                        {loading && <Loader2 className="inline-block w-3 h-3 ml-1 animate-spin" style={{ color: '#fdb813' }} />}
                     </p>
                     <span className="text-gray-300">|</span>
+                    <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
                     <select
                         value={pageSize}
                         onChange={handlePageSizeChange}
-                        className="bg-white border border-gray-300 text-gray-700 text-xs rounded px-2 py-1 focus:outline-none focus:border-[#fdb813]"
+                        className="px-2 py-1 text-xs rounded-sm border transition-all"
+                        style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
                     >
-                        <option value={10}>10개씩 보기</option>
-                        <option value={20}>20개씩 보기</option>
-                        <option value={50}>50개씩 보기</option>
-                        <option value={100}>100개씩 보기</option>
+                        <option value={10}>10개</option>
+                        <option value={20}>20개</option>
+                        <option value={50}>50개</option>
+                        <option value={100}>100개</option>
                     </select>
+                    <span className="text-xs hidden sm:inline" style={{ color: '#373d41' }}>
+                        {startIndex + 1}-{Math.min(startIndex + pageSize, totalCount)} / 총 {totalCount}개
+                    </span>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    {/* 페이지네이션 버튼 */}
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => goToPage(currentPage - 1)}
-                            disabled={!hasPrevPage || loading}
-                            className="px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
-                        >
-                            이전
-                        </button>
-
-                        <div className="flex items-center gap-1">
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                let pageNum: number;
-                                if (totalPages <= 5) {
-                                    pageNum = i + 1;
-                                } else if (currentPage <= 3) {
-                                    pageNum = i + 1;
-                                } else if (currentPage >= totalPages - 2) {
-                                    pageNum = totalPages - 4 + i;
-                                } else {
-                                    pageNum = currentPage - 2 + i;
-                                }
-
-                                return (
-                                    <button
-                                        key={pageNum}
-                                        onClick={() => goToPage(pageNum)}
-                                        disabled={loading}
-                                        className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
-                                            currentPage === pageNum
-                                                ? 'bg-[#fdb813] text-[#081429]'
-                                                : 'text-gray-600 hover:bg-gray-100'
-                                        }`}
-                                    >
-                                        {pageNum}
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        <button
-                            onClick={() => goToPage(currentPage + 1)}
-                            disabled={!hasNextPage || loading}
-                            className="px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
-                        >
-                            다음
-                        </button>
-                    </div>
-
+                <nav className="flex items-center gap-1" aria-label="Pagination">
                     <button
-                        onClick={onRefresh}
-                        disabled={loading}
-                        className="text-sm text-[#081429] hover:text-[#fdb813] transition-colors ml-2 disabled:opacity-50"
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={!hasPrevPage || loading}
+                        className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+                        style={{ color: '#081429' }}
                     >
-                        새로고침
+                        이전
                     </button>
-                </div>
+                    <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum: number;
+                            if (totalPages <= 5) {
+                                pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                                pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                            } else {
+                                pageNum = currentPage - 2 + i;
+                            }
+
+                            return (
+                                <button
+                                    key={pageNum}
+                                    onClick={() => goToPage(pageNum)}
+                                    disabled={loading}
+                                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors text-[#081429] ${
+                                        currentPage === pageNum
+                                            ? ''
+                                            : 'hover:bg-gray-100'
+                                    }`}
+                                    style={{ backgroundColor: currentPage === pageNum ? '#fdb813' : 'transparent' }}
+                                >
+                                    {pageNum}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={!hasNextPage || loading}
+                        className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+                        style={{ color: '#081429' }}
+                    >
+                        다음
+                    </button>
+                </nav>
             </div>
 
             <div className="bg-white rounded-sm border border-gray-200 min-w-[1200px]">

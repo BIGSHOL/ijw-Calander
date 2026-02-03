@@ -139,8 +139,13 @@ export interface UnifiedStudent {
   startDate: string;             // 등록일 (YYYY-MM-DD)
   endDate?: string;              // 퇴원일
   withdrawalDate?: string;       // 퇴원일 (YYYY-MM-DD) - 영어 시간표와 호환
-  withdrawalReason?: string;     // 퇴원 사유
-  withdrawalMemo?: string;       // 퇴원 관련 메모
+  withdrawalReason?: string;     // 퇴원 사유 (카테고리)
+  withdrawalMemo?: string;       // 퇴원 관련 메모 (상세 사유)
+  withdrawalConsultation?: {     // 퇴원/수강종료 상담 추적
+    adminCalledParent?: boolean;   // 관리자 ↔ 학부모 통화 여부
+    teacherCalledParent?: boolean; // 담임 ↔ 학부모 통화 여부
+    talkedWithStudent?: boolean;   // 학생 상담 여부
+  };
   isOldWithdrawn?: boolean;      // 90일 이상 경과한 퇴원생 표시 (검색용)
 
   // 출석부 연동

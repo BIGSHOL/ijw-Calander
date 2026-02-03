@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Resource, UserProfile, RESOURCE_CATEGORY_TREE, CATEGORY_SEPARATOR } from '../../types';
 import { useResources, useCreateResource, useUpdateResource, useDeleteResource } from '../../hooks/useResources';
+import { VideoLoading } from '../Common/VideoLoading';
 import ResourceCard, { ResourceTableHeader, SortField, SortDirection } from './ResourceCard';
 import ResourceAddModal from './ResourceAddModal';
 import { FolderOpen, Folder, Plus, Loader2, RefreshCw, Home, ChevronRight, Search, X, Clock, Trash2, CheckSquare, Star, RotateCcw, GripVertical } from 'lucide-react';
@@ -527,12 +528,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-[#081429] animate-spin mx-auto mb-2" />
-          <p className="text-sm text-gray-500">리소스를 불러오는 중...</p>
-        </div>
-      </div>
+      <VideoLoading className="flex-1 h-full" />
     );
   }
 

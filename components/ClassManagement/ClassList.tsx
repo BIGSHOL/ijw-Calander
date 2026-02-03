@@ -308,10 +308,21 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
   const endIndex = startIndex + itemsPerPage;
   const currentClasses = classes.slice(startIndex, endIndex);
 
-  // 수업 목록 테이블 (헤더는 ClassManagementTab에서 고정 표시)
+  // 수업 목록 테이블
   return (
     <div className="flex flex-col gap-2">
-      <div className="bg-white rounded-t-none rounded-b-lg border border-t-0 border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-sm border border-gray-200 overflow-hidden shadow-sm">
+        {/* 테이블 헤더 */}
+        <div className="bg-gray-50 border-b border-gray-200 px-3 py-2 grid grid-cols-[80px_1fr_100px_100px_1fr_1fr_70px_40px] gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <div className="text-center">과목</div>
+          <div>수업명</div>
+          <div>담임</div>
+          <div>부담임</div>
+          <div>스케줄</div>
+          <div>메모</div>
+          <div className="text-center">학생</div>
+          <div></div>
+        </div>
         {/* 테이블 바디 */}
         <div className="divide-y divide-gray-100">
           {currentClasses.map((classInfo) => {
@@ -407,34 +418,34 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
 
       {/* 페이지네이션 컨트롤 */}
       {classes.length > 0 && (
-        <div className="bg-white rounded-sm border border-gray-200 shadow-sm p-2 flex items-center justify-between">
-          {/* 왼쪽: 항목 수 선택 */}
+        <div className="p-3 rounded-sm shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-600">페이지당</span>
+            <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
             <select
               value={itemsPerPage}
               onChange={(e) => {
                 setItemsPerPage(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="px-2 py-1 text-xs border border-gray-300 rounded bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+              className="px-2 py-1 text-xs rounded-sm border transition-all"
+              style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
             >
               <option value={10}>10개</option>
               <option value={20}>20개</option>
               <option value={50}>50개</option>
               <option value={100}>100개</option>
             </select>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs hidden sm:inline" style={{ color: '#373d41' }}>
               {startIndex + 1}-{Math.min(endIndex, classes.length)} / 총 {classes.length}개
             </span>
           </div>
 
-          {/* 오른쪽: 페이지 네비게이션 */}
-          <div className="flex items-center gap-1">
+          <nav className="flex items-center gap-1" aria-label="Pagination">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-700"
+              className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+              style={{ color: '#081429' }}
             >
               이전
             </button>
@@ -458,9 +469,10 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
                     onClick={() => setCurrentPage(pageNum)}
                     className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
                       currentPage === pageNum
-                        ? 'bg-[#fdb813] text-[#081429]'
+                        ? 'text-[#081429]'
                         : 'text-gray-600 hover:bg-gray-100'
                     }`}
+                    style={{ backgroundColor: currentPage === pageNum ? '#fdb813' : 'transparent' }}
                   >
                     {pageNum}
                   </button>
@@ -471,11 +483,12 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
             <button
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
-              className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-gray-700"
+              className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+              style={{ color: '#081429' }}
             >
               다음
             </button>
-          </div>
+          </nav>
         </div>
       )}
     </div>

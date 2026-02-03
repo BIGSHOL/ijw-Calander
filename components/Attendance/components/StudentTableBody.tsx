@@ -27,6 +27,7 @@ export interface StudentTableBodyProps {
   holidayNameMap?: Map<string, string>;
   sortMode?: 'class' | 'name';
   hasHiddenDates?: boolean;
+  totalGroupCounts?: Map<string, number>;
 }
 
 const StudentTableBody = React.memo(({
@@ -51,7 +52,8 @@ const StudentTableBody = React.memo(({
   highlightWeekends = false,
   holidayDateSet = new Set(),
   holidayNameMap = new Map(),
-  sortMode = 'class'
+  sortMode = 'class',
+  totalGroupCounts
 }: StudentTableBodyProps) => {
   // 그룹 접기/펼치기 상태 관리 (외부에서 전달받거나 내부 state 사용)
   const [internalCollapsedGroups, setInternalCollapsedGroups] = useState<Set<string>>(new Set());
@@ -178,7 +180,7 @@ const StudentTableBody = React.memo(({
       const isFirst = groupIdx <= 0;
       const isLast = groupIdx >= effectiveGroupOrder.length - 1;
       const isCollapsed = collapsedGroups.has(currentGroup);
-      const studentCount = groupStudentCounts.get(currentGroup) || 0;
+      const studentCount = totalGroupCounts?.get(currentGroup) ?? groupStudentCounts.get(currentGroup) ?? 0;
 
       const groupStudents = students.filter(s => s.group === currentGroup);
       const firstStudent = groupStudents[0];
@@ -250,7 +252,7 @@ const StudentTableBody = React.memo(({
     } else if (!student.group && currentGroup !== '그룹 없음' && currentGroup !== null) {
       currentGroup = '그룹 없음';
       const isCollapsed = collapsedGroups.has('그룹 없음');
-      const studentCount = groupStudentCounts.get('그룹 없음') || 0;
+      const studentCount = totalGroupCounts?.get('그룹 없음') ?? groupStudentCounts.get('그룹 없음') ?? 0;
 
       rows.push(
         <tr key="group-none" className="bg-slate-100 border-y border-slate-200">

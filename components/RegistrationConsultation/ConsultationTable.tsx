@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
-import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, Settings2, X, ClipboardList, UserPlus } from 'lucide-react';
+import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
@@ -14,6 +14,9 @@ interface ConsultationTableProps {
     canEdit?: boolean; // 상담 수정 권한 (본인 상담 또는 전체 상담)
     canManage?: boolean; // 모든 상담 관리 권한 (true면 모든 상담 수정/삭제 가능)
     canConvert?: boolean; // 원생 전환 권한
+    searchTerm?: string; // 검색어 (부모에서 전달)
+    showSettings?: boolean; // 보기설정 패널 표시 여부
+    onShowSettingsChange?: (show: boolean) => void; // 보기설정 토글 콜백
 }
 
 // 색상 테마
@@ -93,13 +96,17 @@ const loadSavedColumns = (): Set<ColumnKey> => {
 
 export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     data, onEdit, onDelete, onConvertToStudent,
-    currentUserId, canEdit = false, canManage = false, canConvert = false
+    currentUserId, canEdit = false, canManage = false, canConvert = false,
+    searchTerm = '', showSettings = false, onShowSettingsChange
 }) => {
-    const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [showSettings, setShowSettings] = useState(false);
     const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(loadSavedColumns);
     const [itemsPerPage, setItemsPerPage] = useState<number>(20);
+
+    // 검색어 변경 시 페이지 초기화
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     // 특정 상담에 대한 수정/삭제 권한 확인
     // canManage=true면 모든 상담 수정/삭제 가능
@@ -232,52 +239,6 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
 
     return (
         <div className="flex flex-col h-full gap-4">
-            {/* Header with Search and Settings */}
-            <div className="rounded-sm shadow-sm border p-3 flex flex-col sm:flex-row justify-between items-center gap-3" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
-                <h3 className="hidden sm:flex text-base font-bold items-center" style={{ color: COLORS.navy }}>
-                    <span className="w-2 h-5 rounded-sm mr-2" style={{ backgroundColor: COLORS.yellow }}></span>
-                    상담 기록 목록
-                    <span className="ml-2 text-xxs font-normal px-1.5 py-0.5 rounded-sm" style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.gray }}>{filteredData.length}</span>
-                </h3>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative flex-1 sm:w-72">
-                        <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                            <Search className="h-3.5 w-3.5" style={{ color: COLORS.gray }} />
-                        </div>
-                        <input
-                            type="text"
-                            className="block w-full pl-9 pr-2.5 py-2 rounded-sm leading-5 placeholder-slate-400 focus:outline-none focus:ring-2 sm:text-xs transition-all"
-                            style={{
-                                backgroundColor: `${COLORS.navy}05`,
-                                border: `1px solid ${COLORS.navy}20`,
-                                color: COLORS.navy
-                            }}
-                            placeholder="학생명, 번호, 담당자 검색..."
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                        />
-                    </div>
-
-                    {/* Settings Button */}
-                    <button
-                        onClick={() => setShowSettings(!showSettings)}
-                        className="p-2 rounded-sm border transition-all"
-                        style={{
-                            backgroundColor: showSettings ? `${COLORS.yellow}20` : `${COLORS.navy}05`,
-                            borderColor: showSettings ? COLORS.yellow : `${COLORS.navy}20`,
-                            color: showSettings ? COLORS.yellow : COLORS.gray
-                        }}
-                        title="보기 설정"
-                    >
-                        <Settings2 size={16} />
-                    </button>
-                </div>
-            </div>
-
             {/* Column Settings Panel */}
             {showSettings && (
                 <div className="p-4 rounded-sm shadow-sm border" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
@@ -301,7 +262,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                             >
                                 기본값
                             </button>
-                            <button onClick={() => setShowSettings(false)} style={{ color: COLORS.gray }}>
+                            <button onClick={() => onShowSettingsChange?.(false)} style={{ color: COLORS.gray }}>
                                 <X size={16} />
                             </button>
                         </div>

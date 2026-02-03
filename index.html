@@ -64,7 +64,14 @@
 <link rel="stylesheet" href="/index.css">
 </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Pre-React loading screen (replaced when React mounts) -->
+      <div id="pre-loader" style="display:flex;align-items:center;justify-content:center;height:100vh;background:#ffffff;">
+        <video autoplay muted loop playsinline style="width:100%;height:100vh;object-fit:contain;">
+          <source src="/LoadingPage2.mp4" type="video/mp4" />
+        </video>
+      </div>
+    </div>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedStudent } from '../../types';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
@@ -60,75 +60,72 @@ const StudentList: React.FC<StudentListProps> = ({
   return (
     <div className="flex flex-col h-full">
       {/* 상단: 총 학생 수 + 페이지 크기 선택 + 페이지네이션 */}
-      <div className="px-2 py-1 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center justify-between">
-          {/* 왼쪽: 총 학생 수 + 페이지 크기 */}
-          <div className="flex items-center gap-1">
-            <span className="text-xxs text-[#081429] font-bold">
-              <span className="text-[#fdb813]">{students.length}</span>명
-            </span>
-            <select
-              value={pageSize}
-              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              className="text-xxs border border-gray-300 rounded-sm px-1 py-0.5 bg-white text-[#373d41] focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
-            >
-              <option value={10}>10개</option>
-              <option value={20}>20개</option>
-              <option value={50}>50개</option>
-              <option value={100}>100개</option>
-            </select>
-          </div>
-
-          {/* 오른쪽: 페이지네이션 */}
-          {totalPages > 1 && (
-            <div className="flex items-center gap-0.5">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-1.5 py-0.5 text-xxs text-[#373d41] hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
-              >
-                이전
-              </button>
-
-              <div className="flex items-center gap-0.5">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`w-5 h-5 rounded-full text-xxs font-bold transition-colors ${
-                        currentPage === pageNum
-                          ? 'bg-[#fdb813] text-[#081429]'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-1.5 py-0.5 text-xxs text-[#373d41] hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
-              >
-                다음
-              </button>
-            </div>
-          )}
+      <div className="px-2 py-1.5 border-b flex items-center justify-between" style={{ borderColor: '#08142915', backgroundColor: '#fafafa' }}>
+        <div className="flex items-center gap-1">
+          <span className="text-xxs font-bold" style={{ color: '#081429' }}>
+            <span style={{ color: '#fdb813' }}>{students.length}</span>명
+          </span>
+          <select
+            value={pageSize}
+            onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+            className="text-xxs border rounded-sm px-1 py-0.5 transition-all"
+            style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
+          >
+            <option value={10}>10개</option>
+            <option value={20}>20개</option>
+            <option value={50}>50개</option>
+            <option value={100}>100개</option>
+          </select>
         </div>
+        {totalPages > 1 && (
+          <nav className="flex items-center gap-0.5" aria-label="Pagination">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-1.5 py-0.5 text-xxs hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
+              style={{ color: '#081429' }}
+            >
+              이전
+            </button>
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`w-5 h-5 rounded-full text-xxs font-bold transition-colors ${
+                      currentPage === pageNum
+                        ? 'text-[#081429]'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                    style={currentPage === pageNum ? { backgroundColor: '#fdb813' } : undefined}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-1.5 py-0.5 text-xxs hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
+              style={{ color: '#081429' }}
+            >
+              다음
+            </button>
+          </nav>
+        )}
       </div>
 
       {/* 학생 목록 */}
