@@ -354,6 +354,17 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
     return new Map(teachers.map(t => [t.id, t]));
   }, [teachers]);
 
+  // 이름으로도 강사 조회 가능하도록 (영어 수업 호환성)
+  const teacherByNameMap = useMemo(() => {
+    return new Map(teachers.map(t => [t.name, t]));
+  }, [teachers]);
+
+  // staffId 또는 이름으로 강사 조회
+  const getTeacherByIdOrName = (idOrName: string | undefined | null) => {
+    if (!idOrName) return null;
+    return teacherMap.get(idOrName) || teacherByNameMap.get(idOrName) || null;
+  };
+
   // 수업의 대표 강사 결정
   const getMainTeacher = (group: GroupedEnrollment): string | null => {
     const teacherCounts: Record<string, number> = {};
@@ -363,7 +374,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       .forEach(enrollment => {
         const staffId = enrollment.staffId;
         if (!staffId) return;
-        const teacherData = teacherMap.get(staffId);
+        const teacherData = getTeacherByIdOrName(staffId);
         if (teacherData?.isHidden) return;
 
         const dayCount = enrollment.days?.length || 0;
@@ -379,7 +390,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
     if (topTeachers.length === 1) return topTeachers[0][0];
 
     const nonNativeTeachers = topTeachers.filter(([staffId]) => {
-      const teacherData = teacherMap.get(staffId);
+      const teacherData = getTeacherByIdOrName(staffId);
       return !teacherData?.isNative;
     });
 
@@ -599,11 +610,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
   // 수업 행 렌더링 함수 (현재 수강 중)
   const renderClassRow = (group: GroupedEnrollment, index: number) => {
     const mainTeacherStaffId = getMainTeacher(group);
-    const mainTeacher = teacherMap.get(mainTeacherStaffId)?.name;
+    const mainTeacher = getTeacherByIdOrName(mainTeacherStaffId)?.name;
     const visibleTeachers = group.teachers.filter(staffId => {
-      const teacher = teacherMap.get(staffId);
+      const teacher = getTeacherByIdOrName(staffId);
       return !teacher?.isHidden;
-    }).map(staffId => teacherMap.get(staffId)?.name).filter(Boolean);
+    }).map(staffId => getTeacherByIdOrName(staffId)?.name).filter(Boolean);
     const subjectColor = SUBJECT_COLORS[group.subject];
     const key = `${group.subject}_${group.className}`;
     const isDeleting = deletingClass === key;
@@ -692,7 +703,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
   const renderCompletedClassRow = (group: GroupedEnrollment, index: number) => {
     const subjectColor = SUBJECT_COLORS[group.subject];
     const firstTeacherStaffId = group.teachers[0];
-    const firstTeacherName = teacherMap.get(firstTeacherStaffId)?.name;
+    const firstTeacherName = getTeacherByIdOrName(firstTeacherStaffId)?.name;
 
     return (
       <div
