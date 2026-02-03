@@ -4,6 +4,7 @@ import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserR
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth } from '../../firebaseConfig';
+import { SUBJECT_COLORS, SubjectType } from '../../utils/styleUtils';
 
 interface StaffViewModalProps {
   staff: StaffMember;
@@ -346,8 +347,8 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                     {staff.subjects.map((subject) => (
                       <span
                         key={subject}
-                        className={`text-xs px-2 py-0.5 rounded font-medium ${
-                          subject === 'math' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
+                        className={`text-xs px-2 py-0.5 rounded-sm font-medium ${
+                          SUBJECT_COLORS[subject as SubjectType]?.badge || SUBJECT_COLORS.other.badge
                         }`}
                       >
                         {subject === 'math' ? '수학' : '영어'}

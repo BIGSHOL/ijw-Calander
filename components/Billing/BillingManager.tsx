@@ -1,6 +1,7 @@
 import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { DollarSign, Plus, Filter, Download, Search, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BillingTable } from './BillingTable';
+import { VideoLoading } from '../Common/VideoLoading';
 import { BillingForm } from './BillingForm';
 import { BillingStats } from './BillingStats';
 // bundle-defer-third-party: xlsx 라이브러리 포함 모달을 lazy loading (-60KB gzip)
@@ -178,70 +179,63 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
 
         {/* Pagination */}
         {filteredRecords.length > 0 && (
-          <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+          <div className="p-3 rounded-sm shadow-sm border flex items-center justify-between mt-4" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
             <div className="flex items-center gap-2">
-              <span>페이지당</span>
+              <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
               <select
                 value={pageSize}
                 onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                className="px-2 py-1 border rounded text-sm"
+                className="px-2 py-1 text-xs rounded-sm border transition-all"
+                style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
               >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
+                <option value={10}>10개</option>
+                <option value={20}>20개</option>
+                <option value={50}>50개</option>
+                <option value={100}>100개</option>
               </select>
-              <span>건</span>
-              <span className="ml-2 text-gray-400">
-                (총 {filteredRecords.length}건 중 {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, filteredRecords.length)}건)
+              <span className="text-xs hidden sm:inline" style={{ color: '#373d41' }}>
+                {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, filteredRecords.length)} / 총 {filteredRecords.length}개
               </span>
             </div>
-            <div className="flex items-center gap-1">
+            <nav className="flex items-center gap-1" aria-label="Pagination">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={safePage <= 1}
-                className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-gray-700"
+                className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+                style={{ color: '#081429' }}
               >
                 이전
               </button>
-
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum: number;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (safePage <= 3) {
-                    pageNum = i + 1;
-                  } else if (safePage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = safePage - 2 + i;
-                  }
-
+                  if (totalPages <= 5) pageNum = i + 1;
+                  else if (safePage <= 3) pageNum = i + 1;
+                  else if (safePage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                  else pageNum = safePage - 2 + i;
                   return (
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
                       className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
-                        safePage === pageNum
-                          ? 'bg-[#fdb813] text-[#081429]'
-                          : 'text-gray-600 hover:bg-gray-100'
+                        safePage === pageNum ? 'text-[#081429]' : 'text-gray-600 hover:bg-gray-100'
                       }`}
+                      style={{ backgroundColor: safePage === pageNum ? '#fdb813' : 'transparent' }}
                     >
                       {pageNum}
                     </button>
                   );
                 })}
               </div>
-
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={safePage >= totalPages}
-                className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed text-gray-700"
+                className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+                style={{ color: '#081429' }}
               >
                 다음
               </button>
-            </div>
+            </nav>
           </div>
         )}
       </div>
@@ -259,7 +253,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
 
       {/* Import Modal */}
       {isImportOpen && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white p-6 rounded-sm">로딩 중...</div></div>}>
+        <Suspense fallback={<div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50"><VideoLoading className="h-screen" /></div>}>
           <BillingImportModal
             isOpen={isImportOpen}
             onClose={() => setIsImportOpen(false)}

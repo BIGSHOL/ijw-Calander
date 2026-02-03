@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, RefreshCw, LayoutList, SortAsc } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
+import { VideoLoading } from '../Common/VideoLoading';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
 import { formatCurrency, calculateStats, getCategoryLabel, getLocalYearMonth } from './utils';
 import Table from './components/Table';
@@ -240,6 +241,12 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     storage.setString(STORAGE_KEYS.ATTENDANCE_SORT_MODE, mode);
   }, []);
 
+  // 페이지네이션 상태
+  const [pageSize, setPageSize] = useState<number>(() => {
+    return storage.getJSON<number>(STORAGE_KEYS.ATTENDANCE_PAGE_SIZE, 20);
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+
   // 테이블 ref (이미지 내보내기용)
   const tableRef = useRef<HTMLTableElement>(null);
 
@@ -286,6 +293,28 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     storage.setJSON(hiddenDatesKey, Array.from(newHidden));
   }, [hiddenDatesKey]);
 
+  // Sync localStorage-backed states when key changes (teacher/subject switch)
+  // useState initializer only runs on mount, so we need useEffect to reload
+  useEffect(() => {
+    try {
+      setGroupOrder(storage.getJSON<string[]>(groupOrderKey, []));
+    } catch { setGroupOrder([]); }
+  }, [groupOrderKey]);
+
+  useEffect(() => {
+    try {
+      const saved = storage.getJSON<string[]>(collapsedGroupsKey, []);
+      setCollapsedGroups(new Set(saved));
+    } catch { setCollapsedGroups(new Set()); }
+  }, [collapsedGroupsKey]);
+
+  useEffect(() => {
+    try {
+      const saved = storage.getJSON<string[]>(hiddenDatesKey, []);
+      setHiddenDates(new Set(saved));
+    } catch { setHiddenDates(new Set()); }
+  }, [hiddenDatesKey]);
+
   // 주말 회색 처리 상태 (localStorage에서 로드)
   const [highlightWeekends, setHighlightWeekends] = useState<boolean>(() => {
     return storage.getJSON<boolean>(STORAGE_KEYS.ATTENDANCE_HIGHLIGHT_WEEKENDS, false);
@@ -326,13 +355,36 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // - 독립적으로 메모이제이션되어 불필요한 재계산 방지
   const visibleStudents = useVisibleAttendanceStudents(allStudents, currentDate, groupOrder);
 
+  // 페이지네이션 계산
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(visibleStudents.length / pageSize)), [visibleStudents.length, pageSize]);
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedStudents = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return visibleStudents.slice(start, start + pageSize);
+  }, [visibleStudents, safePage, pageSize]);
+
+  // 필터 변경 시 페이지 초기화
+  const prevFilterKey = useRef(`${filterStaffId}_${selectedSubject}_${currentYearMonth}`);
+  const currentFilterKey = `${filterStaffId}_${selectedSubject}_${currentYearMonth}`;
+  if (prevFilterKey.current !== currentFilterKey) {
+    prevFilterKey.current = currentFilterKey;
+    if (currentPage !== 1) setCurrentPage(1);
+  }
+
   const pendingUpdatesByStudent = useMemo(() => groupUpdates(pendingUpdates), [pendingUpdates]);
   const pendingMemosByStudent = useMemo(() => groupUpdates(pendingMemos), [pendingMemos]);
 
-  // 고유 학생 수 계산 (중복 제거)
-  const uniqueStudentCount = useMemo(() => {
-    const uniqueIds = new Set(visibleStudents.map(s => s.id));
-    return uniqueIds.size;
+  // 출석부 총 행 수 (수업별 확장 포함 - 그룹별 합계와 일치)
+  const totalStudentRows = visibleStudents.length;
+
+  // 전체 페이지 기준 그룹별 학생 수 (페이지네이션과 무관하게 정확한 카운트)
+  const totalGroupCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    visibleStudents.forEach(s => {
+      const group = s.group || '그룹 없음';
+      counts.set(group, (counts.get(group) || 0) + 1);
+    });
+    return counts;
   }, [visibleStudents]);
 
   // 확정된 월은 저장된 설정 사용, 미확정 월은 전역 설정 사용
@@ -344,8 +396,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   );
 
   const stats = useMemo(() =>
-    calculateStats(allStudents, visibleStudents, effectiveSalaryConfig, currentDate),
-    [allStudents, visibleStudents, effectiveSalaryConfig, currentDate]
+    calculateStats(allStudents, visibleStudents, effectiveSalaryConfig, currentDate, rawAllStudents),
+    [allStudents, visibleStudents, effectiveSalaryConfig, currentDate, rawAllStudents]
   );
 
   const finalSalary = useMemo(() => {
@@ -497,12 +549,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // Hooks must always be called in the same order, so early returns must come AFTER all hooks
   if (isLoadingStudents || isLoadingConfig) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-sm animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">출석부를 불러오는 중...</p>
-        </div>
-      </div>
+      <VideoLoading className="flex-1 h-full" />
     );
   }
 
@@ -591,7 +638,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </div>
           <div>
             <p className="text-xxs text-gray-600 font-medium">전체 학생</p>
-            <p className="text-sm font-bold text-[#373d41]">{uniqueStudentCount}명</p>
+            <p className="text-sm font-bold text-[#373d41]">{totalStudentRows}명</p>
           </div>
         </div>
 
@@ -751,7 +798,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           <Table
             ref={tableRef}
             currentDate={currentDate}
-            students={visibleStudents}
+            students={isExporting ? visibleStudents : paginatedStudents}
             salaryConfig={salaryConfig}
             onAttendanceChange={handleAttendanceChange}
             onEditStudent={handleEditStudent}
@@ -774,8 +821,76 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             sortMode={sortMode}
             hiddenDates={hiddenDates}
             onHiddenDatesChange={handleHiddenDatesChange}
+            totalGroupCounts={totalGroupCounts}
           />
         </div>
+
+        {/* Pagination Bar */}
+        {visibleStudents.length > 0 && (
+          <div className="p-3 border-t flex items-center justify-between flex-shrink-0" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  const newSize = Number(e.target.value);
+                  setPageSize(newSize);
+                  storage.setJSON(STORAGE_KEYS.ATTENDANCE_PAGE_SIZE, newSize);
+                  setCurrentPage(1);
+                }}
+                className="px-2 py-1 text-xs rounded-sm border transition-all"
+                style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
+              >
+                <option value={10}>10개</option>
+                <option value={20}>20개</option>
+                <option value={50}>50개</option>
+                <option value={100}>100개</option>
+              </select>
+              <span className="text-xs hidden sm:inline" style={{ color: '#373d41' }}>
+                {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, visibleStudents.length)} / 총 {visibleStudents.length}명
+              </span>
+            </div>
+            <nav className="flex items-center gap-1" aria-label="Pagination">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+                style={{ color: '#081429' }}
+              >
+                이전
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) pageNum = i + 1;
+                  else if (safePage <= 3) pageNum = i + 1;
+                  else if (safePage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                  else pageNum = safePage - 2 + i;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                        safePage === pageNum ? 'text-[#081429]' : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                      style={{ backgroundColor: safePage === pageNum ? '#fdb813' : 'transparent' }}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
+                style={{ color: '#081429' }}
+              >
+                다음
+              </button>
+            </nav>
+          </div>
+        )}
       </div>
 
       {/* Modals */}

@@ -12,7 +12,7 @@ import LevelSettingsModal from './LevelSettingsModal';
 import LevelUpConfirmModal from './LevelUpConfirmModal';
 import StudentModal from './StudentModal';
 import EditClassModal from '../../ClassManagement/EditClassModal';
-// import SimulationStudentModal from './SimulationStudentModal';  // 비활성화
+
 import { doc, onSnapshot, setDoc, collection, query, where, writeBatch, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 
@@ -95,8 +95,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
     const [editingClassId, setEditingClassId] = useState<string | null>(null);  // 시뮬레이션 수업 편집
-    // 시뮬레이션 모드 학생 배정 비활성화 (학생 이동만 드래그앤드랍으로 처리)
-    // const [simStudentModalClass, setSimStudentModalClass] = useState<{ className: string; classId: string } | null>(null);
+
 
     // --- Hook Integration ---
     // 1. Settings & Levels
@@ -717,16 +716,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     currentUser={currentUser}
                 />
             )}
-
-            {/* 시뮬레이션 모드 학생 배정 모달 - 비활성화 (학생 이동은 드래그앤드랍으로만) */}
-            {/* {simStudentModalClass && isSimulationMode && (
-                <SimulationStudentModal
-                    className={simStudentModalClass.className}
-                    classId={simStudentModalClass.classId}
-                    onClose={() => setSimStudentModalClass(null)}
-                    studentMap={studentMap}
-                />
-            )} */}
 
             {/* 시뮬레이션 모드 수업 편집 모달 */}
             {editingClassId && isSimulationMode && (() => {

@@ -2,6 +2,9 @@
   "permissions": {
     "allow": [
       "Read(//d/ijw-calander/**)"
+    ],
+    "additionalDirectories": [
+      "f:\\ijw-calander"
     ]
   }
 }

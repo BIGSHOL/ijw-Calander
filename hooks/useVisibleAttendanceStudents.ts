@@ -38,6 +38,7 @@ export const useVisibleAttendanceStudents = (
     const month = currentDate.getMonth();
     const monthFirstDay = new Date(year, month, 1).toISOString().slice(0, 10);
     const monthLastDay = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10);
 
     // Filter students active during current month
     const filtered = allStudents.filter(s => {
@@ -77,8 +78,8 @@ export const useVisibleAttendanceStudents = (
                   classEndDate = enrollment.endDate;
                 }
 
-                // Skip if enrollment already ended
-                if (enrollment.endDate) return;
+                // Skip if enrollment already ended (past endDate only)
+                if (enrollment.endDate && enrollment.endDate < today) return;
 
                 // Extract days from schedule field (e.g., "월 1" -> "월")
                 if (enrollment.schedule && Array.isArray(enrollment.schedule)) {

@@ -2,7 +2,7 @@
 
 > **Project**: ijw-calander (Academy Management System)
 > **Updated**: 2026-01-31
-> **Structure**: 11 Teams, 67 Agents + 1 Director Command
+> **Structure**: 14 Teams, 82 Agents + 1 Director Command
 
 ---
 
@@ -22,6 +22,9 @@ refactor (Director Command, opus model)
 |-- Debug Team (debug-lead) ................ 5 agents
 |-- Content Team (content-lead) ............ 7 agents
 |-- Migration Team (migration-lead) ........ 5 agents
+|-- Mobile View Team (mobile-view-lead) .... 6 agents
+|-- Desktop View Team (desktop-view-lead) .. 6 agents
+|-- Tablet View Team (tablet-view-lead) .... 6 agents
 ```
 
 Director: `.claude/commands/refactor.md` (opus model, Task tool access)
@@ -180,6 +183,48 @@ Access: `components/` (text), `types.ts` (labels/enum)
 Access: All files (full access)
 Note: `migration-helper` from Database team shared
 Process: Survey -> Architect -> Fulfill -> Evaluate (SAFE)
+
+### 12. Mobile View Team
+
+| Agent | Role |
+|-------|------|
+| mobile-view-lead | Team lead. Mobile screen (~767px) optimization |
+| mobile-layout | Mobile layout/grid |
+| mobile-navigation | Bottom nav/drawer/mobile menu |
+| touch-ux | Touch interaction/gesture/swipe |
+| mobile-form | Mobile form input optimization |
+| mobile-performance | Mobile performance/loading optimization |
+
+Breakpoint: ~767px (default, no prefix)
+Focus: Touch UX, one-hand operation, progressive disclosure
+
+### 13. Desktop View Team
+
+| Agent | Role |
+|-------|------|
+| desktop-view-lead | Team lead. Desktop screen (1024px~) optimization |
+| desktop-layout | Wide layout/multi-column |
+| desktop-navigation | Sidebar/topbar/breadcrumb navigation |
+| keyboard-ux | Keyboard shortcuts/focus management |
+| data-table | Desktop table/grid optimization |
+| desktop-modal | Modal/panel/drawer desktop UX |
+
+Breakpoint: 1024px~ (`lg:`, `xl:`, `2xl:`)
+Focus: Space utilization, information density, keyboard/mouse UX
+
+### 14. Tablet View Team
+
+| Agent | Role |
+|-------|------|
+| tablet-view-lead | Team lead. Tablet screen (768px~1023px) optimization |
+| tablet-layout | Adaptive layout for tablet |
+| orientation-handler | Portrait/landscape mode handling |
+| hybrid-input | Touch + pointer hybrid input |
+| tablet-table | Tablet table/list optimization |
+| tablet-modal | Tablet modal/sheet/panel UX |
+
+Breakpoint: 768px~1023px (`md:`)
+Focus: Portrait/landscape adaptation, hybrid input, split view
 
 ---
 

@@ -10,6 +10,7 @@ import {
   WEEKEND_PERIOD_INFO,
 } from '../../Timetable/constants';
 import { isTeacherMatch, isTeacherMatchWithStaffId, isTeacherInSlotTeachers, isSlotTeacherMatch, isEnglishAssistantTeacher } from '../../../utils/teacherUtils';
+import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../../utils/styleUtils';
 
 interface TeacherDashboardProps {
   userProfile: UserProfile;
@@ -29,9 +30,11 @@ interface MyClass {
 interface MyStudent {
   id: string;
   name: string;
-  englishName?: string;
   grade?: string;
   school?: string;
+  parentPhone?: string;
+  subjects?: string[];
+  memo?: string;
 }
 
 // 요일별 색상 정의
@@ -329,6 +332,20 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         }
       });
 
+      // 학생별 수강 과목 매핑 (모든 enrollment에서 추출)
+      const studentSubjectsMap = new Map<string, Set<string>>();
+      enrollmentsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const studentId = doc.ref.parent.parent?.id;
+        if (studentId && studentsSet.has(studentId)) {
+          const subject = (data.subject as string) || 'other';
+          if (!studentSubjectsMap.has(studentId)) {
+            studentSubjectsMap.set(studentId, new Set());
+          }
+          studentSubjectsMap.get(studentId)!.add(subject);
+        }
+      });
+
       // 학생 정보 가져오기 (청크 처리: 10명씩)
       if (studentsSet.size > 0) {
         const studentIdsArray = Array.from(studentsSet);
@@ -348,9 +365,11 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
             students.push({
               id: doc.id,
               name: data.name,
-              englishName: data.englishName,
               grade: data.grade,
               school: data.school,
+              parentPhone: data.parentPhone,
+              subjects: Array.from(studentSubjectsMap.get(doc.id) || new Set()),
+              memo: data.memo,
             });
           });
         }
@@ -689,14 +708,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                             </div>
                           </td>
                           <td className="px-2">
-                            <span className={`text-xxs px-1.5 py-0.5 rounded-sm ${cls.subject === 'math' ? 'bg-blue-100 text-blue-700' :
-                              cls.subject === 'english' ? 'bg-green-100 text-green-700' :
-                                cls.subject === 'science' ? 'bg-purple-100 text-purple-700' :
-                                  'bg-orange-100 text-orange-700'
-                              }`}>
-                              {cls.subject === 'math' ? '수학' :
-                                cls.subject === 'english' ? '영어' :
-                                  cls.subject === 'science' ? '과학' : '국어'}
+                            <span className={`text-xxs px-1.5 py-0.5 rounded-sm font-medium ${SUBJECT_COLORS[cls.subject as SubjectType]?.badge || SUBJECT_COLORS.other.badge}`}>
+                              {SUBJECT_LABELS[cls.subject as SubjectType] || cls.subject}
                             </span>
                           </td>
                           <td className="px-2 text-center">
@@ -804,7 +817,6 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                           )}
                         </button>
                       </th>
-                      <th className="text-left px-2 text-xs font-bold text-gray-700">영문명</th>
                       <th className="text-left px-2 text-xs font-bold text-gray-700">
                         <button
                           onClick={() => handleSortChange('school')}
@@ -831,15 +843,45 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                           )}
                         </button>
                       </th>
+                      <th className="text-left px-2 text-xs font-bold text-gray-700">과목</th>
+                      <th className="text-left px-2 text-xs font-bold text-gray-700">보호자연락처</th>
+                      <th className="text-left px-2 text-xs font-bold text-gray-700">메모</th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedStudents.slice((studentPage - 1) * 10, studentPage * 10).map(student => (
                       <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50 h-[36px]">
-                        <td className="px-2 text-xs font-medium text-[#081429]">{student.name}</td>
-                        <td className="px-2 text-xs text-gray-600">{student.englishName || '-'}</td>
-                        <td className="px-2 text-xs text-gray-600">{student.school || '-'}</td>
-                        <td className="px-2 text-xs text-gray-600">{student.grade || '-'}</td>
+                        <td className="px-2 text-xs font-medium text-[#081429] whitespace-nowrap">{student.name}</td>
+                        <td className="px-2 text-xs text-gray-600 whitespace-nowrap">{student.school || '-'}</td>
+                        <td className="px-2 text-xs text-gray-600 whitespace-nowrap">{student.grade || '-'}</td>
+                        <td className="px-2">
+                          <div className="flex items-center gap-0.5">
+                            {(student.subjects || []).map(subj => (
+                              <span
+                                key={subj}
+                                className={`px-1 py-0.5 text-micro font-bold rounded-sm ${SUBJECT_COLORS[subj as SubjectType]?.badge || SUBJECT_COLORS.other.badge}`}
+                              >
+                                {SUBJECT_LABELS[subj as SubjectType] || subj}
+                              </span>
+                            ))}
+                            {(!student.subjects || student.subjects.length === 0) && (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-2 text-xs text-gray-600 whitespace-nowrap">{student.parentPhone || '-'}</td>
+                        <td className="px-2 text-xs text-gray-500 max-w-[100px]">
+                          {student.memo ? (
+                            <span
+                              className="block truncate cursor-default"
+                              title={student.memo}
+                            >
+                              {student.memo}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

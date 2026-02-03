@@ -4,6 +4,7 @@ import { useStaff } from '../../hooks/useStaff';
 import { useCreateConsultation, useUpdateConsultation } from '../../hooks/useConsultationMutations';
 import { Consultation, ConsultationCategory, CATEGORY_CONFIG, UserProfile } from '../../types';
 import { X, Search, Loader2, User, Users, Clock, Calendar, MessageSquare, Edit2, FileText, BookOpen, AlertCircle } from 'lucide-react';
+import { SUBJECT_COLORS } from '../../utils/styleUtils';
 
 interface AddConsultationModalProps {
     onClose: () => void;
@@ -326,10 +327,10 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                     ) : (
                                         <>
                                             {studentSubjects.includes('math') && (
-                                                <button type="button" onClick={() => setSubject('math')} className={`px-2 py-0.5 text-xxs font-medium transition-colors ${subject === 'math' ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}>수학</button>
+                                                <button type="button" onClick={() => setSubject('math')} className={`px-2 py-0.5 text-xxs font-medium rounded-sm transition-colors ${subject === 'math' ? SUBJECT_COLORS.math.badge : 'bg-[#fef9e7] text-[#081429] hover:bg-[#fdb813]/30'}`}>수학</button>
                                             )}
                                             {studentSubjects.includes('english') && (
-                                                <button type="button" onClick={() => setSubject('english')} className={`px-2 py-0.5 text-xxs font-medium transition-colors ${subject === 'english' ? 'bg-purple-500 text-white' : 'bg-purple-50 text-purple-600 hover:bg-purple-100'}`}>영어</button>
+                                                <button type="button" onClick={() => setSubject('english')} className={`px-2 py-0.5 text-xxs font-medium rounded-sm transition-colors ${subject === 'english' ? SUBJECT_COLORS.english.badge : 'bg-[#f0f4f8] text-[#081429] hover:bg-[#081429]/10'}`}>영어</button>
                                             )}
                                             {studentSubjects.length === 2 && (
                                                 <button type="button" onClick={() => setSubject('other')} className={`px-2 py-0.5 text-xxs font-medium transition-colors ${subject === 'other' ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>전체</button>

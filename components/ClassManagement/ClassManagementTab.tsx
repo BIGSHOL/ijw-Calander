@@ -241,9 +241,9 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
     { value: 'korean', label: SUBJECT_LABELS.korean, icon: <Book className="w-4 h-4" /> },
   ];
 
-  // 상단 영역 높이 (앱 헤더 ~64px + 브레드크럼 ~48px + 필터바 40px + 테이블헤더 36px = ~188px)
-  // 여유분 포함해서 200px로 설정
-  const SCROLL_OFFSET = 200;
+  // 상단 영역 높이 (앱 헤더 ~64px + 브레드크럼 ~48px + 필터바 40px = ~152px)
+  // 여유분 포함해서 165px로 설정
+  const SCROLL_OFFSET = 165;
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-gray-50">
@@ -555,17 +555,6 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
           </div>
         </TabSubNavigation>
 
-        {/* 테이블 헤더 */}
-        <div className="bg-gray-50 border-b border-gray-200 px-6 py-2 grid grid-cols-[80px_1fr_100px_100px_1fr_1fr_70px_40px] gap-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          <div className="text-center">과목</div>
-          <div>수업명</div>
-          <div>담임</div>
-          <div>부담임</div>
-          <div>스케줄</div>
-          <div>메모</div>
-          <div className="text-center">학생</div>
-          <div></div>
-        </div>
       </div>
 
       {/* 스크롤 가능한 콘텐츠 영역 - 명시적 maxHeight로 스크롤 영역 제한 */}

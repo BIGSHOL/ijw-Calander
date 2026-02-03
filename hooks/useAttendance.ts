@@ -249,8 +249,8 @@ export const useAttendanceStudents = (options?: {
                 const slotClassesSet = new Set<string>();
 
                 teacherEnrollments.forEach((e: any) => {
-                    // 종료된 수업은 제외
-                    if (e.endDate) return;
+                    // 종료된 수업은 제외 (과거 종료일만 - Step 6과 동일한 조건)
+                    if (e.endDate && e.endDate < today) return;
 
                     const classData = myClasses.find(c => c.id === e.classId || c.className === e.className);
                     if (!classData) return;
@@ -275,8 +275,8 @@ export const useAttendanceStudents = (options?: {
                 // OPTIMIZATION (js-set-map-lookups): Set으로 중복 체크 O(1)
                 const teacherDaysSet = new Set<string>();
                 teacherEnrollments.forEach((e: any) => {
-                    // 종료된 수업은 제외
-                    if (e.endDate) return;
+                    // 종료된 수업은 제외 (과거 종료일만 - Step 6과 동일한 조건)
+                    if (e.endDate && e.endDate < today) return;
 
                     const classData = classesMap.get(e.classId);
                     // staffId로 슬롯 선생님 여부 확인
@@ -308,7 +308,7 @@ export const useAttendanceStudents = (options?: {
                 let enrollmentStartDate = '1970-01-01';
                 let enrollmentEndDate: string | null = null;
 
-                const activeEnrollments = teacherEnrollments.filter((e: any) => !e.endDate);
+                const activeEnrollments = teacherEnrollments.filter((e: any) => !e.endDate || e.endDate >= today);
                 if (activeEnrollments.length > 0) {
                     const startDates = activeEnrollments
                         .map((e: any) => e.startDate)
@@ -317,7 +317,7 @@ export const useAttendanceStudents = (options?: {
                     if (startDates.length > 0) {
                         enrollmentStartDate = startDates.sort()[0];
                     }
-                    // 종료되지 않은 수업만 사용하므로 endDate는 항상 null
+                    // 활성 수업이 있으면 endDate는 null (아직 수강 중)
                     enrollmentEndDate = null;
                 }
 

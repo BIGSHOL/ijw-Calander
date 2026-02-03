@@ -78,6 +78,7 @@ const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance')
 const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
 const RoleManagementPage = lazy(() => import('./components/RoleManagement/RoleManagementPage'));
 const ResourceDashboard = lazy(() => import('./components/Resources').then(m => ({ default: m.ResourceDashboard })));
+const WithdrawalManagementTab = lazy(() => import('./components/WithdrawalManagement/WithdrawalManagementTab'));
 const CalendarSettingsModal = lazy(() => import('./components/Calendar/CalendarSettingsModal'));
 // ProspectManagementTab removed - merged into ConsultationManager
 import { Settings, User as UserIcon } from 'lucide-react';
@@ -94,15 +95,10 @@ import { eventConverter } from './converters';
 // Import Style Utilities
 import { INJAEWON_LOGO, getJobTitleStyle } from './utils/styleUtils';
 
+import { VideoLoading } from './components/Common/VideoLoading';
+
 // Lazy loading 폴백 컴포넌트
-const TabLoadingFallback = () => (
-  <div className="w-full h-64 flex items-center justify-center">
-    <div className="flex flex-col items-center gap-3">
-      <div className="w-8 h-8 border-3 border-[#fdb813] border-t-transparent rounded-full animate-spin" />
-      <span className="text-sm text-gray-500">로딩 중...</span>
-    </div>
-  </div>
-);
+const TabLoadingFallback = () => <VideoLoading className="flex-1 h-full" />;
 
 const App: React.FC = () => {
 
@@ -768,10 +764,10 @@ const App: React.FC = () => {
   // This prevents flashing of unauthorized content before we know which tab user can access.
   if (authLoading || (currentUser && isTabPermissionLoading) || (currentUser && appMode === null)) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f8f9fa] flex-col gap-4">
-        {/* Simple Spinner */}
-        <div className="w-8 h-8 border-4 border-[#081429] border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-gray-500 font-medium">사용자 정보를 불러오는 중...</p>
+      <div className="flex h-screen items-center justify-center bg-white">
+        <video autoPlay muted loop playsInline className="w-full h-screen object-contain">
+          <source src="/LoadingPage2.mp4" type="video/mp4" />
+        </video>
       </div>
     );
   }
@@ -970,9 +966,8 @@ const App: React.FC = () => {
           {/* Render Gating: If permission fails, show nothing (Redirect will happen in useEffect) */}
           <ErrorBoundary key={appMode}>
           {!canAccessTab(appMode) ? (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-              {/* Optional: "Not Authorized" message or just blank while redirecting */}
-              <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+            <div className="flex-1 flex items-center justify-center bg-white">
+              <VideoLoading className="flex-1 h-full" />
             </div>
           ) : appMode === 'dashboard' ? (
             /* Dashboard View */
@@ -1213,6 +1208,15 @@ const App: React.FC = () => {
                 />
               </div>
             </Suspense>
+          ) : appMode === 'withdrawal' ? (
+            /* Withdrawal Management View */
+            <Suspense fallback={<TabLoadingFallback />}>
+              <div className="w-full flex-1 overflow-auto">
+                <WithdrawalManagementTab
+                  currentUser={effectiveProfile}
+                />
+              </div>
+            </Suspense>
           ) : null}
           </ErrorBoundary>
 
@@ -1272,7 +1276,7 @@ const App: React.FC = () => {
 
       {/* Event Modal - Performance: lazy loaded */}
       {isEventModalOpen && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+        <Suspense fallback={<div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50"><VideoLoading className="h-screen" /></div>}>
           <EventModal
             isOpen={isEventModalOpen}
             onClose={() => { setIsEventModalOpen(false); setInitialTitle(''); setPendingBucketId(null); setTemplateEvent(null); }}
@@ -1303,7 +1307,7 @@ const App: React.FC = () => {
 
       {/* Settings Modal - Performance: lazy loaded */}
       {isSettingsOpen && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+        <Suspense fallback={<div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50"><VideoLoading className="h-screen" /></div>}>
           <SettingsModal
             isOpen={isSettingsOpen}
             onClose={() => setIsSettingsOpen(false)}

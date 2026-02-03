@@ -10,7 +10,7 @@ import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useSimulationOptional } from '../Timetable/English/context/SimulationContext';
-import { ScenarioClass } from '../Timetable/English/englishUtils';
+import { ScenarioClass } from '../Timetable/English/context/SimulationContext';
 
 interface EditClassModalProps {
   classInfo: ClassInfo;

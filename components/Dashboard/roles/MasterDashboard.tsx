@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useMemo } from 'react';
 import { UserProfile, StaffMember, KPICardData } from '../../../types';
 import DashboardHeader from '../DashboardHeader';
 import KPICard from '../KPICard';
@@ -7,331 +7,277 @@ import { useStudents } from '../../../hooks/useStudents';
 import { useDailyAttendanceByDate, useDailyAttendanceByRange } from '../../../hooks/useDailyAttendance';
 import { useConsultationStats } from '../../../hooks/useConsultationStats';
 import { useBilling } from '../../../hooks/useBilling';
+import { useStaff } from '../../../hooks/useStaff';
+import { useFollowUpConsultations, getFollowUpUrgency, getFollowUpDaysLeft } from '../../../hooks/useStudentConsultations';
+import { useClasses } from '../../../hooks/useClasses';
+import { useRecentExams } from '../../../hooks/useExams';
+import { useConsultations, isRegisteredStatus } from '../../../hooks/useConsultations';
 import { format, startOfMonth, endOfMonth, subDays } from 'date-fns';
-import { UserPlus, ClipboardList, MessageCircle, DollarSign, BarChart3, Calendar } from 'lucide-react';
+import { UserPlus, MessageCircle, BookOpen } from 'lucide-react';
+import { SUBJECT_COLORS } from '../../../utils/styleUtils';
+
+const AddStudentModal = lazy(() => import('../../StudentManagement/AddStudentModal'));
+const AddClassModal = lazy(() => import('../../ClassManagement/AddClassModal'));
+const AddConsultationModal = lazy(() => import('../../StudentConsultation/AddConsultationModal'));
 
 interface MasterDashboardProps {
   userProfile: UserProfile;
   staffMember?: StaffMember;
 }
 
-/**
- * 원장/마스터 대시보드
- * 전체 학원 현황을 한눈에 볼 수 있는 종합 대시보드
- */
+const DAY_NAMES_KO = ['일', '월', '화', '수', '목', '금', '토'];
+
 const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMember }) => {
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 데이터 로딩 - 모두 이번 달 기준 (실시간 현황 파악)
+  // ── 기본 날짜 ──
   const currentMonth = useMemo(() => new Date(), []);
   const currentMonthStart = useMemo(() => startOfMonth(currentMonth), [currentMonth]);
   const currentMonthEnd = useMemo(() => endOfMonth(currentMonth), [currentMonth]);
-
-  const { students = [], loading: studentsLoading } = useStudents();
-
-  // 오늘 출석 데이터
   const today = format(new Date(), 'yyyy-MM-dd');
-  const { data: todayAttendance = [], isLoading: attendanceLoading } = useDailyAttendanceByDate(today);
+  const currentMonthFormatted = format(currentMonthStart, 'yyyy-MM');
+  const currentYear = currentMonth.getFullYear();
+  const currentMonthNum = String(currentMonth.getMonth() + 1);
 
-  // 주간 출석 데이터 (최근 7일)
+  // ── 데이터 로딩 ──
+  const { students = [], loading: studentsLoading } = useStudents(true); // 퇴원생 포함
+  const { data: todayAttendance = [], isLoading: attendanceLoading } = useDailyAttendanceByDate(today);
+  const { records: billingRecords = [], isLoading: billingLoading } = useBilling(currentMonthFormatted);
+  const { staff } = useStaff();
+  const { data: allClasses = [] } = useClasses();
+  const { consultations: followUpList = [] } = useFollowUpConsultations();
+  const { data: recentExams = [] } = useRecentExams(5);
+  const { data: regConsultations = [] } = useConsultations({ month: currentMonthNum, year: currentYear });
+
+  // 주간 출석
   const last7Days = useMemo(() => {
     const days = [];
     const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      days.push(format(subDays(now, i), 'yyyy-MM-dd'));
-    }
+    for (let i = 6; i >= 0; i--) days.push(format(subDays(now, i), 'yyyy-MM-dd'));
     return days;
   }, []);
+  const { data: weeklyAttendanceRange = {}, isLoading: weeklyAttendanceLoading } = useDailyAttendanceByRange(last7Days[0], last7Days[6]);
+  const weeklyAttendanceData = useMemo(() => last7Days.map(d => weeklyAttendanceRange[d] || []), [last7Days, weeklyAttendanceRange]);
 
-  // Performance: async-parallel - 병렬 처리로 7배 빠른 데이터 페칭
-  const weekStartDate = last7Days[0];
-  const weekEndDate = last7Days[6];
-  const { data: weeklyAttendanceRange = {}, isLoading: weeklyAttendanceLoading } = useDailyAttendanceByRange(weekStartDate, weekEndDate);
-
-  const weeklyAttendanceData = useMemo(() => {
-    return last7Days.map(date => weeklyAttendanceRange[date] || []);
-  }, [last7Days, weeklyAttendanceRange]);
-
-  // 이번 달 수납 데이터
-  const currentMonthFormatted = format(currentMonthStart, 'yyyy-MM');
-  const { records: billingRecords = [], isLoading: billingLoading } = useBilling(currentMonthFormatted);
-
-  // 상담 통계 (이번 달) - 상담 관리 대시보드와 동일한 기준
+  // 상담 통계
   const consultationStatsResult = useConsultationStats(
-    {
-      dateRange: {
-        start: format(currentMonthStart, 'yyyy-MM-dd'),
-        end: format(currentMonthEnd, 'yyyy-MM-dd'),
-      },
-      subject: 'all',
-    },
-    []
+    { dateRange: { start: format(currentMonthStart, 'yyyy-MM-dd'), end: format(currentMonthEnd, 'yyyy-MM-dd') }, subject: 'all' },
+    staff
   );
   const stats = consultationStatsResult.stats;
   const consultationLoading = consultationStatsResult.loading;
 
-  // Performance: useMemo - 재원생 수 계산 최적화
-  const activeStudents = useMemo(() => {
-    return students.filter((s) => s.status === 'active').length;
-  }, [students]);
+  // ── 헬퍼 ──
+  const isActiveEnrollment = (e: any) => !e.withdrawalDate && !e.onHold;
 
-  // Performance: useMemo - 출석률 계산 최적화 (중복 필터링 방지)
-  const attendanceStats = useMemo(() => {
-    const presentCount = todayAttendance.filter(
-      (a) => a.status === 'present' || a.status === 'late'
-    ).length;
-    const totalCount = todayAttendance.length;
-    const attendanceRate = totalCount > 0
-      ? Math.round((presentCount / totalCount) * 100)
-      : 0;
+  // ── 재원생 ──
+  const activeStudents = useMemo(() =>
+    students.filter(s => s.status === 'active' && s.enrollments?.some(isActiveEnrollment)).length
+  , [students]);
 
-    return { presentCount, totalCount, attendanceRate };
+  // ── 출석 통계 ──
+  const { presentCount, totalCount, attendanceRate } = useMemo(() => {
+    const present = todayAttendance.filter(a => a.status === 'present' || a.status === 'late').length;
+    const total = todayAttendance.length;
+    return { presentCount: present, totalCount: total, attendanceRate: total > 0 ? Math.round((present / total) * 100) : 0 };
   }, [todayAttendance]);
 
-  const { presentCount, totalCount, attendanceRate } = attendanceStats;
-
-  // Performance: useMemo - 상담 완료율 계산 최적화
-  const consultationStats = useMemo(() => {
-    const totalSubjectEnrollments = stats?.totalSubjectEnrollments || 0;
-    const needingConsultationCount = stats?.studentsNeedingConsultation?.length || 0;
-    const consultedSubjectCount = Math.max(0, totalSubjectEnrollments - needingConsultationCount);
-    const consultationRate = totalSubjectEnrollments > 0
-      ? Math.round((consultedSubjectCount / totalSubjectEnrollments) * 100)
-      : 0;
-
-    return { totalSubjectEnrollments, consultedSubjectCount, consultationRate };
+  // ── 상담 완료율 ──
+  const { totalSubjectEnrollments, consultedSubjectCount, consultationRate } = useMemo(() => {
+    const total = stats?.totalSubjectEnrollments || 0;
+    const needing = stats?.studentsNeedingConsultation?.length || 0;
+    const consulted = Math.max(0, total - needing);
+    return { totalSubjectEnrollments: total, consultedSubjectCount: consulted, consultationRate: total > 0 ? Math.round((consulted / total) * 100) : 0 };
   }, [stats]);
 
-  const { totalSubjectEnrollments, consultedSubjectCount, consultationRate } = consultationStats;
-
-  // Performance: js-combine-iterations - 수납 통계 한 번의 루프로 계산 (O(3n) → O(n))
-  const billingStats = useMemo(() => {
-    let totalBilled = 0;
-    let totalPaid = 0;
-    let pendingCount = 0;
-
-    for (const record of billingRecords) {
-      totalBilled += record.billedAmount;
-      totalPaid += record.paidAmount;
-      if (record.status === 'pending') {
-        pendingCount++;
-      }
+  // ── 수납 통계 ──
+  const { totalBilled, totalPaid, pendingCount, billingRate, unpaidRecords } = useMemo(() => {
+    let billed = 0, paid = 0, pending = 0;
+    const unpaid: typeof billingRecords = [];
+    for (const r of billingRecords) {
+      billed += r.billedAmount;
+      paid += r.paidAmount;
+      if (r.status === 'pending') { pending++; unpaid.push(r); }
     }
-
-    const billingRate = totalBilled > 0
-      ? Math.round((totalPaid / totalBilled) * 100)
-      : 0;
-
-    return { totalBilled, totalPaid, pendingCount, billingRate };
+    unpaid.sort((a, b) => (b.unpaidAmount || 0) - (a.unpaidAmount || 0));
+    return { totalBilled: billed, totalPaid: paid, pendingCount: pending, billingRate: billed > 0 ? Math.round((paid / billed) * 100) : 0, unpaidRecords: unpaid };
   }, [billingRecords]);
 
-  const { totalBilled, totalPaid, pendingCount, billingRate } = billingStats;
+  // ── 신규 등록 ──
+  const newStudentsThisMonth = useMemo(() =>
+    students.filter(s => {
+      if (s.status !== 'active') return false;
+      const d = new Date(s.startDate);
+      return d >= currentMonthStart && d <= currentMonthEnd;
+    }).length
+  , [students, currentMonthStart, currentMonthEnd]);
 
-  // Performance: useMemo - 신규 등록 계산 최적화 (이번 달)
-  const newStudentsThisMonth = useMemo(() => {
-    return students.filter((s) => {
-      const startDate = new Date(s.startDate);
-      return startDate >= currentMonthStart && startDate <= currentMonthEnd;
-    }).length;
-  }, [students, currentMonthStart, currentMonthEnd]);
-
-  // Performance: js-combine-iterations - 배열 순회 최적화 (O(5n) → O(n))
-  // 과목별 학생 분포 계산
-  const subjectDistribution = useMemo(() => {
-    const activeStudentsList = students.filter((s) => s.status === 'active');
-
-    // 활성 수강 중인지 확인 (withdrawalDate 없고 onHold가 아닌 경우)
-    const isActiveEnrollment = (e: any) => !e.withdrawalDate && !e.onHold;
-
-    // 한 번의 루프로 모든 과목 집계
-    const counts = { math: 0, english: 0, korean: 0, science: 0, other: 0, none: 0 };
-
-    activeStudentsList.forEach((s) => {
-      const activeEnrollments = s.enrollments?.filter(isActiveEnrollment) || [];
-
-      if (activeEnrollments.length === 0) {
-        counts.none++;
-        return;
-      }
-
-      // 각 학생의 활성 수강 과목 집계
-      activeEnrollments.forEach((e) => {
-        if (e.subject in counts) {
-          counts[e.subject as keyof typeof counts]++;
-        }
-      });
+  // ── 퇴원 현황 (이번 달) ──
+  const withdrawalData = useMemo(() => {
+    const withdrawn = students.filter(s => {
+      if (s.status !== 'withdrawn' || !s.withdrawalDate) return false;
+      const d = new Date(s.withdrawalDate);
+      return d >= currentMonthStart && d <= currentMonthEnd;
     });
+    const reasons: Record<string, number> = {};
+    withdrawn.forEach(s => {
+      const reason = s.withdrawalReason || '사유 미기재';
+      reasons[reason] = (reasons[reason] || 0) + 1;
+    });
+    return {
+      count: withdrawn.length,
+      netChange: newStudentsThisMonth - withdrawn.length,
+      reasons: Object.entries(reasons).sort(([, a], [, b]) => b - a),
+    };
+  }, [students, currentMonthStart, currentMonthEnd, newStudentsThisMonth]);
 
-    return [
-      { subject: '수학', count: counts.math, color: '#3b82f6' },
-      { subject: '영어', count: counts.english, color: '#10b981' },
-      { subject: '국어', count: counts.korean, color: '#f59e0b' },
-      { subject: '과학', count: counts.science, color: '#8b5cf6' },
-      { subject: '기타', count: counts.other, color: '#6b7280' },
-      { subject: '미등록', count: counts.none, color: '#ef4444' }
-    ].filter(item => item.count > 0); // 0명인 과목은 제외
+  // ── 과목별 분포 ──
+  const subjectDistribution = useMemo(() => {
+    const activeList = students.filter(s => s.status === 'active');
+    const subjectCounts = { math: 0, english: 0, korean: 0, science: 0, other: 0 };
+    const multiSubjectCounts: Record<number, number> = {};
+    activeList.forEach(s => {
+      const active = s.enrollments?.filter(isActiveEnrollment) || [];
+      const unique = new Set(active.map(e => e.subject));
+      unique.forEach(sub => { if (sub in subjectCounts) subjectCounts[sub as keyof typeof subjectCounts]++; });
+      if (unique.size >= 2) multiSubjectCounts[unique.size] = (multiSubjectCounts[unique.size] || 0) + 1;
+    });
+    const result = [
+      { subject: '수학', count: subjectCounts.math, color: SUBJECT_COLORS.math.bg },
+      { subject: '영어', count: subjectCounts.english, color: SUBJECT_COLORS.english.bg },
+      { subject: '국어', count: subjectCounts.korean, color: SUBJECT_COLORS.korean.bg },
+      { subject: '과학', count: subjectCounts.science, color: SUBJECT_COLORS.science.bg },
+      { subject: '기타', count: subjectCounts.other, color: SUBJECT_COLORS.other.bg },
+    ].filter(i => i.count > 0);
+    const multiColors = ['#ec4899', '#f97316', '#14b8a6', '#a855f7'];
+    Object.entries(multiSubjectCounts).sort(([a], [b]) => Number(a) - Number(b)).forEach(([sc, cnt], idx) => {
+      result.push({ subject: `${sc}과목 수강`, count: cnt, color: multiColors[idx % multiColors.length] });
+    });
+    return result;
   }, [students]);
 
-  // 주간 출석 추이 (최근 7일) - 실제 데이터로 계산
+  // ── 주간 출석 추이 ──
   const weeklyAttendance = useMemo(() => {
-    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
     const now = new Date();
     return weeklyAttendanceData.map((dayData, idx) => {
       const date = subDays(now, 6 - idx);
-      const presentCount = dayData.filter((a) => a.status === 'present' || a.status === 'late').length;
-      const totalCount = dayData.length;
-      const rate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
-
-      return {
-        date: format(date, 'MM/dd'),
-        day: dayNames[date.getDay()],
-        rate: rate
-      };
+      const present = dayData.filter(a => a.status === 'present' || a.status === 'late').length;
+      const total = dayData.length;
+      return { day: DAY_NAMES_KO[date.getDay()], rate: total > 0 ? Math.round((present / total) * 100) : 0 };
     });
   }, [weeklyAttendanceData]);
 
-  // KPI 카드 데이터
+  // ── 오늘의 수업 현황 ──
+  const todayClasses = useMemo(() => {
+    const todayDay = DAY_NAMES_KO[new Date().getDay()];
+    const recordedClassIds = new Set(todayAttendance.map(a => a.classId));
+    return allClasses
+      .filter(c => c.schedule?.some(slot => slot.startsWith(todayDay)))
+      .map(c => ({
+        ...c,
+        todaySlots: c.schedule?.filter(slot => slot.startsWith(todayDay)) || [],
+        isRecorded: recordedClassIds.has(c.id),
+      }))
+      .sort((a, b) => {
+        const slotA = a.todaySlots[0] || '';
+        const slotB = b.todaySlots[0] || '';
+        return slotA.localeCompare(slotB);
+      });
+  }, [allClasses, todayAttendance]);
+
+  // ── 상담 후속조치 ──
+  const followUpData = useMemo(() => {
+    const urgent = followUpList.filter(c => getFollowUpUrgency(c) === 'urgent');
+    const pending = followUpList.filter(c => getFollowUpUrgency(c) === 'pending');
+    return { urgent, pending, total: followUpList.length };
+  }, [followUpList]);
+
+  // ── 등록 상담 전환율 ──
+  const regConversionData = useMemo(() => {
+    const total = regConsultations?.length || 0;
+    const registered = regConsultations?.filter(c => isRegisteredStatus(c.status)).length || 0;
+    const rate = total > 0 ? Math.round((registered / total) * 100) : 0;
+    return { total, registered, rate };
+  }, [regConsultations]);
+
+  // ── 최근 시험 ──
+  const recentExamList = useMemo(() => {
+    return (recentExams || []).slice(0, 5).map(exam => ({
+      title: exam.title,
+      date: exam.date,
+      subject: exam.subject === 'math' ? '수학' : exam.subject === 'english' ? '영어' : '공통',
+      type: exam.type,
+    }));
+  }, [recentExams]);
+
+  // ── KPI 카드 ──
   const kpiCards: KPICardData[] = [
     {
-      id: 'students',
-      label: '재원생',
-      value: activeStudents,
-      subValue: '명',
+      id: 'students', label: '재원생', value: activeStudents, subValue: '명',
       trend: newStudentsThisMonth > 0 ? 'up' : 'stable',
       trendValue: newStudentsThisMonth > 0 ? `+${newStudentsThisMonth}` : undefined,
-      icon: '👥',
-      color: '#081429',
+      icon: '👥', color: '#081429',
     },
     {
-      id: 'attendance',
-      label: '오늘 출석률',
-      value: `${attendanceRate}%`,
-      subValue: `${presentCount}/${totalCount}`, // Performance: 중복 필터링 제거
+      id: 'attendance', label: '오늘 출석률', value: `${attendanceRate}%`,
+      subValue: `${presentCount}/${totalCount}`,
       trend: attendanceRate >= 90 ? 'up' : attendanceRate >= 80 ? 'stable' : 'down',
-      icon: '✅',
-      color: '#10b981',
+      icon: '✅', color: '#10b981',
     },
     {
-      id: 'consultation',
-      label: '상담 완료율',
-      value: `${consultationRate}%`,
+      id: 'consultation', label: '상담 완료율', value: `${consultationRate}%`,
       subValue: `${consultedSubjectCount}건 완료 / 총 ${totalSubjectEnrollments}건`,
       trend: consultationRate >= 85 ? 'up' : 'stable',
-      icon: '💬',
-      color: '#6366f1',
+      icon: '💬', color: '#6366f1',
     },
     {
-      id: 'billing',
-      label: '수납률',
-      value: `${billingRate}%`,
+      id: 'billing', label: '수납률', value: `${billingRate}%`,
       subValue: `${totalPaid.toLocaleString()}/${totalBilled.toLocaleString()}원`,
       trend: billingRate >= 90 ? 'up' : billingRate >= 80 ? 'stable' : 'down',
       trendValue: pendingCount > 0 ? `미납 ${pendingCount}건` : undefined,
-      icon: '💰',
-      color: '#f59e0b',
+      icon: '💰', color: '#f59e0b',
     },
     {
-      id: 'new-students',
-      label: '신규 등록',
-      value: newStudentsThisMonth,
-      subValue: '이번 달',
-      trend: newStudentsThisMonth > 0 ? 'up' : 'stable',
-      icon: '🆕',
-      color: '#ec4899',
+      id: 'new-students', label: '신규 등록', value: newStudentsThisMonth,
+      subValue: '이번 달', trend: newStudentsThisMonth > 0 ? 'up' : 'stable',
+      icon: '🆕', color: '#ec4899',
     },
     {
-      id: 'satisfaction',
-      label: '학부모 만족도',
-      value: '-',
-      subValue: '추후 구현',
-      trend: 'stable',
-      icon: '⭐',
-      color: '#fdb813',
+      id: 'net-change', label: '순증감',
+      value: `${withdrawalData.netChange >= 0 ? '+' : ''}${withdrawalData.netChange}`,
+      subValue: `신규 ${newStudentsThisMonth} / 퇴원 ${withdrawalData.count}`,
+      trend: withdrawalData.netChange > 0 ? 'up' : withdrawalData.netChange < 0 ? 'down' : 'stable',
+      icon: '📊', color: '#6b7280',
     },
   ];
 
-  // 빠른 작업
-  // TODO: App.tsx에서 onTabChange 함수를 props로 전달받아 실제 탭 전환 구현
+  // ── 빠른 작업 ──
+  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
+  const [isAddClassOpen, setIsAddClassOpen] = useState(false);
+  const [isAddConsultationOpen, setIsAddConsultationOpen] = useState(false);
+
   const quickActions: QuickAction[] = [
-    {
-      id: 'new-student',
-      label: '학생 등록',
-      icon: UserPlus,
-      onClick: () => {
-        alert('학생 관리 탭으로 이동합니다.\n(학생 관리 > 학생 추가 버튼 클릭)');
-        // TODO: onTabChange('students')
-      },
-      color: '#081429',
-    },
-    {
-      id: 'attendance',
-      label: '출석 관리',
-      icon: ClipboardList,
-      onClick: () => {
-        alert('출석부 탭으로 이동합니다.');
-        // TODO: onTabChange('attendance')
-      },
-      color: '#10b981',
-    },
-    {
-      id: 'consultation',
-      label: '상담 기록',
-      icon: MessageCircle,
-      onClick: () => {
-        alert('상담 탭으로 이동합니다.');
-        // TODO: onTabChange('consultation')
-      },
-      color: '#6366f1',
-    },
-    {
-      id: 'billing',
-      label: '수납 관리',
-      icon: DollarSign,
-      onClick: () => {
-        alert('수납 관리 기능은 개발 예정입니다.');
-        // TODO: Implement billing feature
-      },
-      color: '#f59e0b',
-    },
-    {
-      id: 'reports',
-      label: '통계 보기',
-      icon: BarChart3,
-      onClick: () => {
-        alert('통계 리포트 기능은 개발 예정입니다.');
-        // TODO: Implement analytics/reports feature
-      },
-      color: '#6b7280',
-    },
-    {
-      id: 'schedule',
-      label: '일정 관리',
-      icon: Calendar,
-      onClick: () => {
-        alert('연간 일정 탭으로 이동합니다.');
-        // TODO: onTabChange('calendar')
-      },
-      color: '#8b5cf6',
-    },
+    { id: 'add-student', label: '학생 추가', icon: UserPlus, onClick: () => setIsAddStudentOpen(true), color: '#081429' },
+    { id: 'add-class', label: '수업 추가', icon: BookOpen, onClick: () => setIsAddClassOpen(true), color: '#10b981' },
+    { id: 'add-consultation', label: '상담 기록', icon: MessageCircle, onClick: () => setIsAddConsultationOpen(true), color: '#6366f1' },
   ];
 
-  const handleRefresh = () => {
-    setRefreshKey((prev) => prev + 1);
-  };
-
+  const handleRefresh = () => setRefreshKey(prev => prev + 1);
   const isLoading = studentsLoading || attendanceLoading || weeklyAttendanceLoading || billingLoading || consultationLoading;
+
+  // ── 과목 색상 ──
+  const subjectColor = (sub: string) => {
+    if (sub === '수학') return '#3b82f6';
+    if (sub === '영어') return '#10b981';
+    if (sub === '공통') return '#8b5cf6';
+    return '#6b7280';
+  };
 
   return (
     <div className="w-full h-full overflow-auto p-3 bg-gray-50">
       <div className="max-w-[1800px] mx-auto">
-        {/* 헤더 */}
-        <DashboardHeader
-          userProfile={userProfile}
-          staffMember={staffMember}
-          onRefresh={handleRefresh}
-        />
+        <DashboardHeader userProfile={userProfile} staffMember={staffMember} onRefresh={handleRefresh} />
 
-        {/* 로딩 상태 */}
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
@@ -341,14 +287,12 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           </div>
         ) : (
           <>
-            {/* KPI 카드 그리드 - 더 컴팩트하게 */}
+            {/* ── Row 1: KPI 카드 ── */}
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
-              {kpiCards.map((card) => (
-                <KPICard key={card.id} data={card} />
-              ))}
+              {kpiCards.map(card => <KPICard key={card.id} data={card} />)}
             </div>
 
-            {/* 차트 영역과 알림 센터 */}
+            {/* ── Row 2: 차트 + 알림 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
               {/* 과목별 학생 분포 */}
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
@@ -361,13 +305,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                         <span className="text-xxs font-bold" style={{ color: item.color }}>{item.count}명</span>
                       </div>
                       <div className="w-full bg-gray-100 rounded-sm h-1.5">
-                        <div
-                          className="h-1.5 rounded-sm transition-all duration-500"
-                          style={{
-                            width: `${activeStudents > 0 ? (item.count / activeStudents) * 100 : 0}%`,
-                            backgroundColor: item.color
-                          }}
-                        />
+                        <div className="h-1.5 rounded-sm transition-all duration-500" style={{ width: `${activeStudents > 0 ? (item.count / activeStudents) * 100 : 0}%`, backgroundColor: item.color }} />
                       </div>
                     </div>
                   ))}
@@ -378,60 +316,304 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
                 <h3 className="text-xs font-bold text-[#081429] mb-2">📈 주간 출석 추이</h3>
                 <div className="flex items-end justify-between h-20 gap-1">
-                  {weeklyAttendance.map((day, idx) => {
-                    return (
-                      <div key={idx} className="flex-1 flex flex-col items-center gap-0.5">
-                        <div className="w-full bg-gray-100 rounded-t flex items-end justify-center relative" style={{ height: '60px' }}>
-                          <div
-                            className="w-full bg-gradient-to-t from-[#10b981] to-[#34d399] rounded-t transition-all duration-500"
-                            style={{ height: `${day.rate}%` }}
-                          />
-                        </div>
-                        <span className="text-micro text-gray-500 font-medium">{day.day}</span>
+                  {weeklyAttendance.map((day, idx) => (
+                    <div key={idx} className="flex-1 flex flex-col items-center gap-0.5">
+                      <div className="w-full bg-gray-100 rounded-t flex items-end" style={{ height: '60px' }}>
+                        <div className="w-full bg-gradient-to-t from-[#10b981] to-[#34d399] rounded-t transition-all duration-500" style={{ height: `${day.rate}%` }} />
                       </div>
-                    );
-                  })}
+                      <span className="text-micro text-gray-500 font-medium">{day.day}</span>
+                    </div>
+                  ))}
                 </div>
                 <div className="text-center mt-1.5 text-micro text-gray-400">
-                  평균 출석률: {Math.round(weeklyAttendance.reduce((sum, d) => sum + d.rate, 0) / weeklyAttendance.length) || 0}%
+                  평균 출석률: {Math.round(weeklyAttendance.reduce((s, d) => s + d.rate, 0) / weeklyAttendance.length) || 0}%
                 </div>
               </div>
 
-              {/* 알림 센터 */}
+              {/* 주의 필요 */}
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
                 <h3 className="text-xs font-bold text-[#081429] mb-2">⚠️ 주의 필요</h3>
-                {/* Performance: rendering-conditional-render - && 대신 삼항 연산자 사용 */}
                 <div className="space-y-1.5">
                   {pendingCount > 0 ? (
                     <div className="flex items-center gap-1.5 text-xxs text-red-600">
-                      <span className="w-1 h-1 bg-red-600 rounded-sm" />
-                      미납 학부모 {pendingCount}명 (독촉 필요)
+                      <span className="w-1 h-1 bg-red-600 rounded-sm flex-shrink-0" />
+                      미납 {pendingCount}건 (총 {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원)
+                    </div>
+                  ) : null}
+                  {followUpData.urgent.length > 0 ? (
+                    <div className="flex items-center gap-1.5 text-xxs text-red-600">
+                      <span className="w-1 h-1 bg-red-600 rounded-sm flex-shrink-0" />
+                      긴급 후속조치 {followUpData.urgent.length}건 (3일 이내)
+                    </div>
+                  ) : null}
+                  {followUpData.pending.length > 0 ? (
+                    <div className="flex items-center gap-1.5 text-xxs text-orange-600">
+                      <span className="w-1 h-1 bg-orange-600 rounded-sm flex-shrink-0" />
+                      상담 후속조치 대기 {followUpData.pending.length}건
                     </div>
                   ) : null}
                   {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 ? (
                     <div className="flex items-center gap-1.5 text-xxs text-orange-600">
-                      <span className="w-1 h-1 bg-orange-600 rounded-sm" />
-                      상담 필요 학생 {stats.studentsNeedingConsultation.length}명
+                      <span className="w-1 h-1 bg-orange-600 rounded-sm flex-shrink-0" />
+                      이번 달 미상담 {stats.studentsNeedingConsultation.length}건
                     </div>
                   ) : null}
-                  {attendanceRate < 80 ? (
+                  {withdrawalData.count > 0 ? (
                     <div className="flex items-center gap-1.5 text-xxs text-yellow-600">
-                      <span className="w-1 h-1 bg-yellow-600 rounded-sm" />
+                      <span className="w-1 h-1 bg-yellow-600 rounded-sm flex-shrink-0" />
+                      이번 달 퇴원 {withdrawalData.count}명
+                    </div>
+                  ) : null}
+                  {totalCount === 0 ? (
+                    <div className="flex items-center gap-1.5 text-xxs text-gray-400">
+                      <span className="w-1 h-1 bg-gray-400 rounded-sm flex-shrink-0" />
+                      오늘 출석 데이터 없음
+                    </div>
+                  ) : attendanceRate < 80 ? (
+                    <div className="flex items-center gap-1.5 text-xxs text-yellow-600">
+                      <span className="w-1 h-1 bg-yellow-600 rounded-sm flex-shrink-0" />
                       오늘 출석률 낮음 ({attendanceRate}%)
                     </div>
                   ) : null}
-                  {pendingCount === 0 && attendanceRate >= 80 && (!stats?.studentsNeedingConsultation || stats.studentsNeedingConsultation.length === 0) ? (
-                    <div className="text-xxs text-gray-500">현재 주의가 필요한 항목이 없습니다.</div>
+                  {pendingCount === 0 && followUpData.total === 0 && withdrawalData.count === 0
+                    && (totalCount === 0 || attendanceRate >= 80)
+                    && (!stats?.studentsNeedingConsultation || stats.studentsNeedingConsultation.length === 0) ? (
+                    <div className="text-xxs text-green-600 font-medium">모든 항목 정상입니다.</div>
                   ) : null}
                 </div>
               </div>
             </div>
 
-            {/* 빠른 작업 */}
+            {/* ── Row 3: 미납 현황 + 상담 후속조치 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
+              {/* 미납 현황 */}
+              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold text-[#081429]">💰 미납 현황</h3>
+                  {pendingCount > 0 ? (
+                    <span className="text-xxs font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
+                      {pendingCount}건 / {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원
+                    </span>
+                  ) : null}
+                </div>
+                {unpaidRecords.length > 0 ? (
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {unpaidRecords.slice(0, 10).map((r, idx) => (
+                      <div key={idx} className="flex items-center justify-between py-1 px-2 bg-gray-50 rounded text-xxs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-800">{r.studentName || r.externalStudentId}</span>
+                          <span className="text-gray-400">{r.grade}</span>
+                        </div>
+                        <span className="font-bold text-red-600">{(r.unpaidAmount || 0).toLocaleString()}원</span>
+                      </div>
+                    ))}
+                    {unpaidRecords.length > 10 ? (
+                      <div className="text-xxs text-gray-400 text-center pt-1">외 {unpaidRecords.length - 10}건 더</div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="text-xxs text-green-600 py-4 text-center">미납 없음</div>
+                )}
+              </div>
+
+              {/* 상담 후속조치 */}
+              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold text-[#081429]">📋 상담 후속조치</h3>
+                  {followUpData.total > 0 ? (
+                    <span className="text-xxs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
+                      {followUpData.total}건 대기
+                    </span>
+                  ) : null}
+                </div>
+                {followUpData.total > 0 ? (
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {[...followUpData.urgent, ...followUpData.pending].slice(0, 10).map((c, idx) => {
+                      const urgency = getFollowUpUrgency(c);
+                      const daysLeft = c.followUpDate ? getFollowUpDaysLeft(c.followUpDate) : null;
+                      return (
+                        <div key={idx} className="flex items-center justify-between py-1 px-2 bg-gray-50 rounded text-xxs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${urgency === 'urgent' ? 'bg-red-500' : 'bg-orange-400'}`} />
+                            <span className="font-medium text-gray-800 truncate">{c.studentName}</span>
+                            <span className="text-gray-400 truncate">{c.title}</span>
+                          </div>
+                          <span className={`flex-shrink-0 font-medium ${daysLeft !== null && daysLeft <= 0 ? 'text-red-600' : daysLeft !== null && daysLeft <= 3 ? 'text-orange-600' : 'text-gray-500'}`}>
+                            {daysLeft !== null ? (daysLeft <= 0 ? `${Math.abs(daysLeft)}일 지남` : `${daysLeft}일 남음`) : '기한 없음'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-xxs text-green-600 py-4 text-center">대기 중인 후속조치 없음</div>
+                )}
+              </div>
+            </div>
+
+            {/* ── Row 4: 오늘 수업 + 퇴원 사유 + 등록 전환율 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
+              {/* 오늘의 수업 현황 - 요약 + 미기록만 표시 */}
+              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold text-[#081429]">📚 오늘의 수업</h3>
+                </div>
+                {todayClasses.length > 0 ? (
+                  <>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="flex-1 bg-gray-50 rounded px-2 py-1.5 text-center">
+                        <div className="text-sm font-bold text-[#081429]">{todayClasses.length}</div>
+                        <div className="text-micro text-gray-500">전체</div>
+                      </div>
+                      <div className="flex-1 bg-green-50 rounded px-2 py-1.5 text-center">
+                        <div className="text-sm font-bold text-green-600">{todayClasses.filter(c => c.isRecorded).length}</div>
+                        <div className="text-micro text-gray-500">출석 완료</div>
+                      </div>
+                      <div className="flex-1 bg-red-50 rounded px-2 py-1.5 text-center">
+                        <div className="text-sm font-bold text-red-500">{todayClasses.filter(c => !c.isRecorded).length}</div>
+                        <div className="text-micro text-gray-500">미기록</div>
+                      </div>
+                    </div>
+                    {todayClasses.filter(c => !c.isRecorded).length > 0 ? (
+                      <div className="space-y-1 max-h-24 overflow-y-auto">
+                        <div className="text-xxs text-gray-400 mb-0.5">미기록 수업:</div>
+                        {todayClasses.filter(c => !c.isRecorded).slice(0, 8).map((c, idx) => (
+                          <div key={idx} className="flex items-center justify-between py-0.5 px-2 bg-gray-50 rounded text-xxs">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: SUBJECT_COLORS[c.subject]?.bg || '#6b7280' }} />
+                              <span className="font-medium text-gray-800 truncate">{c.className}</span>
+                            </div>
+                            <span className="text-gray-400 flex-shrink-0">{c.studentCount || 0}명</span>
+                          </div>
+                        ))}
+                        {todayClasses.filter(c => !c.isRecorded).length > 8 ? (
+                          <div className="text-xxs text-gray-400 text-center">외 {todayClasses.filter(c => !c.isRecorded).length - 8}개</div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="text-xxs text-green-600 text-center py-1">모든 수업 출석 기록 완료</div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-xxs text-gray-400 py-4 text-center">오늘 예정된 수업 없음</div>
+                )}
+              </div>
+
+              {/* 퇴원 현황 + 최근 시험 */}
+              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold text-[#081429]">🚪 이번 달 퇴원</h3>
+                  {withdrawalData.count > 0 ? (
+                    <span className="text-xxs font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{withdrawalData.count}명</span>
+                  ) : null}
+                </div>
+                {withdrawalData.count > 0 ? (
+                  <div className="space-y-1 mb-3">
+                    {withdrawalData.reasons.slice(0, 4).map(([reason, count], idx) => (
+                      <div key={idx} className="flex items-center justify-between text-xxs py-0.5 px-2 bg-gray-50 rounded">
+                        <span className="text-gray-700">{reason}</span>
+                        <span className="font-bold text-gray-600">{count}명</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xxs text-green-600 py-1 text-center mb-2">퇴원 없음</div>
+                )}
+
+                <div className="border-t border-gray-100 pt-2">
+                  <h3 className="text-xs font-bold text-[#081429] mb-1.5">📝 최근 시험</h3>
+                  {recentExamList.length > 0 ? (
+                    <div className="space-y-1">
+                      {recentExamList.map((exam, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xxs py-0.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-medium px-1 py-0.5 rounded text-white flex-shrink-0" style={{ backgroundColor: subjectColor(exam.subject), fontSize: '9px' }}>
+                              {exam.subject}
+                            </span>
+                            <span className="text-gray-700 truncate">{exam.title}</span>
+                          </div>
+                          <span className="text-gray-400 flex-shrink-0 ml-1">{exam.date}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xxs text-gray-400 py-1 text-center">등록된 시험 없음</div>
+                  )}
+                </div>
+              </div>
+
+              {/* 등록 상담 전환율 */}
+              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+                <h3 className="text-xs font-bold text-[#081429] mb-2">📞 이번 달 등록 상담</h3>
+                <div className="flex items-center justify-center gap-4 py-2">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-[#081429]">{regConversionData.total}</div>
+                    <div className="text-xxs text-gray-500">전체 상담</div>
+                  </div>
+                  <div className="text-lg text-gray-300">→</div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{regConversionData.registered}</div>
+                    <div className="text-xxs text-gray-500">등록 완료</div>
+                  </div>
+                </div>
+                {/* 전환율 바 */}
+                <div className="mt-1">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-xxs text-gray-500">전환율</span>
+                    <span className="text-xxs font-bold text-[#081429]">{regConversionData.rate}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-sm h-2">
+                    <div
+                      className="h-2 rounded-sm transition-all duration-500"
+                      style={{
+                        width: `${regConversionData.rate}%`,
+                        backgroundColor: regConversionData.rate >= 50 ? '#10b981' : regConversionData.rate >= 30 ? '#f59e0b' : '#ef4444',
+                      }}
+                    />
+                  </div>
+                </div>
+                {/* 상태별 분류 */}
+                {regConsultations && regConsultations.length > 0 ? (
+                  <div className="mt-3 space-y-1">
+                    {(() => {
+                      const statusCounts: Record<string, number> = {};
+                      regConsultations.forEach(c => {
+                        statusCounts[c.status] = (statusCounts[c.status] || 0) + 1;
+                      });
+                      return Object.entries(statusCounts)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([status, count], idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xxs">
+                            <span className={`font-medium ${isRegisteredStatus(status) ? 'text-green-600' : 'text-gray-600'}`}>
+                              {status}
+                            </span>
+                            <span className="text-gray-500">{count}건</span>
+                          </div>
+                        ));
+                    })()}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {/* ── Row 5: 빠른 작업 ── */}
             <QuickActions actions={quickActions} />
           </>
         )}
       </div>
+
+      {/* 빠른 작업 모달 */}
+      <Suspense fallback={null}>
+        {isAddStudentOpen && (
+          <AddStudentModal isOpen={isAddStudentOpen} onClose={() => setIsAddStudentOpen(false)} onSuccess={() => setIsAddStudentOpen(false)} />
+        )}
+        {isAddClassOpen && (
+          <AddClassModal onClose={() => setIsAddClassOpen(false)} />
+        )}
+        {isAddConsultationOpen && (
+          <AddConsultationModal onClose={() => setIsAddConsultationOpen(false)} onSuccess={() => setIsAddConsultationOpen(false)} userProfile={userProfile} />
+        )}
+      </Suspense>
     </div>
   );
 };

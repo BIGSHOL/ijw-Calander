@@ -127,7 +127,8 @@ export const calculateStats = (
   allStudents: Student[], // Need ALL students to calculate dropped count correctly
   visibleStudents: Student[], // Only visible students for salary/attendance
   salaryConfig: SalaryConfig,
-  currentMonth: Date
+  currentMonth: Date,
+  rawAllStudents?: Student[] // Raw students with original startDate/endDate (not overridden by enrollment mapping)
 ) => {
   let totalSalary = 0;
   let totalPresent = 0;
@@ -253,7 +254,10 @@ export const calculateStats = (
 
   // 2. Calculate Dropped Students
   // Definition: endDate month was LAST MONTH.
-  const droppedStudents = allStudents.filter(s => s.endDate && s.endDate.startsWith(prevMonthStr));
+  // rawAllStudents 사용: allStudents는 enrollment 매핑 시 endDate가 null로 덮어씌워지므로,
+  // 원본 학생 데이터(rawAllStudents)의 endDate를 기준으로 계산해야 함
+  const studentsForDropped = rawAllStudents || allStudents;
+  const droppedStudents = studentsForDropped.filter(s => s.endDate && s.endDate.startsWith(prevMonthStr));
 
   // 3. Calculate Rates
   const newStudentsCount = newStudents.length;

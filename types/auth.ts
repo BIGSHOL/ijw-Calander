@@ -62,7 +62,9 @@ export type PermissionId =
   // Grades (NEW)
   | 'grades.view' | 'grades.edit' | 'grades.manage_exams'
   // Billing (NEW)
-  | 'billing.view' | 'billing.edit';
+  | 'billing.view' | 'billing.edit'
+  // Withdrawal (퇴원 관리)
+  | 'withdrawal.view' | 'withdrawal.edit' | 'withdrawal.reactivate';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -109,6 +111,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
     // Billing
     'billing.view': true, 'billing.edit': true,
+    // Withdrawal
+    'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': true,
   },
   manager: {
     // Events
@@ -144,6 +148,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
     // Billing
     'billing.view': true, 'billing.edit': true,
+    // Withdrawal
+    'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': true,
   },
   math_lead: {
     // Events
@@ -178,6 +184,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
     // Billing
     'billing.view': true, 'billing.edit': false,
+    // Withdrawal
+    'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': false,
   },
   english_lead: {
     // Events
@@ -214,6 +222,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': true,
     // Billing
     'billing.view': true, 'billing.edit': false,
+    // Withdrawal
+    'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': false,
   },
   math_teacher: {
     // Events
@@ -247,6 +257,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': false,
     // Billing
     'billing.view': false, 'billing.edit': false,
+    // Withdrawal
+    'withdrawal.view': true, 'withdrawal.edit': false, 'withdrawal.reactivate': false,
   },
   english_teacher: {
     // Events
@@ -280,6 +292,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'grades.view': true, 'grades.edit': true, 'grades.manage_exams': false,
     // Billing
     'billing.view': false, 'billing.edit': false,
+    // Withdrawal
+    'withdrawal.view': true, 'withdrawal.edit': false, 'withdrawal.reactivate': false,
   },
   user: {
     // Events (basic)
@@ -298,6 +312,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'consultation.view': true, 'consultation.create': false, 'consultation.edit': false, 'consultation.convert': false, 'consultation.manage': false,
     // Grades (view only)
     'grades.view': true, 'grades.edit': false, 'grades.manage_exams': false,
+    // Withdrawal
+    'withdrawal.view': false, 'withdrawal.edit': false, 'withdrawal.reactivate': false,
   },
 };
 

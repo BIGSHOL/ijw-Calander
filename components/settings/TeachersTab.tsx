@@ -7,6 +7,7 @@ import {
     Search, Plus, Check, X, Eye, EyeOff, Edit, Trash2, Database
 } from 'lucide-react';
 import TeacherIdMigrationModal from './TeacherIdMigrationModal';
+import { SUBJECT_COLORS } from '../../utils/styleUtils';
 
 interface TeachersTabProps {
     teachers: Teacher[];
@@ -444,8 +445,8 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                         <div className="flex flex-col gap-1">
                                             <span className="font-bold text-gray-700">{teacher.name}</span>
                                             <div className="flex gap-1 items-center">
-                                                {(!teacher.subjects || teacher.subjects.includes('math')) && <span className="text-xxs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 font-medium">수학</span>}
-                                                {(!teacher.subjects || teacher.subjects.includes('english')) && <span className="text-xxs bg-[#fff8e1] text-[#b45309] px-1.5 py-0.5 rounded border border-[#fef3c7] font-medium">영어</span>}
+                                                {(!teacher.subjects || teacher.subjects.includes('math')) && <span className={`text-xxs px-1.5 py-0.5 rounded-sm font-medium ${SUBJECT_COLORS.math.badge}`}>수학</span>}
+                                                {(!teacher.subjects || teacher.subjects.includes('english')) && <span className={`text-xxs px-1.5 py-0.5 rounded-sm font-medium ${SUBJECT_COLORS.english.badge}`}>영어</span>}
                                                 {(teacher.bgColor || teacher.textColor) && (
                                                     <span
                                                         className="text-micro px-1.5 py-0.5 rounded font-bold ml-1"

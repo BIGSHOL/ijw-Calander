@@ -132,6 +132,8 @@ export interface Consultation {
   id: string;
   studentId: string;
   studentName: string;
+  school?: string;
+  grade?: string;
 
   // 상담 정보
   type: 'parent' | 'student';
