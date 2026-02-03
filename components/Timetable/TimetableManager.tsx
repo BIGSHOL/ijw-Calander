@@ -18,7 +18,7 @@ import TimetableGrid from './Math/components/TimetableGrid';
 import MathClassTab from './Math/MathClassTab';
 
 // Performance: bundle-dynamic-imports - Modal components lazy load (~150-200KB bundle reduction)
-const AddClassModal = lazy(() => import('./Math/components/Modals/AddClassModal'));
+const AddClassModal = lazy(() => import('../ClassManagement/AddClassModal'));
 const ClassDetailModal = lazy(() => import('../ClassManagement/ClassDetailModal'));
 const StudentDetailModal = lazy(() => import('../StudentManagement/StudentDetailModal'));
 const SimpleViewSettingsModal = lazy(() => import('./Math/components/Modals/SimpleViewSettingsModal'));
