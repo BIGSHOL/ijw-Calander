@@ -731,13 +731,17 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         {/* 학생수 (빈 공간) */}
         <div className="w-10 shrink-0"></div>
 
-        {/* 시작일/종료일 */}
-        <span className="w-16 shrink-0 text-xxs text-[#373d41] text-center">
-          {formatDate(group.startDate)}
-        </span>
-        <span className="w-14 shrink-0 text-xxs text-[#373d41] text-center">
-          {formatDate(group.endDate)}
-        </span>
+        {/* 시작일/종료일 (compact 모드가 아닐 때만) */}
+        {!compact && (
+          <>
+            <span className="w-16 shrink-0 text-xxs text-[#373d41] text-center">
+              {formatDate(group.startDate)}
+            </span>
+            <span className="w-14 shrink-0 text-xxs text-[#373d41] text-center">
+              {formatDate(group.endDate)}
+            </span>
+          </>
+        )}
 
         {/* 삭제 버튼 (권한이 있는 경우만 표시) */}
         <div className="w-5 shrink-0 flex items-center justify-center">
@@ -952,8 +956,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
             <span className="w-14 shrink-0">강사</span>
             <span className="w-40">상태</span>
             <span className="w-10 shrink-0"></span>
-            <span className="w-16 shrink-0 text-center">시작</span>
-            <span className="w-14 shrink-0 text-center">종료</span>
+            {!compact && (
+              <>
+                <span className="w-16 shrink-0 text-center">시작</span>
+                <span className="w-14 shrink-0 text-center">종료</span>
+              </>
+            )}
             <span className="w-5 shrink-0"></span>
           </div>
 
