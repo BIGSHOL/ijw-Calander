@@ -58,18 +58,18 @@ export const useClassStudents = (
     // studentMap이 비어있지 않은지 확인 (쿼리 활성화 조건용)
     const studentMapReady = Object.keys(studentMap).length > 0;
 
-    // studentMap 크기를 추적하여 내용 변경 감지
-    const prevStudentMapSizeRef = useRef<number>(-1);
+    // studentMap 참조 변경 감지 → 캐시 무효화
+    // React Query의 structuralSharing 덕분에 실제 데이터 변경 시에만 새 참조 생성
+    const prevStudentMapRef = useRef<Record<string, any> | null>(null);
     useEffect(() => {
+        const prev = prevStudentMapRef.current;
         studentMapRef.current = studentMap;
-        const currentSize = Object.keys(studentMap).length;
+        prevStudentMapRef.current = studentMap;
 
-        // studentMap 크기가 변경되면 캐시 무효화 (내용이 실제로 변경된 경우)
-        // -1은 첫 렌더를 의미, 첫 렌더 후 데이터가 로드되면 무효화
-        if (prevStudentMapSizeRef.current >= 0 && prevStudentMapSizeRef.current !== currentSize) {
+        // 첫 렌더가 아니고, 참조가 변경된 경우 캐시 무효화
+        if (prev !== null && prev !== studentMap) {
             queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
         }
-        prevStudentMapSizeRef.current = currentSize;
     }, [studentMap, queryClient]);
 
     // Memoize classNames to avoid unnecessary re-fetches

@@ -387,7 +387,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 const change = moveChanges.get(s.id);
                 return !(change && change.fromClass === classInfo.name);
             });
-            // 이동 들어온 학생 추가
+            // 이동 들어온 학생 추가 (연보라색 표시)
             moveChanges.forEach(change => {
                 if (change.toClass === classInfo.name) {
                     if (!currentList.find(s => s.id === change.student.id)) {
@@ -477,7 +477,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     }, [activeStudents, isEnglish, classInfo.finalDays]);
 
     const getRowStyle = (student: TimetableStudent & { isTempMoved?: boolean; isMoved?: boolean; isWithdrawalScheduled?: boolean }) => {
-        if (student.isTempMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
+        if (student.isTempMoved) return { className: 'bg-purple-400 ring-1 ring-purple-500', textClass: 'text-white font-bold', subTextClass: 'text-white/80', englishTextClass: 'text-white/80' };
         if (student.isMoved && student.underline) return { className: 'bg-green-50 ring-1 ring-green-300', textClass: 'underline decoration-blue-600 text-green-800 font-bold underline-offset-2', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
         if (student.isMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
         // 퇴원 예정 학생 - 주황색 배경에 취소선

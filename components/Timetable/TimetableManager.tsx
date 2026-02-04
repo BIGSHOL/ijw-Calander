@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { TimetableClass, Teacher, ClassKeywordColor, SubjectType } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { VideoLoading } from '../Common/VideoLoading';
@@ -75,10 +75,10 @@ interface MathTimetableContentProps {
     showHoldStudents: boolean;
     showWithdrawnStudents: boolean;
     dragOverClassId: string | null;
-    handleDragStart: (e: React.DragEvent, studentId: string, classId: string) => void;
+    handleDragStart: (e: React.DragEvent, studentId: string, classId: string, zone?: string) => void;
     handleDragOver: (e: React.DragEvent, classId: string) => void;
     handleDragLeave: () => void;
-    handleDrop: (e: React.DragEvent, classId: string) => void;
+    handleDrop: (e: React.DragEvent, classId: string, zone?: string) => void;
     currentSubjectFilter: string;
     studentMap: Record<string, UnifiedStudent>;
     timetableViewMode: 'day-based' | 'teacher-based';
@@ -227,6 +227,73 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
         }
     };
 
+    // 메모이즈된 콜백: TimetableGrid에 전달되는 인라인 함수를 안정화하여 불필요한 리렌더링 방지
+    const handleClassClick = useCallback((cls: TimetableClass) => {
+        if (!canEditMath) return;
+        const classInfo: ClassInfo = {
+            className: cls.className,
+            subject: cls.subject === '수학' ? 'math' : 'english',
+            teacher: cls.teacher,
+            room: cls.room,
+            schedule: cls.schedule,
+            studentCount: cls.studentIds?.length || cls.studentList?.length || 0,
+            id: cls.id,
+        };
+        setSelectedClassInfo(classInfo);
+    }, [canEditMath, setSelectedClassInfo]);
+
+    const handleStudentClick = useCallback((studentId: string) => {
+        const student = studentMap[studentId];
+        if (student) {
+            setSelectedStudentForModal(student);
+        }
+    }, [studentMap, setSelectedStudentForModal]);
+
+    const handleGridDragStart = useCallback((e: React.DragEvent, sId: string, cId: string, zone?: string) => {
+        if (isScenarioMode) {
+            e.dataTransfer.setData('studentId', sId);
+            e.dataTransfer.setData('fromClassId', cId);
+            if (zone) e.dataTransfer.setData('fromZone', zone);
+            e.dataTransfer.effectAllowed = 'move';
+        } else if (canEditMath) {
+            handleDragStart(e, sId, cId, zone);
+        }
+    }, [isScenarioMode, canEditMath, handleDragStart]);
+
+    const handleGridDragOver = useCallback((e: React.DragEvent, classId: string) => {
+        if (isScenarioMode) {
+            e.preventDefault();
+        } else {
+            handleDragOver(e, classId);
+        }
+    }, [isScenarioMode, handleDragOver]);
+
+    const handleGridDragLeave = useCallback((e: React.DragEvent) => {
+        if (!isScenarioMode) {
+            handleDragLeave();
+        }
+    }, [isScenarioMode, handleDragLeave]);
+
+    const handleGridDrop = useCallback((e: React.DragEvent, toClassId: string, toZone?: string) => {
+        if (isScenarioMode) {
+            e.preventDefault();
+            const studentId = e.dataTransfer.getData('studentId');
+            const fromClassId = e.dataTransfer.getData('fromClassId');
+
+            if (!studentId || !fromClassId) return;
+            if (fromClassId === toClassId) return;
+
+            const fromClass = simulation.getScenarioClass(fromClassId);
+            const toClass = simulation.getScenarioClass(toClassId);
+
+            if (fromClass && toClass) {
+                simulation.moveStudent(fromClass.className, toClass.className, studentId);
+            }
+        } else {
+            handleDrop(e, toClassId, toZone);
+        }
+    }, [isScenarioMode, simulation, handleDrop]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -288,74 +355,16 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         showHoldStudents={showHoldStudents}
                         showWithdrawnStudents={showWithdrawnStudents}
                         dragOverClassId={dragOverClassId}
-                        onClassClick={(cls) => {
-                            if (!canEditMath) return;
-                            // TimetableClass -> ClassInfo 변환
-                            const classInfo: ClassInfo = {
-                                className: cls.className,
-                                subject: cls.subject === '수학' ? 'math' : 'english',
-                                teacher: cls.teacher,
-                                room: cls.room,
-                                schedule: cls.schedule,
-                                studentCount: cls.studentIds?.length || cls.studentList?.length || 0,
-                                id: cls.id,
-                            };
-                            setSelectedClassInfo(classInfo);
-                        }}
-                        onDragStart={(e, sId, cId) => {
-                            if (isScenarioMode) {
-                                // 시뮬레이션 모드 드래그 시작
-                                e.dataTransfer.setData('studentId', sId);
-                                e.dataTransfer.setData('fromClassId', cId);
-                                e.dataTransfer.effectAllowed = 'move';
-                            } else if (canEditMath) {
-                                // 라이브 모드 드래그 시작
-                                handleDragStart(e, sId, cId);
-                            }
-                        }}
-                        onDragOver={(e, classId) => {
-                            if (isScenarioMode) {
-                                e.preventDefault();
-                                // 시뮬레이션 모드에서는 별도 상태 없이 브라우저 기본 드래그 효과 사용하거나 필요한 경우 상태 추가
-                            } else {
-                                handleDragOver(e, classId);
-                            }
-                        }}
-                        onDragLeave={(e) => {
-                            if (!isScenarioMode) {
-                                handleDragLeave();
-                            }
-                        }}
-                        onDrop={(e, toClassId) => {
-                            if (isScenarioMode) {
-                                e.preventDefault();
-                                const studentId = e.dataTransfer.getData('studentId');
-                                const fromClassId = e.dataTransfer.getData('fromClassId');
-
-                                if (!studentId || !fromClassId) return;
-                                if (fromClassId === toClassId) return;
-
-                                // classId로 className 찾기 (SimulationContext 사용)
-                                const fromClass = simulation.getScenarioClass(fromClassId);
-                                const toClass = simulation.getScenarioClass(toClassId);
-
-                                if (fromClass && toClass) {
-                                    simulation.moveStudent(fromClass.className, toClass.className, studentId);
-                                }
-                            } else {
-                                handleDrop(e, toClassId);
-                            }
-                        }}
+                        onClassClick={handleClassClick}
+                        onDragStart={handleGridDragStart}
+                        onDragOver={handleGridDragOver}
+                        onDragLeave={handleGridDragLeave}
+                        onDrop={handleGridDrop}
                         currentSubjectFilter={currentSubjectFilter}
                         studentMap={studentMap}
                         timetableViewMode={timetableViewMode}
                         classKeywords={classKeywords}
-                        onStudentClick={(studentId) => {
-                            const student = studentMap[studentId];
-                            if (student) {
-                                setSelectedStudentForModal(student);
-                            }
-                        }}
+                        onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
                     />
                 </div>
@@ -792,7 +801,11 @@ const TimetableManager = ({
         return [...new Set(filteredClasses.map(c => c.room).filter(Boolean))].sort();
     }, [viewType, filteredClasses, sortedTeachers]);
 
-
+    // 메모이즈: 매 렌더마다 new Set() 생성 방지
+    const pendingMovedStudentIds = useMemo(() =>
+        pendingMoves.length > 0 ? new Set(pendingMoves.map(m => m.studentId)) : undefined,
+        [pendingMoves]
+    );
 
     const openAddModal = () => {
         setIsAddClassOpen(true);
@@ -911,7 +924,7 @@ const TimetableManager = ({
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
                 setIsViewSettingsOpen={setIsViewSettingsOpen}
                 pendingMovesCount={pendingMoves.length}
-                pendingMovedStudentIds={pendingMoves.length > 0 ? new Set(pendingMoves.map(m => m.studentId)) : undefined}
+                pendingMovedStudentIds={pendingMovedStudentIds}
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}
                 isSaving={isSaving}

@@ -12,8 +12,9 @@ interface StudentItemProps {
     displayText: string;
     canEdit: boolean;
     onStudentClick?: (studentId: string) => void;
-    onDragStart: (e: React.DragEvent, studentId: string, classId: string) => void;
+    onDragStart: (e: React.DragEvent, studentId: string, classId: string, zone?: string) => void;
     classId: string;
+    zone?: string;  // 'common' | 특정 요일 (예: '월', '목')
     fontSizeClass: string;
     isHighlighted: boolean;
     enrollmentStyle: { bg: string; text: string } | null;
@@ -28,6 +29,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
     onStudentClick,
     onDragStart,
     classId,
+    zone,
     fontSizeClass,
     isHighlighted,
     enrollmentStyle,
@@ -48,7 +50,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
     return (
         <li
             draggable={canEdit}
-            onDragStart={(e) => canEdit && onDragStart(e, student.id, classId)}
+            onDragStart={(e) => canEdit && onDragStart(e, student.id, classId, zone)}
             onClick={(e) => {
                 if (isClickable) {
                     e.stopPropagation();
@@ -59,7 +61,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
             onMouseLeave={() => setIsHovered(false)}
             className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] truncate font-medium transition-all duration-150
             ${canEdit ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''}
-            ${isPendingMoved ? 'bg-purple-400 text-white font-bold rounded-sm' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}`}
+            ${isPendingMoved ? 'bg-purple-400 text-white font-bold' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}`}
             style={hoverStyle}
             title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}\n(클릭하여 상세정보 보기)` : '클릭하여 상세정보 보기'}
         >
@@ -77,12 +79,12 @@ interface ClassCardProps {
     showSchool: boolean;
     showGrade: boolean;
     canEdit: boolean;  // 수정 모드 여부 (true일 때 수업명 클릭하면 수업 상세 모달)
-    dragOverClassId: string | null;
+    isDragOver: boolean;
     onClick: (cls: TimetableClass) => void;  // 수업 상세 모달 열기 (수정 모드에서만)
-    onDragStart: (e: React.DragEvent, studentId: string, fromClassId: string) => void;
+    onDragStart: (e: React.DragEvent, studentId: string, fromClassId: string, fromZone?: string) => void;
     onDragOver: (e: React.DragEvent, classId: string) => void;
     onDragLeave: (e: React.DragEvent) => void;
-    onDrop: (e: React.DragEvent, toClassId: string) => void;
+    onDrop: (e: React.DragEvent, toClassId: string, toZone?: string) => void;
     studentMap: Record<string, any>;
     classKeywords?: ClassKeywordColor[];
     onStudentClick?: (studentId: string) => void;  // 학생 클릭 시 상세 모달 (조회/수정 모두)
@@ -105,7 +107,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     showSchool,
     showGrade,
     canEdit,
-    dragOverClassId,
+    isDragOver,
     onClick,
     onDragStart,
     onDragOver,
@@ -409,12 +411,20 @@ const ClassCard: React.FC<ClassCardProps> = ({
         }
     };
 
+    // 병합 셀 내 zone 드래그 오버 상태 (로컬)
+    const [dragOverZone, setDragOverZone] = useState<string | null>(null);
+
     return (
         <div
             onDragOver={(e) => canEdit && onDragOver(e, cls.id)}
-            onDragLeave={canEdit ? onDragLeave : undefined}
-            onDrop={(e) => canEdit && onDrop(e, cls.id)}
-            className={`flex flex-col h-full overflow-hidden transition-all ${dragOverClassId === cls.id ? 'ring-2 ring-indigo-400 scale-[1.02]' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
+            onDragLeave={(e) => {
+                if (canEdit) {
+                    onDragLeave(e);
+                    setDragOverZone(null);
+                }
+            }}
+            onDrop={(e) => canEdit && onDrop(e, cls.id, 'common')}
+            className={`flex flex-col h-full overflow-hidden transition-all ${isDragOver ? 'ring-2 ring-indigo-400 scale-[1.02]' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
             style={cardBgStyle}
         >
             {/* Class Name Header - 수정 모드에서 클릭 시 수업 상세 모달, 조회 모드에서 마우스 오버시 스케줄 툴팁 */}
@@ -495,7 +505,27 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {showStudents && (
                 isMergedCell ? (
                     <div className="flex-1 flex flex-col overflow-hidden">
-                        <div className="px-1 py-0">
+                        <div
+                            className={`px-1 py-0 transition-colors ${dragOverZone === 'common' ? 'bg-indigo-50' : ''}`}
+                            onDragOver={(e) => {
+                                if (!canEdit) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDragOverZone('common');
+                            }}
+                            onDragLeave={(e) => {
+                                // 자식 요소로 이동하는 경우 무시
+                                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                                setDragOverZone(null);
+                            }}
+                            onDrop={(e) => {
+                                if (!canEdit) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDragOverZone(null);
+                                onDrop(e, cls.id, 'common');
+                            }}
+                        >
                             <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0`}>({commonStudents.active.length})</div>
                             <ul className="flex flex-col gap-0">
                                 {commonStudents.active.map(s => {
@@ -518,6 +548,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             onStudentClick={onStudentClick}
                                             onDragStart={onDragStart}
                                             classId={cls.id}
+                                            zone="common"
                                             fontSizeClass={fontSizeClass}
                                             isHighlighted={isHighlighted}
                                             enrollmentStyle={enrollmentStyle}
@@ -533,9 +564,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         <div className="flex-1"></div>
 
                         {/* 부분 등원 학생 (월만, 목만 등) */}
-                        {hasPartialStudents && (() => {
-                            // 각 요일의 학생 수 중 최대값 계산
+                        {/* 부분 등원 학생 (월만, 목만 등) - 항상 표시 (드롭 영역으로 활용) */}
+                        {isMergedCell && (() => {
                             const maxStudentCount = Math.max(
+                                0,
                                 ...mergedDays.map(day => partialStudentsByDay?.[day]?.active.length || 0)
                             );
 
@@ -545,14 +577,35 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         const isLastDay = idx === mergedDays.length - 1;
                                         const dayStudents = partialStudentsByDay?.[day];
                                         const dayActiveStudents = dayStudents?.active || [];
-                                        const emptySlots = maxStudentCount - dayActiveStudents.length;
+                                        const emptySlots = Math.max(0, maxStudentCount - dayActiveStudents.length);
+                                        const isZoneDragOver = dragOverZone === day;
 
                                         return (
-                                            <div key={day} className={`flex-1 flex flex-col ${!isLastDay ? 'border-r-2 border-amber-300' : ''}`}>
+                                            <div
+                                                key={day}
+                                                className={`flex-1 flex flex-col ${!isLastDay ? 'border-r-2 border-amber-300' : ''} transition-colors ${isZoneDragOver ? 'bg-amber-200' : ''}`}
+                                                onDragOver={(e) => {
+                                                    if (!canEdit) return;
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    setDragOverZone(day);
+                                                }}
+                                                onDragLeave={(e) => {
+                                                    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                                                    setDragOverZone(null);
+                                                }}
+                                                onDrop={(e) => {
+                                                    if (!canEdit) return;
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    setDragOverZone(null);
+                                                    onDrop(e, cls.id, day);
+                                                }}
+                                            >
                                                 <div className="text-center text-[11px] font-bold bg-amber-100 text-amber-800 py-0.5 border-b-2 border-amber-300">
                                                     {day}만 ({dayActiveStudents.length})
                                                 </div>
-                                                <div className="px-0.5 py-0 bg-amber-50 flex-1">
+                                                <div className="px-0.5 py-0 bg-amber-50 flex-1" style={{ minHeight: '20px' }}>
                                                     <ul className="flex flex-col gap-0">
                                                         {dayActiveStudents.map(s => {
                                                             const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
@@ -574,6 +627,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                     onStudentClick={onStudentClick}
                                                                     onDragStart={onDragStart}
                                                                     classId={cls.id}
+                                                                    zone={day}
                                                                     fontSizeClass={fontSizeClass}
                                                                     isHighlighted={isHighlighted}
                                                                     enrollmentStyle={enrollmentStyle}
@@ -760,7 +814,7 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.showSchool === nextProps.showSchool &&
         prevProps.showGrade === nextProps.showGrade &&
         prevProps.canEdit === nextProps.canEdit &&
-        prevProps.dragOverClassId === nextProps.dragOverClassId &&
+        prevProps.isDragOver === nextProps.isDragOver &&
         prevProps.currentDay === nextProps.currentDay &&
         prevProps.fontSize === nextProps.fontSize &&
         prevProps.rowHeight === nextProps.rowHeight &&

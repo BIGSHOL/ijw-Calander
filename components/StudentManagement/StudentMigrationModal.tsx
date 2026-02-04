@@ -96,6 +96,57 @@ const normalizeSchoolName = (school?: string): string | undefined => {
 };
 
 /**
+ * 기존 학생 데이터에서 학교 약칭 → 정식명 자동 보정 맵 생성
+ * 예: "일중"이 1명, "대구일중"이 10명이면 → "일중" → "대구일중"
+ */
+const buildSchoolCorrections = (existingStudents: { id: string; school?: string }[]): Map<string, string> => {
+  const schoolCounts = new Map<string, number>();
+
+  existingStudents.forEach(student => {
+    // ID에서 학교명 추출
+    const idParts = student.id.split('_');
+    const isSemanticId = idParts.length >= 2 && !/^\d+$/.test(student.id) && !/^[a-zA-Z0-9]{15,}$/.test(student.id);
+    if (isSemanticId) {
+      const school = normalizeSchoolName(idParts[1]);
+      if (school) schoolCounts.set(school, (schoolCounts.get(school) || 0) + 1);
+    }
+    // school 필드에서도 수집
+    const school = normalizeSchoolName(student.school);
+    if (school) schoolCounts.set(school, (schoolCounts.get(school) || 0) + 1);
+  });
+
+  const allSchools = Array.from(schoolCounts.keys());
+  const corrections = new Map<string, string>();
+
+  for (const shortName of allSchools) {
+    if (shortName.length > 2) continue; // 3자 이상은 정상 (침산초, 종로초 등)
+    const matches = allSchools.filter(
+      longName => longName.length > shortName.length && longName.endsWith(shortName)
+    );
+    if (matches.length === 1) {
+      corrections.set(shortName, matches[0]);
+    } else if (matches.length > 1) {
+      matches.sort((a, b) => (schoolCounts.get(b) || 0) - (schoolCounts.get(a) || 0));
+      corrections.set(shortName, matches[0]);
+    }
+  }
+
+  return corrections;
+};
+
+/**
+ * 학교명 정규화 + 약칭 보정 통합
+ */
+const fullNormalizeSchoolName = (school?: string, corrections?: Map<string, string>): string | undefined => {
+  const normalized = normalizeSchoolName(school);
+  if (!normalized) return normalized;
+  if (corrections && corrections.has(normalized)) {
+    return corrections.get(normalized)!;
+  }
+  return normalized;
+};
+
+/**
  * 전화번호 포맷팅 (010-1234-5678 형식)
  * - "1093659838" → "010-9365-9838" (10자리, 앞에 0 누락)
  * - "01093659838" → "010-9365-9838" (11자리 휴대폰)
@@ -263,7 +314,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
         // 2차: 출결번호로 못 찾으면 이름_학교_학년으로 찾기 (기존 ID 형식 호환)
         if (!existingData) {
-          const normalizedSchool = normalizeSchoolName(item.학교) || '';
+          const normalizedSchool = normalizeSchoolName(item.학교) || ''; // preview에서는 기본 정규화만
           // 학년 정규화 (간단히)
           let grade = item.학년 || '';
           const gradeNum = grade.match(/\d+/)?.[0];
@@ -373,6 +424,16 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
         }
       });
 
+      // 학교 약칭 보정 맵 생성 (기존 학생 데이터 기반)
+      const existingStudentList = existingSnapshot.docs.map(d => ({
+        id: d.id,
+        school: (d.data() as UnifiedStudent).school,
+      }));
+      const schoolCorrections = buildSchoolCorrections(existingStudentList);
+      if (schoolCorrections.size > 0) {
+        console.log('📌 학교 약칭 보정 맵:', Object.fromEntries(schoolCorrections));
+      }
+
       // 데이터 변환 및 배치 저장
       const batchSize = 500;
       const batches = Math.ceil(rawData.length / batchSize);
@@ -428,8 +489,8 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
           // 기존 학생 찾기 (1. 출결번호 기준, 2. 이름_학교_학년 기준)
           let existingStudent = existingStudentsByAttendance.get(attendanceNumber) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
 
-          // 학교명 정규화
-          const normalizedSchool = normalizeSchoolName(excelData.학교) || '';
+          // 학교명 정규화 + 약칭 보정
+          const normalizedSchool = fullNormalizeSchoolName(excelData.학교, schoolCorrections) || '';
 
           // 출결번호로 못 찾으면 이름_학교_학년으로 찾기 (기존 ID 형식 호환)
           if (!existingStudent) {
@@ -494,7 +555,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             id,
             name: excelData.이름,
             englishName: existingStudent?.englishName || null,
-            school: normalizeSchoolName(excelData.학교 || existingStudent?.school),
+            school: fullNormalizeSchoolName(excelData.학교 || existingStudent?.school, schoolCorrections),
             grade: grade || existingStudent?.grade,
             gender: excelData.성별 === '남' ? 'male' : excelData.성별 === '여' ? 'female' : existingStudent?.gender,
             attendanceNumber,  // 출결번호 추가
@@ -620,7 +681,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
               <li>• 기존 학생과 이름 매칭 → 데이터 보완</li>
               <li>• 새로운 학생 → 추가</li>
               <li>• 영어 수업 자동 매핑 (약어 변환)</li>
-              <li>• 학교명 자동 축약 (초등학교→초, 중학교→중, 고등학교→고)</li>
+              <li>• 학교명 자동 축약 (초등학교→초, 중학교→중, 고등학교→고) + 약칭 자동 보정</li>
               <li>• 전화번호 자동 포맷 (1093659838→010-9365-9838)</li>
               <li>• 수학 수업은 수동 배정 필요</li>
             </ul>

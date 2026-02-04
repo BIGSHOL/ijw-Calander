@@ -990,75 +990,149 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               {studentsToAdd.size > 0 && (
                 <div className="bg-white border border-gray-200 overflow-hidden">
                   <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                    <Calendar className="w-3 h-3 text-green-600" />
+                    <Users className="w-3 h-3 text-green-600" />
                     <h3 className="text-[#081429] font-bold text-xs">추가 예정</h3>
                     <span className="text-xxs text-green-600 ml-1">({studentsToAdd.size}명)</span>
-                    <span className="text-xxs text-gray-400 ml-auto">시작일을 선택하세요</span>
+                    {classInfo.subject === 'math' && classDays.length > 1 && (
+                      <span className="text-xxs text-blue-500 ml-auto">클릭: 등원요일 · 체크박스: 부담임</span>
+                    )}
+                    {classInfo.subject === 'math' && classDays.length <= 1 && (
+                      <span className="text-xxs text-blue-500 ml-auto">체크박스: 부담임</span>
+                    )}
+                    {classInfo.subject === 'english' && (
+                      <span className="text-xxs text-blue-500 ml-auto">U: 밑줄 강조</span>
+                    )}
                   </div>
-                    <div className="max-h-32 overflow-y-auto">
+                    <div className="max-h-40 overflow-y-auto">
                       {studentsToAddInfo.map(student => {
                         const startDate = studentStartDates[student.id] || new Date().toISOString().split('T')[0];
                         const today = new Date().toISOString().split('T')[0];
-                        const isScheduled = startDate > today;  // 미래 날짜인 경우 배정 예정
+                        const isScheduled = startDate > today;
+                        const isExpanded = expandedStudentId === student.id;
+                        const attendanceDaysText = getAttendanceDaysText(student.id);
+                        const isMath = classInfo.subject === 'math';
+                        const isEnglish = classInfo.subject === 'english';
+                        const canExpandForDays = isMath && classDays.length > 1;
+                        const hasUnderline = studentUnderlines[student.id] || false;
 
                         return (
-                          <div
-                            key={student.id}
-                            className="px-2.5 py-1.5 text-sm bg-green-50/50 border-b border-green-100 last:border-b-0"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-green-800 font-medium">{student.name}</span>
-                                <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                          <div key={student.id} className="bg-green-50/30">
+                            <div
+                              className={`flex items-center justify-between px-2.5 py-1.5 text-sm hover:bg-green-50/60 ${canExpandForDays ? 'cursor-pointer' : ''}`}
+                              onClick={() => {
+                                if (canExpandForDays) {
+                                  setExpandedStudentId(isExpanded ? null : student.id);
+                                }
+                              }}
+                            >
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {/* 수학: Calendar 아이콘 */}
+                                {isMath && classDays.length > 1 && (
+                                  <Calendar size={12} className="text-gray-400 flex-shrink-0" />
+                                )}
+                                {/* 수학: 부담임 체크박스 */}
+                                {isMath && (
+                                  <input
+                                    type="checkbox"
+                                    checked={studentSlotTeachers[student.id] || false}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      setStudentSlotTeachers(prev => ({
+                                        ...prev,
+                                        [student.id]: e.target.checked
+                                      }));
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813] flex-shrink-0"
+                                    title="부담임으로 지정"
+                                  />
+                                )}
+                                {/* 영어: 밑줄 토글 버튼 */}
+                                {isEnglish && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleStudentUnderline(student.id);
+                                    }}
+                                    className={`w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded flex-shrink-0 transition-colors ${
+                                      hasUnderline
+                                        ? 'bg-blue-500 text-white underline'
+                                        : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+                                    }`}
+                                    title={hasUnderline ? '밑줄 해제' : '밑줄 강조'}
+                                  >
+                                    U
+                                  </button>
+                                )}
+                                <span className="truncate text-gray-800">{student.name}</span>
+                                <span className="text-[10px] text-gray-400 flex-shrink-0">{formatSchoolGrade(student.school, student.grade)}</span>
+                                {/* 수학: 등원 요일 표시 */}
+                                {isMath && attendanceDaysText && (
+                                  <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
+                                    {attendanceDaysText}만
+                                  </span>
+                                )}
                                 {isScheduled && (
-                                  <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                                  <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
                                     배정 예정
                                   </span>
                                 )}
-                                {/* 부담임 체크박스 (수학만) */}
-                                {classInfo.subject === 'math' && (
-                                  <label className="flex items-center gap-1 ml-1 cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                                    <input
-                                      type="checkbox"
-                                      checked={studentSlotTeachers[student.id] || false}
-                                      onChange={(e) => {
-                                        setStudentSlotTeachers(prev => ({
-                                          ...prev,
-                                          [student.id]: e.target.checked
-                                        }));
-                                      }}
-                                      className="w-3 h-3 text-[#fdb813] rounded focus:ring-[#fdb813]"
-                                    />
-                                    <span className="text-[10px] text-gray-600">부담임</span>
-                                  </label>
-                                )}
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => cancelAddStudent(student.id)}
-                                className="text-xs text-gray-500 hover:text-red-500 font-medium"
-                              >
-                                취소
-                              </button>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <input
+                                  type="date"
+                                  value={startDate}
+                                  onChange={(e) => {
+                                    setStudentStartDates(prev => ({
+                                      ...prev,
+                                      [student.id]: e.target.value
+                                    }));
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="px-1 py-0.5 text-[10px] border border-gray-200 rounded focus:ring-1 focus:ring-[#fdb813] outline-none w-[105px]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    cancelAddStudent(student.id);
+                                  }}
+                                  className="p-1 rounded transition-colors flex-shrink-0 text-red-500 hover:bg-red-100"
+                                  title="추가 취소"
+                                >
+                                  <UserMinus size={14} />
+                                </button>
+                              </div>
                             </div>
-                            {/* 시작일 선택 */}
-                            <div className="flex items-center gap-2 mt-1">
-                              <Calendar size={12} className="text-gray-400" />
-                              <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => {
-                                  setStudentStartDates(prev => ({
-                                    ...prev,
-                                    [student.id]: e.target.value
-                                  }));
-                                }}
-                                className="px-2 py-0.5 text-[10px] border border-gray-200 rounded focus:ring-1 focus:ring-[#fdb813] outline-none"
-                              />
-                              {isScheduled && (
-                                <span className="text-[10px] text-blue-600">{startDate}부터 시작</span>
-                              )}
-                            </div>
+                            {/* 수학: 요일 선택 UI (펼쳐졌을 때) */}
+                            {isMath && isExpanded && classDays.length > 1 && (
+                              <div className="px-2.5 py-2 bg-gray-50 border-t border-gray-100">
+                                <div className="text-[10px] text-gray-500 mb-1.5">등원 요일 선택 (체크 해제하면 해당 요일 미등원)</div>
+                                <div className="flex gap-1 flex-wrap">
+                                  {classDays.map(day => {
+                                    const isAttending = isStudentAttendingDay(student.id, day);
+                                    return (
+                                      <button
+                                        key={day}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleStudentDay(student.id, day);
+                                        }}
+                                        className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                                          isAttending
+                                            ? 'bg-[#fdb813] text-[#081429]'
+                                            : 'bg-gray-200 text-gray-400 line-through'
+                                        }`}
+                                      >
+                                        {day}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -1092,16 +1166,16 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                     availableStudents.map(student => (
                       <label
                         key={student.id}
-                        className="flex items-center gap-2 px-2 py-1 cursor-pointer transition-colors hover:bg-gray-50 text-xs"
+                        className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer transition-colors hover:bg-gray-50 text-sm"
                       >
                         <input
                           type="checkbox"
                           checked={studentsToAdd.has(student.id)}
                           onChange={() => toggleAddStudent(student.id)}
-                          className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
+                          className="w-3.5 h-3.5 text-[#fdb813] focus:ring-[#fdb813]"
                         />
-                        <span className="text-gray-800">{student.name}</span>
-                        <span className="text-xxs text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                        <span className="truncate text-gray-800">{student.name}</span>
+                        <span className="text-[10px] text-gray-400 flex-shrink-0">{formatSchoolGrade(student.school, student.grade)}</span>
                       </label>
                     ))
                   )}
