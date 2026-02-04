@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, getDoc, writeBatch } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
@@ -32,6 +32,15 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
     const [pendingMoves, setPendingMoves] = useState<PendingMove[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Refs: ClassCard의 React.memo가 onDrop을 비교하지 않아 stale closure 발생 방지
+    // handleDrop이 항상 최신 상태를 읽을 수 있도록 ref 사용
+    const draggingStudentRef = useRef<DraggingStudent | null>(null);
+    const localClassesRef = useRef<TimetableClass[]>([]);
+
+    // 렌더 시 동기적으로 ref 업데이트 (항상 최신 상태 유지)
+    // effectiveClasses와 동일한 로직: pendingMoves 없으면 initialClasses 사용
+    localClassesRef.current = pendingMoves.length === 0 ? initialClasses : localClasses;
+
     // Sync local classes with Firestore classes when there are no pending moves
     // useEffect는 paint 이후 실행되므로 localClasses를 동기화용으로만 사용
     useEffect(() => {
@@ -46,7 +55,9 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
     const effectiveClasses = pendingMoves.length === 0 ? initialClasses : localClasses;
 
     const handleDragStart = useCallback((e: React.DragEvent, studentId: string, fromClassId: string, fromZone: DragZone = 'common') => {
-        setDraggingStudent({ studentId, fromClassId, fromZone });
+        const dragInfo = { studentId, fromClassId, fromZone };
+        draggingStudentRef.current = dragInfo;  // 동기적 ref 업데이트 (stale closure 방지)
+        setDraggingStudent(dragInfo);
         e.dataTransfer.effectAllowed = 'move';
     }, []);
 
@@ -57,15 +68,21 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
 
     const handleDragLeave = useCallback(() => setDragOverClassId(null), []);
 
-    const handleDrop = async (e: React.DragEvent, toClassId: string, toZone: DragZone = 'common') => {
+    // useCallback + ref로 안정적인 참조 유지
+    // ClassCard의 React.memo가 onDrop을 비교하지 않아도 항상 최신 상태를 읽음
+    const handleDrop = useCallback(async (e: React.DragEvent, toClassId: string, toZone: DragZone = 'common') => {
         e.preventDefault();
         setDragOverClassId(null);
-        if (!draggingStudent) return;
 
-        const { studentId, fromClassId, fromZone } = draggingStudent;
+        // ref에서 최신 draggingStudent 읽기 (stale closure 방지)
+        const currentDragging = draggingStudentRef.current;
+        if (!currentDragging) return;
+
+        const { studentId, fromClassId, fromZone } = currentDragging;
 
         // 같은 반 + 같은 zone → 무시
         if (fromClassId === toClassId && fromZone === toZone) {
+            draggingStudentRef.current = null;
             setDraggingStudent(null);
             return;
         }
@@ -93,13 +110,16 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                 toZone,
                 student: { id: studentId } as TimetableStudent
             }]);
+            draggingStudentRef.current = null;
             setDraggingStudent(null);
             return;
         }
 
         // ===== 다른 반으로 이동 (기존 로직 + attendanceDays 반영) =====
-        const fromClass = localClasses.find(c => c.id === fromClassId);
-        const toClass = localClasses.find(c => c.id === toClassId);
+        // ref에서 최신 localClasses 읽기 (stale closure 방지)
+        const currentLocalClasses = localClassesRef.current;
+        const fromClass = currentLocalClasses.find(c => c.id === fromClassId);
+        const toClass = currentLocalClasses.find(c => c.id === toClassId);
         if (!fromClass || !toClass) return;
 
         const movingStudent = fromClass.studentList?.find(s => s.id === studentId);
@@ -135,8 +155,9 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             toZone,
             student: { id: studentId } as TimetableStudent
         }]);
+        draggingStudentRef.current = null;
         setDraggingStudent(null);
-    };
+    }, []);
 
     const handleSavePendingMoves = async () => {
         if (pendingMoves.length === 0) return;
