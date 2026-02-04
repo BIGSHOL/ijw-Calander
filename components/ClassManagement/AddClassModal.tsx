@@ -4,7 +4,7 @@ import { useCreateClass, CreateClassData } from '../../hooks/useClassMutations';
 import { useStudents } from '../../hooks/useStudents';
 import { useClasses } from '../../hooks/useClasses';
 import { SUBJECT_LABELS } from '../../utils/styleUtils';
-import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS, SCIENCE_UNIFIED_PERIODS, KOREAN_UNIFIED_PERIODS } from '../Timetable/constants';
+import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS, SCIENCE_UNIFIED_PERIODS, KOREAN_UNIFIED_PERIODS, convertLegacyPeriodId } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
 import { SubjectType } from '../../types';
@@ -143,6 +143,40 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
     );
   }, [students, studentSearch]);
 
+  // 스케줄 겹침 감지
+  const scheduleConflicts = useMemo(() => {
+    if (!existingClasses || selectedSlots.size === 0) return [];
+
+    const conflicts: { slot: string; className: string; teacher: string }[] = [];
+
+    // 기존 수업의 스케줄을 "day-unifiedPeriodId" 형태로 맵 구성
+    const slotMap = new Map<string, { className: string; teacher: string }[]>();
+
+    existingClasses.forEach(cls => {
+      cls.schedule?.forEach(slot => {
+        const parts = slot.split(' ');
+        if (parts.length >= 2) {
+          const normalizedPeriod = convertLegacyPeriodId(parts[1]);
+          const key = `${parts[0]}-${normalizedPeriod}`;
+          if (!slotMap.has(key)) slotMap.set(key, []);
+          slotMap.get(key)!.push({ className: cls.className, teacher: cls.teacher });
+        }
+      });
+    });
+
+    // 선택된 슬롯과 기존 수업 비교
+    selectedSlots.forEach(slotKey => {
+      const existing = slotMap.get(slotKey);
+      if (existing && existing.length > 0) {
+        existing.forEach(e => {
+          conflicts.push({ slot: slotKey, className: e.className, teacher: e.teacher });
+        });
+      }
+    });
+
+    return conflicts;
+  }, [existingClasses, selectedSlots]);
+
   // 슬롯 토글
   const toggleSlot = (day: string, periodId: string) => {
     const key = `${day}-${periodId}`;
@@ -203,6 +237,16 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
     if (isDuplicate) {
       setError(`"${trimmedClassName}" 수업명이 이미 존재합니다. 다른 이름을 사용해주세요.`);
       return;
+    }
+
+    // 스케줄 겹침 경고 확인
+    if (scheduleConflicts.length > 0) {
+      const conflictList = scheduleConflicts.map(c =>
+        `  ${c.slot.split('-')[0]} ${c.slot.split('-')[1]}교시 — ${c.className} (${c.teacher})`
+      ).join('\n');
+      if (!confirm(`⚠️ 다음 시간대에 이미 수업이 있습니다:\n\n${conflictList}\n\n그래도 생성하시겠습니까?`)) {
+        return;
+      }
     }
 
     setError('');
@@ -425,6 +469,17 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                   ))}
                 </div>
               </div>
+
+              {scheduleConflicts.length > 0 && (
+                <div className="mt-1.5 bg-amber-50 border border-amber-200 rounded-sm px-2 py-1.5">
+                  <p className="font-semibold text-amber-700 text-xs mb-0.5">스케줄 겹침 감지</p>
+                  {scheduleConflicts.map((conflict, i) => (
+                    <p key={i} className="text-xxs text-amber-600">
+                      {conflict.slot.split('-')[0]} {conflict.slot.split('-')[1]}교시 — {conflict.className} ({conflict.teacher})
+                    </p>
+                  ))}
+                </div>
+              )}
 
               {selectedSlots.size > 0 && (
                 <div className="mt-1.5 flex items-center justify-between">

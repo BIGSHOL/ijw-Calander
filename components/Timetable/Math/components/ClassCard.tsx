@@ -5,6 +5,7 @@ import { getSubjectTheme } from '../utils/gridUtils';
 import { Clock } from 'lucide-react';
 import { MATH_PERIOD_INFO, MATH_PERIOD_TIMES, WEEKEND_PERIOD_INFO, WEEKEND_PERIOD_TIMES } from '../../constants';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
+import PortalTooltip from '../../../Common/PortalTooltip';
 
 // 학생 항목 컴포넌트 - hover 효과를 위해 분리
 interface StudentItemProps {
@@ -20,6 +21,7 @@ interface StudentItemProps {
     enrollmentStyle: { bg: string; text: string } | null;
     themeText: string;
     isPendingMoved?: boolean;
+    classLabel?: string;  // 합반수업 시 소속 수업 라벨
 }
 
 const StudentItem: React.FC<StudentItemProps> = ({
@@ -34,7 +36,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
     isHighlighted,
     enrollmentStyle,
     themeText,
-    isPendingMoved = false
+    isPendingMoved = false,
+    classLabel
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     // 조회 모드/수정 모드 모두에서 학생 클릭 가능 (영어 시간표와 동일)
@@ -65,6 +68,11 @@ const StudentItem: React.FC<StudentItemProps> = ({
             style={hoverStyle}
             title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}\n(클릭하여 상세정보 보기)` : '클릭하여 상세정보 보기'}
         >
+            {classLabel && (
+                <span className="inline-block text-[8px] leading-none bg-gray-500 text-white rounded px-0.5 mr-0.5 align-middle font-normal">
+                    {classLabel}
+                </span>
+            )}
             {displayText}
         </li>
     );
@@ -96,6 +104,7 @@ interface ClassCardProps {
     showHoldStudents?: boolean;  // 대기 학생 표시 여부
     showWithdrawnStudents?: boolean;  // 퇴원 학생 표시 여부
     pendingMovedStudentIds?: Set<string>;  // 드래그 이동 대기 중인 학생 ID
+    mergedClasses?: TimetableClass[];  // 합반수업: 같은 슬롯의 모든 수업 목록
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -122,7 +131,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     rowHeight = 'normal',
     showHoldStudents = true,
     showWithdrawnStudents = true,
-    pendingMovedStudentIds
+    pendingMovedStudentIds,
+    mergedClasses
 }) => {
     // 컴팩트 모드 여부
     const isCompact = rowHeight === 'compact';
@@ -267,24 +277,43 @@ const ClassCard: React.FC<ClassCardProps> = ({
     // 병합 셀 여부 확인
     const isMergedCell = mergedDays.length > 1;
 
-    // 전체 학생 목록 가져오기
-    const allStudents = useMemo(() => {
-        let students: any[] = [];
-        if (cls.studentList && cls.studentList.length > 0) {
-            students = [...cls.studentList];
-        } else if (cls.studentIds && cls.studentIds.length > 0) {
-            students = cls.studentIds.map(id => studentMap[id]).filter(Boolean);
-        }
+    // 합반수업 여부 확인
+    const isMergedClass = mergedClasses && mergedClasses.length > 1;
+    const mergedClassCount = mergedClasses ? mergedClasses.length : 0;
 
-        // === 입학일 필터링: 오늘 이전에 입학한 학생만 표시 ===
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        return students.filter(s => {
-            // enrollmentDate가 없으면 표시 (기존 학생)
-            if (!s.enrollmentDate) return true;
-            // 입학일이 오늘 이전이면 표시
-            return s.enrollmentDate <= today;
+    // 전체 학생 목록 가져오기 (합반수업 시 모든 수업의 학생을 합침)
+    const allStudents = useMemo(() => {
+        const today = new Date().toISOString().split('T')[0];
+        const classesToProcess = isMergedClass ? mergedClasses! : [cls];
+
+        const allStudentsList: any[] = [];
+        const seenIds = new Set<string>();
+
+        classesToProcess.forEach(targetCls => {
+            let students: any[] = [];
+            if (targetCls.studentList && targetCls.studentList.length > 0) {
+                students = [...targetCls.studentList];
+            } else if (targetCls.studentIds && targetCls.studentIds.length > 0) {
+                students = targetCls.studentIds.map(id => studentMap[id]).filter(Boolean);
+            }
+
+            // 입학일 필터링
+            students = students.filter(s => {
+                if (!s.enrollmentDate) return true;
+                return s.enrollmentDate <= today;
+            });
+
+            // 합반수업일 때 classLabel 태깅 (중복 학생 방지)
+            students.forEach(s => {
+                if (!seenIds.has(s.id)) {
+                    seenIds.add(s.id);
+                    allStudentsList.push(isMergedClass ? { ...s, _classLabel: targetCls.className } : s);
+                }
+            });
         });
-    }, [cls.studentList, cls.studentIds, studentMap]);
+
+        return allStudentsList;
+    }, [cls, mergedClasses, isMergedClass, studentMap]);
 
     // 학생이 병합된 모든 요일에 등원하는지 확인
     const isStudentAttendingAllMergedDays = (student: any): boolean => {
@@ -440,7 +469,28 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     onMouseEnter={() => !canEdit && setShowScheduleTooltip(true)}
                     onMouseLeave={() => setShowScheduleTooltip(false)}
                 >
-                    <div>{cls.className}</div>
+                    <div className="relative">
+                        {cls.className}
+                        {isMergedClass && (
+                            <PortalTooltip
+                                triggerClassName="absolute -top-0.5 -right-0.5 z-10"
+                                content={
+                                    <div className="bg-gray-900 text-white text-xs rounded shadow-xl p-2 min-w-[120px]">
+                                        <div className="font-bold mb-1 border-b border-gray-700 pb-1">합반 수업 ({mergedClassCount}개)</div>
+                                        <ul className="space-y-0.5">
+                                            {mergedClasses!.map(mc => (
+                                                <li key={mc.id} className="text-gray-200">• {mc.className}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                }
+                            >
+                                <span className="inline-flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] px-1 cursor-help shadow-sm">
+                                    +{mergedClassCount - 1}
+                                </span>
+                            </PortalTooltip>
+                        )}
+                    </div>
                     {/* 강의실 + 재원생 수 (학생 목록 숨김 시) */}
                     {(cls.room || !showStudents) && (
                         <div className={`${fontSizeClass} font-normal text-gray-500 mt-0.5`}>
@@ -554,6 +604,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             enrollmentStyle={enrollmentStyle}
                                             themeText={theme.text}
                                             isPendingMoved={pendingMovedStudentIds?.has(s.id)}
+                                            classLabel={isMergedClass ? s._classLabel : undefined}
                                         />
                                     );
                                 })}
@@ -564,8 +615,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         <div className="flex-1"></div>
 
                         {/* 부분 등원 학생 (월만, 목만 등) */}
-                        {/* 부분 등원 학생 (월만, 목만 등) - 항상 표시 (드롭 영역으로 활용) */}
-                        {isMergedCell && (() => {
+                        {/* 수정 모드: 항상 표시 (드롭 영역으로 활용), 조회 모드: 부분등원 학생 있을 때만 표시 */}
+                        {isMergedCell && (canEdit || hasPartialStudents) && (() => {
                             const maxStudentCount = Math.max(
                                 0,
                                 ...mergedDays.map(day => partialStudentsByDay?.[day]?.active.length || 0)
@@ -633,6 +684,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                     enrollmentStyle={enrollmentStyle}
                                                                     themeText="text-amber-900 font-medium"
                                                                     isPendingMoved={pendingMovedStudentIds?.has(s.id)}
+                                                                    classLabel={isMergedClass ? s._classLabel : undefined}
                                                                 />
                                                             );
                                                         })}
@@ -719,12 +771,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             canEdit={canEdit}
                                             onStudentClick={onStudentClick}
                                             onDragStart={onDragStart}
-                                            classId={cls.id}
+                                            classId={s._classLabel ? cls.id : cls.id}
                                             fontSizeClass={fontSizeClass}
                                             isHighlighted={isHighlighted}
                                             enrollmentStyle={enrollmentStyle}
                                             themeText={theme.text}
                                             isPendingMoved={pendingMovedStudentIds?.has(s.id)}
+                                            classLabel={isMergedClass ? s._classLabel : undefined}
                                         />
                                     );
                                 })}
@@ -819,6 +872,7 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.fontSize === nextProps.fontSize &&
         prevProps.rowHeight === nextProps.rowHeight &&
         prevProps.showHoldStudents === nextProps.showHoldStudents &&
-        prevProps.showWithdrawnStudents === nextProps.showWithdrawnStudents
+        prevProps.showWithdrawnStudents === nextProps.showWithdrawnStudents &&
+        prevProps.mergedClasses === nextProps.mergedClasses
     );
 });
