@@ -241,12 +241,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     storage.setString(STORAGE_KEYS.ATTENDANCE_SORT_MODE, mode);
   }, []);
 
-  // 페이지네이션 상태
-  const [pageSize, setPageSize] = useState<number>(() => {
-    return storage.getJSON<number>(STORAGE_KEYS.ATTENDANCE_PAGE_SIZE, 20);
-  });
-  const [currentPage, setCurrentPage] = useState(1);
-
   // 테이블 ref (이미지 내보내기용)
   const tableRef = useRef<HTMLTableElement>(null);
 
@@ -354,22 +348,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // - 90+ 줄 useMemo → useVisibleAttendanceStudents 커스텀 훅으로 분리
   // - 독립적으로 메모이제이션되어 불필요한 재계산 방지
   const visibleStudents = useVisibleAttendanceStudents(allStudents, currentDate, groupOrder);
-
-  // 페이지네이션 계산
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(visibleStudents.length / pageSize)), [visibleStudents.length, pageSize]);
-  const safePage = Math.min(currentPage, totalPages);
-  const paginatedStudents = useMemo(() => {
-    const start = (safePage - 1) * pageSize;
-    return visibleStudents.slice(start, start + pageSize);
-  }, [visibleStudents, safePage, pageSize]);
-
-  // 필터 변경 시 페이지 초기화
-  const prevFilterKey = useRef(`${filterStaffId}_${selectedSubject}_${currentYearMonth}`);
-  const currentFilterKey = `${filterStaffId}_${selectedSubject}_${currentYearMonth}`;
-  if (prevFilterKey.current !== currentFilterKey) {
-    prevFilterKey.current = currentFilterKey;
-    if (currentPage !== 1) setCurrentPage(1);
-  }
 
   const pendingUpdatesByStudent = useMemo(() => groupUpdates(pendingUpdates), [pendingUpdates]);
   const pendingMemosByStudent = useMemo(() => groupUpdates(pendingMemos), [pendingMemos]);
@@ -798,7 +776,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           <Table
             ref={tableRef}
             currentDate={currentDate}
-            students={isExporting ? visibleStudents : paginatedStudents}
+            students={visibleStudents}
             salaryConfig={salaryConfig}
             onAttendanceChange={handleAttendanceChange}
             onEditStudent={handleEditStudent}
@@ -825,72 +803,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           />
         </div>
 
-        {/* Pagination Bar */}
-        {visibleStudents.length > 0 && (
-          <div className="p-3 border-t flex items-center justify-between flex-shrink-0" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
-            <div className="flex items-center gap-2">
-              <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  const newSize = Number(e.target.value);
-                  setPageSize(newSize);
-                  storage.setJSON(STORAGE_KEYS.ATTENDANCE_PAGE_SIZE, newSize);
-                  setCurrentPage(1);
-                }}
-                className="px-2 py-1 text-xs rounded-sm border transition-all"
-                style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
-              >
-                <option value={10}>10개</option>
-                <option value={20}>20개</option>
-                <option value={50}>50개</option>
-                <option value={100}>100개</option>
-              </select>
-              <span className="text-xs hidden sm:inline" style={{ color: '#373d41' }}>
-                {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, visibleStudents.length)} / 총 {visibleStudents.length}명
-              </span>
-            </div>
-            <nav className="flex items-center gap-1" aria-label="Pagination">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={safePage <= 1}
-                className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
-                style={{ color: '#081429' }}
-              >
-                이전
-              </button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum: number;
-                  if (totalPages <= 5) pageNum = i + 1;
-                  else if (safePage <= 3) pageNum = i + 1;
-                  else if (safePage >= totalPages - 2) pageNum = totalPages - 4 + i;
-                  else pageNum = safePage - 2 + i;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
-                        safePage === pageNum ? 'text-[#081429]' : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                      style={{ backgroundColor: safePage === pageNum ? '#fdb813' : 'transparent' }}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={safePage >= totalPages}
-                className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
-                style={{ color: '#081429' }}
-              >
-                다음
-              </button>
-            </nav>
-          </div>
-        )}
       </div>
 
       {/* Modals */}

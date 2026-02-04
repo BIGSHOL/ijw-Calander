@@ -102,8 +102,11 @@ export const useAttendanceStudents = (options?: {
         error: studentsError,
         refetch: refetchStudents
     } = useQuery({
-        queryKey: ['attendanceStudents', options?.staffId, options?.subject],
+        queryKey: ['attendanceStudents', options?.staffId, options?.subject, options?.yearMonth],
         queryFn: async (): Promise<{ filtered: Student[], all: Student[] }> => {
+            // 조회 월 기준 날짜 계산 (과거 월 조회 시 퇴원생도 포함)
+            const monthFirstDay = options?.yearMonth ? `${options.yearMonth}-01` : new Date().toISOString().split('T')[0];
+
             // === PERFORMANCE: 수업 기준으로 학생 찾기 ===
             // OPTIMIZATION (async-parallel): staff + classes 병렬 조회로 로딩 시간 300-500ms 단축
 
@@ -171,16 +174,15 @@ export const useAttendanceStudents = (options?: {
 
             // Step 6: 학생 ID 목록 수집 - 클라이언트에서 className 필터링
             const studentIdsSet = new Set<string>();
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
             enrollmentsSnapshot.docs.forEach(doc => {
                 const data = doc.data();
                 const enrollmentClassName = data.className as string;
                 const enrollmentClassId = data.classId as string;
                 const studentId = doc.ref.parent.parent?.id;
 
-                // BUG FIX: 종료된 수업(endDate가 과거인 enrollment)은 제외
-                // 종료 예정일이 미래인 경우는 아직 수강 중이므로 포함
-                if (data.endDate && data.endDate < today) return;
+                // 조회 월 이전에 종료된 수업만 제외 (과거 월 조회 시 퇴원생도 포함)
+                // monthFirstDay 기준: 조회 월 1일 이전에 종료 → 제외
+                if (data.endDate && data.endDate < monthFirstDay) return;
 
                 // className 또는 classId로 필터링 (내 클래스에 속하는 학생만)
                 if (studentId && (myClassNamesSet.has(enrollmentClassName) || myClassIdsSet.has(enrollmentClassId))) {
@@ -249,8 +251,8 @@ export const useAttendanceStudents = (options?: {
                 const slotClassesSet = new Set<string>();
 
                 teacherEnrollments.forEach((e: any) => {
-                    // 종료된 수업은 제외 (과거 종료일만 - Step 6과 동일한 조건)
-                    if (e.endDate && e.endDate < today) return;
+                    // 조회 월 이전에 종료된 수업만 제외 (과거 월 조회 시 퇴원생도 포함)
+                    if (e.endDate && e.endDate < monthFirstDay) return;
 
                     const classData = myClasses.find(c => c.id === e.classId || c.className === e.className);
                     if (!classData) return;
@@ -275,8 +277,8 @@ export const useAttendanceStudents = (options?: {
                 // OPTIMIZATION (js-set-map-lookups): Set으로 중복 체크 O(1)
                 const teacherDaysSet = new Set<string>();
                 teacherEnrollments.forEach((e: any) => {
-                    // 종료된 수업은 제외 (과거 종료일만 - Step 6과 동일한 조건)
-                    if (e.endDate && e.endDate < today) return;
+                    // 조회 월 이전에 종료된 수업만 제외
+                    if (e.endDate && e.endDate < monthFirstDay) return;
 
                     const classData = classesMap.get(e.classId);
                     // staffId로 슬롯 선생님 여부 확인
@@ -304,11 +306,12 @@ export const useAttendanceStudents = (options?: {
                 });
                 const teacherDays = Array.from(teacherDaysSet);
 
-                // 날짜 범위 추출 (종료되지 않은 수업만)
+                // 날짜 범위 추출 (조회 월 기준 활성 수업)
                 let enrollmentStartDate = '1970-01-01';
                 let enrollmentEndDate: string | null = null;
 
-                const activeEnrollments = teacherEnrollments.filter((e: any) => !e.endDate || e.endDate >= today);
+                // 조회 월 기준 활성 수업: endDate가 없거나 조회 월 1일 이후인 수업
+                const activeEnrollments = teacherEnrollments.filter((e: any) => !e.endDate || e.endDate >= monthFirstDay);
                 if (activeEnrollments.length > 0) {
                     const startDates = activeEnrollments
                         .map((e: any) => e.startDate)
@@ -317,8 +320,16 @@ export const useAttendanceStudents = (options?: {
                     if (startDates.length > 0) {
                         enrollmentStartDate = startDates.sort()[0];
                     }
-                    // 활성 수업이 있으면 endDate는 null (아직 수강 중)
-                    enrollmentEndDate = null;
+
+                    // 모든 활성 수업에 endDate가 있으면 가장 늦은 endDate 사용
+                    const allHaveEndDate = activeEnrollments.every((e: any) => e.endDate);
+                    if (allHaveEndDate) {
+                        const endDates = activeEnrollments.map((e: any) => e.endDate).sort();
+                        enrollmentEndDate = endDates[endDates.length - 1];
+                    } else {
+                        // endDate 없는 수업이 있으면 아직 수강 중
+                        enrollmentEndDate = null;
+                    }
                 }
 
                 // 그룹명: 담임 수업 먼저, 부담임 수업 나중에 (담임/부담임 라벨 없음 - UI에서 표시)
