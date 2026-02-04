@@ -574,7 +574,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                             return (
                                                 <div
                                                     key={scenario.id}
-                                                    className={`p-2 rounded-sm border transition-all ${
+                                                    className={`p-2 rounded-sm border transition-all group ${
                                                         !validation.isValid
                                                             ? 'bg-red-50 border-red-200'
                                                             : isSelected
@@ -618,6 +618,82 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                         {(scenario as any).scheduledApplyStatus === 'failed' && (
                                                             <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded-sm font-bold">실패</span>
                                                         )}
+                                                        {/* 인라인 작업 버튼 */}
+                                                        {(() => {
+                                                            const isOwner = scenario.createdByUid === currentUser?.uid;
+                                                            const canModify = isMaster || isOwner || canManageSimulation;
+                                                            const isPending = (scenario as any).scheduledApplyStatus === 'pending';
+                                                            return (
+                                                                <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                                                                    {/* 불러오기 */}
+                                                                    {isSimulationMode && canEdit && validation.isValid && (
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); handleLoadScenario(scenario); }}
+                                                                            disabled={activeOperation !== null}
+                                                                            className="p-1 rounded-sm hover:bg-blue-100 text-gray-400 hover:text-blue-600 disabled:opacity-50"
+                                                                            title="불러오기"
+                                                                        >
+                                                                            {activeOperation === scenario.id ? (
+                                                                                <div className="animate-spin w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full" />
+                                                                            ) : (
+                                                                                <Download size={12} />
+                                                                            )}
+                                                                        </button>
+                                                                    )}
+                                                                    {/* 덮어쓰기 */}
+                                                                    {isSimulationMode && canEdit && (
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); handleOverwriteScenario(scenario); }}
+                                                                            disabled={activeOperation !== null}
+                                                                            className="p-1 rounded-sm hover:bg-orange-100 text-gray-400 hover:text-orange-600 disabled:opacity-50"
+                                                                            title="덮어쓰기"
+                                                                        >
+                                                                            {activeOperation === `overwrite_${scenario.id}` ? (
+                                                                                <div className="animate-spin w-3 h-3 border-2 border-orange-500 border-t-transparent rounded-full" />
+                                                                            ) : (
+                                                                                <Upload size={12} />
+                                                                            )}
+                                                                        </button>
+                                                                    )}
+                                                                    {/* 수정 */}
+                                                                    {canModify && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setSelectedScenarioId(scenario.id);
+                                                                                setEditingId(scenario.id);
+                                                                                setEditingName(scenario.name);
+                                                                                setEditingDesc(scenario.description || '');
+                                                                            }}
+                                                                            className="p-1 rounded-sm hover:bg-gray-200 text-gray-400 hover:text-gray-700"
+                                                                            title="수정"
+                                                                        >
+                                                                            <Pencil size={12} />
+                                                                        </button>
+                                                                    )}
+                                                                    {/* 삭제 */}
+                                                                    {canManageSimulation && (
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); handleDeleteScenario(scenario); }}
+                                                                            className="p-1 rounded-sm hover:bg-red-100 text-gray-400 hover:text-red-600"
+                                                                            title="삭제"
+                                                                        >
+                                                                            <Trash2 size={12} />
+                                                                        </button>
+                                                                    )}
+                                                                    {/* 예약 취소 */}
+                                                                    {isPending && canManageSimulation && (
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); handleCancelScheduledApply(scenario); }}
+                                                                            className="p-1 rounded-sm hover:bg-gray-200 text-gray-400 hover:text-gray-700"
+                                                                            title="예약 취소"
+                                                                        >
+                                                                            <XCircle size={12} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </div>
                                                     {scenario.description && (
                                                         <p className="text-xs text-gray-500 mb-1 ml-6">{scenario.description}</p>
@@ -773,101 +849,6 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                 </div>
                             )}
 
-                            {/* Section 4: 작업 */}
-                            {selectedScenario && (
-                                <div className="bg-white border border-gray-200 overflow-hidden">
-                                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                        <GitCompare className="w-3 h-3 text-[#081429]" />
-                                        <h3 className="text-[#081429] font-bold text-xs">작업</h3>
-                                    </div>
-                                    <div className="p-3">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {/* Load Button */}
-                                            {isSimulationMode && canEdit && validateScenarioData(selectedScenario).isValid && (
-                                                <button
-                                                    onClick={() => handleLoadScenario(selectedScenario)}
-                                                    disabled={activeOperation !== null}
-                                                    className="flex items-center justify-center gap-1 px-3 py-2 bg-blue-500 text-white rounded-sm text-xs font-bold hover:bg-blue-600 disabled:opacity-50 transition-colors"
-                                                >
-                                                    {activeOperation === selectedScenario.id ? (
-                                                        <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-sm" />
-                                                    ) : (
-                                                        <Download size={12} />
-                                                    )}
-                                                    불러오기
-                                                </button>
-                                            )}
-
-                                            {/* Overwrite Button */}
-                                            {isSimulationMode && canEdit && (
-                                                <button
-                                                    onClick={() => handleOverwriteScenario(selectedScenario)}
-                                                    disabled={activeOperation !== null}
-                                                    className="flex items-center justify-center gap-1 px-3 py-2 bg-orange-500 text-white rounded-sm text-xs font-bold hover:bg-orange-600 disabled:opacity-50 transition-colors"
-                                                    title="현재 상태를 이 시나리오에 덮어쓰기"
-                                                >
-                                                    {activeOperation === `overwrite_${selectedScenario.id}` ? (
-                                                        <div className="animate-spin w-3 h-3 border-2 border-white border-t-transparent rounded-sm" />
-                                                    ) : (
-                                                        <Upload size={12} />
-                                                    )}
-                                                    덮어쓰기
-                                                </button>
-                                            )}
-
-                                            {/* Edit Button */}
-                                            {(() => {
-                                                const isOwner = selectedScenario.createdByUid === currentUser?.uid;
-                                                const canModify = isMaster || isOwner || canManageSimulation;
-                                                return canModify && editingId !== selectedScenario.id && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setEditingId(selectedScenario.id);
-                                                            setEditingName(selectedScenario.name);
-                                                            setEditingDesc(selectedScenario.description || '');
-                                                        }}
-                                                        className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-500 text-white rounded-sm text-xs font-bold hover:bg-gray-600 transition-colors"
-                                                    >
-                                                        <Pencil size={12} />
-                                                        편집
-                                                    </button>
-                                                );
-                                            })()}
-
-                                            {/* Delete Button */}
-                                            {canManageSimulation && (
-                                                <button
-                                                    onClick={() => handleDeleteScenario(selectedScenario)}
-                                                    className="flex items-center justify-center gap-1 px-3 py-2 bg-red-500 text-white rounded-sm text-xs font-bold hover:bg-red-600 transition-colors"
-                                                >
-                                                    <Trash2 size={12} />
-                                                    삭제
-                                                </button>
-                                            )}
-
-                                            {/* Cancel Scheduled Apply Button */}
-                                            {(selectedScenario as any).scheduledApplyStatus === 'pending' && canManageSimulation && (
-                                                <button
-                                                    onClick={() => handleCancelScheduledApply(selectedScenario)}
-                                                    className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-600 text-white rounded-sm text-xs font-bold hover:bg-gray-700 col-span-2"
-                                                    title="예약 취소"
-                                                >
-                                                    <XCircle size={12} />
-                                                    예약 취소
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* Error display */}
-                                        {!validateScenarioData(selectedScenario).isValid && (
-                                            <div className="mt-2 p-2 bg-red-100 rounded-sm text-xs text-red-700 flex items-center gap-1">
-                                                <AlertTriangle size={12} />
-                                                {validateScenarioData(selectedScenario).error}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
                         </>
                     )}
                 </div>

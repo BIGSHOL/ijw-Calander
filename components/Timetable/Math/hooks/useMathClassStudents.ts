@@ -59,24 +59,18 @@ export const useMathClassStudents = (
     // studentMap이 비어있지 않은지 확인 (쿼리 활성화 조건용)
     const studentMapReady = Object.keys(studentMap).length > 0;
 
-    // studentMap 변경 감지: 크기 + 상태 분포 기반 해시 (크기만 비교 시 상태 변경 누락)
-    const prevStudentMapHashRef = useRef<string>('');
+    // studentMap 참조 변경 감지 → 캐시 무효화
+    // React Query의 structuralSharing 덕분에 실제 데이터 변경 시에만 새 참조 생성
+    const prevStudentMapRef = useRef<Record<string, any> | null>(null);
     useEffect(() => {
+        const prev = prevStudentMapRef.current;
         studentMapRef.current = studentMap;
-        // 경량 해시: 크기 + 상태별 카운트 (학생 상태 변경 시 캐시 무효화)
-        const entries = Object.entries(studentMap);
-        let active = 0, withdrawn = 0, onHold = 0;
-        for (const [, s] of entries) {
-            if (s?.status === 'active') active++;
-            else if (s?.status === 'withdrawn') withdrawn++;
-            else if (s?.status === 'on_hold') onHold++;
-        }
-        const hash = `${entries.length}:${active}:${withdrawn}:${onHold}`;
+        prevStudentMapRef.current = studentMap;
 
-        if (prevStudentMapHashRef.current && prevStudentMapHashRef.current !== hash) {
+        // 첫 렌더가 아니고, 참조가 변경된 경우 캐시 무효화
+        if (prev !== null && prev !== studentMap) {
             queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
         }
-        prevStudentMapHashRef.current = hash;
     }, [studentMap, queryClient]);
 
     // Memoize classNames to avoid unnecessary re-fetches

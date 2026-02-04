@@ -76,8 +76,8 @@ export function useStudents(includeWithdrawn = false, enabled = true) {
                 const allStudentsSnap = await getDocs(collection(db, COL_STUDENTS));
 
                 const studentList = allStudentsSnap.docs.map(docSnap => ({
-                    id: docSnap.id,
-                    ...docSnap.data()
+                    ...docSnap.data(),
+                    id: docSnap.id,  // Firestore 문서 ID가 항상 우선 (문서 내 id 필드 덮어쓰기 방지)
                 } as UnifiedStudent));
 
                 // DEBUG: 이상한 이름 또는 name 필드가 없는 학생 찾기
@@ -109,8 +109,8 @@ export function useStudents(includeWithdrawn = false, enabled = true) {
 
                 const snapshot = await getDocs(q);
                 const studentList = snapshot.docs.map(docSnap => ({
-                    id: docSnap.id,
-                    ...docSnap.data()
+                    ...docSnap.data(),
+                    id: docSnap.id,  // Firestore 문서 ID가 항상 우선
                 } as UnifiedStudent));
 
                 // Client-side sort by name (먼저 정렬)
@@ -259,8 +259,8 @@ export async function searchStudentsByQuery(searchQuery: string): Promise<Unifie
 
         const snapshot = await getDocs(nameQuery);
         const results = snapshot.docs.map(doc => ({
-            id: doc.id,
             ...doc.data(),
+            id: doc.id,  // Firestore 문서 ID가 항상 우선
             isOldWithdrawn: true // 과거 퇴원생 표시용
         } as UnifiedStudent));
 
@@ -285,7 +285,7 @@ export async function searchStudentByExactName(name: string): Promise<UnifiedStu
         const currentSnap = await getDocs(currentQuery);
 
         if (!currentSnap.empty) {
-            return { id: currentSnap.docs[0].id, ...currentSnap.docs[0].data() } as UnifiedStudent;
+            return { ...currentSnap.docs[0].data(), id: currentSnap.docs[0].id } as UnifiedStudent;
         }
 
         // 향후 students_archived 컬렉션 추가 시 여기에 검색 로직 추가

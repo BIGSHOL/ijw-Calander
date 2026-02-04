@@ -33,10 +33,10 @@ interface TimetableGridProps {
     // DnD
     dragOverClassId: string | null;
     onClassClick: (cls: TimetableClass) => void;
-    onDragStart: (e: React.DragEvent, studentId: string, fromClassId: string) => void;
+    onDragStart: (e: React.DragEvent, studentId: string, fromClassId: string, fromZone?: string) => void;
     onDragOver: (e: React.DragEvent, classId: string) => void;
     onDragLeave: (e: React.DragEvent) => void;
-    onDrop: (e: React.DragEvent, toClassId: string) => void;
+    onDrop: (e: React.DragEvent, toClassId: string, toZone?: string) => void;
 
     currentSubjectFilter: string;
     studentMap: Record<string, any>;
@@ -554,7 +554,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
                                                                                 canEdit={effectiveCanEdit}
-                                                                                dragOverClassId={dragOverClassId}
+                                                                                isDragOver={dragOverClassId === cls.id}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
                                                                                 onDragOver={onDragOver}
@@ -696,7 +696,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
                                                                                 canEdit={effectiveCanEdit}
-                                                                                dragOverClassId={dragOverClassId}
+                                                                                isDragOver={dragOverClassId === cls.id}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
                                                                                 onDragOver={onDragOver}
@@ -855,7 +855,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showSchool={showSchool}
                                                                                     showGrade={showGrade}
                                                                                     canEdit={effectiveCanEdit}
-                                                                                    dragOverClassId={dragOverClassId}
+                                                                                    isDragOver={dragOverClassId === cls.id}
                                                                                     onClick={onClassClick}
                                                                                     onDragStart={onDragStart}
                                                                                     onDragOver={onDragOver}
@@ -1001,7 +1001,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
                                                                             canEdit={effectiveCanEdit}
-                                                                            dragOverClassId={dragOverClassId}
+                                                                            isDragOver={dragOverClassId === cls.id}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
                                                                             onDragOver={onDragOver}
@@ -1247,7 +1247,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
                                                                             canEdit={effectiveCanEdit}
-                                                                            dragOverClassId={dragOverClassId}
+                                                                            isDragOver={dragOverClassId === cls.id}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
                                                                             onDragOver={onDragOver}
@@ -1326,7 +1326,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
                                                                             canEdit={effectiveCanEdit}
-                                                                            dragOverClassId={dragOverClassId}
+                                                                            isDragOver={dragOverClassId === cls.id}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
                                                                             onDragOver={onDragOver}
@@ -1422,7 +1422,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
                                                                                 canEdit={effectiveCanEdit}
-                                                                                dragOverClassId={dragOverClassId}
+                                                                                isDragOver={dragOverClassId === cls.id}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
                                                                                 onDragOver={onDragOver}
@@ -1528,7 +1528,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         showSchool={showSchool}
                                                                         showGrade={showGrade}
                                                                         canEdit={effectiveCanEdit}
-                                                                        dragOverClassId={dragOverClassId}
+                                                                        isDragOver={dragOverClassId === cls.id}
                                                                         onClick={onClassClick}
                                                                         onDragStart={onDragStart}
                                                                         onDragOver={onDragOver}
@@ -1592,4 +1592,5 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     );
 };
 
-export default TimetableGrid;
+// React.memo로 불필요한 리렌더링 방지 (부모 리렌더 시 props 변경 없으면 스킵)
+export default React.memo(TimetableGrid);

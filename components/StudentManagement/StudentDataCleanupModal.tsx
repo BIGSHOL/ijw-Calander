@@ -56,10 +56,22 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
       .replace(/고등학교$/g, '고');
   };
 
-  // 시맨틱 ID 생성 (학교명 정규화 적용)
-  const toSemanticId = (student: UnifiedStudent): string => {
+  // 학교 약칭 보정 맵 (runAnalysis에서 설정)
+  const [schoolCorrections, setSchoolCorrections] = useState<Map<string, string>>(new Map());
+
+  // 학교명 정규화 + 약칭 보정 통합
+  const fullNormalizeSchool = (school: string, corrections?: Map<string, string>): string => {
+    const normalized = normalizeSchool(school);
+    if (corrections && corrections.has(normalized)) {
+      return corrections.get(normalized)!;
+    }
+    return normalized;
+  };
+
+  // 시맨틱 ID 생성 (학교명 정규화 + 약칭 보정 적용)
+  const toSemanticId = (student: UnifiedStudent, corrections?: Map<string, string>): string => {
     const name = (student.name || '').trim();
-    const school = normalizeSchool(student.school);
+    const school = fullNormalizeSchool(student.school || '', corrections);
     const grade = (student.grade || '').trim();
     return `${name}_${school}_${grade}`;
   };
@@ -71,6 +83,33 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
     const studentsRef = collection(db, 'students');
     const snapshot = await getDocs(studentsRef);
 
+    // 학교 약칭 보정 맵 생성
+    const schoolCounts = new Map<string, number>();
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data() as UnifiedStudent;
+      const idParts = docSnap.id.split('_');
+      const isSemanticDocId = idParts.length >= 2 && !/^\d+$/.test(docSnap.id) && !/^[a-zA-Z0-9]{15,}$/.test(docSnap.id);
+      if (isSemanticDocId) {
+        const s = normalizeSchool(idParts[1]);
+        if (s) schoolCounts.set(s, (schoolCounts.get(s) || 0) + 1);
+      }
+      const s = normalizeSchool(data.school);
+      if (s) schoolCounts.set(s, (schoolCounts.get(s) || 0) + 1);
+    }
+    const allSchools = Array.from(schoolCounts.keys());
+    const corrections = new Map<string, string>();
+    for (const shortName of allSchools) {
+      if (shortName.length > 2) continue; // 3자 이상은 정상 (침산초, 종로초 등)
+      const matches = allSchools.filter(l => l.length > shortName.length && l.endsWith(shortName));
+      if (matches.length === 1) {
+        corrections.set(shortName, matches[0]);
+      } else if (matches.length > 1) {
+        matches.sort((a, b) => (schoolCounts.get(b) || 0) - (schoolCounts.get(a) || 0));
+        corrections.set(shortName, matches[0]);
+      }
+    }
+    setSchoolCorrections(corrections);
+
     const semanticIds = new Set<string>();
     const numericStudents: NumericStudent[] = [];
 
@@ -81,7 +120,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
 
       if (!isNumericId(id)) {
         semanticIds.add(id);
-        semanticIds.add(toSemanticId(data));
+        semanticIds.add(toSemanticId(data, corrections));
       }
     }
 
@@ -91,7 +130,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
       if (!isNumericId(id)) continue;
 
       const data = docSnap.data() as UnifiedStudent;
-      const semanticId = toSemanticId(data);
+      const semanticId = toSemanticId(data, corrections);
       const hasSemantic = semanticIds.has(semanticId);
 
       numericStudents.push({

@@ -25,6 +25,54 @@ function normalizeSchool(school?: string): string {
     .replace(/고등학교$/g, '고');
 }
 
+/**
+ * 기존 학생 데이터에서 학교 약칭 → 정식명 자동 보정 맵 생성
+ * 예: "일중"이 1명, "대구일중"이 10명이면 → "일중" → "대구일중"
+ */
+function buildSchoolCorrections(students: UnifiedStudent[]): Map<string, string> {
+  const schoolCounts = new Map<string, number>();
+
+  students.forEach(student => {
+    const idParts = student.id.split('_');
+    const isSemanticId = idParts.length >= 2 && !/^\d+$/.test(student.id) && !/^[a-zA-Z0-9]{15,}$/.test(student.id);
+    if (isSemanticId) {
+      const school = normalizeSchool(idParts[1]);
+      if (school) schoolCounts.set(school, (schoolCounts.get(school) || 0) + 1);
+    }
+    const school = normalizeSchool(student.school);
+    if (school) schoolCounts.set(school, (schoolCounts.get(school) || 0) + 1);
+  });
+
+  const allSchools = Array.from(schoolCounts.keys());
+  const corrections = new Map<string, string>();
+
+  for (const shortName of allSchools) {
+    if (shortName.length > 2) continue; // 3자 이상은 정상 (침산초, 종로초 등)
+    const matches = allSchools.filter(
+      longName => longName.length > shortName.length && longName.endsWith(shortName)
+    );
+    if (matches.length === 1) {
+      corrections.set(shortName, matches[0]);
+    } else if (matches.length > 1) {
+      matches.sort((a, b) => (schoolCounts.get(b) || 0) - (schoolCounts.get(a) || 0));
+      corrections.set(shortName, matches[0]);
+    }
+  }
+
+  return corrections;
+}
+
+/**
+ * 학교명 정규화 + 약칭 보정 통합
+ */
+function fullNormalizeSchool(school: string, corrections?: Map<string, string>): string {
+  const normalized = normalizeSchool(school);
+  if (corrections && corrections.has(normalized)) {
+    return corrections.get(normalized)!;
+  }
+  return normalized;
+}
+
 export interface DuplicateGroup {
   key: string;                     // 중복 키 (이름_학교_학년)
   name: string;                    // 이름
@@ -106,15 +154,21 @@ export function useStudentDuplicates(
     isSelected: boolean;
   }>>({});
 
+  // 학교 약칭 보정 맵 (데이터 기반)
+  const schoolCorrections = useMemo(() => buildSchoolCorrections(students), [students]);
+
   // 중복 그룹 계산
   const duplicateGroups = useMemo(() => {
     const groupMap = new Map<string, UnifiedStudent[]>();
 
-    // 이름 + 학교(정규화) + 학년으로 그룹화
+    // 문서 ID 기준 이름(접미사 포함) + 학교(정규화+약칭보정) + 학년으로 그룹화
     students.forEach(student => {
-      const name = (student.name || '').trim();
-      const school = normalizeSchool(student.school);
-      const grade = (student.grade || '').trim();
+      // 문서 ID에서 이름 추출 (접미사 A/B/C 포함, 동명이인 구분)
+      const idParts = student.id.split('_');
+      const isSemanticId = idParts.length >= 3 && !/^\d+$/.test(student.id) && !/^[a-zA-Z0-9]{15,}$/.test(student.id);
+      const name = isSemanticId ? idParts[0] : (student.name || '').trim();
+      const school = isSemanticId ? fullNormalizeSchool(idParts[1], schoolCorrections) : fullNormalizeSchool(student.school || '', schoolCorrections);
+      const grade = isSemanticId ? idParts.slice(2).join('_') : (student.grade || '').trim();
 
       // 이름이 없으면 스킵
       if (!name) return;
@@ -152,7 +206,7 @@ export function useStudentDuplicates(
     groups.sort((a, b) => b.students.length - a.students.length);
 
     return groups;
-  }, [students, groupSelections]);
+  }, [students, groupSelections, schoolCorrections]);
 
   // 통계 계산
   const totalDuplicates = useMemo(() =>
