@@ -103,6 +103,11 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
                 );
                 const fromSnapshot = await getDocs(fromEnrollmentsQuery);
 
+                // 이전 enrollment에서 enrollmentDate 보존 (반이동 시 신입생 재표시 방지)
+                const prevEnrollmentDate = fromSnapshot.docs.length > 0
+                    ? fromSnapshot.docs[0].data().enrollmentDate
+                    : undefined;
+
                 const endDatePromises = fromSnapshot.docs.map(docSnap =>
                     updateDoc(docSnap.ref, {
                         endDate: today,
@@ -118,7 +123,7 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
                     className: toClass,
                     subject: 'english',
                     staffId,  // 학생관리 수업 탭 강사 표시용
-                    enrollmentDate: today,  // 시작일 = 오늘
+                    enrollmentDate: prevEnrollmentDate || today,  // 반이동 시 기존 신입생 날짜 유지
                     createdAt: new Date().toISOString(),
                     // 이전 enrollment에서 underline 등 속성 복사
                     underline: student.underline || false,

@@ -195,14 +195,31 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                 return;
             }
 
-            // 기존 enrollment 데이터 읽기
+            // initialClasses(서버 원본)에서 실제 enrollment 문서 ID 조회 맵 구축
+            // localClasses는 optimistic update로 학생이 이동되어 있어 원본 반에서 찾을 수 없음
+            const enrollmentDocIdMap = new Map<string, string>();
+            initialClasses.forEach(cls => {
+                cls.studentList?.forEach(s => {
+                    if (s.enrollmentDocId) {
+                        enrollmentDocIdMap.set(`${s.id}_${cls.id}`, s.enrollmentDocId);
+                    }
+                });
+            });
+
+            // 실제 enrollment 문서 ID 조회 헬퍼
+            const getEnrollmentDocId = (studentId: string, classId: string, className: string) => {
+                return enrollmentDocIdMap.get(`${studentId}_${classId}`) || `math_${className}`;
+            };
+
+            // 기존 enrollment 데이터 읽기 (실제 문서 ID 사용)
             const enrollmentDataMap = new Map<string, Record<string, any>>();
             await Promise.all(
                 Array.from(finalMoves.entries()).map(async ([studentId, move]) => {
                     const fromClass = localClasses.find(c => c.id === move.fromClassId);
                     if (!fromClass) return;
 
-                    const oldEnrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${fromClass.className}`);
+                    const docId = getEnrollmentDocId(studentId, move.fromClassId, fromClass.className);
+                    const oldEnrollmentRef = doc(db, 'students', studentId, 'enrollments', docId);
                     const oldDoc = await getDoc(oldEnrollmentRef);
                     if (oldDoc.exists()) {
                         enrollmentDataMap.set(`${studentId}_${move.fromClassId}`, oldDoc.data());
@@ -221,29 +238,33 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     const cls = localClasses.find(c => c.id === move.fromClassId);
                     if (!cls) continue;
 
-                    const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${cls.className}`);
-                    batch.update(enrollmentRef, {
+                    const docId = getEnrollmentDocId(studentId, move.fromClassId, cls.className);
+                    const enrollmentRef = doc(db, 'students', studentId, 'enrollments', docId);
+                    batch.set(enrollmentRef, {
                         attendanceDays: newAttendanceDays,
                         updatedAt: new Date().toISOString()
-                    });
+                    }, { merge: true });
                 } else {
                     // ===== 반이동 + attendanceDays 설정 =====
                     const fromClass = localClasses.find(c => c.id === move.fromClassId);
                     const toClass = localClasses.find(c => c.id === move.toClassId);
 
                     if (fromClass && toClass) {
-                        const oldEnrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${fromClass.className}`);
+                        const oldDocId = getEnrollmentDocId(studentId, move.fromClassId, fromClass.className);
+                        const oldEnrollmentRef = doc(db, 'students', studentId, 'enrollments', oldDocId);
                         const newEnrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${toClass.className}`);
 
                         const existingData = enrollmentDataMap.get(`${studentId}_${move.fromClassId}`);
                         const today = new Date().toISOString().split('T')[0];
 
-                        // 기존 enrollment 종료 처리
-                        batch.update(oldEnrollmentRef, {
-                            endDate: today,
-                            withdrawalDate: today,
-                            updatedAt: new Date().toISOString()
-                        });
+                        // 기존 enrollment 종료 처리 (문서가 존재하는 경우에만)
+                        if (existingData) {
+                            batch.update(oldEnrollmentRef, {
+                                endDate: today,
+                                withdrawalDate: today,
+                                updatedAt: new Date().toISOString()
+                            });
+                        }
 
                         // 새 enrollment 생성 (attendanceDays 포함)
                         if (existingData) {
@@ -252,7 +273,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                                 ...preservedData,
                                 className: toClass.className,
                                 attendanceDays: newAttendanceDays,
-                                enrollmentDate: today,
+                                enrollmentDate: preservedData.enrollmentDate || today,  // 반이동 시 기존 신입생 날짜 유지
                                 createdAt: new Date().toISOString(),
                                 updatedAt: new Date().toISOString()
                             });

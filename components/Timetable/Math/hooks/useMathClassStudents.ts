@@ -130,6 +130,7 @@ export const useMathClassStudents = (
                 classStudentMap[className].add(studentId);
 
                 enrollmentDataMap[className][studentId] = {
+                    enrollmentDocId: enrollment.id,  // Firestore 실제 문서 ID
                     enrollmentDate: startDate,
                     withdrawalDate: withdrawalDate || endDate,  // endDate도 퇴원으로 처리
                     onHold: enrollment.onHold,
@@ -176,6 +177,7 @@ export const useMathClassStudents = (
                         isScheduled: enrollmentData.isScheduled || false,
                         isTransferred: enrollmentData.isTransferred || false,
                         isTransferredIn: enrollmentData.isTransferredIn || false,
+                        enrollmentDocId: enrollmentData.enrollmentDocId,
                     } as TimetableStudent;
                 })
                 .filter(Boolean) as TimetableStudent[];
