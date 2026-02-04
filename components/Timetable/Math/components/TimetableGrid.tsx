@@ -5,82 +5,7 @@ import ClassCard from './ClassCard';
 import { WEEKEND_PERIOD_TIMES, ALL_WEEKDAYS, LEGACY_TO_UNIFIED_PERIOD_MAP, MATH_GROUP_DISPLAY, MATH_GROUP_PERIOD_IDS, MATH_GROUPED_PERIODS, MATH_PERIOD_TIMES } from '../../constants';
 import { BookOpen } from 'lucide-react';
 
-// Helper: 특정 요일에 강사가 수업이 있는지 확인 (메인 teacher 또는 slotTeachers)
-const hasClassOnDay = (
-    cls: TimetableClass,
-    day: string,
-    resource: string,
-    viewType: 'teacher' | 'room' | 'class'
-): boolean => {
-    // 해당 요일에 스케줄이 있는지 먼저 확인
-    const hasScheduleOnDay = cls.schedule?.some(s => s.includes(day));
-    if (!hasScheduleOnDay) return false;
-
-    if (viewType === 'teacher') {
-        // 메인 teacher인 경우
-        if (cls.teacher?.trim() === resource?.trim()) {
-            // slotTeachers에서 다른 사람이 모든 슬롯을 담당하는지 확인
-            // 해당 요일의 모든 슬롯에 slotTeacher가 지정되어 있으면 메인 teacher는 해당 요일 수업 없음
-            const daySlots = cls.schedule?.filter(s => s.includes(day)) || [];
-            const allSlotsOverridden = daySlots.every(slot => {
-                // slot 형식: "월 1-2" -> slotTeachers 키: "월-2"
-                const parts = slot.trim().split(/\s+/);
-                if (parts.length >= 2) {
-                    const slotDay = parts[0];
-                    const periodPart = parts[1];
-                    // 레거시 periodId를 새 periodId로 변환 (모듈 상수 사용)
-                    const normalizedPeriod = LEGACY_TO_UNIFIED_PERIOD_MAP[periodPart] || periodPart;
-                    const slotKey = `${slotDay}-${normalizedPeriod}`;
-                    const slotTeacher = cls.slotTeachers?.[slotKey];
-                    // slotTeacher가 있고 메인 teacher와 다르면 override
-                    return slotTeacher && slotTeacher.trim() !== resource?.trim();
-                }
-                return false;
-            });
-            // 모든 슬롯이 다른 강사로 override되지 않았으면 해당 요일 수업 있음
-            return !allSlotsOverridden;
-        }
-
-        // slotTeachers에 해당 강사가 있는지 확인
-        if (cls.slotTeachers) {
-            return Object.entries(cls.slotTeachers).some(([key, teacher]) => {
-                // key 형식: "월-2" (요일-periodId)
-                const keyDay = key.split('-')[0];
-                return keyDay === day && teacher?.trim() === resource?.trim();
-            });
-        }
-
-        return false;
-    } else {
-        // Room 뷰
-        if (cls.room?.trim() === resource?.trim()) {
-            const daySlots = cls.schedule?.filter(s => s.includes(day)) || [];
-            const allSlotsOverridden = daySlots.every(slot => {
-                const parts = slot.trim().split(/\s+/);
-                if (parts.length >= 2) {
-                    const slotDay = parts[0];
-                    const periodPart = parts[1];
-                    // 레거시 periodId를 새 periodId로 변환 (모듈 상수 사용)
-                    const normalizedPeriod = LEGACY_TO_UNIFIED_PERIOD_MAP[periodPart] || periodPart;
-                    const slotKey = `${slotDay}-${normalizedPeriod}`;
-                    const slotRoom = cls.slotRooms?.[slotKey];
-                    return slotRoom && slotRoom.trim() !== resource?.trim();
-                }
-                return false;
-            });
-            return !allSlotsOverridden;
-        }
-
-        if (cls.slotRooms) {
-            return Object.entries(cls.slotRooms).some(([key, room]) => {
-                const keyDay = key.split('-')[0];
-                return keyDay === day && room?.trim() === resource?.trim();
-            });
-        }
-
-        return false;
-    }
-};
+// hasClassOnDay replaced by resourceDayLookup (precomputed Map) inside component
 
 interface TimetableGridProps {
     filteredClasses: TimetableClass[];
@@ -121,6 +46,8 @@ interface TimetableGridProps {
     classKeywords?: ClassKeywordColor[];
     // Student Click
     onStudentClick?: (studentId: string) => void;
+    // Pending Moved Students (드래그 이동 대기 중)
+    pendingMovedStudentIds?: Set<string>;
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -155,7 +82,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     studentMap,
     timetableViewMode,
     classKeywords = [],
-    onStudentClick
+    onStudentClick,
+    pendingMovedStudentIds
 }) => {
     // 수정 모드일 때만 실제 canEdit 적용
     const effectiveCanEdit = canEdit && mode === 'edit';
@@ -168,50 +96,73 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return 1; // 전부 표시
     }, [showStudents, showSchool, showGrade]);
 
-    // Helper to get column width style
-    // 병합 셀용 (월/목 같이 여러 요일 병합) - 각 요일당 좁은 너비
-    const getMergedCellWidthStyle = (colspan: number) => {
-        const basePerDay = columnWidth === 'compact' ? 35 :
+    // Pre-computed lookup: resource → Set<days> (O(1) 조회로 hasClassOnDay 대체)
+    const resourceDayLookup = useMemo(() => {
+        const lookup = new Map<string, Set<string>>();
+        const addEntry = (resource: string | undefined, day: string) => {
+            const trimmed = resource?.trim();
+            if (!trimmed) return;
+            if (!lookup.has(trimmed)) lookup.set(trimmed, new Set());
+            lookup.get(trimmed)!.add(day);
+        };
+        filteredClasses.forEach(cls => {
+            cls.schedule?.forEach(slot => {
+                const parts = slot.trim().split(/\s+/);
+                if (parts.length < 2) return;
+                const day = parts[0];
+                const periodPart = parts[1];
+                const normalizedPeriod = LEGACY_TO_UNIFIED_PERIOD_MAP[periodPart] || periodPart;
+                const slotKey = `${day}-${normalizedPeriod}`;
+                if (viewType === 'teacher') {
+                    addEntry(cls.slotTeachers?.[slotKey] || cls.teacher, day);
+                } else {
+                    addEntry(cls.slotRooms?.[slotKey] || cls.room, day);
+                }
+            });
+        });
+        return lookup;
+    }, [filteredClasses, viewType]);
+
+    // Memoized style calculations (매 렌더마다 새 객체 생성 방지)
+    const perDayWidth = useMemo(() => {
+        const base = columnWidth === 'compact' ? 35 :
             columnWidth === 'narrow' ? 50 :
                 columnWidth === 'wide' ? 90 :
                     columnWidth === 'x-wide' ? 125 : 70;
-        const perDayWidth = Math.round(basePerDay * widthFactor);
-        return { width: `${colspan * perDayWidth}px`, minWidth: `${colspan * perDayWidth}px` };
+        return Math.round(base * widthFactor);
+    }, [columnWidth, widthFactor]);
+
+    const mergedCellWidthCache = useMemo(() => {
+        const cache: Record<number, { width: string; minWidth: string }> = {};
+        for (let i = 1; i <= 7; i++) {
+            cache[i] = { width: `${i * perDayWidth}px`, minWidth: `${i * perDayWidth}px` };
+        }
+        return cache;
+    }, [perDayWidth]);
+
+    const getMergedCellWidthStyle = (colspan: number) => {
+        return mergedCellWidthCache[colspan] || { width: `${colspan * perDayWidth}px`, minWidth: `${colspan * perDayWidth}px` };
     };
 
-    // 단일 셀용 (수, 토, 일 등 병합 안 된 셀) - 수업명이 한 줄에 보이도록 넓게
-    const getSingleCellWidthStyle = () => {
+    const singleCellWidthStyle = useMemo(() => {
         const base = columnWidth === 'compact' ? 70 :
             columnWidth === 'narrow' ? 90 :
                 columnWidth === 'wide' ? 150 :
                     columnWidth === 'x-wide' ? 200 : 110;
         const baseWidth = Math.round(base * widthFactor);
         return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
-    };
+    }, [columnWidth, widthFactor]);
 
-    // 날짜별 뷰용 - 더 넓은 너비로 강의명이 한줄에 표시되도록
-    const getDayBasedCellWidthStyle = () => {
-        const base = columnWidth === 'compact' ? 70 :
-            columnWidth === 'narrow' ? 90 :
-                columnWidth === 'wide' ? 150 :
-                    columnWidth === 'x-wide' ? 200 : 110;
-        const baseWidth = Math.round(base * widthFactor);
-        return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
-    };
-
-    // 교시당 기본 높이 계산
-    const getRowHeight = (): number | 'auto' => {
-        // 학생 목록 숨기면 항상 auto (콘텐츠에 맞게 압축)
+    // 교시당 높이 (memoized)
+    const rowHeightValue = useMemo((): number | 'auto' => {
         if (!showStudents) return 'auto';
-        // rowHeight 설정에 따라 조절 - 극단적인 차이
-        if (rowHeight === 'compact') return 'auto';  // 컴팩트: 콘텐츠에 맞게 자동 축소
-        if (rowHeight === 'short') return 100;       // 작게 (수업명 + 학생 1~2명)
-        if (rowHeight === 'tall') return 320;        // 크게
-        if (rowHeight === 'very-tall') return 450;   // 매우 크게 (화면 꽉 참)
-        return 180; // normal - 기본값
-    };
+        if (rowHeight === 'compact') return 'auto';
+        if (rowHeight === 'short') return 100;
+        if (rowHeight === 'tall') return 320;
+        if (rowHeight === 'very-tall') return 450;
+        return 180;
+    }, [showStudents, rowHeight]);
 
-    // 학생 목록 숨기기도 컴팩트 모드처럼 동작
     const isCompactMode = rowHeight === 'compact' || !showStudents;
 
     // 수요일만
@@ -238,7 +189,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
         allResources.forEach(resource => {
             const daysForResource = monThuDays.filter(day =>
-                filteredClasses.some(c => hasClassOnDay(c, day, resource, viewType))
+                resourceDayLookup.get(resource?.trim())?.has(day) ?? false
             );
             if (daysForResource.length > 0) {
                 map.set(resource, daysForResource);
@@ -246,7 +197,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         });
 
         return map;
-    }, [allResources, monThuDays, filteredClasses, viewType]);
+    }, [allResources, monThuDays, resourceDayLookup]);
 
     // 화/금 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산 (slotTeachers 포함)
     const tueFriResourceDaysMap = useMemo(() => {
@@ -254,7 +205,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
         allResources.forEach(resource => {
             const daysForResource = tueFriDays.filter(day =>
-                filteredClasses.some(c => hasClassOnDay(c, day, resource, viewType))
+                resourceDayLookup.get(resource?.trim())?.has(day) ?? false
             );
             if (daysForResource.length > 0) {
                 map.set(resource, daysForResource);
@@ -262,7 +213,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         });
 
         return map;
-    }, [allResources, tueFriDays, filteredClasses, viewType]);
+    }, [allResources, tueFriDays, resourceDayLookup]);
 
     // 토/일 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산 (slotTeachers 포함)
     const weekendResourceDaysMap = useMemo(() => {
@@ -270,7 +221,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
         allResources.forEach(resource => {
             const daysForResource = weekendDays.filter(day =>
-                filteredClasses.some(c => hasClassOnDay(c, day, resource, viewType))
+                resourceDayLookup.get(resource?.trim())?.has(day) ?? false
             );
             if (daysForResource.length > 0) {
                 map.set(resource, daysForResource);
@@ -278,15 +229,15 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         });
 
         return map;
-    }, [allResources, weekendDays, filteredClasses, viewType]);
+    }, [allResources, weekendDays, resourceDayLookup]);
 
     // 수요일 수업이 있는 선생님 (수요일 전용, slotTeachers 포함)
     const wednesdayResources = useMemo(() => {
         if (!hasWednesday) return [];
         return allResources.filter(resource =>
-            filteredClasses.some(c => hasClassOnDay(c, '수', resource, viewType))
+            resourceDayLookup.get(resource?.trim())?.has('수') ?? false
         );
-    }, [allResources, filteredClasses, viewType, hasWednesday]);
+    }, [allResources, resourceDayLookup, hasWednesday]);
 
     // 수요일 그룹: 각 선생님이 수요일 수업이 있으면 ['수'] 반환
     const wednesdayResourceDaysMap = useMemo(() => {
@@ -388,7 +339,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     // 병합 요일(colspan > 1)이면 병합 너비, 아니면 단일 너비
                                     const headerWidthStyle = colspan > 1
                                         ? getMergedCellWidthStyle(colspan)
-                                        : getSingleCellWidthStyle();
+                                        : singleCellWidthStyle;
 
                                     return (
                                         <th
@@ -423,7 +374,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         const isMergedDay = daysForResource.length > 1;
                                         const dayHeaderWidth = isMergedDay
                                             ? getMergedCellWidthStyle(1)  // 병합 셀의 1요일 너비
-                                            : getSingleCellWidthStyle();  // 단독 셀 너비
+                                            : singleCellWidthStyle;  // 단독 셀 너비
 
                                         return (
                                             <th
@@ -567,8 +518,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                                             const baseWidthStyle = colSpan > 1
                                                                 ? getMergedCellWidthStyle(colSpan)
-                                                                : getSingleCellWidthStyle();
-                                                            const heightValue = getRowHeight();
+                                                                : singleCellWidthStyle;
+                                                            const heightValue = rowHeightValue;
                                                             const compactRowHeight = 45;
                                                             const hasClass = cellClasses.length > 0;
                                                             const cellStyle = isCompactMode
@@ -618,6 +569,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 rowHeight={rowHeight}
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
+                                                                                pendingMovedStudentIds={pendingMovedStudentIds}
                                                                             />
                                                                         ))
                                                                     )}
@@ -708,8 +660,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                                             const baseWidthStyle = colSpan > 1
                                                                 ? getMergedCellWidthStyle(colSpan)
-                                                                : getSingleCellWidthStyle();
-                                                            const heightValue = getRowHeight();
+                                                                : singleCellWidthStyle;
+                                                            const heightValue = rowHeightValue;
                                                             const compactRowHeight = 45;
                                                             const hasClass = cellClasses.length > 0;
                                                             const cellStyle = isCompactMode
@@ -759,6 +711,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 rowHeight={rowHeight}
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
+                                                                                pendingMovedStudentIds={pendingMovedStudentIds}
                                                                             />
                                                                         ))
                                                                     )}
@@ -866,8 +819,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                                                 const baseWidthStyle = colSpan > 1
                                                                     ? getMergedCellWidthStyle(colSpan)
-                                                                    : getSingleCellWidthStyle();
-                                                                const heightValue = getRowHeight();
+                                                                    : singleCellWidthStyle;
+                                                                const heightValue = rowHeightValue;
                                                                 const compactRowHeight = 45;
                                                                 const hasClass = cellClasses.length > 0;
                                                                 const cellStyle = isCompactMode
@@ -917,6 +870,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     rowHeight={rowHeight}
                                                                                     showHoldStudents={showHoldStudents}
                                                                                     showWithdrawnStudents={showWithdrawnStudents}
+                                                                                    pendingMovedStudentIds={pendingMovedStudentIds}
                                                                                 />
                                                                             ))
                                                                         )}
@@ -1011,8 +965,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                                         const baseWidthStyle = colSpan > 1
                                                             ? getMergedCellWidthStyle(colSpan)
-                                                            : getSingleCellWidthStyle();
-                                                        const heightValue = getRowHeight();
+                                                            : singleCellWidthStyle;
+                                                        const heightValue = rowHeightValue;
                                                         const compactRowHeight = 45;
                                                         const hasClass = cellClasses.length > 0;
                                                         const cellStyle = isCompactMode
@@ -1062,6 +1016,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             rowHeight={rowHeight}
                                                                             showHoldStudents={showHoldStudents}
                                                                             showWithdrawnStudents={showWithdrawnStudents}
+                                                                            pendingMovedStudentIds={pendingMovedStudentIds}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1096,7 +1051,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
         selectedDaysInOrder.forEach(day => {
             const resourcesForDay = allResources.filter(resource =>
-                filteredClasses.some(c => hasClassOnDay(c, day, resource, viewType))
+                resourceDayLookup.get(resource?.trim())?.has(day) ?? false
             );
             if (resourcesForDay.length > 0) {
                 data.push({ day, resources: resourcesForDay });
@@ -1104,7 +1059,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         });
 
         return data;
-    }, [orderedSelectedDays, allResources, filteredClasses, viewType]);
+    }, [orderedSelectedDays, allResources, resourceDayLookup]);
 
     // 날짜 기반 뷰: 요일별 테이블 렌더링
     const renderDayBasedTable = (day: string, resources: string[]) => {
@@ -1175,7 +1130,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             key={resource}
                                             className={`p-1.5 text-xs font-bold truncate ${borderRightClass}`}
                                             style={{
-                                                ...getDayBasedCellWidthStyle(),
+                                                ...singleCellWidthStyle,
                                                 backgroundColor: bgColor,
                                                 color: textColor
                                             }}
@@ -1258,12 +1213,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
                                                         ));
 
-                                                        const heightValue = getRowHeight();
+                                                        const heightValue = rowHeightValue;
                                                         const compactRowHeight = 45;
                                                         const hasClass = cellClasses.length > 0;
                                                         const cellStyle = isCompactMode
-                                                            ? { ...getDayBasedCellWidthStyle(), height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
-                                                            : { ...getDayBasedCellWidthStyle(), height: `${(heightValue as number) * maxRowSpan}px` };
+                                                            ? { ...singleCellWidthStyle, height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
+                                                            : { ...singleCellWidthStyle, height: `${(heightValue as number) * maxRowSpan}px` };
 
                                                         const isEmpty = cellClasses.length === 0;
                                                         const isLastResource = resourceIdx === resources.length - 1;
@@ -1306,6 +1261,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             rowHeight={rowHeight}
                                                                             showHoldStudents={showHoldStudents}
                                                                             showWithdrawnStudents={showWithdrawnStudents}
+                                                                            pendingMovedStudentIds={pendingMovedStudentIds}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1336,12 +1292,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
                                                         ));
 
-                                                        const heightValue = getRowHeight();
+                                                        const heightValue = rowHeightValue;
                                                         const compactRowHeight = 45;
                                                         const hasClass = cellClasses.length > 0;
                                                         const cellStyle = isCompactMode
-                                                            ? { ...getDayBasedCellWidthStyle(), height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
-                                                            : { ...getDayBasedCellWidthStyle(), height: `${(heightValue as number) * maxRowSpan}px` };
+                                                            ? { ...singleCellWidthStyle, height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
+                                                            : { ...singleCellWidthStyle, height: `${(heightValue as number) * maxRowSpan}px` };
 
                                                         const isEmpty = cellClasses.length === 0;
                                                         const isLastResource = resourceIdx === resources.length - 1;
@@ -1384,6 +1340,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             rowHeight={rowHeight}
                                                                             showHoldStudents={showHoldStudents}
                                                                             showWithdrawnStudents={showWithdrawnStudents}
+                                                                            pendingMovedStudentIds={pendingMovedStudentIds}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1431,12 +1388,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
                                                             ));
 
-                                                            const heightValue = getRowHeight();
+                                                            const heightValue = rowHeightValue;
                                                             const compactRowHeight = 45;
                                                             const hasClass = cellClasses.length > 0;
                                                             const cellStyle = isCompactMode
-                                                                ? { ...getDayBasedCellWidthStyle(), height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
-                                                                : { ...getDayBasedCellWidthStyle(), height: `${(heightValue as number) * maxRowSpan}px` };
+                                                                ? { ...singleCellWidthStyle, height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
+                                                                : { ...singleCellWidthStyle, height: `${(heightValue as number) * maxRowSpan}px` };
 
                                                             const isEmpty = cellClasses.length === 0;
                                                             const isLastResource = resourceIdx === resources.length - 1;
@@ -1479,6 +1436,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 rowHeight={rowHeight}
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
+                                                                                pendingMovedStudentIds={pendingMovedStudentIds}
                                                                             />
                                                                         ))
                                                                     )}
@@ -1536,12 +1494,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
                                                     ));
 
-                                                    const heightValue = getRowHeight();
+                                                    const heightValue = rowHeightValue;
                                                     const compactRowHeight = 45;
                                                     const hasClass = cellClasses.length > 0;
                                                     const cellStyle = isCompactMode
-                                                        ? { ...getDayBasedCellWidthStyle(), height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
-                                                        : { ...getDayBasedCellWidthStyle(), height: `${(heightValue as number) * maxRowSpan}px` };
+                                                        ? { ...singleCellWidthStyle, height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
+                                                        : { ...singleCellWidthStyle, height: `${(heightValue as number) * maxRowSpan}px` };
 
                                                     const isEmpty = cellClasses.length === 0;
                                                     const isLastResource = resourceIdx === resources.length - 1;
@@ -1584,6 +1542,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         rowHeight={rowHeight}
                                                                         showHoldStudents={showHoldStudents}
                                                                         showWithdrawnStudents={showWithdrawnStudents}
+                                                                        pendingMovedStudentIds={pendingMovedStudentIds}
                                                                     />
                                                                 ))
                                                             )}

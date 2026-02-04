@@ -44,6 +44,7 @@ interface MathTimetableContentProps {
     setIsTeacherOrderModalOpen: (open: boolean) => void;
     setIsViewSettingsOpen: (open: boolean) => void;
     pendingMovesCount: number;
+    pendingMovedStudentIds?: Set<string>;
     handleSavePendingMoves: () => void;
     handleCancelPendingMoves: () => void;
     isSaving: boolean;
@@ -111,6 +112,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     setIsTeacherOrderModalOpen,
     setIsViewSettingsOpen,
     pendingMovesCount,
+    pendingMovedStudentIds,
     handleSavePendingMoves,
     handleCancelPendingMoves,
     isSaving,
@@ -354,6 +356,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                                 setSelectedStudentForModal(student);
                             }
                         }}
+                        pendingMovedStudentIds={pendingMovedStudentIds}
                     />
                 </div>
                 )}
@@ -677,7 +680,30 @@ const TimetableManager = ({
         }
     }, [timetableViewMode, showClassName, showSchool, showGrade, showEmptyRooms, columnWidth, rowHeight, fontSize, internalShowStudents, internalSelectedDays, showHoldStudents, showWithdrawnStudents]);
 
-    // Hook Integration: Drag & Drop
+    // Step 1: 수학 수업의 enrollment 데이터를 classes에 병합 (드래그 전에 필요)
+    const mathClassNamesFromRaw = useMemo(() => {
+        return classes.filter(c => c.subject === '수학').map(c => c.className);
+    }, [classes]);
+
+    const { classDataMap: mathClassDataMap } = useMathClassStudents(mathClassNamesFromRaw, studentMap);
+
+    const classesWithEnrollments = useMemo(() => {
+        return classes.map(cls => {
+            if (cls.subject === '수학') {
+                const enrollmentData = mathClassDataMap[cls.className];
+                if (enrollmentData) {
+                    return {
+                        ...cls,
+                        studentList: enrollmentData.studentList,
+                        studentIds: enrollmentData.studentIds,
+                    };
+                }
+            }
+            return cls;
+        });
+    }, [classes, mathClassDataMap]);
+
+    // Step 2: Drag & Drop (enrollment 데이터가 병합된 classes 사용)
     const {
         localClasses,
         pendingMoves,
@@ -690,7 +716,7 @@ const TimetableManager = ({
         handleDrop,
         handleSavePendingMoves,
         handleCancelPendingMoves
-    } = useStudentDragDrop(classes);
+    } = useStudentDragDrop(classesWithEnrollments);
 
     // Search State
     const [searchQuery, setSearchQuery] = useState('');
@@ -752,36 +778,10 @@ const TimetableManager = ({
 
     // NOTE: Teachers list is now passed as props from App.tsx (centralized subscription)
 
-    // Filter classes by current subject (use localClasses for pending moves)
-    const mathClasses = useMemo(() => {
-        return localClasses.filter(c => c.subject === '수학');
-    }, [localClasses]);
-
-    // Get class names for math classes (for useMathClassStudents)
-    const mathClassNames = useMemo(() => {
-        return mathClasses.map(c => c.className);
-    }, [mathClasses]);
-
-    // Fetch student data from enrollments for math classes
-    const { classDataMap: mathClassDataMap } = useMathClassStudents(mathClassNames, studentMap);
-
-    // Merge enrollment-based student data into math classes
+    // Filter classes by current subject (localClasses already has enrollment data merged)
     const filteredClasses = useMemo(() => {
-        if (currentSubjectFilter === '수학') {
-            return mathClasses.map(cls => {
-                const enrollmentData = mathClassDataMap[cls.className];
-                if (enrollmentData) {
-                    return {
-                        ...cls,
-                        studentList: enrollmentData.studentList,
-                        studentIds: enrollmentData.studentIds,
-                    };
-                }
-                return cls;
-            });
-        }
         return localClasses.filter(c => c.subject === currentSubjectFilter);
-    }, [localClasses, currentSubjectFilter, mathClasses, mathClassDataMap]);
+    }, [localClasses, currentSubjectFilter]);
 
     // Compute resources (all teachers from state, filtered by hidden)
     const allResources = useMemo(() => {
@@ -911,6 +911,7 @@ const TimetableManager = ({
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
                 setIsViewSettingsOpen={setIsViewSettingsOpen}
                 pendingMovesCount={pendingMoves.length}
+                pendingMovedStudentIds={pendingMoves.length > 0 ? new Set(pendingMoves.map(m => m.studentId)) : undefined}
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}
                 isSaving={isSaving}

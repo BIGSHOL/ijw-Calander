@@ -18,6 +18,7 @@ interface StudentItemProps {
     isHighlighted: boolean;
     enrollmentStyle: { bg: string; text: string } | null;
     themeText: string;
+    isPendingMoved?: boolean;
 }
 
 const StudentItem: React.FC<StudentItemProps> = ({
@@ -30,7 +31,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
     fontSizeClass,
     isHighlighted,
     enrollmentStyle,
-    themeText
+    themeText,
+    isPendingMoved = false
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     // 조회 모드/수정 모드 모두에서 학생 클릭 가능 (영어 시간표와 동일)
@@ -57,7 +59,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
             onMouseLeave={() => setIsHovered(false)}
             className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] truncate font-medium transition-all duration-150
             ${canEdit ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''}
-            ${isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}`}
+            ${isPendingMoved ? 'bg-purple-400 text-white font-bold rounded-sm' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}`}
             style={hoverStyle}
             title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}\n(클릭하여 상세정보 보기)` : '클릭하여 상세정보 보기'}
         >
@@ -91,6 +93,7 @@ interface ClassCardProps {
     rowHeight?: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';  // 세로 높이 설정
     showHoldStudents?: boolean;  // 대기 학생 표시 여부
     showWithdrawnStudents?: boolean;  // 퇴원 학생 표시 여부
+    pendingMovedStudentIds?: Set<string>;  // 드래그 이동 대기 중인 학생 ID
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -116,7 +119,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     fontSize = 'normal',
     rowHeight = 'normal',
     showHoldStudents = true,
-    showWithdrawnStudents = true
+    showWithdrawnStudents = true,
+    pendingMovedStudentIds
 }) => {
     // 컴팩트 모드 여부
     const isCompact = rowHeight === 'compact';
@@ -518,6 +522,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isHighlighted={isHighlighted}
                                             enrollmentStyle={enrollmentStyle}
                                             themeText={theme.text}
+                                            isPendingMoved={pendingMovedStudentIds?.has(s.id)}
                                         />
                                     );
                                 })}
@@ -573,6 +578,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                     isHighlighted={isHighlighted}
                                                                     enrollmentStyle={enrollmentStyle}
                                                                     themeText="text-amber-900 font-medium"
+                                                                    isPendingMoved={pendingMovedStudentIds?.has(s.id)}
                                                                 />
                                                             );
                                                         })}
@@ -599,9 +605,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         <div className="text-xxs font-bold text-pink-600">대기 ({commonStudents.hold.length}명)</div>
                                         {commonStudents.hold.length > 0 ? (
                                             <ul className="flex flex-col gap-0.5">
-                                                {commonStudents.hold.map(s => (
-                                                    <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate">{s.name}</li>
-                                                ))}
+                                                {commonStudents.hold.map(s => {
+                                                    let text = s.name;
+                                                    if (showSchool || showGrade) {
+                                                        const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
+                                                        if (sg && sg !== '-') text += `/${sg}`;
+                                                    }
+                                                    return <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate">{text}</li>;
+                                                })}
                                             </ul>
                                         ) : (
                                             <span className="text-xxs text-pink-300">-</span>
@@ -613,9 +624,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         <div className="text-xxs font-bold text-gray-600">퇴원 ({commonStudents.withdrawn.length}명)</div>
                                         {commonStudents.withdrawn.length > 0 ? (
                                             <ul className="flex flex-col gap-0.5">
-                                                {commonStudents.withdrawn.map(s => (
-                                                    <li key={s.id} className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate">{s.name}</li>
-                                                ))}
+                                                {commonStudents.withdrawn.map(s => {
+                                                    let text = s.name;
+                                                    if (showSchool || showGrade) {
+                                                        const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
+                                                        if (sg && sg !== '-') text += `/${sg}`;
+                                                    }
+                                                    return <li key={s.id} className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate">{text}</li>;
+                                                })}
                                             </ul>
                                         ) : (
                                             <span className="text-xxs text-gray-400">-</span>
@@ -654,6 +670,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isHighlighted={isHighlighted}
                                             enrollmentStyle={enrollmentStyle}
                                             themeText={theme.text}
+                                            isPendingMoved={pendingMovedStudentIds?.has(s.id)}
                                         />
                                     );
                                 })}
@@ -672,11 +689,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         <div className="text-xxs font-bold text-pink-600">대기 ({holdStudents.length}명)</div>
                                         {holdStudents.length > 0 ? (
                                             <ul className="flex flex-col gap-0.5">
-                                                {holdStudents.map(s => (
-                                                    <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate" title={s.name}>
-                                                        {s.name}
-                                                    </li>
-                                                ))}
+                                                {holdStudents.map(s => {
+                                                    let text = s.name;
+                                                    if (showSchool || showGrade) {
+                                                        const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
+                                                        if (sg && sg !== '-') text += `/${sg}`;
+                                                    }
+                                                    return (
+                                                        <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate" title={text}>
+                                                            {text}
+                                                        </li>
+                                                    );
+                                                })}
                                             </ul>
                                         ) : (
                                             <span className="text-xxs text-pink-300">-</span>
@@ -690,15 +714,22 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         <div className="text-xxs font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
                                         {withdrawnStudents.length > 0 ? (
                                             <ul className="flex flex-col gap-0.5">
-                                                {withdrawnStudents.map(s => (
-                                                    <li
-                                                        key={s.id}
-                                                        className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate"
-                                                        title={s.withdrawalDate ? `${s.name} (퇴원: ${s.withdrawalDate})` : s.name}
-                                                    >
-                                                        {s.name}
-                                                    </li>
-                                                ))}
+                                                {withdrawnStudents.map(s => {
+                                                    let text = s.name;
+                                                    if (showSchool || showGrade) {
+                                                        const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
+                                                        if (sg && sg !== '-') text += `/${sg}`;
+                                                    }
+                                                    return (
+                                                        <li
+                                                            key={s.id}
+                                                            className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate"
+                                                            title={s.withdrawalDate ? `${text} (퇴원: ${s.withdrawalDate})` : text}
+                                                        >
+                                                            {text}
+                                                        </li>
+                                                    );
+                                                })}
                                             </ul>
                                         ) : (
                                             <span className="text-xxs text-gray-400">-</span>

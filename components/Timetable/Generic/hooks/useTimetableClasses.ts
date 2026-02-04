@@ -2,15 +2,15 @@
  * Generic Timetable Classes Hook
  *
  * Performance Optimizations Applied:
- * - async-parallel: Firebase listener runs independently
- * - client-swr-dedup: Real-time Firebase subscription with automatic deduplication
- * - rerender-dependencies: Stable dependency (subject) prevents unnecessary re-subscriptions
+ * - React Query로 전환: 캐싱 및 중복 요청 제거
+ * - getDocs 사용: 필요 시점에만 데이터 조회
+ * - staleTime: 30초 (불필요한 재조회 방지)
+ * - subject별 독립적인 쿼리 키로 병렬 캐싱
  */
 
-import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, where } from 'firebase/firestore';
+import { useQuery } from '@tanstack/react-query';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
-import { listenerRegistry } from '../../../../utils/firebaseCleanup';
 import { convertToLegacyPeriodId } from '../../constants';
 import type { TimetableClass, SubjectKey } from '../types';
 import { getSubjectConfig } from '../utils/subjectConfig';
@@ -24,29 +24,29 @@ const COL_CLASSES = 'classes';
  * @returns Classes data and loading state
  *
  * Performance Notes:
- * - Uses Firebase real-time listener for instant updates
- * - Automatically cleans up subscription on unmount
- * - Subject filter at Firebase level (not in-memory)
+ * - React Query로 캐싱 및 중복 요청 제거
+ * - Subject별 독립적인 캐시 관리
+ * - 30초 staleTime으로 불필요한 재조회 방지
  */
 export function useTimetableClasses(subject: SubjectKey) {
-  const [classes, setClasses] = useState<TimetableClass[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: classes = [], isLoading: loading } = useQuery({
+    queryKey: ['timetableClasses', subject],
+    queryFn: async () => {
+      // Performance Note (js-cache-property-access):
+      // Cache config lookup
+      const config = getSubjectConfig(subject);
 
-  useEffect(() => {
-    // Performance Note (js-cache-property-access):
-    // Cache config lookup outside snapshot callback
-    const config = getSubjectConfig(subject);
+      // Query classes filtered by subject at Firebase level
+      // Performance Note (server-side-filter):
+      // Filter at database level, not in-memory
+      const q = query(
+        collection(db, COL_CLASSES),
+        where('isActive', '==', true),
+        where('subject', '==', config.firebaseSubjectKey)
+      );
 
-    // Query classes filtered by subject at Firebase level
-    // Performance Note (server-side-filter):
-    // Filter at database level, not in-memory
-    const q = query(
-      collection(db, COL_CLASSES),
-      where('isActive', '==', true),
-      where('subject', '==', config.firebaseSubjectKey)
-    );
+      const snapshot = await getDocs(q);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
       // Performance Note (js-cache-property-access):
       // Cache frequently accessed values
       const hasGrouping = config.hasGrouping;
@@ -87,19 +87,12 @@ export function useTimetableClasses(subject: SubjectKey) {
         };
       });
 
-      setClasses(loadedClasses);
-      setLoading(false);
-    }, (error) => {
-      console.error(`[useTimetableClasses:${subject}] Error loading classes:`, error);
-      setLoading(false);
-    });
-
-    // Register listener for cleanup (returns cleanup function)
-    const cleanupListener = listenerRegistry.register(`timetable-classes-${subject}`, unsubscribe);
-
-    // Cleanup on unmount
-    return cleanupListener;
-  }, [subject]); // Performance Note (rerender-dependencies): Stable primitive dependency
+      return loadedClasses;
+    },
+    staleTime: 1000 * 30, // 30초
+    gcTime: 1000 * 60 * 5, // 5분
+    refetchOnWindowFocus: false,
+  });
 
   return { classes, loading };
 }

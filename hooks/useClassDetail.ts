@@ -123,9 +123,10 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
             const startDate = convertTimestampToDate(data.enrollmentDate || data.startDate);
             if (startDate && startDate > today) return;
 
-            // Filter out withdrawn students
+            // Filter out withdrawn/ended students
             const withdrawalDate = convertTimestampToDate(data.withdrawalDate);
-            if (withdrawalDate) return;
+            const endDate = convertTimestampToDate(data.endDate);
+            if (withdrawalDate || endDate) return;
 
             // Don't completely filter out onHold students (they should appear in the list)
             // The onHold state will be shown visually in the UI

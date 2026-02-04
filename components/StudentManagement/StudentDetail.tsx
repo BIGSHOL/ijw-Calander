@@ -9,6 +9,9 @@ import BillingTab from './tabs/BillingTab';
 import WithdrawalModal from './WithdrawalModal';
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
+import { collection, getDocs, updateDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useQueryClient } from '@tanstack/react-query';
 import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard } from 'lucide-react';
 
 interface StudentDetailProps {
@@ -25,6 +28,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const { updateStudent, deleteStudent } = useStudents();
+  const queryClient = useQueryClient();
 
   // 권한 체크
   const { hasPermission } = usePermissions(currentUser || null);
@@ -50,6 +54,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
     withdrawalReason?: string;
     withdrawalMemo?: string;
   }) => {
+    // 1. 학생 문서 상태 변경
     await updateStudent(student.id, {
       status: 'withdrawn',
       endDate: data.withdrawalDate,
@@ -57,6 +62,33 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
       withdrawalReason: data.withdrawalReason,
       withdrawalMemo: data.withdrawalMemo,
     });
+
+    // 2. 모든 활성 enrollment에도 withdrawalDate 설정 (시간표 퇴원 섹션 실시간 반영)
+    try {
+      const enrollmentsRef = collection(db, 'students', student.id, 'enrollments');
+      const snapshot = await getDocs(enrollmentsRef);
+
+      const updatePromises = snapshot.docs
+        .filter(doc => {
+          const d = doc.data();
+          return !d.withdrawalDate && !d.endDate; // 아직 퇴원 처리 안 된 enrollment만
+        })
+        .map(doc =>
+          updateDoc(doc.ref, {
+            withdrawalDate: data.withdrawalDate,
+            endDate: data.withdrawalDate,
+          })
+        );
+
+      await Promise.all(updatePromises);
+
+      // 모든 시간표 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['classStudents'] });
+    } catch (error) {
+      console.error('enrollment 퇴원 동기화 오류:', error);
+    }
   };
 
   // 재원 복구

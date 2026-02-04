@@ -19,6 +19,7 @@ export const useClassOperations = () => {
         queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
         queryClient.invalidateQueries({ queryKey: ['students'] });
         queryClient.invalidateQueries({ queryKey: ['classes'] });
+        queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
     };
 
     // Check for consecutive periods

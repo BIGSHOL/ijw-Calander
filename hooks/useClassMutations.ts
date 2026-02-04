@@ -87,7 +87,8 @@ export const useCreateClass = () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 시간표 대기 섹션 실시간 반영
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
+      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });     // 수학 시간표 실시간 반영
     },
   });
 };
@@ -212,7 +213,8 @@ export const useUpdateClass = () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 시간표 대기 섹션 실시간 반영
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
+      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });     // 수학 시간표 실시간 반영
     },
   });
 };
@@ -277,7 +279,8 @@ export const useDeleteClass = () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 시간표 대기 섹션 실시간 반영
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
+      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });     // 수학 시간표 실시간 반영
     },
   });
 };
@@ -407,6 +410,7 @@ export const useManageClassStudents = () => {
           const updatePromises = snapshot.docs.map(async (docSnap) => {
             await updateDoc(docSnap.ref, {
               endDate: today,
+              withdrawalDate: today,  // useClassDetail 필터링 + 시간표 퇴원 섹션 표시용
               updatedAt: new Date().toISOString()
             });
           });
@@ -535,7 +539,8 @@ export const useManageClassStudents = () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 시간표 대기 섹션 실시간 반영
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
+      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });     // 수학 시간표 실시간 반영
     },
   });
 };

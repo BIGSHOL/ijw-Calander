@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, where } from 'firebase/firestore';
+import { useQuery } from '@tanstack/react-query';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
-import { listenerRegistry } from '../../../../utils/firebaseCleanup';
 import { TimetableClass, TimetableStudent } from '../../../../types';
 import { convertToLegacyPeriodId } from '../../constants';
 
@@ -12,19 +11,24 @@ const COL_CLASSES = 'classes';
  *
  * 데이터 소스: classes 컬렉션 (isActive=true)
  * 학생 데이터: enrollments에서 별도 조회 (useMathClassStudents)
+ *
+ * React Query로 전환:
+ * - onSnapshot → getDocs (실시간 업데이트 제거, 폴링 기반)
+ * - staleTime: 30초 (캐시 유지 시간)
+ * - gcTime: 5분 (가비지 컬렉션 시간)
  */
 export const useTimetableClasses = () => {
-    const [classes, setClasses] = useState<TimetableClass[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: classes = [], isLoading: loading } = useQuery({
+        queryKey: ['timetableClasses'],
+        queryFn: async () => {
+            // classes 컬렉션에서 활성 수업만 조회
+            const q = query(
+                collection(db, COL_CLASSES),
+                where('isActive', '==', true)
+            );
 
-    useEffect(() => {
-        // classes 컬렉션에서 활성 수업만 조회
-        const q = query(
-            collection(db, COL_CLASSES),
-            where('isActive', '==', true)
-        );
+            const snapshot = await getDocs(q);
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
             const loadedClasses: TimetableClass[] = snapshot.docs.map(doc => {
                 const data = doc.data();
 
@@ -73,15 +77,12 @@ export const useTimetableClasses = () => {
             // className 기준 정렬
             loadedClasses.sort((a, b) => a.className.localeCompare(b.className, 'ko'));
 
-            setClasses(loadedClasses);
-            setLoading(false);
-        }, (error) => {
-            console.error('[useTimetableClasses] Error loading classes:', error);
-            setLoading(false);
-        });
-
-        return listenerRegistry.register('useTimetableClasses', unsubscribe);
-    }, []);
+            return loadedClasses;
+        },
+        staleTime: 1000 * 30, // 30초
+        gcTime: 1000 * 60 * 5, // 5분
+        refetchOnWindowFocus: false,
+    });
 
     return { classes, loading };
 };
