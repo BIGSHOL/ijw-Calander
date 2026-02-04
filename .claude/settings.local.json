@@ -51,7 +51,9 @@
       "Bash(find:*)",
       "Read(//d/ijw-calander/**)",
       "Read(//f/**)",
-      "Bash(npm run test:run:*)"
+      "Bash(npm run test:run:*)",
+      "Bash(if not exist \"f:\\\\ijw-calander\\\\design\" mkdir \"f:\\\\ijw-calander\\\\design\")",
+      "Read(//c/Users/user/**)"
     ],
     "additionalDirectories": [
       "d:\\ijw-calander\\components\\Timetable\\English",
