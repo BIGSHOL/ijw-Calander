@@ -111,9 +111,9 @@ export const useClasses = (subjectOrEnabled?: SubjectType | boolean, enabled = t
 
             return classes;
         },
-        staleTime: 1000 * 60 * 2,     // 2분 캐싱 (더 자주 업데이트)
+        staleTime: 1000 * 60 * 5,     // 5분 캐싱 (invalidateQueries로 즉시 반영)
         gcTime: 1000 * 60 * 30,
-        refetchOnWindowFocus: true,   // 창 포커스 시 재조회 (enrollment 변경 감지)
+        refetchOnWindowFocus: false,  // 성능 최적화 (invalidateQueries로 관리)
     });
 };
 

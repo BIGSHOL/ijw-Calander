@@ -59,18 +59,24 @@ export const useMathClassStudents = (
     // studentMap이 비어있지 않은지 확인 (쿼리 활성화 조건용)
     const studentMapReady = Object.keys(studentMap).length > 0;
 
-    // studentMap 크기를 추적하여 내용 변경 감지
-    const prevStudentMapSizeRef = useRef<number>(-1);
+    // studentMap 변경 감지: 크기 + 상태 분포 기반 해시 (크기만 비교 시 상태 변경 누락)
+    const prevStudentMapHashRef = useRef<string>('');
     useEffect(() => {
         studentMapRef.current = studentMap;
-        const currentSize = Object.keys(studentMap).length;
+        // 경량 해시: 크기 + 상태별 카운트 (학생 상태 변경 시 캐시 무효화)
+        const entries = Object.entries(studentMap);
+        let active = 0, withdrawn = 0, onHold = 0;
+        for (const [, s] of entries) {
+            if (s?.status === 'active') active++;
+            else if (s?.status === 'withdrawn') withdrawn++;
+            else if (s?.status === 'on_hold') onHold++;
+        }
+        const hash = `${entries.length}:${active}:${withdrawn}:${onHold}`;
 
-        // studentMap 크기가 변경되면 캐시 무효화 (내용이 실제로 변경된 경우)
-        // -1은 첫 렌더를 의미, 첫 렌더 후 데이터가 로드되면 무효화
-        if (prevStudentMapSizeRef.current >= 0 && prevStudentMapSizeRef.current !== currentSize) {
+        if (prevStudentMapHashRef.current && prevStudentMapHashRef.current !== hash) {
             queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
         }
-        prevStudentMapSizeRef.current = currentSize;
+        prevStudentMapHashRef.current = hash;
     }, [studentMap, queryClient]);
 
     // Memoize classNames to avoid unnecessary re-fetches
@@ -196,8 +202,9 @@ export const useMathClassStudents = (
                             return null;
                         }
 
-                        // Skip if student is not active (영어 시간표와 동일)
-                        if (baseStudent.status !== 'active') return null;
+                        // withdrawn/on_hold 상태도 시간표에 포함 (퇴원/대기 섹션 표시)
+                        // prospect/prospective 등 예비 학생만 제외
+                        if (!['active', 'withdrawn', 'on_hold'].includes(baseStudent.status)) return null;
 
                         // Priority for enrollment date (학생 관리 수업 탭 기준):
                         // 1. enrollmentData.enrollmentDate (학생 관리 수업 탭의 '시작일' from enrollments subcollection)
