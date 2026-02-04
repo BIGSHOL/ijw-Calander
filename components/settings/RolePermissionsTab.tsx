@@ -169,6 +169,7 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
         { id: 'students.edit' as PermissionId, label: '학생 정보 수정', desc: '학생 기본 정보 및 수강 배정 수정' },
         { id: 'students.delete' as PermissionId, label: '학생 삭제', desc: '학생 데이터 완전 삭제' },
         { id: 'students.manage_class_history' as PermissionId, label: '수업 이력 관리', desc: '종료된 수업 이력 삭제' },
+        { id: 'students.edit_enrollment_dates' as PermissionId, label: '수강 일자 수정', desc: '수강 시작일/종료일 수정' },
     ];
 
     // --- Render Permission Row ---
