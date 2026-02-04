@@ -83,6 +83,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
       await Promise.all(updatePromises);
 
       // 모든 시간표 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
       queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
       queryClient.invalidateQueries({ queryKey: ['classStudents'] });

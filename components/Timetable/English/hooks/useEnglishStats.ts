@@ -1,22 +1,30 @@
 /**
  * useEnglishStats - Student statistics for English timetable
  *
- * PURPOSE: Fetch student statistics from students/enrollments structure
+ * PURPOSE: Derive student statistics from studentMap (which already contains enrollments)
+ * instead of making a separate Firestore collectionGroup query.
  *
  * DATA FLOW:
- * 1. Query enrollments collection group for subject='english'
- * 2. Calculate stats based on enrollment data and student status
+ * 1. studentMap already contains student.enrollments[] from useStudents(true)
+ * 2. Filter enrollments by subject='english' and calculate stats
  *
- * OPTIMIZATION (2026-01-17):
- * - onSnapshot → getDocs + React Query 캐싱으로 변경
- * - Firebase 읽기 비용 60% 이상 절감 (실시간 구독 제거)
- * - 5분 캐싱으로 불필요한 재요청 방지
+ * OPTIMIZATION (2026-02-04):
+ * - useQuery + collectionGroup → useMemo 파생으로 변경
+ * - 중복 Firestore 쿼리 완전 제거 (useStudents가 이미 모든 enrollment 포함)
  */
 
-import { useMemo, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { query, where, collectionGroup, getDocs } from 'firebase/firestore';
-import { db } from '../../../../firebaseConfig';
+import { useMemo } from 'react';
+
+// Helper to convert Firestore Timestamp to YYYY-MM-DD string
+const convertTimestampToDate = (timestamp: any): string | undefined => {
+    if (!timestamp) return undefined;
+    if (typeof timestamp === 'string') return timestamp;
+    if (timestamp?.toDate) {
+        const date = timestamp.toDate();
+        return date.toISOString().split('T')[0];
+    }
+    return undefined;
+};
 
 interface ScheduleCell {
     className?: string;
@@ -42,14 +50,8 @@ export const useEnglishStats = (
     isSimulationMode: boolean,
     studentMap: Record<string, any> = {}
 ) => {
-    // Use Ref to avoid re-fetch when studentMap reference changes
-    const studentMapRef = useRef(studentMap);
-    useEffect(() => {
-        studentMapRef.current = studentMap;
-    }, [studentMap]);
-
-    // Memoize classNames from scheduleData
-    const classNamesKey = useMemo(() => {
+    const studentStats = useMemo<StudentStats>(() => {
+        // Get unique class names from scheduleData
         const classNames = new Set<string>();
         Object.values(scheduleData).forEach(cell => {
             if (cell.className) classNames.add(cell.className);
@@ -59,67 +61,44 @@ export const useEnglishStats = (
                 });
             }
         });
-        return [...classNames].sort().join(',');
-    }, [scheduleData]);
 
-    const { data: studentStats = { active: 0, new1: 0, new2: 0, withdrawn: 0, waiting: 0 } } = useQuery<StudentStats>({
-        queryKey: ['englishStats', classNamesKey],
-        queryFn: async () => {
-            // Get unique class names from scheduleData
-            const classNames = new Set<string>();
-            Object.values(scheduleData).forEach(cell => {
-                if (cell.className) classNames.add(cell.className);
-                if (cell.merged) {
-                    cell.merged.forEach(m => {
-                        if (m.className) classNames.add(m.className);
-                    });
-                }
-            });
+        if (classNames.size === 0 || Object.keys(studentMap).length === 0) {
+            return { active: 0, new1: 0, new2: 0, withdrawn: 0, waiting: 0 };
+        }
 
-            if (classNames.size === 0) {
-                return { active: 0, new1: 0, new2: 0, withdrawn: 0, waiting: 0 };
-            }
+        const now = new Date();
+        let active = 0, new1 = 0, new2 = 0, withdrawn = 0, waiting = 0;
 
-            // Query enrollments collection group for english subject
-            const enrollmentsQuery = query(
-                collectionGroup(db, 'enrollments'),
-                where('subject', '==', 'english')
-            );
+        // Track unique students to avoid double-counting (a student can have multiple enrollments)
+        const countedStudents = new Set<string>();
 
-            const snapshot = await getDocs(enrollmentsQuery);
+        Object.entries(studentMap).forEach(([studentId, student]) => {
+            if (!student.enrollments) return;
 
-            const now = new Date();
-            let active = 0, new1 = 0, new2 = 0, withdrawn = 0, waiting = 0;
+            student.enrollments.forEach((enrollment: any) => {
+                if (enrollment.subject !== 'english') return;
 
-            // Track unique students to avoid double-counting (a student can have multiple enrollments)
-            const countedStudents = new Set<string>();
-
-            snapshot.docs.forEach(doc => {
-                const data = doc.data();
-                const className = data.className as string;
+                const className = enrollment.className as string;
 
                 // Only process if this class is in our scheduleData
-                if (!classNames.has(className)) return;
-
-                // Get student ID from document path
-                const studentId = doc.ref.parent.parent?.id;
-                if (!studentId) return;
+                if (!className || !classNames.has(className)) return;
 
                 // Skip if already counted this student
                 if (countedStudents.has(studentId)) return;
 
                 // Get student base info
-                const baseStudent = studentMapRef.current[studentId];
+                const baseStudent = studentMap[studentId];
 
-                // If student not in studentMap, skip (student doesn't exist or is withdrawn)
+                // If student not in studentMap, skip
                 if (!baseStudent) return;
 
                 // Skip if already counted this student (moved after baseStudent check)
                 countedStudents.add(studentId);
 
                 // Withdrawn check (from enrollment data)
-                if (data.withdrawalDate) {
-                    const withdrawnDate = new Date(data.withdrawalDate);
+                const enrollmentWithdrawalDate = convertTimestampToDate(enrollment.withdrawalDate);
+                if (enrollmentWithdrawalDate) {
+                    const withdrawnDate = new Date(enrollmentWithdrawalDate);
                     const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
                     if (daysSinceWithdrawal <= 30) {
                         withdrawn++;
@@ -128,7 +107,7 @@ export const useEnglishStats = (
                 }
 
                 // On hold check (대기생)
-                if (data.onHold) {
+                if (enrollment.onHold) {
                     waiting++;
                     return;
                 }
@@ -140,7 +119,9 @@ export const useEnglishStats = (
 
                 // New student check - 우선순위: 영어 과목 수강 시작일 > 학생 전체 등록일
                 // (학생이 등록 후 나중에 영어 과목을 추가할 수 있으므로 영어 과목 기준)
-                const enrollmentDate = data.enrollmentDate || baseStudent.startDate || data.startDate;
+                const enrollmentDate = convertTimestampToDate(enrollment.enrollmentDate) ||
+                    baseStudent.startDate ||
+                    convertTimestampToDate(enrollment.startDate);
                 if (enrollmentDate) {
                     const enrollDate = new Date(enrollmentDate);
                     const daysSinceEnroll = Math.floor((now.getTime() - enrollDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -151,14 +132,10 @@ export const useEnglishStats = (
                     }
                 }
             });
+        });
 
-            return { active, new1, new2, withdrawn, waiting };
-        },
-        enabled: classNamesKey.length > 0,
-        staleTime: 1000 * 60 * 5,     // 5분 캐싱
-        gcTime: 1000 * 60 * 15,       // 15분 GC
-        refetchOnWindowFocus: false,  // 창 포커스 시 자동 재요청 비활성화
-    });
+        return { active, new1, new2, withdrawn, waiting };
+    }, [scheduleData, studentMap]);
 
     return studentStats;
 };
