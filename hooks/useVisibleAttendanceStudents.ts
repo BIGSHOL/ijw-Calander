@@ -38,11 +38,16 @@ export const useVisibleAttendanceStudents = (
     const month = currentDate.getMonth();
     const monthFirstDay = new Date(year, month, 1).toISOString().slice(0, 10);
     const monthLastDay = new Date(year, month + 1, 0).toISOString().slice(0, 10);
-    const today = new Date().toISOString().slice(0, 10);
+
 
     // Filter students active during current month
     const filtered = allStudents.filter(s => {
-      if (s.status === 'withdrawn') return false;
+      // 퇴원 학생: 조회 월에 활성이었으면 표시 (과거 월의 출결 확인 가능)
+      // s.endDate는 enrollment 기준 (useAttendance에서 설정)
+      if (s.status === 'withdrawn') {
+        if (!s.endDate || s.endDate < monthFirstDay) return false;
+        // endDate가 조회 월 내이면 포함 (해당 월에 수강 중이었음)
+      }
       if (s.startDate && typeof s.startDate === 'string' && s.startDate > monthLastDay) return false;
       if (s.endDate && typeof s.endDate === 'string' && s.endDate < monthFirstDay) return false;
       return true;
@@ -78,8 +83,8 @@ export const useVisibleAttendanceStudents = (
                   classEndDate = enrollment.endDate;
                 }
 
-                // Skip if enrollment already ended (past endDate only)
-                if (enrollment.endDate && enrollment.endDate < today) return;
+                // 조회 월 이전에 종료된 수업만 제외 (과거 월 조회 시 퇴원생도 포함)
+                if (enrollment.endDate && enrollment.endDate < monthFirstDay) return;
 
                 // Extract days from schedule field (e.g., "월 1" -> "월")
                 if (enrollment.schedule && Array.isArray(enrollment.schedule)) {
