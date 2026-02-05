@@ -177,22 +177,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
             .sort((a, b) => a.startPeriod - b.startPeriod || (a.name || '').localeCompare(b.name || '', 'ko'));
     }, [rawClasses, searchTerm]);
     // --- End Hook Integration ---
-
-
-
-    // Close Display Options when clicking outside
-    useEffect(() => {
-        if (!isDisplayOptionsOpen) return;
-        const handleClickOutside = () => setIsDisplayOptionsOpen(false);
-        const timeoutId = setTimeout(() => {
-            document.addEventListener('click', handleClickOutside);
-        }, 0);
-        return () => {
-            clearTimeout(timeoutId);
-            document.removeEventListener('click', handleClickOutside);
-        };
-    }, [isDisplayOptionsOpen]);
-
     // 2. Group classes by start period OR Custom Groups
     const groupedClasses = useMemo(() => {
         const groups: { periodIndex: number; label: string; classes: ClassInfo[]; useInjaePeriod?: boolean }[] = [];
