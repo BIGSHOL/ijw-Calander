@@ -7,7 +7,7 @@
  * 3. 체크박스로 선택 후 일괄 수정
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, AlertTriangle, RefreshCw, Check, Trash2, ArrowRight, CheckSquare, Square } from 'lucide-react';
 import { useClasses } from '../../hooks/useClasses';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -38,6 +38,13 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
   const [isFixing, setIsFixing] = useState(false);
   const [fixedCount, setFixedCount] = useState(0);
   const [subjectFilter, setSubjectFilter] = useState<'all' | 'math' | 'english'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20); // 페이지당 20개씩 표시
+
+  // 필터 변경 시 페이지 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [subjectFilter]);
 
   // classes에서 유효한 className 목록 추출
   const validClassNames = useMemo(() => {
@@ -135,16 +142,29 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
     return mismatches;
   }, [allEnrollments, validClassNames, subjectFilter]);
 
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(mismatchedEnrollments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEnrollments = mismatchedEnrollments.slice(startIndex, endIndex);
+
   // 아이템 키 생성
   const getItemKey = (m: MismatchedEnrollment) => `${m.studentId}_${m.enrollmentId}`;
 
-  // 전체 선택/해제
+  // 현재 페이지 전체 선택/해제
   const handleSelectAll = () => {
-    if (selectedItems.size === mismatchedEnrollments.length) {
-      setSelectedItems(new Set());
+    const currentPageKeys = paginatedEnrollments.map(getItemKey);
+    const allCurrentSelected = currentPageKeys.every(key => selectedItems.has(key));
+
+    const newSet = new Set(selectedItems);
+    if (allCurrentSelected) {
+      // 현재 페이지 항목 모두 제거
+      currentPageKeys.forEach(key => newSet.delete(key));
     } else {
-      setSelectedItems(new Set(mismatchedEnrollments.map(getItemKey)));
+      // 현재 페이지 항목 모두 추가
+      currentPageKeys.forEach(key => newSet.add(key));
     }
+    setSelectedItems(newSet);
   };
 
   // 개별 선택/해제
@@ -265,7 +285,8 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
     );
   }
 
-  const isAllSelected = selectedItems.size === mismatchedEnrollments.length && mismatchedEnrollments.length > 0;
+  const isAllCurrentPageSelected = paginatedEnrollments.length > 0 &&
+    paginatedEnrollments.every(m => selectedItems.has(getItemKey(m)));
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -299,6 +320,11 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
             <div className="text-sm">
               <span className="text-amber-600 font-semibold">{mismatchedEnrollments.length}</span>
               <span className="text-gray-500"> 개 불일치</span>
+              {totalPages > 1 && (
+                <span className="text-gray-400 ml-2">
+                  (페이지 {currentPage}/{totalPages})
+                </span>
+              )}
               {selectedItems.size > 0 && (
                 <span className="text-blue-600 ml-2">({selectedItems.size}개 선택됨)</span>
               )}
@@ -342,7 +368,7 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
                 <tr>
                   <th className="p-2 text-left w-10">
                     <button onClick={handleSelectAll} className="p-1 hover:bg-gray-200 rounded">
-                      {isAllSelected ? (
+                      {isAllCurrentPageSelected ? (
                         <CheckSquare className="w-4 h-4 text-blue-500" />
                       ) : (
                         <Square className="w-4 h-4 text-gray-400" />
@@ -356,7 +382,7 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
                 </tr>
               </thead>
               <tbody>
-                {mismatchedEnrollments.map((mismatch) => {
+                {paginatedEnrollments.map((mismatch) => {
                   const key = getItemKey(mismatch);
                   const isSelected = selectedItems.has(key);
                   const selectedClass = fixTargets[key];
@@ -422,6 +448,43 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
             </table>
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-3 border-t border-gray-200 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              처음
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              이전
+            </button>
+            <span className="text-sm text-gray-600">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              다음
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 text-sm border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+            >
+              마지막
+            </button>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 flex justify-between items-center">
