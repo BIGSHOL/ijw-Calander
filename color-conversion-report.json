@@ -1,0 +1,3913 @@
+{
+  "timestamp": "2026-02-05T17:35:18.871Z",
+  "totalFiles": 235,
+  "modifiedFiles": 165,
+  "totalChanges": 2319,
+  "files": [
+    {
+      "path": "components/Gantt/GanttBuilder.tsx",
+      "changes": 86,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 18
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 7
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 13
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 15
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 10
+        },
+        {
+          "pattern": "bg-\\[#373d41\\]",
+          "replacement": "bg-primary-700",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 19
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/ConsultationDashboard.tsx",
+      "changes": 85,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 19
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 14
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 13
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 7
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 5
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#373d41\\]",
+          "replacement": "bg-primary-700",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 20
+        },
+        {
+          "pattern": "bg-\\[#f59e0b\\]",
+          "replacement": "bg-warning",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#f59e0b\\]",
+          "replacement": "border-warning",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/ClassManagement/ClassDetailModal.tsx",
+      "changes": 76,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 45
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 5
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 11
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 5
+        },
+        {
+          "pattern": "text-\\[#10b981\\]",
+          "replacement": "text-success",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#f59e0b\\]",
+          "replacement": "text-warning",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#3b82f6\\]",
+          "replacement": "text-info",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/tabs/BasicInfoTab.tsx",
+      "changes": 70,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 30
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 6
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 15
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 14
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/Math/components/TimetableHeader.tsx",
+      "changes": 59,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 19
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 19
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 20
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/StudentConsultation/ConsultationDetailModal.tsx",
+      "changes": 55,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 30
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 19
+        }
+      ]
+    },
+    {
+      "path": "components/Resources/ResourceAddModal.tsx",
+      "changes": 53,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 10
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 4
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 14
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 10
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 12
+        }
+      ]
+    },
+    {
+      "path": "components/ClassManagement/EditClassModal.tsx",
+      "changes": 53,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 22
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 7
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 4
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 5
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 11
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/StudentConsultation/AddConsultationModal.tsx",
+      "changes": 51,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 16
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 12
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 13
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/Math/components/Modals/SimpleViewSettingsModal.tsx",
+      "changes": 48,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 15
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 14
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 5
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 14
+        }
+      ]
+    },
+    {
+      "path": "components/PaymentReport/PaymentReport.tsx",
+      "changes": 43,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 11
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 5
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 11
+        },
+        {
+          "pattern": "border-\\[#373d41\\]",
+          "replacement": "border-primary-700",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/AddStudentModal.tsx",
+      "changes": 41,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 14
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 6
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 16
+        }
+      ]
+    },
+    {
+      "path": "components/Auth/LoginModal.tsx",
+      "changes": 41,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 10
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 8
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 9
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/StudentMergeModal.tsx",
+      "changes": 39,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 18
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 6
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 4
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "path": "components/Staff/StaffViewModal.tsx",
+      "changes": 38,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 22
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 14
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Grades/ExamCreateModal.tsx",
+      "changes": 38,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 10
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 9
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 9
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 9
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/EventFormFields.tsx",
+      "changes": 37,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 12
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 4
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 12
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "path": "components/Header/StudentsNavBar.tsx",
+      "changes": 35,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 20
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 4
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/Grades/AddScoreModal.tsx",
+      "changes": 31,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 13
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 9
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/Math/MathStudentModal.tsx",
+      "changes": 31,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 13
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "path": "components/RegistrationConsultation/RegistrationMigrationModal.tsx",
+      "changes": 29,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 13
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 6
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 8
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/ClassManagement/AddClassModal.tsx",
+      "changes": 29,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 8
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 5
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 8
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/tabs/CoursesTab.tsx",
+      "changes": 29,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 6
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 19
+        }
+      ]
+    },
+    {
+      "path": "components/Resources/ResourceDashboard.tsx",
+      "changes": 28,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 9
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 6
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 4
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/tabs/GradesTab.tsx",
+      "changes": 28,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 18
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/RegistrationConsultation/RegistrationConsultationDetailModal.tsx",
+      "changes": 27,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 27
+        }
+      ]
+    },
+    {
+      "path": "components/ClassManagement/ClassSettingsModal.tsx",
+      "changes": 27,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 6
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 17
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/WithdrawalManagement/WithdrawalStudentDetail.tsx",
+      "changes": 26,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 17
+        },
+        {
+          "pattern": "focus:ring-\\[#081429\\]",
+          "replacement": "focus:ring-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 5
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/AttendanceNumberMigrationModal.tsx",
+      "changes": 25,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 15
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/Staff/StaffForm.tsx",
+      "changes": 23,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 15
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/MyEventsModal.tsx",
+      "changes": 22,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 8
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 4
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/SeminarEventModal.tsx",
+      "changes": 21,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 8
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 13
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/CalendarBoard.tsx",
+      "changes": 20,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 6
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 4
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 4
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/StudentList.tsx",
+      "changes": 18,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 4
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 6
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/Staff/StaffManager.tsx",
+      "changes": 18,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 8
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 3
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/ClassManagement/ClassManagementTab.tsx",
+      "changes": 18,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 6
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 6
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/BulkEnglishNameUpdateModal.tsx",
+      "changes": 17,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 7
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 3
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/AssignClassModal.tsx",
+      "changes": 17,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 5
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/settings/HolidaysTab.tsx",
+      "changes": 17,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 7
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Resources/ResourceCard.tsx",
+      "changes": 17,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 4
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 8
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Header/CalendarFilterPopover.tsx",
+      "changes": 17,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 4
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "path": "components/Gantt/GanttTemplateSelector.tsx",
+      "changes": 17,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 6
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/YearlyView.tsx",
+      "changes": 17,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 6
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 4
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/Attendance/AttendanceManager.tsx",
+      "changes": 17,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 7
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/StudentModal.tsx",
+      "changes": 17,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 8
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 4
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/StudentConsultation/ConsultationManagementTab.tsx",
+      "changes": 16,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 4
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 4
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/CalendarSettingsModal.tsx",
+      "changes": 16,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 11
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/Math/ScenarioManagementModal.tsx",
+      "changes": 16,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 10
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/BucketModal.tsx",
+      "changes": 15,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 5
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 3
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/tabs/ConsultationsTab.tsx",
+      "changes": 15,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 7
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/roles/TeacherDashboard.tsx",
+      "changes": 15,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 13
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/DuplicateNamesViewModal.tsx",
+      "changes": 14,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 10
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/PaymentReport/EntryForm.tsx",
+      "changes": 14,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 4
+        },
+        {
+          "pattern": "border-\\[#373d41\\]",
+          "replacement": "border-primary-700",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Gantt/GanttTaskList.tsx",
+      "changes": 14,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/ScenarioManagementModal.tsx",
+      "changes": 14,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 8
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/BatchInputBar.tsx",
+      "changes": 14,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#081429\\]",
+          "replacement": "focus:ring-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 3
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Staff/LeaveManagement.tsx",
+      "changes": 13,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 6
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/settings/tabs/UsersTab.tsx",
+      "changes": 13,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 7
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/roles/MasterDashboard.tsx",
+      "changes": 13,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 12
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/roles/ManagerDashboard.tsx",
+      "changes": 13,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 10
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/WithdrawalManagement/WithdrawalManagementTab.tsx",
+      "changes": 12,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 2
+        },
+        {
+          "pattern": "focus:ring-\\[#081429\\]",
+          "replacement": "focus:ring-primary",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/StudentManagementTab.tsx",
+      "changes": 12,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 5
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#373d41\\]",
+          "replacement": "border-primary-700",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/DeleteInvalidStudentsModal.tsx",
+      "changes": 12,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 12
+        }
+      ]
+    },
+    {
+      "path": "components/StudentConsultation/ConsultationList.tsx",
+      "changes": 12,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 5
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Resources/ResourcePreviewPanel.tsx",
+      "changes": 12,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 5
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/ClassroomAssignment/components/AssignmentToolbar.tsx",
+      "changes": 12,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 5
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Classroom/components/ClassroomToolbar.tsx",
+      "changes": 12,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 5
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Attendance/components/SettlementModal.tsx",
+      "changes": 12,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 9
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/StudentMigrationModal.tsx",
+      "changes": 11,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Common/TabFilterGroup.tsx",
+      "changes": 11,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/WeekBlock.tsx",
+      "changes": 11,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#373d41\\]",
+          "replacement": "border-primary-700",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Attendance/AttendanceMigrationModal.tsx",
+      "changes": 11,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 11
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/EnglishExportModal.tsx",
+      "changes": 11,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 6
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "path": "components/Gantt/GanttSettingsModal.tsx",
+      "changes": 10,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 7
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Attendance/components/SessionSettingsTab.tsx",
+      "changes": 10,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 8
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/StudentConsultation/ConsultationMigrationModal.tsx",
+      "changes": 9,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 4
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/settings/ClassesTab.tsx",
+      "changes": 9,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 6
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/ClassManagement/ClassList.tsx",
+      "changes": 9,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/CustomSelect.tsx",
+      "changes": 9,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/TaskMemo/MemoSendModal.tsx",
+      "changes": 8,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 5
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/TaskMemo/MemoDetailModal.tsx",
+      "changes": 8,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 5
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/settings/HashtagsTab.tsx",
+      "changes": 8,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 2
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/RegistrationConsultation/ConsultationManager.tsx",
+      "changes": 8,
+      "details": [
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#10b981\\]",
+          "replacement": "bg-success",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#3b82f6\\]",
+          "replacement": "bg-info",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Navigation/Sidebar.tsx",
+      "changes": 8,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/LevelSettingsModal.tsx",
+      "changes": 8,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/BackupHistoryModal.tsx",
+      "changes": 8,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "path": "components/settings/tabs/DepartmentsManagementTab.tsx",
+      "changes": 8,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 4
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Attendance/components/Table.tsx",
+      "changes": 8,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "path": "components/settings/TeachersTab.tsx",
+      "changes": 7,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/Header/PermissionViewModal.tsx",
+      "changes": 7,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "path": "components/Header/CalendarFilterBar.tsx",
+      "changes": 7,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Grades/GradesManager.tsx",
+      "changes": 7,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Gantt/GanttManager.tsx",
+      "changes": 7,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Billing/BillingImportModal.tsx",
+      "changes": 7,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/tabs/BillingTab.tsx",
+      "changes": 7,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 6
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Attendance/components/StudentRow.tsx",
+      "changes": 7,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/tabs/grades/LevelTestModal.tsx",
+      "changes": 7,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/WithdrawalModal.tsx",
+      "changes": 6,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/StudentDataCleanupModal.tsx",
+      "changes": 6,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/RegistrationConsultation/ConsultationForm.tsx",
+      "changes": 6,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "path": "components/Navigation/TabGroupDropdown.tsx",
+      "changes": 6,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Header/TimetableNavBar.tsx",
+      "changes": 6,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 4
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/PerformanceProgress.tsx",
+      "changes": 6,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/ClassManagement/EnrollmentDiagnosticModal.tsx",
+      "changes": 6,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 3
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/SimulationStudentModal.tsx",
+      "changes": 6,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/tabs/grades/GoalSettingModal.tsx",
+      "changes": 6,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/tabs/grades/CommentModal.tsx",
+      "changes": 6,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/StudentConsultation/ConsultationCard.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Staff/StaffSchedule.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/RegistrationConsultation/ConsultationYearView.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 4
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/StaffSelector.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Common/TabButton.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Common/GridDropdown.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/ClassManagement/ClassStudentList.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/ClassManagement/ClassCard.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/EventModalActions.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/MoveSelectionModal.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 3
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#081429\\]",
+          "replacement": "border-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/settings/tabs/DepartmentPermissionsTab.tsx",
+      "changes": 5,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/settings/SettingsModal.tsx",
+      "changes": 4,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Gantt/GanttProgressBar.tsx",
+      "changes": 4,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Common/Modal.tsx",
+      "changes": 4,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 3
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/ParticipantsPanel.tsx",
+      "changes": 4,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/ParticipantSelector.tsx",
+      "changes": 4,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/EventModal.tsx",
+      "changes": 4,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 3
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/tabs/AttendanceTab.tsx",
+      "changes": 4,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "path": "components/StudentManagement/StudentDetail.tsx",
+      "changes": 3,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Staff/StaffList.tsx",
+      "changes": 3,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Grades/ExamListView.tsx",
+      "changes": 3,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Common/SkipLink.tsx",
+      "changes": 3,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#081429\\]",
+          "replacement": "focus:ring-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/StudentModal/StudentListTable.tsx",
+      "changes": 3,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#373d41\\]",
+          "replacement": "text-primary-700",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/TimetableManager.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Staff/StaffLinkModal.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/settings/TabAccessTab.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/settings/RolePermissionsTab.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/RoleManagement/RoleManagementPage.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "hover:bg-\\[#0a1a35\\]",
+          "replacement": "hover:bg-primary-800",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Header/MemoDropdown.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Header/AttendanceNavBar.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/StaffSubjectStats.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/index.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/DashboardTab.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/DashboardHeader.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/CategoryStats.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Common/TabSubNavigation.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "path": "components/Auth/PendingApprovalOverlay.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "bg-\\[#081429\\]",
+          "replacement": "bg-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Attendance/SessionSettingsModal.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Attendance/AttendanceSettingsModal.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/EnglishTimetable.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        },
+        {
+          "pattern": "focus:ring-\\[#fdb813\\]",
+          "replacement": "focus:ring-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/English/StudentModal/AddStudentForm.tsx",
+      "changes": 2,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        },
+        {
+          "pattern": "bg-\\[#fdb813\\]",
+          "replacement": "bg-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/WeekdayOrderModal.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Timetable/TimetableSettingsModal.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/settings/TeacherIdMigrationModal.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/RegistrationConsultation/ConsultationTable.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/PaymentReport/TuitionChart.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Grades/ScoreInputView.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/QuickActions.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/CounselingOverview.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/DailyAttendance/ClassAttendanceList.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Common/ExportImageModal.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Common/Breadcrumb.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#fdb813\\]",
+          "replacement": "text-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Calendar/HashtagCombobox.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "border-\\[#fdb813\\]",
+          "replacement": "border-accent",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Billing/BillingManager.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Dashboard/roles/StaffDashboard.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/ClassroomAssignment/components/ApplyConfirmModal.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Attendance/components/StudentListModal.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "path": "components/Attendance/components/AddStudentToAttendanceModal.tsx",
+      "changes": 1,
+      "details": [
+        {
+          "pattern": "text-\\[#081429\\]",
+          "replacement": "text-primary",
+          "count": 1
+        }
+      ]
+    }
+  ]
+}
