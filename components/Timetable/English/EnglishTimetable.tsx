@@ -15,6 +15,7 @@ import BackupHistoryModal from './BackupHistoryModal';
 import ScenarioManagementModal from './ScenarioManagementModal';
 import { SimulationProvider, useSimulation } from './context/SimulationContext';
 import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus, ChevronLeft, ChevronRight, Search, Eye, Edit, Settings, ArrowRightLeft, Copy, Upload, Save } from 'lucide-react';
+import { useEnglishStats } from './hooks/useEnglishStats';
 
 interface EnglishTimetableProps {
     onClose?: () => void;
@@ -62,6 +63,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [labRooms, setLabRooms] = useState<string[]>([]);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isLevelSettingsOpen, setIsLevelSettingsOpen] = useState(false);
 
     // Header controls (mode, search) - managed at parent level for class view
     const [mode, setMode] = useState<'view' | 'edit'>('view');
@@ -70,6 +73,9 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     // SimulationContext 사용
     const simulation = useSimulation();
     const { isScenarioMode: isSimulationMode, currentScenarioName, enterScenarioMode: enterSimulationMode, exitScenarioMode: exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName, canUndo, canRedo, undo, redo, history, historyIndex, getHistoryDescription } = simulation;
+
+    // 학생 통계
+    const studentStats = useEnglishStats(scheduleData, isSimulationMode, simulation.scenarioClasses, studentMap, currentWeekStart);
 
     // Ctrl+Z / Ctrl+Y 키보드 단축키 (시뮬레이션 모드에서만)
     useEffect(() => {
@@ -423,7 +429,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             {/* 통합뷰: 수학 시간표처럼 깔끔한 1행 헤더 */}
             {viewType === 'class' && (
                 <div className={`px-4 py-2.5 border-b flex items-center justify-between shrink-0 transition-colors duration-300 ${isSimulationMode ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
-                    {/* Left: 주차 네비게이션 */}
+                    {/* Left: 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3">
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
                             <>
@@ -450,6 +456,37 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 </div>
                             </>
                         )}
+                        {/* 학생 통계 배지 */}
+                        <div className="flex items-center gap-2 pl-3 border-l border-gray-300">
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-sm">
+                                <span className="text-xxs text-green-700 font-medium">재원</span>
+                                <span className="text-xs font-bold text-green-800">{studentStats.active}</span>
+                            </div>
+                            {studentStats.new1 > 0 && (
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-50 border border-pink-200 rounded-sm">
+                                    <span className="text-xxs text-pink-700 font-medium">신입1</span>
+                                    <span className="text-xs font-bold text-pink-800">{studentStats.new1}</span>
+                                </div>
+                            )}
+                            {studentStats.new2 > 0 && (
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-red-50 border border-red-200 rounded-sm">
+                                    <span className="text-xxs text-red-700 font-medium">신입2</span>
+                                    <span className="text-xs font-bold text-red-800">{studentStats.new2}</span>
+                                </div>
+                            )}
+                            {studentStats.waiting > 0 && (
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-sm">
+                                    <span className="text-xxs text-amber-700 font-medium">대기</span>
+                                    <span className="text-xs font-bold text-amber-800">{studentStats.waiting}</span>
+                                </div>
+                            )}
+                            {studentStats.withdrawn > 0 && (
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-300 rounded-sm">
+                                    <span className="text-xxs text-gray-700 font-medium">퇴원</span>
+                                    <span className="text-xs font-bold text-gray-800">{studentStats.withdrawn}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Center: 시간표 제목 */}
@@ -463,7 +500,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
                     </h1>
 
-                    {/* Right: 모드 토글, 검색, 시뮬레이션 컨트롤 */}
+                    {/* Right: 모드 토글, 검색, 설정 */}
                     <div className="flex items-center gap-2">
                         {/* 시뮬레이션 모드 토글 */}
                         {canSimulation && (
@@ -511,6 +548,28 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
                             />
                         </div>
+
+                        {/* 뷰 설정 */}
+                        {mode === 'edit' && canEditEnglish && (
+                            <button
+                                onClick={() => setIsSettingsOpen(true)}
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold shadow-sm"
+                            >
+                                <Settings size={14} />
+                                뷰 설정
+                            </button>
+                        )}
+
+                        {/* 레벨 설정 */}
+                        {mode === 'edit' && canEditEnglish && !isSimulationMode && (
+                            <button
+                                onClick={() => setIsLevelSettingsOpen(true)}
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold shadow-sm"
+                            >
+                                <Settings size={14} />
+                                레벨 설정
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -716,6 +775,10 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 setMode={setMode}
                                 searchTerm={searchQuery}
                                 setSearchTerm={setSearchQuery}
+                                isSettingsOpen={isSettingsOpen}
+                                setIsSettingsOpen={setIsSettingsOpen}
+                                isLevelSettingsOpen={isLevelSettingsOpen}
+                                setIsLevelSettingsOpen={setIsLevelSettingsOpen}
                             />
                         )}
                         {viewType === 'room' && (

@@ -57,6 +57,11 @@ interface EnglishClassTabProps {
     setMode?: (mode: 'view' | 'edit') => void;
     searchTerm?: string;
     setSearchTerm?: (term: string) => void;
+    // 설정 모달 (상위 컴포넌트에서 관리)
+    isSettingsOpen?: boolean;
+    setIsSettingsOpen?: (open: boolean) => void;
+    isLevelSettingsOpen?: boolean;
+    setIsLevelSettingsOpen?: (open: boolean) => void;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -84,6 +89,10 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     setMode: setModeProp,
     searchTerm: searchTermProp,
     setSearchTerm: setSearchTermProp,
+    isSettingsOpen: isSettingsOpenProp,
+    setIsSettingsOpen: setIsSettingsOpenProp,
+    isLevelSettingsOpen: isLevelSettingsOpenProp,
+    setIsLevelSettingsOpen: setIsLevelSettingsOpenProp,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -99,6 +108,14 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const mode = modeProp ?? modeLocal;
     const setMode = setModeProp ?? setModeLocal;
 
+    const [isSettingsOpenLocal, setIsSettingsOpenLocal] = useState(false);
+    const isSettingsOpen = isSettingsOpenProp ?? isSettingsOpenLocal;
+    const setIsSettingsOpen = setIsSettingsOpenProp ?? setIsSettingsOpenLocal;
+
+    const [isLevelSettingsOpenLocal, setIsLevelSettingsOpenLocal] = useState(false);
+    const isLevelSettingsOpen = isLevelSettingsOpenProp ?? isLevelSettingsOpenLocal;
+    const setIsLevelSettingsOpen = setIsLevelSettingsOpenProp ?? setIsLevelSettingsOpenLocal;
+
     // 시뮬레이션 모드에서는 항상 수정모드
     useEffect(() => {
         if (isSimulationMode) setMode('edit');
@@ -107,8 +124,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
 
     // UI States
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isLevelSettingsOpen, setIsLevelSettingsOpen] = useState(false);
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
     const [editingClassId, setEditingClassId] = useState<string | null>(null);  // 시뮬레이션 수업 편집
@@ -309,84 +324,37 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
     return (
         <div className="flex flex-col h-full bg-white select-none">
-            {/* Teacher Legend + Controls */}
-            <div className="px-4 py-2 bg-white border-b flex items-center justify-between flex-shrink-0">
-                {/* Left: 강사 목록 */}
-                <div className="flex flex-wrap gap-2 items-center">
-                    <span className="text-xs font-bold text-gray-400 mr-1">강사 목록:</span>
-                    {teachers.filter(t => {
-                        const td = teachersData.find(td => td.name === t);
-                        if (td?.isHidden) return false;
-                        return true;
-                    }).map(teacher => {
-                        const colors = getTeacherColor(teacher, teachersData);
-                        return (
-                            <div
-                                key={teacher}
-                                className="px-2 py-0.5 rounded-sm text-xs font-bold shadow-sm border border-black/5"
-                                style={{ backgroundColor: colors.bg, color: colors.text }}
-                            >
-                                {teacher}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Right: 통합뷰 고유 버튼들 */}
-                <div className="flex items-center gap-2 ml-4">
-                    {/* Batch Save Controls (Visible when changes exist) */}
-                    {moveChanges.size > 0 && mode === 'edit' && (
-                        <>
-                            <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-sm">
-                                {moveChanges.size}건 변경
-                            </span>
-                            <button
-                                onClick={handleSaveChanges}
-                                disabled={isSaving}
-                                className="px-2 py-0.5 bg-green-500 text-white rounded-sm text-xs font-bold hover:bg-green-600 disabled:opacity-50"
-                            >
-                                {isSaving ? '저장중...' : '💾 저장'}
-                            </button>
-                            <button
-                                onClick={handleCancelChanges}
-                                disabled={isSaving}
-                                className="px-2 py-0.5 bg-gray-500 text-white rounded-sm text-xs font-bold hover:bg-gray-600 disabled:opacity-50"
-                            >
-                                ↩ 취소
-                            </button>
-                        </>
-                    )}
-
-                    {/* Hidden Count */}
-                    {hiddenClasses.size > 0 && (
-                        <span className="text-xs text-gray-400 font-medium px-2">
-                            {hiddenClasses.size}개 숨김
-                        </span>
-                    )}
-
-                    {/* 뷰 설정 */}
-                    {mode === 'edit' && canEditEnglish && (
+            {/* Simulation Action Bar */}
+            {isSimulationMode && canEditEnglish && (
+                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
+                    <button
+                        onClick={onCopyLiveToDraft}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
+                        title="현재 실시간 시간표를 복사해옵니다"
+                    >
+                        <Copy size={12} />
+                        현재 상태 가져오기
+                    </button>
+                    {canPublish && (
                         <button
-                            onClick={() => setIsSettingsOpen(true)}
-                            className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
+                            onClick={onPublishToLive}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
+                            title="시뮬레이션 내용을 실제 시간표에 적용합니다"
                         >
-                            <Settings size={12} />
-                            뷰 설정
+                            <Upload size={12} />
+                            실제 반영
                         </button>
                     )}
-
-                    {/* 레벨 설정 */}
-                    {mode === 'edit' && canEditEnglish && !isSimulationMode && (
-                        <button
-                            onClick={() => setIsLevelSettingsOpen(true)}
-                            className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
-                        >
-                            <Settings size={12} />
-                            레벨 설정
-                        </button>
-                    )}
+                    <button
+                        onClick={onOpenScenarioModal}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
+                        title="시나리오 저장/불러오기"
+                    >
+                        <Save size={12} />
+                        시나리오 관리
+                    </button>
                 </div>
-            </div>
+            )}
 
             {/* Row 3: Simulation Action Bar */}
             {isSimulationMode && canEditEnglish && (
