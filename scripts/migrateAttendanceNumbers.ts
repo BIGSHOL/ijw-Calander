@@ -23,7 +23,7 @@ async function migrateAttendanceNumbers() {
   try {
     // Firebase 초기화
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db = getFirestore(app, 'restore260202');
 
     // 모든 학생 데이터 로드
     console.log('📚 학생 데이터 로딩 중...');

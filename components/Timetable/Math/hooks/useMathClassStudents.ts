@@ -138,6 +138,7 @@ export const useMathClassStudents = (
                     isScheduled,  // 배정 예정 플래그
                     isTransferred: hasActiveInOtherClass,  // 반이동 나감 (퇴원 섹션에서 제외)
                     isTransferredIn: hasEndedInOtherClass,  // 반이동 들어옴 (초록색 배경으로 상단 표시)
+                    isSlotTeacher: enrollment.isSlotTeacher || false,  // 부담임 여부
                 };
             });
         });
@@ -178,6 +179,7 @@ export const useMathClassStudents = (
                         isTransferred: enrollmentData.isTransferred || false,
                         isTransferredIn: enrollmentData.isTransferredIn || false,
                         enrollmentDocId: enrollmentData.enrollmentDocId,
+                        isSlotTeacher: enrollmentData.isSlotTeacher || false,
                     } as TimetableStudent;
                 })
                 .filter(Boolean) as TimetableStudent[];

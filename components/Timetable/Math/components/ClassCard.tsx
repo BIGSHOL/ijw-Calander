@@ -353,8 +353,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
         const commonHold = allStudents
             .filter(s => s.onHold && !s.withdrawalDate && isStudentAttendingAllMergedDays(s))
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+        // 퇴원 학생은 attendanceDays와 관계없이 모두 표시 (퇴원 이력 추적)
         const commonWithdrawn = allStudents
-            .filter(s => s.withdrawalDate && isStudentAttendingAllMergedDays(s))
+            .filter(s => s.withdrawalDate)
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
         // 요일별 부분 등원 학생 (특정 요일만 오는 학생)
@@ -369,10 +370,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
             const hold = allStudents
                 .filter(s => s.onHold && !s.withdrawalDate && !isStudentAttendingAllMergedDays(s) && isStudentAttendingDay(s, day))
                 .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
-            const withdrawn = allStudents
-                .filter(s => s.withdrawalDate && !isStudentAttendingAllMergedDays(s) && isStudentAttendingDay(s, day))
-                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
-            partial[day] = { active, hold, withdrawn };
+            // 퇴원 학생은 commonWithdrawn에서 통합 표시 (요일별 분리 X)
+            partial[day] = { active, hold, withdrawn: [] };
         });
 
         return {
@@ -412,8 +411,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .filter(s => s.onHold && !s.withdrawalDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
+        // 퇴원 학생은 attendanceDays와 관계없이 모두 표시 (퇴원 이력 추적)
         const withdrawn = allStudents
-            .filter(s => s.withdrawalDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
+            .filter(s => s.withdrawalDate)
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
         return { activeStudents: active, holdStudents: hold, withdrawnStudents: withdrawn };
