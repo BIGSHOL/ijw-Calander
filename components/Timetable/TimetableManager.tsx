@@ -28,6 +28,7 @@ import { ClassInfo } from '../../hooks/useClasses';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 import { MathSimulationProvider, useMathSimulation } from './Math/context/SimulationContext';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
+import EmbedTokenManager from '../Embed/EmbedTokenManager';
 
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
@@ -328,6 +329,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     onCopyLiveToDraft={handleCopyLiveToDraft}
                     onPublishDraftToLive={handlePublishDraftToLive}
                     onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+                    isMaster={isMaster}
+                    onOpenEmbedManager={() => setIsEmbedManagerOpen(true)}
                 />
 
                 {/* Timetable Content - viewType에 따라 분기 */}
@@ -447,6 +450,13 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setShowSchool={setShowSchool}
                     showGrade={showGrade}
                     setShowGrade={setShowGrade}
+                />
+
+                {/* Embed Token Manager Modal - 마스터 전용 */}
+                <EmbedTokenManager
+                    isOpen={isEmbedManagerOpen}
+                    onClose={() => setIsEmbedManagerOpen(false)}
+                    staffId={currentUser?.staffId || currentUser?.uid || ''}
                 />
 
                 {/* Scenario Management Modal */}
@@ -632,6 +642,7 @@ const TimetableManager = ({
 
     const [isAddClassOpen, setIsAddClassOpen] = useState(false);
     const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
+    const [isEmbedManagerOpen, setIsEmbedManagerOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<TimetableClass | null>(null);
     const [selectedClassInfo, setSelectedClassInfo] = useState<ClassInfo | null>(null);
     const [selectedStudentForModal, setSelectedStudentForModal] = useState<UnifiedStudent | null>(null);

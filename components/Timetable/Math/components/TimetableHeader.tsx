@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit, SlidersHorizontal,
-    ArrowRightLeft, Copy, Upload, Save
+    ArrowRightLeft, Copy, Upload, Save, Link2
 } from 'lucide-react';
 
 interface TimetableHeaderProps {
@@ -28,6 +28,9 @@ interface TimetableHeaderProps {
     onCopyLiveToDraft?: () => void;
     onPublishDraftToLive?: () => void;
     onOpenScenarioModal?: () => void;
+    // 공유 링크 (마스터 전용)
+    isMaster?: boolean;
+    onOpenEmbedManager?: () => void;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -51,7 +54,9 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     onToggleSimulation,
     onCopyLiveToDraft,
     onPublishDraftToLive,
-    onOpenScenarioModal
+    onOpenScenarioModal,
+    isMaster = false,
+    onOpenEmbedManager
 }) => {
     return (
         <div className="bg-gray-50 h-10 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs">
@@ -190,6 +195,18 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         title="강사 순서 설정"
                     >
                         ↕️ 강사 순서
+                    </button>
+                )}
+
+                {/* Embed Share Link - 마스터만 */}
+                {isMaster && onOpenEmbedManager && (
+                    <button
+                        onClick={onOpenEmbedManager}
+                        className="flex items-center gap-1 px-2 py-1 bg-indigo-50 border border-indigo-300 text-indigo-700 rounded-sm text-xs font-bold hover:bg-indigo-100 transition-colors"
+                        title="외부 공유 링크 관리"
+                    >
+                        <Link2 size={12} />
+                        공유
                     </button>
                 )}
 
