@@ -1,0 +1,286 @@
+[
+  {
+    "name": "1. Student Management",
+    "x": 3080,
+    "y": 0,
+    "width": 1440,
+    "height": 900,
+    "fill": "#FAFAFA",
+    "layout": "none",
+    "children": [
+      {
+        "type": "frame",
+        "name": "LeftPanel",
+        "x": 0,
+        "y": 0,
+        "width": 400,
+        "height": 900,
+        "fill": "#FFFFFF",
+        "stroke": {"align": "inside", "thickness": {"right": 1}, "fill": "#E5E5E5"},
+        "layout": "vertical",
+        "children": [
+          {
+            "type": "frame",
+            "name": "ListHeader",
+            "width": "fill_container",
+            "height": 56,
+            "fill": "#081429",
+            "padding": [0, 16],
+            "gap": 12,
+            "alignItems": "center",
+            "children": [
+              {"type": "icon_font", "width": 20, "height": 20, "iconFontName": "users", "iconFontFamily": "lucide", "fill": "#fdb813"},
+              {"type": "text", "fill": "#FFFFFF", "content": "학생 목록", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "700"},
+              {"type": "frame", "name": "Spacer", "width": "fill_container", "height": 1},
+              {"type": "icon_font", "width": 16, "height": 16, "iconFontName": "user-plus", "iconFontFamily": "lucide", "fill": "#fdb813"},
+              {"type": "icon_font", "width": 16, "height": 16, "iconFontName": "refresh-cw", "iconFontFamily": "lucide", "fill": "#9CA3AF"},
+              {"type": "frame", "width": 60, "height": 24, "fill": "#FFFFFF1A", "cornerRadius": 4, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#9CA3AF", "content": "248명", "fontFamily": "Inter", "fontSize": 11, "fontWeight": "600"}]}
+            ]
+          },
+          {
+            "type": "frame",
+            "name": "SearchBar",
+            "width": "fill_container",
+            "height": 48,
+            "padding": [0, 16],
+            "justifyContent": "center",
+            "children": [
+              {
+                "type": "frame",
+                "width": "fill_container",
+                "height": 32,
+                "fill": "#F5F5F5",
+                "cornerRadius": 6,
+                "padding": [0, 12],
+                "gap": 8,
+                "alignItems": "center",
+                "children": [
+                  {"type": "icon_font", "width": 16, "height": 16, "iconFontName": "search", "iconFontFamily": "lucide", "fill": "#888888"},
+                  {"type": "text", "fill": "#888888", "content": "학생 이름, 학교 검색...", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "400"}
+                ]
+              }
+            ]
+          },
+          {
+            "type": "frame",
+            "name": "FilterTabs",
+            "width": "fill_container",
+            "height": 40,
+            "padding": [0, 16],
+            "gap": 8,
+            "alignItems": "center",
+            "children": [
+              {"type": "frame", "width": 60, "height": 28, "fill": "#fdb813", "cornerRadius": 4, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#081429", "content": "재원", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "700"}]},
+              {"type": "frame", "width": 60, "height": 28, "fill": "#F5F5F5", "cornerRadius": 4, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#666666", "content": "휴원", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "600"}]},
+              {"type": "frame", "width": 60, "height": 28, "fill": "#F5F5F5", "cornerRadius": 4, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#666666", "content": "퇴원", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "600"}]}
+            ]
+          },
+          {
+            "type": "frame",
+            "name": "StudentList",
+            "width": "fill_container",
+            "height": "fill_container",
+            "clip": true,
+            "layout": "vertical",
+            "children": [
+              {
+                "type": "frame",
+                "name": "StudentItem1",
+                "width": "fill_container",
+                "height": 72,
+                "fill": "#fdb8131A",
+                "stroke": {"align": "inside", "thickness": {"left": 3}, "fill": "#fdb813"},
+                "padding": [0, 16],
+                "gap": 12,
+                "alignItems": "center",
+                "children": [
+                  {"type": "frame", "width": 44, "height": 44, "fill": "#0D6E6E", "cornerRadius": 22, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#FFFFFF", "content": "김", "fontFamily": "Inter", "fontSize": 16, "fontWeight": "700"}]},
+                  {
+                    "type": "frame",
+                    "name": "Info",
+                    "width": "fill_container",
+                    "height": "fill_container",
+                    "layout": "vertical",
+                    "justifyContent": "center",
+                    "gap": 4,
+                    "children": [
+                      {"type": "text", "fill": "#1A1A1A", "content": "김지우", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "700"},
+                      {"type": "text", "fill": "#666666", "content": "서울고등학교 2학년", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "400"}
+                    ]
+                  },
+                  {"type": "frame", "width": 50, "height": 22, "fill": "#0ea5e9", "cornerRadius": 11, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#FFFFFF", "content": "수학", "fontFamily": "Inter", "fontSize": 10, "fontWeight": "600"}]}
+                ]
+              },
+              {
+                "type": "frame",
+                "name": "StudentItem2",
+                "width": "fill_container",
+                "height": 72,
+                "padding": [0, 16],
+                "gap": 12,
+                "alignItems": "center",
+                "children": [
+                  {"type": "frame", "width": 44, "height": 44, "fill": "#E07B54", "cornerRadius": 22, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#FFFFFF", "content": "박", "fontFamily": "Inter", "fontSize": 16, "fontWeight": "700"}]},
+                  {
+                    "type": "frame",
+                    "name": "Info",
+                    "width": "fill_container",
+                    "height": "fill_container",
+                    "layout": "vertical",
+                    "justifyContent": "center",
+                    "gap": 4,
+                    "children": [
+                      {"type": "text", "fill": "#1A1A1A", "content": "박민준", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "700"},
+                      {"type": "text", "fill": "#666666", "content": "서울중학교 3학년", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "400"}
+                    ]
+                  },
+                  {"type": "frame", "width": 50, "height": 22, "fill": "#a855f7", "cornerRadius": 11, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#FFFFFF", "content": "영어", "fontFamily": "Inter", "fontSize": 10, "fontWeight": "600"}]}
+                ]
+              },
+              {
+                "type": "frame",
+                "name": "StudentItem3",
+                "width": "fill_container",
+                "height": 72,
+                "padding": [0, 16],
+                "gap": 12,
+                "alignItems": "center",
+                "children": [
+                  {"type": "frame", "width": 44, "height": 44, "fill": "#94a3b8", "cornerRadius": 22, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#FFFFFF", "content": "이", "fontFamily": "Inter", "fontSize": 16, "fontWeight": "700"}]},
+                  {
+                    "type": "frame",
+                    "name": "Info",
+                    "width": "fill_container",
+                    "height": "fill_container",
+                    "layout": "vertical",
+                    "justifyContent": "center",
+                    "gap": 4,
+                    "children": [
+                      {"type": "text", "fill": "#1A1A1A", "content": "이서연", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "700"},
+                      {"type": "text", "fill": "#666666", "content": "강남고등학교 1학년", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "400"}
+                    ]
+                  },
+                  {"type": "frame", "width": 50, "height": 22, "fill": "#22c55e", "cornerRadius": 11, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#FFFFFF", "content": "과학", "fontFamily": "Inter", "fontSize": 10, "fontWeight": "600"}]}
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "frame",
+        "name": "RightPanel",
+        "x": 400,
+        "y": 0,
+        "width": 1040,
+        "height": 900,
+        "fill": "#FFFFFF",
+        "layout": "vertical",
+        "children": [
+          {
+            "type": "frame",
+            "name": "DetailHeader",
+            "width": "fill_container",
+            "height": 56,
+            "fill": "#081429",
+            "padding": [0, 24],
+            "gap": 16,
+            "alignItems": "center",
+            "children": [
+              {"type": "text", "fill": "#FFFFFF", "content": "김지우", "fontFamily": "Inter", "fontSize": 18, "fontWeight": "700"},
+              {"type": "frame", "width": 60, "height": 26, "fill": "#22c55e", "cornerRadius": 4, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#FFFFFF", "content": "재원", "fontFamily": "Inter", "fontSize": 11, "fontWeight": "700"}]},
+              {"type": "frame", "name": "Spacer", "width": "fill_container", "height": 1},
+              {"type": "icon_font", "width": 18, "height": 18, "iconFontName": "edit", "iconFontFamily": "lucide", "fill": "#fdb813"},
+              {"type": "icon_font", "width": 18, "height": 18, "iconFontName": "trash-2", "iconFontFamily": "lucide", "fill": "#ef4444"}
+            ]
+          },
+          {
+            "type": "frame",
+            "name": "TabBar",
+            "width": "fill_container",
+            "height": 48,
+            "padding": [0, 24],
+            "gap": 24,
+            "alignItems": "center",
+            "stroke": {"align": "inside", "thickness": {"bottom": 1}, "fill": "#E5E5E5"},
+            "children": [
+              {"type": "frame", "width": 80, "height": "fill_container", "justifyContent": "center", "alignItems": "center", "stroke": {"align": "inside", "thickness": {"bottom": 2}, "fill": "#fdb813"}, "children": [{"type": "text", "fill": "#fdb813", "content": "기본정보", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "700"}]},
+              {"type": "frame", "width": 80, "height": "fill_container", "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#666666", "content": "수강내역", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "600"}]},
+              {"type": "frame", "width": 80, "height": "fill_container", "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#666666", "content": "상담기록", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "600"}]},
+              {"type": "frame", "width": 80, "height": "fill_container", "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#666666", "content": "성적", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "600"}]}
+            ]
+          },
+          {
+            "type": "frame",
+            "name": "DetailContent",
+            "width": "fill_container",
+            "height": "fill_container",
+            "clip": true,
+            "padding": [24, 24],
+            "layout": "vertical",
+            "gap": 24,
+            "children": [
+              {
+                "type": "frame",
+                "name": "Section1",
+                "width": "fill_container",
+                "height": "auto",
+                "fill": "#F9FAFB",
+                "cornerRadius": 8,
+                "padding": [20, 20],
+                "layout": "vertical",
+                "gap": 16,
+                "children": [
+                  {"type": "text", "fill": "#1A1A1A", "content": "기본 정보", "fontFamily": "Inter", "fontSize": 15, "fontWeight": "700"},
+                  {
+                    "type": "frame",
+                    "width": "fill_container",
+                    "height": "auto",
+                    "layout": "vertical",
+                    "gap": 12,
+                    "children": [
+                      {"type": "frame", "width": "fill_container", "height": 40, "gap": 100, "alignItems": "center", "children": [{"type": "text", "fill": "#666666", "content": "학교", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "600"}, {"type": "text", "fill": "#1A1A1A", "content": "서울고등학교", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "400"}]},
+                      {"type": "frame", "width": "fill_container", "height": 40, "gap": 100, "alignItems": "center", "children": [{"type": "text", "fill": "#666666", "content": "학년", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "600"}, {"type": "text", "fill": "#1A1A1A", "content": "2학년", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "400"}]},
+                      {"type": "frame", "width": "fill_container", "height": 40, "gap": 100, "alignItems": "center", "children": [{"type": "text", "fill": "#666666", "content": "연락처", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "600"}, {"type": "text", "fill": "#1A1A1A", "content": "010-1234-5678", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "400"}]},
+                      {"type": "frame", "width": "fill_container", "height": 40, "gap": 100, "alignItems": "center", "children": [{"type": "text", "fill": "#666666", "content": "보호자", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "600"}, {"type": "text", "fill": "#1A1A1A", "content": "김○○ (010-9876-5432)", "fontFamily": "Inter", "fontSize": 13, "fontWeight": "400"}]}
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "frame",
+                "name": "Section2",
+                "width": "fill_container",
+                "height": "auto",
+                "fill": "#F9FAFB",
+                "cornerRadius": 8,
+                "padding": [20, 20],
+                "layout": "vertical",
+                "gap": 16,
+                "children": [
+                  {"type": "text", "fill": "#1A1A1A", "content": "수강 정보", "fontFamily": "Inter", "fontSize": 15, "fontWeight": "700"},
+                  {
+                    "type": "frame",
+                    "width": "fill_container",
+                    "height": 64,
+                    "fill": "#FFFFFF",
+                    "cornerRadius": 6,
+                    "padding": [0, 16],
+                    "gap": 12,
+                    "alignItems": "center",
+                    "stroke": {"align": "inside", "thickness": 1, "fill": "#E5E5E5"},
+                    "children": [
+                      {"type": "frame", "width": 8, "height": 48, "fill": "#0ea5e9", "cornerRadius": 4},
+                      {"type": "frame", "width": "fill_container", "height": "fill_container", "layout": "vertical", "justifyContent": "center", "gap": 4, "children": [{"type": "text", "fill": "#1A1A1A", "content": "수학 심화반 (월/수/금 19:00-21:00)", "fontFamily": "Inter", "fontSize": 14, "fontWeight": "700"}, {"type": "text", "fill": "#666666", "content": "담당: 김선생님", "fontFamily": "Inter", "fontSize": 12, "fontWeight": "400"}]},
+                      {"type": "frame", "width": 60, "height": 24, "fill": "#22c55e", "cornerRadius": 4, "justifyContent": "center", "alignItems": "center", "children": [{"type": "text", "fill": "#FFFFFF", "content": "수강중", "fontFamily": "Inter", "fontSize": 11, "fontWeight": "700"}]}
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { BookOpen, Search, Plus, Calculator, Settings, Microscope, Book, ChevronDown, X, Lock, AlertTriangle } from 'lucide-react';
+import { BookOpen, Search, Plus, Calculator, Settings, Microscope, Book, ChevronDown, X, Lock } from 'lucide-react';
 import { useClasses, ClassInfo } from '../../hooks/useClasses';
 import { useStaff } from '../../hooks/useStaff';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -9,7 +9,6 @@ import ClassList from './ClassList';
 import ClassDetailModal from './ClassDetailModal';
 import AddClassModal from './AddClassModal';
 import ClassSettingsModal from './ClassSettingsModal';
-import EnrollmentSyncModal from './EnrollmentSyncModal';
 import { TabSubNavigation } from '../Common/TabSubNavigation';
 import { TabButton } from '../Common/TabButton';
 
@@ -55,9 +54,6 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
 
   // 수업 설정 모달
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-
-  // 데이터 동기화 모달
-  const [showSyncModal, setShowSyncModal] = useState(false);
 
   // 강사 드롭다운 상태
   const [showTeacherDropdown, setShowTeacherDropdown] = useState(false);
@@ -533,16 +529,6 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
               <div className="flex items-center gap-2 ml-auto flex-shrink-0">
                 {canEditClass && (
                   <button
-                    onClick={() => setShowSyncModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-amber-600 text-white hover:bg-amber-500 transition-colors shadow-sm font-bold"
-                    title="Enrollment 데이터 동기화"
-                  >
-                    <AlertTriangle size={14} />
-                    <span>데이터 동기화</span>
-                  </button>
-                )}
-                {canEditClass && (
-                  <button
                     onClick={() => setShowSettingsModal(true)}
                     className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-gray-700 text-white hover:bg-gray-600 transition-colors shadow-sm font-bold"
                     title="수업 설정"
@@ -626,11 +612,6 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
       )}
 
       {/* Enrollment 데이터 동기화 모달 */}
-      <EnrollmentSyncModal
-        isOpen={showSyncModal}
-        onClose={() => setShowSyncModal(false)}
-      />
-
     </div>
   );
 };
