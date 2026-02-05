@@ -405,6 +405,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
                             canPublish={canEditMath}
                             currentWeekStart={currentMonday}
+                            isViewSettingsOpen={isViewSettingsOpen}
+                            setIsViewSettingsOpen={setIsViewSettingsOpen}
                         />
                     </div>
                 )}
@@ -444,31 +446,34 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     onSave={handleSaveTeacherOrder}
                 />
 
-                {/* View Settings Modal (Math) */}
-                <SimpleViewSettingsModal
-                    isOpen={isViewSettingsOpen}
-                    onClose={() => setIsViewSettingsOpen(false)}
-                    columnWidth={columnWidth}
-                    setColumnWidth={setColumnWidth}
-                    rowHeight={rowHeight}
-                    setRowHeight={setRowHeight}
-                    fontSize={fontSize}
-                    setFontSize={setFontSize}
-                    selectedDays={selectedDays}
-                    setSelectedDays={setSelectedDays}
-                    showStudents={showStudents}
-                    setShowStudents={setShowStudents}
-                    showClassName={showClassName}
-                    setShowClassName={setShowClassName}
-                    showSchool={showSchool}
-                    setShowSchool={setShowSchool}
-                    showGrade={showGrade}
-                    setShowGrade={setShowGrade}
-                    showHoldStudents={showHoldStudents}
-                    setShowHoldStudents={setShowHoldStudents}
-                    showWithdrawnStudents={showWithdrawnStudents}
-                    setShowWithdrawnStudents={setShowWithdrawnStudents}
-                />
+                {/* View Settings Modal (Math) - 날짜/강사뷰만 */}
+                {viewType !== 'class' && (
+                    <SimpleViewSettingsModal
+                        isOpen={isViewSettingsOpen}
+                        onClose={() => setIsViewSettingsOpen(false)}
+                        viewType="date-teacher"
+                        columnWidth={columnWidth}
+                        setColumnWidth={setColumnWidth}
+                        rowHeight={rowHeight}
+                        setRowHeight={setRowHeight}
+                        fontSize={fontSize}
+                        setFontSize={setFontSize}
+                        selectedDays={selectedDays}
+                        setSelectedDays={setSelectedDays}
+                        showStudents={showStudents}
+                        setShowStudents={setShowStudents}
+                        showClassName={showClassName}
+                        setShowClassName={setShowClassName}
+                        showSchool={showSchool}
+                        setShowSchool={setShowSchool}
+                        showGrade={showGrade}
+                        setShowGrade={setShowGrade}
+                        showHoldStudents={showHoldStudents}
+                        setShowHoldStudents={setShowHoldStudents}
+                        showWithdrawnStudents={showWithdrawnStudents}
+                        setShowWithdrawnStudents={setShowWithdrawnStudents}
+                    />
+                )}
 
                 {/* Embed Token Manager Modal - 마스터 전용 */}
                 <EmbedTokenManager

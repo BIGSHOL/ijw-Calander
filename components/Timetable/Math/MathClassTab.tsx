@@ -40,6 +40,9 @@ interface MathClassTabProps {
     canPublish?: boolean;
     // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
     currentWeekStart?: Date;
+    // 보기 설정 모달 제어 (TimetableHeader 버튼 연동)
+    isViewSettingsOpen?: boolean;
+    setIsViewSettingsOpen?: (isOpen: boolean) => void;
 }
 
 interface GroupedClass {
@@ -74,6 +77,8 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     onOpenScenarioModal,
     canPublish = false,
     currentWeekStart,
+    isViewSettingsOpen: isViewSettingsOpenProp,
+    setIsViewSettingsOpen: setIsViewSettingsOpenProp,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -85,7 +90,9 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
 
     // UI States
-    const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
+    const [isViewSettingsOpenLocal, setIsViewSettingsOpenLocal] = useState(false);
+    const isViewSettingsOpen = isViewSettingsOpenProp ?? isViewSettingsOpenLocal;
+    const setIsViewSettingsOpen = setIsViewSettingsOpenProp ?? setIsViewSettingsOpenLocal;
     const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
     const [isEmbedManagerOpen, setIsEmbedManagerOpen] = useState(false);
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
@@ -282,111 +289,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
 
     return (
         <div className="flex flex-col h-full bg-white select-none">
-            {/* Toolbar */}
-            <div className="bg-gray-50 h-10 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs">
-                {/* Left: 타이틀 */}
-                <div className="flex items-center gap-3">
-                    <span className="text-gray-600 font-medium">수학 통합뷰</span>
-                </div>
-
-                {/* Right: 액션 버튼들 */}
-                <div className="flex items-center gap-2">
-                    {/* Mode Toggle */}
-                    {!isSimulationMode && (
-                        <>
-                            <div className="flex bg-gray-200 rounded-sm p-0.5">
-                                <button
-                                    onClick={() => setMode('view')}
-                                    className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
-                                >
-                                    <Eye size={12} />
-                                    조회
-                                </button>
-                                {canEditMath && (
-                                    <button
-                                        onClick={() => setMode('edit')}
-                                        className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
-                                    >
-                                        <Edit size={12} />
-                                        수정
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Separator */}
-                            <div className="w-px h-4 bg-gray-300 mx-1"></div>
-                        </>
-                    )}
-
-                    {/* Search */}
-                    <div className="relative">
-                        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            placeholder="수업명 검색..."
-                            className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
-                        />
-                    </div>
-
-                    {/* Separator */}
-                    <div className="w-px h-4 bg-gray-300 mx-1"></div>
-
-                    {/* Hidden Count */}
-                    {hiddenClasses.size > 0 && (
-                        <span className="text-xs text-gray-400 font-medium px-2">
-                            {hiddenClasses.size}개 숨김
-                        </span>
-                    )}
-
-                    {/* 보기 설정 (통합) */}
-                    <button
-                        onClick={() => setIsViewSettingsOpen(true)}
-                        className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
-                    >
-                        <SlidersHorizontal size={12} />
-                        보기 설정
-                    </button>
-
-                    {/* 그룹 설정 */}
-                    {mode === 'edit' && canEditMath && (
-                        <button
-                            onClick={() => setIsGroupSettingsOpen(true)}
-                            className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
-                        >
-                            <Settings size={12} />
-                            그룹 설정
-                        </button>
-                    )}
-
-                    {/* Embed Share Link - 관리자만 */}
-                    {isMaster && (
-                        <button
-                            onClick={() => setIsEmbedManagerOpen(true)}
-                            className="flex items-center gap-1 px-2 py-1 bg-indigo-50 border border-indigo-300 text-indigo-700 rounded-sm hover:bg-indigo-100 text-xs font-bold transition-colors"
-                            title="외부 공유 링크 관리"
-                        >
-                            <Link2 size={12} />
-                            <span className="hidden md:inline">공유</span>
-                        </button>
-                    )}
-
-                    {/* Simulation Mode Toggle */}
-                    {canSimulation && (
-                        <div
-                            className={`flex items-center gap-1 px-2 py-1 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
-                            onClick={onToggleSimulation}
-                        >
-                            <ArrowRightLeft size={12} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
-                            <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
-                                {isSimulationMode ? '시뮬레이션' : '실시간'}
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </div>
-
             {/* Simulation Action Bar */}
             {isSimulationMode && canEditMath && (
                 <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
@@ -419,25 +321,61 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                 </div>
             )}
 
-            {/* Teacher Legend */}
-            <div className="px-4 py-2 bg-white border-b flex flex-wrap gap-2 items-center flex-shrink-0">
-                <span className="text-xs font-bold text-gray-400 mr-1">강사 목록:</span>
-                {teachers.filter(t => {
-                    const td = teachersData.find(td => td.name === t);
-                    if (td?.isHidden) return false;
-                    return true;
-                }).map(teacher => {
-                    const colors = getTeacherColor(teacher, teachersData);
-                    return (
-                        <div
-                            key={teacher}
-                            className="px-2 py-0.5 rounded-sm text-xs font-bold shadow-sm border border-black/5"
-                            style={{ backgroundColor: colors.bg, color: colors.text }}
+            {/* Teacher Legend + Controls */}
+            <div className="px-4 py-2 bg-white border-b flex items-center justify-between flex-shrink-0">
+                {/* Left: 강사 목록 */}
+                <div className="flex flex-wrap gap-2 items-center">
+                    <span className="text-xs font-bold text-gray-400 mr-1">강사 목록:</span>
+                    {teachers.filter(t => {
+                        const td = teachersData.find(td => td.name === t);
+                        if (td?.isHidden) return false;
+                        return true;
+                    }).map(teacher => {
+                        const colors = getTeacherColor(teacher, teachersData);
+                        return (
+                            <div
+                                key={teacher}
+                                className="px-2 py-0.5 rounded-sm text-xs font-bold shadow-sm border border-black/5"
+                                style={{ backgroundColor: colors.bg, color: colors.text }}
+                            >
+                                {teacher}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Right: 통합뷰 고유 버튼들 */}
+                <div className="flex items-center gap-2 ml-4">
+                    {/* Search */}
+                    <div className="relative">
+                        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            placeholder="수업명 검색..."
+                            className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
+                        />
+                    </div>
+
+                    {/* Hidden Count */}
+                    {hiddenClasses.size > 0 && (
+                        <span className="text-xs text-gray-400 font-medium px-2">
+                            {hiddenClasses.size}개 숨김
+                        </span>
+                    )}
+
+                    {/* 그룹 설정 */}
+                    {mode === 'edit' && canEditMath && (
+                        <button
+                            onClick={() => setIsGroupSettingsOpen(true)}
+                            className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
                         >
-                            {teacher}
-                        </div>
-                    );
-                })}
+                            <Settings size={12} />
+                            그룹 설정
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Classes Grid */}
