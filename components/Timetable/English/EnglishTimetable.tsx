@@ -14,7 +14,7 @@ import TeacherOrderModal from './TeacherOrderModal';
 import BackupHistoryModal from './BackupHistoryModal';
 import ScenarioManagementModal from './ScenarioManagementModal';
 import { SimulationProvider, useSimulation } from './context/SimulationContext';
-import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus, ChevronLeft, ChevronRight, Search, Eye, Edit, Settings, ArrowRightLeft, Copy, Upload, Save } from 'lucide-react';
 
 interface EnglishTimetableProps {
     onClose?: () => void;
@@ -420,76 +420,173 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
     return (
         <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
-            {/* Header - Row 1: Title only */}
-            <div className={`text-center py-3 border-b shrink-0 transition-colors duration-300 ${isSimulationMode ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
-                <h1 className="text-2xl font-black text-gray-800 tracking-tight flex items-center justify-center gap-2">
-                    <span>
-                        {isSimulationMode && currentScenarioName
-                            ? currentScenarioName
-                            : (publishedScenarioName || '인재원 본원 통합 영어시간표')
-                        }
-                    </span>
-                    {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
-                </h1>
-                {/* 주차 네비게이션 */}
-                {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
-                    <div className="flex items-center justify-center gap-2 mt-2">
-                        <span className="text-sm text-gray-600 font-medium">{weekLabel}</span>
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={goToPrevWeek}
-                                className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+            {/* 통합뷰: 수학 시간표처럼 깔끔한 1행 헤더 */}
+            {viewType === 'class' && (
+                <div className={`px-4 py-2.5 border-b flex items-center justify-between shrink-0 transition-colors duration-300 ${isSimulationMode ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
+                    {/* Left: 주차 네비게이션 */}
+                    <div className="flex items-center gap-3">
+                        {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
+                            <>
+                                <span className="text-sm text-gray-700 font-bold">{weekLabel}</span>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={goToPrevWeek}
+                                        className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                    >
+                                        <ChevronLeft size={14} />
+                                    </button>
+                                    <button
+                                        onClick={goToThisWeek}
+                                        className="px-2 py-0.5 text-xs font-bold border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                    >
+                                        이번주
+                                    </button>
+                                    <button
+                                        onClick={goToNextWeek}
+                                        className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                    >
+                                        <ChevronRight size={14} />
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Center: 시간표 제목 */}
+                    <h1 className="text-lg font-black text-gray-800 tracking-tight flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
+                        <span>
+                            {isSimulationMode && currentScenarioName
+                                ? currentScenarioName
+                                : (publishedScenarioName || '인재원 본원 통합 영어시간표')
+                            }
+                        </span>
+                        {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
+                    </h1>
+
+                    {/* Right: 모드 토글, 검색, 시뮬레이션 컨트롤 */}
+                    <div className="flex items-center gap-2">
+                        {/* 시뮬레이션 모드 토글 */}
+                        {canSimulation && (
+                            <div
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                                onClick={handleToggleSimulationMode}
                             >
-                                <ChevronLeft size={14} />
-                            </button>
-                            <button
-                                onClick={goToThisWeek}
-                                className="px-2 py-0.5 text-xs font-bold border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-                            >
-                                이번주
-                            </button>
-                            <button
-                                onClick={goToNextWeek}
-                                className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-                            >
-                                <ChevronRight size={14} />
-                            </button>
+                                <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
+                                <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
+                                    {isSimulationMode ? '시뮬레이션' : '실시간'}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* 모드 토글 - 시뮬레이션 모드에서는 숨김 */}
+                        {!isSimulationMode && (
+                            <div className="flex bg-gray-200 rounded-sm p-0.5">
+                                <button
+                                    onClick={() => setMode('view')}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                                >
+                                    <Eye size={12} />
+                                    조회
+                                </button>
+                                {canEditEnglish && (
+                                    <button
+                                        onClick={() => setMode('edit')}
+                                        className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                                    >
+                                        <Edit size={12} />
+                                        수정
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 검색 */}
+                        <div className="relative">
+                            <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                placeholder="수업명 검색..."
+                                className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
+                            />
                         </div>
                     </div>
-                )}
-                {/* 시뮬레이션 모드 히스토리 컨트롤 */}
-                {isSimulationMode && (
-                    <div className="flex items-center justify-center gap-2 mt-2">
-                        <button
-                            onClick={undo}
-                            disabled={!canUndo}
-                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${canUndo ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-                            title="되돌리기 (Ctrl+Z)"
-                        >
-                            <Undo2 size={14} />
-                            되돌리기
-                        </button>
-                        <button
-                            onClick={redo}
-                            disabled={!canRedo}
-                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${canRedo ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-                            title="다시 실행 (Ctrl+Y)"
-                        >
-                            <Redo2 size={14} />
-                            다시 실행
-                        </button>
-                        <button
-                            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                            className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${history.length > 0 ? 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-400'}`}
-                            title="변경 히스토리 보기"
-                        >
-                            <History size={14} />
-                            히스토리 ({history.length})
-                            {isHistoryOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                        </button>
-                    </div>
-                )}
-            </div>
+                </div>
+            )}
+
+            {/* 강사/강의실뷰: 기존 헤더 */}
+            {viewType !== 'class' && (
+                <div className={`text-center py-3 border-b shrink-0 transition-colors duration-300 ${isSimulationMode ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <h1 className="text-2xl font-black text-gray-800 tracking-tight flex items-center justify-center gap-2">
+                        <span>
+                            {isSimulationMode && currentScenarioName
+                                ? currentScenarioName
+                                : (publishedScenarioName || '인재원 본원 통합 영어시간표')
+                            }
+                        </span>
+                        {isSimulationMode && <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
+                    </h1>
+                    {/* 주차 네비게이션 */}
+                    {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
+                        <div className="flex items-center justify-center gap-2 mt-2">
+                            <span className="text-sm text-gray-600 font-medium">{weekLabel}</span>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={goToPrevWeek}
+                                    className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                >
+                                    <ChevronLeft size={14} />
+                                </button>
+                                <button
+                                    onClick={goToThisWeek}
+                                    className="px-2 py-0.5 text-xs font-bold border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                >
+                                    이번주
+                                </button>
+                                <button
+                                    onClick={goToNextWeek}
+                                    className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                >
+                                    <ChevronRight size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {/* 시뮬레이션 모드 히스토리 컨트롤 */}
+                    {isSimulationMode && (
+                        <div className="flex items-center justify-center gap-2 mt-2">
+                            <button
+                                onClick={undo}
+                                disabled={!canUndo}
+                                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${canUndo ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                title="되돌리기 (Ctrl+Z)"
+                            >
+                                <Undo2 size={14} />
+                                되돌리기
+                            </button>
+                            <button
+                                onClick={redo}
+                                disabled={!canRedo}
+                                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${canRedo ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                                title="다시 실행 (Ctrl+Y)"
+                            >
+                                <Redo2 size={14} />
+                                다시 실행
+                            </button>
+                            <button
+                                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-sm transition-colors ${history.length > 0 ? 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-400'}`}
+                                title="변경 히스토리 보기"
+                            >
+                                <History size={14} />
+                                히스토리 ({history.length})
+                                {isHistoryOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* 히스토리 패널 */}
             {isSimulationMode && isHistoryOpen && history.length > 0 && (
