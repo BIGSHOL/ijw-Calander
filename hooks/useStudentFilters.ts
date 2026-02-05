@@ -238,15 +238,25 @@ const filterByStatus = (students: UnifiedStudent[], status: string): UnifiedStud
 
 /**
  * Filter students by subjects (OR condition)
+ * CoursesTab과 동일한 로직: 현재 수강 중인 수업만 (배정 예정 제외)
  */
 const filterBySubjects = (students: UnifiedStudent[], subjects: string[]): UnifiedStudent[] => {
     if (subjects.length === 0) return students;
+
+    const today = new Date().toISOString().split('T')[0];
 
     return students.filter((s) => {
         if (s.status === 'withdrawn') return true;
 
         const studentSubjects = (s.enrollments || [])
-            .filter(e => !e.endDate)
+            .filter(e => {
+                // CoursesTab과 동일한 로직: endDate가 없고 startDate가 오늘 이전인 것만
+                const hasEnded = !!e.endDate;
+                const startDate = e.startDate;
+                const isFuture = startDate && startDate > today;
+                // 종료되지 않았고, 미래가 아닌 수업만 (현재 수강 중)
+                return !hasEnded && !isFuture;
+            })
             .map((e) => e.subject);
 
         return subjects.some((subject) => studentSubjects.includes(subject as any));
@@ -255,15 +265,25 @@ const filterBySubjects = (students: UnifiedStudent[], subjects: string[]): Unifi
 
 /**
  * Filter students by teacher
+ * CoursesTab과 동일한 로직: 현재 수강 중인 수업만 (배정 예정 제외)
  */
 const filterByTeacher = (students: UnifiedStudent[], teacherId: string): UnifiedStudent[] => {
     if (teacherId === 'all') return students;
+
+    const today = new Date().toISOString().split('T')[0];
 
     return students.filter((s) => {
         if (s.status === 'withdrawn') return true;
 
         return (s.enrollments || [])
-            .filter(e => !e.endDate)
+            .filter(e => {
+                // CoursesTab과 동일한 로직: endDate가 없고 startDate가 오늘 이전인 것만
+                const hasEnded = !!e.endDate;
+                const startDate = e.startDate;
+                const isFuture = startDate && startDate > today;
+                // 종료되지 않았고, 미래가 아닌 수업만 (현재 수강 중)
+                return !hasEnded && !isFuture;
+            })
             .some((e) => e.staffId === teacherId);
     });
 };

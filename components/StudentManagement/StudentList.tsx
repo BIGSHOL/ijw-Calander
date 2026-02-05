@@ -40,9 +40,6 @@ const StudentList: React.FC<StudentListProps> = ({
     setCurrentPage(newPage);
   };
 
-  // 오늘 날짜 (YYYY-MM-DD 형식 문자열) - CoursesTab과 동일한 방식
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
-
   const getStatusBadge = (status: string | undefined) => {
     switch (status) {
       case 'prospect':
@@ -178,24 +175,10 @@ const StudentList: React.FC<StudentListProps> = ({
                       </span>
                     )}
                   </div>
-                  {/* 2번째 줄: 과목 (현재 수강 중인 수업만 표시 - CoursesTab과 동일한 로직) */}
-                  {student.enrollments && student.enrollments.filter(e => {
-                    // CoursesTab과 동일한 로직: endDate가 없고 startDate가 오늘 이전인 것만
-                    const hasEnded = !!e.endDate;
-                    const startDate = e.startDate;
-                    const isFuture = startDate && startDate > today;
-
-                    // 종료되지 않았고, 미래가 아닌 수업만 (현재 수강 중)
-                    return !hasEnded && !isFuture;
-                  }).length > 0 && (
+                  {/* 2번째 줄: 과목 (배정 예정 포함, 종료되지 않은 수업 모두 표시) */}
+                  {student.enrollments && student.enrollments.filter(e => !e.endDate).length > 0 && (
                     <div className="flex items-center gap-1 pl-0.5">
-                      {Array.from(new Set(student.enrollments.filter(e => {
-                        // 동일한 로직 반복
-                        const hasEnded = !!e.endDate;
-                        const startDate = e.startDate;
-                        const isFuture = startDate && startDate > today;
-                        return !hasEnded && !isFuture;
-                      }).map(e => e.subject)))
+                      {Array.from(new Set(student.enrollments.filter(e => !e.endDate).map(e => e.subject)))
                         .sort((a, b) => {
                           // 과목 정렬 순서: math, english, korean, science, 기타
                           const order: Record<string, number> = {
