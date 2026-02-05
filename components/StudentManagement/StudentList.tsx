@@ -21,13 +21,49 @@ const StudentList: React.FC<StudentListProps> = ({
     setCurrentPage(1);
   }, [students.length]);
 
-  // 페이지네이션 계산
+  // 페이지네이션은 전체 학생 수 기준으로 (섹션 구분과 무관)
   const totalPages = Math.ceil(students.length / pageSize);
-  const paginatedStudents = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return students.slice(startIndex, endIndex);
-  }, [students, currentPage, pageSize]);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+
+  // 각 섹션의 페이지네이션된 학생 목록
+  const paginatedSections = useMemo(() => {
+    let currentIndex = 0;
+    const result = {
+      active: [] as UnifiedStudent[],
+      onHold: [] as UnifiedStudent[],
+      withdrawing: [] as UnifiedStudent[]
+    };
+
+    // 재원생 섹션
+    for (let i = 0; i < activeStudents.length; i++) {
+      if (currentIndex >= startIndex && currentIndex < endIndex) {
+        result.active.push(activeStudents[i]);
+      }
+      currentIndex++;
+      if (currentIndex >= endIndex) return result;
+    }
+
+    // 대기생 섹션
+    for (let i = 0; i < onHoldStudents.length; i++) {
+      if (currentIndex >= startIndex && currentIndex < endIndex) {
+        result.onHold.push(onHoldStudents[i]);
+      }
+      currentIndex++;
+      if (currentIndex >= endIndex) return result;
+    }
+
+    // 퇴원 예정 섹션
+    for (let i = 0; i < withdrawingThisWeekStudents.length; i++) {
+      if (currentIndex >= startIndex && currentIndex < endIndex) {
+        result.withdrawing.push(withdrawingThisWeekStudents[i]);
+      }
+      currentIndex++;
+      if (currentIndex >= endIndex) return result;
+    }
+
+    return result;
+  }, [activeStudents, onHoldStudents, withdrawingThisWeekStudents, startIndex, endIndex]);
 
   // 페이지 크기 변경 시 첫 페이지로 이동
   const handlePageSizeChange = (newSize: number) => {
@@ -42,6 +78,70 @@ const StudentList: React.FC<StudentListProps> = ({
 
   // 오늘 날짜 (YYYY-MM-DD 형식 문자열) - CoursesTab과 동일한 방식
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // 이번 주 마지막 날 계산 (일요일)
+  const weekEnd = useMemo(() => {
+    const now = new Date();
+    const currentDay = now.getDay(); // 0(일) ~ 6(토)
+    const daysUntilSunday = currentDay === 0 ? 0 : 7 - currentDay;
+    const sunday = new Date(now);
+    sunday.setDate(now.getDate() + daysUntilSunday);
+    return sunday.toISOString().split('T')[0];
+  }, []);
+
+  // 학생 섹션 분류 (ClassCard 로직과 동일)
+  const { activeStudents, onHoldStudents, withdrawingThisWeekStudents } = useMemo(() => {
+    const active: UnifiedStudent[] = [];
+    const onHold: UnifiedStudent[] = [];
+    const withdrawing: UnifiedStudent[] = [];
+
+    students.forEach(student => {
+      // 퇴원생: withdrawalDate가 있는 경우
+      if (student.withdrawalDate) {
+        // 이번 주에 퇴원하는 학생인지 확인
+        if (student.withdrawalDate >= today && student.withdrawalDate <= weekEnd) {
+          withdrawing.push(student);
+        }
+        // 이미 퇴원한 학생은 표시하지 않음
+        return;
+      }
+
+      // 대기생 체크 (withdrawalDate 없음)
+      let isOnHold = false;
+
+      // 1. status가 on_hold인 경우
+      if (student.status === 'on_hold') {
+        isOnHold = true;
+      }
+
+      // 2. enrollments에서 체크 (현재 수강 중인 수업이 모두 대기 상태)
+      const activeEnrollments = (student.enrollments || []).filter(e => {
+        const hasEnded = !!e.endDate;
+        const startDate = e.startDate;
+        const isFuture = startDate && startDate > today;
+        return !hasEnded && !isFuture;
+      });
+
+      if (activeEnrollments.length > 0) {
+        const allOnHold = activeEnrollments.every(e => e.onHold === true);
+        if (allOnHold) {
+          isOnHold = true;
+        }
+      }
+
+      if (isOnHold) {
+        onHold.push(student);
+      } else {
+        active.push(student);
+      }
+    });
+
+    return {
+      activeStudents: active,
+      onHoldStudents: onHold,
+      withdrawingThisWeekStudents: withdrawing
+    };
+  }, [students, today, weekEnd]);
 
   const getStatusBadge = (status: string | undefined) => {
     switch (status) {
@@ -132,7 +232,7 @@ const StudentList: React.FC<StudentListProps> = ({
         )}
       </div>
 
-      {/* 학생 목록 */}
+      {/* 학생 목록 - 섹션별로 구분 */}
       <div className="flex-1 overflow-y-auto">
         {students.length === 0 ? (
           <div className="p-4 text-center text-gray-500 text-sm">
@@ -140,100 +240,172 @@ const StudentList: React.FC<StudentListProps> = ({
             <p className="text-xs mt-1 text-gray-400">상단 필터를 조정해보세요</p>
           </div>
         ) : (
-          <ul className="divide-y divide-gray-100">
-            {paginatedStudents.map((student) => (
-              <li
-                key={student.id}
-                onClick={() => onSelectStudent(student)}
-                className={`px-2 py-1 cursor-pointer transition-colors ${selectedStudent?.id === student.id
-                  ? 'bg-[#fdb813]/10 border-l-2 border-[#fdb813]'
-                  : student.isOldWithdrawn
-                    ? 'hover:bg-[#fdb813]/5 bg-[#fdb813]/5'
-                    : 'hover:bg-[#081429]/5'
-                  }`}
-              >
-                <div className="flex flex-col gap-0.5">
-                  {/* 1번째 줄: 상태 + 이름 + 영어이름 + 학교/학년 */}
-                  <div className="flex items-center gap-1">
-                    {getStatusBadge(student.status)}
-                    <span className={`text-xs font-bold ${student.isOldWithdrawn ? 'text-[#fdb813]' : 'text-[#081429]'}`}>
-                      {student.name}
-                    </span>
-                    {student.englishName && (
-                      <span
-                        className="text-xxs text-gray-500 max-w-[60px] truncate"
-                        title={student.englishName}
-                      >
-                        ({student.englishName})
-                      </span>
-                    )}
-                    {student.isOldWithdrawn && (
-                      <span className="text-micro bg-[#fdb813]/20 text-[#fdb813] px-1 rounded-sm font-medium">과거</span>
-                    )}
-                    {(student.school || student.grade) && (
-                      <span className="text-xxs text-gray-400">
-                        {student.school && <span className="truncate max-w-[50px]" title={student.school}>{student.school}</span>}
-                        {student.school && student.grade && ' '}
-                        {student.grade}
-                      </span>
-                    )}
-                  </div>
-                  {/* 2번째 줄: 과목 (배정일 이후만 표시, 배정 예정 제외) */}
-                  {student.enrollments && student.enrollments.filter(e => {
-                    // CoursesTab과 동일한 로직: endDate가 없고 startDate가 오늘 이전인 것만
-                    const hasEnded = !!e.endDate;
-                    const startDate = e.startDate;
-                    const isFuture = startDate && startDate > today;
-                    // 종료되지 않았고, 미래가 아닌 수업만 (현재 수강 중)
-                    return !hasEnded && !isFuture;
-                  }).length > 0 && (
-                    <div className="flex items-center gap-1 pl-0.5">
-                      {Array.from(new Set(student.enrollments.filter(e => {
-                        // 동일한 로직 반복
-                        const hasEnded = !!e.endDate;
-                        const startDate = e.startDate;
-                        const isFuture = startDate && startDate > today;
-                        return !hasEnded && !isFuture;
-                      }).map(e => e.subject)))
-                        .sort((a, b) => {
-                          // 과목 정렬 순서: math, english, korean, science, 기타
-                          const order: Record<string, number> = {
-                            math: 1,
-                            english: 2,
-                            korean: 3,
-                            science: 4,
-                          };
-                          return (order[a] || 99) - (order[b] || 99);
-                        })
-                        .map((subject) => {
-                          // 과목명 매핑
-                          const subjectNames: Record<string, string> = {
-                            math: '수학',
-                            english: '영어',
-                            korean: '국어',
-                            science: '과학',
-                          };
-                          const subjectColors: Record<string, string> = {
-                            math: 'bg-blue-100 text-blue-700',
-                            english: 'bg-purple-100 text-purple-700',
-                            korean: 'bg-green-100 text-green-700',
-                            science: 'bg-orange-100 text-orange-700',
-                          };
-                          return (
-                            <span
-                              key={subject}
-                              className={`text-micro px-1 rounded-sm font-medium ${subjectColors[subject] || 'bg-gray-100 text-gray-700'}`}
-                            >
-                              {subjectNames[subject] || subject}
-                            </span>
-                          );
-                        })}
-                    </div>
-                  )}
+          <div>
+            {/* 재원생 섹션 */}
+            {paginatedSections.active.length > 0 && (
+              <div>
+                <div className="sticky top-0 px-2 py-1 bg-green-50 border-b border-green-200 z-10">
+                  <span className="text-xxs font-bold text-green-800">
+                    재원 ({activeStudents.length}명)
+                  </span>
                 </div>
-              </li>
-            ))}
-          </ul>
+                <ul className="divide-y divide-gray-100">
+                  {paginatedSections.active.map((student) => (
+                    <li
+                      key={student.id}
+                      onClick={() => onSelectStudent(student)}
+                      className={`px-2 py-1 cursor-pointer transition-colors ${selectedStudent?.id === student.id
+                        ? 'bg-[#fdb813]/10 border-l-2 border-[#fdb813]'
+                        : student.isOldWithdrawn
+                          ? 'hover:bg-[#fdb813]/5 bg-[#fdb813]/5'
+                          : 'hover:bg-[#081429]/5'
+                        }`}
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        {/* 1번째 줄: 상태 + 이름 + 영어이름 + 학교/학년 */}
+                        <div className="flex items-center gap-1">
+                          {getStatusBadge(student.status)}
+                          <span className={`text-xs font-bold ${student.isOldWithdrawn ? 'text-[#fdb813]' : 'text-[#081429]'}`}>
+                            {student.name}
+                          </span>
+                          {student.englishName && (
+                            <span
+                              className="text-xxs text-gray-500 max-w-[60px] truncate"
+                              title={student.englishName}
+                            >
+                              ({student.englishName})
+                            </span>
+                          )}
+                          {student.isOldWithdrawn && (
+                            <span className="text-micro bg-[#fdb813]/20 text-[#fdb813] px-1 rounded-sm font-medium">과거</span>
+                          )}
+                          {(student.school || student.grade) && (
+                            <span className="text-xxs text-gray-400">
+                              {student.school && <span className="truncate max-w-[50px]" title={student.school}>{student.school}</span>}
+                              {student.school && student.grade && ' '}
+                              {student.grade}
+                            </span>
+                          )}
+                        </div>
+                        {/* 2번째 줄: 과목 */}
+                        {student.enrollments && student.enrollments.filter(e => {
+                          const hasEnded = !!e.endDate;
+                          const startDate = e.startDate;
+                          const isFuture = startDate && startDate > today;
+                          return !hasEnded && !isFuture;
+                        }).length > 0 && (
+                          <div className="flex items-center gap-1 pl-0.5">
+                            {Array.from(new Set(student.enrollments.filter(e => {
+                              const hasEnded = !!e.endDate;
+                              const startDate = e.startDate;
+                              const isFuture = startDate && startDate > today;
+                              return !hasEnded && !isFuture;
+                            }).map(e => e.subject)))
+                              .sort((a, b) => {
+                                const order: Record<string, number> = { math: 1, english: 2, korean: 3, science: 4 };
+                                return (order[a] || 99) - (order[b] || 99);
+                              })
+                              .map((subject) => {
+                                const subjectNames: Record<string, string> = { math: '수학', english: '영어', korean: '국어', science: '과학' };
+                                const subjectColors: Record<string, string> = { math: 'bg-blue-100 text-blue-700', english: 'bg-purple-100 text-purple-700', korean: 'bg-green-100 text-green-700', science: 'bg-orange-100 text-orange-700' };
+                                return (
+                                  <span key={subject} className={`text-micro px-1 rounded-sm font-medium ${subjectColors[subject] || 'bg-gray-100 text-gray-700'}`}>
+                                    {subjectNames[subject] || subject}
+                                  </span>
+                                );
+                              })}
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 대기생 섹션 */}
+            {paginatedSections.onHold.length > 0 && (
+              <div>
+                <div className="sticky top-0 px-2 py-1 bg-amber-50 border-b border-amber-200 z-10">
+                  <span className="text-xxs font-bold text-amber-800">
+                    대기 ({onHoldStudents.length}명)
+                  </span>
+                </div>
+                <ul className="divide-y divide-gray-100">
+                  {paginatedSections.onHold.map((student) => (
+                    <li
+                      key={student.id}
+                      onClick={() => onSelectStudent(student)}
+                      className={`px-2 py-1 cursor-pointer transition-colors ${selectedStudent?.id === student.id
+                        ? 'bg-[#fdb813]/10 border-l-2 border-[#fdb813]'
+                        : 'hover:bg-[#081429]/5'
+                        }`}
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1">
+                          {getStatusBadge(student.status)}
+                          <span className="text-xs font-bold text-[#081429]">{student.name}</span>
+                          {student.englishName && (
+                            <span className="text-xxs text-gray-500 max-w-[60px] truncate" title={student.englishName}>({student.englishName})</span>
+                          )}
+                          {(student.school || student.grade) && (
+                            <span className="text-xxs text-gray-400">
+                              {student.school && <span className="truncate max-w-[50px]" title={student.school}>{student.school}</span>}
+                              {student.school && student.grade && ' '}
+                              {student.grade}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* 퇴원 예정 섹션 (이번 주) */}
+            {paginatedSections.withdrawing.length > 0 && (
+              <div>
+                <div className="sticky top-0 px-2 py-1 bg-red-50 border-b border-red-200 z-10">
+                  <span className="text-xxs font-bold text-red-800">
+                    퇴원 예정 ({withdrawingThisWeekStudents.length}명) - 이번 주
+                  </span>
+                </div>
+                <ul className="divide-y divide-gray-100">
+                  {paginatedSections.withdrawing.map((student) => (
+                    <li
+                      key={student.id}
+                      onClick={() => onSelectStudent(student)}
+                      className={`px-2 py-1 cursor-pointer transition-colors ${selectedStudent?.id === student.id
+                        ? 'bg-[#fdb813]/10 border-l-2 border-[#fdb813]'
+                        : 'hover:bg-[#081429]/5'
+                        }`}
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1">
+                          {getStatusBadge(student.status)}
+                          <span className="text-xs font-bold text-[#081429]">{student.name}</span>
+                          {student.englishName && (
+                            <span className="text-xxs text-gray-500 max-w-[60px] truncate" title={student.englishName}>({student.englishName})</span>
+                          )}
+                          <span className="text-micro bg-red-100 text-red-700 px-1 rounded-sm font-medium">
+                            {student.withdrawalDate}
+                          </span>
+                          {(student.school || student.grade) && (
+                            <span className="text-xxs text-gray-400">
+                              {student.school && <span className="truncate max-w-[50px]" title={student.school}>{student.school}</span>}
+                              {student.school && student.grade && ' '}
+                              {student.grade}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
