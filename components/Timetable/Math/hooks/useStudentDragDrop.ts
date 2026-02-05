@@ -43,9 +43,15 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
 
     // Sync local classes with Firestore classes when there are no pending moves
     // useEffect는 paint 이후 실행되므로 localClasses를 동기화용으로만 사용
+    // IMPORTANT: initialClasses를 JSON.stringify로 비교하여 실제 내용이 변경되었을 때만 업데이트
+    const initialClassesRef = useRef<string>('');
     useEffect(() => {
         if (pendingMoves.length === 0) {
-            setLocalClasses(initialClasses);
+            const serialized = JSON.stringify(initialClasses);
+            if (serialized !== initialClassesRef.current) {
+                initialClassesRef.current = serialized;
+                setLocalClasses(initialClasses);
+            }
         }
     }, [initialClasses, pendingMoves.length]);
 
