@@ -179,12 +179,15 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Firestore Data State - React Query for static data (cached 30-60min)
-  const { data: departments = [] } = useDepartments(!!currentUser);
-  const { data: teachers = [] } = useTeachers(!!currentUser);
-  const { data: holidays = [] } = useHolidays(!!currentUser);
-  const { data: classKeywords = [] } = useClassKeywords(!!currentUser);
+  // Performance: Only load essential data at app startup
   const { data: systemConfig } = useSystemConfig(!!currentUser);
   const { data: staffWithAccounts = [] } = useStaffWithAccounts(!!currentUser);
+
+  // Tab-specific data: Load only when needed (각 탭에서 로딩)
+  const { data: departments = [] } = useDepartments(!!currentUser && appMode === 'calendar');
+  const { data: teachers = [] } = useTeachers(!!currentUser && (appMode === 'attendance' || appMode === 'timetable'));
+  const { data: holidays = [] } = useHolidays(!!currentUser && appMode === 'calendar');
+  const { data: classKeywords = [] } = useClassKeywords(!!currentUser && appMode === 'timetable');
 
   // Auth: 프로필 동기화 + 로그아웃 (extracted to hooks/useAuth.ts)
   const { userProfile, setUserProfile, authLoading, handleLogout } = useAuth({
@@ -239,9 +242,10 @@ const App: React.FC = () => {
     );
   }, [effectiveProfile, isSimulating, currentStaffMember, staffWithAccounts]);
 
-  // Students and Classes for Global Search
-  const { students: globalStudents = [] } = useStudents(false, !!currentUser);
-  const { data: allClasses = [] } = useClasses(!!currentUser);
+  // Students and Classes for Global Search (load only when search is opened or in students mode)
+  const shouldLoadGlobalData = !!currentUser && (isGlobalSearchOpen || appMode === 'students');
+  const { students: globalStudents = [] } = useStudents(false, shouldLoadGlobalData);
+  const { data: allClasses = [] } = useClasses(shouldLoadGlobalData);
 
   // 선생님 목록 추출 (학생 enrollments에서 staffId 수집, 과목별 그룹화)
   const teachersBySubject = useMemo(() => {
@@ -512,8 +516,14 @@ const App: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
-  // Subscribe to Events - REAL-TIME (필수)
+  // Subscribe to Events - REAL-TIME (only in calendar mode for performance)
   useEffect(() => {
+    // Performance: Only subscribe to events when in calendar mode
+    if (!currentUser || appMode !== 'calendar') {
+      setEvents([]);
+      return;
+    }
+
     // Optimization: Fetch events from configured lookback years (default 2)
     const queryStartDate = format(subYears(new Date(), lookbackYears), 'yyyy-MM-dd');
 
@@ -527,7 +537,7 @@ const App: React.FC = () => {
       setEvents(loadEvents);
     });
     return () => unsubscribe();
-  }, [lookbackYears]);
+  }, [lookbackYears, currentUser, appMode]);
 
   // Note: departments, staff, holidays, classKeywords, systemConfig are now handled by React Query hooks
 

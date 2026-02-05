@@ -29,8 +29,8 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
             <h3 className="text-sm font-bold text-slate-800 mb-3">{title}</h3>
             <div className="flex flex-row items-center justify-between flex-1 gap-3">
                 {/* Chart Side */}
-                <div className="relative w-24 h-24 flex-shrink-0" style={{ minHeight: '96px' }}>
-                    <ResponsiveContainer width="100%" height="100%" minHeight={96}>
+                <div className="relative w-24 h-24 flex-shrink-0" style={{ minHeight: '96px', minWidth: '96px' }}>
+                    <ResponsiveContainer width="100%" height="100%" minHeight={96} minWidth={96}>
                         <PieChart>
                             <Pie
                                 data={data}
@@ -309,8 +309,8 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
             {/* Charts Row 2 */}
             <div className="bg-white p-3 rounded-sm shadow-sm border border-slate-100">
                 <h3 className="text-sm font-bold text-slate-800 mb-2">일별 상담 추이</h3>
-                <div className="h-40" style={{ minHeight: '160px' }}>
-                    <ResponsiveContainer width="100%" height="100%" minHeight={160}>
+                <div className="h-40" style={{ minHeight: '160px', minWidth: '200px' }}>
+                    <ResponsiveContainer width="100%" height="100%" minHeight={160} minWidth={200}>
                         <LineChart data={dailyData}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} dy={5} />

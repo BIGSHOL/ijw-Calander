@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { X, Upload, Check, Loader2, Database, AlertCircle, FileSpreadsheet, Eye, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { read, utils } from 'xlsx';
 import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
@@ -31,18 +31,36 @@ function mapGrade(raw: any): SchoolGrade {
   if (!raw) return '기타' as SchoolGrade;
   const str = String(raw).trim();
 
-  // 패턴: "종로초3" → "초3", "일중3" → "중3"
+  // 패턴1: "신목초등학교5" → "초5"
+  // 패턴2: "종로초3" → "초3"
+  // 패턴3: "경일여중학교2" → "중2"
+
+  // 초등학교 패턴
   if (str.includes('초')) {
-    const match = str.match(GRADE_ELEMENTARY_PATTERN);
-    return match ? (`초${match[1]}` as SchoolGrade) : '기타' as SchoolGrade;
+    // "초등학교5" 또는 "초5" 형식에서 숫자 추출
+    const match1 = str.match(/초등학교(\d)/);
+    if (match1) return `초${match1[1]}` as SchoolGrade;
+
+    const match2 = str.match(GRADE_ELEMENTARY_PATTERN);
+    if (match2) return `초${match2[1]}` as SchoolGrade;
   }
+
+  // 중학교 패턴
   if (str.includes('중')) {
-    const match = str.match(GRADE_MIDDLE_PATTERN);
-    return match ? (`중${match[1]}` as SchoolGrade) : '기타' as SchoolGrade;
+    const match1 = str.match(/중학교(\d)/);
+    if (match1) return `중${match1[1]}` as SchoolGrade;
+
+    const match2 = str.match(GRADE_MIDDLE_PATTERN);
+    if (match2) return `중${match2[1]}` as SchoolGrade;
   }
+
+  // 고등학교 패턴
   if (str.includes('고')) {
-    const match = str.match(GRADE_HIGH_PATTERN);
-    return match ? (`고${match[1]}` as SchoolGrade) : '기타' as SchoolGrade;
+    const match1 = str.match(/고등학교(\d)/);
+    if (match1) return `고${match1[1]}` as SchoolGrade;
+
+    const match2 = str.match(GRADE_HIGH_PATTERN);
+    if (match2) return `고${match2[1]}` as SchoolGrade;
   }
 
   return '기타' as SchoolGrade;
@@ -53,7 +71,22 @@ function extractSchool(raw: any): string {
   if (!raw) return '';
   const str = String(raw).trim();
 
-  // "종로초3" → "종로초등학교"
+  // 패턴1: "신목초등학교5" → "신목초등학교"
+  // 패턴2: "경일여중학교2" → "경일여중학교"
+  // 패턴3: "종로초3" → "종로초등학교"
+
+  // 이미 "초등학교", "중학교", "고등학교"가 포함된 경우 → 뒤의 숫자만 제거
+  if (str.includes('초등학교')) {
+    return str.replace(/(\d+)$/, ''); // 마지막 숫자 제거
+  }
+  if (str.includes('중학교')) {
+    return str.replace(/(\d+)$/, '');
+  }
+  if (str.includes('고등학교')) {
+    return str.replace(/(\d+)$/, '');
+  }
+
+  // "종로초3" 형식 → "종로초등학교"
   const match = str.match(SCHOOL_PATTERN);
   if (match) {
     if (str.includes('초')) return match[1] + '초등학교';
@@ -62,6 +95,15 @@ function extractSchool(raw: any): string {
   }
 
   return str;
+}
+
+// 화면 표시용 학교 이름 (짧게)
+function getDisplaySchoolName(schoolName: string): string {
+  if (!schoolName) return '';
+  return schoolName
+    .replace('초등학교', '초')
+    .replace('중학교', '중')
+    .replace('고등학교', '고');
 }
 
 // 과목 매핑
@@ -116,15 +158,16 @@ function parseDate(raw: any, yearMonth: string): string {
 const TABLE_HEADERS = (
   <thead className="bg-gray-100 sticky top-0">
     <tr>
-      <th className="px-2 py-1 text-left text-xxs">시트</th>
-      <th className="px-2 py-1 text-left text-xxs">행</th>
-      <th className="px-2 py-1 text-left text-xxs">이름</th>
-      <th className="px-2 py-1 text-left text-xxs">학교학년</th>
       <th className="px-2 py-1 text-left text-xxs">상담일</th>
+      <th className="px-2 py-1 text-left text-xxs">이름</th>
+      <th className="px-2 py-1 text-left text-xxs">학교</th>
+      <th className="px-2 py-1 text-left text-xxs">학년</th>
       <th className="px-2 py-1 text-left text-xxs">과목</th>
       <th className="px-2 py-1 text-left text-xxs">학생연동</th>
       <th className="px-2 py-1 text-left text-xxs">등록여부</th>
       <th className="px-2 py-1 text-left text-xxs">상태</th>
+      <th className="px-2 py-1 text-left text-xxs">시트</th>
+      <th className="px-2 py-1 text-left text-xxs">행</th>
     </tr>
   </thead>
 );
@@ -162,10 +205,8 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
       const monthSheets = workbook.SheetNames.filter(name => MONTH_SHEET_PATTERN.test(name));
 
       if (monthSheets.length === 0) {
-        throw new Error('월별 시트가 없습니다. (예: 1월, 2월, ...)');
+        throw new Error(`월별 시트가 없습니다. (예: 1월, 2월, ...)\n현재 시트: ${workbook.SheetNames.join(', ')}`);
       }
-
-      console.log(`📋 사용 가능한 시트: ${monthSheets.join(', ')}`);
 
       // 워크북과 시트 목록 저장
       setWorkbookData(workbook);
@@ -210,8 +251,8 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
 
       studentsSnapshot.docs.forEach(docSnap => {
         const student = docSnap.data();
-        // 매칭 키: 이름_보호자연락처
-        const matchKey = `${student.name}_${student.parentPhone || ''}`;
+        // 매칭 키: 이름_학교
+        const matchKey = `${student.name}_${student.school || ''}`;
         studentMatchMap.set(matchKey, {
           id: docSnap.id,
           name: student.name
@@ -222,63 +263,120 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
 
       // 선택된 시트만 처리
       const sheetsToProcess = Array.from(selectedSheets);
+
       for (const sheetName of sheetsToProcess) {
         const sheet = workbook.Sheets[sheetName];
         const rawData = utils.sheet_to_json(sheet, { defval: '', header: 1 }) as any[][];
 
-        // 월 추출 (예: "1월" → "2026-01")
+        // 월 추출 및 연도 판단
+        // 10월, 11월, 12월 → 2025년
+        // 1월, 2월, ... 9월 → 2026년
         const monthNum = sheetName.replace('월', '').padStart(2, '0');
-        const yearMonth = `2026-${monthNum}`;
+        const month = parseInt(monthNum, 10);
+        const year = month >= 10 ? '2025' : '2026';
+        const yearMonth = `${year}-${monthNum}`;
 
         // Row 0: 빈 행, Row 1: 헤더, Row 2+: 데이터
         const dataRows = rawData.slice(2);
 
+        // 시트 구조 감지 (헤더 확인)
+        const headers = rawData[1] || [];
+        const hasPhoneColumn = headers.some((h: any) => String(h).includes('전화번호'));
+
+        // 컬럼 인덱스 매핑 (전화번호 유무에 따라 다름)
+        // hasPhoneColumn = true: 1월, 2월 구조 (전화번호 있음, 모든 컬럼 +1)
+        // hasPhoneColumn = false: 10~12월 구조 (전화번호 없음)
+        const col = hasPhoneColumn ? {
+          name: 4,           // E열 (전화번호 있음)
+          schoolGrade: 5,    // F열
+          address: 6,        // G열
+          consultDate: 7,    // H열
+          subject: 8,        // I열
+          counselor: 9,      // J열
+          status: 10,        // K열
+          parentPhone: 11,   // L열
+          registrar: 12,     // M열
+          amount: 13,        // N열
+          paymentDate: 15,   // P열
+          notes: 16,         // Q열
+          nonRegReason: 17,  // R열
+          followUpDate: 18,  // S열
+          followUpContent: 19, // T열
+          consultPath: 20    // U열
+        } : {
+          name: 3,           // D열 (전화번호 없음)
+          schoolGrade: 4,    // E열
+          address: 5,        // F열
+          consultDate: 6,    // G열
+          subject: 7,        // H열
+          counselor: 8,      // I열
+          status: 9,         // J열
+          parentPhone: 10,   // K열
+          registrar: 11,     // L열
+          amount: 12,        // M열
+          paymentDate: 14,   // O열
+          notes: 15,         // P열
+          nonRegReason: 16,  // Q열
+          followUpDate: 17,  // R열
+          followUpContent: 18, // S열
+          consultPath: 19    // T열
+        };
+
+        let skippedCount = 0;
+        let processedCount = 0;
+
         dataRows.forEach((row, idx) => {
           // 빈 행 스킵 (이름 없으면)
-          if (!row[3] || row[3] === '') return;
+          if (!row[col.name] || row[col.name] === '') {
+            skippedCount++;
+            return;
+          }
 
-          const studentName = String(row[3] || '').trim();
-          const consultationDate = parseDate(row[6], yearMonth) || parseDate(row[1], yearMonth);
-          const notes = String(row[15] || '').trim();
+          processedCount++;
+
+          const studentName = String(row[col.name] || '').trim(); // 이름
+          const consultationDate = parseDate(row[col.consultDate], yearMonth) || parseDate(row[1], yearMonth) || `${yearMonth}-01`; // 상담일 (fallback: 접수일 → 해당월 1일)
+          const notes = String(row[col.notes] || '').trim(); // 상담내용
 
           // 중복 체크
           const key = `${studentName}_${consultationDate}_${notes.substring(0, 50)}`;
           const isDuplicate = existingKeys.has(key);
 
-          // 학생 매칭 체크 (이름 + 보호자 연락처)
-          const parentPhone = String(row[10] || '').trim(); // 보호자 연락처는 10번 컬럼
-          const matchKey = `${studentName}_${parentPhone}`;
+          // 학생 매칭 체크 (이름 + 학교)
+          const schoolName = extractSchool(row[col.schoolGrade]); // 학교학년
+          const parentPhone = String(row[col.parentPhone] || '').trim(); // 보호자 연락처
+          const matchKey = `${studentName}_${schoolName}`;
           const matchedStudent = studentMatchMap.get(matchKey);
 
           const record: ParsedRecord = {
             // 학생 정보
             studentName,
-            schoolName: extractSchool(row[4]),
-            grade: mapGrade(row[4]),
-            address: String(row[5] || '').trim(),
+            schoolName: extractSchool(row[col.schoolGrade]), // 학교학년
+            grade: mapGrade(row[col.schoolGrade]), // 학교학년
+            address: String(row[col.address] || '').trim(), // 주소
             parentPhone,
 
             // 상담 정보
             consultationDate: consultationDate + 'T00:00:00.000Z',
-            subject: mapSubject(row[7]),
-            counselor: String(row[8] || '').trim(),
-            receiver: String(row[2] || '').trim(),
+            subject: mapSubject(row[col.subject]), // 과목
+            counselor: String(row[col.counselor] || '').trim(), // 상담자
+            receiver: String(row[2] || '').trim(), // C열: 수신자 (구조 무관하게 동일)
 
             // 등록 정보
-            status: mapStatus(row[9]),
-            registrar: String(row[11] || '').trim(),
-            paymentAmount: String(row[12] || ''),
-            paymentDate: parseDate(row[14], yearMonth) ? parseDate(row[14], yearMonth) + 'T00:00:00.000Z' : '',
+            status: mapStatus(row[col.status]), // 등록여부
+            registrar: String(row[col.registrar] || '').trim(), // 등록자
+            paymentAmount: String(row[col.amount] || ''), // 금액
+            paymentDate: parseDate(row[col.paymentDate], yearMonth) ? parseDate(row[col.paymentDate], yearMonth) + 'T00:00:00.000Z' : '', // 납부일
 
             // 상담 내용
             notes,
-            nonRegistrationReason: String(row[16] || '').trim(),
-            followUpDate: parseDate(row[17], yearMonth) ? parseDate(row[17], yearMonth) + 'T00:00:00.000Z' : '',
-            followUpContent: String(row[18] || '').trim(),
-            consultationPath: String(row[19] || '').trim(),
+            nonRegistrationReason: String(row[col.nonRegReason] || '').trim(), // 미등록사유
+            followUpDate: parseDate(row[col.followUpDate], yearMonth) ? parseDate(row[col.followUpDate], yearMonth) + 'T00:00:00.000Z' : '', // 추후상담일
+            followUpContent: String(row[col.followUpContent] || '').trim(), // 추후상담내용
+            consultationPath: String(row[col.consultPath] || '').trim(), // 상담경로
 
             // 메타데이터
-            createdAt: parseDate(row[1], yearMonth) + 'T00:00:00.000Z',
+            createdAt: (parseDate(row[1], yearMonth) || consultationDate) + 'T00:00:00.000Z', // B열: 접수일 (fallback: 상담일)
             updatedAt: new Date().toISOString(),
 
             // 중복 여부, 행 번호, 시트 이름, 학생 매칭 정보
@@ -350,9 +448,10 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
         const batchRecords = newRecords.slice(start, end);
 
         batchRecords.forEach(record => {
-          const timestamp = Date.now().toString(36);
-          const dateStr = record.consultationDate.substring(0, 10).replace(/-/g, '');
-          const docId = `${dateStr}_${record.studentName}_${timestamp}`;
+          // 랜덤 ID 생성 (20자 영숫자)
+          const docId = Array.from({ length: 20 }, () =>
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 62)]
+          ).join('');
 
           // 메타데이터 필드 제거하고, 매칭된 학생 ID는 registeredStudentId로 설정
           const { _isDuplicate, _rowNumber, _sheetName, _matchedStudentId, _matchedStudentName, ...cleanRecord } = record;
@@ -618,18 +717,15 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                             key={idx}
                             className={`border-b border-gray-100 ${record._isDuplicate ? 'bg-orange-50' : ''}`}
                           >
-                            <td className="px-2 py-1">
-                              <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">
-                                {record._sheetName}
-                              </span>
-                            </td>
-                            <td className="px-2 py-1 text-gray-500">{record._rowNumber}</td>
-                            <td className="px-2 py-1 font-medium">{record.studentName}</td>
-                            <td className="px-2 py-1 text-gray-600">
-                              {record.schoolName} {record.grade}
-                            </td>
                             <td className="px-2 py-1 text-gray-600">
                               {record.consultationDate.substring(0, 10)}
+                            </td>
+                            <td className="px-2 py-1 font-medium">{record.studentName}</td>
+                            <td className="px-2 py-1 text-gray-600">
+                              {getDisplaySchoolName(record.schoolName)}
+                            </td>
+                            <td className="px-2 py-1 text-gray-600">
+                              {record.grade}
                             </td>
                             <td className="px-2 py-1">
                               <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
@@ -661,6 +757,12 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                                 <span className="text-green-600 font-medium">신규</span>
                               )}
                             </td>
+                            <td className="px-2 py-1">
+                              <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">
+                                {record._sheetName}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1 text-gray-500">{record._rowNumber}</td>
                           </tr>
                         ))}
                       </tbody>

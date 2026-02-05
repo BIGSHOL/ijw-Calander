@@ -1,12 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ConsultationRecord, ConsultationStatus, SchoolGrade, ConsultationSubject } from '../../types';
-import { X, ChevronDown, ChevronRight } from 'lucide-react';
+import { ConsultationRecord, ConsultationStatus, SchoolGrade, ConsultationSubject, SubjectConsultationDetail } from '../../types';
+import {
+    X, ChevronDown, ChevronRight, User, Phone, Calendar, MapPin, School, BookOpen,
+    FileText, Globe, Users, Cake, Home, Smile, AlertTriangle, Target, Tag, Bus,
+    XCircle, CheckCircle, Banknote, Shield, UserCheck, GraduationCap, MessageSquare, ClipboardList
+} from 'lucide-react';
 
 interface ConsultationFormProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: Omit<ConsultationRecord, 'id'>) => void;
     initialData?: ConsultationRecord | null;
+    onDelete?: (id: string) => void;
+    onConvertToStudent?: (record: ConsultationRecord) => void;
+    canDelete?: boolean;
+    canConvert?: boolean;
 }
 
 // Grade options - exclude legacy
@@ -34,9 +42,30 @@ const getLocalDate = () => {
     return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 };
 
-export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
-    // 확장 섹션 펼침 상태 (학생 상세 정보)
+export const ConsultationForm: React.FC<ConsultationFormProps> = ({
+    isOpen,
+    onClose,
+    onSubmit,
+    initialData,
+    onDelete,
+    onConvertToStudent,
+    canDelete = false,
+    canConvert = false
+}) => {
+    // 탭 상태 관리
+    type TabType = 'basic' | 'math' | 'english' | 'korean' | 'etc';
+    const [activeTab, setActiveTab] = useState<TabType>('basic');
+
+    // 확장 섹션 펼침 상태
     const [showExtendedInfo, setShowExtendedInfo] = useState(false);
+    const [showAcademyInfo, setShowAcademyInfo] = useState(false);
+    const [showFollowUp, setShowFollowUp] = useState(false);
+
+    // 과목별 상담 정보 상태
+    const [mathConsult, setMathConsult] = useState<SubjectConsultationDetail>({});
+    const [englishConsult, setEnglishConsult] = useState<SubjectConsultationDetail>({});
+    const [koreanConsult, setKoreanConsult] = useState<SubjectConsultationDetail>({});
+    const [etcConsult, setEtcConsult] = useState<SubjectConsultationDetail>({});
 
     const [formData, setFormData] = useState<Omit<ConsultationRecord, 'id'>>({
         // 학생 기본 정보
@@ -60,6 +89,15 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
         birthDate: '',
         nickname: '',
         enrollmentReason: '',
+        // 학원 전용 추가 정보
+        safetyNotes: '',
+        careerGoal: '',
+        siblings: '',
+        siblingsDetails: '',
+        shuttleBusRequest: false,
+        studentType: '',
+        installmentAgreement: false,
+        privacyAgreement: false,
         // 상담 정보
         consultationDate: getLocalDate(),
         subject: ConsultationSubject.English,
@@ -99,12 +137,25 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                 birthDate: initialData.birthDate || '',
                 nickname: initialData.nickname || '',
                 enrollmentReason: initialData.enrollmentReason || '',
+                // 학원 전용 추가 정보
+                safetyNotes: initialData.safetyNotes || '',
+                careerGoal: initialData.careerGoal || '',
+                siblings: initialData.siblings || '',
+                siblingsDetails: initialData.siblingsDetails || '',
+                shuttleBusRequest: initialData.shuttleBusRequest || false,
+                studentType: initialData.studentType || '',
+                installmentAgreement: initialData.installmentAgreement || false,
+                privacyAgreement: initialData.privacyAgreement || false,
             });
-            // 데이터가 있으면 확장 섹션 자동 펼침
-            if (initialData.englishName || initialData.gender || initialData.studentPhone ||
-                initialData.parentName || initialData.birthDate) {
-                setShowExtendedInfo(true);
-            }
+            // 모든 섹션 기본 접힘
+            setShowExtendedInfo(false);
+            setShowAcademyInfo(false);
+            setShowFollowUp(false);
+            // 과목별 상담 정보 로드
+            setMathConsult(initialData.mathConsultation || {});
+            setEnglishConsult(initialData.englishConsultation || {});
+            setKoreanConsult(initialData.koreanConsultation || {});
+            setEtcConsult(initialData.etcConsultation || {});
         } else {
             setFormData({
                 // 학생 기본 정보
@@ -128,6 +179,15 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                 birthDate: '',
                 nickname: '',
                 enrollmentReason: '',
+                // 학원 전용 추가 정보
+                safetyNotes: '',
+                careerGoal: '',
+                siblings: '',
+                siblingsDetails: '',
+                shuttleBusRequest: false,
+                studentType: '',
+                installmentAgreement: false,
+                privacyAgreement: false,
                 // 상담 정보
                 consultationDate: getLocalDate(),
                 subject: ConsultationSubject.English,
@@ -145,6 +205,13 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                 createdAt: getLocalDate()
             });
             setShowExtendedInfo(false);
+            setShowAcademyInfo(false);
+            setShowFollowUp(false);
+            // 과목별 상담 정보 초기화
+            setMathConsult({});
+            setEnglishConsult({});
+            setKoreanConsult({});
+            setEtcConsult({});
         }
     }, [initialData, isOpen]);
 
@@ -153,16 +220,72 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
         setFormData(prev => ({ ...prev, [field]: value }));
     }, []);
 
+    // 날짜 유효성 검사 및 변환 헬퍼 함수
+    const validateAndConvertDate = (dateStr: string | undefined, fieldName: string, isRequired: boolean = false): string => {
+        // 빈 값 처리
+        if (!dateStr || dateStr.trim() === '') {
+            if (isRequired) {
+                throw new Error(`${fieldName}은(는) 필수 입력 항목입니다.`);
+            }
+            return '';
+        }
+
+        // 잘못된 형식 검사 (예: "T00:00:00." 같은 경우)
+        if (dateStr.startsWith('T') || dateStr.length < 10) {
+            console.warn(`⚠️ 잘못된 날짜 형식 감지: ${fieldName} = "${dateStr}"`);
+            if (isRequired) {
+                // 필수 필드면 오늘 날짜로 대체
+                return new Date().toISOString();
+            }
+            return '';
+        }
+
+        // Date 객체 생성 및 유효성 검사
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) {
+            console.warn(`⚠️ 유효하지 않은 날짜: ${fieldName} = "${dateStr}"`);
+            if (isRequired) {
+                return new Date().toISOString();
+            }
+            return '';
+        }
+
+        return date.toISOString();
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit({
-            ...formData,
-            consultationDate: new Date(formData.consultationDate).toISOString(),
-            paymentDate: formData.paymentDate ? new Date(formData.paymentDate).toISOString() : '',
-            followUpDate: formData.followUpDate ? new Date(formData.followUpDate).toISOString() : '',
-            createdAt: new Date(formData.createdAt).toISOString()
-        });
-        onClose();
+
+        try {
+            // 각 날짜 필드를 검증하고 변환
+            const consultationDateISO = validateAndConvertDate(formData.consultationDate, '상담일', true);
+            const paymentDateISO = validateAndConvertDate(formData.paymentDate, '결제일', false);
+            const followUpDateISO = validateAndConvertDate(formData.followUpDate, '후속조치일', false);
+            const createdAtISO = validateAndConvertDate(formData.createdAt, '접수일', true);
+
+            const submitData = {
+                ...formData,
+                consultationDate: consultationDateISO,
+                paymentDate: paymentDateISO,
+                followUpDate: followUpDateISO,
+                createdAt: createdAtISO,
+                mathConsultation: mathConsult,
+                englishConsultation: englishConsult,
+                koreanConsultation: koreanConsult,
+                etcConsultation: etcConsult
+            };
+
+            // Firestore는 undefined 값을 지원하지 않으므로 제거
+            const cleanedData = Object.fromEntries(
+                Object.entries(submitData).filter(([_, value]) => value !== undefined)
+            ) as Omit<ConsultationRecord, 'id'>;
+
+            onSubmit(cleanedData);
+            onClose();
+        } catch (error) {
+            console.error('❌ Form submit error:', error);
+            alert(`폼 제출 중 오류가 발생했습니다:\n\n${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+        }
     };
 
     const inputClass = "w-full px-2.5 py-1.5 text-sm border border-slate-300 rounded-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500";
@@ -170,26 +293,67 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
 
     if (!isOpen) return null;
 
+    // 탭 설정
+    const tabs: { id: TabType; label: string; color: string }[] = [
+        { id: 'basic', label: '기본 정보', color: CUSTOM_COLORS.NAVY },
+        { id: 'math', label: '수학 상담', color: '#10b981' },
+        { id: 'english', label: '영어 상담', color: '#3b82f6' },
+        { id: 'korean', label: '국어 상담', color: '#f59e0b' },
+        { id: 'etc', label: '기타 상담', color: '#8b5cf6' },
+    ];
+
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-sm shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
+            <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-sm shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[84vh]">
                 {/* 헤더 */}
-                <div className="px-3 py-2 border-b flex justify-between items-center bg-slate-50">
-                    <h2 className="text-lg font-bold" style={{ color: CUSTOM_COLORS.NAVY }}>
+                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+                    <h2 className="text-sm font-bold text-[#081429]">
                         {initialData ? '상담 기록 수정' : '새 상담 등록'}
                     </h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
-                        <X size={20} />
+                    <button
+                        onClick={onClose}
+                        type="button"
+                        className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                        <X size={18} />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-2 overflow-y-auto flex-1">
+                {/* 탭 네비게이션 */}
+                <div className="flex border-b border-gray-200 px-3 shrink-0">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`px-4 py-2 text-xs font-medium transition-colors relative ${
+                                activeTab === tab.id
+                                    ? 'text-[#081429]'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                            style={activeTab === tab.id ? {
+                                borderBottom: `2px solid ${tab.color}`,
+                                color: tab.color
+                            } : {}}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {/* 기본 정보 탭 */}
+                    {activeTab === 'basic' && (
+                    <>
                     {/* 1. 접수 정보 */}
-                    <div className="mb-2">
-                        <div className="text-xs font-bold text-slate-500 uppercase mb-1.5 pb-1 border-b">접수 정보</div>
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <h3 className="text-[#081429] font-bold text-xs">접수 정보</h3>
+                        </div>
+                        <div className="p-2">
                         <div className="grid grid-cols-4 gap-2">
                             <div>
-                                <label className={labelClass}>수신자 <span className="text-red-500">*</span></label>
+                                <label className={labelClass}><UserCheck size={12} className="inline mr-1" />수신자 <span className="text-red-500">*</span></label>
                                 <input
                                     required
                                     type="text"
@@ -200,7 +364,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                 />
                             </div>
                             <div>
-                                <label className={labelClass}>접수일</label>
+                                <label className={labelClass}><Calendar size={12} className="inline mr-1" />접수일</label>
                                 <input
                                     type="date"
                                     value={formData.createdAt}
@@ -209,7 +373,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                 />
                             </div>
                             <div>
-                                <label className={labelClass}>상담자</label>
+                                <label className={labelClass}><User size={12} className="inline mr-1" />상담자</label>
                                 <input
                                     type="text"
                                     value={formData.counselor}
@@ -219,7 +383,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                 />
                             </div>
                             <div>
-                                <label className={labelClass}>상담 경로</label>
+                                <label className={labelClass}><Globe size={12} className="inline mr-1" />상담 경로</label>
                                 <input
                                     type="text"
                                     value={formData.consultationPath}
@@ -229,16 +393,20 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                 />
                             </div>
                         </div>
+                        </div>
                     </div>
 
                     {/* 2. 학생 + 상담 정보 (2열) */}
-                    <div className="grid grid-cols-2 gap-4 mb-2">
+                    <div className="grid grid-cols-2 gap-2">
                         {/* 학생 정보 */}
-                        <div>
-                            <div className="text-xs font-bold text-slate-500 uppercase mb-1.5 pb-1 border-b">학생 정보</div>
+                        <div className="bg-white border border-gray-200 overflow-hidden">
+                            <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                <h3 className="text-[#081429] font-bold text-xs">학생 정보</h3>
+                            </div>
+                            <div className="p-2">
                             <div className="grid grid-cols-2 gap-2 mb-2">
                                 <div>
-                                    <label className={labelClass}>이름 <span className="text-red-500">*</span></label>
+                                    <label className={labelClass}><User size={12} className="inline mr-1" />이름 <span className="text-red-500">*</span></label>
                                     <input
                                         required
                                         type="text"
@@ -248,7 +416,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     />
                                 </div>
                                 <div>
-                                    <label className={labelClass}>연락처</label>
+                                    <label className={labelClass}><Phone size={12} className="inline mr-1" />연락처</label>
                                     <input
                                         type="text"
                                         value={formData.parentPhone}
@@ -259,7 +427,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                             </div>
                             <div className="grid grid-cols-2 gap-2 mb-2">
                                 <div>
-                                    <label className={labelClass}>학교 <span className="text-red-500">*</span></label>
+                                    <label className={labelClass}><School size={12} className="inline mr-1" />학교 <span className="text-red-500">*</span></label>
                                     <input
                                         required
                                         type="text"
@@ -269,7 +437,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     />
                                 </div>
                                 <div>
-                                    <label className={labelClass}>학년 <span className="text-red-500">*</span></label>
+                                    <label className={labelClass}><GraduationCap size={12} className="inline mr-1" />학년 <span className="text-red-500">*</span></label>
                                     <select
                                         required
                                         value={formData.grade}
@@ -283,7 +451,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                 </div>
                             </div>
                             <div>
-                                <label className={labelClass}>주소</label>
+                                <label className={labelClass}><MapPin size={12} className="inline mr-1" />주소</label>
                                 <input
                                     type="text"
                                     value={formData.address}
@@ -292,14 +460,18 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     placeholder="상세 주소"
                                 />
                             </div>
+                            </div>
                         </div>
 
                         {/* 상담 정보 */}
-                        <div>
-                            <div className="text-xs font-bold text-slate-500 uppercase mb-1.5 pb-1 border-b">상담 내용</div>
+                        <div className="bg-white border border-gray-200 overflow-hidden">
+                            <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                <h3 className="text-[#081429] font-bold text-xs">상담 내용</h3>
+                            </div>
+                            <div className="p-2">
                             <div className="grid grid-cols-2 gap-2 mb-2">
                                 <div>
-                                    <label className={labelClass}>상담일</label>
+                                    <label className={labelClass}><Calendar size={12} className="inline mr-1" />상담일</label>
                                     <input
                                         type="date"
                                         value={formData.consultationDate}
@@ -308,7 +480,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     />
                                 </div>
                                 <div>
-                                    <label className={labelClass}>과목 <span className="text-red-500">*</span></label>
+                                    <label className={labelClass}><BookOpen size={12} className="inline mr-1" />과목 <span className="text-red-500">*</span></label>
                                     <select
                                         required
                                         value={formData.subject}
@@ -322,14 +494,15 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                 </div>
                             </div>
                             <div>
-                                <label className={labelClass}>상담 내용 <span className="text-red-500">*</span></label>
+                                <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />상담 내용 <span className="text-red-500">*</span></label>
                                 <textarea
                                     required
-                                    rows={3}
+                                    rows={5}
                                     value={formData.notes}
                                     onChange={e => setFormData({ ...formData, notes: e.target.value })}
                                     className={`${inputClass} resize-none`}
                                 />
+                            </div>
                             </div>
                         </div>
                     </div>
@@ -355,7 +528,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     <div className="text-xs font-semibold text-slate-600 mb-2">추가 기본 정보</div>
                                     <div className="grid grid-cols-3 gap-2">
                                         <div>
-                                            <label className={labelClass}>영어 이름</label>
+                                            <label className={labelClass}><Globe size={12} className="inline mr-1" />영어 이름</label>
                                             <input
                                                 type="text"
                                                 value={formData.englishName || ''}
@@ -365,7 +538,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                             />
                                         </div>
                                         <div>
-                                            <label className={labelClass}>성별</label>
+                                            <label className={labelClass}><User size={12} className="inline mr-1" />성별</label>
                                             <select
                                                 value={formData.gender || ''}
                                                 onChange={e => setFormData({ ...formData, gender: e.target.value as 'male' | 'female' | undefined })}
@@ -377,7 +550,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                             </select>
                                         </div>
                                         <div>
-                                            <label className={labelClass}>졸업 연도</label>
+                                            <label className={labelClass}><GraduationCap size={12} className="inline mr-1" />졸업 연도</label>
                                             <input
                                                 type="text"
                                                 value={formData.graduationYear || ''}
@@ -394,7 +567,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     <div className="text-xs font-semibold text-slate-600 mb-2">연락처 상세</div>
                                     <div className="grid grid-cols-4 gap-2">
                                         <div>
-                                            <label className={labelClass}>학생 전화</label>
+                                            <label className={labelClass}><Phone size={12} className="inline mr-1" />학생 전화</label>
                                             <input
                                                 type="text"
                                                 value={formData.studentPhone || ''}
@@ -404,7 +577,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                             />
                                         </div>
                                         <div>
-                                            <label className={labelClass}>집 전화</label>
+                                            <label className={labelClass}><Home size={12} className="inline mr-1" />집 전화</label>
                                             <input
                                                 type="text"
                                                 value={formData.homePhone || ''}
@@ -414,7 +587,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                             />
                                         </div>
                                         <div>
-                                            <label className={labelClass}>보호자명</label>
+                                            <label className={labelClass}><User size={12} className="inline mr-1" />보호자명</label>
                                             <input
                                                 type="text"
                                                 value={formData.parentName || ''}
@@ -424,7 +597,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                             />
                                         </div>
                                         <div>
-                                            <label className={labelClass}>보호자 관계</label>
+                                            <label className={labelClass}><Users size={12} className="inline mr-1" />보호자 관계</label>
                                             <select
                                                 value={formData.parentRelation || '모'}
                                                 onChange={e => setFormData({ ...formData, parentRelation: e.target.value })}
@@ -441,7 +614,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     <div className="text-xs font-semibold text-slate-600 mb-2">주소 상세</div>
                                     <div className="grid grid-cols-3 gap-2">
                                         <div>
-                                            <label className={labelClass}>우편번호</label>
+                                            <label className={labelClass}><MapPin size={12} className="inline mr-1" />우편번호</label>
                                             <input
                                                 type="text"
                                                 value={formData.zipCode || ''}
@@ -451,7 +624,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                             />
                                         </div>
                                         <div className="col-span-2">
-                                            <label className={labelClass}>상세주소</label>
+                                            <label className={labelClass}><Home size={12} className="inline mr-1" />상세주소</label>
                                             <input
                                                 type="text"
                                                 value={formData.addressDetail || ''}
@@ -468,7 +641,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     <div className="text-xs font-semibold text-slate-600 mb-2">기타 정보</div>
                                     <div className="grid grid-cols-3 gap-2">
                                         <div>
-                                            <label className={labelClass}>생년월일</label>
+                                            <label className={labelClass}><Cake size={12} className="inline mr-1" />생년월일</label>
                                             <input
                                                 type="date"
                                                 value={formData.birthDate || ''}
@@ -477,7 +650,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                             />
                                         </div>
                                         <div>
-                                            <label className={labelClass}>닉네임</label>
+                                            <label className={labelClass}><Smile size={12} className="inline mr-1" />닉네임</label>
                                             <input
                                                 type="text"
                                                 value={formData.nickname || ''}
@@ -487,7 +660,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                             />
                                         </div>
                                         <div>
-                                            <label className={labelClass}>입학 동기</label>
+                                            <label className={labelClass}><FileText size={12} className="inline mr-1" />입학 동기</label>
                                             <input
                                                 type="text"
                                                 value={formData.enrollmentReason || ''}
@@ -502,48 +675,149 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                         )}
                     </div>
 
-                    {/* 4. 후속 조치 + 등록/결제 (2열) */}
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* 후속 조치 */}
-                        <div>
-                            <div className="text-xs font-bold text-slate-500 uppercase mb-1.5 pb-1 border-b">후속 조치</div>
-                            <div className="grid grid-cols-2 gap-2 mb-2">
+                    {/* 3-2. 학원 관리 정보 (접을 수 있는 확장 섹션) */}
+                    <div className="mb-2 border border-orange-200 rounded-sm bg-orange-50/30">
+                        <button
+                            type="button"
+                            onClick={() => setShowAcademyInfo(!showAcademyInfo)}
+                            className="w-full px-4 py-2 flex items-center justify-between hover:bg-orange-50 transition-colors rounded-sm"
+                        >
+                            <div className="flex items-center gap-2">
+                                {showAcademyInfo ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                <span className="text-sm font-bold text-orange-900">📋 학원 관리 정보 (선택)</span>
+                                <span className="text-xs text-orange-600">안전사항, 희망진로, 남매 관계 등</span>
+                            </div>
+                        </button>
+
+                        {showAcademyInfo && (
+                            <div className="px-4 pb-4 pt-2 space-y-3">
                                 <div>
-                                    <label className={labelClass}>후속 조치일</label>
-                                    <input
-                                        type="date"
-                                        value={formData.followUpDate}
-                                        onChange={e => setFormData({ ...formData, followUpDate: e.target.value })}
-                                        className={inputClass}
+                                    <label className={labelClass}><AlertTriangle size={12} className="inline mr-1" />안전사항</label>
+                                    <textarea
+                                        rows={2}
+                                        value={formData.safetyNotes || ''}
+                                        onChange={e => setFormData({ ...formData, safetyNotes: e.target.value })}
+                                        className={`${inputClass} resize-none`}
+                                        placeholder="알레르기, 주의사항 등"
                                     />
                                 </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className={labelClass}><Target size={12} className="inline mr-1" />희망진로</label>
+                                        <input
+                                            type="text"
+                                            value={formData.careerGoal || ''}
+                                            onChange={e => setFormData({ ...formData, careerGoal: e.target.value })}
+                                            className={inputClass}
+                                            placeholder="의사, 교사 등"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}><Tag size={12} className="inline mr-1" />학생 구분</label>
+                                        <input
+                                            type="text"
+                                            value={formData.studentType || ''}
+                                            onChange={e => setFormData({ ...formData, studentType: e.target.value })}
+                                            className={inputClass}
+                                            placeholder="예비/재원"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className={labelClass}><Users size={12} className="inline mr-1" />남매 관계</label>
+                                        <input
+                                            type="text"
+                                            value={formData.siblings || ''}
+                                            onChange={e => setFormData({ ...formData, siblings: e.target.value })}
+                                            className={inputClass}
+                                            placeholder="외동, 형제 2명 등"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}><Users size={12} className="inline mr-1" />남매 관계 기록</label>
+                                        <input
+                                            type="text"
+                                            value={formData.siblingsDetails || ''}
+                                            onChange={e => setFormData({ ...formData, siblingsDetails: e.target.value })}
+                                            className={inputClass}
+                                            placeholder="재원생 여부 등"
+                                        />
+                                    </div>
+                                </div>
                                 <div>
-                                    <label className={labelClass}>조치 내용</label>
+                                    <label className="flex items-center gap-2 text-sm">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.shuttleBusRequest || false}
+                                            onChange={e => setFormData({ ...formData, shuttleBusRequest: e.target.checked })}
+                                            className="rounded"
+                                        />
+                                        <span className="text-slate-600"><Bus size={12} className="inline mr-1" />셔틀버스 신청</span>
+                                    </label>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 4. 후속 조치 (접을 수 있는 확장 섹션) */}
+                    <div className="mb-2 border border-purple-200 rounded-sm bg-purple-50/30">
+                        <button
+                            type="button"
+                            onClick={() => setShowFollowUp(!showFollowUp)}
+                            className="w-full px-4 py-2 flex items-center justify-between hover:bg-purple-50 transition-colors rounded-sm"
+                        >
+                            <div className="flex items-center gap-2">
+                                {showFollowUp ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                <span className="text-sm font-bold text-purple-900">📅 후속 조치 (선택)</span>
+                                <span className="text-xs text-purple-600">후속 조치일, 미등록 사유 등</span>
+                            </div>
+                        </button>
+
+                        {showFollowUp && (
+                            <div className="px-4 pb-4 pt-2">
+                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                    <div>
+                                        <label className={labelClass}><Calendar size={12} className="inline mr-1" />후속 조치일</label>
+                                        <input
+                                            type="date"
+                                            value={formData.followUpDate}
+                                            onChange={e => setFormData({ ...formData, followUpDate: e.target.value })}
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />조치 내용</label>
+                                        <input
+                                            type="text"
+                                            value={formData.followUpContent}
+                                            onChange={e => setFormData({ ...formData, followUpContent: e.target.value })}
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className={labelClass}><XCircle size={12} className="inline mr-1" />미등록 사유</label>
                                     <input
                                         type="text"
-                                        value={formData.followUpContent}
-                                        onChange={e => setFormData({ ...formData, followUpContent: e.target.value })}
+                                        value={formData.nonRegistrationReason}
+                                        onChange={e => setFormData({ ...formData, nonRegistrationReason: e.target.value })}
                                         className={inputClass}
+                                        placeholder="등록 안한 이유"
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label className={labelClass}>미등록 사유</label>
-                                <input
-                                    type="text"
-                                    value={formData.nonRegistrationReason}
-                                    onChange={e => setFormData({ ...formData, nonRegistrationReason: e.target.value })}
-                                    className={inputClass}
-                                    placeholder="등록 안한 이유"
-                                />
-                            </div>
-                        </div>
+                        )}
+                    </div>
 
-                        {/* 등록/결제 */}
-                        <div className="bg-slate-50 p-3 rounded-sm border border-slate-200">
-                            <div className="text-xs font-bold text-slate-500 uppercase mb-2 pb-1 border-b border-slate-200">등록 / 결제</div>
+                    {/* 5. 등록/결제 */}
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                        <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                            <h3 className="text-[#081429] font-bold text-xs">등록 / 결제</h3>
+                        </div>
+                        <div className="p-2">
                             <div className="mb-2">
-                                <label className={labelClass}>등록 상태</label>
+                                <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />등록 상태</label>
                                 <select
                                     value={formData.status}
                                     onChange={e => setFormData({ ...formData, status: e.target.value as ConsultationStatus })}
@@ -554,7 +828,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                             </div>
                             <div className="grid grid-cols-2 gap-2 mb-2">
                                 <div>
-                                    <label className={labelClass}>결제 금액</label>
+                                    <label className={labelClass}><Banknote size={12} className="inline mr-1" />결제 금액</label>
                                     <input
                                         type="text"
                                         value={formData.paymentAmount}
@@ -564,7 +838,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     />
                                 </div>
                                 <div>
-                                    <label className={labelClass}>결제일</label>
+                                    <label className={labelClass}><Calendar size={12} className="inline mr-1" />결제일</label>
                                     <input
                                         type="date"
                                         value={formData.paymentDate}
@@ -574,7 +848,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                 </div>
                             </div>
                             <div>
-                                <label className={labelClass}>등록자</label>
+                                <label className={labelClass}><UserCheck size={12} className="inline mr-1" />등록자</label>
                                 <input
                                     type="text"
                                     value={formData.registrar}
@@ -583,25 +857,313 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({ isOpen, onCl
                                     placeholder="등록 처리자"
                                 />
                             </div>
+                            <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
+                                <label className="flex items-center gap-2 text-xs">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.installmentAgreement || false}
+                                        onChange={e => setFormData({ ...formData, installmentAgreement: e.target.checked })}
+                                        className="rounded"
+                                    />
+                                    <span className="text-slate-600"><Shield size={12} className="inline mr-1" />할부 규정 안내 동의서</span>
+                                </label>
+                                <label className="flex items-center gap-2 text-xs">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.privacyAgreement || false}
+                                        onChange={e => setFormData({ ...formData, privacyAgreement: e.target.checked })}
+                                        className="rounded"
+                                    />
+                                    <span className="text-slate-600"><Shield size={12} className="inline mr-1" />개인정보 활용 동의서</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
+                    </>
+                    )}
+
+                    {/* 수학 상담 탭 */}
+                    {activeTab === 'math' && (
+                        <div className="bg-white border border-gray-200 overflow-hidden">
+                            <div className="px-2 py-1.5 bg-green-50 border-b border-green-200">
+                                <h3 className="text-green-900 font-bold text-xs flex items-center gap-1">
+                                    <BookOpen size={14} />
+                                    MATH
+                                </h3>
+                            </div>
+                            <div className="p-3 space-y-3">
+                                <div>
+                                    <label className={labelClass}><ClipboardList size={12} className="inline mr-1" />레벨테스트 점수 (수학)</label>
+                                    <input
+                                        type="text"
+                                        value={mathConsult.levelTestScore || ''}
+                                        onChange={e => setMathConsult({ ...mathConsult, levelTestScore: e.target.value })}
+                                        className={inputClass}
+                                        placeholder="수학 레벨 미실시"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 (수학)</label>
+                                    <textarea
+                                        rows={2}
+                                        value={mathConsult.academyHistory || ''}
+                                        onChange={e => setMathConsult({ ...mathConsult, academyHistory: e.target.value })}
+                                        className={`${inputClass} resize-none`}
+                                        placeholder="비어 있음"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><BookOpen size={12} className="inline mr-1" />학습 진도 (수학)</label>
+                                    <textarea
+                                        rows={2}
+                                        value={mathConsult.learningProgress || ''}
+                                        onChange={e => setMathConsult({ ...mathConsult, learningProgress: e.target.value })}
+                                        className={`${inputClass} resize-none`}
+                                        placeholder="비어 있음"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />학생 시험 성적 (수학)</label>
+                                    <textarea
+                                        rows={2}
+                                        value={mathConsult.examResults || ''}
+                                        onChange={e => setMathConsult({ ...mathConsult, examResults: e.target.value })}
+                                        className={`${inputClass} resize-none`}
+                                        placeholder="비어 있음"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />학생 상담 내역 (수학)</label>
+                                    <textarea
+                                        rows={2}
+                                        value={mathConsult.consultationHistory || ''}
+                                        onChange={e => setMathConsult({ ...mathConsult, consultationHistory: e.target.value })}
+                                        className={`${inputClass} resize-none`}
+                                        placeholder="비어 있음"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className={labelClass}><Tag size={12} className="inline mr-1" />추천반 (수학)</label>
+                                        <input
+                                            type="text"
+                                            value={mathConsult.recommendedClass || ''}
+                                            onChange={e => setMathConsult({ ...mathConsult, recommendedClass: e.target.value })}
+                                            className={inputClass}
+                                            placeholder="비어 있음"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}><User size={12} className="inline mr-1" />담임 (수학)</label>
+                                        <input
+                                            type="text"
+                                            value={mathConsult.homeRoomTeacher || ''}
+                                            onChange={e => setMathConsult({ ...mathConsult, homeRoomTeacher: e.target.value })}
+                                            className={inputClass}
+                                            placeholder="비어 있음"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className={labelClass}><Calendar size={12} className="inline mr-1" />첫 수업일 (수학)</label>
+                                    <input
+                                        type="date"
+                                        value={mathConsult.firstClassDate || ''}
+                                        onChange={e => setMathConsult({ ...mathConsult, firstClassDate: e.target.value })}
+                                        className={inputClass}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />기타</label>
+                                    <textarea
+                                        rows={2}
+                                        value={mathConsult.notes || ''}
+                                        onChange={e => setMathConsult({ ...mathConsult, notes: e.target.value })}
+                                        className={`${inputClass} resize-none`}
+                                        placeholder="비어 있음"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 영어 상담 탭 */}
+                    {activeTab === 'english' && (
+                        <div className="bg-white border border-gray-200 overflow-hidden">
+                            <div className="px-2 py-1.5 bg-blue-50 border-b border-blue-200">
+                                <h3 className="text-blue-900 font-bold text-xs flex items-center gap-1">
+                                    <Globe size={14} />
+                                    ENGLISH
+                                </h3>
+                            </div>
+                            <div className="p-3 space-y-3">
+                                <div>
+                                    <label className={labelClass}><ClipboardList size={12} className="inline mr-1" />레벨테스트 점수 (영어)</label>
+                                    <input
+                                        type="text"
+                                        value={englishConsult.levelTestScore || ''}
+                                        onChange={e => setEnglishConsult({ ...englishConsult, levelTestScore: e.target.value })}
+                                        className={inputClass}
+                                        placeholder="영어 레벨 미실시"
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 (영어)</label>
+                                    <textarea rows={2} value={englishConsult.academyHistory || ''} onChange={e => setEnglishConsult({ ...englishConsult, academyHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><BookOpen size={12} className="inline mr-1" />학습 진도 (영어)</label>
+                                    <textarea rows={2} value={englishConsult.learningProgress || ''} onChange={e => setEnglishConsult({ ...englishConsult, learningProgress: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />학생 시험 성적 (영어)</label>
+                                    <textarea rows={2} value={englishConsult.examResults || ''} onChange={e => setEnglishConsult({ ...englishConsult, examResults: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />학생 상담 내역 (영어)</label>
+                                    <textarea rows={2} value={englishConsult.consultationHistory || ''} onChange={e => setEnglishConsult({ ...englishConsult, consultationHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className={labelClass}><Tag size={12} className="inline mr-1" />추천반 (영어)</label>
+                                        <input type="text" value={englishConsult.recommendedClass || ''} onChange={e => setEnglishConsult({ ...englishConsult, recommendedClass: e.target.value })} className={inputClass} placeholder="비어 있음" />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}><User size={12} className="inline mr-1" />담임 (영어)</label>
+                                        <input type="text" value={englishConsult.homeRoomTeacher || ''} onChange={e => setEnglishConsult({ ...englishConsult, homeRoomTeacher: e.target.value })} className={inputClass} placeholder="비어 있음" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className={labelClass}><Calendar size={12} className="inline mr-1" />첫 수업일 (영어)</label>
+                                    <input type="date" value={englishConsult.firstClassDate || ''} onChange={e => setEnglishConsult({ ...englishConsult, firstClassDate: e.target.value })} className={inputClass} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />기타</label>
+                                    <textarea rows={2} value={englishConsult.notes || ''} onChange={e => setEnglishConsult({ ...englishConsult, notes: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 국어 상담 탭 */}
+                    {activeTab === 'korean' && (
+                        <div className="bg-white border border-gray-200 overflow-hidden">
+                            <div className="px-2 py-1.5 bg-orange-50 border-b border-orange-200">
+                                <h3 className="text-orange-900 font-bold text-xs flex items-center gap-1">
+                                    <FileText size={14} />
+                                    KOREAN
+                                </h3>
+                            </div>
+                            <div className="p-3 space-y-3">
+                                <div>
+                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 (국어)</label>
+                                    <textarea rows={2} value={koreanConsult.academyHistory || ''} onChange={e => setKoreanConsult({ ...koreanConsult, academyHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><BookOpen size={12} className="inline mr-1" />학습 진도 (국어)</label>
+                                    <textarea rows={2} value={koreanConsult.learningProgress || ''} onChange={e => setKoreanConsult({ ...koreanConsult, learningProgress: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />학생 시험 성적 (국어)</label>
+                                    <textarea rows={2} value={koreanConsult.examResults || ''} onChange={e => setKoreanConsult({ ...koreanConsult, examResults: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />학생 상담 내역 (국어)</label>
+                                    <textarea rows={2} value={koreanConsult.consultationHistory || ''} onChange={e => setKoreanConsult({ ...koreanConsult, consultationHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 기타 상담 탭 */}
+                    {activeTab === 'etc' && (
+                        <div className="bg-white border border-gray-200 overflow-hidden">
+                            <div className="px-2 py-1.5 bg-purple-50 border-b border-purple-200">
+                                <h3 className="text-purple-900 font-bold text-xs flex items-center gap-1">
+                                    <MessageSquare size={14} />
+                                    ETC
+                                </h3>
+                            </div>
+                            <div className="p-3 space-y-3">
+                                <div>
+                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 (기타)</label>
+                                    <textarea rows={2} value={etcConsult.academyHistory || ''} onChange={e => setEtcConsult({ ...etcConsult, academyHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><BookOpen size={12} className="inline mr-1" />학습 진도 (기타)</label>
+                                    <textarea rows={2} value={etcConsult.learningProgress || ''} onChange={e => setEtcConsult({ ...etcConsult, learningProgress: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />학생 시험 성적 (기타)</label>
+                                    <textarea rows={2} value={etcConsult.examResults || ''} onChange={e => setEtcConsult({ ...etcConsult, examResults: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />학생 상담 내역 (기타)</label>
+                                    <textarea rows={2} value={etcConsult.consultationHistory || ''} onChange={e => setEtcConsult({ ...etcConsult, consultationHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                                <div>
+                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />기타</label>
+                                    <textarea rows={2} value={etcConsult.notes || ''} onChange={e => setEtcConsult({ ...etcConsult, notes: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* 버튼 */}
-                    <div className="mt-4 flex justify-end gap-2 pt-3 border-t">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm rounded-sm border border-slate-300 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
-                        >
-                            취소
-                        </button>
-                        <button
-                            type="submit"
-                            style={{ backgroundColor: CUSTOM_COLORS.NAVY }}
-                            className="px-4 py-2 text-sm rounded-sm text-white font-medium hover:opacity-90 shadow-sm transition-all"
-                        >
-                            {initialData ? '수정 완료' : '등록'}
-                        </button>
+                    <div className="mt-4 flex justify-between items-center pt-3 border-t">
+                        <div className="flex gap-2">
+                            {/* 삭제 버튼 - 수정 모드일 때만 표시 */}
+                            {initialData && canDelete && onDelete && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (window.confirm('정말로 삭제하시겠습니까?')) {
+                                            onDelete(initialData.id);
+                                            onClose();
+                                        }
+                                    }}
+                                    className="px-4 py-2 text-sm rounded-sm border border-red-300 text-red-600 font-medium hover:bg-red-50 transition-colors"
+                                >
+                                    삭제
+                                </button>
+                            )}
+                            {/* 원생 전환 버튼 - 전환 권한 + 미전환 상태일 때만 */}
+                            {initialData && canConvert && onConvertToStudent && !initialData.registeredStudentId && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onConvertToStudent(initialData);
+                                        onClose();
+                                    }}
+                                    className="px-4 py-2 text-sm rounded-sm border border-green-300 text-green-600 font-medium hover:bg-green-50 transition-colors flex items-center gap-1"
+                                >
+                                    <User size={14} />
+                                    원생 전환
+                                </button>
+                            )}
+                            {/* 전환 완료 표시 */}
+                            {initialData && initialData.registeredStudentId && (
+                                <span className="px-4 py-2 text-xs bg-green-100 text-green-800 rounded-sm font-medium">
+                                    ✓ 원생 전환 완료
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-4 py-2 text-sm rounded-sm border border-slate-300 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                type="submit"
+                                style={{ backgroundColor: CUSTOM_COLORS.NAVY }}
+                                className="px-4 py-2 text-sm rounded-sm text-white font-medium hover:opacity-90 shadow-sm transition-all"
+                            >
+                                {initialData ? '수정 완료' : '등록'}
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

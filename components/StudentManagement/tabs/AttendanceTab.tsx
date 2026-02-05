@@ -1,6 +1,6 @@
 ﻿import React, { useMemo, useState } from 'react';
 import { UnifiedStudent } from '../../../types';
-import { Calendar as CalendarIcon, TrendingUp, TrendingDown, CheckCircle2, XCircle, BookOpen } from 'lucide-react';
+import { Calendar as CalendarIcon, TrendingUp, TrendingDown, CheckCircle2, XCircle, BookOpen, ChevronDown } from 'lucide-react';
 import { useAttendanceRecords } from '../../../hooks/useAttendance';
 import {
   SubjectForSchedule,
@@ -209,6 +209,10 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
   const [selectedMonth, setSelectedMonth] = useState(currentDate);
   const [selectedClass, setSelectedClass] = useState<string>('all'); // 'all' 또는 className
 
+  // 섹션 접기/펼치기 상태
+  const [showStats, setShowStats] = useState(true);
+  const [showCalendar, setShowCalendar] = useState(true);
+
   // 현재 선택된 월의 yearMonth 포맷 (YYYY-MM)
   const yearMonth = useMemo(() => {
     const year = selectedMonth.getFullYear();
@@ -401,7 +405,17 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
         </div>
       )}
 
+      {/* 통계 섹션 */}
+      <div
+        className="flex items-center gap-2 cursor-pointer"
+        onClick={() => setShowStats(!showStats)}
+      >
+        <h4 className="text-xs font-bold text-[#081429]">출석 통계</h4>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? '' : 'rotate-180'}`} />
+      </div>
+
       {/* 통계 카드 - 컴팩트 (1행 4열) */}
+      {showStats && (
       <div className="grid grid-cols-4 gap-1.5">
         <div className="bg-white border border-green-200 rounded-sm p-1.5">
           <p className="text-micro text-gray-500">출석률</p>
@@ -427,8 +441,20 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
           <p className="text-xxs text-gray-400">일</p>
         </div>
       </div>
+      )}
+
+      {/* 달력 섹션 */}
+      <div
+        className="flex items-center gap-2 cursor-pointer"
+        onClick={() => setShowCalendar(!showCalendar)}
+      >
+        <h4 className="text-xs font-bold text-[#081429]">출석 달력</h4>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showCalendar ? '' : 'rotate-180'}`} />
+      </div>
 
       {/* 달력 뷰 */}
+      {showCalendar && (
+      <>
       <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
         {/* 요일 헤더 */}
         <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
@@ -520,6 +546,8 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
           ))}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

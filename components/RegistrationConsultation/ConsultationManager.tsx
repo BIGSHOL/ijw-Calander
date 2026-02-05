@@ -1,8 +1,9 @@
 import React, { useState, useCallback, Suspense, lazy } from 'react';
-import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade, ConsultationSubject, ConsultationStatus } from '../../types';
+import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade, ConsultationSubject, ConsultationStatus, LevelTest } from '../../types';
 import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation } from '../../hooks/useConsultations';
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useAddLevelTest, determineLevel } from '../../hooks/useGradeProfile';
 import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
@@ -13,6 +14,22 @@ import { TabButton } from '../Common/TabButton';
 import { VideoLoading } from '../Common/VideoLoading';
 
 const RegistrationMigrationModal = lazy(() => import('./RegistrationMigrationModal'));
+
+/**
+ * 레벨테스트 점수 문자열 파싱
+ * @param scoreStr "85점", "85", "85.5", "85.5점" 등의 형식
+ * @returns 숫자 점수 또는 null (파싱 실패 시)
+ */
+function parseLevelTestScore(scoreStr: string | undefined): number | null {
+    if (!scoreStr) return null;
+
+    // 숫자와 소수점만 추출
+    const match = scoreStr.match(/(\d+(?:\.\d+)?)/);
+    if (!match) return null;
+
+    const score = parseFloat(match[1]);
+    return isNaN(score) ? null : score;
+}
 
 interface ConsultationManagerProps {
     userProfile: UserProfile | null;
@@ -54,6 +71,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
 
     // 원생 전환을 위한 학생 관리 hook
     const { students: existingStudents, addStudent } = useStudents();
+    const addLevelTest = useAddLevelTest();
 
     const handleAddRecord = useCallback((record: Omit<ConsultationRecord, 'id' | 'createdAt'>) => {
         createConsultation.mutate({
@@ -97,6 +115,21 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
         });
     }, [deleteConsultation]);
 
+    // 학교 이름 정규화 함수 (축약형 → 전체 이름)
+    const normalizeSchoolName = (schoolName: string | undefined): string => {
+        if (!schoolName) return '';
+        const name = schoolName.trim();
+        // 이미 전체 이름이면 그대로 반환
+        if (name.includes('초등학교') || name.includes('중학교') || name.includes('고등학교')) {
+            return name;
+        }
+        // 축약형 → 전체 이름 변환
+        if (name.includes('초')) return name.replace('초', '초등학교');
+        if (name.includes('중')) return name.replace('중', '중학교');
+        if (name.includes('고')) return name.replace('고', '고등학교');
+        return name;
+    };
+
     // 원생 전환 핸들러
     const handleConvertToStudent = useCallback(async (consultation: ConsultationRecord) => {
         // 중복 방지 체크
@@ -105,30 +138,50 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
             return;
         }
 
-        // Performance: js-index-maps - Map을 사용한 O(1) 중복 검색
-        const studentKey = `${consultation.studentName}_${consultation.parentPhone}`;
+        // Performance: js-index-maps - Map을 사용한 O(1) 중복 검색 (이름 + 학교)
+        const normalizedConsultSchool = normalizeSchoolName(consultation.schoolName);
+        const studentKey = `${consultation.studentName}_${normalizedConsultSchool}`;
         const studentMap = new Map(
             existingStudents
                 .filter(s => s.status !== 'withdrawn')
-                .map(s => [`${s.name}_${s.parentPhone}`, s])
+                .map(s => [`${s.name}_${normalizeSchoolName(s.school)}`, s])
         );
-        const duplicate = studentMap.get(studentKey);
+        const existingStudent = studentMap.get(studentKey);
 
-        if (duplicate) {
-            const confirmMsg = `⚠️ 동일한 학생이 이미 등록되어 있습니다!\n\n` +
-                `이름: ${duplicate.name}\n` +
-                `학교: ${duplicate.school}\n` +
-                `학년: ${duplicate.grade}\n` +
-                `연락처: ${duplicate.parentPhone}\n` +
-                `상태: ${duplicate.status === 'active' ? '재원 중' : duplicate.status}\n\n` +
-                `그래도 새로 등록하시겠습니까?`;
+        if (existingStudent) {
+            // 기존 학생이 있으면 자동 연동 확인
+            const confirmMsg = `✅ 동일한 학생이 이미 등록되어 있습니다!\n\n` +
+                `이름: ${existingStudent.name}\n` +
+                `학교: ${existingStudent.school}\n` +
+                `학년: ${existingStudent.grade}\n` +
+                `연락처: ${existingStudent.parentPhone}\n` +
+                `상태: ${existingStudent.status === 'active' ? '재원 중' : existingStudent.status}\n\n` +
+                `이 학생과 상담 기록을 연동하시겠습니까?\n(새로 생성하지 않고 기존 학생 데이터와 연결됩니다)`;
 
             if (!confirm(confirmMsg)) {
                 return;
             }
+
+            try {
+                // 기존 학생과 연동 (새로 생성하지 않음)
+                await updateConsultation.mutateAsync({
+                    id: consultation.id,
+                    updates: {
+                        registeredStudentId: existingStudent.id,
+                        status: ConsultationStatus.Registered, // 등록 완료 상태로 변경
+                    }
+                });
+
+                alert(`✅ "${consultation.studentName}" 상담 기록이 기존 학생과 연동되었습니다!`);
+                return;
+            } catch (error) {
+                console.error('학생 연동 오류:', error);
+                alert('학생 연동에 실패했습니다.');
+                return;
+            }
         }
 
-        // 확인 다이얼로그
+        // 확인 다이얼로그 (신규 학생 생성)
         if (!confirm(`"${consultation.studentName}" 학생을 원생 관리로 전환하시겠습니까?\n\n전환 후 학생 관리 탭에서 수업 배정 및 추가 정보를 입력하실 수 있습니다.`)) {
             return;
         }
@@ -182,6 +235,77 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
             // 2. 학생 생성
             const studentId = await addStudent(newStudentData);
 
+            // 2-1. 레벨테스트 자동 생성 (있는 경우)
+            const levelTestPromises: Promise<any>[] = [];
+
+            // 수학 레벨테스트 생성
+            if (consultation.mathConsultation?.levelTestScore) {
+                const score = parseLevelTestScore(consultation.mathConsultation.levelTestScore);
+                if (score !== null) {
+                    const maxScore = 100; // 기본 만점
+                    const percentage = (score / maxScore) * 100;
+                    const recommendedLevel = determineLevel('math', percentage);
+
+                    const mathLevelTest: Omit<LevelTest, 'id'> = {
+                        studentId,
+                        studentName: consultation.studentName,
+                        testDate: consultation.consultationDate,
+                        subject: 'math',
+                        testType: 'placement', // 배치 테스트
+                        score,
+                        maxScore,
+                        percentage,
+                        recommendedLevel,
+                        recommendedClass: consultation.mathConsultation.recommendedClass,
+                        evaluatorId: userProfile?.uid || '',
+                        evaluatorName: userProfile?.name || consultation.counselor || '상담자',
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                    };
+
+                    levelTestPromises.push(addLevelTest.mutateAsync(mathLevelTest));
+                }
+            }
+
+            // 영어 레벨테스트 생성
+            if (consultation.englishConsultation?.levelTestScore) {
+                const score = parseLevelTestScore(consultation.englishConsultation.levelTestScore);
+                if (score !== null) {
+                    const maxScore = 100;
+                    const percentage = (score / maxScore) * 100;
+                    const recommendedLevel = determineLevel('english', percentage);
+
+                    const englishLevelTest: Omit<LevelTest, 'id'> = {
+                        studentId,
+                        studentName: consultation.studentName,
+                        testDate: consultation.consultationDate,
+                        subject: 'english',
+                        testType: 'placement',
+                        score,
+                        maxScore,
+                        percentage,
+                        recommendedLevel,
+                        recommendedClass: consultation.englishConsultation.recommendedClass,
+                        evaluatorId: userProfile?.uid || '',
+                        evaluatorName: userProfile?.name || consultation.counselor || '상담자',
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                    };
+
+                    levelTestPromises.push(addLevelTest.mutateAsync(englishLevelTest));
+                }
+            }
+
+            // 레벨테스트 저장 (비동기 병렬 처리)
+            if (levelTestPromises.length > 0) {
+                try {
+                    await Promise.all(levelTestPromises);
+                } catch (error) {
+                    console.error('레벨테스트 저장 오류:', error);
+                    // 레벨테스트 저장 실패해도 학생 전환은 계속 진행
+                }
+            }
+
             // 3. 상담 기록 업데이트
             await updateConsultation.mutateAsync({
                 id: consultation.id,
@@ -191,12 +315,25 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                 }
             });
 
-            alert(`✅ "${consultation.studentName}" 학생이 원생으로 전환되었습니다!\n\n[자동 등록됨]\n과목: ${consultation.subject}\n수업: 미배정 (나중에 배정 필요)\n\n학생 관리 탭에서 수업을 배정해주세요.`);
+            // 성공 메시지 생성
+            let successMsg = `✅ "${consultation.studentName}" 학생이 원생으로 전환되었습니다!\n\n[자동 등록됨]\n과목: ${consultation.subject}\n수업: 미배정 (나중에 배정 필요)`;
+
+            // 레벨테스트 자동 생성 안내
+            if (levelTestPromises.length > 0) {
+                const subjects: string[] = [];
+                if (consultation.mathConsultation?.levelTestScore) subjects.push('수학');
+                if (consultation.englishConsultation?.levelTestScore) subjects.push('영어');
+                successMsg += `\n\n[레벨테스트 자동 생성]\n과목: ${subjects.join(', ')}\n→ 성적 탭에서 확인 가능`;
+            }
+
+            successMsg += `\n\n학생 관리 탭에서 수업을 배정해주세요.`;
+
+            alert(successMsg);
         } catch (error) {
             console.error('원생 전환 오류:', error);
             alert('❌ 원생 전환에 실패했습니다.\n\n' + (error instanceof Error ? error.message : '알 수 없는 오류'));
         }
-    }, [existingStudents, addStudent, updateConsultation]);
+    }, [existingStudents, addStudent, updateConsultation, addLevelTest, userProfile]);
 
     const openAddModal = () => {
         setEditingRecord(null);
@@ -563,6 +700,10 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                 onClose={() => setIsFormOpen(false)}
                 onSubmit={editingRecord ? handleUpdateRecord : handleAddRecord}
                 initialData={editingRecord}
+                onDelete={handleDeleteRecord}
+                onConvertToStudent={handleConvertToStudent}
+                canDelete={canManage || (canEdit && editingRecord?.authorId === userProfile?.uid)}
+                canConvert={canConvert}
             />
 
             {/* Migration Modal */}

@@ -1,6 +1,6 @@
 ﻿import React, { useState, useMemo } from 'react';
 import { UnifiedStudent, UserProfile } from '../../../types';
-import { BookOpen, Plus, User, X, Loader2, Users, Trash2 } from 'lucide-react';
+import { BookOpen, Plus, User, X, Loader2, Users, Trash2, ChevronDown } from 'lucide-react';
 import AssignClassModal from '../AssignClassModal';
 import { useStudents } from '../../../hooks/useStudents';
 import { useTeachers } from '../../../hooks/useFirebaseQueries';
@@ -218,6 +218,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
   const [deletingClass, setDeletingClass] = useState<string | null>(null);
+
+  // 섹션 접기/펼치기 상태
+  const [showCurrentClasses, setShowCurrentClasses] = useState(true);
+  const [showScheduledClasses, setShowScheduledClasses] = useState(true);
+  const [showCompletedClasses, setShowCompletedClasses] = useState(true);
   const { students, refreshStudents } = useStudents();
   const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
   const { data: allClasses = [] } = useClasses();
@@ -943,11 +948,15 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
     <div className="space-y-2">
       {/* 헤더 */}
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
+        <div
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => setShowCurrentClasses(!showCurrentClasses)}
+        >
           <h3 className="text-xs font-bold text-[#081429]">수강 중인 수업</h3>
           <span className="text-xs text-[#373d41]">
             ({groupedEnrollments.length}개)
           </span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showCurrentClasses ? '' : 'rotate-180'}`} />
         </div>
         {!readOnly && (
           <button
@@ -961,6 +970,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       </div>
 
       {/* 수업 목록 - 행 스타일 */}
+      {showCurrentClasses && (
       <div className="bg-white border border-gray-200 overflow-hidden">
         {/* 테이블 헤더 */}
         <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
@@ -1001,10 +1011,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           </div>
         )}
       </div>
+      )}
 
       {/* 배정 예정 수업 섹션 */}
       <div className="mt-4">
-        <div className="flex items-center gap-2 mb-2">
+        <div
+          className="flex items-center gap-2 mb-2 cursor-pointer"
+          onClick={() => setShowScheduledClasses(!showScheduledClasses)}
+        >
           <h3 className="text-xs font-bold text-[#081429]">배정 예정 수업</h3>
           <span className="text-xs text-[#373d41]">
             ({scheduledEnrollments.length}개)
@@ -1014,7 +1028,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
               🗓️ 시작일 전
             </span>
           )}
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showScheduledClasses ? '' : 'rotate-180'}`} />
         </div>
+        {showScheduledClasses && (
         <div className="bg-amber-50/30 border border-amber-200 overflow-hidden">
           {/* 테이블 헤더 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-amber-100/50 border-b border-amber-200 text-xxs font-medium text-[#373d41]">
@@ -1126,11 +1142,22 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* 지난 수업 섹션 */}
       <div className="mt-4">
-        <h3 className="text-xs font-bold text-[#373d41] mb-2">지난 수업 ({completedClasses.length}개)</h3>
+        <div
+          className="flex items-center gap-2 mb-2 cursor-pointer"
+          onClick={() => setShowCompletedClasses(!showCompletedClasses)}
+        >
+          <h3 className="text-xs font-bold text-[#373d41]">지난 수업</h3>
+          <span className="text-xs text-[#373d41]">
+            ({completedClasses.length}개)
+          </span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showCompletedClasses ? '' : 'rotate-180'}`} />
+        </div>
+        {showCompletedClasses && (
         <div className="bg-white border border-gray-200 overflow-hidden">
           {/* 테이블 헤더 - 수강중인 수업과 열 위치 동일하게 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
@@ -1159,6 +1186,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* 수업 배정 모달 */}

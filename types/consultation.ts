@@ -64,6 +64,16 @@ export interface ConsultationRecord {
   nickname?: string;               // 닉네임 (추가)
   enrollmentReason?: string;       // 입학 동기 (추가)
 
+  // === 학원 전용 추가 정보 ===
+  safetyNotes?: string;            // 안전사항 (주의사항)
+  careerGoal?: string;             // 희망진로
+  siblings?: string;               // 남매 관계
+  siblingsDetails?: string;        // 남매 관계 기록
+  shuttleBusRequest?: boolean;     // 셔틀버스 신청
+  studentType?: string;            // 학생 구분 (예비/재원 등)
+  installmentAgreement?: boolean;  // 할부 규정 안내 동의서
+  privacyAgreement?: boolean;      // 개인정보 활용 동의서
+
   // === 상담 전용 정보 ===
   consultationDate: string; // ISO Date string (YYYY-MM-DD)
   subject: ConsultationSubject;
@@ -86,6 +96,25 @@ export interface ConsultationRecord {
 
   // 예비원생/재원생 연동
   registeredStudentId?: string;  // 전환된 학생 ID (students 컬렉션)
+
+  // === 과목별 상담 정보 ===
+  mathConsultation?: SubjectConsultationDetail;
+  englishConsultation?: SubjectConsultationDetail;
+  koreanConsultation?: SubjectConsultationDetail;
+  etcConsultation?: SubjectConsultationDetail;
+}
+
+// 과목별 상담 상세 정보
+export interface SubjectConsultationDetail {
+  levelTestScore?: string;          // 레벨테스트 점수
+  academyHistory?: string;           // 학원 히스토리
+  learningProgress?: string;         // 학습 진도
+  examResults?: string;              // 학생 시험 성적
+  consultationHistory?: string;      // 학생 상담 내역
+  recommendedClass?: string;         // 추천반
+  homeRoomTeacher?: string;          // 담임
+  firstClassDate?: string;           // 첫 수업일
+  notes?: string;                    // 기타
 }
 
 export interface ConsultationStats {

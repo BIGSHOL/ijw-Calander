@@ -15,6 +15,7 @@ import {
   CreditCard,
   Bell,
   CheckSquare,
+  ChevronDown,
 } from 'lucide-react';
 import { useStudents } from '../../../hooks/useStudents';
 
@@ -143,6 +144,18 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UnifiedStudent>>({});
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  // 섹션 접기/펼치기 상태
+  const [showBasicInfo, setShowBasicInfo] = useState(true);
+  const [showSchoolInfo, setShowSchoolInfo] = useState(true);
+  const [showContacts, setShowContacts] = useState(true);
+  const [showNotifications, setShowNotifications] = useState(true);
+  const [showAddress, setShowAddress] = useState(true);
+  const [showAdditionalInfo, setShowAdditionalInfo] = useState(true);
+  const [showEnrollmentInfo, setShowEnrollmentInfo] = useState(true);
+  const [showBillingInfo, setShowBillingInfo] = useState(true);
+  const [showOtherInfo, setShowOtherInfo] = useState(true);
+  const [showMemo, setShowMemo] = useState(true);
 
   // 학생 데이터가 변경되면 폼 데이터 초기화
   useEffect(() => {
@@ -316,10 +329,17 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
 
       {/* 기본 정보 섹션 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <User className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
+        <div
+          className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
+          onClick={() => setShowBasicInfo(!showBasicInfo)}
+        >
+          <div className="flex items-center gap-1">
+            <User className="w-3 h-3 text-[#081429]" />
+            <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showBasicInfo ? '' : 'rotate-180'}`} />
         </div>
+        {showBasicInfo && (
         <div className="divide-y divide-gray-100">
           <InputField label="이름" value={formData.name} onChange={(v) => handleChange('name', v)} isEditing={isEditing} />
           <InputField label="영어 이름" value={formData.englishName ?? ''} onChange={(v) => handleChange('englishName', v)} isEditing={isEditing} />
@@ -371,27 +391,43 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* 학교 정보 섹션 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <School className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">학교 정보</h3>
+        <div
+          className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
+          onClick={() => setShowSchoolInfo(!showSchoolInfo)}
+        >
+          <div className="flex items-center gap-1">
+            <School className="w-3 h-3 text-[#081429]" />
+            <h3 className="text-[#081429] font-bold text-xs">학교 정보</h3>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showSchoolInfo ? '' : 'rotate-180'}`} />
         </div>
+        {showSchoolInfo && (
         <div className="divide-y divide-gray-100">
           <InputField label="학교" value={formData.school} onChange={(v) => handleChange('school', v)} isEditing={isEditing} placeholder="예: 침산초" />
           <SelectField label="학년" value={formData.grade} onChange={(v) => handleChange('grade', v)} isEditing={isEditing} options={GRADE_OPTIONS} />
           <InputField label="졸업연도" value={formData.graduationYear} onChange={(v) => handleChange('graduationYear', v)} isEditing={isEditing} placeholder="예: 2026" />
         </div>
+        )}
       </div>
 
       {/* 연락처 섹션 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <Phone className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">연락처</h3>
+        <div
+          className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
+          onClick={() => setShowContacts(!showContacts)}
+        >
+          <div className="flex items-center gap-1">
+            <Phone className="w-3 h-3 text-[#081429]" />
+            <h3 className="text-[#081429] font-bold text-xs">연락처</h3>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showContacts ? '' : 'rotate-180'}`} />
         </div>
+        {showContacts && (
         <div className="divide-y divide-gray-100">
           <InputField label="원생 휴대폰" value={formData.studentPhone} onChange={(v) => handleChange('studentPhone', v)} isEditing={isEditing} placeholder="010-0000-0000" />
           <InputField label="원생 집전화" value={formData.homePhone} onChange={(v) => handleChange('homePhone', v)} isEditing={isEditing} placeholder="053-000-0000" />
@@ -441,14 +477,22 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* 알림 설정 섹션 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <Bell className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">알림 설정</h3>
+        <div
+          className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
+          onClick={() => setShowNotifications(!showNotifications)}
+        >
+          <div className="flex items-center gap-1">
+            <Bell className="w-3 h-3 text-[#081429]" />
+            <h3 className="text-[#081429] font-bold text-xs">알림 설정</h3>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showNotifications ? '' : 'rotate-180'}`} />
         </div>
+        {showNotifications && (
         <div className="p-2 space-y-2">
           <div>
             <p className="text-xs font-medium text-[#373d41] mb-1">등하원알림</p>
@@ -466,40 +510,64 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* 주소 정보 섹션 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <MapPin className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">주소</h3>
+        <div
+          className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
+          onClick={() => setShowAddress(!showAddress)}
+        >
+          <div className="flex items-center gap-1">
+            <MapPin className="w-3 h-3 text-[#081429]" />
+            <h3 className="text-[#081429] font-bold text-xs">주소</h3>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showAddress ? '' : 'rotate-180'}`} />
         </div>
+        {showAddress && (
         <div className="divide-y divide-gray-100">
           <InputField label="우편번호" value={formData.zipCode} onChange={(v) => handleChange('zipCode', v)} isEditing={isEditing} placeholder="12345" />
           <InputField label="주소" value={formData.address} onChange={(v) => handleChange('address', v)} isEditing={isEditing} placeholder="대구 북구..." />
           <InputField label="상세주소" value={formData.addressDetail} onChange={(v) => handleChange('addressDetail', v)} isEditing={isEditing} />
         </div>
+        )}
       </div>
 
       {/* 추가 정보 섹션 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <Cake className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">추가 정보</h3>
+        <div
+          className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
+          onClick={() => setShowAdditionalInfo(!showAdditionalInfo)}
+        >
+          <div className="flex items-center gap-1">
+            <Cake className="w-3 h-3 text-[#081429]" />
+            <h3 className="text-[#081429] font-bold text-xs">추가 정보</h3>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showAdditionalInfo ? '' : 'rotate-180'}`} />
         </div>
+        {showAdditionalInfo && (
         <div className="divide-y divide-gray-100">
           <InputField label="생년월일" value={formData.birthDate} onChange={(v) => handleChange('birthDate', v)} isEditing={isEditing} type="date" />
           <InputField label="닉네임" value={formData.nickname} onChange={(v) => handleChange('nickname', v)} isEditing={isEditing} />
           <InputField label="원생 이메일" value={formData.studentEmail} onChange={(v) => handleChange('studentEmail', v)} isEditing={isEditing} type="email" placeholder="example@email.com" />
         </div>
+        )}
       </div>
 
       {/* 등록/재원 정보 섹션 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <Calendar className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">등록 정보</h3>
+        <div
+          className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
+          onClick={() => setShowEnrollmentInfo(!showEnrollmentInfo)}
+        >
+          <div className="flex items-center gap-1">
+            <Calendar className="w-3 h-3 text-[#081429]" />
+            <h3 className="text-[#081429] font-bold text-xs">등록 정보</h3>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showEnrollmentInfo ? '' : 'rotate-180'}`} />
         </div>
+        {showEnrollmentInfo && (
         <div className="divide-y divide-gray-100">
           <InputField label="등록일" value={formData.startDate} onChange={(v) => handleChange('startDate', v)} isEditing={isEditing} type="date" />
           <div className="flex items-center gap-2 px-2 py-1">
@@ -528,14 +596,22 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
             <InputField label="퇴원일" value={formData.endDate} onChange={(v) => handleChange('endDate', v)} isEditing={isEditing} type="date" />
           )}
         </div>
+        )}
       </div>
 
       {/* 수납 정보 섹션 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <CreditCard className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">수납 정보</h3>
+        <div
+          className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
+          onClick={() => setShowBillingInfo(!showBillingInfo)}
+        >
+          <div className="flex items-center gap-1">
+            <CreditCard className="w-3 h-3 text-[#081429]" />
+            <h3 className="text-[#081429] font-bold text-xs">수납 정보</h3>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showBillingInfo ? '' : 'rotate-180'}`} />
         </div>
+        {showBillingInfo && (
         <div className="divide-y divide-gray-100">
           <div className="flex items-center gap-2 px-2 py-1">
             <label className="w-20 shrink-0 text-xs font-medium text-[#373d41]">현금영수증</label>
@@ -596,26 +672,42 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* 기타 정보 섹션 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <CheckSquare className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">기타</h3>
+        <div
+          className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
+          onClick={() => setShowOtherInfo(!showOtherInfo)}
+        >
+          <div className="flex items-center gap-1">
+            <CheckSquare className="w-3 h-3 text-[#081429]" />
+            <h3 className="text-[#081429] font-bold text-xs">기타</h3>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showOtherInfo ? '' : 'rotate-180'}`} />
         </div>
+        {showOtherInfo && (
         <div className="divide-y divide-gray-100">
           <InputField label="기타항목1" value={formData.customField1} onChange={(v) => handleChange('customField1', v)} isEditing={isEditing} />
           <InputField label="기타항목2" value={formData.customField2} onChange={(v) => handleChange('customField2', v)} isEditing={isEditing} />
         </div>
+        )}
       </div>
 
       {/* 메모 섹션 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <FileText className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">메모</h3>
+        <div
+          className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
+          onClick={() => setShowMemo(!showMemo)}
+        >
+          <div className="flex items-center gap-1">
+            <FileText className="w-3 h-3 text-[#081429]" />
+            <h3 className="text-[#081429] font-bold text-xs">메모</h3>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showMemo ? '' : 'rotate-180'}`} />
         </div>
+        {showMemo && (
         <div className="p-2">
           {isEditing ? (
             <textarea
@@ -633,6 +725,7 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
