@@ -47,6 +47,7 @@ export interface StaffMember {
   // === 선생님 전용 필드 (role === 'teacher'일 때만 사용) ===
   // 시간표 표시 설정
   isHiddenInTimetable?: boolean;  // 시간표에서 숨김
+  isHiddenInAttendance?: boolean; // 출석부에서 숨김
   isNative?: boolean;             // 원어민 강사 여부
 
   // 퍼스널 색상 (시간표, 출석부 등에서 사용)

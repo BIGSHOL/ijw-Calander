@@ -5,6 +5,7 @@ import { useStudentConsultations, getFollowUpUrgency, getFollowUpDaysLeft } from
 import { useStaff } from '../../../hooks/useStaff';
 import { useConsultations } from '../../../hooks/useConsultations';
 import { ConsultationDetailModal } from '../../StudentConsultation';
+import RegistrationConsultationDetailModal from '../../RegistrationConsultation/RegistrationConsultationDetailModal';
 // Lazy load for better code splitting
 const AddConsultationModal = React.lazy(() => import('../../StudentConsultation/AddConsultationModal'));
 
@@ -17,6 +18,7 @@ interface ConsultationsTabProps {
 const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly = false, currentUser }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
+  const [selectedRegistrationRecord, setSelectedRegistrationRecord] = useState<ConsultationRecord | null>(null);
   const { staff } = useStaff();
   const { consultations, loading } = useStudentConsultations({ studentId: student.id });
 
@@ -214,28 +216,28 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
       </div>
 
       {/* ========== 하단: 등록 상담 기록 ========== */}
-      <div className="space-y-3 pt-3 border-t-2 border-blue-200">
+      <div className="space-y-3 pt-3 border-t border-gray-200">
         {/* 등록 상담 기록 헤더 */}
         <div
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => setShowRegistrationConsultations(!showRegistrationConsultations)}
         >
-          <ClipboardList className="w-4 h-4 text-blue-700" />
-          <h3 className="text-xs font-bold text-blue-900">등록 상담 이력</h3>
-          <span className="text-xs text-blue-600">
+          <ClipboardList className="w-4 h-4 text-[#081429]" />
+          <h3 className="text-xs font-bold text-[#081429]">등록 상담 이력</h3>
+          <span className="text-xs text-[#373d41]">
             ({filteredRegistrationConsultations.length}건)
           </span>
-          <ChevronDown className={`w-4 h-4 text-blue-400 transition-transform ${showRegistrationConsultations ? '' : 'rotate-180'}`} />
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showRegistrationConsultations ? '' : 'rotate-180'}`} />
         </div>
 
         {/* 등록 상담 기록 목록 */}
         {showRegistrationConsultations && (
         <>
         {filteredRegistrationConsultations.length === 0 ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-sm p-6 text-center">
-            <ClipboardList className="w-8 h-8 mx-auto mb-2 text-blue-300" />
-            <p className="text-blue-600 text-xs">등록 상담 기록이 없습니다</p>
-            <p className="text-blue-400 text-xxs mt-1">
+          <div className="bg-gray-50 border border-gray-200 rounded-sm p-6 text-center">
+            <ClipboardList className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+            <p className="text-gray-500 text-xs">등록 상담 기록이 없습니다</p>
+            <p className="text-gray-400 text-xxs mt-1">
               이름: {student.name} / 학교: {student.school} / 학년: {student.grade}
             </p>
           </div>
@@ -244,15 +246,16 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
             {filteredRegistrationConsultations.map(record => (
               <div
                 key={record.id}
-                className="bg-white border border-blue-100 rounded-sm p-3 hover:border-blue-300 transition-colors"
+                onClick={() => setSelectedRegistrationRecord(record)}
+                className="bg-white border border-gray-200 rounded-sm p-3 hover:border-gray-300 hover:bg-[#fdb813]/5 transition-colors cursor-pointer"
               >
                 {/* 상단: 날짜, 과목, 상태 */}
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold text-blue-900">
+                    <span className="text-xs font-semibold text-[#081429]">
                       {record.consultationDate?.slice(0, 10) || '-'}
                     </span>
-                    <span className="text-xs px-1.5 py-0.5 rounded-sm bg-blue-100 text-blue-700">
+                    <span className="text-xs px-1.5 py-0.5 rounded-sm bg-gray-100 text-gray-700">
                       {record.subject}
                     </span>
                     <span className="text-xs px-1.5 py-0.5 rounded-sm bg-green-100 text-green-700">
@@ -357,6 +360,14 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
         <ConsultationDetailModal
           consultation={selectedConsultation}
           onClose={() => setSelectedConsultation(null)}
+        />
+      )}
+
+      {/* 등록 상담 상세 모달 */}
+      {selectedRegistrationRecord && (
+        <RegistrationConsultationDetailModal
+          record={selectedRegistrationRecord}
+          onClose={() => setSelectedRegistrationRecord(null)}
         />
       )}
     </div>

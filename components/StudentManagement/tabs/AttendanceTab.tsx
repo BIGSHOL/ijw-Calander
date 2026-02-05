@@ -361,7 +361,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
       {/* 월 선택 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <CalendarIcon className="w-4 h-4 text-indigo-600" />
+          <CalendarIcon className="w-4 h-4 text-[#081429]" />
           <h3 className="text-sm font-bold text-[#081429]">출결 현황</h3>
         </div>
         <div className="flex items-center gap-1">

@@ -37,12 +37,26 @@ interface ScheduleCell {
 
 type ScheduleData = Record<string, ScheduleCell>;
 
+interface StudentInfo {
+    id: string;
+    name: string;
+    school?: string;
+    grade?: string;
+    enrollmentDate?: string;
+    withdrawalDate?: string;
+}
+
 interface StudentStats {
     active: number;
     new1: number;
     new2: number;
     withdrawn: number;
+    withdrawnFuture: number;  // 퇴원 예정
     waiting: number;  // 대기생 (onHold)
+    // 툴팁용 상세 정보
+    waitingStudents: StudentInfo[];
+    withdrawnStudents: StudentInfo[];
+    withdrawnFutureStudents: StudentInfo[];
 }
 
 export const useEnglishStats = (
@@ -63,11 +77,15 @@ export const useEnglishStats = (
         });
 
         if (classNames.size === 0 || Object.keys(studentMap).length === 0) {
-            return { active: 0, new1: 0, new2: 0, withdrawn: 0, waiting: 0 };
+            return { active: 0, new1: 0, new2: 0, withdrawn: 0, withdrawnFuture: 0, waiting: 0, waitingStudents: [], withdrawnStudents: [], withdrawnFutureStudents: [] };
         }
 
         const now = new Date();
-        let active = 0, new1 = 0, new2 = 0, withdrawn = 0, waiting = 0;
+        const today = now.toISOString().split('T')[0];
+        let active = 0, new1 = 0, new2 = 0, withdrawn = 0, withdrawnFuture = 0, waiting = 0;
+        const waitingStudents: StudentInfo[] = [];
+        const withdrawnStudents: StudentInfo[] = [];
+        const withdrawnFutureStudents: StudentInfo[] = [];
 
         // Track unique students to avoid double-counting (a student can have multiple enrollments)
         const countedStudents = new Set<string>();
@@ -98,10 +116,26 @@ export const useEnglishStats = (
                 // Withdrawn check (from enrollment data)
                 const enrollmentWithdrawalDate = convertTimestampToDate(enrollment.withdrawalDate);
                 if (enrollmentWithdrawalDate) {
-                    const withdrawnDate = new Date(enrollmentWithdrawalDate);
-                    const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
-                    if (daysSinceWithdrawal <= 30) {
-                        withdrawn++;
+                    const studentInfo: StudentInfo = {
+                        id: studentId,
+                        name: baseStudent.name,
+                        school: baseStudent.school,
+                        grade: baseStudent.grade,
+                        withdrawalDate: enrollmentWithdrawalDate
+                    };
+
+                    if (enrollmentWithdrawalDate > today) {
+                        // 퇴원 예정 (미래)
+                        withdrawnFuture++;
+                        withdrawnFutureStudents.push(studentInfo);
+                    } else {
+                        // 이미 퇴원 (과거/오늘)
+                        const withdrawnDate = new Date(enrollmentWithdrawalDate);
+                        const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
+                        if (daysSinceWithdrawal <= 30) {
+                            withdrawn++;
+                            withdrawnStudents.push(studentInfo);
+                        }
                     }
                     return;
                 }
@@ -109,6 +143,13 @@ export const useEnglishStats = (
                 // On hold check (대기생)
                 if (enrollment.onHold) {
                     waiting++;
+                    waitingStudents.push({
+                        id: studentId,
+                        name: baseStudent.name,
+                        school: baseStudent.school,
+                        grade: baseStudent.grade,
+                        enrollmentDate: convertTimestampToDate(enrollment.enrollmentDate) || baseStudent.startDate
+                    });
                     return;
                 }
 
@@ -134,7 +175,17 @@ export const useEnglishStats = (
             });
         });
 
-        return { active, new1, new2, withdrawn, waiting };
+        return {
+            active,
+            new1,
+            new2,
+            withdrawn,
+            withdrawnFuture,
+            waiting,
+            waitingStudents,
+            withdrawnStudents,
+            withdrawnFutureStudents
+        };
     }, [scheduleData, studentMap]);
 
     return studentStats;

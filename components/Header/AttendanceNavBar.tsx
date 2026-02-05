@@ -54,6 +54,8 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
 
   const availableTeachers = canManageCurrentSubject
     ? teachers.filter(t => {
+      // 출석부에서 숨김 처리된 강사 제외
+      if (t.isHiddenInAttendance) return false;
       if (attendanceSubject === 'math') return t.subjects?.includes('math');
       if (attendanceSubject === 'english') return t.subjects?.includes('english');
       return true;

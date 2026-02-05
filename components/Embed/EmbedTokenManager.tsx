@@ -22,6 +22,7 @@ import {
   EmbedType,
   EmbedToken,
   CreateEmbedTokenInput,
+  EmbedViewType,
   DEFAULT_EMBED_SETTINGS,
 } from '../../types/embed';
 
@@ -163,6 +164,49 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
                 </select>
               </div>
 
+              {/* 뷰 타입 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  표시 형식
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'teacher' as EmbedViewType, label: '강사뷰 (그리드)', desc: '교시별 강사 배치 표' },
+                    { value: 'class' as EmbedViewType, label: '통합뷰 (카드)', desc: '수업별 카드 목록' },
+                  ].map(({ value, label, desc }) => (
+                    <label
+                      key={value}
+                      className={`flex flex-col p-3 border rounded-lg cursor-pointer transition-colors ${
+                        (newToken.settings?.viewType || 'class') === value
+                          ? 'border-indigo-500 bg-indigo-50'
+                          : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="viewType"
+                          value={value}
+                          checked={(newToken.settings?.viewType || 'class') === value}
+                          onChange={(e) =>
+                            setNewToken({
+                              ...newToken,
+                              settings: {
+                                ...newToken.settings,
+                                viewType: e.target.value as EmbedViewType,
+                              },
+                            })
+                          }
+                          className="w-4 h-4 text-indigo-600"
+                        />
+                        <span className="text-sm font-medium text-gray-800">{label}</span>
+                      </div>
+                      <span className="text-xs text-gray-500 mt-1 ml-6">{desc}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               {/* 만료일 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -213,6 +257,43 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
                 </div>
               </div>
 
+              {/* 학생 상태 표시 옵션 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  학생 상태 표시
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: 'showHoldStudents', label: '대기 학생', desc: '휴원/대기 중인 학생' },
+                    { key: 'showWithdrawnStudents', label: '퇴원 학생', desc: '퇴원한 학생' },
+                  ].map(({ key, label, desc }) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-2 p-2 bg-white border rounded-lg cursor-pointer hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(newToken.settings as any)?.[key] ?? false}
+                        onChange={(e) =>
+                          setNewToken({
+                            ...newToken,
+                            settings: {
+                              ...newToken.settings,
+                              [key]: e.target.checked,
+                            },
+                          })
+                        }
+                        className="w-4 h-4 text-indigo-600 rounded"
+                      />
+                      <div>
+                        <span className="text-sm text-gray-700">{label}</span>
+                        <p className="text-xs text-gray-400">{desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               {/* 버튼 */}
               <div className="flex justify-end gap-2 pt-2">
                 <button
@@ -256,6 +337,9 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
                         <span className="font-semibold text-gray-800">{token.name}</span>
                         <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded">
                           {EMBED_TYPE_LABELS[token.type]}
+                        </span>
+                        <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded">
+                          {token.settings?.viewType === 'teacher' ? '강사뷰' : '통합뷰'}
                         </span>
                         {!token.isActive && (
                           <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded">

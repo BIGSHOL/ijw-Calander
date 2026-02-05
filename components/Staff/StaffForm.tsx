@@ -61,6 +61,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
     memo: '',
     // 강사 전용 필드
     isHiddenInTimetable: false,
+    isHiddenInAttendance: false,
     isNative: false,
     bgColor: '#3b82f6',
     textColor: '#ffffff',
@@ -87,6 +88,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
         memo: staff.memo || '',
         // 강사 전용 필드
         isHiddenInTimetable: staff.isHiddenInTimetable || false,
+        isHiddenInAttendance: staff.isHiddenInAttendance || false,
         isNative: staff.isNative || false,
         bgColor: staff.bgColor || '#3b82f6',
         textColor: staff.textColor || '#ffffff',
@@ -422,6 +424,15 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                       className="w-4 h-4 text-[#081429] border-gray-300 rounded focus:ring-[#fdb813]"
                     />
                     <span className="text-xs text-gray-700">시간표에서 숨김</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isHiddenInAttendance}
+                      onChange={(e) => setFormData(prev => ({ ...prev, isHiddenInAttendance: e.target.checked }))}
+                      className="w-4 h-4 text-[#081429] border-gray-300 rounded focus:ring-[#fdb813]"
+                    />
+                    <span className="text-xs text-gray-700">출석부에서 숨김</span>
                   </label>
                 </div>
               </div>

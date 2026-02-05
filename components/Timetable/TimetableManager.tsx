@@ -29,6 +29,9 @@ import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 import { MathSimulationProvider, useMathSimulation } from './Math/context/SimulationContext';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import EmbedTokenManager from '../Embed/EmbedTokenManager';
+import { useMathSettings } from './Math/hooks/useMathSettings';
+import ExportImageModal, { ExportGroup } from '../Common/ExportImageModal';
+import type { ExportGroupInfo } from './Math/MathClassTab';
 
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
@@ -184,9 +187,44 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     classesData,
 }) => {
     const simulation = useMathSimulation();
-    const { isScenarioMode, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
+    const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
     const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // 통합뷰 전용: 설정 및 이미지 저장 모달
+    const { settings: mathIntegrationSettings, updateSettings: updateMathIntegrationSettings } = useMathSettings();
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const gridRef = React.useRef<HTMLDivElement>(null);
+    // 이미지 내보내기용 그룹 상태
+    const [exportGroups, setExportGroups] = useState<ExportGroup[]>([]);
+    const [exportVisibleGroups, setExportVisibleGroups] = useState<number[] | undefined>(undefined);
+
+    // 통합뷰 표시 옵션 변경 핸들러
+    const handleIntegrationDisplayOptionChange = (key: string, value: boolean) => {
+        updateMathIntegrationSettings({
+            ...mathIntegrationSettings,
+            displayOptions: {
+                ...mathIntegrationSettings.displayOptions,
+                [key]: value
+            }
+        });
+    };
+
+    // 이미지 내보내기: MathClassTab에서 그룹 정보 수신
+    const handleGroupsReady = useCallback((groups: ExportGroupInfo[]) => {
+        setExportGroups(groups.map(g => ({ id: g.id, label: g.label })));
+    }, []);
+
+    // 이미지 내보내기: 선택된 그룹 변경 시 처리
+    const handleExportGroupsChanged = useCallback((selectedIds: (string | number)[]) => {
+        setExportVisibleGroups(selectedIds.map(id => Number(id)));
+    }, []);
+
+    // 모달 닫힐 때 그룹 필터 초기화
+    const handleExportModalClose = useCallback(() => {
+        setIsExportModalOpen(false);
+        setExportVisibleGroups(undefined); // 모든 그룹 표시로 복원
+    }, []);
 
     const handleToggleSimulation = async () => {
         if (isScenarioMode) {
@@ -339,6 +377,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setMode={setMode}
                     canEdit={canEditMath}
                     isSimulationMode={isScenarioMode}
+                    currentScenarioName={currentScenarioName}
                     onToggleSimulation={handleToggleSimulation}
                     onCopyLiveToDraft={handleCopyLiveToDraft}
                     onPublishDraftToLive={handlePublishDraftToLive}
@@ -348,11 +387,37 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     studentMap={studentMap}
                     currentWeekStart={currentMonday}
                     filteredClasses={filteredClasses}
+                    // 보기 설정 (드롭다운에서 직접 조절)
+                    selectedDays={selectedDays}
+                    setSelectedDays={setSelectedDays}
+                    showStudents={showStudents}
+                    setShowStudents={setShowStudents}
+                    showClassName={showClassName}
+                    setShowClassName={setShowClassName}
+                    showSchool={showSchool}
+                    setShowSchool={setShowSchool}
+                    showGrade={showGrade}
+                    setShowGrade={setShowGrade}
+                    showHoldStudents={showHoldStudents}
+                    setShowHoldStudents={setShowHoldStudents}
+                    showWithdrawnStudents={showWithdrawnStudents}
+                    setShowWithdrawnStudents={setShowWithdrawnStudents}
+                    columnWidth={columnWidth}
+                    setColumnWidth={setColumnWidth}
+                    rowHeight={rowHeight}
+                    setRowHeight={setRowHeight}
+                    fontSize={fontSize}
+                    setFontSize={setFontSize}
+                    // 이미지 저장 (모든 viewType에서 사용 가능)
+                    onExportImage={() => setIsExportModalOpen(true)}
+                    // 통합뷰 전용 props
+                    integrationDisplayOptions={viewType === 'class' ? mathIntegrationSettings.displayOptions : undefined}
+                    onIntegrationDisplayOptionsChange={viewType === 'class' ? handleIntegrationDisplayOptionChange : undefined}
                 />
 
                 {/* Timetable Content - viewType에 따라 분기 */}
                 {viewType === 'teacher' && (
-                <div className="flex-1 overflow-hidden border-t border-gray-200 p-4">
+                <div ref={gridRef} className="flex-1 overflow-hidden border-t border-gray-200 p-4">
                     <TimetableGrid
                         filteredClasses={filteredClasses}
                         allResources={allResources}
@@ -392,7 +457,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
                 {/* Math Class Tab - 통합뷰 */}
                 {viewType === 'class' && (
-                    <div className="flex-1 overflow-hidden border-t border-gray-200">
+                    <div ref={gridRef} className="flex-1 overflow-hidden border-t border-gray-200">
                         <MathClassTab
                             classes={filteredClasses}
                             teachers={sortedTeachers}
@@ -402,18 +467,14 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             studentMap={studentMap}
                             classesData={classesData}
                             isSimulationMode={isScenarioMode}
-                            canSimulation={canEditMath}
-                            onToggleSimulation={handleToggleSimulation}
-                            onCopyLiveToDraft={handleCopyLiveToDraft}
-                            onPublishToLive={handlePublishDraftToLive}
-                            onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
-                            canPublish={canEditMath}
                             currentWeekStart={currentMonday}
                             isViewSettingsOpen={isViewSettingsOpen}
                             setIsViewSettingsOpen={setIsViewSettingsOpen}
                             searchQuery={searchQuery}
                             mode={mode}
                             setMode={setMode}
+                            onGroupsReady={handleGroupsReady}
+                            exportVisibleGroups={exportVisibleGroups}
                         />
                     </div>
                 )}
@@ -487,6 +548,20 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     isOpen={isEmbedManagerOpen}
                     onClose={() => setIsEmbedManagerOpen(false)}
                     staffId={currentUser?.staffId || currentUser?.uid || ''}
+                />
+
+                {/* 이미지 저장 모달 */}
+                <ExportImageModal
+                    isOpen={isExportModalOpen}
+                    onClose={handleExportModalClose}
+                    targetRef={gridRef}
+                    title={viewType === 'class' ? "수학 통합 시간표 저장" : "수학 강사별 시간표 저장"}
+                    subtitle={viewType === 'class' ? "저장할 행을 선택하세요" : undefined}
+                    fileName={viewType === 'class'
+                        ? `수학_통합시간표_${new Date().toISOString().split('T')[0]}`
+                        : `수학_강사별시간표_${new Date().toISOString().split('T')[0]}`}
+                    groups={viewType === 'class' ? exportGroups : undefined}
+                    onGroupsChanged={viewType === 'class' ? handleExportGroupsChanged : undefined}
                 />
 
                 {/* Scenario Management Modal */}

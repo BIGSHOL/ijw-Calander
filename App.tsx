@@ -82,7 +82,7 @@ const ResourceDashboard = lazy(() => import('./components/Resources').then(m => 
 const WithdrawalManagementTab = lazy(() => import('./components/WithdrawalManagement/WithdrawalManagementTab'));
 const CalendarSettingsModal = lazy(() => import('./components/Calendar/CalendarSettingsModal'));
 // ProspectManagementTab removed - merged into ConsultationManager
-import { Settings, User as UserIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { Settings, User as UserIcon, ChevronUp, ChevronDown, FlaskConical } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, doc, deleteDoc, query, where, updateDoc, getDocs } from 'firebase/firestore';
 import { User } from 'firebase/auth';
@@ -151,6 +151,8 @@ const App: React.FC = () => {
 
   // Header collapse state
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  // Role simulation panel state
+  const [isRoleSimulationOpen, setIsRoleSimulationOpen] = useState(false);
 
   const {
     timetableSubject, setTimetableSubject, timetableViewType, setTimetableViewType,
@@ -804,6 +806,9 @@ const App: React.FC = () => {
       <RoleSimulationBanner
         actualRole={userProfile?.role || null}
         availableUsers={usersFromStaff}
+        isOpen={isRoleSimulationOpen}
+        onOpenChange={setIsRoleSimulationOpen}
+        externalTrigger={true}
       />
 
       {/* Skip Link for Keyboard Navigation - Addresses Issue #7 */}
@@ -873,6 +878,16 @@ const App: React.FC = () => {
               {!isHeaderCollapsed && hasPermission('settings.access') && (
                 <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
                   <Settings size={20} />
+                </button>
+              )}
+              {/* Role Simulation Button - Master Only */}
+              {!isHeaderCollapsed && userProfile?.role === 'master' && (
+                <button
+                  onClick={() => setIsRoleSimulationOpen(!isRoleSimulationOpen)}
+                  className={`transition-colors ${isRoleSimulationOpen ? 'text-amber-400' : 'text-gray-400 hover:text-white'}`}
+                  title="권한 테스트 모드"
+                >
+                  <FlaskConical size={20} />
                 </button>
               )}
               {/* Memo/Messenger */}

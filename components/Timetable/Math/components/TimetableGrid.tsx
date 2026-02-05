@@ -107,6 +107,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         };
         filteredClasses.forEach(cls => {
             cls.schedule?.forEach(slot => {
+                if (typeof slot !== 'string') return;
                 const parts = slot.trim().split(/\s+/);
                 if (parts.length < 2) return;
                 const day = parts[0];

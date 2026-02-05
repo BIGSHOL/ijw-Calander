@@ -17,12 +17,19 @@ export interface EmbedToken {
   settings?: EmbedSettings;
 }
 
+export type EmbedViewType = 'teacher' | 'class';
+
 export interface EmbedSettings {
+  // 뷰 타입
+  viewType?: EmbedViewType;     // 강사뷰 (teacher) 또는 통합뷰 (class)
+
   // 표시 옵션
   showStudentList: boolean;
   showTeacherInfo: boolean;
   showClassroom: boolean;
   showSchedule: boolean;
+  showHoldStudents?: boolean;      // 대기 학생 표시 여부
+  showWithdrawnStudents?: boolean; // 퇴원 학생 표시 여부
 
   // 필터 옵션
   filterByTeacher?: string[];   // 특정 선생님 수업만
@@ -35,10 +42,13 @@ export interface EmbedSettings {
 
 // 기본 임베드 설정
 export const DEFAULT_EMBED_SETTINGS: EmbedSettings = {
+  viewType: 'class',            // 기본값: 통합뷰 (카드형)
   showStudentList: true,
   showTeacherInfo: true,
   showClassroom: true,
   showSchedule: true,
+  showHoldStudents: false,      // 기본값: 대기 학생 숨김
+  showWithdrawnStudents: false, // 기본값: 퇴원 학생 숨김
   theme: 'light',
   compactMode: false,
 };

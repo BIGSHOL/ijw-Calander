@@ -1,8 +1,8 @@
 // English Class Integration Tab
 // 영어 통합 시간표 탭 - 수업별 컬럼 뷰 (Refactored to match academy-app style with Logic Port)
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Settings, ArrowRightLeft, Copy, Upload, Save } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Settings, ArrowRightLeft, Copy, Upload, Save, GraduationCap, RotateCcw, Download } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -28,6 +28,7 @@ import { ClassInfo as ClassInfoFromHook } from '../../../hooks/useClasses';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
 import StudentDetailModal from '../../StudentManagement/StudentDetailModal';
 import { UnifiedStudent } from '../../../types';
+import ExportImageModal, { ExportGroup } from '../../Common/ExportImageModal';
 
 
 // ScheduleCell, ScheduleData, ClassInfo definitions removed (imported from hooks)
@@ -62,6 +63,9 @@ interface EnglishClassTabProps {
     setIsSettingsOpen?: (open: boolean) => void;
     isLevelSettingsOpen?: boolean;
     setIsLevelSettingsOpen?: (open: boolean) => void;
+    // 이미지 저장 모달 (상위 컴포넌트에서 관리)
+    isExportModalOpen?: boolean;
+    setIsExportModalOpen?: (open: boolean) => void;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -93,6 +97,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     setIsSettingsOpen: setIsSettingsOpenProp,
     isLevelSettingsOpen: isLevelSettingsOpenProp,
     setIsLevelSettingsOpen: setIsLevelSettingsOpenProp,
+    isExportModalOpen: isExportModalOpenProp,
+    setIsExportModalOpen: setIsExportModalOpenProp,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -116,10 +122,26 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const isLevelSettingsOpen = isLevelSettingsOpenProp ?? isLevelSettingsOpenLocal;
     const setIsLevelSettingsOpen = setIsLevelSettingsOpenProp ?? setIsLevelSettingsOpenLocal;
 
+    // 레벨 드롭다운 상태
+    const [isLevelDropdownOpen, setIsLevelDropdownOpen] = useState(false);
+    const levelDropdownRef = useRef<HTMLDivElement>(null);
+
     // 시뮬레이션 모드에서는 항상 수정모드
     useEffect(() => {
         if (isSimulationMode) setMode('edit');
     }, [isSimulationMode]);
+
+    // 레벨 드롭다운 외부 클릭 시 닫기
+    useEffect(() => {
+        if (!isLevelDropdownOpen) return;
+        const handleClickOutside = (event: MouseEvent) => {
+            if (levelDropdownRef.current && !levelDropdownRef.current.contains(event.target as Node)) {
+                setIsLevelDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isLevelDropdownOpen]);
 
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
 
@@ -127,6 +149,15 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
     const [editingClassId, setEditingClassId] = useState<string | null>(null);  // 시뮬레이션 수업 편집
+
+    // 이미지 저장 모달 상태 (상위 컴포넌트에서 제어 가능)
+    const [localExportModalOpen, setLocalExportModalOpen] = useState(false);
+    const isExportModalOpen = isExportModalOpenProp ?? localExportModalOpen;
+    const setIsExportModalOpen = setIsExportModalOpenProp ?? setLocalExportModalOpen;
+    const gridRef = useRef<HTMLDivElement>(null);
+    // 이미지 내보내기용 그룹 상태
+    const [exportGroups, setExportGroups] = useState<ExportGroup[]>([]);
+    const [exportVisibleGroups, setExportVisibleGroups] = useState<number[] | undefined>(undefined);
 
 
     // --- Hook Integration ---
@@ -268,6 +299,33 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         return groups;
     }, [classes, hiddenClasses, mode, settings]);
 
+    // 그룹 정보 업데이트 (이미지 내보내기용)
+    // 이전 그룹 ID를 추적하여 실제 변경 시에만 상태 업데이트 (무한 루프 방지)
+    const prevGroupIdsRef = useRef<string>('');
+    useEffect(() => {
+        if (groupedClasses.length > 0) {
+            const groupIds = groupedClasses.map(g => g.periodIndex).join(',');
+            if (groupIds !== prevGroupIdsRef.current) {
+                prevGroupIdsRef.current = groupIds;
+                setExportGroups(groupedClasses.map(g => ({
+                    id: g.periodIndex,
+                    label: g.label,
+                })));
+            }
+        }
+    }, [groupedClasses]);
+
+    // 이미지 내보내기: 선택된 그룹 변경 시 처리
+    const handleExportGroupsChanged = useCallback((selectedIds: (string | number)[]) => {
+        setExportVisibleGroups(selectedIds.map(id => Number(id)));
+    }, []);
+
+    // 모달 닫힐 때 그룹 필터 초기화
+    const handleExportModalClose = useCallback(() => {
+        setIsExportModalOpen(false);
+        setExportVisibleGroups(undefined); // 모든 그룹 표시로 복원
+    }, []);
+
     const toggleHidden = (className: string) => {
         setHiddenClasses(prev => {
             const newSet = new Set(prev);
@@ -356,64 +414,92 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 </div>
             )}
 
-            {/* Row 3: Simulation Action Bar */}
-            {isSimulationMode && canEditEnglish && (
-                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
-                    <button
-                        onClick={onCopyLiveToDraft}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
-                        title="현재 실시간 시간표를 복사해옵니다 (기존 시뮬레이션 데이터 덮어쓰기)"
-                    >
-                        <Copy size={12} />
-                        현재 상태 가져오기
-                    </button>
-                    {canPublish && (
-                        <button
-                            onClick={onPublishToLive}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
-                            title="시뮬레이션 내용을 실제 시간표에 적용합니다 (주의)"
-                        >
-                            <Upload size={12} />
-                            실제 반영
-                        </button>
-                    )}
-                    <button
-                        onClick={onOpenScenarioModal}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
-                        title="시나리오 저장/불러오기"
-                    >
-                        <Save size={12} />
-                        시나리오 관리
-                    </button>
+            {/* Teacher Legend + Controls */}
+            <div className="px-4 py-2 bg-white border-b flex items-center justify-between flex-shrink-0">
+                {/* Left: 강사 목록 */}
+                <div className="flex flex-wrap gap-2 items-center">
+                    <span className="text-xs font-bold text-gray-400 mr-1">강사 목록:</span>
+                    {teachers.filter(t => {
+                        if (settings.hiddenLegendTeachers?.includes(t)) return false;
+                        const td = teachersData.find(td => td.name === t || td.englishName === t);
+                        if (td?.isHidden) return false;
+                        return true;
+                    }).map(teacher => {
+                        const colors = getTeacherColor(teacher, teachersData);
+                        // 영어이름(한글이름) 형식으로 표시
+                        const staffMember = teachersData?.find(t => t.name === teacher || t.englishName === teacher);
+                        const displayName = staffMember?.englishName
+                            ? `${staffMember.englishName}(${staffMember.name})`
+                            : teacher;
+
+                        return (
+                            <div
+                                key={teacher}
+                                className="px-2 py-0.5 rounded-sm text-xs font-bold shadow-sm border border-black/5"
+                                style={{ backgroundColor: colors.bg, color: colors.text }}
+                            >
+                                {displayName}
+                            </div>
+                        );
+                    })}
                 </div>
-            )}
 
-            {/* Teacher Legend */}
-            <div className="px-4 py-2 bg-white border-b flex flex-wrap gap-2 items-center flex-shrink-0">
-                <span className="text-xs font-bold text-gray-400 mr-1">강사 목록:</span>
-                {teachers.filter(t => {
-                    if (settings.hiddenLegendTeachers?.includes(t)) return false;
-                    const td = teachersData.find(td => td.name === t || td.englishName === t);
-                    if (td?.isHidden) return false;
-                    return true;
-                }).map(teacher => {
-                    const colors = getTeacherColor(teacher, teachersData);
-                    // 영어이름(한글이름) 형식으로 표시
-                    const staffMember = teachersData?.find(t => t.name === teacher || t.englishName === teacher);
-                    const displayName = staffMember?.englishName
-                        ? `${staffMember.englishName}(${staffMember.name})`
-                        : teacher;
-
-                    return (
-                        <div
-                            key={teacher}
-                            className="px-2 py-0.5 rounded-sm text-xs font-bold shadow-sm border border-black/5"
-                            style={{ backgroundColor: colors.bg, color: colors.text }}
-                        >
-                            {displayName}
-                        </div>
-                    );
-                })}
+                {/* Right: 설정 버튼들 */}
+                <div className="flex items-center gap-2 ml-4">
+                    {/* 수정 모드 버튼들 */}
+                    {mode === 'edit' && canEditEnglish && (
+                        <>
+                            {/* 그룹 설정 (보기 설정) */}
+                            <button
+                                onClick={() => setIsSettingsOpen(true)}
+                                className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
+                            >
+                                <Settings size={12} />
+                                그룹 설정
+                            </button>
+                            {/* 레벨 드롭다운 (화살표 없음) */}
+                            {!isSimulationMode && (
+                                <div className="relative" ref={levelDropdownRef}>
+                                    <button
+                                        onClick={() => setIsLevelDropdownOpen(!isLevelDropdownOpen)}
+                                        className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
+                                    >
+                                        <GraduationCap size={12} />
+                                        레벨
+                                    </button>
+                                    {isLevelDropdownOpen && (
+                                        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 min-w-[140px]">
+                                            <button
+                                                onClick={() => {
+                                                    setIsLevelSettingsOpen(true);
+                                                    setIsLevelDropdownOpen(false);
+                                                }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 text-left"
+                                            >
+                                                <Settings size={12} />
+                                                레벨 설정
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    // 기본값 초기화 기능 - 직접 접근
+                                                    if (confirm('기본 레벨 데이터(DP~MEC)로 초기화하시겠습니까?')) {
+                                                        // LevelSettingsModal에서 처리하므로 모달 열기
+                                                        setIsLevelSettingsOpen(true);
+                                                    }
+                                                    setIsLevelDropdownOpen(false);
+                                                }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 text-left border-t border-gray-100"
+                                            >
+                                                <RotateCcw size={12} />
+                                                기본값 초기화
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Classes Grid */}
@@ -423,9 +509,11 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                         데이터가 없습니다.
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-6">
-                        {groupedClasses.map(group => (
-                            <div key={group.periodIndex} className="bg-white shadow border border-gray-300 overflow-hidden w-max max-w-full">
+                    <div ref={gridRef} className="flex flex-col gap-6">
+                        {groupedClasses
+                            .filter(group => !exportVisibleGroups || exportVisibleGroups.includes(group.periodIndex))
+                            .map(group => (
+                            <div key={group.periodIndex} data-group-id={group.periodIndex} className="bg-white shadow border border-gray-300 overflow-hidden w-max max-w-full">
                                 {/* Group Header */}
                                 <div className="bg-gray-800 text-white px-4 py-2 font-bold text-sm flex items-center gap-2">
                                     <span>🕒 {group.label}</span>
@@ -577,6 +665,18 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     />
                 );
             })()}
+
+            {/* 이미지 저장 모달 */}
+            <ExportImageModal
+                isOpen={isExportModalOpen}
+                onClose={handleExportModalClose}
+                targetRef={gridRef}
+                title="영어 통합 시간표 저장"
+                subtitle="저장할 행을 선택하세요"
+                fileName={`영어_통합시간표_${new Date().toISOString().split('T')[0]}`}
+                groups={exportGroups}
+                onGroupsChanged={handleExportGroupsChanged}
+            />
         </div>
     );
 };

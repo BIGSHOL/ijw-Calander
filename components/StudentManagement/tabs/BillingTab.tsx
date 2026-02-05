@@ -324,8 +324,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
       </div>
 
       {/* 전체 통계 */}
-      {showOverallStats && (
-      {records.length > 0 && (
+      {showOverallStats && records.length > 0 && (
         <div className="bg-gray-50 border border-gray-200 rounded-sm p-2">
           <p className="text-xxs text-gray-500 mb-1">전체 기간 통계</p>
           <div className="flex items-center gap-4 text-xs">

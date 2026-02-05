@@ -8,6 +8,12 @@ interface RoleSimulationBannerProps {
   actualRole: UserRole | null;
   /** 시뮬레이션 가능한 사용자 목록 (마스터 제외) */
   availableUsers?: UserProfile[];
+  /** 외부 제어용 - 패널 열림 상태 */
+  isOpen?: boolean;
+  /** 외부 제어용 - 패널 열림 상태 변경 */
+  onOpenChange?: (open: boolean) => void;
+  /** 트리거 버튼을 헤더에서 렌더링할지 (true면 자체 버튼 숨김) */
+  externalTrigger?: boolean;
 }
 
 /** 시뮬레이션 모드 타입 */
@@ -21,7 +27,13 @@ type SimulationMode = 'role' | 'user';
  * - 클릭 시 확장되어 선택 UI 표시
  * - 시뮬레이션 중이면 확장된 상태로 유지
  */
-export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSimulationBannerProps) {
+export function RoleSimulationBanner({
+  actualRole,
+  availableUsers = [],
+  isOpen: externalIsOpen,
+  onOpenChange,
+  externalTrigger = false
+}: RoleSimulationBannerProps) {
   const {
     simulatedRole,
     simulationType,
@@ -34,8 +46,16 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
     simulatedUserInfo,
   } = useRoleSimulation();
 
-  // 패널 확장 상태
-  const [isExpanded, setIsExpanded] = useState(false);
+  // 패널 확장 상태 (외부 제어 또는 내부 상태)
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = externalTrigger ? (externalIsOpen ?? false) : internalExpanded;
+  const setIsExpanded = (value: boolean) => {
+    if (externalTrigger && onOpenChange) {
+      onOpenChange(value);
+    } else {
+      setInternalExpanded(value);
+    }
+  };
   // 시뮬레이션 중 접기 상태
   const [isCollapsed, setIsCollapsed] = useState(false);
   // 로컬 UI 상태: 역할 시뮬레이션 vs 사용자 시뮬레이션
@@ -78,8 +98,11 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
     [simulatableUsers]
   );
 
-  // 시뮬레이션 중이 아니고 축소 상태일 때: 작은 플로팅 버튼
+  // 시뮬레이션 중이 아니고 축소 상태일 때: 작은 플로팅 버튼 (외부 트리거 사용 시 숨김)
   if (!isSimulating && !isExpanded) {
+    if (externalTrigger) {
+      return null; // 외부 트리거 사용 시 자체 버튼 숨김
+    }
     return (
       <button
         onClick={() => setIsExpanded(true)}
@@ -108,8 +131,11 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
     );
   }
 
-  // 시뮬레이션 중이고 접힌 상태일 때: 작은 배너
+  // 시뮬레이션 중이고 접힌 상태일 때: 작은 배너 (외부 트리거 사용 시 숨김)
   if (isSimulating && isCollapsed) {
+    if (externalTrigger) {
+      return null; // 외부 트리거 사용 시 자체 버튼 숨김
+    }
     const displayName = simulationType === 'user' && simulatedUserInfo
       ? simulatedUserInfo.displayName
       : simulatedRoleLabel;
@@ -140,9 +166,10 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
   return (
     <div
       className={`
-        fixed top-3 right-[270px] z-[10000]
+        fixed z-[10000]
         rounded-sm shadow-xl
         transition-all duration-300
+        ${externalTrigger ? 'top-12 right-4' : 'top-3 right-[270px]'}
         ${isSimulating
           ? 'bg-amber-500 text-amber-950'
           : 'bg-gray-800 text-gray-300'
@@ -168,7 +195,7 @@ export function RoleSimulationBanner({ actualRole, availableUsers = [] }: RoleSi
         </div>
         {isSimulating ? (
           <button
-            onClick={() => setIsCollapsed(true)}
+            onClick={() => externalTrigger ? setIsExpanded(false) : setIsCollapsed(true)}
             className="p-1 hover:bg-amber-600/50 rounded transition-colors"
             title="접기"
           >

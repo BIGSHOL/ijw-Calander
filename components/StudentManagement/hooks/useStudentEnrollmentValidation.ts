@@ -16,7 +16,7 @@ interface InvalidEnrollment {
 }
 
 export function useStudentEnrollmentValidation(student: UnifiedStudent) {
-  const { classes } = useClasses();
+  const { data: classes } = useClasses();
 
   const invalidEnrollments = useMemo(() => {
     if (!classes || !student.enrollments) return [];

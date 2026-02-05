@@ -1,8 +1,8 @@
 // Math Class Integration Tab
 // 수학 통합 시간표 탭 - 수업별 컬럼 뷰 (영어 통합뷰와 동일한 디자인)
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Settings, Eye, Edit, ArrowRightLeft, Copy, Upload, Save, SlidersHorizontal, Link2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Settings } from 'lucide-react';
 import { doc, collection, query, where, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { Teacher, TimetableStudent, ClassKeywordColor, TimetableClass } from '../../../types';
@@ -23,6 +23,12 @@ import EmbedTokenManager from '../../Embed/EmbedTokenManager';
 import { ClassInfo as ClassInfoFromHook } from '../../../hooks/useClasses';
 import { UnifiedStudent } from '../../../types';
 
+// 그룹 정보 인터페이스 (이미지 내보내기용)
+export interface ExportGroupInfo {
+    id: number;
+    label: string;
+}
+
 interface MathClassTabProps {
     classes: TimetableClass[];
     teachers: string[];
@@ -32,12 +38,6 @@ interface MathClassTabProps {
     studentMap: Record<string, any>;
     classesData?: ClassInfoFromHook[];
     isSimulationMode?: boolean;
-    canSimulation?: boolean;
-    onToggleSimulation?: () => void;
-    onCopyLiveToDraft?: () => void;
-    onPublishToLive?: () => void;
-    onOpenScenarioModal?: () => void;
-    canPublish?: boolean;
     // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
     currentWeekStart?: Date;
     // 보기 설정 모달 제어 (TimetableHeader 버튼 연동)
@@ -48,6 +48,10 @@ interface MathClassTabProps {
     // 조회/수정 모드 (TimetableHeader 버튼 연동)
     mode?: 'view' | 'edit';
     setMode?: (mode: 'view' | 'edit') => void;
+    // 이미지 내보내기용: 그룹 정보 콜백
+    onGroupsReady?: (groups: ExportGroupInfo[]) => void;
+    // 이미지 내보내기용: 표시할 그룹 ID 목록 (undefined면 모두 표시)
+    exportVisibleGroups?: number[];
 }
 
 interface GroupedClass {
@@ -75,18 +79,14 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     studentMap,
     classesData = [],
     isSimulationMode = false,
-    canSimulation = false,
-    onToggleSimulation,
-    onCopyLiveToDraft,
-    onPublishToLive,
-    onOpenScenarioModal,
-    canPublish = false,
     currentWeekStart,
     isViewSettingsOpen: isViewSettingsOpenProp,
     setIsViewSettingsOpen: setIsViewSettingsOpenProp,
     searchQuery = '',
     mode: modeProp,
     setMode: setModeProp,
+    onGroupsReady,
+    exportVisibleGroups,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
@@ -222,6 +222,22 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
         return groups;
     }, [filteredClasses, settings, hiddenClasses, mode]);
 
+    // 그룹 정보를 부모에게 전달 (이미지 내보내기용)
+    // 이전 그룹 ID를 추적하여 실제 변경 시에만 콜백 호출 (무한 루프 방지)
+    const prevGroupIdsRef = useRef<string>('');
+    useEffect(() => {
+        if (onGroupsReady && groupedClasses.length > 0) {
+            const groupIds = groupedClasses.map(g => g.periodIndex).join(',');
+            if (groupIds !== prevGroupIdsRef.current) {
+                prevGroupIdsRef.current = groupIds;
+                onGroupsReady(groupedClasses.map(g => ({
+                    id: g.periodIndex,
+                    label: g.label,
+                })));
+            }
+        }
+    }, [groupedClasses, onGroupsReady]);
+
     const allClassesForSettings: MathClassEntry[] = useMemo(() => {
         return mathClasses.map(c => ({
             classId: c.classId,
@@ -298,37 +314,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
 
     return (
         <div className="flex flex-col h-full bg-white select-none">
-            {/* Simulation Action Bar */}
-            {isSimulationMode && canEditMath && (
-                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
-                    <button
-                        onClick={onCopyLiveToDraft}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
-                        title="현재 실시간 시간표를 복사해옵니다"
-                    >
-                        <Copy size={12} />
-                        현재 상태 가져오기
-                    </button>
-                    {canPublish && (
-                        <button
-                            onClick={onPublishToLive}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
-                            title="시뮬레이션 내용을 실제 시간표에 적용합니다"
-                        >
-                            <Upload size={12} />
-                            실제 반영
-                        </button>
-                    )}
-                    <button
-                        onClick={onOpenScenarioModal}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
-                        title="시나리오 저장/불러오기"
-                    >
-                        <Save size={12} />
-                        시나리오 관리
-                    </button>
-                </div>
-            )}
+            {/* 시뮬레이션 액션 바는 TimetableHeader로 통합됨 */}
 
             {/* Teacher Legend + Controls */}
             <div className="px-4 py-2 bg-white border-b flex items-center justify-between flex-shrink-0">
@@ -362,7 +348,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                         </span>
                     )}
 
-                    {/* 그룹 설정 */}
+                    {/* 그룹 설정 (수정 모드에서만) */}
                     {mode === 'edit' && canEditMath && (
                         <button
                             onClick={() => setIsGroupSettingsOpen(true)}
@@ -383,8 +369,10 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                     </div>
                 ) : (
                     <div className="flex flex-col gap-6">
-                        {groupedClasses.map(group => (
-                            <div key={group.periodIndex} className="bg-white shadow border border-gray-300 overflow-hidden w-max max-w-full">
+                        {groupedClasses
+                            .filter(group => !exportVisibleGroups || exportVisibleGroups.includes(group.periodIndex))
+                            .map(group => (
+                            <div key={group.periodIndex} data-group-id={group.periodIndex} className="bg-white shadow border border-gray-300 overflow-hidden w-max max-w-full">
                                 {/* Group Header */}
                                 <div className="bg-gray-800 text-white px-4 py-2 font-bold text-sm flex items-center gap-2">
                                     <span>🕒 {group.label}</span>
