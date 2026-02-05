@@ -408,6 +408,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             isViewSettingsOpen={isViewSettingsOpen}
                             setIsViewSettingsOpen={setIsViewSettingsOpen}
                             searchQuery={searchQuery}
+                            mode={mode}
+                            setMode={setMode}
                         />
                     </div>
                 )}

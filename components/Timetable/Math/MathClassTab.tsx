@@ -45,6 +45,9 @@ interface MathClassTabProps {
     setIsViewSettingsOpen?: (isOpen: boolean) => void;
     // 검색어 (TimetableHeader 검색 필드와 통합)
     searchQuery?: string;
+    // 조회/수정 모드 (TimetableHeader 버튼 연동)
+    mode?: 'view' | 'edit';
+    setMode?: (mode: 'view' | 'edit') => void;
 }
 
 interface GroupedClass {
@@ -82,14 +85,23 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     isViewSettingsOpen: isViewSettingsOpenProp,
     setIsViewSettingsOpen: setIsViewSettingsOpenProp,
     searchQuery = '',
+    mode: modeProp,
+    setMode: setModeProp,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditMath = hasPermission('timetable.math.edit') || isMaster;
     const canManageStudents = isMaster || hasPermission('students.edit');
 
-    const [mode, setMode] = useState<'view' | 'edit'>(isSimulationMode ? 'edit' : 'view');
+    const [modeLocal, setModeLocal] = useState<'view' | 'edit'>(isSimulationMode ? 'edit' : 'view');
+    const mode = modeProp ?? modeLocal;
+    const setMode = setModeProp ?? setModeLocal;
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
+
+    // 시뮬레이션 모드에서는 항상 수정모드
+    useEffect(() => {
+        if (isSimulationMode) setMode('edit');
+    }, [isSimulationMode, setMode]);
 
     // UI States
     const [isViewSettingsOpenLocal, setIsViewSettingsOpenLocal] = useState(false);
