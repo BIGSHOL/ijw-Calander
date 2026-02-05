@@ -1,6 +1,6 @@
 ﻿import React, { useState, useMemo } from 'react';
 import { UnifiedStudent, UserProfile } from '../../../types';
-import { BookOpen, Plus, User, X, Loader2, Users, Trash2, PauseCircle, PlayCircle } from 'lucide-react';
+import { BookOpen, Plus, User, X, Loader2, Users, Trash2 } from 'lucide-react';
 import AssignClassModal from '../AssignClassModal';
 import { useStudents } from '../../../hooks/useStudents';
 import { useTeachers } from '../../../hooks/useFirebaseQueries';
@@ -553,68 +553,6 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
     }
   };
 
-  // 대기(휴원) 토글 - enrollment의 onHold 플래그 변경
-  const handleToggleHold = async (group: GroupedEnrollment, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    const key = `${group.subject}_${group.className}`;
-    setDeletingClass(key); // 로딩 상태 재활용
-
-    try {
-      // 현재 enrollment의 onHold 상태 확인
-      let currentOnHold = false;
-      if (group.enrollmentIds.length > 0) {
-        const docRef = doc(db, `students/${student.id}/enrollments`, group.enrollmentIds[0]);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          currentOnHold = docSnap.data().onHold || false;
-        }
-      }
-
-      const newOnHold = !currentOnHold;
-      const actionText = newOnHold ? '대기로 전환' : '대기 해제';
-      if (!window.confirm(`"${group.className}" 수업을 ${actionText}하시겠습니까?`)) {
-        setDeletingClass(null);
-        return;
-      }
-
-      // enrollment 문서 업데이트
-      if (group.enrollmentIds.length > 0) {
-        for (const enrollmentId of group.enrollmentIds) {
-          const docRef = doc(db, `students/${student.id}/enrollments`, enrollmentId);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            await updateDoc(docRef, { onHold: newOnHold });
-          }
-        }
-      } else {
-        const enrollmentsRef = collection(db, `students/${student.id}/enrollments`);
-        const q = query(
-          enrollmentsRef,
-          where('subject', '==', group.subject),
-          where('className', '==', group.className)
-        );
-        const snapshot = await getDocs(q);
-        for (const docSnap of snapshot.docs) {
-          await updateDoc(docSnap.ref, { onHold: newOnHold });
-        }
-      }
-
-      // 캐시 무효화 (모든 시간표 뷰에 실시간 반영)
-      queryClient.invalidateQueries({ queryKey: ['students'] });
-      queryClient.invalidateQueries({ queryKey: ['classes'] });
-      queryClient.invalidateQueries({ queryKey: ['classStudents'] });
-      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
-      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
-      refreshStudents();
-
-    } catch (err) {
-      console.error('대기 상태 변경 오류:', err);
-      alert('대기 상태 변경에 실패했습니다.');
-    } finally {
-      setDeletingClass(null);
-    }
-  };
 
   // 종료된 수업 이력 완전 삭제 (권한 필요)
   const handleDeleteCompletedEnrollment = async (group: GroupedEnrollment, e: React.MouseEvent) => {
@@ -842,30 +780,20 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           </>
         )}
 
-        {/* 대기/삭제 버튼 - readOnly 모드에서는 숨김 */}
+        {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
         {!readOnly && (
-          <div className="flex items-center gap-0.5 shrink-0">
-            <button
-              onClick={(e) => handleToggleHold(group, e)}
-              disabled={isDeleting}
-              className="w-5 h-5 flex items-center justify-center text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-sm transition-colors disabled:opacity-50"
-              title="대기(휴원) 전환"
-            >
-              <PauseCircle className="w-3 h-3" />
-            </button>
-            <button
-              onClick={(e) => handleRemoveEnrollment(group, e)}
-              disabled={isDeleting}
-              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-sm transition-colors disabled:opacity-50"
-              title="수업 배정 취소"
-            >
-              {isDeleting ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <X className="w-3 h-3" />
-              )}
-            </button>
-          </div>
+          <button
+            onClick={(e) => handleRemoveEnrollment(group, e)}
+            disabled={isDeleting}
+            className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-sm transition-colors disabled:opacity-50"
+            title="수업 배정 취소"
+          >
+            {isDeleting ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <X className="w-3 h-3" />
+            )}
+          </button>
         )}
       </div>
     );
