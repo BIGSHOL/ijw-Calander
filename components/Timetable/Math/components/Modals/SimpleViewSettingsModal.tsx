@@ -23,6 +23,10 @@ interface SimpleViewSettingsModalProps {
     setShowSchool: (show: boolean) => void;
     showGrade: boolean;
     setShowGrade: (show: boolean) => void;
+    showHoldStudents: boolean;
+    setShowHoldStudents: (show: boolean) => void;
+    showWithdrawnStudents: boolean;
+    setShowWithdrawnStudents: (show: boolean) => void;
 }
 
 const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
@@ -44,6 +48,10 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
     setShowSchool,
     showGrade,
     setShowGrade,
+    showHoldStudents,
+    setShowHoldStudents,
+    showWithdrawnStudents,
+    setShowWithdrawnStudents,
 }) => {
     if (!isOpen) return null;
 
@@ -166,6 +174,26 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                 }`}
                             >
                                 학년
+                            </button>
+                            <button
+                                onClick={() => setShowHoldStudents(!showHoldStudents)}
+                                className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
+                                    showHoldStudents
+                                        ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                        : 'bg-gray-100 text-gray-400 border-gray-200'
+                                }`}
+                            >
+                                대기
+                            </button>
+                            <button
+                                onClick={() => setShowWithdrawnStudents(!showWithdrawnStudents)}
+                                className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
+                                    showWithdrawnStudents
+                                        ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                        : 'bg-gray-100 text-gray-400 border-gray-200'
+                                }`}
+                            >
+                                퇴원
                             </button>
                         </div>
                     </div>
