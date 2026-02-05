@@ -538,11 +538,13 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       }
 
       // 캐시 무효화 및 새로고침 (모든 시간표 뷰에 실시간 반영)
-      queryClient.invalidateQueries({ queryKey: ['students'] });
-      queryClient.invalidateQueries({ queryKey: ['classes'] });
-      queryClient.invalidateQueries({ queryKey: ['classStudents'] });  // Generic 시간표
-      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표
-      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });  // 수학 시간표
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['students'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['classes'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['classStudents'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['englishClassStudents'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['mathClassStudents'], refetchType: 'all' }),
+      ]);
       refreshStudents();
 
     } catch (err) {
