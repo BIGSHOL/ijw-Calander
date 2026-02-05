@@ -713,7 +713,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         </span>
 
         {/* 수업명 */}
-        <span className="w-40 shrink-0 text-xs text-[#081429] truncate font-medium">
+        <span className="w-52 shrink-0 text-xs text-[#081429] truncate font-medium">
           {group.className}
         </span>
 
@@ -963,7 +963,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         {/* 테이블 헤더 */}
         <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
           <span className="w-8 shrink-0">과목</span>
-          <span className="w-40 shrink-0">수업명</span>
+          <span className="w-52 shrink-0">수업명</span>
           <span className="w-14 shrink-0">강사</span>
           <span className="w-40">스케줄</span>
           <span className="w-10 shrink-0 text-center">인원</span>
@@ -1016,8 +1016,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         <div className="bg-amber-50/30 border border-amber-200 overflow-hidden">
           {/* 테이블 헤더 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-amber-100/50 border-b border-amber-200 text-xxs font-medium text-[#373d41]">
-            <span className="w-8 shrink-0"></span>
-            <span className="w-40 shrink-0">수업명</span>
+            <span className="w-8 shrink-0">과목</span>
+            <span className="w-52 shrink-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
             <span className="w-40">스케줄</span>
             <span className="w-10 shrink-0 text-center">인원</span>
@@ -1051,11 +1051,19 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                     className="flex items-center gap-2 px-2 py-1.5 border-b border-amber-200 hover:bg-amber-100/30 transition-colors cursor-pointer"
                     onClick={() => handleClassClick(group)}
                   >
-                    {/* 과목 뱃지 - 배정 예정 수업은 라벨 숨김 */}
-                    <span className="w-8 shrink-0"></span>
+                    {/* 과목 뱃지 */}
+                    <span
+                      className="w-8 shrink-0 text-micro px-1 py-0.5 rounded-sm font-semibold text-center"
+                      style={{
+                        backgroundColor: subjectColor.bg,
+                        color: subjectColor.text,
+                      }}
+                    >
+                      {SUBJECT_LABELS[group.subject]}
+                    </span>
 
                     {/* 수업명 */}
-                    <span className="w-40 shrink-0 text-xs text-[#373d41] font-medium truncate">
+                    <span className="w-52 shrink-0 text-xs text-[#373d41] font-medium truncate">
                       {group.className}
                     </span>
 
@@ -1125,7 +1133,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           {/* 테이블 헤더 - 수강중인 수업과 열 위치 동일하게 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
             <span className="w-8 shrink-0">과목</span>
-            <span className="w-40 shrink-0">수업명</span>
+            <span className="w-52 shrink-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
             <span className="w-40"></span>{/* 스케줄 자리 */}
             <span className="w-10 shrink-0"></span>{/* 인원 자리 */}
