@@ -174,10 +174,34 @@ const StudentList: React.FC<StudentListProps> = ({
                       </span>
                     )}
                   </div>
-                  {/* 2번째 줄: 과목 (현재 수강 중인 수업만 표시 - endDate가 없는 것) */}
-                  {student.enrollments && student.enrollments.filter(e => !e.endDate).length > 0 && (
+                  {/* 2번째 줄: 과목 (현재 수강 중인 수업만 표시 - 시작했고 종료되지 않은 것) */}
+                  {student.enrollments && student.enrollments.filter(e => {
+                    const now = new Date();
+                    const startDate = e.startDate ? new Date(e.startDate) : null;
+                    const endDate = e.endDate ? new Date(e.endDate) : null;
+
+                    // 아직 시작하지 않은 수업 제외 (배정 예정)
+                    if (startDate && startDate > now) return false;
+
+                    // 이미 종료된 수업 제외
+                    if (endDate && endDate < now) return false;
+
+                    return true;
+                  }).length > 0 && (
                     <div className="flex items-center gap-1 pl-0.5">
-                      {Array.from(new Set(student.enrollments.filter(e => !e.endDate).map(e => e.subject)))
+                      {Array.from(new Set(student.enrollments.filter(e => {
+                        const now = new Date();
+                        const startDate = e.startDate ? new Date(e.startDate) : null;
+                        const endDate = e.endDate ? new Date(e.endDate) : null;
+
+                        // 아직 시작하지 않은 수업 제외 (배정 예정)
+                        if (startDate && startDate > now) return false;
+
+                        // 이미 종료된 수업 제외
+                        if (endDate && endDate < now) return false;
+
+                        return true;
+                      }).map(e => e.subject)))
                         .sort((a, b) => {
                           // 과목 정렬 순서: math, english, korean, science, 기타
                           const order: Record<string, number> = {
