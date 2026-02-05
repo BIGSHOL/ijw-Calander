@@ -48,6 +48,8 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
       korean: new Set(),
     };
 
+    if (!classes) return namesBySubject;
+
     classes.forEach(cls => {
       const subject = cls.subject || 'math';
       if (!namesBySubject[subject]) {
@@ -96,6 +98,8 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
   // 불일치 enrollment 찾기
   const mismatchedEnrollments = useMemo(() => {
     const mismatches: MismatchedEnrollment[] = [];
+
+    if (!students) return mismatches;
 
     students.forEach(student => {
       if (!student.enrollments) return;
@@ -250,6 +254,20 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
   };
 
   if (!isOpen) return null;
+
+  // 데이터 로딩 중
+  if (!students || !classes) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8">
+          <div className="flex items-center gap-3">
+            <RefreshCw className="w-5 h-5 animate-spin text-amber-500" />
+            <span className="text-gray-700">데이터 로딩 중...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isAllSelected = selectedItems.size === mismatchedEnrollments.length && mismatchedEnrollments.length > 0;
 
