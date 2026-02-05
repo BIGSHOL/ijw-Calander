@@ -2,7 +2,7 @@
 // 수학 통합 시간표 탭 - 수업별 컬럼 뷰 (영어 통합뷰와 동일한 디자인)
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Settings, Eye, Edit, ArrowRightLeft, Copy, Upload, Save, ChevronDown, Users, Home, User, CalendarDays, Link2 } from 'lucide-react';
+import { Search, Settings, Eye, Edit, ArrowRightLeft, Copy, Upload, Save, SlidersHorizontal, Link2 } from 'lucide-react';
 import { doc, collection, query, where, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { Teacher, TimetableStudent, ClassKeywordColor, TimetableClass } from '../../../types';
@@ -16,6 +16,7 @@ import { useMathClassStudents } from './hooks/useMathClassStudents';
 // Components
 import IntegrationClassCard from '../shared/IntegrationClassCard';
 import MathIntegrationViewSettings, { MathClassEntry } from './MathIntegrationViewSettings';
+import SimpleViewSettingsModal from './components/Modals/SimpleViewSettingsModal';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
 import StudentDetailModal from '../../StudentManagement/StudentDetailModal';
 import EmbedTokenManager from '../../Embed/EmbedTokenManager';
@@ -84,8 +85,8 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
 
     // UI States
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
+    const [isViewSettingsOpen, setIsViewSettingsOpen] = useState(false);
+    const [isGroupSettingsOpen, setIsGroupSettingsOpen] = useState(false);
     const [isEmbedManagerOpen, setIsEmbedManagerOpen] = useState(false);
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
@@ -94,19 +95,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     useEffect(() => {
         if (isSimulationMode) setMode('edit');
     }, [isSimulationMode]);
-
-    // Close Display Options when clicking outside
-    useEffect(() => {
-        if (!isDisplayOptionsOpen) return;
-        const handleClickOutside = () => setIsDisplayOptionsOpen(false);
-        const timeoutId = setTimeout(() => {
-            document.addEventListener('click', handleClickOutside);
-        }, 0);
-        return () => {
-            clearTimeout(timeoutId);
-            document.removeEventListener('click', handleClickOutside);
-        };
-    }, [isDisplayOptionsOpen]);
 
     // --- Hook Integration ---
     const { settings, settingsLoading, updateSettings } = useMathSettings();
@@ -295,135 +283,80 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     return (
         <div className="flex flex-col h-full bg-white select-none">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b flex-shrink-0">
+            <div className="bg-gray-50 h-10 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs">
+                {/* Left: 타이틀 */}
                 <div className="flex items-center gap-3">
+                    <span className="text-gray-600 font-medium">수학 통합뷰</span>
+                </div>
+
+                {/* Right: 액션 버튼들 */}
+                <div className="flex items-center gap-2">
                     {/* Mode Toggle */}
                     {!isSimulationMode && (
-                        <div className="flex bg-gray-200 rounded-sm p-0.5">
-                            <button
-                                onClick={() => setMode('view')}
-                                className={`px-3 py-1 text-xs font-bold rounded-sm transition-all ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
-                            >
-                                👁️ 조회
-                            </button>
-                            {canEditMath && (
+                        <>
+                            <div className="flex bg-gray-200 rounded-sm p-0.5">
                                 <button
-                                    onClick={() => setMode('edit')}
-                                    className={`px-3 py-1 text-xs font-bold rounded-sm transition-all ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                                    onClick={() => setMode('view')}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
                                 >
-                                    <Edit className="inline-block w-3 h-3 mr-1" />
-                                    수정
+                                    <Eye size={12} />
+                                    조회
                                 </button>
-                            )}
-                        </div>
+                                {canEditMath && (
+                                    <button
+                                        onClick={() => setMode('edit')}
+                                        className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                                    >
+                                        <Edit size={12} />
+                                        수정
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Separator */}
+                            <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                        </>
                     )}
 
                     {/* Search */}
                     <div className="relative">
-                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             placeholder="수업명 검색..."
-                            className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-sm w-48 focus:ring-2 focus:ring-indigo-400 outline-none shadow-sm"
+                            className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
                         />
                     </div>
-                </div>
 
-                {/* Right Section */}
-                <div className="flex items-center gap-2">
+                    {/* Separator */}
+                    <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
+                    {/* Hidden Count */}
                     {hiddenClasses.size > 0 && (
-                        <span className="text-xs text-gray-400 font-medium">
+                        <span className="text-xs text-gray-400 font-medium px-2">
                             {hiddenClasses.size}개 숨김
                         </span>
                     )}
 
-                    {/* Display Options Dropdown */}
-                    <div className="relative group">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsDisplayOptionsOpen(!isDisplayOptionsOpen);
-                            }}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold shadow-sm"
-                        >
-                            <Eye size={14} />
-                            <span className="hidden md:inline">표시 옵션</span>
-                            <ChevronDown size={12} className={`transition-transform ${isDisplayOptionsOpen ? 'rotate-180' : ''}`} />
-                        </button>
+                    {/* 보기 설정 (통합) */}
+                    <button
+                        onClick={() => setIsViewSettingsOpen(true)}
+                        className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
+                    >
+                        <SlidersHorizontal size={12} />
+                        보기 설정
+                    </button>
 
-                        {isDisplayOptionsOpen && (
-                            <div
-                                className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-sm border border-gray-200 z-20 py-2 min-w-[180px]"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.displayOptions?.showStudents ?? true}
-                                        onChange={(e) => updateSettings({
-                                            ...settings,
-                                            displayOptions: { ...settings.displayOptions!, showStudents: e.target.checked }
-                                        })}
-                                        className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                    />
-                                    <Users size={14} className="text-gray-500" />
-                                    <span className="text-xs text-gray-700">학생 목록</span>
-                                </label>
-
-                                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.displayOptions?.showRoom ?? true}
-                                        onChange={(e) => updateSettings({
-                                            ...settings,
-                                            displayOptions: { ...settings.displayOptions!, showRoom: e.target.checked }
-                                        })}
-                                        className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                    />
-                                    <Home size={14} className="text-gray-500" />
-                                    <span className="text-xs text-gray-700">강의실</span>
-                                </label>
-
-                                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.displayOptions?.showTeacher ?? true}
-                                        onChange={(e) => updateSettings({
-                                            ...settings,
-                                            displayOptions: { ...settings.displayOptions!, showTeacher: e.target.checked }
-                                        })}
-                                        className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                    />
-                                    <User size={14} className="text-gray-500" />
-                                    <span className="text-xs text-gray-700">담임 정보</span>
-                                </label>
-
-                                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={settings.displayOptions?.showSchedule ?? true}
-                                        onChange={(e) => updateSettings({
-                                            ...settings,
-                                            displayOptions: { ...settings.displayOptions!, showSchedule: e.target.checked }
-                                        })}
-                                        className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                    />
-                                    <CalendarDays size={14} className="text-gray-500" />
-                                    <span className="text-xs text-gray-700">스케줄</span>
-                                </label>
-                            </div>
-                        )}
-                    </div>
-
+                    {/* 그룹 설정 */}
                     {mode === 'edit' && canEditMath && (
                         <button
-                            onClick={() => setIsSettingsOpen(true)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold shadow-sm"
+                            onClick={() => setIsGroupSettingsOpen(true)}
+                            className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
                         >
-                            <Settings size={14} />
-                            뷰 설정
+                            <Settings size={12} />
+                            그룹 설정
                         </button>
                     )}
 
@@ -431,21 +364,21 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                     {isMaster && (
                         <button
                             onClick={() => setIsEmbedManagerOpen(true)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 border border-indigo-300 text-indigo-700 rounded-sm hover:bg-indigo-100 text-xs font-bold shadow-sm transition-colors"
+                            className="flex items-center gap-1 px-2 py-1 bg-indigo-50 border border-indigo-300 text-indigo-700 rounded-sm hover:bg-indigo-100 text-xs font-bold transition-colors"
                             title="외부 공유 링크 관리"
                         >
-                            <Link2 size={14} />
-                            <span className="hidden md:inline">공유 링크</span>
+                            <Link2 size={12} />
+                            <span className="hidden md:inline">공유</span>
                         </button>
                     )}
 
                     {/* Simulation Mode Toggle */}
                     {canSimulation && (
                         <div
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
                             onClick={onToggleSimulation}
                         >
-                            <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
+                            <ArrowRightLeft size={12} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
                             <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
                                 {isSimulationMode ? '시뮬레이션' : '실시간'}
                             </span>
@@ -576,10 +509,37 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                 )}
             </div>
 
-            {/* Settings Modal */}
+            {/* 보기 설정 Modal (통합) */}
+            <SimpleViewSettingsModal
+                isOpen={isViewSettingsOpen}
+                onClose={() => setIsViewSettingsOpen(false)}
+                viewType="integration"
+                showStudents={settings.displayOptions?.showStudents}
+                setShowStudents={(show) => updateSettings({
+                    ...settings,
+                    displayOptions: { ...settings.displayOptions!, showStudents: show }
+                })}
+                showRoom={settings.displayOptions?.showRoom}
+                setShowRoom={(show) => updateSettings({
+                    ...settings,
+                    displayOptions: { ...settings.displayOptions!, showRoom: show }
+                })}
+                showTeacher={settings.displayOptions?.showTeacher}
+                setShowTeacher={(show) => updateSettings({
+                    ...settings,
+                    displayOptions: { ...settings.displayOptions!, showTeacher: show }
+                })}
+                showSchedule={settings.displayOptions?.showSchedule}
+                setShowSchedule={(show) => updateSettings({
+                    ...settings,
+                    displayOptions: { ...settings.displayOptions!, showSchedule: show }
+                })}
+            />
+
+            {/* 그룹 설정 Modal */}
             <MathIntegrationViewSettings
-                isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
+                isOpen={isGroupSettingsOpen}
+                onClose={() => setIsGroupSettingsOpen(false)}
                 settings={settings}
                 onChange={updateSettings}
                 allClasses={allClassesForSettings}
