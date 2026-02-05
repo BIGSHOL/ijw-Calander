@@ -309,90 +309,111 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     return (
         <div className="flex flex-col h-full bg-white select-none">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b flex-shrink-0">
+            <div className="bg-gray-50 h-10 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs">
+                {/* Left: 타이틀 + 학생 통계 */}
                 <div className="flex items-center gap-3">
+                    <span className="text-gray-600 font-medium">영어 통합뷰</span>
+
+                    {/* Student Stats Badges */}
+                    <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
+                        <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-sm">
+                            <span className="text-xxs text-green-700 font-medium">재원</span>
+                            <span className="text-xs font-bold text-green-800">{studentStats.active}</span>
+                        </div>
+                        {studentStats.new1 > 0 && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-50 border border-pink-200 rounded-sm">
+                                <span className="text-xxs text-pink-700 font-medium">신입1</span>
+                                <span className="text-xs font-bold text-pink-800">{studentStats.new1}</span>
+                            </div>
+                        )}
+                        {studentStats.new2 > 0 && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-red-50 border border-red-200 rounded-sm">
+                                <span className="text-xxs text-red-700 font-medium">신입2</span>
+                                <span className="text-xs font-bold text-red-800">{studentStats.new2}</span>
+                            </div>
+                        )}
+                        {studentStats.waiting > 0 && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-sm">
+                                <span className="text-xxs text-amber-700 font-medium">대기</span>
+                                <span className="text-xs font-bold text-amber-800">{studentStats.waiting}</span>
+                            </div>
+                        )}
+                        {studentStats.withdrawn > 0 && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-300 rounded-sm">
+                                <span className="text-xxs text-gray-700 font-medium">퇴원</span>
+                                <span className="text-xs font-bold text-gray-800">{studentStats.withdrawn}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right: 액션 버튼들 */}
+                <div className="flex items-center gap-2">
                     {/* Mode Toggle - 시뮬레이션 모드에서는 항상 수정모드이므로 숨김 */}
                     {!isSimulationMode && (
-                        <div className="flex bg-gray-200 rounded-sm p-0.5">
-                            <button
-                                onClick={() => setMode('view')}
-                                className={`px-3 py-1 text-xs font-bold rounded-sm transition-all ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
-                            >
-                                👁️ 조회
-                            </button>
-                            {canEditEnglish && (
+                        <>
+                            <div className="flex bg-gray-200 rounded-sm p-0.5">
                                 <button
-                                    onClick={() => setMode('edit')}
-                                    className={`px-3 py-1 text-xs font-bold rounded-sm transition-all ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+                                    onClick={() => setMode('view')}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
                                 >
-                                    <Edit className="inline-block w-3 h-3 mr-1" />
-                                    수정
+                                    <Eye size={12} />
+                                    조회
                                 </button>
-                            )}
-                        </div>
+                                {canEditEnglish && (
+                                    <button
+                                        onClick={() => setMode('edit')}
+                                        className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                                    >
+                                        <Edit size={12} />
+                                        수정
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Separator */}
+                            <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                        </>
                     )}
 
                     {/* Search */}
                     <div className="relative">
-                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             placeholder="수업명 검색..."
-                            className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-sm w-48 focus:ring-2 focus:ring-indigo-400 outline-none shadow-sm"
+                            className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
                         />
                     </div>
 
-                    {/* Student Stats Badges */}
-                    <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-sm text-xxs font-bold">
-                            재원 {studentStats.active}
-                        </span>
-                        <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded-sm text-xxs font-bold">
-                            신입1 {studentStats.new1}
-                        </span>
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-sm text-xxs font-bold">
-                            신입2 {studentStats.new2}
-                        </span>
-                        {studentStats.waiting > 0 && (
-                            <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-sm text-xxs font-bold">
-                                대기 {studentStats.waiting}
-                            </span>
-                        )}
-                        {studentStats.withdrawn > 0 && (
-                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-sm text-xxs font-bold">
-                                퇴원 {studentStats.withdrawn}
-                            </span>
-                        )}
-                    </div>
-                </div>
+                    {/* Separator */}
+                    <div className="w-px h-4 bg-gray-300 mx-1"></div>
 
 
 
-                {/* Right Section: Hidden Count + Settings Buttons */}
-                <div className="flex items-center gap-2">
                     {/* Batch Save Controls (Visible when changes exist) */}
                     {moveChanges.size > 0 && mode === 'edit' && (
-                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-                            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-sm">
-                                {moveChanges.size}명
+                        <>
+                            <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-sm">
+                                {moveChanges.size}건 변경
                             </span>
                             <button
                                 onClick={handleSaveChanges}
                                 disabled={isSaving}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-sm text-xs font-bold shadow-sm transition-colors disabled:opacity-50"
+                                className="px-2 py-0.5 bg-green-500 text-white rounded-sm text-xs font-bold hover:bg-green-600 disabled:opacity-50"
                             >
-                                {isSaving ? '...' : '💾'}
+                                {isSaving ? '저장중...' : '💾 저장'}
                             </button>
                             <button
                                 onClick={handleCancelChanges}
                                 disabled={isSaving}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-sm text-xs font-bold shadow-sm transition-colors"
+                                className="px-2 py-0.5 bg-gray-500 text-white rounded-sm text-xs font-bold hover:bg-gray-600 disabled:opacity-50"
                             >
-                                ✖
+                                ↩ 취소
                             </button>
-                        </div>
+                        </>
                     )}
 
                     {hiddenClasses.size > 0 && (
