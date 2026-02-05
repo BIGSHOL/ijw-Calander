@@ -97,14 +97,6 @@ const normalizeSchedule = (schedule: any[] | undefined): string[] => {
     return null;
   }).flat().filter((s): s is string => s !== null && s !== '');
 
-  // 디버그 로깅 (첫 번째 실행시만)
-  if (schedule.length > 0 && result.length === 0) {
-    console.warn('[normalizeSchedule] 스케줄 정규화 실패:', {
-      originalSchedule: schedule.slice(0, 3),
-      originalTypes: schedule.slice(0, 3).map(s => typeof s),
-    });
-  }
-
   return result;
 };
 
@@ -144,19 +136,7 @@ const MathTimetableEmbed: React.FC<MathTimetableEmbedProps> = ({ token }) => {
     });
 
     // 빈 문자열 제거 후 정렬
-    const result = Array.from(teacherNames).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ko'));
-
-    // 디버그 로깅 (개발용)
-    if (result.length === 0 && classes.length > 0) {
-      console.warn('[MathTimetableEmbed] 강사 추출 실패:', {
-        classCount: classes.length,
-        sampleClass: classes[0],
-        hasTeacher: !!classes[0]?.teacher,
-        hasSlotTeachers: !!classes[0]?.slotTeachers,
-      });
-    }
-
-    return result;
+    return Array.from(teacherNames).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ko'));
   }, [classes]);
 
   // weekDates 계산 (현재 주 기준)
@@ -252,24 +232,24 @@ const MathTimetableEmbed: React.FC<MathTimetableEmbedProps> = ({ token }) => {
     return groups;
   }, [filteredClasses]);
 
-  // 학생 통계
+  // 학생 통계 (수학 수업 학생만, 중복 제거)
   const studentStats = useMemo(() => {
-    let active = 0;
-    let withdrawn = 0;
+    const activeSet = new Set<string>();
+    const withdrawnSet = new Set<string>();
 
     Object.values(classDataMap).forEach(data => {
       if (data?.studentList) {
         data.studentList.forEach((s: TimetableStudent) => {
           if (s.withdrawalDate) {
-            withdrawn++;
+            withdrawnSet.add(s.id);
           } else if (!s.onHold) {
-            active++;
+            activeSet.add(s.id);
           }
         });
       }
     });
 
-    return { active, withdrawn };
+    return { active: activeSet.size, withdrawn: withdrawnSet.size };
   }, [classDataMap]);
 
   // 표시 옵션
@@ -301,21 +281,6 @@ const MathTimetableEmbed: React.FC<MathTimetableEmbedProps> = ({ token }) => {
         </div>
       </div>
     );
-  }
-
-  // 디버그: 스케줄 샘플 확인
-  if (classes.length > 0) {
-    const sampleClass = classes.find(c => c.schedule && c.schedule.length > 0) || classes[0];
-    const normalizedSample = filteredClassesForGrid.find(c => c.schedule && c.schedule.length > 0);
-    console.log('[MathTimetableEmbed] Debug:', {
-      classCount: classes.length,
-      teacherCount: sortedTeachers.length,
-      sampleClassName: sampleClass?.className,
-      sampleTeacher: sampleClass?.teacher,
-      originalSchedule: sampleClass?.schedule?.slice(0, 5),
-      normalizedSchedule: normalizedSample?.schedule?.slice(0, 5),
-      expectedFormat: 'e.g., "월 3-1" (day space legacy-period)',
-    });
   }
 
   const isDark = embedSettings.theme === 'dark';
