@@ -100,6 +100,10 @@ interface MathTimetableContentProps {
     setSelectedDays: (days: string[]) => void;
     currentMonday: Date;
     currentUser: any;
+    // 공유 링크
+    isMaster: boolean;
+    isEmbedManagerOpen: boolean;
+    setIsEmbedManagerOpen: (open: boolean) => void;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -168,6 +172,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     setSelectedDays,
     currentMonday,
     currentUser,
+    isMaster,
+    isEmbedManagerOpen,
+    setIsEmbedManagerOpen,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
@@ -990,6 +997,9 @@ const TimetableManager = ({
                 setSelectedDays={setSelectedDays}
                 currentMonday={currentMonday}
                 currentUser={currentUser}
+                isMaster={isMaster}
+                isEmbedManagerOpen={isEmbedManagerOpen}
+                setIsEmbedManagerOpen={setIsEmbedManagerOpen}
             />
         </MathSimulationProvider>
     );
