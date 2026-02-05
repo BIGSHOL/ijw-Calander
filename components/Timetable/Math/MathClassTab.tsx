@@ -2,7 +2,7 @@
 // 수학 통합 시간표 탭 - 수업별 컬럼 뷰 (영어 통합뷰와 동일한 디자인)
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Settings, Eye, Edit, ArrowRightLeft, Copy, Upload, Save, ChevronDown, Users, Home, User, CalendarDays } from 'lucide-react';
+import { Search, Settings, Eye, Edit, ArrowRightLeft, Copy, Upload, Save, ChevronDown, Users, Home, User, CalendarDays, Link2 } from 'lucide-react';
 import { doc, collection, query, where, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { Teacher, TimetableStudent, ClassKeywordColor, TimetableClass } from '../../../types';
@@ -18,6 +18,7 @@ import IntegrationClassCard from '../shared/IntegrationClassCard';
 import MathIntegrationViewSettings, { MathClassEntry } from './MathIntegrationViewSettings';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
 import StudentDetailModal from '../../StudentManagement/StudentDetailModal';
+import EmbedTokenManager from '../../Embed/EmbedTokenManager';
 import { ClassInfo as ClassInfoFromHook } from '../../../hooks/useClasses';
 import { UnifiedStudent } from '../../../types';
 
@@ -85,6 +86,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     // UI States
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
+    const [isEmbedManagerOpen, setIsEmbedManagerOpen] = useState(false);
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassInfoFromHook | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
 
@@ -457,6 +459,18 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                         </button>
                     )}
 
+                    {/* Embed Share Link - 관리자만 */}
+                    {isMaster && (
+                        <button
+                            onClick={() => setIsEmbedManagerOpen(true)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 border border-indigo-300 text-indigo-700 rounded-sm hover:bg-indigo-100 text-xs font-bold shadow-sm transition-colors"
+                            title="외부 공유 링크 관리"
+                        >
+                            <Link2 size={14} />
+                            <span className="hidden md:inline">공유 링크</span>
+                        </button>
+                    )}
+
                     {/* Simulation Mode Toggle */}
                     {canSimulation && (
                         <div
@@ -622,6 +636,13 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                     currentUser={currentUser}
                 />
             )}
+
+            {/* Embed Token Manager Modal - 관리자 전용 */}
+            <EmbedTokenManager
+                isOpen={isEmbedManagerOpen}
+                onClose={() => setIsEmbedManagerOpen(false)}
+                staffId={currentUser?.staffId || currentUser?.uid || ''}
+            />
         </div>
     );
 };
