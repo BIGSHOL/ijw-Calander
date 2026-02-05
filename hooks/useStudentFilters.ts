@@ -250,25 +250,21 @@ const filterByStatus = (students: UnifiedStudent[], status: string): UnifiedStud
 
 /**
  * Filter students by subjects (OR/AND condition)
- * CoursesTab과 동일한 로직: 현재 수강 중인 수업만 (배정 예정 제외)
+ * 시간표와 동일한 로직: 현재 수강 중 + 배정 예정 포함 (endDate만 체크)
  * @param mode - 'OR': 하나라도 수강, 'AND': 모두 수강
  */
 const filterBySubjects = (students: UnifiedStudent[], subjects: string[], mode: 'OR' | 'AND' = 'OR'): UnifiedStudent[] => {
     if (subjects.length === 0) return students;
-
-    const today = new Date().toISOString().split('T')[0];
 
     return students.filter((s) => {
         if (s.status === 'withdrawn') return true;
 
         const studentSubjects = (s.enrollments || [])
             .filter(e => {
-                // CoursesTab과 동일한 로직: endDate가 없고 startDate가 오늘 이전인 것만
-                const hasEnded = !!e.endDate;
-                const startDate = e.startDate;
-                const isFuture = startDate && startDate > today;
-                // 종료되지 않았고, 미래가 아닌 수업만 (현재 수강 중)
-                return !hasEnded && !isFuture;
+                // 시간표와 동일한 로직: endDate가 없으면 포함 (배정 예정도 포함)
+                // endDate/withdrawalDate가 있으면 종료된 것으로 간주
+                const hasEnded = !!(e.endDate || e.withdrawalDate);
+                return !hasEnded;
             })
             .map((e) => e.subject);
 
@@ -284,24 +280,19 @@ const filterBySubjects = (students: UnifiedStudent[], subjects: string[], mode: 
 
 /**
  * Filter students by teacher
- * CoursesTab과 동일한 로직: 현재 수강 중인 수업만 (배정 예정 제외)
+ * 시간표와 동일한 로직: 현재 수강 중 + 배정 예정 포함 (endDate만 체크)
  */
 const filterByTeacher = (students: UnifiedStudent[], teacherId: string): UnifiedStudent[] => {
     if (teacherId === 'all') return students;
-
-    const today = new Date().toISOString().split('T')[0];
 
     return students.filter((s) => {
         if (s.status === 'withdrawn') return true;
 
         return (s.enrollments || [])
             .filter(e => {
-                // CoursesTab과 동일한 로직: endDate가 없고 startDate가 오늘 이전인 것만
-                const hasEnded = !!e.endDate;
-                const startDate = e.startDate;
-                const isFuture = startDate && startDate > today;
-                // 종료되지 않았고, 미래가 아닌 수업만 (현재 수강 중)
-                return !hasEnded && !isFuture;
+                // 시간표와 동일한 로직: endDate가 없으면 포함 (배정 예정도 포함)
+                const hasEnded = !!(e.endDate || e.withdrawalDate);
+                return !hasEnded;
             })
             .some((e) => e.staffId === teacherId);
     });
