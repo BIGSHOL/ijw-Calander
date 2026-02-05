@@ -462,7 +462,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 <div
                     ref={headerRef}
                     onClick={handleClassHeaderClick}
-                    className={`text-center font-bold py-1 px-1 ${titleFontSizeClass} ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-help'} ${showStudents ? 'border-b border-gray-300' : 'flex-1 flex flex-col justify-center'}`}
+                    className={`text-center font-bold py-1 px-1 ${titleFontSizeClass} ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-pointer'} ${showStudents ? 'border-b border-gray-300' : 'flex-1 flex flex-col justify-center'}`}
                     style={matchedKeyword
                         ? { color: matchedKeyword.textColor }
                         : { color: '#1f2937' }
@@ -486,7 +486,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                     </div>
                                 }
                             >
-                                <span className="inline-flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] px-1 cursor-help shadow-sm">
+                                <span className="inline-flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] px-1 cursor-pointer shadow-sm">
                                     +{mergedClassCount - 1}
                                 </span>
                             </PortalTooltip>
@@ -719,7 +719,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                         if (sg && sg !== '-') text += `/${sg}`;
                                                     }
                                                     const tooltipText = s.enrollmentDate ? `예정일: ${s.enrollmentDate}` : undefined;
-                                                    return <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate cursor-help" title={tooltipText}>{text}</li>;
+                                                    return <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate cursor-pointer" title={tooltipText}>{text}</li>;
                                                 })}
                                             </ul>
                                         ) : (
@@ -739,7 +739,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                         if (sg && sg !== '-') text += `/${sg}`;
                                                     }
                                                     const tooltipText = s.withdrawalDate ? `퇴원일: ${s.withdrawalDate}` : undefined;
-                                                    return <li key={s.id} className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate cursor-help" title={tooltipText}>{text}</li>;
+                                                    return <li key={s.id} className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate cursor-pointer" title={tooltipText}>{text}</li>;
                                                 })}
                                             </ul>
                                         ) : (
