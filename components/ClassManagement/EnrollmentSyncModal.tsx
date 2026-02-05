@@ -31,7 +31,7 @@ interface EnrollmentSyncModalProps {
 
 const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClose }) => {
   const queryClient = useQueryClient();
-  const { enrollments: allEnrollments, isLoading: enrollmentsLoading, refetch: refetchEnrollments } = useEnrollmentSync(isOpen);
+  const { enrollments: allEnrollments, isLoading: enrollmentsLoading, progress, refetch: refetchEnrollments } = useEnrollmentSync(isOpen);
   const { classes } = useClasses();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [fixTargets, setFixTargets] = useState<Record<string, string>>({}); // key -> newClassName
@@ -271,14 +271,14 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
 
   if (!isOpen) return null;
 
-  // 데이터 로딩 중
-  if (enrollmentsLoading || !classes) {
+  // classes 로딩 중 (필수 데이터)
+  if (!classes) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg shadow-xl p-8">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center gap-3">
             <RefreshCw className="w-5 h-5 animate-spin text-amber-500" />
-            <span className="text-gray-700">Enrollment 데이터 로딩 중...</span>
+            <span className="text-gray-700">수업 데이터 로딩 중...</span>
           </div>
         </div>
       </div>
@@ -318,18 +318,35 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
               </select>
             </div>
             <div className="text-sm">
-              <span className="text-amber-600 font-semibold">{mismatchedEnrollments.length}</span>
-              <span className="text-gray-500"> 개 불일치</span>
-              {totalPages > 1 && (
-                <span className="text-gray-400 ml-2">
-                  (페이지 {currentPage}/{totalPages})
-                </span>
-              )}
-              {selectedItems.size > 0 && (
-                <span className="text-blue-600 ml-2">({selectedItems.size}개 선택됨)</span>
-              )}
-              {fixedCount > 0 && (
-                <span className="text-green-600 ml-2">({fixedCount}개 처리됨)</span>
+              {enrollmentsLoading && progress.total > 0 ? (
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin text-amber-500" />
+                  <span className="text-gray-600">
+                    로딩 중... ({progress.current}/{progress.total})
+                  </span>
+                  <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-amber-500 transition-all duration-300"
+                      style={{ width: `${(progress.current / progress.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span className="text-amber-600 font-semibold">{mismatchedEnrollments.length}</span>
+                  <span className="text-gray-500"> 개 불일치</span>
+                  {totalPages > 1 && (
+                    <span className="text-gray-400 ml-2">
+                      (페이지 {currentPage}/{totalPages})
+                    </span>
+                  )}
+                  {selectedItems.size > 0 && (
+                    <span className="text-blue-600 ml-2">({selectedItems.size}개 선택됨)</span>
+                  )}
+                  {fixedCount > 0 && (
+                    <span className="text-green-600 ml-2">({fixedCount}개 처리됨)</span>
+                  )}
+                </>
               )}
             </div>
           </div>
